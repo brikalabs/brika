@@ -17,369 +17,478 @@
     />
     <style>
       :root {
-        color-scheme: light dark;
-        --brika-bg: #fafaf9;
-        --brika-fg: #18181b;
-        --brika-mark-bg: #18181b;
-        --brika-mark-fg: #fafafa;
-        --brika-muted: rgba(24, 24, 27, 0.55);
-        --brika-border: rgba(24, 24, 27, 0.12);
-        --brika-input-bg: rgba(255, 255, 255, 0.6);
-        --brika-error: #b91c1c;
-        --brika-accent: #f97316;
-      }
-      @media (prefers-color-scheme: dark) {
-        :root {
-          --brika-bg: #0a0a0a;
-          --brika-fg: #fafafa;
-          --brika-mark-bg: #fafafa;
-          --brika-mark-fg: #18181b;
-          --brika-muted: rgba(250, 250, 250, 0.55);
-          --brika-border: rgba(250, 250, 250, 0.12);
-          --brika-input-bg: rgba(255, 255, 255, 0.04);
-          --brika-error: #fca5a5;
-          --brika-accent: #fb923c;
-        }
-      }
+              color-scheme: light dark;
+              --brika-bg: #fafaf9;
+              --brika-fg: #18181b;
+              --brika-mark-bg: #18181b;
+              --brika-mark-fg: #fafafa;
+              --brika-muted: rgba(24, 24, 27, 0.55);
+              --brika-border: rgba(24, 24, 27, 0.12);
+              --brika-input-bg: rgba(255, 255, 255, 0.6);
+              --brika-error: #b91c1c;
+              --brika-accent: #f97316;
+            }
+            @media (prefers-color-scheme: dark) {
+              :root {
+                --brika-bg: #0a0a0a;
+                --brika-fg: #fafafa;
+                --brika-mark-bg: #fafafa;
+                --brika-mark-fg: #18181b;
+                --brika-muted: rgba(250, 250, 250, 0.55);
+                --brika-border: rgba(250, 250, 250, 0.12);
+                --brika-input-bg: rgba(255, 255, 255, 0.04);
+                --brika-error: #fca5a5;
+                --brika-accent: #fb923c;
+              }
+            }
 
-      *,
-      *::before,
-      *::after {
-        box-sizing: border-box;
-      }
+            *,
+            *::before,
+            *::after {
+              box-sizing: border-box;
+            }
 
-      html,
-      body {
-        margin: 0;
-        padding: 0;
-        min-height: 100%;
-        background: var(--brika-bg);
-        color: var(--brika-fg);
-        font-family:
-          ui-sans-serif,
-          system-ui,
-          -apple-system,
-          'Segoe UI',
-          Roboto,
-          sans-serif;
-        -webkit-font-smoothing: antialiased;
-      }
+            html,
+            body {
+              margin: 0;
+              padding: 0;
+              min-height: 100%;
+              background: var(--brika-bg);
+              color: var(--brika-fg);
+              font-family:
+                ui-sans-serif,
+                system-ui,
+                -apple-system,
+                'Segoe UI',
+                Roboto,
+                sans-serif;
+              -webkit-font-smoothing: antialiased;
+            }
 
-      /* Soft animated gradient backdrop. Pure CSS, no images. */
-      body::before {
-        content: '';
-        position: fixed;
-        inset: -20%;
-        background:
-          radial-gradient(ellipse 40% 30% at 20% 30%, color-mix(in srgb, var(--brika-accent) 12%, transparent), transparent 60%),
-          radial-gradient(ellipse 30% 20% at 80% 70%, color-mix(in srgb, var(--brika-mark-bg) 8%, transparent), transparent 60%);
-        filter: blur(60px);
-        z-index: -2;
-        animation: brika-aurora 16s ease-in-out infinite alternate;
-        pointer-events: none;
-      }
+            /* Soft animated gradient backdrop. Pure CSS, no images. */
+            body::before {
+              content: '';
+              position: fixed;
+              inset: -20%;
+              background:
+                radial-gradient(ellipse 40% 30% at 20% 30%, color-mix(in srgb, var(--brika-accent) 12%, transparent), transparent 60%),
+                radial-gradient(ellipse 30% 20% at 80% 70%, color-mix(in srgb, var(--brika-mark-bg) 8%, transparent), transparent 60%);
+              filter: blur(60px);
+              z-index: -2;
+              animation: brika-aurora 16s ease-in-out infinite alternate;
+              pointer-events: none;
+            }
 
-      @keyframes brika-aurora {
-        0%   { transform: translate3d(-3%, -2%, 0) scale(1); }
-        50%  { transform: translate3d(3%, 2%, 0) scale(1.05); }
-        100% { transform: translate3d(-2%, 3%, 0) scale(1); }
-      }
+            @keyframes brika-aurora {
+              0%   { transform: translate3d(-3%, -2%, 0) scale(1); }
+              50%  { transform: translate3d(3%, 2%, 0) scale(1.05); }
+              100% { transform: translate3d(-2%, 3%, 0) scale(1); }
+            }
 
-      #brika-bootstrap {
-        position: fixed;
-        inset: 0;
-        display: grid;
-        place-items: center;
-        padding: 24px;
-      }
+            #brika-bootstrap {
+              position: fixed;
+              inset: 0;
+              display: grid;
+              place-items: center;
+              padding: 24px;
+            }
 
-      .brika-card {
-        max-width: 420px;
-        text-align: center;
-      }
+            .brika-card {
+              max-width: 420px;
+              text-align: center;
+            }
 
-      /* ─── Mark ─────────────────────────────────────────────────────────── */
+            /* ─── Mark ─────────────────────────────────────────────────────────── */
 
-      .brika-mark {
-        width: 92px;
-        height: 92px;
-        margin: 0 auto 24px;
-        border-radius: 26px;
-        background: var(--brika-mark-bg);
-        display: grid;
-        place-items: center;
-        position: relative;
-      }
-      .brika-mark::after {
-        content: '';
-        position: absolute;
-        inset: -6px;
-        border-radius: 32px;
-        background: var(--brika-mark-bg);
-        z-index: -1;
-        animation: brika-glow 2.4s ease-in-out infinite;
-      }
-      .brika-mark svg {
-        width: 56px;
-        height: 56px;
-        color: var(--brika-mark-fg);
-        overflow: visible;
-      }
+            .brika-mark {
+              width: 92px;
+              height: 92px;
+              margin: 0 auto 24px;
+              border-radius: 26px;
+              background: var(--brika-mark-bg);
+              display: grid;
+              place-items: center;
+              position: relative;
+            }
+            .brika-mark::after {
+              content: '';
+              position: absolute;
+              inset: -6px;
+              border-radius: 32px;
+              background: var(--brika-mark-bg);
+              z-index: -1;
+              animation: brika-glow 2.4s ease-in-out infinite;
+            }
+            .brika-mark svg {
+              width: 56px;
+              height: 56px;
+              color: var(--brika-mark-fg);
+              overflow: visible;
+            }
 
-      /*
-       * Each shape runs TWO animations:
-       *   1. `brika-build` — one-shot snap-in on first paint. Staggered so the
-       *      bricks stack bottom-up and the "B/R" pieces slot in last.
-       *   2. `brika-shimmer` — indefinite cascade. After the build settles,
-       *      a soft pulse travels through the shapes in the same order, so
-       *      the logo keeps reading as "loading" without spinning anything.
-       *
-       * `transform-box: fill-box` + `transform-origin: center` make scales
-       * happen around each shape's own midpoint (not the SVG origin).
-       */
-      .brika-shape {
-        opacity: 0;
-        transform: translate3d(0, 12px, 0) scale(0.7);
-        transform-box: fill-box;
-        transform-origin: center;
-        animation-name: brika-build, brika-shimmer;
-        animation-duration: 0.55s, 1.8s;
-        animation-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1), ease-in-out;
-        animation-iteration-count: 1, infinite;
-        animation-fill-mode: forwards, none;
-      }
+            /*
+             * Each shape runs TWO animations:
+             *   1. `brika-build` — one-shot snap-in on first paint. Staggered so the
+             *      bricks stack bottom-up and the "B/R" pieces slot in last.
+             *   2. `brika-shimmer` — indefinite cascade. After the build settles,
+             *      a soft pulse travels through the shapes in the same order, so
+             *      the logo keeps reading as "loading" without spinning anything.
+             *
+             * `transform-box: fill-box` + `transform-origin: center` make scales
+             * happen around each shape's own midpoint (not the SVG origin).
+             */
+            .brika-shape {
+              opacity: 0;
+              transform: translate3d(0, 12px, 0) scale(0.7);
+              transform-box: fill-box;
+              transform-origin: center;
+              animation-name: brika-build, brika-shimmer;
+              animation-duration: 0.55s, 1.8s;
+              animation-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1), ease-in-out;
+              animation-iteration-count: 1, infinite;
+              animation-fill-mode: forwards, none;
+            }
 
-      /* Animation delays are pairs: <build-delay>, <shimmer-delay>.
-       * Shimmer starts ~0.8 s after the build finishes for each shape, so
-       * there's a brief settle before the loop begins. The same stagger
-       * order (bottom-brick → top-brick → B → R) repeats, so the shimmer
-       * reads as a wave climbing the mark. */
-      .brika-l-3   { animation-delay: 0.00s, 1.10s; }
-      .brika-l-2   { animation-delay: 0.10s, 1.22s; }
-      .brika-l-1   { animation-delay: 0.20s, 1.34s; }
-      .brika-r-top { animation-delay: 0.35s, 1.50s; }
-      .brika-r-bot { animation-delay: 0.45s, 1.62s; }
+            /* Animation delays are pairs: <build-delay>, <shimmer-delay>.
+             * Shimmer starts ~0.8 s after the build finishes for each shape, so
+             * there's a brief settle before the loop begins. The same stagger
+             * order (bottom-brick → top-brick → B → R) repeats, so the shimmer
+             * reads as a wave climbing the mark. */
+            .brika-l-3   { animation-delay: 0.00s, 1.10s; }
+            .brika-l-2   { animation-delay: 0.10s, 1.22s; }
+            .brika-l-1   { animation-delay: 0.20s, 1.34s; }
+            .brika-r-top { animation-delay: 0.35s, 1.50s; }
+            .brika-r-bot { animation-delay: 0.45s, 1.62s; }
 
-      @keyframes brika-build {
-        to {
-          opacity: 1;
-          transform: translate3d(0, 0, 0) scale(1);
-        }
-      }
+            @keyframes brika-build {
+              to {
+                opacity: 1;
+                transform: translate3d(0, 0, 0) scale(1);
+              }
+            }
 
-      @keyframes brika-shimmer {
-        0%, 70%, 100% {
-          opacity: 1;
-          transform: translate3d(0, 0, 0) scale(1);
-        }
-        35% {
-          opacity: 0.28;
-          transform: translate3d(0, -3px, 0) scale(0.88);
-        }
-      }
+            @keyframes brika-shimmer {
+              0%, 70%, 100% {
+                opacity: 1;
+                transform: translate3d(0, 0, 0) scale(1);
+              }
+              35% {
+                opacity: 0.28;
+                transform: translate3d(0, -3px, 0) scale(0.88);
+              }
+            }
 
-      @keyframes brika-glow {
-        0%, 100% {
-          opacity: 0.12;
-          filter: blur(12px);
-        }
-        50% {
-          opacity: 0.36;
-          filter: blur(20px);
-        }
-      }
+            @keyframes brika-glow {
+              0%, 100% {
+                opacity: 0.12;
+                filter: blur(12px);
+              }
+              50% {
+                opacity: 0.36;
+                filter: blur(20px);
+              }
+            }
 
-      /* Error: freeze the mark, tint it red, kill the shimmer. */
-      #brika-bootstrap[data-brika-phase='error'] .brika-mark {
-        background: var(--brika-error);
-      }
-      #brika-bootstrap[data-brika-phase='error'] .brika-mark::after,
-      #brika-bootstrap[data-brika-phase='error'] .brika-shape {
-        animation: none;
-      }
-      #brika-bootstrap[data-brika-phase='error'] .brika-shape {
-        opacity: 1;
-        transform: none;
-      }
+            /*
+             * Error: the mark stays in its normal color (less alarming than a full
+             * red fill), animations freeze in place, and one brick — the top-left
+             * — drops down and dims, suggesting "something fell off the stack."
+             * The red status dot in the corner is what carries the alarm.
+             */
+            #brika-bootstrap[data-brika-phase='error'] .brika-mark::after,
+            #brika-bootstrap[data-brika-phase='error'] .brika-shape {
+              animation: none;
+            }
+            #brika-bootstrap[data-brika-phase='error'] .brika-shape {
+              opacity: 1;
+              transform: none;
+            }
+            #brika-bootstrap[data-brika-phase='error'] .brika-l-1 {
+              opacity: 0.25;
+              transform: translate3d(-3px, 6px, 0) rotate(-8deg);
+              transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.5s ease;
+            }
+            .brika-status-dot {
+              position: absolute;
+              top: -4px;
+              right: -4px;
+              width: 16px;
+              height: 16px;
+              border-radius: 50%;
+              background: var(--brika-error);
+              border: 3px solid var(--brika-bg);
+              opacity: 0;
+              transform: scale(0);
+              transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            }
+            #brika-bootstrap[data-brika-phase='error'] .brika-status-dot {
+              opacity: 1;
+              transform: scale(1);
+              animation: brika-dot-pulse 1.8s ease-in-out infinite;
+              animation-delay: 0.3s;
+            }
+            @keyframes brika-dot-pulse {
+              0%, 100% {
+                box-shadow: 0 0 0 0 color-mix(in srgb, var(--brika-error) 50%, transparent);
+              }
+              50% {
+                box-shadow: 0 0 0 8px color-mix(in srgb, var(--brika-error) 0%, transparent);
+              }
+            }
 
-      /* Landing state: no shimmer either, just the static logo. */
-      #brika-bootstrap[data-brika-phase='landing'] .brika-mark::after,
-      #brika-bootstrap[data-brika-phase='landing'] .brika-shape {
-        animation: none;
-      }
-      #brika-bootstrap[data-brika-phase='landing'] .brika-shape {
-        opacity: 1;
-        transform: none;
-      }
+            /* Landing state: no shimmer either, just the static logo. */
+            #brika-bootstrap[data-brika-phase='landing'] .brika-mark::after,
+            #brika-bootstrap[data-brika-phase='landing'] .brika-shape {
+              animation: none;
+            }
+            #brika-bootstrap[data-brika-phase='landing'] .brika-shape {
+              opacity: 1;
+              transform: none;
+            }
 
-      /* ─── Status text ──────────────────────────────────────────────────── */
+            /* ─── Status text ──────────────────────────────────────────────────── */
 
-      .brika-wordmark {
-        font-size: 22px;
-        font-weight: 600;
-        letter-spacing: -0.02em;
-        margin: 0 0 6px;
-        display: none;
-      }
-      .brika-tagline {
-        font-size: 13.5px;
-        color: var(--brika-muted);
-        margin: 0 0 20px;
-        line-height: 1.5;
-        display: none;
-      }
-      .brika-status {
-        font-size: 14px;
-        font-weight: 500;
-        margin: 0 0 6px;
-        letter-spacing: -0.01em;
-        opacity: 0;
-        animation: brika-fade-in 0.5s ease-out 0.7s forwards;
-      }
-      .brika-detail {
-        font-size: 12px;
-        color: var(--brika-muted);
-        margin: 0;
-        font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
-        word-break: break-all;
-        min-height: 1em;
-        opacity: 0;
-        animation: brika-fade-in 0.5s ease-out 0.9s forwards;
-      }
-      #brika-bootstrap[data-brika-phase='error'] .brika-status {
-        color: var(--brika-error);
-      }
-      @keyframes brika-fade-in {
-        to { opacity: 1; }
-      }
+            .brika-wordmark {
+              font-size: 22px;
+              font-weight: 600;
+              letter-spacing: -0.02em;
+              margin: 0 0 6px;
+              display: none;
+            }
+            .brika-tagline {
+              font-size: 13.5px;
+              color: var(--brika-muted);
+              margin: 0 0 20px;
+              line-height: 1.5;
+              display: none;
+            }
+            .brika-status {
+              font-size: 14px;
+              font-weight: 500;
+              margin: 0 0 6px;
+              letter-spacing: -0.01em;
+              opacity: 0;
+              animation: brika-fade-in 0.5s ease-out 0.7s forwards;
+            }
+            .brika-detail {
+              font-size: 12px;
+              color: var(--brika-muted);
+              margin: 0;
+              font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+              word-break: break-all;
+              min-height: 1em;
+              opacity: 0;
+              animation: brika-fade-in 0.5s ease-out 0.9s forwards;
+            }
+            @keyframes brika-fade-in {
+              to { opacity: 1; }
+            }
 
-      /* ─── Landing form (shown when no hub name is in the URL) ─────────── */
+            /* ─── Error card ───────────────────────────────────────────────────── */
 
-      .brika-landing {
-        display: none;
-        text-align: left;
-      }
-      #brika-bootstrap[data-brika-phase='landing'] .brika-wordmark,
-      #brika-bootstrap[data-brika-phase='landing'] .brika-tagline,
-      #brika-bootstrap[data-brika-phase='landing'] .brika-landing {
-        display: block;
-      }
-      #brika-bootstrap[data-brika-phase='landing'] .brika-status,
-      #brika-bootstrap[data-brika-phase='landing'] .brika-detail {
-        display: none;
-      }
-      #brika-bootstrap[data-brika-phase='landing'] .brika-card {
-        text-align: center;
-      }
+            .brika-error-card {
+              display: none;
+              text-align: center;
+              margin-top: 4px;
+            }
+            #brika-bootstrap[data-brika-phase='error'] .brika-status,
+            #brika-bootstrap[data-brika-phase='error'] .brika-detail {
+              display: none;
+            }
+            #brika-bootstrap[data-brika-phase='error'] .brika-error-card {
+              display: block;
+              animation: brika-fade-in 0.4s ease-out forwards;
+            }
+            .brika-error-title {
+              font-size: 16px;
+              font-weight: 600;
+              margin: 0 0 8px;
+              letter-spacing: -0.01em;
+              color: var(--brika-fg);
+            }
+            .brika-error-detail {
+              font-size: 13.5px;
+              color: var(--brika-muted);
+              margin: 0 0 20px;
+              line-height: 1.5;
+              max-width: 340px;
+              margin-left: auto;
+              margin-right: auto;
+            }
+            .brika-error-actions {
+              display: flex;
+              gap: 8px;
+              justify-content: center;
+              flex-wrap: wrap;
+            }
+            .brika-error-actions .brika-button {
+              padding: 9px 16px;
+            }
+            .brika-error-secondary {
+              padding: 9px 16px;
+              font: inherit;
+              font-size: 13px;
+              font-weight: 500;
+              color: var(--brika-fg);
+              background: transparent;
+              border: 1px solid var(--brika-border);
+              border-radius: 10px;
+              cursor: pointer;
+              transition: background 0.15s ease;
+              text-decoration: none;
+              display: inline-flex;
+              align-items: center;
+            }
+            .brika-error-secondary:hover {
+              background: var(--brika-input-bg);
+            }
+            .brika-error-retry {
+              font-size: 12px;
+              color: var(--brika-muted);
+              margin: 16px 0 0;
+              min-height: 1em;
+              font-variant-numeric: tabular-nums;
+            }
+            .brika-error-retry[data-active='1']::before {
+              content: '';
+              display: inline-block;
+              width: 6px;
+              height: 6px;
+              border-radius: 50%;
+              background: var(--brika-muted);
+              margin-right: 6px;
+              vertical-align: middle;
+              animation: brika-dot-pulse 1.8s ease-in-out infinite;
+            }
 
-      .brika-form {
-        margin: 16px auto 12px;
-        display: flex;
-        gap: 8px;
-        max-width: 360px;
-        padding: 6px;
-        background: var(--brika-input-bg);
-        border: 1px solid var(--brika-border);
-        border-radius: 14px;
-        backdrop-filter: blur(8px);
-        -webkit-backdrop-filter: blur(8px);
-        transition: border-color 0.15s ease;
-      }
-      .brika-form:focus-within {
-        border-color: color-mix(in srgb, var(--brika-fg) 35%, transparent);
-      }
-      .brika-prefix {
-        align-self: center;
-        padding-left: 10px;
-        font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
-        font-size: 13px;
-        color: var(--brika-muted);
-      }
-      .brika-input {
-        flex: 1;
-        min-width: 0;
-        border: 0;
-        background: transparent;
-        font: inherit;
-        font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
-        font-size: 13px;
-        color: var(--brika-fg);
-        padding: 8px 4px;
-        outline: none;
-      }
-      .brika-input::placeholder {
-        color: color-mix(in srgb, var(--brika-muted) 70%, transparent);
-      }
-      .brika-button {
-        padding: 8px 14px;
-        font: inherit;
-        font-size: 13px;
-        font-weight: 500;
-        color: var(--brika-mark-fg);
-        background: var(--brika-mark-bg);
-        border: 0;
-        border-radius: 10px;
-        cursor: pointer;
-        transition: opacity 0.15s ease, transform 0.1s ease;
-      }
-      .brika-button:hover {
-        opacity: 0.88;
-      }
-      .brika-button:active {
-        transform: scale(0.97);
-      }
-      .brika-button:disabled {
-        opacity: 0.35;
-        cursor: not-allowed;
-      }
-      .brika-form-error {
-        font-size: 12px;
-        color: var(--brika-error);
-        margin: 4px 0 0;
-        min-height: 1em;
-      }
-      .brika-footer {
-        margin-top: 28px;
-        font-size: 12.5px;
-        color: var(--brika-muted);
-        display: flex;
-        gap: 16px;
-        justify-content: center;
-        flex-wrap: wrap;
-      }
-      .brika-footer a {
-        color: inherit;
-        text-decoration: none;
-        border-bottom: 1px dotted color-mix(in srgb, var(--brika-muted) 50%, transparent);
-        transition: color 0.15s ease, border-color 0.15s ease;
-      }
-      .brika-footer a:hover {
-        color: var(--brika-fg);
-        border-bottom-color: var(--brika-fg);
-      }
+            /* ─── Landing form (shown when no hub name is in the URL) ─────────── */
 
-      /* ─── Reduced motion ───────────────────────────────────────────────── */
-      @media (prefers-reduced-motion: reduce) {
-        body::before,
-        .brika-shape,
-        .brika-status,
-        .brika-detail,
-        .brika-mark::after {
-          animation: none !important;
-        }
-        .brika-shape,
-        .brika-status,
-        .brika-detail {
-          opacity: 1 !important;
-          transform: none !important;
-        }
-      }
+            .brika-landing {
+              display: none;
+              text-align: left;
+            }
+            #brika-bootstrap[data-brika-phase='landing'] .brika-wordmark,
+            #brika-bootstrap[data-brika-phase='landing'] .brika-tagline,
+            #brika-bootstrap[data-brika-phase='landing'] .brika-landing {
+              display: block;
+            }
+            #brika-bootstrap[data-brika-phase='landing'] .brika-status,
+            #brika-bootstrap[data-brika-phase='landing'] .brika-detail {
+              display: none;
+            }
+            #brika-bootstrap[data-brika-phase='landing'] .brika-card {
+              text-align: center;
+            }
+
+            .brika-form {
+              margin: 16px auto 12px;
+              display: flex;
+              gap: 8px;
+              max-width: 360px;
+              padding: 6px;
+              background: var(--brika-input-bg);
+              border: 1px solid var(--brika-border);
+              border-radius: 14px;
+              backdrop-filter: blur(8px);
+              -webkit-backdrop-filter: blur(8px);
+              transition: border-color 0.15s ease;
+            }
+            .brika-form:focus-within {
+              border-color: color-mix(in srgb, var(--brika-fg) 35%, transparent);
+            }
+            .brika-prefix {
+              align-self: center;
+              padding-left: 10px;
+              font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+              font-size: 13px;
+              color: var(--brika-muted);
+            }
+            .brika-input {
+              flex: 1;
+              min-width: 0;
+              border: 0;
+              background: transparent;
+              font: inherit;
+              font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+              font-size: 13px;
+              color: var(--brika-fg);
+              padding: 8px 4px;
+              outline: none;
+            }
+            .brika-input::placeholder {
+              color: color-mix(in srgb, var(--brika-muted) 70%, transparent);
+            }
+            .brika-button {
+              padding: 8px 14px;
+              font: inherit;
+              font-size: 13px;
+              font-weight: 500;
+              color: var(--brika-mark-fg);
+              background: var(--brika-mark-bg);
+              border: 0;
+              border-radius: 10px;
+              cursor: pointer;
+              transition: opacity 0.15s ease, transform 0.1s ease;
+            }
+            .brika-button:hover {
+              opacity: 0.88;
+            }
+            .brika-button:active {
+              transform: scale(0.97);
+            }
+            .brika-button:disabled {
+              opacity: 0.35;
+              cursor: not-allowed;
+            }
+            .brika-form-error {
+              font-size: 12px;
+              color: var(--brika-error);
+              margin: 4px 0 0;
+              min-height: 1em;
+            }
+            .brika-footer {
+              margin-top: 28px;
+              font-size: 12.5px;
+              color: var(--brika-muted);
+              display: flex;
+              gap: 16px;
+              justify-content: center;
+              flex-wrap: wrap;
+            }
+            .brika-footer a {
+              color: inherit;
+              text-decoration: none;
+              border-bottom: 1px dotted color-mix(in srgb, var(--brika-muted) 50%, transparent);
+              transition: color 0.15s ease, border-color 0.15s ease;
+            }
+            .brika-footer a:hover {
+              color: var(--brika-fg);
+              border-bottom-color: var(--brika-fg);
+            }
+
+            /* ─── Reduced motion ───────────────────────────────────────────────── */
+            @media (prefers-reduced-motion: reduce) {
+              body::before,
+              .brika-shape,
+              .brika-status,
+              .brika-detail,
+              .brika-mark::after {
+                animation: none !important;
+              }
+              .brika-shape,
+              .brika-status,
+              .brika-detail {
+                opacity: 1 !important;
+                transform: none !important;
+              }
+            }
     </style>
   </head>
   <body>
     <div id="brika-bootstrap" data-brika-phase="connecting">
       <div class="brika-card">
         <div class="brika-mark" aria-hidden="true">
+          <span class="brika-status-dot" aria-hidden="true"></span>
           <svg viewBox="0 0 240 240" fill="currentColor">
             <!-- "B" upper and "R" lower — slotted in last to read as the name being completed. -->
             <path
@@ -400,6 +509,17 @@
         <!-- Connecting / loading view -->
         <p class="brika-status" data-brika-status>Connecting to your hub…</p>
         <p class="brika-detail" data-brika-detail></p>
+
+        <!-- Error view — populated by bootstrap.ts when something fails -->
+        <div class="brika-error-card" role="alert">
+          <h2 class="brika-error-title" data-brika-error-title>Couldn't reach your hub</h2>
+          <p class="brika-error-detail" data-brika-error-detail></p>
+          <div class="brika-error-actions">
+            <button type="button" class="brika-button" data-brika-error-primary>Try again</button>
+            <a href="/" class="brika-error-secondary" data-brika-error-secondary>Different hub</a>
+          </div>
+          <p class="brika-error-retry" data-brika-error-retry></p>
+        </div>
 
         <!-- Landing view (no hub name in URL) -->
         <h1 class="brika-wordmark">BRIKA</h1>

@@ -62,9 +62,22 @@ function dlog(...args: unknown[]): void {
 
 type Phase = 'landing' | 'connecting' | 'fetching' | 'loading' | 'error' | 'done';
 
+type ErrorAction =
+  | { kind: 'retry'; onRetry: () => void; secondaryHref?: string }
+  | { kind: 'change-name' }
+  | { kind: 'help'; href: string };
+
+interface ErrorView {
+  title: string;
+  detail: string;
+  action: ErrorAction;
+  /** Seconds before an auto-retry fires; omit to disable. */
+  autoRetryAfter?: number;
+}
+
 interface StatusSurface {
   setPhase(phase: Phase, message?: string): void;
-  showError(title: string, detail?: string): void;
+  showError(view: ErrorView): void;
 }
 
 function createStatusSurface(): StatusSurface {
@@ -73,19 +86,158 @@ function createStatusSurface(): StatusSurface {
     return { setPhase: () => {}, showError: () => {} };
   }
   const statusEl = root.querySelector<HTMLElement>('[data-brika-status]');
-  const detailEl = root.querySelector<HTMLElement>('[data-brika-detail]');
+  const errorTitle = root.querySelector<HTMLElement>('[data-brika-error-title]');
+  const errorDetail = root.querySelector<HTMLElement>('[data-brika-error-detail]');
+  const errorPrimary = root.querySelector<HTMLButtonElement>('[data-brika-error-primary]');
+  const errorSecondary = root.querySelector<HTMLAnchorElement>('[data-brika-error-secondary]');
+  const errorRetry = root.querySelector<HTMLElement>('[data-brika-error-retry]');
+
+  let countdownTimer: ReturnType<typeof setInterval> | null = null;
+  const stopCountdown = (): void => {
+    if (countdownTimer !== null) {
+      clearInterval(countdownTimer);
+      countdownTimer = null;
+    }
+    if (errorRetry) {
+      errorRetry.dataset.active = '';
+      errorRetry.textContent = '';
+    }
+  };
+
   return {
     setPhase(phase, message) {
       root.dataset.brikaPhase = phase;
+      if (phase !== 'error') {
+        stopCountdown();
+      }
       if (statusEl && message) {
         statusEl.textContent = message;
       }
     },
-    showError(title, detail) {
+    showError(view) {
+      stopCountdown();
       root.dataset.brikaPhase = 'error';
-      if (statusEl) statusEl.textContent = title;
-      if (detailEl && detail) detailEl.textContent = detail;
+      if (errorTitle) errorTitle.textContent = view.title;
+      if (errorDetail) errorDetail.textContent = view.detail;
+
+      if (errorPrimary) {
+        errorPrimary.textContent =
+          view.action.kind === 'retry'
+            ? 'Try again'
+            : view.action.kind === 'change-name'
+              ? 'Different hub'
+              : 'Get help';
+        errorPrimary.onclick = (): void => {
+          if (view.action.kind === 'retry') {
+            stopCountdown();
+            view.action.onRetry();
+          } else if (view.action.kind === 'change-name') {
+            location.href = '/';
+          } else {
+            window.open(view.action.href, '_blank', 'noopener');
+          }
+        };
+      }
+      if (errorSecondary) {
+        if (view.action.kind === 'retry') {
+          errorSecondary.textContent = 'Different hub';
+          errorSecondary.href = '/';
+          errorSecondary.style.display = '';
+        } else {
+          errorSecondary.style.display = 'none';
+        }
+      }
+      if (
+        view.action.kind === 'retry' &&
+        typeof view.autoRetryAfter === 'number' &&
+        view.autoRetryAfter > 0 &&
+        errorRetry
+      ) {
+        let remaining = view.autoRetryAfter;
+        const action = view.action;
+        const render = (): void => {
+          errorRetry.dataset.active = '1';
+          errorRetry.textContent = `Auto-retrying in ${remaining}s…`;
+        };
+        render();
+        countdownTimer = setInterval(() => {
+          remaining -= 1;
+          if (remaining <= 0) {
+            stopCountdown();
+            action.onRetry();
+            return;
+          }
+          render();
+        }, 1000);
+      }
     },
+  };
+}
+
+// ─── Error classification ─────────────────────────────────────────────────
+
+interface ErrorClassification {
+  title: string;
+  detail: string;
+  /** 'retry' for transient failures, 'change-name' for unknown hubs, 'help' for setup issues. */
+  kind: 'retry' | 'change-name' | 'help';
+  /** Whether to auto-retry (in seconds). Only meaningful for `kind === 'retry'`. */
+  autoRetry?: number;
+}
+
+function classifyError(err: unknown, hubName: string): ErrorClassification {
+  const message = err instanceof Error ? err.message : String(err);
+  // 404 from /v1/tickets — the name was never claimed.
+  if (/Unknown hub|404/.test(message)) {
+    return {
+      title: `No hub named "${hubName}"`,
+      detail:
+        "That name isn't registered on this coordinator. Double-check the URL — names are case-insensitive but must match exactly.",
+      kind: 'change-name',
+    };
+  }
+  // Hub never opened its UI handler — older version, no remote-access support.
+  if (/missing a module entry|outdated hub/i.test(message)) {
+    return {
+      title: 'Your hub needs an update',
+      detail: `"${hubName}" is running an older version of Brika that doesn't serve its UI through the bridge yet. Update the hub and reload this page.`,
+      kind: 'help',
+    };
+  }
+  // WS-level failures are usually the coordinator side.
+  if (/Signaling WS|open timed out|errored before open/.test(message)) {
+    return {
+      title: "Can't reach the signaling service",
+      detail:
+        "The Brika coordinator might be temporarily down. This usually clears up on its own — we'll retry automatically.",
+      kind: 'retry',
+      autoRetry: 30,
+    };
+  }
+  // Data-channel + WebRTC failures = the hub itself is offline.
+  if (/Data channel|WebRTC connection (failed|closed)/.test(message)) {
+    return {
+      title: 'Your hub looks offline',
+      detail: `"${hubName}" isn't reachable right now. Make sure the device is powered on and connected to the internet, then try again.`,
+      kind: 'retry',
+      autoRetry: 30,
+    };
+  }
+  // Generic network/fetch failure — coordinator HTTP didn't even respond.
+  if (/Failed to fetch|NetworkError|Load failed/i.test(message)) {
+    return {
+      title: 'Network error',
+      detail:
+        "Couldn't reach the Brika coordinator at all. Check your internet connection and try again.",
+      kind: 'retry',
+      autoRetry: 15,
+    };
+  }
+  return {
+    title: `Couldn't reach "${hubName}"`,
+    detail: message,
+    kind: 'retry',
+    autoRetry: 30,
   };
 }
 
@@ -796,21 +948,12 @@ function showLanding(status: StatusSurface): void {
 
 // ─── Main ──────────────────────────────────────────────────────────────────
 
-async function main(): Promise<void> {
-  const status = createStatusSurface();
-  const hubName = readHubName();
-  if (!hubName) {
-    showLanding(status);
-    return;
-  }
-
+async function attemptConnect(hubName: string, status: StatusSurface): Promise<void> {
+  status.setPhase('connecting', `Connecting to ${hubName}…`);
   const coordinator = resolveCoordinator();
-  dlog('main', { hubName, coordinator, debug: DEBUG });
-
-  // Kick off SW registration AND ticket mint in parallel — both are
-  // pre-requisites and neither depends on the other.
+  dlog('attemptConnect', { hubName, coordinator, debug: DEBUG });
+  // SW registration + ticket mint run in parallel — independent prerequisites.
   const swPromise = ensureServiceWorker();
-
   let peer: PeerHandle | null = null;
   try {
     const ticket = await mintTicket(hubName, coordinator);
@@ -822,10 +965,42 @@ async function main(): Promise<void> {
     status.setPhase('done');
   } catch (err) {
     if (peer) peer.close();
-    const message = err instanceof Error ? err.message : String(err);
-    dlog('failed', err);
-    status.showError(`Couldn't reach hub "${hubName}"`, message);
+    dlog('attemptConnect failed', err);
+    const classification = classifyError(err, hubName);
+    const retry = (): void => {
+      void attemptConnect(hubName, status);
+    };
+    if (classification.kind === 'retry') {
+      status.showError({
+        title: classification.title,
+        detail: classification.detail,
+        action: { kind: 'retry', onRetry: retry },
+        autoRetryAfter: classification.autoRetry,
+      });
+    } else if (classification.kind === 'change-name') {
+      status.showError({
+        title: classification.title,
+        detail: classification.detail,
+        action: { kind: 'change-name' },
+      });
+    } else {
+      status.showError({
+        title: classification.title,
+        detail: classification.detail,
+        action: { kind: 'help', href: 'https://brika.dev/docs/remote-access' },
+      });
+    }
   }
+}
+
+async function main(): Promise<void> {
+  const status = createStatusSurface();
+  const hubName = readHubName();
+  if (!hubName) {
+    showLanding(status);
+    return;
+  }
+  await attemptConnect(hubName, status);
 }
 
 await main();
