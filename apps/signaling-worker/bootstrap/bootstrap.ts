@@ -60,7 +60,7 @@ function dlog(...args: unknown[]): void {
 
 // ─── Status surface ────────────────────────────────────────────────────────
 
-type Phase = 'connecting' | 'fetching' | 'loading' | 'error' | 'done';
+type Phase = 'landing' | 'connecting' | 'fetching' | 'loading' | 'error' | 'done';
 
 interface StatusSurface {
   setPhase(phase: Phase, message?: string): void;
@@ -758,13 +758,49 @@ function injectGraph(graph: AssetGraph): void {
   document.body.appendChild(entry);
 }
 
+// ─── Landing (hub.brika.dev with no name) ─────────────────────────────────
+
+/**
+ * Switch the splash into "landing" mode: shows the wordmark, tagline, and a
+ * little input that takes a hub name and navigates to `/<name>`. Used when
+ * the URL doesn't identify any hub — far better UX than the previous
+ * "No hub specified" error.
+ */
+function showLanding(status: StatusSurface): void {
+  status.setPhase('landing');
+  const form = document.querySelector<HTMLFormElement>('[data-brika-form]');
+  const input = document.querySelector<HTMLInputElement>('[data-brika-input]');
+  const error = document.querySelector<HTMLElement>('[data-brika-form-error]');
+  const submit = document.querySelector<HTMLButtonElement>('[data-brika-submit]');
+  if (!form || !input || !error || !submit) {
+    return;
+  }
+  submit.disabled = true;
+  input.addEventListener('input', () => {
+    submit.disabled = input.value.trim().length < 4;
+    if (error.textContent) error.textContent = '';
+  });
+  form.addEventListener('submit', (ev) => {
+    ev.preventDefault();
+    const candidate = input.value.trim().toLowerCase();
+    if (!isValidHubName(candidate)) {
+      error.textContent =
+        'Names are 4–32 chars: lowercase letters, digits, hyphens. Must start with a letter and end alphanumeric.';
+      return;
+    }
+    // Navigate so the worker stamps the meta tag and we go through the
+    // normal bootstrap path on the next page load.
+    location.href = `/${candidate}`;
+  });
+}
+
 // ─── Main ──────────────────────────────────────────────────────────────────
 
 async function main(): Promise<void> {
   const status = createStatusSurface();
   const hubName = readHubName();
   if (!hubName) {
-    status.showError('No hub specified', 'Open a URL of the form hub.brika.dev/<name>.');
+    showLanding(status);
     return;
   }
 
