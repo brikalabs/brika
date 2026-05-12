@@ -380,17 +380,33 @@ export async function buildAssetGraph(
  * Replace the bootstrap with the hub's app. After this runs the React
  * tree no longer drives the page — the loaded UI takes over its own
  * `#root` mount.
+ *
+ * CSS isolation: the bootstrap and the hub UI both ship Tailwind +
+ * Clay with identical theme-token variables, body resets, etc. If we
+ * just added the hub's stylesheets to `<head>` without removing the
+ * bootstrap's, both would stay active and the last-loaded rule would
+ * win at the CSS-specificity tie — fragile and prone to subtle leaks
+ * (e.g. the bootstrap's `--background` value overriding the hub's
+ * after a Vite re-shuffle). Solution: snapshot the bootstrap's
+ * `<link rel="stylesheet">` elements + `<style>` blocks BEFORE
+ * appending the hub's, wait for the hub's sheets to load, and then
+ * detach the bootstrap's. No FOUC because the hub's CSS is fully
+ * resolved before the bootstrap's leaves.
  */
-export function injectGraph(graph: AssetGraph, rootId: string): void {
+export async function injectGraph(graph: AssetGraph, rootId: string): Promise<void> {
   if (graph.title) {
     document.title = graph.title;
   }
 
-  for (const css of graph.cssLinks) {
-    const link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.href = css;
-    document.head.appendChild(link);
+  const bootstrapStyleNodes: Element[] = [
+    ...document.head.querySelectorAll('link[rel="stylesheet"]'),
+    ...document.head.querySelectorAll('style'),
+  ];
+
+  await Promise.all(graph.cssLinks.map((href) => appendStylesheet(href)));
+
+  for (const node of bootstrapStyleNodes) {
+    node.remove();
   }
 
   swapRoot(rootId);
@@ -408,6 +424,22 @@ export function injectGraph(graph: AssetGraph, rootId: string): void {
     }
     document.body.appendChild(script);
   }
+}
+
+/**
+ * Append a `<link rel="stylesheet">` and resolve once it has loaded
+ * (or errored). Awaiting all hub stylesheets before removing the
+ * bootstrap's prevents a flash of unstyled content during handoff.
+ */
+function appendStylesheet(href: string): Promise<void> {
+  return new Promise<void>((resolve) => {
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = href;
+    link.addEventListener('load', () => resolve(), { once: true });
+    link.addEventListener('error', () => resolve(), { once: true });
+    document.head.appendChild(link);
+  });
 }
 
 /**

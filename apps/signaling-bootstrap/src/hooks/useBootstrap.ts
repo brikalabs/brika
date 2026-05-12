@@ -51,7 +51,7 @@ export function useBootstrap(hubName: string | null): BootstrapState {
       setPhase('loading');
       setStatus('Starting app…');
       setDetail(`${graph.scripts.length} scripts · ${graph.cssLinks.length} stylesheets`);
-      injectGraph(graph, 'root');
+      await injectGraph(graph, 'root');
       setPhase('done');
     } catch (err) {
       if (peer) {
