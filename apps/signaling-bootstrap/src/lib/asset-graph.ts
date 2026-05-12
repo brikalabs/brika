@@ -52,13 +52,17 @@ const IMPORT_PATTERNS = [IMPORT_FROM_RE, IMPORT_CALL_RE, IMPORT_SIDE_RE];
 const CSS_URL_RE = /url\(\s*['"]?([^)'"]+)['"]?\s*\)/g;
 
 /**
- * HMR-only modules. The Vite HMR client opens a WebSocket back to the dev
- * server, which would target `hub.brika.dev` (the bootstrap origin) and
- * fail. React-refresh's preamble injects globals we don't need in this
- * context either. Skipping them keeps the console quiet without affecting
- * rendering correctness.
+ * Module paths we don't want to *inject* as top-level scripts because
+ * they'd open a WebSocket back to the dev server (which would target
+ * `hub.brika.dev` and fail noisily). They're still cached so transitive
+ * imports resolve through the SW.
+ *
+ * `/@react-refresh` is NOT in this set: the inline preamble Vite emits
+ * imports it and calls `injectIntoGlobalHook(window)`, then sets the
+ * `$RefreshReg$` / `$RefreshSig$` globals every transformed component
+ * file references. Skipping it would crash the first component render.
  */
-const HMR_ONLY_PATHS = new Set(['/@vite/client', '/@vite/env', '/@react-refresh']);
+const NO_INJECT_PATHS = new Set(['/@vite/client', '/@vite/env']);
 
 export interface ModuleScriptRef {
   /** Absolute hub-origin path; mutually exclusive with `inline`. */
@@ -84,9 +88,9 @@ export interface AssetGraphProgress {
 
 export type ProgressListener = (event: AssetGraphProgress) => void;
 
-function isHmrOnly(url: string): boolean {
+function shouldNotInject(url: string): boolean {
   const path = url.split('?')[0] ?? url;
-  return HMR_ONLY_PATHS.has(path);
+  return NO_INJECT_PATHS.has(path);
 }
 
 function isAbsolutePath(spec: string): boolean {
@@ -143,7 +147,7 @@ function scanJSImports(text: string, seen: ReadonlySet<string>): string[] {
   for (const re of IMPORT_PATTERNS) {
     for (const m of text.matchAll(re)) {
       const spec = m[1];
-      if (spec && isAbsolutePath(spec) && !seen.has(spec) && !isHmrOnly(spec)) {
+      if (spec && isAbsolutePath(spec) && !seen.has(spec)) {
         out.push(spec);
       }
     }
@@ -204,11 +208,11 @@ async function primeCache(
 ): Promise<number> {
   const cache = await caches.open(ASSET_CACHE);
   const visited = new Set<string>();
-  const queue: string[] = initial.filter((u) => !isHmrOnly(u));
+  const queue: string[] = [...initial];
   let fetched = 0;
   while (queue.length > 0) {
     const url = queue.shift();
-    if (!url || visited.has(url) || isHmrOnly(url)) {
+    if (!url || visited.has(url)) {
       continue;
     }
     visited.add(url);
@@ -324,7 +328,7 @@ export function injectGraph(graph: AssetGraph, rootId: string): void {
   swapRoot(rootId);
 
   for (const s of graph.scripts) {
-    if (s.src && isHmrOnly(s.src)) {
+    if (s.src && shouldNotInject(s.src)) {
       continue;
     }
     const script = document.createElement('script');
