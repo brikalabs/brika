@@ -24,7 +24,7 @@ import {
   Trash2,
   XCircle,
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { memo, useEffect, useState } from 'react';
 import { useLocale } from '@/lib/use-locale';
 import {
   type RemoteAccessStatus,
@@ -307,7 +307,9 @@ function StateDescription({ state }: Readonly<{ state: SignalingState }>) {
   );
 }
 
-function ConnectedView({ status }: Readonly<{ status: RemoteAccessStatus }>) {
+const ConnectedView = memo(function ConnectedView({
+  status,
+}: Readonly<{ status: RemoteAccessStatus }>) {
   const { t } = useLocale();
   const forget = useForgetRemoteAccess();
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -399,7 +401,7 @@ function ConnectedView({ status }: Readonly<{ status: RemoteAccessStatus }>) {
       </AlertDialog>
     </div>
   );
-}
+});
 
 // ─── Top-level section ──────────────────────────────────────────────────────
 

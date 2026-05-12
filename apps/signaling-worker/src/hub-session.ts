@@ -21,6 +21,8 @@ import {
   type IceServer,
   PROTOCOL_VERSION,
   type SignalingMessage,
+  translateFromClient,
+  translateFromHub,
 } from '@brika/remote-access-protocol';
 
 const ICE_SERVERS: ReadonlyArray<IceServer> = [
@@ -255,111 +257,34 @@ export class HubSession {
   // ─── Routing helpers ────────────────────────────────────────────────────
 
   #routeFromHub(_name: string, msg: SignalingMessage): void {
-    switch (msg.kind) {
-      case 'hub.answer': {
-        const client = this.#findClient(msg.sessionId);
-        client?.send(
-          encodeSignaling({
-            v: PROTOCOL_VERSION,
-            kind: 'session.answer',
-            sessionId: msg.sessionId,
-            sdp: msg.sdp,
-          })
-        );
-        return;
-      }
-      case 'hub.ice': {
-        const client = this.#findClient(msg.sessionId);
-        client?.send(
-          encodeSignaling({
-            v: PROTOCOL_VERSION,
-            kind: 'session.ice',
-            sessionId: msg.sessionId,
-            candidate: msg.candidate,
-            from: 'hub',
-          })
-        );
-        return;
-      }
-      case 'hub.abort': {
-        const client = this.#findClient(msg.sessionId);
-        if (client) {
-          client.send(
-            encodeSignaling({
-              v: PROTOCOL_VERSION,
-              kind: 'session.error',
-              sessionId: msg.sessionId,
-              code: 'hub-abort',
-              message: msg.reason ?? 'Hub aborted session',
-            })
-          );
-          client.close(4002, 'hub abort');
-        }
-        return;
-      }
-      case 'hub.register':
-        // Hubs register implicitly by connecting — nothing to do here.
-        return;
-      default:
-        return;
+    if (msg.kind !== 'hub.answer' && msg.kind !== 'hub.ice' && msg.kind !== 'hub.abort') {
+      // `hub.register` is implicit on connect; unknown kinds are no-ops.
+      return;
+    }
+    const client = this.#findClient(msg.sessionId);
+    if (!client) {
+      return;
+    }
+    client.send(encodeSignaling(translateFromHub(msg)));
+    if (msg.kind === 'hub.abort') {
+      client.close(4002, 'hub abort');
     }
   }
 
   #routeFromClient(att: Attachment & { role: 'client' }, msg: SignalingMessage): void {
-    switch (msg.kind) {
-      case 'client.offer': {
-        const hub = this.#state.getWebSockets('hub')[0];
-        if (!hub) {
-          // hub left between accept and offer
-          return;
-        }
-        hub.send(
-          encodeSignaling({
-            v: PROTOCOL_VERSION,
-            kind: 'session.offer',
-            sessionId: att.sessionId,
-            sdp: msg.sdp,
-            clientCaps: msg.caps,
-            iceServers: ICE_SERVERS,
-          })
-        );
-        return;
-      }
-      case 'client.ice': {
-        if (msg.sessionId !== att.sessionId) {
-          return;
-        }
-        const hub = this.#state.getWebSockets('hub')[0];
-        hub?.send(
-          encodeSignaling({
-            v: PROTOCOL_VERSION,
-            kind: 'session.ice',
-            sessionId: att.sessionId,
-            candidate: msg.candidate,
-            from: 'client',
-          })
-        );
-        return;
-      }
-      case 'client.abort': {
-        if (msg.sessionId !== att.sessionId) {
-          return;
-        }
-        const hub = this.#state.getWebSockets('hub')[0];
-        hub?.send(
-          encodeSignaling({
-            v: PROTOCOL_VERSION,
-            kind: 'session.error',
-            sessionId: att.sessionId,
-            code: 'client-abort',
-            message: msg.reason ?? 'Client aborted',
-          })
-        );
-        return;
-      }
-      default:
-        return;
+    if (msg.kind !== 'client.offer' && msg.kind !== 'client.ice' && msg.kind !== 'client.abort') {
+      return;
     }
+    // ICE and abort frames must carry the client's own session id.
+    if (msg.kind !== 'client.offer' && msg.sessionId !== att.sessionId) {
+      return;
+    }
+    const hub = this.#state.getWebSockets('hub')[0];
+    if (!hub) {
+      // hub left between accept and the frame — drop silently
+      return;
+    }
+    hub.send(encodeSignaling(translateFromClient(msg, att.sessionId, ICE_SERVERS)));
   }
 
   #findClient(sessionId: string): WebSocket | undefined {

@@ -15,6 +15,12 @@ export {
 } from './claims-validation';
 export { decodeRpc, decodeSignaling, encodeRpc, encodeSignaling } from './codec';
 export {
+  type ClientInbound,
+  type HubInbound,
+  translateFromClient,
+  translateFromHub,
+} from './route';
+export {
   type AbortMessage,
   type HelloMessage,
   type RequestMessage,

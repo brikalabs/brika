@@ -12,6 +12,8 @@ import {
   type IceServer,
   PROTOCOL_VERSION,
   type SignalingMessage,
+  translateFromClient,
+  translateFromHub,
 } from '@brika/remote-access-protocol';
 import type { ClientConnection, HubConnection, Registry } from './registry';
 
@@ -54,118 +56,52 @@ export function routeFrame(deps: RouterDeps, peer: Peer, raw: string): void {
 }
 
 function routeFromHub(deps: RouterDeps, hub: HubConnection, msg: SignalingMessage): void {
-  switch (msg.kind) {
-    case 'hub.answer': {
-      const session = deps.registry.getSession(msg.sessionId);
-      if (session?.hubName !== hub.name) {
-        return;
-      }
-      send(session.socket, {
-        v: PROTOCOL_VERSION,
-        kind: 'session.answer',
-        sessionId: msg.sessionId,
-        sdp: msg.sdp,
-      });
-      return;
-    }
-    case 'hub.ice': {
-      const session = deps.registry.getSession(msg.sessionId);
-      if (session?.hubName !== hub.name) {
-        return;
-      }
-      send(session.socket, {
-        v: PROTOCOL_VERSION,
-        kind: 'session.ice',
-        sessionId: msg.sessionId,
-        candidate: msg.candidate,
-        from: 'hub',
-      });
-      return;
-    }
-    case 'hub.abort': {
-      const session = deps.registry.getSession(msg.sessionId);
-      if (session?.hubName !== hub.name) {
-        return;
-      }
-      send(session.socket, {
-        v: PROTOCOL_VERSION,
-        kind: 'session.error',
-        sessionId: msg.sessionId,
-        code: 'hub-abort',
-        message: msg.reason ?? 'Hub aborted session',
-      });
-      session.socket.close(4002, 'hub abort');
-      deps.registry.closeSession(msg.sessionId, hub.socket);
-      return;
-    }
-    default:
-      // Re-registers from the same socket, and frames the hub shouldn't be
-      // sending, are both no-ops.
-      return;
+  if (msg.kind !== 'hub.answer' && msg.kind !== 'hub.ice' && msg.kind !== 'hub.abort') {
+    // Re-registers from the same socket, and frames the hub shouldn't be
+    // sending, are both no-ops.
+    return;
+  }
+  const session = deps.registry.getSession(msg.sessionId);
+  if (session?.hubName !== hub.name) {
+    return;
+  }
+  send(session.socket, translateFromHub(msg));
+  if (msg.kind === 'hub.abort') {
+    session.socket.close(4002, 'hub abort');
+    deps.registry.closeSession(msg.sessionId, hub.socket);
   }
 }
 
 function routeFromClient(deps: RouterDeps, client: ClientConnection, msg: SignalingMessage): void {
-  switch (msg.kind) {
-    case 'client.offer': {
-      const hub = deps.registry.getHub(client.hubName);
-      if (!hub) {
-        send(client.socket, {
-          v: PROTOCOL_VERSION,
-          kind: 'session.error',
-          sessionId: client.sessionId,
-          code: 'hub-offline',
-          message: `Hub "${client.hubName}" is not online`,
-        });
-        return;
-      }
-      send(hub.socket, {
+  if (msg.kind !== 'client.offer' && msg.kind !== 'client.ice' && msg.kind !== 'client.abort') {
+    return;
+  }
+  // ICE and abort frames must carry the client's own session id.
+  if (msg.kind !== 'client.offer' && msg.sessionId !== client.sessionId) {
+    return;
+  }
+  const hub = deps.registry.getHub(client.hubName);
+  if (!hub) {
+    // Only `client.offer` gets a 'hub-offline' courtesy reply; ice/abort are
+    // best-effort fire-and-forget.
+    if (msg.kind === 'client.offer') {
+      send(client.socket, {
         v: PROTOCOL_VERSION,
-        kind: 'session.offer',
+        kind: 'session.error',
         sessionId: client.sessionId,
-        sdp: msg.sdp,
-        clientCaps: msg.caps,
-        iceServers: deps.iceServers,
+        code: 'hub-offline',
+        message: `Hub "${client.hubName}" is not online`,
       });
-      return;
     }
-    case 'client.ice': {
-      // Clients can only emit ICE for their own session id.
-      if (msg.sessionId !== client.sessionId) {
-        return;
-      }
-      const hub = deps.registry.getHub(client.hubName);
-      if (!hub) {
-        return;
-      }
-      send(hub.socket, {
-        v: PROTOCOL_VERSION,
-        kind: 'session.ice',
-        sessionId: client.sessionId,
-        candidate: msg.candidate,
-        from: 'client',
-      });
-      return;
-    }
-    case 'client.abort': {
-      if (msg.sessionId !== client.sessionId) {
-        return;
-      }
-      const hub = deps.registry.getHub(client.hubName);
-      if (hub) {
-        send(hub.socket, {
-          v: PROTOCOL_VERSION,
-          kind: 'session.error',
-          sessionId: client.sessionId,
-          code: 'client-abort',
-          message: msg.reason ?? 'Client aborted',
-        });
-      }
+    if (msg.kind === 'client.abort') {
       deps.registry.closeSession(client.sessionId, client.socket);
       client.socket.close(1000, 'client abort');
-      return;
     }
-    default:
-      return;
+    return;
+  }
+  send(hub.socket, translateFromClient(msg, client.sessionId, deps.iceServers));
+  if (msg.kind === 'client.abort') {
+    deps.registry.closeSession(client.sessionId, client.socket);
+    client.socket.close(1000, 'client abort');
   }
 }
