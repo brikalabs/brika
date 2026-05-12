@@ -27,7 +27,10 @@ export { routes } from './routes';
  * Returns `undefined` (default basepath `/`) on LAN / dev hosts.
  */
 function detectBasepath(): string | undefined {
-  if (typeof document === 'undefined' || typeof globalThis.location === 'undefined') {
+  // Use `globalThis.x` so an undeclared global returns `undefined`
+  // instead of throwing — keeps SSR/test contexts happy without the
+  // `typeof` check Sonar S7741 flags as unidiomatic.
+  if (globalThis.document === undefined || globalThis.location === undefined) {
     return undefined;
   }
   const metaHub = document.querySelector('meta[name="brika:hub"]')?.getAttribute('content');

@@ -51,8 +51,11 @@ const IMPORT_PATTERNS = [IMPORT_FROM_RE, IMPORT_CALL_RE, IMPORT_SIDE_RE];
  * Asset URLs referenced from CSS (background-image, @font-face, etc).
  * Vite serves these from `/assets/` in prod and `/@fs/` (or `/src/`) in
  * dev — both are absolute paths so the same scan works.
+ *
+ * Quantifiers are bounded so the regex is provably linear and can't be
+ * tripped into super-linear matching by adversarial CSS (Sonar S5852).
  */
-const CSS_URL_RE = /url\(\s*['"]?([^)'"]+)['"]?\s*\)/g;
+const CSS_URL_RE = /url\(\s{0,8}['"]?([^)'"]{1,2048})['"]?\s{0,8}\)/g;
 
 /**
  * Module paths we don't want to *inject* as top-level scripts because
