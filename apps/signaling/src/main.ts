@@ -15,7 +15,13 @@
  * directly and this process drops out.
  */
 
-import { decodeSignaling, type IceServer, PROTOCOL_VERSION } from '@brika/remote-access-protocol';
+import {
+  constantTimeEqual,
+  decodeSignaling,
+  type IceServer,
+  PROTOCOL_VERSION,
+  parseSubprotocols,
+} from '@brika/remote-access-protocol';
 import { ClaimError, ClaimStore } from './claims';
 import { Registry } from './registry';
 import { routeFrame } from './router';
@@ -31,35 +37,6 @@ function parseIceServers(): ReadonlyArray<IceServer> {
     }
   }
   return [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun.cloudflare.com:3478' }];
-}
-
-function parseSubprotocols(header: string | null): { proto?: string; bearer?: string } {
-  if (!header) {
-    return {};
-  }
-  const out: { proto?: string; bearer?: string } = {};
-  for (const part of header.split(',')) {
-    const trimmed = part.trim();
-    if (trimmed.startsWith('brika.v')) {
-      out.proto = trimmed;
-    } else if (trimmed.startsWith('bearer.')) {
-      out.bearer = trimmed.slice('bearer.'.length);
-    } else if (trimmed.startsWith('ticket.')) {
-      out.bearer = trimmed.slice('ticket.'.length);
-    }
-  }
-  return out;
-}
-
-function constantTimeEqual(a: string, b: string): boolean {
-  if (a.length !== b.length) {
-    return false;
-  }
-  let diff = 0;
-  for (let i = 0; i < a.length; i++) {
-    diff |= (a.codePointAt(i) ?? 0) ^ (b.codePointAt(i) ?? 0);
-  }
-  return diff === 0;
 }
 
 /**

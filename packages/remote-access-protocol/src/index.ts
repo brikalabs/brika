@@ -47,5 +47,10 @@ export {
   type SignalingMessage,
   type SignalingMessageKind,
 } from './signaling';
+export {
+  constantTimeEqual,
+  type ParsedSubprotocols,
+  parseSubprotocols,
+} from './subprotocols';
 export { mintTicket, type TicketClaims, verifyTicket } from './tickets';
 export { PROTOCOL_VERSION, type ProtocolVersion } from './version';

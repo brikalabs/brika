@@ -14,6 +14,55 @@ function formatDuration(ms: number): string {
   return ms < 1 ? `${(ms * 1000).toFixed(0)}µs` : `${ms.toFixed(2)}ms`;
 }
 
+/**
+ * CORS check for `*.brika.dev` and `hubs.brika.dev` over HTTPS — the public
+ * UI shell used when accessing the hub remotely.
+ */
+export function isBrikaSubdomainOrigin(origin: string): boolean {
+  try {
+    const url = new URL(origin);
+    const host = url.hostname.toLowerCase();
+    if (host === 'hubs.brika.dev' || host.endsWith('.hubs.brika.dev')) {
+      return url.protocol === 'https:';
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * CORS check for loopback + RFC1918 + link-local + mDNS origins. Covers
+ * everything a developer or LAN device would legitimately use to reach
+ * the hub.
+ */
+export function isPrivateNetworkOrigin(origin: string): boolean {
+  try {
+    const url = new URL(origin);
+    const host = url.hostname.toLowerCase();
+    // URL parser preserves the surrounding brackets on IPv6 hostnames, so
+    // the loopback form to match against is `[::1]`, not `::1`.
+    if (host === 'localhost' || host === '127.0.0.1' || host === '[::1]') {
+      return true;
+    }
+    if (host.endsWith('.local')) {
+      return true;
+    }
+    if (host.startsWith('10.') || host.startsWith('192.168.')) {
+      return true;
+    }
+    if (/^172\.(1[6-9]|2\d|3[01])\./.test(host)) {
+      return true;
+    }
+    if (host.startsWith('169.254.')) {
+      return true;
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
+
 @singleton()
 export class ApiServer {
   readonly #config = inject(HubConfig);
@@ -146,45 +195,7 @@ export class ApiServer {
    * theft.
    */
   #corsAllowlist(): CorsOriginMatcher {
-    const isBrikaSubdomain = (origin: string): boolean => {
-      try {
-        const url = new URL(origin);
-        const host = url.hostname.toLowerCase();
-        // The static UI shell lives at `<name>.hubs.brika.dev`. Active hub-name
-        // validation happens at the RPC/auth layer, not at CORS time.
-        if (host === 'hubs.brika.dev' || host.endsWith('.hubs.brika.dev')) {
-          return url.protocol === 'https:';
-        }
-        return false;
-      } catch {
-        return false;
-      }
-    };
-    const isPrivateNetwork = (origin: string): boolean => {
-      try {
-        const url = new URL(origin);
-        const host = url.hostname.toLowerCase();
-        if (host === 'localhost' || host === '127.0.0.1' || host === '::1') {
-          return true;
-        }
-        if (host.endsWith('.local')) {
-          return true;
-        }
-        if (host.startsWith('10.') || host.startsWith('192.168.')) {
-          return true;
-        }
-        if (/^172\.(1[6-9]|2\d|3[01])\./.test(host)) {
-          return true;
-        }
-        if (host.startsWith('169.254.')) {
-          return true;
-        }
-        return false;
-      } catch {
-        return false;
-      }
-    };
-    return [isBrikaSubdomain, isPrivateNetwork];
+    return [isBrikaSubdomainOrigin, isPrivateNetworkOrigin];
   }
 
   #setupStaticFiles(): void {

@@ -187,6 +187,103 @@ describe('routeFrame', () => {
     ).not.toThrow();
   });
 
+  it('hub.abort tears down the session and notifies the client', () => {
+    const registry = new Registry();
+    const hubSocket = makeSocket();
+    const hub = registry.registerHub('maxime', hubSocket);
+    const clientSocket = makeSocket();
+    const client = registry.openSession('maxime', clientSocket);
+    const c = ensure(client, 'client');
+
+    routeFrame(
+      { registry, iceServers: ICE },
+      { kind: 'hub', conn: hub },
+      encodeSignaling({
+        v: PROTOCOL_VERSION,
+        kind: 'hub.abort',
+        sessionId: c.sessionId,
+        reason: 'kicked',
+      })
+    );
+
+    const last = parseLast(clientSocket);
+    expect(last.kind).toBe('session.error');
+    if (last.kind === 'session.error') {
+      expect(last.code).toBe('hub-abort');
+    }
+    expect(clientSocket.closes.length).toBe(1);
+    expect(registry.getSession(c.sessionId)).toBeUndefined();
+  });
+
+  it('client.abort closes the session and notifies the hub', () => {
+    const registry = new Registry();
+    const hubSocket = makeSocket();
+    registry.registerHub('maxime', hubSocket);
+    const clientSocket = makeSocket();
+    const client = registry.openSession('maxime', clientSocket);
+    const c = ensure(client, 'client');
+
+    routeFrame(
+      { registry, iceServers: ICE },
+      { kind: 'client', conn: c },
+      encodeSignaling({
+        v: PROTOCOL_VERSION,
+        kind: 'client.abort',
+        sessionId: c.sessionId,
+        reason: 'user-cancel',
+      })
+    );
+
+    const last = parseLast(hubSocket);
+    expect(last.kind).toBe('session.error');
+    if (last.kind === 'session.error') {
+      expect(last.code).toBe('client-abort');
+    }
+    expect(clientSocket.closes.length).toBe(1);
+    expect(registry.getSession(c.sessionId)).toBeUndefined();
+  });
+
+  it('hub frames addressing an unknown session are silent no-ops', () => {
+    const registry = new Registry();
+    const hubSocket = makeSocket();
+    const hub = registry.registerHub('maxime', hubSocket);
+
+    routeFrame(
+      { registry, iceServers: ICE },
+      { kind: 'hub', conn: hub },
+      encodeSignaling({
+        v: PROTOCOL_VERSION,
+        kind: 'hub.answer',
+        sessionId: 'no-such-session',
+        sdp: 'sdp',
+      })
+    );
+    expect(hubSocket.sent).toEqual([]);
+  });
+
+  it('hub.ice for a session owned by a different hub is dropped', () => {
+    const registry = new Registry();
+    const aliceHub = registry.registerHub('alice', makeSocket());
+    const bobHub = registry.registerHub('bob', makeSocket());
+    const clientSocket = makeSocket();
+    const session = registry.openSession('alice', clientSocket);
+    const s = ensure(session, 'session');
+
+    routeFrame(
+      { registry, iceServers: ICE },
+      { kind: 'hub', conn: bobHub },
+      encodeSignaling({
+        v: PROTOCOL_VERSION,
+        kind: 'hub.ice',
+        sessionId: s.sessionId,
+        candidate: { candidate: 'forged' },
+      })
+    );
+    expect(clientSocket.sent).toEqual([]);
+    // aliceHub is the rightful owner.
+    expect(aliceHub.name).toBe('alice');
+  });
+
   it('rejects ICE for a session id the client does not own', () => {
     const registry = new Registry();
     const hubSocket = makeSocket();
@@ -232,6 +329,42 @@ describe('Registry', () => {
     // Older socket's close handler fires AFTER the new one has taken over.
     registry.unregisterHub('maxime', oldSocket);
     expect(registry.getHub('maxime')?.socket).toBe(newSocket);
+  });
+
+  it('openSession returns null when the hub is not registered', () => {
+    const registry = new Registry();
+    expect(registry.openSession('unknown', makeSocket())).toBeNull();
+  });
+
+  it('closeSession is a no-op on an unknown sessionId', () => {
+    const registry = new Registry();
+    expect(() => registry.closeSession('not-a-session')).not.toThrow();
+  });
+
+  it('closeSession rejects an originator that does not own the session', () => {
+    const registry = new Registry();
+    registry.registerHub('maxime', makeSocket());
+    const clientSocket = makeSocket();
+    const session = registry.openSession('maxime', clientSocket);
+    const s = ensure(session, 'session');
+
+    // A foreign socket (not the client and not the owning hub) can't close it.
+    registry.closeSession(s.sessionId, makeSocket());
+    expect(registry.getSession(s.sessionId)).not.toBeUndefined();
+
+    // The owning client socket can.
+    registry.closeSession(s.sessionId, clientSocket);
+    expect(registry.getSession(s.sessionId)).toBeUndefined();
+  });
+
+  it('stats() reflects current hubs and sessions', () => {
+    const registry = new Registry();
+    registry.registerHub('maxime', makeSocket());
+    registry.openSession('maxime', makeSocket());
+    const s = registry.stats();
+    expect(s.hubs).toBe(1);
+    expect(s.sessions).toBe(1);
+    expect(s.hubNames).toEqual(['maxime']);
   });
 
   it('tears down sessions when the hub disconnects', () => {
