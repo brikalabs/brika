@@ -20,19 +20,23 @@ workers_dev = true
 # the modern default; harmless when unused.
 compatibility_flags = ["nodejs_compat"]
 
-# Static UI shell. Served at `*.hubs.brika.dev` (and anywhere else this worker
-# is routed) for any path the worker code doesn't claim. Built artifact lives
-# in the UI app workspace — single bundle, no duplication.
+# Static bootstrap shell. This is NOT the Brika UI bundle — it's the tiny
+# bootstrap loader (~10 KB) that opens a WebRTC bridge to the hub and then
+# dynamic-imports the actual app code FROM that hub. Keeping the UI off the
+# Worker means the version the browser runs always matches the version the
+# hub is running; new hub features ship without redeploying the Worker.
+#
+# Built by `bun run build:bootstrap` (see apps/signaling-worker/bootstrap/).
 [assets]
-directory = "../ui/dist"
+directory = "./public"
 binding = "ASSETS"
-# SPA fallback: any unknown path returns `/index.html` so the client-side
-# router can take over.
+# SPA fallback: every unknown path returns `/index.html` so the bootstrap
+# runs regardless of which URL the user typed (hub.brika.dev/<name>,
+# hub.brika.dev/<name>/dashboard, …).
 not_found_handling = "single-page-application"
 # Worker runs first for every request. It owns /v1/* (signaling API) plus
-# the hub-name resolution that lets `hub.brika.dev/<name>` serve the same
-# UI shell as `<name>.hubs.brika.dev`. After name resolution the worker
-# hands off to the asset binding.
+# the hub-name resolution that stamps the resolved name into the bootstrap
+# shell as <meta name="brika:hub">.
 run_worker_first = true
 
 # ─── Custom domains ─────────────────────────────────────────────────────────

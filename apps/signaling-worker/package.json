@@ -6,7 +6,8 @@
   "description": "Brika signaling coordinator on Cloudflare Workers (DO + D1)",
   "scripts": {
     "dev": "wrangler dev",
-    "deploy": "wrangler deploy",
+    "deploy": "bun run build:bootstrap && wrangler deploy",
+    "build:bootstrap": "bun run bootstrap/build.ts",
     "tail": "wrangler tail",
     "test": "bun test",
     "typecheck": "tsgo --noEmit",

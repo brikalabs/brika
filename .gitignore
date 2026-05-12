@@ -46,5 +46,9 @@ biome-report.json
 **/locales/i18n-resources.d.ts
 **/locales/i18n-namespaces.ts
 
+# Bootstrap shell build output (apps/signaling-worker/bootstrap/build.ts emits
+# here; gets uploaded by wrangler as the Worker's static asset binding).
+apps/signaling-worker/public/
+
 # Claude Code local state
 .claude/
