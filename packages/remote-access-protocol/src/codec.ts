@@ -39,7 +39,7 @@ const RPC_KINDS = new Set<RpcMessageKind>([
   'response.error',
 ]);
 
-function parseEnvelope(raw: string): { v: unknown; kind: unknown } | null {
+function parseEnvelope(raw: string): { v: unknown; kind: unknown; obj: unknown } | null {
   let parsed: unknown;
   try {
     parsed = JSON.parse(raw);
@@ -50,7 +50,7 @@ function parseEnvelope(raw: string): { v: unknown; kind: unknown } | null {
     return null;
   }
   const obj = parsed as Record<string, unknown>;
-  return { v: obj.v, kind: obj.kind };
+  return { v: obj.v, kind: obj.kind, obj };
 }
 
 /**
@@ -71,7 +71,7 @@ export function decodeSignaling(raw: string): SignalingMessage | null {
   if (typeof env.kind !== 'string' || !SIGNALING_KINDS.has(env.kind as SignalingMessageKind)) {
     return null;
   }
-  return JSON.parse(raw) as SignalingMessage;
+  return env.obj as SignalingMessage;
 }
 
 /** Decode an RPC frame received over a data channel. */
@@ -86,7 +86,7 @@ export function decodeRpc(raw: string): RpcMessage | null {
   if (typeof env.kind !== 'string' || !RPC_KINDS.has(env.kind as RpcMessageKind)) {
     return null;
   }
-  return JSON.parse(raw) as RpcMessage;
+  return env.obj as RpcMessage;
 }
 
 /** Encode a signaling frame for transmission. Pure JSON.stringify. */

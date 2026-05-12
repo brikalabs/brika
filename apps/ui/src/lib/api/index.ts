@@ -49,6 +49,7 @@ function hubFromMetaTag(): string | null {
 }
 
 let cachedTransport: Transport | null = null;
+let cachedRemote: RemoteHints | null | undefined;
 
 interface RemoteHints {
   readonly hubName: string;
@@ -65,40 +66,43 @@ function hubOriginFor(name: string, coordinatorOrigin: string): string {
 }
 
 function detectRemote(): RemoteHints | null {
+  if (cachedRemote !== undefined) {
+    return cachedRemote;
+  }
   if (globalThis.location === undefined) {
+    cachedRemote = null;
     return null;
   }
   const loc = globalThis.location;
   const coordinatorOrigin = DEFAULT_COORDINATOR_ORIGIN;
 
+  const hubName = resolveHubName(loc);
+  cachedRemote = hubName
+    ? { hubName, hubOrigin: hubOriginFor(hubName, coordinatorOrigin), coordinatorOrigin }
+    : null;
+  return cachedRemote;
+}
+
+function resolveHubName(loc: Location): string | null {
   // 1. <meta name="brika:hub"> — the worker stamps this into every UI shell
   //    it serves. Most reliable source: the worker has D1 + the request URL
   //    to work with; the browser only has the URL.
   const metaHub = hubFromMetaTag();
   if (metaHub) {
-    return {
-      hubName: metaHub,
-      hubOrigin: hubOriginFor(metaHub, coordinatorOrigin),
-      coordinatorOrigin,
-    };
+    return metaHub;
   }
 
   // 2. ?hub=<name> — explicit override, works on any hostname.
   const queryHub = new URL(loc.href).searchParams.get(HUB_QUERY_PARAM);
-  if (queryHub && queryHub.length > 0) {
-    return {
-      hubName: queryHub,
-      hubOrigin: hubOriginFor(queryHub, coordinatorOrigin),
-      coordinatorOrigin,
-    };
+  if (queryHub) {
+    return queryHub;
   }
 
   // 3. Path-based fallback: /<name>/... on the canonical host. Only kicks in
   //    when the worker's meta-tag injector didn't fire (degraded responses,
   //    self-hosted coordinators, etc.).
-  const first = loc.pathname.split('/').find((segment) => segment.length > 0);
-  if (loc.hostname.toLowerCase() === CANONICAL_HOST && first) {
-    return { hubName: first, hubOrigin: hubOriginFor(first, coordinatorOrigin), coordinatorOrigin };
+  if (loc.hostname.toLowerCase() === CANONICAL_HOST) {
+    return loc.pathname.split('/').find((segment) => segment.length > 0) ?? null;
   }
 
   return null;
@@ -146,14 +150,13 @@ export function apiFetch(input: RequestInfo | URL, init?: RequestInit): Promise<
 // The interceptor is installed exactly once and is idempotent on hot-reloads.
 // ─────────────────────────────────────────────────────────────────────────────
 
-const INTERCEPTOR_INSTALLED = Symbol.for('brika.api.fetchInterceptor');
+let interceptorInstalled = false;
 
 function installFetchInterceptor(transport: Transport, coordinatorOrigin: string): void {
-  const g = globalThis as unknown as Record<symbol, boolean | undefined>;
-  if (g[INTERCEPTOR_INSTALLED]) {
+  if (interceptorInstalled) {
     return;
   }
-  g[INTERCEPTOR_INSTALLED] = true;
+  interceptorInstalled = true;
 
   const original = globalThis.fetch.bind(globalThis);
   let coordinatorHost = '';
@@ -199,7 +202,7 @@ function resolveUrl(input: RequestInfo | URL): URL | null {
 // active. This installs the global fetch interceptor before any module that
 // imports `@/lib/api` indirectly (i18n, query, etc.) has a chance to issue
 // its first request.
-if (globalThis.location !== undefined && detectRemote()) {
+if (detectRemote()) {
   const transport = getTransport();
   // Wire up the bootstrap SW → page bridge so dynamic `import()` of
   // plugin/brick modules under `/api/bricks/modules/...` round-trip

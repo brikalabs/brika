@@ -13,6 +13,7 @@ import {
   encodeRpc,
   encodeSignaling,
   type IceCandidate,
+  type IceServer,
   PROTOCOL_VERSION,
   type RpcMessage,
   type SignalingMessage,
@@ -22,7 +23,7 @@ import { isValidHubName } from './hub-name';
 export interface TicketResponse {
   ticket: string;
   expiresAt: number;
-  iceServers?: { urls: string | string[]; username?: string; credential?: string }[];
+  iceServers?: IceServer[];
 }
 
 export interface PeerHandle {
@@ -30,13 +31,7 @@ export interface PeerHandle {
   close(): void;
 }
 
-interface IceServerSpec {
-  urls: string | string[];
-  username?: string;
-  credential?: string;
-}
-
-const FALLBACK_ICE_SERVERS: IceServerSpec[] = [
+const FALLBACK_ICE_SERVERS: IceServer[] = [
   { urls: 'stun:stun.l.google.com:19302' },
   { urls: 'stun:stun.cloudflare.com:3478' },
 ];
@@ -53,7 +48,8 @@ export async function mintTicket(hubName: string, coordinator: string): Promise<
   if (!res.ok) {
     throw new Error(`/v1/tickets failed: ${res.status} ${await res.text()}`);
   }
-  return (await res.json()) as TicketResponse;
+  const data: TicketResponse = await res.json();
+  return data;
 }
 
 interface InflightEntry {
@@ -93,7 +89,7 @@ function closeQuietly(c: { close(): void }): void {
 function pickIceServers(servers: TicketResponse['iceServers']): RTCIceServer[] {
   const chosen = servers && servers.length > 0 ? servers : FALLBACK_ICE_SERVERS;
   return chosen.map((s) => ({
-    urls: s.urls,
+    urls: typeof s.urls === 'string' ? s.urls : [...s.urls],
     username: s.username,
     credential: s.credential,
   }));
@@ -121,25 +117,35 @@ function waitForWsOpen(ws: WebSocket, timeoutMs: number): Promise<void> {
   });
 }
 
-function waitForDataChannel(channel: RTCDataChannel, pc: RTCPeerConnection): Promise<void> {
-  return new Promise<void>((resolve, reject) => {
+interface DataChannelReady {
+  readonly promise: Promise<void>;
+  /** Reject the open promise with a fatal error from any source (e.g. signaling). */
+  fail(err: Error): void;
+}
+
+function makeDataChannelReady(channel: RTCDataChannel, pc: RTCPeerConnection): DataChannelReady {
+  let fail = (_err: Error): void => {
+    /* replaced below */
+  };
+  const promise = new Promise<void>((resolve, reject) => {
     const t = setTimeout(() => reject(new Error('Data channel open timed out')), 30_000);
-    if (channel.readyState === 'open') {
+    const settle = (cb: () => void): void => {
       clearTimeout(t);
-      resolve();
+      cb();
+    };
+    fail = (err) => settle(() => reject(err));
+    if (channel.readyState === 'open') {
+      settle(resolve);
       return;
     }
-    channel.addEventListener('open', () => {
-      clearTimeout(t);
-      resolve();
-    });
+    channel.addEventListener('open', () => settle(resolve));
     pc.addEventListener('connectionstatechange', () => {
       if (pc.connectionState === 'failed' || pc.connectionState === 'closed') {
-        clearTimeout(t);
-        reject(new Error(`WebRTC connection ${pc.connectionState}`));
+        settle(() => reject(new Error(`WebRTC connection ${pc.connectionState}`)));
       }
     });
   });
+  return { promise, fail: (err) => fail(err) };
 }
 
 function dispatchRpcFrame(msg: RpcMessage, inflight: Map<number, InflightEntry>): void {
@@ -158,11 +164,11 @@ function dispatchRpcFrame(msg: RpcMessage, inflight: Map<number, InflightEntry>)
   switch (msg.kind) {
     case 'response.head': {
       entry.headEmitted = true;
-      const response = new Response(entry.stream, {
-        status: msg.status,
-        headers: new Headers(msg.headers.map(([k, v]) => [k, v]) as [string, string][]),
-      });
-      entry.resolve(response);
+      const headers = new Headers();
+      for (const [k, v] of msg.headers) {
+        headers.append(k, v);
+      }
+      entry.resolve(new Response(entry.stream, { status: msg.status, headers }));
       return;
     }
     case 'response.chunk':
@@ -267,7 +273,9 @@ export async function openPeer(
     caps: ['rpc.v1'],
   });
 
-  ws.addEventListener('message', async (ev) => {
+  const dcReady = makeDataChannelReady(channel, pc);
+
+  ws.addEventListener('message', (ev) => {
     const raw = typeof ev.data === 'string' ? ev.data : new TextDecoder().decode(ev.data);
     const msg = decodeSignaling(raw);
     if (!msg) {
@@ -278,36 +286,38 @@ export async function openPeer(
     }
     if (msg.kind === 'session.answer') {
       sessionId = msg.sessionId;
-      await pc.setRemoteDescription({ type: 'answer', sdp: msg.sdp });
-      for (const cand of pendingIce) {
-        sendSignaling({
-          v: PROTOCOL_VERSION,
-          kind: 'client.ice',
-          sessionId,
-          candidate: cand,
-        });
+      // Flush queued local candidates synchronously so the live `icecandidate`
+      // handler and the flush can't interleave. setRemoteDescription doesn't
+      // need to complete before we forward our own ICE to the coordinator.
+      const toFlush = pendingIce.splice(0);
+      for (const cand of toFlush) {
+        sendSignaling({ v: PROTOCOL_VERSION, kind: 'client.ice', sessionId, candidate: cand });
       }
-      pendingIce.length = 0;
+      pc.setRemoteDescription({ type: 'answer', sdp: msg.sdp }).catch((err: unknown) => {
+        dcReady.fail(err instanceof Error ? err : new Error(String(err)));
+      });
       return;
     }
     if (msg.kind === 'session.ice') {
-      try {
-        await pc.addIceCandidate({
-          candidate: msg.candidate.candidate,
-          sdpMid: msg.candidate.sdpMid,
-          sdpMLineIndex: msg.candidate.sdpMLineIndex,
-        });
-      } catch {
+      pc.addIceCandidate({
+        candidate: msg.candidate.candidate,
+        sdpMid: msg.candidate.sdpMid,
+        sdpMLineIndex: msg.candidate.sdpMLineIndex,
+      }).catch(() => {
         /* late or malformed — drop */
-      }
+      });
       return;
     }
     if (msg.kind === 'session.error') {
-      throw new Error(`Signaling error: ${msg.code} ${msg.message ?? ''}`);
+      dcReady.fail(new Error(`Signaling error: ${msg.code} ${msg.message ?? ''}`));
     }
   });
 
-  await waitForDataChannel(channel, pc);
+  ws.addEventListener('close', () => {
+    dcReady.fail(new Error('Signaling WS closed before data channel opened'));
+  });
+
+  await dcReady.promise;
 
   return {
     request: (method, url, signal): Promise<Response> => {

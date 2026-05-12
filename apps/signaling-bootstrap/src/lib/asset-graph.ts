@@ -376,9 +376,9 @@ export async function buildAssetGraph(
     throw new Error('Hub UI is missing a module entry — outdated hub?');
   }
 
-  const cssLinks = Array.from(doc.querySelectorAll('link[rel="stylesheet"][href^="/"]')).map(
-    (el) => el.getAttribute('href') as string
-  );
+  const cssLinks = Array.from(doc.querySelectorAll('link[rel="stylesheet"][href^="/"]'))
+    .map((el) => el.getAttribute('href'))
+    .filter((href): href is string => href !== null);
   const title = doc.title;
 
   // Initial fetch set: every absolute-path script src, every inline-block

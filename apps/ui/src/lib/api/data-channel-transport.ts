@@ -25,6 +25,7 @@
 import {
   type AbortMessage,
   decodeRpc,
+  decodeSignaling,
   encodeRpc,
   encodeSignaling,
   type IceServer,
@@ -172,12 +173,12 @@ export class DataChannelTransport implements Transport {
 
     const request = await this.#buildRequest(input, init);
     const id = this.#nextRequestId++;
-    const frame: RequestMessage = await requestToFrames(id, request);
+    const baseFrame = await requestToFrames(id, request);
     // Cookie is a forbidden request header in browsers — `new Request(url, { headers })`
     // silently drops any `Cookie` we try to set, even when the request is bound for
-    // our data-channel transport. We bypass that by injecting the Cookie pair
-    // directly into the wire frame *after* serialization, so the hub still sees it.
-    this.#injectCookieIntoFrame(frame, request);
+    // our data-channel transport. We bypass that by inlining the Cookie pair
+    // into the wire frame *after* serialization, so the hub still sees it.
+    const frame = this.#withCookieHeader(baseFrame, request);
     debug('→ request', { id, method: frame.method, url: frame.url });
 
     const assembler = new ResponseAssembler();
@@ -391,14 +392,8 @@ export class DataChannelTransport implements Transport {
   }
 
   #onSignalingMessage(raw: string): void {
-    let msg: SignalingMessage;
-    try {
-      const parsed = JSON.parse(raw) as SignalingMessage;
-      if (parsed.v !== PROTOCOL_VERSION) {
-        return;
-      }
-      msg = parsed;
-    } catch {
+    const msg = decodeSignaling(raw);
+    if (!msg) {
       return;
     }
     switch (msg.kind) {
@@ -558,37 +553,26 @@ export class DataChannelTransport implements Transport {
   }
 
   /**
-   * Attach matching cookies as the `Cookie` request header. The browser would
-   * normally do this from its real jar, but our `Request` was constructed in
-   * JS against the hub origin — no automatic cookies. We rebuild the Request
-   * with the cookie header inlined so {@link requestToFrames} sees it.
+   * Return a frame with the matching `Cookie` header inlined. We can't go
+   * through `new Request(url, { headers })` because the browser's Request
+   * constructor enforces Fetch's forbidden-header list and silently drops
+   * Cookie. The wire frame is plain JSON pairs, so it survives.
    */
-  /**
-   * Inject the matching Cookie header directly into the RPC frame's headers
-   * array. We can't go through `new Request(url, { headers })` because the
-   * browser's Request constructor enforces Fetch's forbidden-header list and
-   * silently drops Cookie. The wire frame is plain JSON pairs, so it survives.
-   */
-  #injectCookieIntoFrame(frame: RequestMessage, request: Request): void {
+  #withCookieHeader(frame: RequestMessage, request: Request): RequestMessage {
     const path = new URL(request.url).pathname;
     const header = this.#cookies.cookieHeader(path);
     debug('cookie jar lookup', { path, attached: header || '(none)' });
     if (!header) {
-      return;
+      return frame;
     }
-    // `frame.headers` is declared `ReadonlyArray<readonly [string, string]>`
-    // for safety, but at the moment of injection we own the array and the
-    // hub-side parser doesn't care about repeated entries. Cast through
-    // `unknown` to mutate it cleanly.
-    const headers = frame.headers as unknown as Array<[string, string]>;
-    // Merge with any caller-supplied Cookie that may have been propagated
-    // through the Request constructor (very rare — most callers don't set it).
-    const existing = headers.find(([n]) => n.toLowerCase() === 'cookie');
-    if (existing) {
-      existing[1] = `${existing[1]}; ${header}`;
+    const headers: Array<[string, string]> = frame.headers.map(([n, v]) => [n, v]);
+    const existingIndex = headers.findIndex(([n]) => n.toLowerCase() === 'cookie');
+    if (existingIndex >= 0) {
+      headers[existingIndex] = ['Cookie', `${headers[existingIndex][1]}; ${header}`];
     } else {
       headers.push(['Cookie', header]);
     }
+    return { ...frame, headers };
   }
 
   /**
