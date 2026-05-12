@@ -14,15 +14,14 @@ import { loadHubName } from '@/lib/hub-storage';
 export function LoaderScreen(): React.ReactElement {
   const hubName = loadHubName();
   const { phase, status, detail, error, retry } = useBootstrap(hubName);
+  const busy = phase === 'connecting' || phase === 'fetching' || phase === 'loading';
 
   return (
-    <main className="fixed inset-0 grid place-items-center p-6">
+    <main className="fixed inset-0 grid place-items-center p-6" aria-busy={busy || undefined}>
       <div className="flex flex-col items-center">
         <Mark phase={phase} />
         {phase === 'landing' && <LandingCard />}
-        {(phase === 'connecting' || phase === 'fetching' || phase === 'loading') && (
-          <ConnectingCard status={status} detail={detail} />
-        )}
+        {busy && <ConnectingCard status={status} detail={detail} />}
         {phase === 'error' && error && <ErrorCard error={error} onRetry={retry} />}
       </div>
     </main>

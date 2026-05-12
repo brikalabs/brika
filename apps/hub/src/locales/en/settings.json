@@ -61,7 +61,10 @@
     "forget": {
       "title": "Disconnect",
       "description": "Releases the name on the coordinator and removes the local bearer token. You can claim the same name again later.",
-      "action": "Forget this hub"
+      "action": "Forget this hub",
+      "confirmTitle": "Release \"{name}\"?",
+      "confirmDescription": "The name will become available for anyone else to claim. You'll lose remote access to this hub until you claim a name again.",
+      "confirm": "Release and forget"
     }
   },
   "time": {

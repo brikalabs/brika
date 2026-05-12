@@ -1,4 +1,16 @@
-import { Badge, Button, Input } from '@brika/clay';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  Badge,
+  Button,
+  Input,
+} from '@brika/clay';
 import {
   Check,
   CheckCircle2,
@@ -298,6 +310,13 @@ function StateDescription({ state }: Readonly<{ state: SignalingState }>) {
 function ConnectedView({ status }: Readonly<{ status: RemoteAccessStatus }>) {
   const { t } = useLocale();
   const forget = useForgetRemoteAccess();
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
+  const handleConfirm = () => {
+    forget.mutate(undefined, {
+      onSettled: () => setConfirmOpen(false),
+    });
+  };
 
   return (
     <div className="space-y-5">
@@ -346,13 +365,38 @@ function ConnectedView({ status }: Readonly<{ status: RemoteAccessStatus }>) {
           type="button"
           variant="ghost"
           size="sm"
-          onClick={() => forget.mutate()}
+          onClick={() => setConfirmOpen(true)}
           disabled={forget.isPending}
         >
           <Trash2 />
           {t('settings:remoteAccess.forget.action')}
         </Button>
       </div>
+
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {t('settings:remoteAccess.forget.confirmTitle', { name: status.name })}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('settings:remoteAccess.forget.confirmDescription')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={forget.isPending}>
+              {t('common:actions.cancel')}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirm}
+              disabled={forget.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {t('settings:remoteAccess.forget.confirm')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

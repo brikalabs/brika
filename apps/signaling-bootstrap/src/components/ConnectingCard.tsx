@@ -18,9 +18,13 @@ interface ConnectingCardProps {
  */
 export function ConnectingCard({ status, detail }: ConnectingCardProps): React.ReactElement {
   return (
-    <div className="flex max-w-full flex-col items-center gap-1 text-center text-foreground">
+    <div
+      className="flex max-w-full flex-col items-center gap-1 text-center text-foreground"
+      role="status"
+      aria-live="polite"
+    >
       <div className="flex items-center gap-2">
-        <Spinner size="sm" />
+        <Spinner size="sm" aria-hidden />
         <p className="font-medium text-[14px] tracking-tight">{status}</p>
       </div>
       {detail && (

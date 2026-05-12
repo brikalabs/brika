@@ -61,7 +61,10 @@
     "forget": {
       "title": "Déconnecter",
       "description": "Libère le nom sur le coordinateur et supprime le jeton local. Le nom pourra être revendiqué à nouveau plus tard.",
-      "action": "Oublier ce hub"
+      "action": "Oublier ce hub",
+      "confirmTitle": "Libérer « {name} » ?",
+      "confirmDescription": "Le nom redeviendra disponible et n'importe qui pourra le revendiquer. L'accès distant à ce hub sera perdu tant qu'un nom ne sera pas revendiqué à nouveau.",
+      "confirm": "Libérer et oublier"
     }
   },
   "time": {
