@@ -14,8 +14,6 @@
  *      coordinators where the worker shell wasn't able to inject the meta
  *      tag.
  *
- *   4. `VITE_BRIKA_REMOTE_FORCE=1` env override (dev shortcut).
- *
  * If none of the above match, we use {@link FetchTransport} — the LAN/dev
  * default that just hits `window.fetch`.
  */
@@ -71,8 +69,7 @@ function detectRemote(): RemoteHints | null {
     return null;
   }
   const loc = globalThis.location;
-  const env = (import.meta as unknown as { env?: Record<string, string | undefined> }).env ?? {};
-  const coordinatorOrigin = env.VITE_BRIKA_COORDINATOR_ORIGIN || DEFAULT_COORDINATOR_ORIGIN;
+  const coordinatorOrigin = DEFAULT_COORDINATOR_ORIGIN;
 
   // 1. <meta name="brika:hub"> — the worker stamps this into every UI shell
   //    it serves. Most reliable source: the worker has D1 + the request URL
@@ -102,16 +99,6 @@ function detectRemote(): RemoteHints | null {
   const first = loc.pathname.split('/').find((segment) => segment.length > 0);
   if (loc.hostname.toLowerCase() === CANONICAL_HOST && first) {
     return { hubName: first, hubOrigin: hubOriginFor(first, coordinatorOrigin), coordinatorOrigin };
-  }
-
-  // 4. Dev override.
-  if (env.VITE_BRIKA_REMOTE_FORCE === '1') {
-    const forcedName = env.VITE_BRIKA_REMOTE_NAME ?? 'devtest';
-    return {
-      hubName: forcedName,
-      hubOrigin: hubOriginFor(forcedName, coordinatorOrigin),
-      coordinatorOrigin,
-    };
   }
 
   return null;

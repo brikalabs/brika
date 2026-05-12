@@ -83,6 +83,31 @@ export class RemoteAccessClaimError extends Error {
   }
 }
 
+/**
+ * Parse `BRIKA_REMOTE_CLAIM` (format `<name>:<token>`). Both halves must be
+ * non-empty; anything malformed is treated as "not set" so a typo doesn't
+ * silently break startup.
+ */
+function parseRemoteClaim(raw: string | undefined): { name: string; token: string } | null {
+  if (!raw) {
+    return null;
+  }
+  const trimmed = raw.trim();
+  if (!trimmed) {
+    return null;
+  }
+  const sep = trimmed.indexOf(':');
+  if (sep <= 0 || sep === trimmed.length - 1) {
+    return null;
+  }
+  const name = trimmed.slice(0, sep).trim();
+  const token = trimmed.slice(sep + 1).trim();
+  if (!name || !token) {
+    return null;
+  }
+  return { name, token };
+}
+
 @singleton()
 export class RemoteAccessService {
   readonly #config = inject(HubConfig);
@@ -170,17 +195,13 @@ export class RemoteAccessService {
 
   async start(): Promise<void> {
     // Identity comes from the OS keychain after a UI-driven claim.
-    // BRIKA_REMOTE_NAME + BRIKA_REMOTE_TOKEN remain as a dev/CI escape hatch
-    // for booting a hub against a known coordinator without the keychain
-    // round-trip — both must be set together.
-    const envName = process.env.BRIKA_REMOTE_NAME?.trim();
-    const envToken = process.env.BRIKA_REMOTE_TOKEN?.trim();
+    // BRIKA_REMOTE_CLAIM (formatted `<name>:<token>`) is a CI/test escape
+    // hatch that boots the hub against a known coordinator without the
+    // keychain round-trip — useful where the OS keychain isn't available.
+    const envClaim = parseRemoteClaim(process.env.BRIKA_REMOTE_CLAIM);
     let name =
-      envName && envToken
-        ? envName
-        : ((await this.#secrets.getHubSecret(SIGNALING_NAME_SECRET_KEY)) ?? '');
-    let token =
-      envName && envToken ? envToken : await this.#secrets.getHubSecret(SIGNALING_TOKEN_SECRET_KEY);
+      envClaim?.name ?? (await this.#secrets.getHubSecret(SIGNALING_NAME_SECRET_KEY)) ?? '';
+    let token = envClaim?.token ?? (await this.#secrets.getHubSecret(SIGNALING_TOKEN_SECRET_KEY));
 
     // Dev-mode auto-claim: if BRIKA_DEV_AUTOCLAIM is set and we don't have a
     // claim yet, claim the requested name against the coordinator and

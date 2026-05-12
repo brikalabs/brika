@@ -2,8 +2,6 @@ import { defineCommand } from '../command';
 import { detect } from '../utils/runtime';
 import { runSupervisor, startBackground } from '../utils/supervisor';
 
-const uiDir = detect('ui');
-
 export default defineCommand({
   name: 'start',
   description: 'Start the Brika hub',
@@ -43,7 +41,13 @@ export default defineCommand({
     if (values.host) {
       process.env.BRIKA_HOST = values.host;
     }
-    process.env.BRIKA_STATIC_DIR ??= uiDir;
+    // Sidecar `ui/` directory next to the binary still wins if present, so
+    // legacy Docker layouts keep working. The embedded archive baked into
+    // the binary covers the normal install case.
+    const sidecar = detect('ui');
+    if (sidecar) {
+      process.env.BRIKA_STATIC_DIR ??= sidecar;
+    }
 
     if (process.env.BRIKA_SUPERVISOR_PID) {
       await import('@/main');
