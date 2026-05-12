@@ -146,8 +146,7 @@ export class ApiServer {
    * theft.
    */
   #corsAllowlist(): CorsOriginMatcher {
-    const matchers: Array<string | RegExp | ((origin: string) => boolean)> = [];
-    matchers.push((origin: string) => {
+    const isBrikaSubdomain = (origin: string): boolean => {
       try {
         const url = new URL(origin);
         const host = url.hostname.toLowerCase();
@@ -160,8 +159,8 @@ export class ApiServer {
       } catch {
         return false;
       }
-    });
-    matchers.push((origin: string) => {
+    };
+    const isPrivateNetwork = (origin: string): boolean => {
       try {
         const url = new URL(origin);
         const host = url.hostname.toLowerCase();
@@ -184,8 +183,8 @@ export class ApiServer {
       } catch {
         return false;
       }
-    });
-    return matchers;
+    };
+    return [isBrikaSubdomain, isPrivateNetwork];
   }
 
   #setupStaticFiles(): void {

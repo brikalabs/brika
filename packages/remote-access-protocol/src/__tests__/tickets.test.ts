@@ -26,10 +26,14 @@ describe('tickets', () => {
     const { ticket } = await mintTicket(SECRET, 'maxime');
     // Tamper with the encoded claims to force exp=0.
     const [h, _claims, sig] = ticket.split('.') as [string, string, string];
-    const expired = `${h}.${btoa(JSON.stringify({ hub: 'maxime', exp: 0, nonce: 'x' }))
+    const encoded = btoa(JSON.stringify({ hub: 'maxime', exp: 0, nonce: 'x' }))
       .replaceAll('+', '-')
-      .replaceAll('/', '_')
-      .replace(/=+$/, '')}.${sig}`;
+      .replaceAll('/', '_');
+    let end = encoded.length;
+    while (end > 0 && encoded[end - 1] === '=') {
+      end -= 1;
+    }
+    const expired = `${h}.${encoded.slice(0, end)}.${sig}`;
     expect(await verifyTicket(SECRET, expired)).toBeNull();
   });
 });

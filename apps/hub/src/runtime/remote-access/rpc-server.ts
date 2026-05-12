@@ -64,8 +64,8 @@ export class RpcServer {
         // misbehaving. Drop silently.
         return;
       default: {
-        const exhaustive: never = msg;
-        void exhaustive;
+        // Exhaustive guard — TypeScript flags any unhandled `msg.kind`.
+        msg satisfies never;
         return;
       }
     }

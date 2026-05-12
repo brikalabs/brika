@@ -15,11 +15,9 @@ interface RoutePath<T extends string> {
 }
 
 function route<const T extends string>(path: T): RoutePath<T> {
-  return {
-    path,
-    to: ((...args: unknown[]) =>
-      resolvePath(path, args[0] as Record<string, string> | undefined)) as RoutePath<T>['to'],
-  };
+  const to: RoutePath<T>['to'] = (...args: unknown[]) =>
+    resolvePath(path, args[0] as Record<string, string> | undefined);
+  return { path, to };
 }
 
 // ─── Route paths ────────────────────────────────────────────────────────────

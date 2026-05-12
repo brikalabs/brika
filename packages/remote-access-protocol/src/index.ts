@@ -5,6 +5,14 @@ export {
   responseToFrames,
   rpcRequestToFetch,
 } from './bridge';
+export {
+  type Claim,
+  ClaimError,
+  type ClaimErrorCode,
+  generateToken,
+  RESERVED_NAMES,
+  validateName,
+} from './claims-validation';
 export { decodeRpc, decodeSignaling, encodeRpc, encodeSignaling } from './codec';
 export {
   type AbortMessage,
@@ -39,4 +47,5 @@ export {
   type SignalingMessage,
   type SignalingMessageKind,
 } from './signaling';
+export { mintTicket, type TicketClaims, verifyTicket } from './tickets';
 export { PROTOCOL_VERSION, type ProtocolVersion } from './version';

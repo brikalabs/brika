@@ -2,7 +2,7 @@ import { afterAll, beforeEach, describe, expect, it } from 'bun:test';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { ClaimError, ClaimStore, RESERVED_NAMES, validateName } from '../claims';
+import { ClaimError, ClaimStore } from '../claims';
 
 const tmpDirs: string[] = [];
 
@@ -18,42 +18,6 @@ afterAll(async () => {
   for (const dir of tmpDirs) {
     await rm(dir, { recursive: true, force: true });
   }
-});
-
-describe('validateName', () => {
-  it('accepts simple lowercase names', () => {
-    expect(validateName('maxime')).toBe('maxime');
-    expect(validateName('home-hub-1')).toBe('home-hub-1');
-  });
-
-  it('lower-cases the input', () => {
-    expect(validateName('MAXIME')).toBe('maxime');
-  });
-
-  it('rejects too-short names', () => {
-    expect(() => validateName('abc')).toThrow(ClaimError);
-  });
-
-  it('rejects names with invalid chars', () => {
-    expect(() => validateName('with space')).toThrow(ClaimError);
-    expect(() => validateName('with_under')).toThrow(ClaimError);
-    expect(() => validateName('with.dot')).toThrow(ClaimError);
-  });
-
-  it('rejects names that start with a digit or hyphen', () => {
-    expect(() => validateName('1abcd')).toThrow(ClaimError);
-    expect(() => validateName('-abcd')).toThrow(ClaimError);
-  });
-
-  it('rejects names that end with a hyphen', () => {
-    expect(() => validateName('abcd-')).toThrow(ClaimError);
-  });
-
-  it('rejects reserved names', () => {
-    for (const reserved of RESERVED_NAMES) {
-      expect(() => validateName(reserved)).toThrow(ClaimError);
-    }
-  });
 });
 
 describe('ClaimStore', () => {

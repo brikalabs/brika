@@ -46,7 +46,7 @@ export class Registry {
 
   unregisterHub(name: string, socket: PeerSocket): void {
     const conn = this.#hubs.get(name);
-    if (!conn || conn.socket !== socket) {
+    if (conn?.socket !== socket) {
       // Either not present or already replaced — ignore.
       return;
     }
@@ -95,7 +95,7 @@ export class Registry {
       // The hub is closing a session it owns — only let it through if it's
       // bound to a hub connection that owns the sessionId.
       const hub = this.#hubs.get(conn.hubName);
-      if (!hub || hub.socket !== originatorSocket) {
+      if (hub?.socket !== originatorSocket) {
         return;
       }
     }

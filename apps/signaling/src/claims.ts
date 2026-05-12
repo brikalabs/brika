@@ -10,81 +10,25 @@
  */
 
 import { readFile, rename, writeFile } from 'node:fs/promises';
+import { type Claim, ClaimError, generateToken, validateName } from '@brika/remote-access-protocol';
 
-export interface Claim {
-  /** Unique hub name (subdomain), lowercase, validated. */
-  readonly name: string;
-  /** Opaque bearer token the hub uses on the signaling WebSocket. */
-  readonly token: string;
-  /** Unix epoch (ms) the claim was first issued. */
-  readonly createdAt: number;
-}
+export {
+  type Claim,
+  ClaimError,
+  RESERVED_NAMES,
+  validateName,
+} from '@brika/remote-access-protocol';
 
 interface ClaimFile {
   readonly version: 1;
   readonly claims: Record<string, Claim>;
 }
 
-/** Names we'll never let a user claim. Tweak as needed. */
-export const RESERVED_NAMES = new Set<string>([
-  'admin',
-  'api',
-  'app',
-  'auth',
-  'brika',
-  'docs',
-  'help',
-  'mail',
-  'public',
-  'root',
-  'static',
-  'support',
-  'system',
-  'webhook',
-  'webhooks',
-  'www',
-]);
-
-const NAME_PATTERN = /^[a-z][a-z0-9-]{2,30}[a-z0-9]$/;
-const TOKEN_BYTES = 32;
-
-export class ClaimError extends Error {
-  readonly code: 'invalid-name' | 'reserved' | 'taken' | 'unknown' | 'unauthorized';
-  constructor(code: ClaimError['code'], message: string) {
-    super(message);
-    this.name = 'ClaimError';
-    this.code = code;
-  }
-}
-
-export function validateName(name: string): string {
-  const lower = name.toLowerCase();
-  if (!NAME_PATTERN.test(lower)) {
-    throw new ClaimError(
-      'invalid-name',
-      'Name must be 4-32 chars: lowercase letters, digits, hyphens; start with a letter, end alphanumeric'
-    );
-  }
-  if (RESERVED_NAMES.has(lower)) {
-    throw new ClaimError('reserved', `"${lower}" is reserved`);
-  }
-  return lower;
-}
-
-function generateToken(): string {
-  const bytes = crypto.getRandomValues(new Uint8Array(TOKEN_BYTES));
-  let s = '';
-  for (const b of bytes) {
-    s += String.fromCodePoint(b);
-  }
-  return btoa(s).replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/, '');
-}
-
 export class ClaimStore {
   readonly #path: string;
-  #map = new Map<string, Claim>();
+  readonly #map = new Map<string, Claim>();
   /** Reverse index: token → name. Built lazily, kept in sync with `#map`. */
-  #byToken = new Map<string, string>();
+  readonly #byToken = new Map<string, string>();
   #loaded = false;
   /** Serializes concurrent writes so we never race on the file. */
   #writeChain: Promise<void> = Promise.resolve();

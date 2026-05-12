@@ -42,7 +42,7 @@ interface RemoteHints {
 }
 
 function detectRemote(): RemoteHints | null {
-  if (typeof globalThis.location === 'undefined') {
+  if (globalThis.location === undefined) {
     return null;
   }
   const loc = globalThis.location;
@@ -149,18 +149,18 @@ function installFetchInterceptor(transport: Transport, coordinatorOrigin: string
   globalThis.fetch = (input, init) => {
     const url = resolveUrl(input);
     if (!url) {
-      return original(input as RequestInfo, init);
+      return original(input, init);
     }
     // Coordinator calls (signaling, tickets) MUST bypass the transport — they
     // are how the transport itself comes online.
     if (url.host === coordinatorHost && url.pathname.startsWith('/v1/')) {
-      return original(input as RequestInfo, init);
+      return original(input, init);
     }
     // Hub API surface — route through the transport.
     if (url.pathname.startsWith('/api/')) {
-      return transport.fetch(input as RequestInfo, init);
+      return transport.fetch(input, init);
     }
-    return original(input as RequestInfo, init);
+    return original(input, init);
   };
 }
 
@@ -182,6 +182,6 @@ function resolveUrl(input: RequestInfo | URL): URL | null {
 // active. This installs the global fetch interceptor before any module that
 // imports `@/lib/api` indirectly (i18n, query, etc.) has a chance to issue
 // its first request.
-if (typeof globalThis.location !== 'undefined' && detectRemote()) {
+if (globalThis.location !== undefined && detectRemote()) {
   getTransport();
 }

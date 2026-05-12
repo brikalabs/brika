@@ -38,31 +38,27 @@ function send(socket: { send: (data: string) => void }, msg: SignalingMessage): 
 }
 
 /**
- * Route a JSON-encoded frame from `peer`. Returns false when the frame is
- * malformed or unauthorized for this peer (so the caller can close the
- * socket).
+ * Route a JSON-encoded frame from `peer`. Malformed frames are dropped.
+ * Authorization/ownership checks happen inside the per-peer routers.
  */
-export function routeFrame(deps: RouterDeps, peer: Peer, raw: string): boolean {
+export function routeFrame(deps: RouterDeps, peer: Peer, raw: string): void {
   const msg = decodeSignaling(raw);
   if (!msg) {
-    return false;
+    return;
   }
-  return route(deps, peer, msg);
-}
-
-function route(deps: RouterDeps, peer: Peer, msg: SignalingMessage): boolean {
   if (peer.kind === 'hub') {
-    return routeFromHub(deps, peer.conn, msg);
+    routeFromHub(deps, peer.conn, msg);
+    return;
   }
-  return routeFromClient(deps, peer.conn, msg);
+  routeFromClient(deps, peer.conn, msg);
 }
 
-function routeFromHub(deps: RouterDeps, hub: HubConnection, msg: SignalingMessage): boolean {
+function routeFromHub(deps: RouterDeps, hub: HubConnection, msg: SignalingMessage): void {
   switch (msg.kind) {
     case 'hub.answer': {
       const session = deps.registry.getSession(msg.sessionId);
-      if (!session || session.hubName !== hub.name) {
-        return true;
+      if (session?.hubName !== hub.name) {
+        return;
       }
       send(session.socket, {
         v: PROTOCOL_VERSION,
@@ -70,12 +66,12 @@ function routeFromHub(deps: RouterDeps, hub: HubConnection, msg: SignalingMessag
         sessionId: msg.sessionId,
         sdp: msg.sdp,
       });
-      return true;
+      return;
     }
     case 'hub.ice': {
       const session = deps.registry.getSession(msg.sessionId);
-      if (!session || session.hubName !== hub.name) {
-        return true;
+      if (session?.hubName !== hub.name) {
+        return;
       }
       send(session.socket, {
         v: PROTOCOL_VERSION,
@@ -84,12 +80,12 @@ function routeFromHub(deps: RouterDeps, hub: HubConnection, msg: SignalingMessag
         candidate: msg.candidate,
         from: 'hub',
       });
-      return true;
+      return;
     }
     case 'hub.abort': {
       const session = deps.registry.getSession(msg.sessionId);
-      if (!session || session.hubName !== hub.name) {
-        return true;
+      if (session?.hubName !== hub.name) {
+        return;
       }
       send(session.socket, {
         v: PROTOCOL_VERSION,
@@ -100,22 +96,16 @@ function routeFromHub(deps: RouterDeps, hub: HubConnection, msg: SignalingMessag
       });
       session.socket.close(4002, 'hub abort');
       deps.registry.closeSession(msg.sessionId, hub.socket);
-      return true;
+      return;
     }
-    case 'hub.register':
-      // Re-registers from the same socket are no-ops.
-      return true;
     default:
-      // Frames the hub shouldn't be sending — ignore.
-      return true;
+      // Re-registers from the same socket, and frames the hub shouldn't be
+      // sending, are both no-ops.
+      return;
   }
 }
 
-function routeFromClient(
-  deps: RouterDeps,
-  client: ClientConnection,
-  msg: SignalingMessage
-): boolean {
+function routeFromClient(deps: RouterDeps, client: ClientConnection, msg: SignalingMessage): void {
   switch (msg.kind) {
     case 'client.offer': {
       const hub = deps.registry.getHub(client.hubName);
@@ -127,7 +117,7 @@ function routeFromClient(
           code: 'hub-offline',
           message: `Hub "${client.hubName}" is not online`,
         });
-        return true;
+        return;
       }
       send(hub.socket, {
         v: PROTOCOL_VERSION,
@@ -137,16 +127,16 @@ function routeFromClient(
         clientCaps: msg.caps,
         iceServers: deps.iceServers,
       });
-      return true;
+      return;
     }
     case 'client.ice': {
       // Clients can only emit ICE for their own session id.
       if (msg.sessionId !== client.sessionId) {
-        return true;
+        return;
       }
       const hub = deps.registry.getHub(client.hubName);
       if (!hub) {
-        return true;
+        return;
       }
       send(hub.socket, {
         v: PROTOCOL_VERSION,
@@ -155,11 +145,11 @@ function routeFromClient(
         candidate: msg.candidate,
         from: 'client',
       });
-      return true;
+      return;
     }
     case 'client.abort': {
       if (msg.sessionId !== client.sessionId) {
-        return true;
+        return;
       }
       const hub = deps.registry.getHub(client.hubName);
       if (hub) {
@@ -173,9 +163,9 @@ function routeFromClient(
       }
       deps.registry.closeSession(client.sessionId, client.socket);
       client.socket.close(1000, 'client abort');
-      return true;
+      return;
     }
     default:
-      return true;
+      return;
   }
 }

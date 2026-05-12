@@ -88,7 +88,7 @@ function jsonError(status: number, error: string, code?: string): Response {
 
 async function readJson<T>(req: Request): Promise<T | null> {
   try {
-    return (await req.json()) as T;
+    return await req.json<T>();
   } catch {
     return null;
   }

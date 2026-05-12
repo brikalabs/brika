@@ -178,12 +178,13 @@ describe('routeFrame', () => {
   it('drops malformed frames without crashing', () => {
     const registry = new Registry();
     const hub = registry.registerHub('maxime', makeSocket());
-    const ok = routeFrame(
-      { registry, iceServers: ICE },
-      { kind: 'hub', conn: hub },
-      '{"not":"a real frame"}'
-    );
-    expect(ok).toBe(false);
+    expect(() =>
+      routeFrame(
+        { registry, iceServers: ICE },
+        { kind: 'hub', conn: hub },
+        '{"not":"a real frame"}'
+      )
+    ).not.toThrow();
   });
 
   it('rejects ICE for a session id the client does not own', () => {

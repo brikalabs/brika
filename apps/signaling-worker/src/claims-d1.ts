@@ -9,70 +9,15 @@
  * `findByToken(token)` an indexed lookup rather than a table scan.
  */
 
-const NAME_PATTERN = /^[a-z][a-z0-9-]{2,30}[a-z0-9]$/;
-const TOKEN_BYTES = 32;
+import { type Claim, ClaimError, generateToken, validateName } from '@brika/remote-access-protocol';
 
-export const RESERVED_NAMES = new Set<string>([
-  'admin',
-  'api',
-  'app',
-  'auth',
-  'brika',
-  'clay',
-  'doc',
-  'docs',
-  'help',
-  'hubs',
-  'mail',
-  'public',
-  'root',
-  'static',
-  'support',
-  'system',
-  'webhook',
-  'webhooks',
-  'www',
-]);
-
-export interface Claim {
-  readonly name: string;
-  readonly token: string;
-  readonly createdAt: number;
-}
-
-export type ClaimErrorCode = 'invalid-name' | 'reserved' | 'taken' | 'unknown' | 'unauthorized';
-
-export class ClaimError extends Error {
-  readonly code: ClaimErrorCode;
-  constructor(code: ClaimErrorCode, message: string) {
-    super(message);
-    this.name = 'ClaimError';
-    this.code = code;
-  }
-}
-
-export function validateName(name: string): string {
-  const lower = name.toLowerCase();
-  if (!NAME_PATTERN.test(lower)) {
-    throw new ClaimError(
-      'invalid-name',
-      'Name must be 4-32 chars: lowercase letters, digits, hyphens; start with a letter, end alphanumeric'
-    );
-  }
-  if (RESERVED_NAMES.has(lower)) {
-    throw new ClaimError('reserved', `"${lower}" is reserved`);
-  }
-  return lower;
-}
-
-function generateToken(): string {
-  const bytes = crypto.getRandomValues(new Uint8Array(TOKEN_BYTES));
-  let s = '';
-  for (const b of bytes) {
-    s += String.fromCodePoint(b);
-  }
-  return btoa(s).replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/, '');
-}
+export {
+  type Claim,
+  ClaimError,
+  type ClaimErrorCode,
+  RESERVED_NAMES,
+  validateName,
+} from '@brika/remote-access-protocol';
 
 /**
  * Row layout in D1. SQLite stores everything as TEXT/INTEGER; we hydrate

@@ -60,7 +60,7 @@ function CoordinatorEditor({
     setDraft(coordinatorOrigin);
   }, [coordinatorOrigin]);
 
-  const save = (e: React.FormEvent<HTMLFormElement>) => {
+  const save = (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     const trimmed = draft.trim();
     if (!trimmed || trimmed === coordinatorOrigin) {
@@ -167,7 +167,7 @@ function ClaimForm({ coordinatorOrigin }: Readonly<{ coordinatorOrigin: string }
   const claim = useClaimRemoteAccessName();
   const [name, setName] = useState('');
 
-  const submit = (e: React.FormEvent<HTMLFormElement>) => {
+  const submit = (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     const trimmed = name.trim().toLowerCase();
     if (trimmed.length < 4) {
