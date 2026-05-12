@@ -1,5 +1,17 @@
-import { Button } from '@brika/clay';
-import { ExternalLink, RotateCw } from 'lucide-react';
+import {
+  Alert,
+  AlertDescription,
+  AlertIcon,
+  AlertTitle,
+  Button,
+  EmptyState,
+  EmptyStateActions,
+  EmptyStateDescription,
+  EmptyStateIcon,
+  EmptyStateTitle,
+} from '@brika/clay';
+import { Link } from '@tanstack/react-router';
+import { AlertCircle, ExternalLink, RotateCw, SearchX } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
 import type { ErrorClassification } from '@/lib/classify-error';
 
@@ -8,15 +20,12 @@ interface ErrorCardProps {
   readonly onRetry: () => void;
 }
 
-const PRIMARY_LABEL: Record<ErrorClassification['kind'], string> = {
-  retry: 'Try again',
-  'change-name': 'Different hub',
-  help: 'Get help',
-};
-
 const HELP_HREF = 'https://brika.dev/docs/remote-access';
 
 export function ErrorCard({ error, onRetry }: ErrorCardProps): React.ReactElement {
+  // `change-name` doesn't auto-retry; the user has to pick a different name.
+  // For 'retry' kinds we run a visible countdown that the user can cancel
+  // by clicking the primary action.
   const [remaining, setRemaining] = useState<number | null>(
     error.kind === 'retry' && error.autoRetry ? error.autoRetry : null
   );
@@ -35,38 +44,60 @@ export function ErrorCard({ error, onRetry }: ErrorCardProps): React.ReactElemen
     return () => clearTimeout(t);
   }, [remaining]);
 
-  const onPrimaryClick = (): void => {
-    if (error.kind === 'retry') {
-      setRemaining(null);
-      onRetry();
-    } else if (error.kind === 'change-name') {
-      location.href = '/';
-    } else {
-      window.open(HELP_HREF, '_blank', 'noopener');
-    }
-  };
+  // The "no such hub" case isn't really an error — it's an empty/not-found
+  // state. Render with EmptyState so the affordance reads "pick another"
+  // rather than "something broke".
+  if (error.kind === 'change-name') {
+    return (
+      <EmptyState className="w-full max-w-[440px]">
+        <EmptyStateIcon>
+          <SearchX />
+        </EmptyStateIcon>
+        <EmptyStateTitle>{error.title}</EmptyStateTitle>
+        <EmptyStateDescription>{error.detail}</EmptyStateDescription>
+        <EmptyStateActions>
+          <Button asChild>
+            <Link to="/">Pick a different hub</Link>
+          </Button>
+        </EmptyStateActions>
+      </EmptyState>
+    );
+  }
 
   return (
-    <div className="w-full max-w-[420px] text-center">
-      <h2 className="font-semibold text-[16px] tracking-tight">{error.title}</h2>
-      <p className="mx-auto mt-2 max-w-[340px] text-[13.5px] text-muted-foreground leading-relaxed">
-        {error.detail}
-      </p>
-      <div className="mt-5 flex flex-wrap justify-center gap-2">
-        <Button onClick={onPrimaryClick}>
-          {error.kind === 'retry' && <RotateCw />}
-          {error.kind === 'help' && <ExternalLink />}
-          {PRIMARY_LABEL[error.kind]}
-        </Button>
-        {error.kind === 'retry' && (
-          <Button asChild variant="outline">
-            <a href="/">Different hub</a>
+    <div className="w-full max-w-[440px] space-y-3">
+      <Alert variant="destructive">
+        <AlertIcon>
+          <AlertCircle />
+        </AlertIcon>
+        <AlertTitle>{error.title}</AlertTitle>
+        <AlertDescription>{error.detail}</AlertDescription>
+      </Alert>
+      <div className="flex flex-wrap items-center justify-center gap-2">
+        {error.kind === 'retry' ? (
+          <Button
+            onClick={() => {
+              setRemaining(null);
+              onRetry();
+            }}
+          >
+            <RotateCw />
+            Try again
+          </Button>
+        ) : (
+          <Button asChild>
+            <a href={HELP_HREF} target="_blank" rel="noopener">
+              <ExternalLink />
+              Get help
+            </a>
           </Button>
         )}
+        <Button asChild variant="outline">
+          <Link to="/">Different hub</Link>
+        </Button>
       </div>
       {remaining !== null && remaining > 0 && (
-        <p className="mt-4 inline-flex items-center gap-2 text-[12px] text-muted-foreground tabular-nums">
-          <span className="size-1.5 rounded-full bg-muted-foreground" />
+        <p className="text-center text-[12px] text-muted-foreground tabular-nums">
           Auto-retrying in {remaining}s…
         </p>
       )}

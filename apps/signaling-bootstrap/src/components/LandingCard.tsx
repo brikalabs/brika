@@ -9,6 +9,7 @@ import {
   InputGroupInput,
   InputGroupText,
 } from '@brika/clay';
+import { useNavigate } from '@tanstack/react-router';
 import { ArrowRight, ExternalLink } from 'lucide-react';
 import React, { useState } from 'react';
 import { isValidHubName } from '@/lib/hub-name';
@@ -19,6 +20,7 @@ import { isValidHubName } from '@/lib/hub-name';
  * help links.
  */
 export function LandingCard(): React.ReactElement {
+  const navigate = useNavigate();
   const [name, setName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const trimmed = name.trim().toLowerCase();
@@ -32,7 +34,10 @@ export function LandingCard(): React.ReactElement {
       );
       return;
     }
-    location.href = `/${trimmed}`;
+    navigate({ to: '/$hubName', params: { hubName: trimmed } }).catch(() => {
+      // Navigation failures (cancelled by a later push, etc.) are not
+      // actionable here — the user can retype if it stays stuck.
+    });
   };
 
   return (

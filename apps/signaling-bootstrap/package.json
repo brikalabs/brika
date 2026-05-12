@@ -13,6 +13,7 @@
   "dependencies": {
     "@brika/clay": "^0.1.0",
     "@brika/remote-access-protocol": "workspace:*",
+    "@tanstack/react-router": "^1.163.2",
     "lucide-react": "^0.475.0",
     "react": "^19.2.3",
     "react-dom": "^19.2.3"
