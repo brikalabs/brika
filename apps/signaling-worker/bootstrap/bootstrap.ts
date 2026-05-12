@@ -121,12 +121,12 @@ function createStatusSurface(): StatusSurface {
       if (errorDetail) errorDetail.textContent = view.detail;
 
       if (errorPrimary) {
-        errorPrimary.textContent =
-          view.action.kind === 'retry'
-            ? 'Try again'
-            : view.action.kind === 'change-name'
-              ? 'Different hub'
-              : 'Get help';
+        const PRIMARY_LABELS: Record<ErrorAction['kind'], string> = {
+          retry: 'Try again',
+          'change-name': 'Different hub',
+          help: 'Get help',
+        };
+        errorPrimary.textContent = PRIMARY_LABELS[view.action.kind];
         errorPrimary.onclick = (): void => {
           if (view.action.kind === 'retry') {
             stopCountdown();
@@ -299,6 +299,11 @@ function resolveCoordinator(): string {
 }
 
 async function mintTicket(hubName: string, coordinator: string): Promise<TicketResponse> {
+  // Re-validate at the boundary so the taint analysis can see the guard,
+  // and so a bug in upstream callers can't slip a malformed name through.
+  if (!isValidHubName(hubName)) {
+    throw new Error(`Refusing to mint ticket for invalid hub name "${hubName}"`);
+  }
   dlog('mintTicket', { hubName, coordinator });
   const res = await fetch(`${coordinator}/v1/tickets`, {
     method: 'POST',
@@ -392,6 +397,10 @@ function closeSilently(closable: { close(): void }): void {
 }
 
 function buildSignalingUrl(coordinator: string, hubName: string, ticket: string): string {
+  // Boundary check so Sonar's taint analyzer sees the guard at the use site.
+  if (!isValidHubName(hubName)) {
+    throw new Error(`Refusing to open signaling URL for invalid hub name "${hubName}"`);
+  }
   const u = new URL('/v1/client', coordinator);
   u.protocol = u.protocol === 'https:' ? 'wss:' : 'ws:';
   u.searchParams.set('hub', hubName);
@@ -749,6 +758,33 @@ async function fetchAssetThroughPeer(
  * the cache first, fall back to the hub via WebRTC on miss, then `put` the
  * fresh response so subsequent visits don't pay the cost.
  */
+async function fetchOrCache(cache: Cache, peer: PeerHandle, url: string): Promise<string | null> {
+  const cached = await cache.match(url);
+  if (cached) {
+    return url.endsWith('.js') ? await cached.clone().text() : null;
+  }
+  const { bytes, text, contentType } = await fetchAssetThroughPeer(peer, url, guessAssetMime(url));
+  const response = new Response(bytes, { headers: { 'content-type': contentType } });
+  // `cache.put` swallows quota errors — if the user's disk is full, we
+  // still want to serve from memory this session.
+  cache.put(url, response).catch((err) => dlog('cache.put failed', url, err));
+  return text;
+}
+
+function scanForChunkRefs(
+  text: string | null,
+  url: string,
+  queue: string[],
+  visited: Set<string>
+): void {
+  if (!text || !url.endsWith('.js')) {
+    return;
+  }
+  for (const match of text.matchAll(ASSET_RE)) {
+    if (!visited.has(match[0])) queue.push(match[0]);
+  }
+}
+
 async function primeAssetCache(
   peer: PeerHandle,
   initial: ReadonlyArray<string>
@@ -761,31 +797,8 @@ async function primeAssetCache(
     const url = queue.shift();
     if (!url || visited.has(url)) continue;
     visited.add(url);
-
-    let textForScan: string | null = null;
-
-    const cached = await cache.match(url);
-    if (cached && url.endsWith('.js')) {
-      // Cached JS still has to be scanned for transitive references.
-      textForScan = await cached.clone().text();
-    } else if (!cached) {
-      const { bytes, text, contentType } = await fetchAssetThroughPeer(
-        peer,
-        url,
-        guessAssetMime(url)
-      );
-      textForScan = text;
-      const response = new Response(bytes, { headers: { 'content-type': contentType } });
-      // `cache.put` swallows quota errors — if the user's disk is full, we
-      // still want to serve from memory this session.
-      cache.put(url, response).catch((err) => dlog('cache.put failed', url, err));
-    }
-
-    if (textForScan && url.endsWith('.js')) {
-      for (const match of textForScan.matchAll(ASSET_RE)) {
-        if (!visited.has(match[0])) queue.push(match[0]);
-      }
-    }
+    const text = await fetchOrCache(cache, peer, url);
+    scanForChunkRefs(text, url, queue, visited);
   }
 
   return [...visited];
