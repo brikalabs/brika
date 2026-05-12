@@ -300,7 +300,45 @@ Browser              Coordinator (Worker/Bun)         Hub (apps/hub)
    │  every dynamic import /api/bricks/modules/* via SW bridge
 ```
 
-## 10. Key files
+## 10. Trust model and isolation
+
+Once the bootstrap commits to a hub, the hub's JavaScript runs in the `hub.brika.dev` origin alongside the bootstrap's own code. This is a deliberate trade-off — the alternative (per-hub subdomain `<name>.hubs.brika.dev`) was tried and dropped because the operational cost (wildcard TLS provisioning, DNS, certificate rotation) wasn't worth it for the typical "connect to my own hub" use case. The realistic threat we're defending against isn't "the hub I set up is malicious" — it's "switching between hubs in the same browser can't leak credentials".
+
+### What we trust about a chosen hub
+
+A hub the user names is treated as trusted for that session:
+
+- Its JavaScript executes in the `hub.brika.dev` origin with full DOM/SW/storage capabilities scoped to that origin.
+- Its `Set-Cookie` headers populate the in-memory cookie jar; subsequent `/api/*` calls re-attach those cookies.
+- Its `<script>` and `<link>` tags are injected into the page; the SW caches the bytes under `brika-assets-v2`.
+
+A user binding to a hub they don't control (clicking a phishing link like `hub.brika.dev/?hub=evil`) carries the same risk as running an unknown installer. We surface the hub name in the landing card, but the trust decision is the user's.
+
+### Cross-hub isolation (what we *do* enforce)
+
+When a browser has bound to multiple hubs over time, leakage **between** hubs is closed:
+
+- **Cookie jar is per-hub** (`apps/ui/src/lib/api/cookie-jar.ts`). Storage key is `brika.remote.cookies::<hub>`; the constructor sweeps stale entries from other hubs. Cookies issued by hub A can't ride a request to hub B in the same browser.
+- **Set-Cookie Path enforcement.** Cookies whose `Path` falls outside `/api` are rejected at the jar boundary — the jar is only consulted for `/api/*` requests, so off-surface paths are pure attack surface with no benefit.
+- **SW cross-tab guard** (`apps/signaling-bootstrap/public/sw.js`). The `/api/*` proxy routes to the originating client (`event.clientId`), not `allClients[0]`. A request emitted by tab A bound to hub X cannot be answered by tab B bound to hub Y.
+- **Cache purge on rebind** (`apps/signaling-bootstrap/src/lib/hub-storage.ts`). `storeHubName` / `clearHubName` drop every `brika-*` cache when the prior name differs from the new one — the next page load fetches a fresh asset graph from the new hub.
+- **CORS/Origin allowlist on the coordinator.** `/v1/hubs/claim` and `/v1/tickets` reject cross-origin browser POSTs from any `Origin` not in the allowlist. A malicious page on another domain can't mint a ticket against the user's session.
+
+### Server-side hardening
+
+- **Bridge URL validation** (`packages/remote-access-protocol/src/bridge.ts`). `rpcRequestToFetch` rejects non-absolute or protocol-relative URLs so a peer cannot bypass the host-allowlist middleware via `msg.url = "https://attacker/..."`.
+- **Hostile-CSS smuggling** (`apps/signaling-bootstrap/src/lib/asset-graph.ts`). `CSS_URL_RE` excludes whitespace inside `url(...)` so a hub-served CSS body cannot drive CRLF into the BFS fetcher's request line.
+- **Ticket secret refusal** (`apps/signaling/src/main.ts`). The Bun coordinator refuses to start with the well-known dev default when `NODE_ENV=production`.
+
+### What we don't have
+
+- **In-session isolation between the hub UI and the bootstrap.** If a chosen hub is compromised, its JS sees the bootstrap's localStorage (just the bound hub name) and the hub's own cookie jar. It can call `/api/*` as the logged-in user *of that hub*. It cannot reach other hubs (cookie scoping, SW guard, cache purge).
+- **Client-identity binding on tickets.** Tickets bind to `hubName` only; anyone with a valid ticket and the hub name can open a peer. Browser-bound nonces would tighten this but aren't in v1.
+- **Rate limiting on `/v1/tickets` and `/v1/hubs/claim`.** Cloudflare's rate-limit binding belongs here but isn't wired yet.
+
+If you need per-hub origin isolation, the realistic move is `<iframe sandbox>` (no `allow-same-origin`) with a `postMessage` transport bridge. This is a substantial change — the transport and cookie jar would have to live in the parent and the hub UI's `apiFetch` becomes a thin shim that posts to parent. Documented here so a future maintainer doesn't reinvent the question.
+
+## 11. Key files
 
 - Protocol: `packages/remote-access-protocol/src/{rpc,signaling,bridge,codec,tickets,claims-validation,subprotocols,version}.ts`
 - Bun coordinator: `apps/signaling/src/{main,router,registry,claims,tickets}.ts`
