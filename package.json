@@ -18,6 +18,7 @@
     "dev:hub:proxied": "BRIKA_DEV_UI_PROXY=http://localhost:5173 bun --filter @brika/hub dev",
     "dev:ui": "bun --filter @brika/ui dev",
     "dev:worker": "bun --filter @brika/signaling-worker dev",
+    "dev:bootstrap": "bun --filter @brika/signaling-bootstrap --filter @brika/signaling-worker dev",
     "dev:remote": "BRIKA_COORDINATOR_URL=http://localhost:8787 BRIKA_DEV_UI_PROXY=http://localhost:5173 BRIKA_DEV_AUTOCLAIM=devhub bun --filter @brika/signaling-worker --filter @brika/ui --filter @brika/hub dev",
     "test": "bun --filter '*' test --parallel",
     "test:coverage": "bun --filter '*' test --parallel",

@@ -26,9 +26,9 @@ compatibility_flags = ["nodejs_compat"]
 # Worker means the version the browser runs always matches the version the
 # hub is running; new hub features ship without redeploying the Worker.
 #
-# Built by `bun run build:bootstrap` (see apps/signaling-worker/bootstrap/).
+# Built by `bun --filter @brika/signaling-bootstrap build`.
 [assets]
-directory = "./public"
+directory = "../signaling-bootstrap/dist"
 binding = "ASSETS"
 # SPA fallback: every unknown path returns `/index.html` so the bootstrap
 # runs regardless of which URL the user typed (hub.brika.dev/<name>,
