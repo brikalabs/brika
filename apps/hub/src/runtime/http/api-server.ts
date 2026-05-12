@@ -8,19 +8,17 @@ import {
 import { serveStatic } from 'hono/bun';
 import { HubConfig } from '@/runtime/config';
 import { Logger } from '@/runtime/logs/log-router';
+import {
+  devUiProxyMiddleware,
+  type ProxyWsData,
+  proxyWebSocketHandlers,
+  proxyWebSocketUpgrade,
+} from './dev-ui-proxy';
 import { embeddedUi, embeddedUiAvailable } from './embedded-ui';
 import { hostAllowlist } from './middleware/host-allowlist';
 
 function formatDuration(ms: number): string {
   return ms < 1 ? `${(ms * 1000).toFixed(0)}µs` : `${ms.toFixed(2)}ms`;
-}
-
-/**
- * Per-WebSocket state stored on Bun's server-managed `ws.data`. The proxy
- * needs the outbound WebSocket handle to forward messages each way.
- */
-interface ProxyWsData {
-  outbound: WebSocket;
 }
 
 /**
@@ -114,148 +112,21 @@ export class ApiServer {
           req.headers.delete('x-forwarded-for');
           req.headers.set('x-real-ip', addr.address);
         }
-        // Dev-mode WebSocket proxy. When the request is an upgrade for any
-        // non-`/api/*` path AND `BRIKA_DEV_UI_PROXY` is set, pipe it to the
-        // upstream dev server (Vite). This keeps HMR's WebSocket working
-        // when developers open `localhost:7878` through the hub instead of
-        // `localhost:5173` directly.
+        // Dev-mode WebSocket proxy. When `BRIKA_DEV_UI_PROXY` is set and the
+        // request is an upgrade for a non-`/api/*` path, pipe it to the
+        // upstream dev server (Vite). This keeps HMR's WebSocket working.
+        const proxy = this.#config.devUiProxy;
         if (
-          this.#config.devUiProxy &&
+          proxy &&
           req.headers.get('upgrade')?.toLowerCase() === 'websocket' &&
           !new URL(req.url).pathname.startsWith('/api/')
         ) {
-          return this.#proxyWebSocketUpgrade(req, server);
+          return proxyWebSocketUpgrade(req, server, proxy, (msg, ctx) => this.#logs.warn(msg, ctx));
         }
         return this.#handleRequest(req);
       },
-      websocket: {
-        open: (ws) => {
-          const outbound = ws.data.outbound;
-          outbound.addEventListener('message', (ev) => {
-            try {
-              if (typeof ev.data === 'string') {
-                ws.send(ev.data);
-              } else if (ev.data instanceof ArrayBuffer) {
-                ws.send(new Uint8Array(ev.data));
-              }
-            } catch {
-              /* downstream peer already closed */
-            }
-          });
-          outbound.addEventListener('close', (ev) => {
-            try {
-              ws.close(ev.code || 1000, ev.reason);
-            } catch {
-              /* already closed */
-            }
-          });
-          outbound.addEventListener('error', () => {
-            try {
-              ws.close(1011, 'upstream errored');
-            } catch {
-              /* already closed */
-            }
-          });
-        },
-        message: (ws, message) => {
-          const out = ws.data.outbound;
-          if (out.readyState === WebSocket.OPEN) {
-            out.send(message as string | Uint8Array);
-          } else if (out.readyState === WebSocket.CONNECTING) {
-            out.addEventListener('open', () => out.send(message as string | Uint8Array), {
-              once: true,
-            });
-          }
-        },
-        close: (ws) => {
-          try {
-            ws.data.outbound.close();
-          } catch {
-            /* already closed */
-          }
-        },
-      },
+      websocket: proxyWebSocketHandlers,
     });
-  }
-
-  /**
-   * Open an outbound WebSocket to the dev UI proxy target, wait for it to be
-   * ready, then upgrade the inbound request. Returning `undefined` from a
-   * Bun.serve fetch handler tells Bun the response is being driven by the
-   * upgrade machinery — Bun emits the 101.
-   */
-  async #proxyWebSocketUpgrade(
-    req: Request,
-    server: Bun.Server<ProxyWsData>
-  ): Promise<Response | undefined> {
-    const targetBase = this.#config.devUiProxy;
-    if (!targetBase) {
-      return new Response('Dev proxy not configured', { status: 500 });
-    }
-    const sourceUrl = new URL(req.url);
-    const targetUrl = new URL(targetBase);
-    targetUrl.pathname = sourceUrl.pathname;
-    targetUrl.search = sourceUrl.search;
-    targetUrl.protocol = targetUrl.protocol === 'https:' ? 'wss:' : 'ws:';
-
-    const protocols = req.headers
-      .get('sec-websocket-protocol')
-      ?.split(',')
-      .map((s) => s.trim())
-      .filter(Boolean);
-
-    let outbound: WebSocket;
-    try {
-      outbound = new WebSocket(targetUrl.toString(), protocols);
-    } catch (err) {
-      this.#logs.warn('Dev UI WS proxy failed to dial upstream', {
-        target: targetUrl.toString(),
-        error: err instanceof Error ? err.message : String(err),
-      });
-      return new Response('Bad upstream', { status: 502 });
-    }
-
-    const opened = await new Promise<boolean>((resolve) => {
-      const onOpen = (): void => {
-        cleanup();
-        resolve(true);
-      };
-      const onError = (): void => {
-        cleanup();
-        resolve(false);
-      };
-      const timer = setTimeout(() => {
-        cleanup();
-        resolve(false);
-      }, 3000);
-      function cleanup(): void {
-        outbound.removeEventListener('open', onOpen);
-        outbound.removeEventListener('error', onError);
-        clearTimeout(timer);
-      }
-      outbound.addEventListener('open', onOpen);
-      outbound.addEventListener('error', onError);
-    });
-
-    if (!opened) {
-      try {
-        outbound.close();
-      } catch {
-        /* fine */
-      }
-      return new Response('Upstream WebSocket did not open in time', { status: 504 });
-    }
-
-    const upgraded = server.upgrade(req, { data: { outbound } });
-    if (!upgraded) {
-      try {
-        outbound.close();
-      } catch {
-        /* fine */
-      }
-      return new Response('Upgrade failed', { status: 426 });
-    }
-    return undefined;
   }
 
   stop(): void {
@@ -353,7 +224,11 @@ export class ApiServer {
     //   2. BRIKA_STATIC_DIR    — serve from a directory on disk
     //   3. Embedded archive    — bytes baked into the binary at build time
     if (this.#config.devUiProxy) {
-      this.#setupDevUiProxy(this.#config.devUiProxy);
+      this.#app?.use(
+        '/*',
+        devUiProxyMiddleware(this.#config.devUiProxy, (msg, ctx) => this.#logs.warn(msg, ctx))
+      );
+      this.#logs.info('Dev UI proxy enabled', { target: this.#config.devUiProxy });
       return;
     }
 
@@ -388,56 +263,5 @@ export class ApiServer {
       source: 'disk',
       directory: staticDir,
     });
-  }
-
-  /**
-   * Forward every non-`/api/*` request to {@link target}. Used in dev so the
-   * hub serves the live Vite UI without a build step. Hop-by-hop headers
-   * (`host`, `connection`) are stripped on outbound; the response body is
-   * streamed back as-is, so HMR updates and source maps work unchanged.
-   */
-  #setupDevUiProxy(target: string): void {
-    const app = this.#app;
-    if (!app) {
-      return;
-    }
-
-    app.all('*', async (c, next) => {
-      if (c.req.path.startsWith('/api/')) {
-        return next();
-      }
-      const upstreamUrl = `${target}${c.req.path}${c.req.url.includes('?') ? c.req.url.slice(c.req.url.indexOf('?')) : ''}`;
-      const outHeaders = new Headers(c.req.raw.headers);
-      outHeaders.delete('host');
-      outHeaders.delete('connection');
-      try {
-        const upstream = await fetch(upstreamUrl, {
-          method: c.req.method,
-          headers: outHeaders,
-          body:
-            c.req.method === 'GET' || c.req.method === 'HEAD'
-              ? undefined
-              : await c.req.raw.arrayBuffer(),
-          redirect: 'manual',
-        });
-        return new Response(upstream.body, {
-          status: upstream.status,
-          statusText: upstream.statusText,
-          headers: upstream.headers,
-        });
-      } catch (err) {
-        this.#logs.warn('Dev UI proxy failed', {
-          target,
-          path: c.req.path,
-          error: err instanceof Error ? err.message : String(err),
-        });
-        return c.text(
-          `Dev UI proxy could not reach ${target}. Is your UI dev server running?\n\n${err instanceof Error ? err.message : String(err)}`,
-          502
-        );
-      }
-    });
-
-    this.#logs.info('Dev UI proxy enabled', { target });
   }
 }
