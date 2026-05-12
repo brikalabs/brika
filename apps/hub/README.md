@@ -14,19 +14,23 @@ The Brika home hub — a Bun runtime that hosts plugins, runs workflows, and ser
 ## Quick start
 
 ```bash
-bun run dev                      # hub + Vite UI, with the dev proxy wired
-                                 # → open http://localhost:7878 (hub-proxied UI)
-                                 # → or http://localhost:5173 (Vite direct, with HMR)
+bun run dev                      # hub + Vite UI, proxy + HMR wired
+                                 # → open http://localhost:7878 (hub-proxied UI, HMR works)
+                                 # → or http://localhost:5173 (Vite direct, also HMR)
+bun run dev:remote               # hub + Vite UI + wrangler-dev worker
+                                 # → open http://localhost:8787/devhub?debug=1
+                                 # (full end-to-end WebRTC loop, auto-claim, HMR)
 bun --filter @brika/hub dev      # hub only (UI served only if BRIKA_STATIC_DIR set)
 brika start                      # production binary (after `bun run compile`)
 brika logs --follow
 ```
 
-### Dev UI proxy
+### Dev UI proxy (HTTP + WebSocket)
 
 When `BRIKA_DEV_UI_PROXY` is set, the hub forwards every non-`/api/*` request
-to that URL. Use it to serve the live Vite UI through the hub without a build
-cycle:
+— including WebSocket upgrades — to that URL. Vite's HMR socket therefore
+works when developers open `localhost:7878` through the hub instead of
+`localhost:5173` directly.
 
 ```bash
 bun --filter @brika/ui dev &                                   # Vite on :5173
@@ -35,9 +39,28 @@ BRIKA_DEV_UI_PROXY=http://localhost:5173 bun --filter @brika/hub dev
 
 The root `bun run dev` script does this automatically.
 
-Limitations: only HTTP is proxied — Vite's HMR WebSocket isn't. So loading
-through the hub gets you the latest build but full-page reload, not HMR. For
-HMR, open Vite directly (it proxies `/api/*` back to the hub).
+### Dev auto-claim
+
+`BRIKA_DEV_AUTOCLAIM=<name>` makes the hub call the coordinator's
+`/v1/hubs/claim` on boot if no claim is persisted yet. Skips the manual
+"visit Settings → Remote access" step every fresh worktree. Combines well
+with `BRIKA_COORDINATOR_URL` pointing at a local `wrangler dev` instance.
+
+### End-to-end remote loop in one command
+
+```bash
+bun run dev:remote
+```
+
+Spins up:
+
+- `wrangler dev`  on :8787  — coordinator + bootstrap shell
+- `vite dev`      on :5173  — UI with HMR
+- hub             on :7878  — auto-claims `devhub`, proxies UI to Vite
+
+Then open `http://localhost:8787/devhub?debug=1` and you have the full
+production code path locally: bootstrap → WebRTC → hub → UI through the
+data channel. `?debug=1` prints every bootstrap step to the console.
 
 ## Layout
 

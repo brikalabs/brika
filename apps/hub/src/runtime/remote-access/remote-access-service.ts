@@ -175,12 +175,25 @@ export class RemoteAccessService {
     // round-trip — both must be set together.
     const envName = process.env.BRIKA_REMOTE_NAME?.trim();
     const envToken = process.env.BRIKA_REMOTE_TOKEN?.trim();
-    const name =
+    let name =
       envName && envToken
         ? envName
         : ((await this.#secrets.getHubSecret(SIGNALING_NAME_SECRET_KEY)) ?? '');
-    const token =
+    let token =
       envName && envToken ? envToken : await this.#secrets.getHubSecret(SIGNALING_TOKEN_SECRET_KEY);
+
+    // Dev-mode auto-claim: if BRIKA_DEV_AUTOCLAIM is set and we don't have a
+    // claim yet, claim the requested name against the coordinator and
+    // persist the response. Lets the dev loop come up without a manual
+    // visit to Settings → Remote access on every fresh worktree.
+    if (!name || !token) {
+      const dev = await this.#tryAutoClaim();
+      if (dev) {
+        name = dev.name;
+        token = dev.token;
+      }
+    }
+
     if (!name || !token) {
       this.#log.info('remote access not claimed — visit Settings → Remote access to enable');
       return;
@@ -188,6 +201,58 @@ export class RemoteAccessService {
     this.#activeName = name;
     const origin = await this.coordinatorOrigin();
     this.#startClient(name, token, deriveSignalingUrl(origin));
+  }
+
+  async #tryAutoClaim(): Promise<{ name: string; token: string } | null> {
+    const requested = process.env.BRIKA_DEV_AUTOCLAIM?.trim();
+    if (!requested) {
+      return null;
+    }
+    // Wait up to 30 s for the coordinator to come up — `bun run dev:remote`
+    // starts the worker and the hub in parallel, so there's a brief window
+    // when /v1/hubs/claim 404s while wrangler is still booting.
+    const deadline = Date.now() + 30_000;
+    let lastError: unknown = null;
+    while (Date.now() < deadline) {
+      try {
+        const body = await this.#coordinatorRequest<{ name: string; token: string }>(
+          'POST',
+          '/v1/hubs/claim',
+          { name: requested }
+        );
+        await this.#secrets.setHubSecret(SIGNALING_NAME_SECRET_KEY, body.name);
+        await this.#secrets.setHubSecret(SIGNALING_TOKEN_SECRET_KEY, body.token);
+        this.#log.info('auto-claimed dev hub name', { name: body.name });
+        return body;
+      } catch (err) {
+        // 409 = name taken — the coordinator is up, retrying won't help.
+        if (err instanceof RemoteAccessClaimError && err.status === 409) {
+          this.#log.warn('auto-claim failed: name is taken on this coordinator', {
+            name: requested,
+            hint: 'pick a different BRIKA_DEV_AUTOCLAIM, or release the existing claim',
+          });
+          return null;
+        }
+        // 4xx other than 409 are equally non-retriable.
+        if (
+          err instanceof RemoteAccessClaimError &&
+          err.status >= 400 &&
+          err.status < 500 &&
+          err.status !== 408
+        ) {
+          this.#log.warn('auto-claim failed', { name: requested, error: err.message });
+          return null;
+        }
+        // Otherwise we likely hit a network/coordinator-not-ready error.
+        lastError = err;
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      }
+    }
+    this.#log.warn('auto-claim timed out waiting for coordinator', {
+      name: requested,
+      lastError: lastError instanceof Error ? lastError.message : String(lastError),
+    });
+    return null;
   }
 
   stop(): void {
