@@ -107,6 +107,26 @@ async function handleHealth(env: Env): Promise<Response> {
   return Response.json({ ok: true, claims: await claims.size() });
 }
 
+/**
+ * Per-hub liveness probe. Used by operators to verify that their hub is
+ * actually connected to the coordinator. The Worker itself doesn't track
+ * which hubs are online — that's per-Durable-Object state — so we forward
+ * a small synthetic GET to the named DO and have it answer.
+ */
+async function handleHubStatus(env: Env, name: string): Promise<Response> {
+  const lower = name.toLowerCase();
+  const claims = new D1ClaimStore(env.DB);
+  if (!(await claims.get(lower))) {
+    return jsonError(404, 'Unknown hub');
+  }
+  const stub = doStubFor(env, lower);
+  // The DO recognizes `/internal/status` as a non-WS introspection endpoint.
+  const probeUrl = new URL(
+    `https://internal.brika.dev/internal/status?name=${encodeURIComponent(lower)}`
+  );
+  return stub.fetch(probeUrl.toString());
+}
+
 async function handleClaim(req: Request, env: Env): Promise<Response> {
   const body = await readJson<{ name?: string }>(req);
   if (!body?.name || typeof body.name !== 'string') {
@@ -234,6 +254,10 @@ export default {
     const rotateMatch = /^\/v1\/hubs\/([^/]+)\/rotate$/.exec(path);
     if (rotateMatch?.[1] && method === 'POST') {
       return handleRotate(req, env, decodeURIComponent(rotateMatch[1]));
+    }
+    const statusMatch = /^\/v1\/hubs\/([^/]+)\/status$/.exec(path);
+    if (statusMatch?.[1] && method === 'GET') {
+      return handleHubStatus(env, decodeURIComponent(statusMatch[1]));
     }
     const releaseMatch = /^\/v1\/hubs\/([^/]+)$/.exec(path);
     if (releaseMatch?.[1] && method === 'DELETE') {

@@ -64,6 +64,19 @@ export class HubSession {
    * here is informational; we capture it on the attachment for logs).
    */
   fetch(request: Request): Response {
+    const url = new URL(request.url);
+
+    // Operator-facing introspection — non-WebSocket, returns whether this DO
+    // currently has a live hub WebSocket and how many client sessions are
+    // attached. Routed by the Worker via `GET /v1/hubs/<name>/status`.
+    if (url.pathname === '/internal/status') {
+      return Response.json({
+        name: url.searchParams.get('name') ?? '',
+        hubOnline: this.#state.getWebSockets('hub').length > 0,
+        activeSessions: this.#state.getWebSockets('client').length,
+      });
+    }
+
     if (request.headers.get('upgrade') !== 'websocket') {
       return new Response('Expected WebSocket', { status: 426 });
     }
@@ -79,7 +92,6 @@ export class HubSession {
       .map((s) => s.trim())
       .find((s) => s.startsWith('brika.v'));
 
-    const url = new URL(request.url);
     if (url.pathname === '/v1/hub') {
       return this.#acceptHub(this.#nameFromBearer(request) ?? '', acceptedProtocol);
     }
@@ -242,7 +254,7 @@ export class HubSession {
 
   // ─── Routing helpers ────────────────────────────────────────────────────
 
-  #routeFromHub(name: string, msg: SignalingMessage): void {
+  #routeFromHub(_name: string, msg: SignalingMessage): void {
     switch (msg.kind) {
       case 'hub.answer': {
         const client = this.#findClient(msg.sessionId);
