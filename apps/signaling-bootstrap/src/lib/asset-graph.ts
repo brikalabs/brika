@@ -473,8 +473,13 @@ export async function ensureServiceWorker(): Promise<boolean> {
         // caller surface a specific error (with a manual "Reset" CTA).
         return false;
       }
+      // Order matters: bump the counter AFTER the soft-reset so the
+      // counter survives the reload. softResetForRecovery deliberately
+      // leaves sessionStorage alone; if we called the public
+      // clearBootstrapState() here it would wipe the counter and we'd
+      // loop forever.
+      await softResetForRecovery();
       sessionStorage.setItem(RELOAD_FLAG, String(attempts + 1));
-      await clearBootstrapState();
       globalThis.location.reload();
       // Page is about to navigate; never resolve.
       await new Promise<void>(() => {
@@ -490,12 +495,11 @@ export async function ensureServiceWorker(): Promise<boolean> {
 }
 
 /**
- * Hard reset: unregister every SW on this origin and delete every
- * cache the bootstrap might have populated. Used both by the soft
- * auto-recovery path and by the manual "Reset" button on the error
- * card when auto-recovery has exhausted its retries.
+ * Unregister every SW + drop every `brika-*` cache. Used internally
+ * by the auto-recovery path. Does NOT clear sessionStorage so the
+ * outer retry counter survives the reload.
  */
-export async function clearBootstrapState(): Promise<void> {
+async function softResetForRecovery(): Promise<void> {
   try {
     if ('serviceWorker' in navigator) {
       const regs = await navigator.serviceWorker.getRegistrations();
@@ -512,6 +516,15 @@ export async function clearBootstrapState(): Promise<void> {
   } catch {
     /* best effort */
   }
+}
+
+/**
+ * Hard reset for the user-initiated "Reset and reload" button on the
+ * error card: unregister every SW, drop every cache, AND clear the
+ * retry counter so the next bootstrap attempt starts fresh.
+ */
+export async function clearBootstrapState(): Promise<void> {
+  await softResetForRecovery();
   try {
     sessionStorage.removeItem(RELOAD_FLAG);
   } catch {
