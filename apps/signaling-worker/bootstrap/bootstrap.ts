@@ -91,13 +91,26 @@ function createStatusSurface(): StatusSurface {
 
 // ─── Read hub identity ─────────────────────────────────────────────────────
 
+/**
+ * Hub-name shape. Must mirror `validateName` in `@brika/remote-access-protocol`
+ * — the coordinator rejects anything else, so accepting it here would only
+ * lead to a confusing 4xx later. Used as the security boundary for every
+ * URL we construct from a hub name (Sonar S8476, S8480).
+ */
+const HUB_NAME_PATTERN = /^[a-z][a-z0-9-]{2,30}[a-z0-9]$/;
+
+function isValidHubName(candidate: string | null | undefined): candidate is string {
+  return Boolean(candidate && HUB_NAME_PATTERN.test(candidate));
+}
+
 function readHubName(): string | null {
-  // 1. Worker-injected meta tag (preferred).
+  // 1. Worker-injected meta tag (preferred). Still re-validated even though
+  //    the worker has its own validator — defence in depth.
   const meta = document.querySelector('meta[name="brika:hub"]')?.getAttribute('content');
-  if (meta) return meta;
+  if (isValidHubName(meta)) return meta;
   // 2. Path fallback for self-hosted setups.
   const first = location.pathname.split('/').find((s) => s.length > 0);
-  if (first && /^[a-z][a-z0-9-]{2,30}[a-z0-9]$/.test(first)) return first;
+  if (isValidHubName(first)) return first;
   return null;
 }
 
@@ -159,260 +172,116 @@ interface PeerHandle {
   close(): void;
 }
 
-async function openPeer(
-  hubName: string,
-  ticket: TicketResponse,
-  coordinator: string,
-  status: StatusSurface
-): Promise<PeerHandle> {
-  status.setPhase('connecting', `Connecting to ${hubName}…`);
-  dlog('openPeer', { hubName, coordinator });
+interface InflightEntry {
+  controller: AbortController;
+  resolve: (res: Response) => void;
+  reject: (err: Error) => void;
+  headEmitted: boolean;
+  writer: WritableStreamDefaultWriter<Uint8Array>;
+  stream: ReadableStream<Uint8Array>;
+}
 
-  const wsUrl = (() => {
-    const u = new URL('/v1/client', coordinator);
-    u.protocol = u.protocol === 'https:' ? 'wss:' : 'ws:';
-    u.searchParams.set('hub', hubName);
-    u.searchParams.set('ticket', ticket.ticket);
-    return u.toString();
-  })();
-
-  const ws = new WebSocket(wsUrl, [`brika.v${PROTOCOL_VERSION}`, `ticket.${ticket.ticket}`]);
-  const pc = new RTCPeerConnection({
-    iceServers: (ticket.iceServers && ticket.iceServers.length > 0
-      ? ticket.iceServers
-      : FALLBACK_ICE_SERVERS) as RTCIceServer[],
-  });
-
-  let dataChannel: RTCDataChannel | null = null;
-  let sessionId = '';
-  const pendingIce: IceCandidate[] = [];
-
-  const sendSignaling = (msg: SignalingMessage): void => {
-    if (ws.readyState === WebSocket.OPEN) {
-      ws.send(encodeSignaling(msg));
-    }
-  };
-
-  pc.addEventListener('icecandidate', (ev) => {
-    if (!ev.candidate) return;
-    const cand: IceCandidate = {
-      candidate: ev.candidate.candidate,
-      sdpMid: ev.candidate.sdpMid ?? undefined,
-      sdpMLineIndex: ev.candidate.sdpMLineIndex ?? undefined,
-    };
-    if (sessionId) {
-      sendSignaling({ v: PROTOCOL_VERSION, kind: 'client.ice', sessionId, candidate: cand });
-    } else {
-      pendingIce.push(cand);
-    }
-  });
-
-  // The hub side opens the data channel after it receives our offer (we
-  // create it locally so negotiation knows about it).
-  const channel = pc.createDataChannel('rpc', { ordered: true });
-  channel.binaryType = 'arraybuffer';
-
-  // RPC plumbing
-  const inflight = new Map<
-    number,
-    {
-      controller: AbortController;
-      resolve: (res: Response) => void;
-      reject: (err: Error) => void;
-      headEmitted: boolean;
-      writer: WritableStreamDefaultWriter<Uint8Array>;
-      stream: ReadableStream<Uint8Array>;
-      status: number;
-      headers: Headers;
-    }
-  >();
-  let nextId = 1;
-
-  channel.addEventListener('open', () => {
-    dataChannel = channel;
-    dlog('data channel open');
-    sendRpc({
-      v: PROTOCOL_VERSION,
-      kind: 'hello',
-      role: 'client',
-      softwareVersion: 'bootstrap',
-      maxProtocolVersion: PROTOCOL_VERSION,
-    });
-  });
-
-  channel.addEventListener('message', (ev) => {
-    const raw = typeof ev.data === 'string' ? ev.data : new TextDecoder().decode(ev.data);
-    const msg = decodeRpc(raw);
-    if (!msg) return;
-    handleRpcFrame(msg);
-  });
-
-  function sendRpc(frame: RpcMessage): void {
-    if (dataChannel?.readyState === 'open') {
-      dataChannel.send(encodeRpc(frame));
-    }
+function chunkToBytes(msg: { dataB64?: string; dataText?: string }): Uint8Array {
+  if (msg.dataB64) {
+    return Uint8Array.from(atob(msg.dataB64), (c) => c.codePointAt(0) ?? 0);
   }
+  return new TextEncoder().encode(msg.dataText ?? '');
+}
 
-  function handleRpcFrame(msg: RpcMessage): void {
-    if (msg.kind === 'response.head') {
-      const entry = inflight.get(msg.id);
-      if (!entry) return;
-      entry.status = msg.status;
-      entry.headers = new Headers(msg.headers);
-      const response = new Response(entry.stream, {
-        status: msg.status,
-        headers: entry.headers,
-      });
-      entry.headEmitted = true;
-      entry.resolve(response);
-    } else if (msg.kind === 'response.chunk') {
-      const entry = inflight.get(msg.id);
-      if (!entry) return;
-      // Either a text or base64 chunk depending on the source content-type.
-      const bytes = msg.dataB64
-        ? Uint8Array.from(atob(msg.dataB64), (c) => c.charCodeAt(0))
-        : new TextEncoder().encode(msg.dataText ?? '');
-      void entry.writer.write(bytes);
-    } else if (msg.kind === 'response.end') {
-      const entry = inflight.get(msg.id);
-      if (!entry) return;
+function deliverHead(
+  entry: InflightEntry,
+  status: number,
+  headers: ReadonlyArray<readonly [string, string]>
+): void {
+  entry.headEmitted = true;
+  const response = new Response(entry.stream, { status, headers: new Headers(headers) });
+  entry.resolve(response);
+}
+
+function dispatchRpcFrame(msg: RpcMessage, inflight: Map<number, InflightEntry>): void {
+  if (
+    msg.kind !== 'response.head' &&
+    msg.kind !== 'response.chunk' &&
+    msg.kind !== 'response.end' &&
+    msg.kind !== 'response.error'
+  ) {
+    return;
+  }
+  const entry = inflight.get(msg.id);
+  if (!entry) return;
+  switch (msg.kind) {
+    case 'response.head':
+      deliverHead(entry, msg.status, msg.headers);
+      return;
+    case 'response.chunk':
+      void entry.writer.write(chunkToBytes(msg));
+      return;
+    case 'response.end':
       void entry.writer.close();
       inflight.delete(msg.id);
-    } else if (msg.kind === 'response.error') {
-      const entry = inflight.get(msg.id);
-      if (!entry) return;
-      if (!entry.headEmitted) {
-        entry.reject(new Error(`RPC ${msg.id}: ${msg.code} ${msg.message ?? ''}`));
-      } else {
+      return;
+    case 'response.error':
+      if (entry.headEmitted) {
         void entry.writer.abort(new Error(`RPC ${msg.id}: ${msg.code}`));
+      } else {
+        entry.reject(new Error(`RPC ${msg.id}: ${msg.code} ${msg.message ?? ''}`));
       }
       inflight.delete(msg.id);
-    }
+      return;
   }
+}
 
-  const handle: PeerHandle = {
-    send: sendRpc,
-    request(method, url, signal) {
-      return new Promise<Response>((resolve, reject) => {
-        const id = nextId++;
-        const { writable, readable } = new TransformStream<Uint8Array, Uint8Array>();
-        const writer = writable.getWriter();
-        const controller = new AbortController();
-        if (signal) {
-          signal.addEventListener('abort', () => controller.abort());
-        }
-        controller.signal.addEventListener('abort', () => {
-          sendRpc({ v: PROTOCOL_VERSION, kind: 'abort', id });
-          inflight.delete(id);
-          reject(new DOMException('Aborted', 'AbortError'));
-        });
-        inflight.set(id, {
-          controller,
-          resolve,
-          reject,
-          headEmitted: false,
-          writer,
-          stream: readable,
-          status: 0,
-          headers: new Headers(),
-        });
-        sendRpc({
-          v: PROTOCOL_VERSION,
-          kind: 'request',
-          id,
-          method,
-          url,
-          // Bootstrap only ever issues GETs for asset fetches — no body.
-          headers: [],
-        });
-      });
-    },
-    close() {
-      try {
-        channel.close();
-      } catch {
-        /* ignore */
-      }
-      try {
-        pc.close();
-      } catch {
-        /* ignore */
-      }
-      try {
-        ws.close();
-      } catch {
-        /* ignore */
-      }
-    },
-  };
+function closeSilently(closable: { close(): void }): void {
+  try {
+    closable.close();
+  } catch {
+    /* peer already torn down */
+  }
+}
 
-  // Drive the SDP exchange.
-  await new Promise<void>((resolve, reject) => {
-    const timeout = setTimeout(() => reject(new Error('Signaling WS open timed out')), 10_000);
-    ws.addEventListener('open', () => {
-      clearTimeout(timeout);
-      resolve();
-    });
-    ws.addEventListener('error', () => {
-      clearTimeout(timeout);
-      reject(new Error('Signaling WS errored before open'));
-    });
+function buildSignalingUrl(coordinator: string, hubName: string, ticket: string): string {
+  const u = new URL('/v1/client', coordinator);
+  u.protocol = u.protocol === 'https:' ? 'wss:' : 'ws:';
+  u.searchParams.set('hub', hubName);
+  u.searchParams.set('ticket', ticket);
+  return u.toString();
+}
+
+function pickIceServers(servers: ReadonlyArray<IceServer> | undefined): RTCIceServer[] {
+  const chosen = servers && servers.length > 0 ? servers : FALLBACK_ICE_SERVERS;
+  return chosen.map(
+    (s): RTCIceServer => ({
+      urls: s.urls,
+      username: s.username,
+      credential: s.credential,
+    })
+  );
+}
+
+function waitForOpen(ws: WebSocket, timeoutMs: number, label: string): Promise<void> {
+  return new Promise<void>((resolve, reject) => {
+    const timeout = setTimeout(() => reject(new Error(`${label} open timed out`)), timeoutMs);
+    ws.addEventListener(
+      'open',
+      () => {
+        clearTimeout(timeout);
+        resolve();
+      },
+      { once: true }
+    );
+    ws.addEventListener(
+      'error',
+      () => {
+        clearTimeout(timeout);
+        reject(new Error(`${label} errored before open`));
+      },
+      { once: true }
+    );
   });
+}
 
-  const offer = await pc.createOffer();
-  await pc.setLocalDescription(offer);
-  if (!offer.sdp) throw new Error('createOffer produced no SDP');
-  sendSignaling({
-    v: PROTOCOL_VERSION,
-    kind: 'client.offer',
-    hubName,
-    sdp: offer.sdp,
-    ticket: ticket.ticket,
-    caps: ['rpc.v1'],
-  });
-
-  ws.addEventListener('message', async (ev) => {
-    const raw = typeof ev.data === 'string' ? ev.data : new TextDecoder().decode(ev.data);
-    const msg = decodeSignaling(raw);
-    if (!msg) return;
-    if (msg.kind === 'session.iceServers') {
-      // Coordinator pushes the canonical ICE list. RTCPeerConnection doesn't
-      // hot-swap iceServers post-creation, so we treat this as informational.
-      return;
-    }
-    if (msg.kind === 'session.answer') {
-      sessionId = msg.sessionId;
-      await pc.setRemoteDescription({ type: 'answer', sdp: msg.sdp });
-      for (const cand of pendingIce) {
-        sendSignaling({
-          v: PROTOCOL_VERSION,
-          kind: 'client.ice',
-          sessionId,
-          candidate: cand,
-        });
-      }
-      pendingIce.length = 0;
-      return;
-    }
-    if (msg.kind === 'session.ice') {
-      try {
-        await pc.addIceCandidate({
-          candidate: msg.candidate.candidate,
-          sdpMid: msg.candidate.sdpMid,
-          sdpMLineIndex: msg.candidate.sdpMLineIndex,
-        });
-      } catch {
-        // Ignore — a late or malformed candidate just doesn't help.
-      }
-      return;
-    }
-    if (msg.kind === 'session.error') {
-      throw new Error(`Signaling error: ${msg.code} ${msg.message ?? ''}`);
-    }
-  });
-
-  // Wait for the data channel to open. WebRTC may take 1-5 seconds.
-  await new Promise<void>((resolve, reject) => {
+function waitForDataChannel(channel: RTCDataChannel, pc: RTCPeerConnection): Promise<void> {
+  return new Promise<void>((resolve, reject) => {
     const timeout = setTimeout(() => reject(new Error('Data channel open timed out')), 30_000);
     if (channel.readyState === 'open') {
       clearTimeout(timeout);
@@ -430,8 +299,203 @@ async function openPeer(
       }
     });
   });
+}
 
+interface SignalingCtx {
+  readonly pc: RTCPeerConnection;
+  readonly pendingIce: IceCandidate[];
+  readonly sessionRef: { current: string };
+  send(msg: SignalingMessage): void;
+}
+
+async function handleSignalingFrame(raw: string, ctx: SignalingCtx): Promise<void> {
+  const msg = decodeSignaling(raw);
+  if (!msg) return;
+  if (msg.kind === 'session.iceServers') {
+    // RTCPeerConnection doesn't hot-swap iceServers post-creation, so this
+    // is informational.
+    return;
+  }
+  if (msg.kind === 'session.answer') {
+    ctx.sessionRef.current = msg.sessionId;
+    await ctx.pc.setRemoteDescription({ type: 'answer', sdp: msg.sdp });
+    for (const cand of ctx.pendingIce) {
+      ctx.send({
+        v: PROTOCOL_VERSION,
+        kind: 'client.ice',
+        sessionId: ctx.sessionRef.current,
+        candidate: cand,
+      });
+    }
+    ctx.pendingIce.length = 0;
+    return;
+  }
+  if (msg.kind === 'session.ice') {
+    try {
+      await ctx.pc.addIceCandidate({
+        candidate: msg.candidate.candidate,
+        sdpMid: msg.candidate.sdpMid,
+        sdpMLineIndex: msg.candidate.sdpMLineIndex,
+      });
+    } catch {
+      // Late/malformed candidates are harmless to drop.
+    }
+    return;
+  }
+  if (msg.kind === 'session.error') {
+    throw new Error(`Signaling error: ${msg.code} ${msg.message ?? ''}`);
+  }
+}
+
+async function openPeer(
+  hubName: string,
+  ticket: TicketResponse,
+  coordinator: string,
+  status: StatusSurface
+): Promise<PeerHandle> {
+  status.setPhase('connecting', `Connecting to ${hubName}…`);
+  dlog('openPeer', { hubName, coordinator });
+
+  const ws = new WebSocket(buildSignalingUrl(coordinator, hubName, ticket.ticket), [
+    `brika.v${PROTOCOL_VERSION}`,
+    `ticket.${ticket.ticket}`,
+  ]);
+  const pc = new RTCPeerConnection({ iceServers: pickIceServers(ticket.iceServers) });
+
+  const sessionRef = { current: '' };
+  const pendingIce: IceCandidate[] = [];
+
+  const sendSignaling = (msg: SignalingMessage): void => {
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(encodeSignaling(msg));
+    }
+  };
+
+  pc.addEventListener('icecandidate', (ev) => {
+    if (!ev.candidate) return;
+    const cand: IceCandidate = {
+      candidate: ev.candidate.candidate,
+      sdpMid: ev.candidate.sdpMid ?? undefined,
+      sdpMLineIndex: ev.candidate.sdpMLineIndex ?? undefined,
+    };
+    if (sessionRef.current) {
+      sendSignaling({
+        v: PROTOCOL_VERSION,
+        kind: 'client.ice',
+        sessionId: sessionRef.current,
+        candidate: cand,
+      });
+    } else {
+      pendingIce.push(cand);
+    }
+  });
+
+  // We create the data channel locally so SDP negotiation knows about it.
+  const channel = pc.createDataChannel('rpc', { ordered: true });
+  channel.binaryType = 'arraybuffer';
+
+  const inflight = new Map<number, InflightEntry>();
+  let nextId = 1;
+  let dataChannel: RTCDataChannel | null = null;
+
+  const sendRpc = (frame: RpcMessage): void => {
+    if (dataChannel?.readyState === 'open') {
+      dataChannel.send(encodeRpc(frame));
+    }
+  };
+
+  channel.addEventListener('open', () => {
+    dataChannel = channel;
+    dlog('data channel open');
+    sendRpc({
+      v: PROTOCOL_VERSION,
+      kind: 'hello',
+      role: 'client',
+      softwareVersion: 'bootstrap',
+      maxProtocolVersion: PROTOCOL_VERSION,
+    });
+  });
+
+  channel.addEventListener('message', (ev) => {
+    const raw = typeof ev.data === 'string' ? ev.data : new TextDecoder().decode(ev.data);
+    const msg = decodeRpc(raw);
+    if (msg) dispatchRpcFrame(msg, inflight);
+  });
+
+  const handle: PeerHandle = {
+    send: sendRpc,
+    request: (method, url, signal) =>
+      makeRpcRequest(method, url, signal, inflight, () => nextId++, sendRpc),
+    close: () => {
+      closeSilently(channel);
+      closeSilently(pc);
+      closeSilently(ws);
+    },
+  };
+
+  await waitForOpen(ws, 10_000, 'Signaling WS');
+
+  const offer = await pc.createOffer();
+  await pc.setLocalDescription(offer);
+  if (!offer.sdp) throw new Error('createOffer produced no SDP');
+  sendSignaling({
+    v: PROTOCOL_VERSION,
+    kind: 'client.offer',
+    hubName,
+    sdp: offer.sdp,
+    ticket: ticket.ticket,
+    caps: ['rpc.v1'],
+  });
+
+  const ctx: SignalingCtx = { pc, pendingIce, sessionRef, send: sendSignaling };
+  ws.addEventListener('message', (ev) => {
+    const raw = typeof ev.data === 'string' ? ev.data : new TextDecoder().decode(ev.data);
+    void handleSignalingFrame(raw, ctx);
+  });
+
+  await waitForDataChannel(channel, pc);
   return handle;
+}
+
+function makeRpcRequest(
+  method: string,
+  url: string,
+  signal: AbortSignal | undefined,
+  inflight: Map<number, InflightEntry>,
+  nextId: () => number,
+  sendRpc: (frame: RpcMessage) => void
+): Promise<Response> {
+  return new Promise<Response>((resolve, reject) => {
+    const id = nextId();
+    const { writable, readable } = new TransformStream<Uint8Array, Uint8Array>();
+    const writer = writable.getWriter();
+    const controller = new AbortController();
+    if (signal) {
+      signal.addEventListener('abort', () => controller.abort());
+    }
+    controller.signal.addEventListener('abort', () => {
+      sendRpc({ v: PROTOCOL_VERSION, kind: 'abort', id });
+      inflight.delete(id);
+      reject(new DOMException('Aborted', 'AbortError'));
+    });
+    inflight.set(id, {
+      controller,
+      resolve,
+      reject,
+      headEmitted: false,
+      writer,
+      stream: readable,
+    });
+    sendRpc({
+      v: PROTOCOL_VERSION,
+      kind: 'request',
+      id,
+      method,
+      url,
+      // Bootstrap only ever issues GETs for asset fetches — no body.
+      headers: [],
+    });
+  });
 }
 
 // ─── Service Worker + Cache API ────────────────────────────────────────────
@@ -497,6 +561,17 @@ interface AssetGraph {
 
 const ASSET_RE = /\/assets\/[A-Za-z0-9._-]+\.(?:js|css|woff2?|png|svg|jpg|jpeg|webp|json)/g;
 
+/**
+ * Best-effort MIME guess for the bootstrap-side fetch. Hub responses also
+ * carry their own `content-type`; this is a fallback for binary asset types
+ * where the protocol's text/base64 distinction loses the original header.
+ */
+function guessAssetMime(url: string): string | undefined {
+  if (url.endsWith('.css')) return 'text/css';
+  if (url.endsWith('.js')) return 'text/javascript';
+  return undefined;
+}
+
 interface FetchedAsset {
   bytes: ArrayBuffer;
   text: string | null;
@@ -538,18 +613,15 @@ async function primeAssetCache(
     let textForScan: string | null = null;
 
     const cached = await cache.match(url);
-    if (cached) {
-      // Only need to scan JS for transitive references; load text lazily.
-      if (url.endsWith('.js')) {
-        textForScan = await cached.clone().text();
-      }
-    } else {
-      const mime = url.endsWith('.css')
-        ? 'text/css'
-        : url.endsWith('.js')
-          ? 'text/javascript'
-          : undefined;
-      const { bytes, text, contentType } = await fetchAssetThroughPeer(peer, url, mime);
+    if (cached && url.endsWith('.js')) {
+      // Cached JS still has to be scanned for transitive references.
+      textForScan = await cached.clone().text();
+    } else if (!cached) {
+      const { bytes, text, contentType } = await fetchAssetThroughPeer(
+        peer,
+        url,
+        guessAssetMime(url)
+      );
       textForScan = text;
       const response = new Response(bytes, { headers: { 'content-type': contentType } });
       // `cache.put` swallows quota errors — if the user's disk is full, we
@@ -593,11 +665,7 @@ async function buildBlobGraph(
     const url = queue.shift();
     if (!url || visited.has(url)) continue;
     visited.add(url);
-    const mime = url.endsWith('.css')
-      ? 'text/css'
-      : url.endsWith('.js')
-        ? 'text/javascript'
-        : undefined;
+    const mime = guessAssetMime(url);
     const { blobUrl, text } = await fetchAsBlobUrl(peer, url, mime);
     blobs.set(url, blobUrl);
     if (text && url.endsWith('.js')) {
@@ -724,4 +792,4 @@ async function main(): Promise<void> {
   }
 }
 
-void main();
+await main();

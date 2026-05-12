@@ -36,9 +36,7 @@ async function loadArchive(): Promise<Map<string, Uint8Array>> {
 }
 
 function archive(): Promise<Map<string, Uint8Array>> {
-  if (!cache) {
-    cache = loadArchive();
-  }
+  cache ??= loadArchive();
   return cache;
 }
 
@@ -104,11 +102,8 @@ export function embeddedUi(): MiddlewareHandler {
     }
 
     const requested = c.req.path === '/' ? 'index.html' : c.req.path.replace(/^\/+/, '');
-    let bytes = files.get(requested);
-    if (!bytes) {
-      // SPA fallback for client-side routes.
-      bytes = files.get('index.html');
-    }
+    // SPA fallback for client-side routes (`null` so `??=` works).
+    const bytes = files.get(requested) ?? files.get('index.html') ?? null;
     if (!bytes) {
       await next();
       return undefined;

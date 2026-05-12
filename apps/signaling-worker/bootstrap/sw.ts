@@ -20,7 +20,7 @@
 
 const ASSET_CACHE = 'brika-assets-v1';
 
-const sw = self as unknown as ServiceWorkerGlobalScope;
+const sw = globalThis as unknown as ServiceWorkerGlobalScope;
 
 sw.addEventListener('install', () => {
   // Take over from any previous SW version immediately. The Brika bootstrap
@@ -51,5 +51,3 @@ async function serveAssetFromCache(req: Request): Promise<Response> {
   // recover automatically.
   return fetch(req);
 }
-
-export {};

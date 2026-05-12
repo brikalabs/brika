@@ -10,105 +10,176 @@
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 240 240' fill='none'%3E%3Crect width='240' height='240' rx='65' fill='black'/%3E%3Cpath d='M119 60.893C119 58.206 119 56.862 119.143 55.734C120.177 47.59 126.59 41.177 134.734 40.143C135.862 40 137.206 40 139.893 40H146C166.987 40 184 57.013 184 78S166.987 116 146 116H139.893C137.206 116 135.862 116 134.734 115.857C126.59 114.823 120.177 108.41 119.143 100.266C119 99.137 119 97.794 119 95.107V60.893Z' fill='white'/%3E%3Cpath d='M119 148.107C119 142.427 119 139.587 119.635 137.26C121.313 131.114 126.114 126.313 132.26 124.635C134.587 124 137.427 124 143.107 124H156C176.987 124 194 141.013 194 162S176.987 200 156 200H143.107C137.427 200 134.587 200 132.26 199.365C126.114 197.687 121.313 192.886 119.635 186.74C119 184.413 119 181.573 119 175.893V148.107Z' fill='white'/%3E%3Crect x='63' y='152' width='48' height='48' rx='18' fill='white'/%3E%3Crect x='63' y='96' width='48' height='48' rx='18' fill='white'/%3E%3Crect x='63' y='40' width='48' height='48' rx='18' fill='white'/%3E%3C/svg%3E"
     />
     <style>
-      /* Apply persisted theme synchronously so the splash doesn't flash. */
-                        :root {
-                          color-scheme: light dark;
-                        }
-                        html,
-                        body {
-                          margin: 0;
-                          padding: 0;
-                          min-height: 100%;
-                          background: #fafaf9;
-                          color: #18181b;
-                          font-family:
-                            ui-sans-serif,
-                            system-ui,
-                            -apple-system,
-                            'Segoe UI',
-                            Roboto,
-                            sans-serif;
-                        }
-                        @media (prefers-color-scheme: dark) {
-                          html,
-                          body {
-                            background: #0a0a0a;
-                            color: #fafafa;
-                          }
-                        }
-                        #brika-bootstrap {
-                          position: fixed;
-                          inset: 0;
-                          display: grid;
-                          place-items: center;
-                          padding: 24px;
-                        }
-                        .brika-card {
-                          max-width: 380px;
-                          text-align: center;
-                        }
-                        .brika-mark {
-                          width: 64px;
-                          height: 64px;
-                          margin: 0 auto 20px;
-                          border-radius: 18px;
-                          background: #18181b;
-                          display: grid;
-                          place-items: center;
-                        }
-                        @media (prefers-color-scheme: dark) {
-                          .brika-mark {
-                            background: #fafafa;
-                          }
-                        }
-                        .brika-mark svg {
-                          width: 36px;
-                          height: 36px;
-                          color: #fafafa;
-                        }
-                        @media (prefers-color-scheme: dark) {
-                          .brika-mark svg {
-                            color: #18181b;
-                          }
-                        }
-                        .brika-status {
-                          font-size: 14px;
-                          font-weight: 500;
-                          margin: 0 0 6px;
-                        }
-                        .brika-detail {
-                          font-size: 12.5px;
-                          opacity: 0.6;
-                          margin: 0;
-                          font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
-                          word-break: break-all;
-                        }
-                        .brika-spinner {
-                          width: 18px;
-                          height: 18px;
-                          margin: 0 auto 14px;
-                          border: 2px solid currentColor;
-                          border-right-color: transparent;
-                          border-radius: 50%;
-                          animation: brika-spin 0.7s linear infinite;
-                          opacity: 0.45;
-                        }
-                        @keyframes brika-spin {
-                          to {
-                            transform: rotate(360deg);
-                          }
-                        }
-                        #brika-bootstrap[data-brika-phase='error'] .brika-spinner {
-                          display: none;
-                        }
-                        #brika-bootstrap[data-brika-phase='error'] .brika-status {
-                          color: #b91c1c;
-                        }
-                        @media (prefers-color-scheme: dark) {
-                          #brika-bootstrap[data-brika-phase='error'] .brika-status {
-                            color: #fca5a5;
-                          }
-                        }
+      :root {
+              color-scheme: light dark;
+              --brika-bg: #fafaf9;
+              --brika-fg: #18181b;
+              --brika-mark-bg: #18181b;
+              --brika-mark-fg: #fafafa;
+              --brika-glow: rgba(255, 255, 255, 0.06);
+              --brika-muted: rgba(24, 24, 27, 0.55);
+              --brika-error: #b91c1c;
+            }
+            @media (prefers-color-scheme: dark) {
+              :root {
+                --brika-bg: #0a0a0a;
+                --brika-fg: #fafafa;
+                --brika-mark-bg: #fafafa;
+                --brika-mark-fg: #18181b;
+                --brika-glow: rgba(255, 255, 255, 0.08);
+                --brika-muted: rgba(250, 250, 250, 0.55);
+                --brika-error: #fca5a5;
+              }
+            }
+
+            html,
+            body {
+              margin: 0;
+              padding: 0;
+              min-height: 100%;
+              background:
+                radial-gradient(
+                  ellipse 80% 60% at 50% 35%,
+                  var(--brika-glow),
+                  transparent 70%
+                ),
+                var(--brika-bg);
+              color: var(--brika-fg);
+              font-family:
+                ui-sans-serif,
+                system-ui,
+                -apple-system,
+                'Segoe UI',
+                Roboto,
+                sans-serif;
+              -webkit-font-smoothing: antialiased;
+            }
+
+            #brika-bootstrap {
+              position: fixed;
+              inset: 0;
+              display: grid;
+              place-items: center;
+              padding: 24px;
+            }
+
+            .brika-card {
+              max-width: 380px;
+              text-align: center;
+            }
+
+            /* ─── Mark ─────────────────────────────────────────────────────────── */
+
+            .brika-mark {
+              width: 92px;
+              height: 92px;
+              margin: 0 auto 24px;
+              border-radius: 26px;
+              background: var(--brika-mark-bg);
+              display: grid;
+              place-items: center;
+              position: relative;
+              animation: brika-mark-pulse 2.6s ease-in-out infinite;
+              animation-delay: 1.1s;
+            }
+            .brika-mark::after {
+              content: '';
+              position: absolute;
+              inset: -6px;
+              border-radius: 32px;
+              background: var(--brika-mark-bg);
+              opacity: 0.25;
+              filter: blur(14px);
+              z-index: -1;
+              animation: brika-glow 2.6s ease-in-out infinite;
+              animation-delay: 1.1s;
+            }
+            .brika-mark svg {
+              width: 56px;
+              height: 56px;
+              color: var(--brika-mark-fg);
+              overflow: visible;
+            }
+
+            .brika-shape {
+              opacity: 0;
+              transform: translate3d(0, 10px, 0) scale(0.85);
+              transform-box: fill-box;
+              transform-origin: center;
+              animation: brika-build 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+            }
+            /* Stack the left bricks bottom-up, then snap in the right pieces. */
+            .brika-l-3 { animation-delay: 0.10s; }
+            .brika-l-2 { animation-delay: 0.20s; }
+            .brika-l-1 { animation-delay: 0.30s; }
+            .brika-r-top { animation-delay: 0.45s; }
+            .brika-r-bot { animation-delay: 0.55s; }
+
+            @keyframes brika-build {
+              to {
+                opacity: 1;
+                transform: translate3d(0, 0, 0) scale(1);
+              }
+            }
+
+            @keyframes brika-mark-pulse {
+              0%, 100% { transform: scale(1); }
+              50% { transform: scale(1.035); }
+            }
+
+            @keyframes brika-glow {
+              0%, 100% { opacity: 0.20; }
+              50% { opacity: 0.45; }
+            }
+
+            /* Error: still the mark, but tinted red and not pulsing. */
+            #brika-bootstrap[data-brika-phase='error'] .brika-mark,
+            #brika-bootstrap[data-brika-phase='error'] .brika-mark::after {
+              animation: none;
+              background: var(--brika-error);
+            }
+
+            /* ─── Status text ──────────────────────────────────────────────────── */
+
+            .brika-status {
+              font-size: 14px;
+              font-weight: 500;
+              margin: 0 0 6px;
+              letter-spacing: -0.01em;
+              opacity: 0;
+              animation: brika-fade-in 0.5s ease-out 0.7s forwards;
+            }
+            .brika-detail {
+              font-size: 12px;
+              color: var(--brika-muted);
+              margin: 0;
+              font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+              word-break: break-all;
+              min-height: 1em;
+              opacity: 0;
+              animation: brika-fade-in 0.5s ease-out 0.9s forwards;
+            }
+            #brika-bootstrap[data-brika-phase='error'] .brika-status {
+              color: var(--brika-error);
+            }
+            @keyframes brika-fade-in {
+              to { opacity: 1; }
+            }
+
+            /* ─── Reduced motion ───────────────────────────────────────────────── */
+            @media (prefers-reduced-motion: reduce) {
+              .brika-shape,
+              .brika-status,
+              .brika-detail {
+                animation: none !important;
+                opacity: 1 !important;
+                transform: none !important;
+              }
+              .brika-mark,
+              .brika-mark::after {
+                animation: none !important;
+              }
+            }
     </style>
   </head>
   <body>
@@ -116,18 +187,21 @@
       <div class="brika-card">
         <div class="brika-mark" aria-hidden="true">
           <svg viewBox="0 0 240 240" fill="currentColor">
+            <!-- Right side: the "B" (top) and "R" loop (bottom) — slot in last so they read as a name being completed. -->
             <path
+              class="brika-shape brika-r-top"
               d="M119 60.893C119 58.206 119 56.862 119.143 55.734C120.177 47.59 126.59 41.177 134.734 40.143C135.862 40 137.206 40 139.893 40H146C166.987 40 184 57.013 184 78S166.987 116 146 116H139.893C137.206 116 135.862 116 134.734 115.857C126.59 114.823 120.177 108.41 119.143 100.266C119 99.137 119 97.794 119 95.107V60.893Z"
             />
             <path
+              class="brika-shape brika-r-bot"
               d="M119 148.107C119 142.427 119 139.587 119.635 137.26C121.313 131.114 126.114 126.313 132.26 124.635C134.587 124 137.427 124 143.107 124H156C176.987 124 194 141.013 194 162S176.987 200 156 200H143.107C137.427 200 134.587 200 132.26 199.365C126.114 197.687 121.313 192.886 119.635 186.74C119 184.413 119 181.573 119 175.893V148.107Z"
             />
-            <rect x="63" y="152" width="48" height="48" rx="18" />
-            <rect x="63" y="96" width="48" height="48" rx="18" />
-            <rect x="63" y="40" width="48" height="48" rx="18" />
+            <!-- Left side: the three bricks. They stack bottom-up so the build reads as construction. -->
+            <rect class="brika-shape brika-l-3" x="63" y="152" width="48" height="48" rx="18" />
+            <rect class="brika-shape brika-l-2" x="63" y="96" width="48" height="48" rx="18" />
+            <rect class="brika-shape brika-l-1" x="63" y="40" width="48" height="48" rx="18" />
           </svg>
         </div>
-        <div class="brika-spinner" aria-hidden="true"></div>
         <p class="brika-status" data-brika-status>Connecting to your hub…</p>
         <p class="brika-detail" data-brika-detail></p>
       </div>
