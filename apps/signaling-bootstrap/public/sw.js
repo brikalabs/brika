@@ -14,7 +14,7 @@
 // Bump the cache name (v1 → v2 → …) whenever the cached-shape semantics
 // change. The activate handler deletes every prior `brika-assets-*`
 // cache so users carrying a stale one get a clean slate automatically.
-const ASSET_CACHE = 'brika-assets-v3';
+const ASSET_CACHE = 'brika-assets-v4';
 
 globalThis.addEventListener('install', () => {
   // skipWaiting() lets the new SW replace any previous version as soon
@@ -54,7 +54,7 @@ globalThis.addEventListener('activate', (event) => {
 
 // Sentinel URL the bootstrap pings to verify it's talking to a fresh
 // SW. Bump alongside ASSET_CACHE whenever the SW contract changes.
-const SW_VERSION = '3';
+const SW_VERSION = '4';
 const SW_PING_PATH = '/__brika_sw_ping__';
 
 globalThis.addEventListener('fetch', (event) => {
@@ -99,17 +99,22 @@ globalThis.addEventListener('fetch', (event) => {
       if (cached) {
         return cached;
       }
-      try {
-        return await fetch(req);
-      } catch (err) {
-        // Surface network failures as a 502 instead of an unhandled
-        // promise rejection in the SW (which the browser logs as an
-        // ugly "FetchEvent resulted in a network error response").
-        return new Response(`SW network fallback failed: ${err}`, {
-          status: 502,
-          headers: { 'content-type': 'text/plain' },
-        });
+      // Cache miss. In Vite dev the BFS can't statically discover every
+      // dynamic / conditional import (~3000 modules), so falling through
+      // to the network here would hit the bootstrap origin and 404 →
+      // SPA-fallback HTML with the wrong MIME → "Failed to load module
+      // script". Instead route the miss through the page bridge so the
+      // hub's dev-ui-proxy can serve the module from Vite. Slow on first
+      // hit, cached for subsequent loads.
+      const res = await proxyThroughClient(req, event.clientId);
+      // Write the proxied result back into the cache so the next request
+      // for the same URL hits locally. Clone first — Response bodies are
+      // one-shot.
+      if (res.ok) {
+        const cacheable = res.clone();
+        event.waitUntil(cache.put(req, cacheable).catch(() => {}));
       }
+      return res;
     })()
   );
 });
