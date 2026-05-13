@@ -315,13 +315,28 @@ export class DataChannelTransport implements Transport {
     reject: (err: Error) => void,
     clearTimer: () => void
   ): void {
-    const pc = new RTCPeerConnection({
-      iceServers: iceServers.map((s) => ({
-        urls: s.urls as string | string[],
+    // Filter out malformed entries — `urls: undefined` would crash with
+    // "not iterable" the moment a downstream consumer spreads it.
+    const rtcIceServers: RTCIceServer[] = [];
+    for (const s of iceServers) {
+      let urls: string | string[];
+      if (typeof s.urls === 'string') {
+        if (s.urls.length === 0) {
+          continue;
+        }
+        urls = s.urls;
+      } else if (Array.isArray(s.urls) && s.urls.length > 0) {
+        urls = [...s.urls];
+      } else {
+        continue;
+      }
+      rtcIceServers.push({
+        urls,
         ...(s.username && { username: s.username }),
         ...(s.credential && { credential: s.credential }),
-      })),
-    });
+      });
+    }
+    const pc = new RTCPeerConnection({ iceServers: rtcIceServers });
     this.#pc = pc;
 
     const channel = pc.createDataChannel('brika.rpc', { ordered: true });

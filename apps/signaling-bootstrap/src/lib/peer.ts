@@ -76,11 +76,25 @@ function closeQuietly(c: { close(): void }): void {
 function pickIceServers(servers: TicketResponse['iceServers']): RTCIceServer[] {
   const chosen: ReadonlyArray<IceServer> =
     servers && servers.length > 0 ? servers : DEFAULT_ICE_SERVERS;
-  return chosen.map((s) => ({
-    urls: typeof s.urls === 'string' ? s.urls : [...s.urls],
-    username: s.username,
-    credential: s.credential,
-  }));
+  const out: RTCIceServer[] = [];
+  for (const s of chosen) {
+    // Drop entries with a missing or malformed `urls` — `[...undefined]`
+    // would throw "Spread syntax requires ...iterable not be null or
+    // undefined" and abort the entire `RTCPeerConnection` construction.
+    let urls: string | string[];
+    if (typeof s.urls === 'string') {
+      if (s.urls.length === 0) {
+        continue;
+      }
+      urls = s.urls;
+    } else if (Array.isArray(s.urls) && s.urls.length > 0) {
+      urls = [...s.urls];
+    } else {
+      continue;
+    }
+    out.push({ urls, username: s.username, credential: s.credential });
+  }
+  return out;
 }
 
 function waitForWsOpen(ws: WebSocket, timeoutMs: number): Promise<void> {

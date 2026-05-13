@@ -24,12 +24,10 @@ export interface CloudflareTurnConfig {
   readonly ttlSeconds?: number;
 }
 
-interface CloudflareIceServersResponse {
-  readonly iceServers?: {
-    readonly urls: string | string[];
-    readonly username?: string;
-    readonly credential?: string;
-  };
+interface CloudflareIceServerEntry {
+  readonly urls?: string | string[];
+  readonly username?: string;
+  readonly credential?: string;
 }
 
 /**
@@ -62,21 +60,39 @@ export async function fetchCloudflareIceServers(
     if (!res.ok) {
       return [];
     }
-    const body = (await res.json()) as CloudflareIceServersResponse;
-    if (!body.iceServers) {
-      return [];
+    const body = (await res.json()) as {
+      iceServers?: CloudflareIceServerEntry | CloudflareIceServerEntry[];
+    };
+    // CF Realtime's `generate-ice-servers` has shipped two response shapes
+    // across versions: `iceServers: {urls, username, credential}` (single
+    // object) and `iceServers: [{...}]` (array). Normalize both to an array
+    // of valid `IceServer` entries; drop anything without a usable `urls`
+    // field rather than letting `undefined` reach the consumer's
+    // `RTCPeerConnection({ iceServers })` and fail with "not iterable".
+    const raw = body.iceServers;
+    let entries: CloudflareIceServerEntry[];
+    if (Array.isArray(raw)) {
+      entries = raw;
+    } else if (raw) {
+      entries = [raw];
+    } else {
+      entries = [];
     }
-    // Cloudflare returns a single object with multiple URLs (turn:, turns:,
-    // stun:). Normalize to one IceServer entry — RTCPeerConnection accepts
-    // the multi-URL shape directly.
-    return [
-      {
-        urls: body.iceServers.urls,
-        ...(body.iceServers.username ? { username: body.iceServers.username } : {}),
-        ...(body.iceServers.credential ? { credential: body.iceServers.credential } : {}),
-      },
-    ];
+    return entries.filter(isValidIceServerEntry).map((e) => ({
+      urls: e.urls,
+      ...(e.username ? { username: e.username } : {}),
+      ...(e.credential ? { credential: e.credential } : {}),
+    }));
   } catch {
     return [];
   }
+}
+
+function isValidIceServerEntry(
+  e: CloudflareIceServerEntry
+): e is CloudflareIceServerEntry & { urls: string | string[] } {
+  if (typeof e.urls === 'string') {
+    return e.urls.length > 0;
+  }
+  return Array.isArray(e.urls) && e.urls.length > 0;
 }
