@@ -28,7 +28,7 @@ import type { PeerHandle } from './peer';
 // Keep in sync with `public/sw.js` — they must agree on the cache name
 // for the bootstrap's `cache.put()` to be visible to the SW's
 // `cache.match()`.
-const ASSET_CACHE = 'brika-assets-v2';
+const ASSET_CACHE = 'brika-assets-v3';
 
 /**
  * Absolute-path module specifiers in ES module source. Captures static
@@ -500,7 +500,7 @@ function swapRoot(rootId: string): void {
  * doesn't respond with this exact string the SW is stale and we force
  * a one-time auto-reload to pick up the fresh worker.
  */
-const EXPECTED_SW_VERSION = '2';
+const EXPECTED_SW_VERSION = '3';
 const SW_PING_PATH = '/__brika_sw_ping__';
 const RELOAD_FLAG = 'brika-bootstrap-sw-reloaded';
 

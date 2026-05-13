@@ -71,24 +71,42 @@ async function handleProxiedRequest(
       init.body = data.body;
     }
     const res = await transport.fetch(data.url, init);
-    const buf = await res.arrayBuffer();
+    // Stream chunks back through the MessagePort so SSE / long-poll /
+    // text/event-stream responses don't hang waiting for `arrayBuffer()`
+    // to consume an infinite body. The SW reconstructs a Response wrapping
+    // a TransformStream and writes each chunk as it arrives.
     const respHeaders: Array<[string, string]> = [];
     res.headers.forEach((v, k) => respHeaders.push([k, v]));
-    port.postMessage(
-      {
-        status: res.status,
-        headers: respHeaders,
-        body: buf,
-      },
-      [buf]
-    );
+    port.postMessage({ kind: 'head', status: res.status, headers: respHeaders });
+
+    if (!res.body) {
+      port.postMessage({ kind: 'end' });
+      return;
+    }
+    const reader = res.body.getReader();
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) {
+          break;
+        }
+        if (value && value.byteLength > 0) {
+          // Copy into a fresh ArrayBuffer so we can transfer it (the
+          // Uint8Array might be a view over a shared buffer that the
+          // browser still owns).
+          const copy = new ArrayBuffer(value.byteLength);
+          new Uint8Array(copy).set(value);
+          port.postMessage({ kind: 'chunk', bytes: copy }, [copy]);
+        }
+      }
+      port.postMessage({ kind: 'end' });
+    } finally {
+      reader.releaseLock();
+    }
   } catch (err) {
     port.postMessage({
-      status: 502,
-      headers: [['content-type', 'text/plain']],
-      body: new TextEncoder().encode(
-        `Bridge proxy failed: ${err instanceof Error ? err.message : String(err)}`
-      ).buffer,
+      kind: 'error',
+      message: err instanceof Error ? err.message : String(err),
     });
   }
 }

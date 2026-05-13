@@ -14,7 +14,7 @@
 // Bump the cache name (v1 → v2 → …) whenever the cached-shape semantics
 // change. The activate handler deletes every prior `brika-assets-*`
 // cache so users carrying a stale one get a clean slate automatically.
-const ASSET_CACHE = 'brika-assets-v2';
+const ASSET_CACHE = 'brika-assets-v3';
 
 globalThis.addEventListener('install', () => {
   // skipWaiting() lets the new SW replace any previous version as soon
@@ -54,7 +54,7 @@ globalThis.addEventListener('activate', (event) => {
 
 // Sentinel URL the bootstrap pings to verify it's talking to a fresh
 // SW. Bump alongside ASSET_CACHE whenever the SW contract changes.
-const SW_VERSION = '2';
+const SW_VERSION = '3';
 const SW_PING_PATH = '/__brika_sw_ping__';
 
 globalThis.addEventListener('fetch', (event) => {
@@ -155,24 +155,51 @@ async function proxyThroughClient(req, clientId) {
     },
     [channel.port2]
   );
+  // Stream the body chunk-by-chunk through the MessagePort. The previous
+  // shape buffered the entire response via `arrayBuffer()` on the page
+  // side, which hangs forever on streaming responses (SSE / long-poll /
+  // `text/event-stream`) — bricks-not-loading was the visible symptom.
+  // Head arrives first; chunks flow until end/error. The 30s timeout only
+  // covers head arrival; once the head lands the stream lifetime is
+  // governed by the chunks.
   return new Promise((resolve) => {
-    const timer = setTimeout(() => {
-      resolve(
-        new Response('Bridge proxy timed out', {
-          status: 504,
-          headers: { 'content-type': 'text/plain' },
-        })
-      );
+    const { readable, writable } = new TransformStream();
+    const writer = writable.getWriter();
+    let headSeen = false;
+    const headTimer = setTimeout(() => {
+      if (!headSeen) {
+        resolve(
+          new Response('Bridge proxy timed out before head', {
+            status: 504,
+            headers: { 'content-type': 'text/plain' },
+          })
+        );
+      }
     }, 30_000);
     channel.port1.onmessage = (event) => {
-      clearTimeout(timer);
-      const { status, headers: respHeaders, body: respBody } = event.data ?? {};
-      resolve(
-        new Response(respBody ?? null, {
-          status: status ?? 502,
-          headers: respHeaders ?? [],
-        })
-      );
+      const msg = event.data ?? {};
+      if (msg.kind === 'head' && !headSeen) {
+        headSeen = true;
+        clearTimeout(headTimer);
+        resolve(
+          new Response(readable, {
+            status: msg.status ?? 502,
+            headers: msg.headers ?? [],
+          })
+        );
+        return;
+      }
+      if (msg.kind === 'chunk' && msg.bytes) {
+        void writer.write(new Uint8Array(msg.bytes));
+        return;
+      }
+      if (msg.kind === 'end') {
+        void writer.close();
+        return;
+      }
+      if (msg.kind === 'error') {
+        void writer.abort(new Error(msg.message ?? 'bridge error'));
+      }
     };
   });
 }
