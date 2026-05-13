@@ -281,6 +281,16 @@ function nextRefs(
  * browser will then resolve module imports to the original URLs and the
  * SW intercepts each request, serving from cache.
  */
+/**
+ * Cap on parallel BFS fetches. Vite dev in particular has a ~3000-module
+ * graph; doing those sequentially is 30s+ of `await`s. Running 16 in
+ * flight at once lets the data channel pipeline RPC requests (each gets
+ * its own `id`) while still bounding hub-side concurrency. 16 matches
+ * roughly what a browser would parallelize when loading the modules
+ * naturally, so the bridge isn't the bottleneck.
+ */
+const PRIME_CACHE_PARALLELISM = 16;
+
 async function primeCache(
   peer: PeerHandle,
   initial: readonly string[],
@@ -288,22 +298,29 @@ async function primeCache(
 ): Promise<number> {
   const cache = await caches.open(ASSET_CACHE);
   const visited = new Set<string>();
-  const queue: string[] = [...initial];
+  const queue: string[] = [];
+  for (const url of initial) {
+    if (!visited.has(url)) {
+      visited.add(url);
+      queue.push(url);
+    }
+  }
   let fetched = 0;
-  while (queue.length > 0) {
-    const url = queue.shift();
-    if (!url || visited.has(url)) {
-      continue;
+  let stop: Error | null = null;
+  const inflight = new Set<Promise<void>>();
+
+  const processOne = async (url: string): Promise<void> => {
+    if (stop) {
+      return;
     }
-    visited.add(url);
     if (await cache.match(url)) {
-      // Already primed from a previous attempt — still want to follow
-      // its transitive refs in case the graph grew.
-      continue;
+      // Already primed from a previous attempt — still follow its refs
+      // in case the graph grew.
+      return;
     }
-    // Neutralize Vite's HMR runtime so the imports resolve to a no-op
-    // module instead of attempting (and failing) a WS/SSE back-channel
-    // from the bootstrap origin to localhost:5173.
+    // Neutralize Vite's HMR runtime — synthesize a no-op module instead
+    // of fetching the real `/@vite/client` (which would try to open a WS
+    // back to localhost:5173 from the bootstrap origin).
     if (shouldNotInject(url)) {
       await cache.put(
         url,
@@ -311,7 +328,7 @@ async function primeCache(
       );
       fetched += 1;
       onProgress?.({ fetched, url });
-      continue;
+      return;
     }
     let fetchResult: { response: Response; text: string | null; contentType: string };
     try {
@@ -319,20 +336,49 @@ async function primeCache(
     } catch (err) {
       // A misconfigured dev hub (Vite down, dev-ui-proxy misrouting)
       // returns HTML for every module URL; that's a user-actionable
-      // setup error, not a transient 404, so let it propagate.
+      // setup error — propagate it so the bootstrap can surface the
+      // specific error card.
       if (err instanceof HtmlForModuleError) {
-        throw err;
+        stop = err;
       }
       // 404s on optional resources (some `?import` queries Vite emits)
       // shouldn't abort the whole graph — the injected script just
       // won't have that piece.
-      continue;
+      return;
     }
     const { response, text, contentType } = fetchResult;
     await cache.put(url, response);
     fetched += 1;
     onProgress?.({ fetched, url });
-    queue.push(...nextRefs(text, contentType, url, visited));
+    for (const ref of nextRefs(text, contentType, url, visited)) {
+      if (!visited.has(ref)) {
+        visited.add(ref);
+        queue.push(ref);
+      }
+    }
+  };
+
+  // Worker-pool BFS: keep up to PRIME_CACHE_PARALLELISM fetches in flight
+  // at once, refilling from the queue as each completes. Faster than batch-
+  // and-wait because slow modules don't stall the whole layer.
+  while (queue.length > 0 || inflight.size > 0) {
+    while (queue.length > 0 && inflight.size < PRIME_CACHE_PARALLELISM && !stop) {
+      const url = queue.shift();
+      if (!url) {
+        break;
+      }
+      const task = processOne(url).finally(() => inflight.delete(task));
+      inflight.add(task);
+    }
+    if (inflight.size === 0) {
+      break;
+    }
+    await Promise.race(inflight);
+  }
+  // Drain any remaining tasks so an HtmlForModuleError surfaces.
+  await Promise.all(inflight);
+  if (stop) {
+    throw stop;
   }
   return fetched;
 }
