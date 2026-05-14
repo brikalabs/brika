@@ -28,11 +28,15 @@ interface ProxyRequest {
 
 let installed = false;
 
+const log = (...args: unknown[]): void => console.log('[brika-sw-proxy]', ...args);
+
 export function installSwProxyListener(transport: Transport): void {
+  log('install called', { alreadyInstalled: installed });
   if (installed) {
     return;
   }
   if (typeof navigator === 'undefined' || !navigator.serviceWorker) {
+    log('install skipped — no navigator.serviceWorker');
     return;
   }
   installed = true;
@@ -51,14 +55,16 @@ export function installSwProxyListener(transport: Transport): void {
   // the SW falls back to network for cache misses (it can't distinguish
   // a hub-UI document from the bare bootstrap document, which has no
   // listener and would just hang for 30s on every proxied message).
-  notifySwReady();
+  notifySwReady('install');
   // A controller swap (new SW takes over after activation) loses the
   // ready-set, so re-announce.
-  navigator.serviceWorker.addEventListener('controllerchange', () => notifySwReady());
+  navigator.serviceWorker.addEventListener('controllerchange', () => notifySwReady('controllerchange'));
 }
 
-function notifySwReady(): void {
-  navigator.serviceWorker.controller?.postMessage({ type: 'BRIKA_PROXY_READY' });
+function notifySwReady(trigger: string): void {
+  const controller = navigator.serviceWorker.controller;
+  log('notifySwReady', { trigger, hasController: !!controller, scriptURL: controller?.scriptURL ?? null });
+  controller?.postMessage({ type: 'BRIKA_PROXY_READY' });
 }
 
 async function handleProxiedRequest(

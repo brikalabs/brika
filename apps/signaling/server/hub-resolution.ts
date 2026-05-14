@@ -40,29 +40,35 @@ export interface ResolvedHub {
 }
 
 /**
- * Resolve the hub name a request is targeting from a URL of the form
- * `<anything>/<name>[/rest]`. Returns `null` when the first path segment
- * doesn't look like a hub name — caller falls back to regular asset
- * serving or a 404.
+ * Resolve the hub name a request is targeting. Two shapes are accepted:
+ *
+ *   1. `/<name>[/rest]` — path-based, the canonical production form.
+ *   2. `/?hub=<name>`   — query override, used in dev where every hub serves
+ *                          from the same `localhost:5174/` root.
+ *
+ * Returns `null` when neither matches a valid hub name; caller falls back
+ * to regular asset serving or a 404.
  *
  * Hostname is intentionally ignored: a single Worker now serves every host
- * the deployment cares about, so the path-based form is the only one. The
- * caller is responsible for excluding the API prefix (`/v1/*`) before
- * invoking this — otherwise `v1` would still be rejected (too short to be
- * a valid hub name) but the response shape would not be the API one.
+ * the deployment cares about. The caller is responsible for excluding the
+ * API prefix (`/v1/*`) before invoking this.
  */
 export function resolveHubFromUrl(url: URL): ResolvedHub | null {
+  // 1. Path-based.
   const match = /^\/([^/]+)(\/.*)?$/.exec(url.pathname);
-  const candidate = match?.[1];
-  if (!candidate || !HUB_NAME_PATTERN.test(candidate)) {
-    return null;
+  const pathCandidate = match?.[1];
+  if (pathCandidate && HUB_NAME_PATTERN.test(pathCandidate) && !ASSET_PREFIXES.has(pathCandidate)) {
+    return { hubName: pathCandidate, restPath: match?.[2] ?? '/' };
   }
-  // Don't shadow the asset binding — `assets`, `sw.js`, etc. happen to fit
-  // the hub-name regex but they belong to Vite's static output.
-  if (ASSET_PREFIXES.has(candidate)) {
-    return null;
+  // 2. Query-based. `?hub=<name>` on the root path. Lets the bootstrap stamp
+  // the `brika:hub` meta tag in the served HTML *before* the bootstrap's JS
+  // runs — which avoids a race where the hub UI's `detectRemote` evaluates
+  // against a still-unstamped DOM.
+  const queryCandidate = url.searchParams.get('hub')?.toLowerCase();
+  if (queryCandidate && HUB_NAME_PATTERN.test(queryCandidate)) {
+    return { hubName: queryCandidate, restPath: url.pathname };
   }
-  return { hubName: candidate, restPath: match?.[2] ?? '/' };
+  return null;
 }
 
 /**

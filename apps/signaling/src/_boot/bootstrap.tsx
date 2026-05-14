@@ -1,3 +1,8 @@
+console.log('[brika-bootstrap] entry module loaded', {
+  url: location.href,
+  scripts: Array.from(document.scripts).map((s) => s.src || '(inline)'),
+});
+
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { App } from '@/App';

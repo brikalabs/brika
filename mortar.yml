@@ -17,19 +17,19 @@
 
 services:
   signaling:
-    label: Signaling (Vite + miniflare)
+    label: Signaling
     cwd: apps/signaling
     command: bun run dev
     port: 5174
 
   ui:
-    label: UI (Vite)
+    label: Brika UI
     cwd: apps/ui
     command: bun run dev
     port: 5173
 
   hub:
-    label: Hub
+    label: Brika Hub
     cwd: apps/hub
     command: bun run dev
     port: 3001

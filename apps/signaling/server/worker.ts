@@ -30,7 +30,7 @@ import {
 } from '@brika/remote-access-protocol';
 import { Hono } from 'hono';
 import { ClaimError, D1ClaimStore } from './claims-d1';
-import { type Env, EnvConfigError, validateEnvOnce } from './env';
+import { checkEnv, type Env } from './env';
 import { injectHubMeta, resolveHubFromUrl } from './hub-resolution';
 import { mintTicket, verifyTicket } from './tickets';
 
@@ -114,28 +114,6 @@ async function resolveIceServers(env: Env): Promise<ReadonlyArray<unknown>> {
 
 const app = new Hono<{ Bindings: Env }>();
 
-// First-request validation of required secrets. Workers has no startup hook
-// that sees `env`, so this is the closest equivalent to boot-time assertion:
-// the check runs once per cold isolate and short-circuits on every subsequent
-// request. A misconfigured deploy fails loudly on the first hit (including
-// /v1/health) instead of crashing deep inside `crypto.subtle.importKey` when
-// someone later tries to mint a ticket.
-app.use('*', async (c, next) => {
-  validateEnvOnce(c.env);
-  await next();
-});
-
-// Surface missing/empty secrets as an actionable 500 instead of letting the
-// crash bubble up as a cryptic crypto DataError. The body names the offending
-// var and the file to fix — much faster path for a new contributor than
-// "DOMException: Imported HMAC key length (0)…".
-app.onError((err, c) => {
-  if (err instanceof EnvConfigError) {
-    return c.json({ error: 'env-misconfigured', detail: err.message }, 500);
-  }
-  throw err;
-});
-
 app.get('/v1/health', async (c) => {
   const claims = new D1ClaimStore(c.env.DB);
   return c.json({ ok: true, claims: await claims.size() });
@@ -169,8 +147,10 @@ app.get('/v1/hubs/:name/status', async (c) => {
     return c.json({ error: 'Unknown hub' }, 404);
   }
   // The DO recognizes `/internal/status` as a non-WS introspection endpoint.
+  // Host is `do.invalid` — the RFC 2606-reserved TLD makes it obvious to a
+  // reader that this URL is never dialed; the DO only inspects path + query.
   const stub = doStubFor(c.env, lower);
-  const probeUrl = `https://internal.brika.dev/internal/status?name=${encodeURIComponent(lower)}`;
+  const probeUrl = `https://do.invalid/internal/status?name=${encodeURIComponent(lower)}`;
   return stub.fetch(probeUrl);
 });
 
@@ -276,4 +256,12 @@ app.all('*', async (c) => {
   return injectHubMeta(assetRes, resolved.hubName);
 });
 
-export default app satisfies ExportedHandler<Env>;
+// One guard at the entry point: parse env on the first request of each
+// isolate, fail loudly with an actionable 500 if misconfigured, otherwise
+// hand off to Hono. No middleware, no error class — just `check → forward`.
+export default {
+  fetch(req, env, ctx) {
+    const misconfigured = checkEnv(env);
+    return misconfigured ?? app.fetch(req, env, ctx);
+  },
+} satisfies ExportedHandler<Env>;

@@ -3,6 +3,9 @@ node_modules
 **/node_modules
 **/dist
 **/.cache
+
+# Compiled from src/sw.ts by vite.config.ts (brikaSwPlugin) — generated artifact.
+apps/signaling/public/sw.js
 **/.DS_Store
 .env
 # Cloudflare Workers local secrets (loaded by miniflare). The committed

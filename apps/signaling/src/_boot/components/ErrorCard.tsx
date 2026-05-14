@@ -9,9 +9,9 @@ import {
 } from '@brika/clay';
 import { Eraser, ExternalLink, RotateCw, SearchX } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
-import { clearBootstrapState } from '@/lib/asset-graph';
 import type { ErrorClassification } from '@/lib/classify-error';
 import { clearHubName } from '@/lib/hub-storage';
+import { clearBootstrapState } from '@/lib/service-worker';
 
 interface ErrorCardProps {
   readonly error: ErrorClassification;

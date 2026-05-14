@@ -1,25 +1,43 @@
-// Brika bootstrap Service Worker — intercepts same-origin GETs and serves
-// from the `brika-assets-v5` Cache. The page-side bootstrap pre-populates
-// this cache via WebRTC BEFORE injecting the hub's `<script>` / `<link>`
-// tags, so every browser fetch hits the cache locally. On miss we fall
-// through to the network — keeps the SW transparent for resources the
-// bootstrap didn't pre-cache (its own assets, /sw.js itself, etc.).
-//
-// This must intercept every path (not just `/assets/`) because Vite dev
-// HTML pulls modules from `/src/`, `/@fs/`, `/@vite/`, and
-// `/node_modules/.vite/deps/`, none of which match a `/assets/` prefix.
-// Intercepting everything is safe because the cache key is the full
-// Request — anything we didn't `cache.put()` is a miss and falls through.
-//
-// Bump the cache name (v1 → v2 → …) whenever the cached-shape semantics
-// change. The activate handler deletes every prior `brika-assets-*`
-// cache so users carrying a stale one get a clean slate automatically.
+/**
+ * Brika bootstrap Service Worker — intercepts same-origin GETs and serves
+ * from the `brika-assets-v5` Cache. The page-side bootstrap pre-populates
+ * this cache via WebRTC BEFORE injecting the hub's `<script>` / `<link>`
+ * tags, so every browser fetch hits the cache locally. On miss we fall
+ * through to the network — keeps the SW transparent for resources the
+ * bootstrap didn't pre-cache (its own assets, /sw.js itself, etc.).
+ *
+ * This must intercept every path (not just `/assets/`) because Vite dev
+ * HTML pulls modules from `/src/`, `/@fs/`, `/@vite/`, and
+ * `/node_modules/.vite/deps/`, none of which match a `/assets/` prefix.
+ * Intercepting everything is safe because the cache key is the full
+ * Request — anything we didn't `cache.put()` is a miss and falls through.
+ *
+ * Bump the cache name (v1 → v2 → …) whenever the cached-shape semantics
+ * change. The activate handler deletes every prior `brika-assets-*`
+ * cache so users carrying a stale one get a clean slate automatically.
+ */
+
+/// <reference lib="webworker" />
+
+// `lib: "WebWorker"` alone types `globalThis` as `WorkerGlobalScope` — the
+// broad base scope, missing SW-specific events (`install`, `activate`,
+// `fetch`) and the `clients` / `skipWaiting()` surface. Alias once as
+// `ServiceWorkerGlobalScope` and use the alias throughout — redeclaring
+// the global itself collides with the lib's existing declaration.
+const sw = globalThis as unknown as ServiceWorkerGlobalScope;
+
 const ASSET_CACHE = 'brika-assets-v5';
 
-globalThis.addEventListener('install', () => {
-  // skipWaiting() lets the new SW replace any previous version as soon
-  // as it's installed, without waiting for every tab to close.
-  globalThis.skipWaiting();
+// Visible in the SW's own DevTools console (Application → Service Workers →
+// click the SW link). Pairs with the page-side `[brika-sw]` logs so a failed
+// boot can be traced across both sides.
+const log = (...args: unknown[]): void => console.log('[brika-sw][worker]', ...args);
+
+log('script loaded', { scope: sw.registration?.scope ?? null });
+
+sw.addEventListener('install', (event: ExtendableEvent) => {
+  log('install');
+  event.waitUntil(sw.skipWaiting().then(() => log('skipWaiting resolved')));
 });
 
 // Set of FetchEvent clientIds that have installed the page-side proxy
@@ -29,15 +47,39 @@ globalThis.addEventListener('install', () => {
 // (which has no listener) apart from the hub-UI document (which does),
 // and posting to a client with no listener hangs until the head timer
 // expires (504). Cleared automatically when the SW restarts.
-const proxyReadyClients = new Set();
+const proxyReadyClients = new Set<string>();
 
-globalThis.addEventListener('message', (event) => {
-  if (event.origin !== globalThis.location.origin) {
+interface SwMessage {
+  type?: string;
+}
+
+sw.addEventListener('message', (event: ExtendableMessageEvent) => {
+  const data = event.data as SwMessage | undefined;
+  log('message received', {
+    type: data?.type,
+    origin: event.origin,
+    swOrigin: sw.location.origin,
+    sourceId: event.source && 'id' in event.source ? event.source.id : null,
+    sourceType: event.source?.constructor.name ?? null,
+  });
+  if (event.origin !== sw.location.origin) {
+    log('message dropped — origin mismatch');
     return;
   }
-  const data = event.data;
   if (data?.type === 'SKIP_WAITING') {
-    globalThis.skipWaiting();
+    void sw.skipWaiting();
+    return;
+  }
+  // Page-initiated claim. `clients.claim()` normally runs only inside the
+  // `activate` handler; on a subsequent page load the SW is *already*
+  // activated, so claim() never re-fires and the new page can come up
+  // uncontrolled (especially with DevTools "Bypass for network" or after an
+  // HMR-triggered reload). The page-side `ensureServiceWorker` posts this
+  // when it finds itself with `navigator.serviceWorker.controller === null`
+  // but a registration that does have an `active` worker.
+  if (data?.type === 'CLAIM') {
+    log('CLAIM requested by page');
+    void sw.clients.claim().then(() => log('clients.claim() resolved'));
     return;
   }
   // The hub-UI's installSwProxyListener posts this immediately after
@@ -46,35 +88,36 @@ globalThis.addEventListener('message', (event) => {
   // requests from that document.
   if (data?.type === 'BRIKA_PROXY_READY' && event.source && 'id' in event.source) {
     proxyReadyClients.add(event.source.id);
+    log('proxy registered', {
+      clientId: event.source.id,
+      totalReady: proxyReadyClients.size,
+    });
   }
 });
 
-globalThis.addEventListener('activate', (event) => {
+sw.addEventListener('activate', (event: ExtendableEvent) => {
+  log('activate');
   event.waitUntil(
     (async () => {
       const names = await caches.keys();
-      await Promise.all(
-        names
-          .filter((n) => n.startsWith('brika-assets-') && n !== ASSET_CACHE)
-          .map((n) => caches.delete(n))
-      );
+      const stale = names.filter((n) => n.startsWith('brika-assets-') && n !== ASSET_CACHE);
+      if (stale.length > 0) {
+        log('dropping stale caches', stale);
+      }
+      await Promise.all(stale.map((n) => caches.delete(n)));
       // clients.claim() takes control of any pages already open under
       // a previous SW — so an in-flight bootstrap visit auto-heals
       // without forcing a manual unregister + hard refresh.
-      await globalThis.clients.claim();
+      await sw.clients.claim();
+      log('clients.claim resolved');
     })()
   );
 });
 
-// Sentinel URL the bootstrap pings to verify it's talking to a fresh
-// SW. Bump alongside ASSET_CACHE whenever the SW contract changes.
-const SW_VERSION = '5';
-const SW_PING_PATH = '/__brika_sw_ping__';
-
-globalThis.addEventListener('fetch', (event) => {
+sw.addEventListener('fetch', (event: FetchEvent) => {
   const req = event.request;
   const url = new URL(req.url);
-  if (url.origin !== globalThis.location.origin) {
+  if (url.origin !== sw.location.origin) {
     return;
   }
   // Navigation requests (top-level document loads) must never be
@@ -98,14 +141,6 @@ globalThis.addEventListener('fetch', (event) => {
   }
   // Everything below this point is the static-asset cache path — GET-only.
   if (req.method !== 'GET') {
-    return;
-  }
-  if (url.pathname === SW_PING_PATH) {
-    event.respondWith(
-      new Response(SW_VERSION, {
-        headers: { 'content-type': 'text/plain', 'cache-control': 'no-store' },
-      })
-    );
     return;
   }
 
@@ -154,9 +189,14 @@ globalThis.addEventListener('fetch', (event) => {
  * runs (the import is top-level-awaited), so this 503 only fires when
  * something has gone wrong — usually a refresh interrupting the boot.
  */
-async function proxyOr503(req, clientId) {
+async function proxyOr503(req: Request, clientId: string): Promise<Response> {
   const client = await resolveProxyClient(clientId);
   if (!client) {
+    log('/api 503', {
+      url: req.url,
+      fetchClientId: clientId || '<empty>',
+      ready: [...proxyReadyClients],
+    });
     return new Response('No controlling page available to proxy /api', {
       status: 503,
       headers: { 'content-type': 'text/plain' },
@@ -171,11 +211,11 @@ async function proxyOr503(req, clientId) {
  * route a request emitted from tab A through tab B's bridge, possibly
  * targeting a different hub.
  */
-async function resolveProxyClient(clientId) {
+async function resolveProxyClient(clientId: string): Promise<Client | null> {
   if (!clientId || !proxyReadyClients.has(clientId)) {
     return null;
   }
-  const client = await globalThis.clients.get(clientId);
+  const client = await sw.clients.get(clientId);
   if (!client) {
     // Client went away — purge so the Set doesn't grow unbounded over
     // long-lived SWs. (Browsers also kill the SW periodically.)
@@ -185,20 +225,35 @@ async function resolveProxyClient(clientId) {
   return client;
 }
 
+interface ProxyHead {
+  kind: 'head';
+  status?: number;
+  headers?: Array<[string, string]>;
+}
+interface ProxyChunk {
+  kind: 'chunk';
+  bytes?: ArrayBuffer;
+}
+interface ProxyEnd {
+  kind: 'end';
+}
+interface ProxyError {
+  kind: 'error';
+  message?: string;
+}
+type ProxyMessage = ProxyHead | ProxyChunk | ProxyEnd | ProxyError;
+
 /**
  * Ask the page to re-issue this request through its WebRTC bridge and
  * stream the result back. The page-side listener lives in
  * `apps/ui/src/lib/api/sw-proxy.ts`.
  */
-async function proxyThroughClient(req, client) {
-  const headers = [];
+async function proxyThroughClient(req: Request, client: Client): Promise<Response> {
+  const headers: Array<[string, string]> = [];
   for (const [k, v] of req.headers) {
     headers.push([k, v]);
   }
-  let body = null;
-  if (req.method !== 'GET' && req.method !== 'HEAD') {
-    body = await req.arrayBuffer();
-  }
+  const body = req.method !== 'GET' && req.method !== 'HEAD' ? await req.arrayBuffer() : null;
   const channel = new MessageChannel();
   client.postMessage(
     {
@@ -217,8 +272,8 @@ async function proxyThroughClient(req, client) {
   // Head arrives first; chunks flow until end/error. The 30s timeout only
   // covers head arrival; once the head lands the stream lifetime is
   // governed by the chunks.
-  return new Promise((resolve) => {
-    const { readable, writable } = new TransformStream();
+  return new Promise<Response>((resolve) => {
+    const { readable, writable } = new TransformStream<Uint8Array, Uint8Array>();
     const writer = writable.getWriter();
     let headSeen = false;
     const headTimer = setTimeout(() => {
@@ -231,8 +286,8 @@ async function proxyThroughClient(req, client) {
         );
       }
     }, 30_000);
-    channel.port1.onmessage = (event) => {
-      const msg = event.data ?? {};
+    channel.port1.onmessage = (event: MessageEvent<ProxyMessage>) => {
+      const msg = event.data;
       if (msg.kind === 'head' && !headSeen) {
         headSeen = true;
         clearTimeout(headTimer);

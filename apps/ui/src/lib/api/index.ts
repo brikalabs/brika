@@ -110,12 +110,23 @@ function detectRemote(): RemoteHints | null {
     return null;
   }
   const loc = globalThis.location;
-  const coordinatorOrigin = DEFAULT_COORDINATOR_ORIGIN;
+  // The bootstrap and the coordinator are the same Worker, so the page's
+  // origin is the coordinator's origin — in prod (hub.brika.dev), in local
+  // dev (localhost:5174), and in any self-hosted variant. Hard-coding the
+  // canonical host here breaks the dev loop with a CORS error on /v1/tickets.
+  const coordinatorOrigin = loc.origin || DEFAULT_COORDINATOR_ORIGIN;
 
   const hubName = resolveHubName(loc);
   cachedRemote = hubName
     ? { hubName, hubOrigin: hubOriginFor(hubName, coordinatorOrigin), coordinatorOrigin }
     : null;
+  console.log('[brika-api] detectRemote', {
+    hubName,
+    cached: cachedRemote,
+    metaTag: hubFromMetaTag(),
+    hostname: loc.hostname,
+    href: loc.href,
+  });
   return cachedRemote;
 }
 
@@ -239,6 +250,7 @@ function resolveUrl(input: RequestInfo | URL): URL | null {
 // imports `@/lib/api` indirectly (i18n, query, etc.) has a chance to issue
 // its first request.
 if (detectRemote()) {
+  console.log('[brika-api] remote mode — installing transport + SW proxy');
   const transport = getTransport();
   // Wire up the bootstrap SW → page bridge so dynamic `import()` of
   // plugin/brick modules under `/api/bricks/modules/...` round-trip
@@ -246,4 +258,9 @@ if (detectRemote()) {
   // CF Worker (which returns SPA-fallback HTML).
   const { installSwProxyListener } = await import('./sw-proxy');
   installSwProxyListener(transport);
+  console.log('[brika-api] sw proxy listener installed', {
+    controller: navigator.serviceWorker?.controller?.scriptURL ?? null,
+  });
+} else {
+  console.warn('[brika-api] NOT remote mode — sw proxy NOT installed (no meta tag / no hub)');
 }

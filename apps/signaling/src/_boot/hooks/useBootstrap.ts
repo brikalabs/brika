@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
-import { buildAssetGraph, ensureServiceWorker, injectGraph } from '@/lib/asset-graph';
+import { buildAssetGraph, injectGraph } from '@/lib/asset-graph';
 import { classifyError, type ErrorClassification } from '@/lib/classify-error';
 import { BootstrapTimeoutError } from '@/lib/errors';
 import { resolveCoordinator } from '@/lib/hub-name';
 import { storeHubName } from '@/lib/hub-storage';
 import { mintTicket, openPeer, type PeerHandle } from '@/lib/peer';
+import { ensureServiceWorker } from '@/lib/service-worker';
 
 export type BootstrapPhase = 'landing' | 'connecting' | 'fetching' | 'loading' | 'error' | 'done';
 
@@ -72,15 +73,21 @@ export function useBootstrap(hubName: string | null): BootstrapState {
 
     void runAttempt(hubName, ac.signal, peerRef, { setPhase, setStatus, setDetail })
       .then(() => clearTimeout(watchdog))
-      .catch((err) => {
+      .catch((err: unknown) => {
         clearTimeout(watchdog);
         if (peerRef.current) {
           peerRef.current.close();
           peerRef.current = null;
         }
         if (ac.signal.aborted) {
+          log('attempt aborted (cleanup), ignoring err', err);
           return;
         }
+        console.error('[brika-bootstrap] attempt failed', {
+          errorClass: err instanceof Error ? err.constructor.name : typeof err,
+          message: err instanceof Error ? err.message : String(err),
+          err,
+        });
         setError(classifyError(err, hubName));
         setPhase('error');
       });
@@ -104,26 +111,38 @@ export function useBootstrap(hubName: string | null): BootstrapState {
   };
 }
 
+const log = (...args: unknown[]): void => console.log('[brika-bootstrap]', ...args);
+
 async function runAttempt(
   hubName: string,
   signal: AbortSignal,
   peerRef: { current: PeerHandle | null },
   cb: AttemptCallbacks
 ): Promise<void> {
+  log('attempt start', { hubName });
   const coordinator = resolveCoordinator();
   const swPromise = ensureServiceWorker();
 
+  log('minting ticket', { coordinator });
   const ticket = await mintTicket(hubName, coordinator, signal);
   if (signal.aborted) {
+    log('aborted after mintTicket');
     return;
   }
+  log('ticket ok', {
+    ticket: `${ticket.ticket.slice(0, 12)}…`,
+    expiresIn: `${ticket.expiresAt - Math.floor(Date.now() / 1000)}s`,
+  });
 
+  log('opening peer');
   peerRef.current = await openPeer(hubName, ticket, coordinator);
   if (signal.aborted) {
+    log('aborted after openPeer');
     peerRef.current.close();
     peerRef.current = null;
     return;
   }
+  log('peer open');
 
   // Handshake succeeded — only now do we persist the hub name. Writing
   // earlier (on landing-card submit) would trap the user on a bad name:
@@ -137,26 +156,37 @@ async function runAttempt(
   cb.setPhase('fetching');
   cb.setStatus('Loading app from your hub…');
   const hasServiceWorker = await swPromise;
+  log('hasServiceWorker', hasServiceWorker);
   if (signal.aborted) {
+    log('aborted after swPromise');
     return;
   }
 
+  log('building asset graph');
   const graph = await buildAssetGraph(peerRef.current, hubName, hasServiceWorker, (event) => {
     if (!signal.aborted) {
       cb.setDetail(`${event.fetched} modules · ${shortenUrl(event.url)}`);
     }
   });
   if (signal.aborted) {
+    log('aborted after buildAssetGraph');
     return;
   }
+  log('graph built', {
+    scripts: graph.scripts.length,
+    cssLinks: graph.cssLinks.length,
+  });
 
   cb.setPhase('loading');
   cb.setStatus('Starting app…');
   cb.setDetail(`${graph.scripts.length} scripts · ${graph.cssLinks.length} stylesheets`);
+  log('injecting graph');
   await injectGraph(graph, 'root');
   if (signal.aborted) {
+    log('aborted after injectGraph');
     return;
   }
+  log('done');
 
   cb.setPhase('done');
 }
