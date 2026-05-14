@@ -24,16 +24,20 @@
 
 import {
   type AbortMessage,
+  type BinaryChunkKind,
   DEFAULT_ICE_SERVERS,
+  decodeBinaryChunk,
   decodeRpc,
   decodeSignaling,
   emitRequest,
+  encodeBinaryChunk,
   encodeRpc,
   encodeSignaling,
   type IceServer,
   PROTOCOL_VERSION,
   ResponseAssembler,
   type ResponseHeadMessage,
+  RPC_CAPABILITIES,
   type RpcMessage,
   type SignalingMessage,
 } from '@brika/remote-access-protocol';
@@ -178,6 +182,13 @@ export class DataChannelTransport implements Transport {
    * sessionId lands. Symmetric to `#pendingRemoteIce` for the inbound side.
    */
   #pendingLocalIce: RTCIceCandidateInit[] = [];
+  /**
+   * Flipped to `true` when the hub's hello frame carries `binary-frames` in
+   * its `caps`. From that point on, body chunks emitted by `emitRequest`
+   * route through `#sendBinaryChunk` (raw bytes on the wire) instead of
+   * base64-encoded JSON. One-way ratchet — never downgrades back to b64.
+   */
+  #peerSupportsBinary = false;
 
   constructor(options: DataChannelTransportOptions) {
     this.#options = options;
@@ -260,7 +271,18 @@ export class DataChannelTransport implements Transport {
       await this.#awaitDrain();
       this.#sendFrame(next);
     };
-    void emitRequest(id, request, emit).catch((err: unknown) => {
+    // Binary path is opt-in per peer: until the hub's hello arrives with
+    // `binary-frames`, body chunks travel as base64-in-JSON via `emit`. The
+    // helper is captured at request start, so a peer that upgrades mid-stream
+    // takes effect on the *next* request — fine for our use case (uploads are
+    // discrete) and avoids the FE having to reason about partial-binary streams.
+    const sendBinary = this.#peerSupportsBinary
+      ? async (bytes: Uint8Array): Promise<void> => {
+          await this.#awaitDrain();
+          this.#sendBinaryChunk('request.chunk', id, bytes);
+        }
+      : undefined;
+    void emitRequest(id, request, emit, { sendBinary }).catch((err: unknown) => {
       debug('emit failed', { id, err: err instanceof Error ? err.message : String(err) });
     });
 
@@ -385,14 +407,30 @@ export class DataChannelTransport implements Transport {
     // actually triggers — setting it inside the slow path would race with the
     // first `bufferedamountlow` event.
     channel.bufferedAmountLowThreshold = BUFFER_LOW_WATER_BYTES;
+    // Receive binary frames as ArrayBuffer (default in browsers is 'blob' on
+    // some legacy paths; pin it so the message handler's `typeof === 'string'`
+    // branch is exhaustive for the binary case).
+    channel.binaryType = 'arraybuffer';
 
     channel.addEventListener('open', () => {
       clearTimer();
+      // Announce our caps so the hub knows it can send binary response chunks.
+      // Conservative — the hub still won't send binary until it sees this.
+      this.#sendFrame({
+        v: PROTOCOL_VERSION,
+        kind: 'hello',
+        role: 'client',
+        softwareVersion: 'brika-ui',
+        maxProtocolVersion: PROTOCOL_VERSION,
+        caps: [RPC_CAPABILITIES.BINARY_FRAMES],
+      });
       resolve();
     });
     channel.addEventListener('message', (ev) => {
       if (typeof ev.data === 'string') {
         this.#onRpcMessage(ev.data);
+      } else if (ev.data instanceof ArrayBuffer) {
+        this.#onBinaryMessage(ev.data);
       }
     });
     channel.addEventListener('close', () => {
@@ -556,6 +594,20 @@ export class DataChannelTransport implements Transport {
     });
   }
 
+  #onBinaryMessage(buffer: ArrayBuffer): void {
+    const chunk = decodeBinaryChunk(buffer);
+    if (!chunk) {
+      debug('← drop malformed binary frame', { bytes: buffer.byteLength });
+      return;
+    }
+    // Only `response.chunk` is meaningful on the client side. `request.chunk`
+    // in this direction means the hub is misbehaving — drop silently.
+    if (chunk.kind !== 'response.chunk') {
+      return;
+    }
+    this.#inflight.get(chunk.id)?.assembler.onBinaryChunk(chunk.payload);
+  }
+
   #onRpcMessage(raw: string): void {
     const msg = decodeRpc(raw);
     if (!msg) {
@@ -564,7 +616,13 @@ export class DataChannelTransport implements Transport {
     }
     switch (msg.kind) {
       case 'hello':
-        debug('← hello', { role: msg.role, version: msg.softwareVersion });
+        debug('← hello', { role: msg.role, version: msg.softwareVersion, caps: msg.caps });
+        // One-way capability ratchet: once the hub has advertised binary,
+        // every subsequent request emits body chunks as raw bytes. Never
+        // downgrades, even if a reconnected peer drops the cap.
+        if (msg.caps?.includes(RPC_CAPABILITIES.BINARY_FRAMES)) {
+          this.#peerSupportsBinary = true;
+        }
         return;
       case 'response.head': {
         const setCookies = msg.headers
@@ -681,6 +739,26 @@ export class DataChannelTransport implements Transport {
   }
 
   /**
+   * Send a request body chunk as a raw binary frame. Same failure-routing as
+   * {@link #sendFrame} so a too-large/mid-flight throw propagates as a
+   * `TransportError` instead of silently truncating the upload.
+   */
+  #sendBinaryChunk(kind: BinaryChunkKind, id: number, bytes: Uint8Array): void {
+    const channel = this.#channel;
+    if (!channel || channel.readyState !== 'open') {
+      this.#onUnexpectedClose('channel-closed', 'Channel not open at send time');
+      throw new TransportError('channel-closed', 'Channel not open at send time');
+    }
+    try {
+      channel.send(encodeBinaryChunk(kind, id, bytes));
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      this.#onUnexpectedClose('send-failed', message);
+      throw err instanceof Error ? err : new Error(message);
+    }
+  }
+
+  /**
    * Backpressure for streaming uploads. Pauses chunk emission when SCTP's
    * `bufferedAmount` crosses HIGH and resumes once it drains below the
    * `bufferedAmountLowThreshold` set at channel creation. Also resolves on
@@ -735,6 +813,9 @@ export class DataChannelTransport implements Transport {
     this.#pendingRemoteIce = [];
     this.#pendingLocalIce = [];
     this.#remoteDescriptionApplied = false;
+    // Reset so the reconnected session re-negotiates from scratch — a
+    // reconnect may land on a peer that doesn't speak binary-frames.
+    this.#peerSupportsBinary = false;
     this.#connectPromise = null;
   }
 

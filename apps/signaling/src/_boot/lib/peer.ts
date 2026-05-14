@@ -9,6 +9,7 @@
 
 import {
   DEFAULT_ICE_SERVERS,
+  decodeBinaryChunk,
   decodeRpc,
   decodeSignaling,
   encodeRpc,
@@ -17,6 +18,7 @@ import {
   type IceServer,
   PROTOCOL_VERSION,
   ResponseAssembler,
+  RPC_CAPABILITIES,
   type RpcMessage,
   type SignalingMessage,
 } from '@brika/remote-access-protocol';
@@ -274,14 +276,26 @@ export async function openPeer(
       role: 'client',
       softwareVersion: 'bootstrap',
       maxProtocolVersion: PROTOCOL_VERSION,
+      // Bootstrap is GET-only (asset prime), so we only ever *receive*
+      // binary chunks — but advertising the cap lets the hub stream
+      // assets without paying the base64 tax.
+      caps: [RPC_CAPABILITIES.BINARY_FRAMES],
     });
   });
 
   channel.addEventListener('message', (ev) => {
-    const raw = typeof ev.data === 'string' ? ev.data : TEXT_DECODER.decode(ev.data);
-    const msg = decodeRpc(raw);
-    if (msg) {
-      dispatchRpcFrame(msg, inflight);
+    if (typeof ev.data === 'string') {
+      const msg = decodeRpc(ev.data);
+      if (msg) {
+        dispatchRpcFrame(msg, inflight);
+      }
+      return;
+    }
+    if (ev.data instanceof ArrayBuffer) {
+      const chunk = decodeBinaryChunk(ev.data);
+      if (chunk?.kind === 'response.chunk') {
+        inflight.get(chunk.id)?.assembler.onBinaryChunk(chunk.payload);
+      }
     }
   });
 

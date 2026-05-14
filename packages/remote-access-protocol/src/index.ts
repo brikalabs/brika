@@ -7,6 +7,7 @@ export {
   ResponseAssembler,
   responseToFrames,
   rpcRequestToFetch,
+  type SendBinaryChunk,
 } from './bridge';
 export {
   type Claim,
@@ -16,7 +17,16 @@ export {
   RESERVED_NAMES,
   validateName,
 } from './claims-validation';
-export { decodeRpc, decodeSignaling, encodeRpc, encodeSignaling } from './codec';
+export {
+  type BinaryChunkKind,
+  type DecodedBinaryChunk,
+  decodeBinaryChunk,
+  decodeRpc,
+  decodeSignaling,
+  encodeBinaryChunk,
+  encodeRpc,
+  encodeSignaling,
+} from './codec';
 export {
   type ClientContext,
   type ClientInbound,

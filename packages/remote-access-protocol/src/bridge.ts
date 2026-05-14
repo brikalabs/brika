@@ -244,9 +244,27 @@ function isTextContentType(contentType: string | null): boolean {
 const MAX_CHUNK_PAYLOAD_BYTES = 16 * 1024;
 
 /**
+ * Callback to send a raw-binary body chunk. Invoked instead of `emit` for
+ * non-text bodies when the peer has advertised `binary-frames`. The transport
+ * implementation wraps the bytes in a {@link encodeBinaryChunk} frame and
+ * pushes them onto the data channel as an `ArrayBuffer`.
+ *
+ * Bytes are owned by the callee: each call receives a fresh allocation, so
+ * holding the buffer past `await` is safe.
+ */
+export type SendBinaryChunk = (bytes: Uint8Array) => void | Promise<void>;
+
+/**
  * Read a body stream and emit chunk frames built by `buildChunk`. Returns
  * `true` if the stream completed normally, `false` if aborted mid-stream.
  * Used by both `emitRequest` and `responseToFrames` for symmetric chunking.
+ *
+ * Body routing:
+ * - **text** content-type → `emit(buildChunk({ dataText }))`. Always.
+ * - **binary**, peer supports `binary-frames` → `sendBinary(bytes)`. Raw
+ *   bytes on the wire — no base64 inflation, no JSON parse on either side.
+ * - **binary**, peer does NOT support binary-frames → `emit(buildChunk({ dataB64 }))`.
+ *   Fallback for cross-version compat.
  *
  * `stream: true` on the decoder keeps incomplete UTF-8 sequences buffered
  * across calls — splitting on byte boundaries never corrupts multi-byte
@@ -257,7 +275,8 @@ async function streamBodyAsChunks<T extends RpcMessage>(
   decoder: TextDecoder | null,
   buildChunk: (data: { dataText?: string; dataB64?: string }) => T,
   emit: (frame: T) => void | Promise<void>,
-  abortSignal: AbortSignal | undefined
+  abortSignal: AbortSignal | undefined,
+  sendBinary?: SendBinaryChunk
 ): Promise<boolean> {
   const reader = body.getReader();
   try {
@@ -279,6 +298,12 @@ async function streamBodyAsChunks<T extends RpcMessage>(
         );
         if (decoder) {
           await emit(buildChunk({ dataText: decoder.decode(slice, { stream: true }) }));
+        } else if (sendBinary) {
+          // Copy into a fresh buffer so the consumer can retain it past the
+          // call without aliasing the reader's working buffer.
+          const owned = new Uint8Array(slice.byteLength);
+          owned.set(slice);
+          await sendBinary(owned);
         } else {
           await emit(buildChunk({ dataB64: bytesToBase64(slice) }));
         }
@@ -319,7 +344,7 @@ export async function emitRequest(
   id: number,
   request: Request,
   emit: EmitFrame,
-  options: { abortSignal?: AbortSignal } = {}
+  options: { abortSignal?: AbortSignal; sendBinary?: SendBinaryChunk } = {}
 ): Promise<void> {
   const headerPairs = headersToPairs(request.headers);
   const method = request.method.toUpperCase();
@@ -348,7 +373,8 @@ export async function emitRequest(
     decoder,
     (data) => ({ v: PROTOCOL_VERSION, kind: 'request.chunk', id, ...data }),
     emit,
-    options.abortSignal
+    options.abortSignal,
+    options.sendBinary
   );
   if (completed) {
     await emit({ v: PROTOCOL_VERSION, kind: 'request.end', id });
@@ -425,7 +451,7 @@ export async function responseToFrames(
   id: number,
   response: Response,
   emit: EmitFrame,
-  options: { abortSignal?: AbortSignal } = {}
+  options: { abortSignal?: AbortSignal; sendBinary?: SendBinaryChunk } = {}
 ): Promise<void> {
   await emit({
     v: PROTOCOL_VERSION,
@@ -450,7 +476,8 @@ export async function responseToFrames(
       decoder,
       (data) => ({ v: PROTOCOL_VERSION, kind: 'response.chunk', id, ...data }),
       emit,
-      options.abortSignal
+      options.abortSignal,
+      options.sendBinary
     );
     if (completed) {
       await emit({ v: PROTOCOL_VERSION, kind: 'response.end', id });
@@ -526,6 +553,14 @@ export class ResponseAssembler {
     this.#body.enqueue(msg);
   }
 
+  /**
+   * Enqueue raw body bytes from a binary-frame transport. Bypasses the JSON
+   * frame shape entirely — the bytes are routed straight to the body stream.
+   */
+  onBinaryChunk(bytes: Uint8Array): void {
+    this.#body.enqueue({ dataBin: bytes });
+  }
+
   onEnd(_msg: ResponseEndMessage): void {
     this.#body.close();
   }
@@ -570,6 +605,15 @@ export class RequestAssembler {
 
   onChunk(msg: RequestChunkMessage): void {
     this.#sink.enqueue(msg);
+  }
+
+  /**
+   * Enqueue raw body bytes from a binary-frame transport. The size cap, if
+   * configured, applies — a hostile peer can't bypass `maxBodyBytes` by
+   * switching to the binary path.
+   */
+  onBinaryChunk(bytes: Uint8Array): void {
+    this.#sink.enqueue({ dataBin: bytes });
   }
 
   onEnd(_msg: RequestEndMessage): void {

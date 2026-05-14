@@ -14,16 +14,54 @@
  */
 
 import {
+  type BinaryChunkKind,
+  type DecodedBinaryChunk,
+  decodeBinaryChunk,
   decodeRpc,
+  encodeBinaryChunk,
   encodeRpc,
   type IceCandidate,
   PROTOCOL_VERSION,
+  RPC_CAPABILITIES,
   type RpcMessage,
 } from '@brika/remote-access-protocol';
 import { type RTCDataChannel, RTCPeerConnection } from 'werift';
 import type { SignalingLogger } from './signaling-client';
 
-export type RpcHandler = (msg: RpcMessage, send: (frame: RpcMessage) => void) => void;
+/**
+ * Outbound API the RPC handler uses to push frames at the peer. The session
+ * owns the data-channel send path and decides on the fly whether to use the
+ * JSON-text frame or the {@link encodeBinaryChunk} binary frame for body
+ * payloads, based on what the peer advertised in `hello.caps`.
+ */
+export interface RpcSender {
+  /** Send a JSON-text RPC frame. Always works. */
+  send(frame: RpcMessage): void;
+  /**
+   * Send a body chunk as a binary frame. The session MUST only call this
+   * after {@link peerSupportsBinary} returns `true` — otherwise the peer's
+   * decoder won't recognise the frame and the chunk is silently lost.
+   */
+  sendBinaryChunk(kind: BinaryChunkKind, id: number, bytes: Uint8Array): void;
+  /**
+   * `true` once the peer's hello has advertised `binary-frames`. Polled at
+   * each call site — the value flips from `false` → `true` mid-session as
+   * the peer's hello arrives.
+   */
+  peerSupportsBinary(): boolean;
+}
+
+/**
+ * Inbound frame variants. Most frames arrive as decoded JSON; raw body bytes
+ * arrive as a {@link DecodedBinaryChunk} that the handler routes to the
+ * matching assembler directly (no `RpcMessage` is fabricated for them — the
+ * binary path bypasses the JSON schema by design).
+ */
+export type InboundFrame =
+  | { readonly kind: 'rpc'; readonly msg: RpcMessage }
+  | { readonly kind: 'binary'; readonly chunk: DecodedBinaryChunk };
+
+export type RpcHandler = (frame: InboundFrame, sender: RpcSender) => void;
 
 export interface PeerSessionOptions {
   readonly sessionId: string;
@@ -49,9 +87,16 @@ export class PeerSession {
   #channel: RTCDataChannel | null = null;
   #idleTimer: ReturnType<typeof setTimeout> | null = null;
   #closed = false;
+  #peerSupportsBinary = false;
+  readonly #sender: RpcSender;
 
   constructor(options: PeerSessionOptions) {
     this.#options = options;
+    this.#sender = {
+      send: (frame) => this.#send(frame),
+      sendBinaryChunk: (kind, id, bytes) => this.#sendBinaryChunk(kind, id, bytes),
+      peerSupportsBinary: () => this.#peerSupportsBinary,
+    };
     // werift's RTCIceServer takes a single string for `urls`; if the caller
     // supplies an array, expand it into one server entry per URL so we
     // preserve the full set without losing credentials.
@@ -144,15 +189,11 @@ export class PeerSession {
 
     channel.onMessage.subscribe((data: string | Buffer) => {
       this.#resetIdleTimer();
-      const raw = typeof data === 'string' ? data : data.toString('utf-8');
-      const msg = decodeRpc(raw);
-      if (!msg) {
-        this.#options.log.warn('rpc: dropped malformed/wrong-version frame', {
-          sessionId: this.#options.sessionId,
-        });
-        return;
+      if (typeof data === 'string') {
+        this.#handleText(data);
+      } else {
+        this.#handleBinary(data);
       }
-      this.#options.onRpc(msg, (frame) => this.#send(frame));
     });
 
     channel.stateChanged.subscribe((state) => {
@@ -179,7 +220,43 @@ export class PeerSession {
       role: 'hub',
       softwareVersion: 'brika-hub',
       maxProtocolVersion: PROTOCOL_VERSION,
+      // Advertise everything we can decode. The peer flips on binary sends
+      // once it sees this in its own `handle` for our hello.
+      caps: [RPC_CAPABILITIES.BINARY_FRAMES],
     });
+  }
+
+  #handleText(raw: string): void {
+    const msg = decodeRpc(raw);
+    if (!msg) {
+      this.#options.log.warn('rpc: dropped malformed/wrong-version frame', {
+        sessionId: this.#options.sessionId,
+      });
+      return;
+    }
+    // Capture peer caps from their hello so subsequent body chunks can route
+    // through the binary path. This is a one-way ratchet — once `true`, we
+    // never downgrade for the rest of the session.
+    if (msg.kind === 'hello' && msg.caps?.includes(RPC_CAPABILITIES.BINARY_FRAMES)) {
+      this.#peerSupportsBinary = true;
+    }
+    this.#options.onRpc({ kind: 'rpc', msg }, this.#sender);
+  }
+
+  #handleBinary(data: Buffer): void {
+    // werift hands us a Node Buffer; copy into a fresh ArrayBuffer so the
+    // decoded slice owns its bytes — Buffer pooling can otherwise alias the
+    // payload across subsequent reads.
+    const ab = data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength) as ArrayBuffer;
+    const chunk = decodeBinaryChunk(ab);
+    if (!chunk) {
+      this.#options.log.warn('rpc: dropped malformed binary frame', {
+        sessionId: this.#options.sessionId,
+        bytes: data.byteLength,
+      });
+      return;
+    }
+    this.#options.onRpc({ kind: 'binary', chunk }, this.#sender);
   }
 
   #send(frame: RpcMessage): void {
@@ -198,6 +275,24 @@ export class PeerSession {
       this.#options.log.error('data channel send failed — frame dropped', {
         sessionId: this.#options.sessionId,
         kind: frame.kind,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
+
+  #sendBinaryChunk(kind: BinaryChunkKind, id: number, bytes: Uint8Array): void {
+    if (!this.#channel || this.#channel.readyState !== 'open') {
+      return;
+    }
+    try {
+      // werift accepts ArrayBuffer for binary data-channel sends.
+      this.#channel.send(Buffer.from(encodeBinaryChunk(kind, id, bytes)));
+    } catch (err) {
+      this.#options.log.error('data channel binary send failed — frame dropped', {
+        sessionId: this.#options.sessionId,
+        kind,
+        id,
+        bytes: bytes.byteLength,
         error: err instanceof Error ? err.message : String(err),
       });
     }

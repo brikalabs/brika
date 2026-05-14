@@ -24,8 +24,10 @@ import {
   type RpcMessage,
   responseToFrames,
   rpcRequestToFetch,
+  type SendBinaryChunk,
 } from '@brika/remote-access-protocol';
 import type { ApiServer } from '@/runtime/http/api-server';
+import type { InboundFrame, RpcSender } from './peer-session';
 import type { SignalingLogger } from './signaling-client';
 
 export interface RpcServerOptions {
@@ -83,13 +85,25 @@ export class RpcServer {
   }
 
   /** Dispatch a frame received from the peer. */
-  handle(msg: RpcMessage, send: (frame: RpcMessage) => void): void {
+  handle(frame: InboundFrame, sender: RpcSender): void {
+    if (frame.kind === 'binary') {
+      // Only request.chunk is meaningful inbound on the hub side —
+      // response.chunk in this direction means the peer is misbehaving.
+      if (frame.chunk.kind !== 'request.chunk') {
+        return;
+      }
+      this.#inflight.get(frame.chunk.id)?.assembler?.onBinaryChunk(frame.chunk.payload);
+      return;
+    }
+    const msg = frame.msg;
     switch (msg.kind) {
       case 'hello':
-        // Currently no capability negotiation needed beyond version match.
+        // Capability negotiation happens at the PeerSession layer (it
+        // toggles `peerSupportsBinary` based on the peer's caps). Nothing
+        // else for us to do here.
         return;
       case 'request':
-        this.#startRequest(msg, send);
+        this.#startRequest(msg, sender);
         return;
       case 'request.chunk':
         this.#inflight.get(msg.id)?.assembler?.onChunk(msg);
@@ -124,10 +138,10 @@ export class RpcServer {
     this.#inflight.clear();
   }
 
-  #startRequest(msg: RequestMessage, send: (frame: RpcMessage) => void): void {
+  #startRequest(msg: RequestMessage, sender: RpcSender): void {
     if (this.#inflight.has(msg.id)) {
       // Duplicate id — surface an error frame so the client knows.
-      send({
+      sender.send({
         v: PROTOCOL_VERSION,
         kind: 'response.error',
         id: msg.id,
@@ -144,7 +158,7 @@ export class RpcServer {
 
     // Dispatch eagerly — the assembler's stream backs the Request body so
     // `app.fetch()` reads chunks as `request.chunk` frames arrive.
-    void this.#runRequest(msg, assembler, send, controller.signal).finally(() => {
+    void this.#runRequest(msg, assembler, sender, controller.signal).finally(() => {
       this.#inflight.delete(msg.id);
     });
   }
@@ -152,9 +166,15 @@ export class RpcServer {
   async #runRequest(
     msg: RequestMessage,
     assembler: RequestAssembler | null,
-    send: (frame: RpcMessage) => void,
+    sender: RpcSender,
     signal: AbortSignal
   ): Promise<void> {
+    const send = (frame: RpcMessage): void => sender.send(frame);
+    // Binary path is gated on the peer advertising `binary-frames` — until
+    // then we fall back to base64-in-JSON chunks so the FE can still decode.
+    const sendBinary: SendBinaryChunk | undefined = sender.peerSupportsBinary()
+      ? (bytes) => sender.sendBinaryChunk('response.chunk', msg.id, bytes)
+      : undefined;
     let request: Request;
     try {
       request = rpcRequestToFetch(msg, this.#options.baseOrigin, assembler?.body() ?? null);
@@ -219,7 +239,7 @@ export class RpcServer {
     }
 
     try {
-      await responseToFrames(msg.id, response, send, { abortSignal: signal });
+      await responseToFrames(msg.id, response, send, { abortSignal: signal, sendBinary });
     } catch (err) {
       this.#options.log.warn('rpc stream errored', {
         sessionId: this.#options.sessionId,

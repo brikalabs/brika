@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'bun:test';
-import { decodeRpc, decodeSignaling, encodeRpc, encodeSignaling } from '../codec';
+import {
+  decodeBinaryChunk,
+  decodeRpc,
+  decodeSignaling,
+  encodeBinaryChunk,
+  encodeRpc,
+  encodeSignaling,
+} from '../codec';
 import type { RequestMessage } from '../rpc';
 import type { ClientOfferMessage } from '../signaling';
 import { PROTOCOL_VERSION } from '../version';
@@ -173,6 +180,56 @@ describe('codec', () => {
         softwareVersion: '1.0',
       });
       expect(decodeRpc(raw)).toBeNull();
+    });
+  });
+
+  describe('binary chunk frames', () => {
+    it('roundtrips a request.chunk through encode/decode', () => {
+      const payload = new Uint8Array([0, 1, 2, 3, 254, 255]);
+      const buf = encodeBinaryChunk('request.chunk', 42, payload);
+      const decoded = decodeBinaryChunk(buf);
+      expect(decoded?.kind).toBe('request.chunk');
+      expect(decoded?.id).toBe(42);
+      expect(Array.from(decoded?.payload ?? new Uint8Array())).toEqual(Array.from(payload));
+    });
+
+    it('roundtrips a response.chunk with a large payload', () => {
+      const payload = new Uint8Array(16 * 1024);
+      for (let i = 0; i < payload.length; i++) {
+        payload[i] = i & 0xff;
+      }
+      const buf = encodeBinaryChunk('response.chunk', 0xdeadbeef, payload);
+      // 5-byte header + payload.
+      expect(buf.byteLength).toBe(5 + payload.byteLength);
+      const decoded = decodeBinaryChunk(buf);
+      expect(decoded?.kind).toBe('response.chunk');
+      expect(decoded?.id).toBe(0xdeadbeef);
+      expect(decoded?.payload.byteLength).toBe(payload.byteLength);
+      expect(decoded?.payload[0]).toBe(0);
+      expect(decoded?.payload[12_345]).toBe(12_345 & 0xff);
+    });
+
+    it('returns null for buffers shorter than the header', () => {
+      expect(decodeBinaryChunk(new ArrayBuffer(0))).toBeNull();
+      expect(decodeBinaryChunk(new ArrayBuffer(4))).toBeNull();
+    });
+
+    it('returns null for an unknown kind tag', () => {
+      const buf = new ArrayBuffer(5);
+      new DataView(buf).setUint8(0, 0xff);
+      expect(decodeBinaryChunk(buf)).toBeNull();
+    });
+
+    it('uses little-endian uint32 for id (cross-platform stable wire shape)', () => {
+      const buf = encodeBinaryChunk('request.chunk', 0x01020304, new Uint8Array());
+      const bytes = new Uint8Array(buf);
+      // Header: [0x01, 0x04, 0x03, 0x02, 0x01]
+      //         kind  ─── id (LE) ───
+      expect(bytes[0]).toBe(0x01);
+      expect(bytes[1]).toBe(0x04);
+      expect(bytes[2]).toBe(0x03);
+      expect(bytes[3]).toBe(0x02);
+      expect(bytes[4]).toBe(0x01);
     });
   });
 });

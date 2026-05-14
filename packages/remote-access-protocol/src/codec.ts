@@ -156,3 +156,67 @@ export function encodeSignaling(msg: SignalingMessage): string {
 export function encodeRpc(msg: RpcMessage): string {
   return JSON.stringify(msg);
 }
+
+// ─── Binary chunk frames ───────────────────────────────────────────────────
+//
+// Only `request.chunk` and `response.chunk` ever travel as binary — every
+// other frame stays JSON-text so the protocol remains debuggable and
+// forward-compat via the schema's `.loose()`. Body chunks are where the
+// payload is, and base64-in-JSON costs ~33% bytes + non-trivial CPU on both
+// encode and decode for multi-MB uploads/downloads.
+//
+// Wire layout (little-endian):
+//   [0]    : kind tag (uint8)  0x01 = request.chunk, 0x02 = response.chunk
+//   [1..4] : id (uint32)       — matches `id` in the corresponding RpcMessage
+//   [5..]  : payload bytes     — the raw body slice, no framing
+//
+// The receiver demultiplexes on `typeof event.data === 'string'`: text is
+// JSON, ArrayBuffer is one of these binary chunks. Both peers MUST advertise
+// `binary-frames` in their hello caps before binary chunks may be sent; until
+// then, the conservative default is base64-in-JSON for back-compat.
+
+export type BinaryChunkKind = 'request.chunk' | 'response.chunk';
+
+const BINARY_TAG_REQUEST_CHUNK = 0x01;
+const BINARY_TAG_RESPONSE_CHUNK = 0x02;
+const BINARY_HEADER_BYTES = 5;
+
+export function encodeBinaryChunk(
+  kind: BinaryChunkKind,
+  id: number,
+  payload: Uint8Array
+): ArrayBuffer {
+  const buffer = new ArrayBuffer(BINARY_HEADER_BYTES + payload.byteLength);
+  const view = new DataView(buffer);
+  view.setUint8(0, kind === 'request.chunk' ? BINARY_TAG_REQUEST_CHUNK : BINARY_TAG_RESPONSE_CHUNK);
+  view.setUint32(1, id >>> 0, /* littleEndian */ true);
+  new Uint8Array(buffer, BINARY_HEADER_BYTES).set(payload);
+  return buffer;
+}
+
+export interface DecodedBinaryChunk {
+  readonly kind: BinaryChunkKind;
+  readonly id: number;
+  readonly payload: Uint8Array;
+}
+
+export function decodeBinaryChunk(buffer: ArrayBuffer): DecodedBinaryChunk | null {
+  if (buffer.byteLength < BINARY_HEADER_BYTES) {
+    return null;
+  }
+  const view = new DataView(buffer);
+  const tag = view.getUint8(0);
+  let kind: BinaryChunkKind;
+  if (tag === BINARY_TAG_REQUEST_CHUNK) {
+    kind = 'request.chunk';
+  } else if (tag === BINARY_TAG_RESPONSE_CHUNK) {
+    kind = 'response.chunk';
+  } else {
+    return null;
+  }
+  const id = view.getUint32(1, /* littleEndian */ true);
+  // Slice off the header — owns its own buffer so the assembler can retain
+  // it past the call without worrying about the receive ring being reused.
+  const payload = new Uint8Array(buffer.slice(BINARY_HEADER_BYTES));
+  return { kind, id, payload };
+}
