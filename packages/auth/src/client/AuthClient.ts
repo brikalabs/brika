@@ -10,6 +10,8 @@
  *   await auth.logout()
  */
 
+import type { ConnectionType } from '../types';
+
 export class AuthError extends Error {
   constructor(
     message: string,
@@ -33,6 +35,7 @@ export interface SessionInfo {
   id: string;
   ip: string | null;
   userAgent: string | null;
+  connectionType: ConnectionType;
   createdAt: number;
   lastSeenAt: number;
   current: boolean;

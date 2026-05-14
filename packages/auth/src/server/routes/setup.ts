@@ -12,6 +12,7 @@ import { Role } from '../../roles';
 import { SetupSchema } from '../../schemas';
 import { AuthService } from '../../services/AuthService';
 import { UserService } from '../../services/UserService';
+import { parseTransportHeader, TRANSPORT_HEADER } from '../../types';
 import { sessionCookie } from './cookie';
 
 /** POST / — Create the first admin account */
@@ -35,7 +36,8 @@ const createAdmin = route.post({
     const ip =
       ctx.req.headers.get('x-forwarded-for') ?? ctx.req.headers.get('x-real-ip') ?? undefined;
     const userAgent = ctx.req.headers.get('user-agent') ?? undefined;
-    const result = await authService.login(email, password, ip, userAgent);
+    const connectionType = parseTransportHeader(ctx.req.headers.get(TRANSPORT_HEADER));
+    const result = await authService.login(email, password, ip, userAgent, connectionType);
 
     return new Response(JSON.stringify({ user: result.user }), {
       status: 201,

@@ -15,6 +15,7 @@ export {
 } from './claims-validation';
 export { decodeRpc, decodeSignaling, encodeRpc, encodeSignaling } from './codec';
 export {
+  type ClientContext,
   type ClientInbound,
   type HubInbound,
   translateFromClient,

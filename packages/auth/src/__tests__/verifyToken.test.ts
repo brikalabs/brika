@@ -110,7 +110,7 @@ describe('verifyToken', () => {
 
     await middleware(ctx as never, next);
 
-    expect(mockSessionService.validateSession).toHaveBeenCalledWith('my-token-value', undefined);
+    expect(mockSessionService.validateSession).toHaveBeenCalledWith('my-token-value', undefined, undefined, 'http');
     expect(ctx.set).toHaveBeenCalledWith('session', fakeSession);
     expect(next).toHaveBeenCalledTimes(1);
   });
@@ -126,7 +126,9 @@ describe('verifyToken', () => {
 
     expect(mockSessionService.validateSession).toHaveBeenCalledWith(
       'bearer-token-value',
-      undefined
+      undefined,
+      undefined,
+      'http'
     );
     expect(ctx.set).toHaveBeenCalledWith('session', fakeSession);
     expect(next).toHaveBeenCalledTimes(1);
@@ -142,7 +144,12 @@ describe('verifyToken', () => {
 
     await middleware(ctx as never, next);
 
-    expect(mockSessionService.validateSession).toHaveBeenCalledWith('token-xyz', '203.0.113.42');
+    expect(mockSessionService.validateSession).toHaveBeenCalledWith(
+      'token-xyz',
+      '203.0.113.42',
+      undefined,
+      'http'
+    );
   });
 
   it('falls back to x-real-ip when x-forwarded-for is absent', async () => {
@@ -155,7 +162,12 @@ describe('verifyToken', () => {
 
     await middleware(ctx as never, next);
 
-    expect(mockSessionService.validateSession).toHaveBeenCalledWith('token-xyz', '198.51.100.7');
+    expect(mockSessionService.validateSession).toHaveBeenCalledWith(
+      'token-xyz',
+      '198.51.100.7',
+      undefined,
+      'http'
+    );
   });
 
   it('sets session from validateSession return value on context', async () => {
@@ -200,7 +212,12 @@ describe('verifyToken cookie parsing', () => {
 
     await middleware(ctx as never, next);
 
-    expect(mockSessionService.validateSession).toHaveBeenCalledWith('correct-token', undefined);
+    expect(mockSessionService.validateSession).toHaveBeenCalledWith(
+      'correct-token',
+      undefined,
+      undefined,
+      'http'
+    );
   });
 
   it('sets null session when the cookie name is not present in the header', async () => {

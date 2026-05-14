@@ -33,15 +33,17 @@ import {
  */
 type Attachment =
   | { role: 'hub'; name: string }
-  | { role: 'client'; name: string; sessionId: string };
+  | {
+      role: 'client';
+      name: string;
+      sessionId: string;
+      /** Real client IP captured from the WS upgrade — undefined when not present. */
+      clientIp?: string;
+      /** `user-agent` header from the WS upgrade — undefined when not present. */
+      clientUserAgent?: string;
+    };
 
-export interface Env {
-  HUB_SESSION: DurableObjectNamespace;
-  DB: D1Database;
-  TICKET_SECRET?: string;
-  CF_REALTIME_APP_ID?: string;
-  CF_REALTIME_APP_TOKEN?: string;
-}
+import type { Env } from './env';
 
 export class HubSession {
   readonly #state: DurableObjectState;
@@ -99,7 +101,12 @@ export class HubSession {
       return this.#acceptHub(this.#nameFromBearer(request) ?? '', acceptedProtocol);
     }
     if (url.pathname === '/v1/client') {
-      return await this.#acceptClient(url.searchParams.get('hub') ?? '', acceptedProtocol);
+      return await this.#acceptClient(
+        url.searchParams.get('hub') ?? '',
+        acceptedProtocol,
+        clientIpFromRequest(request),
+        request.headers.get('user-agent') ?? undefined
+      );
     }
     return new Response('Unknown upgrade endpoint', { status: 404 });
   }
@@ -125,7 +132,12 @@ export class HubSession {
     return this.#upgradeResponse(client, protocol);
   }
 
-  async #acceptClient(hubName: string, protocol: string | undefined): Promise<Response> {
+  async #acceptClient(
+    hubName: string,
+    protocol: string | undefined,
+    clientIp: string | undefined,
+    clientUserAgent: string | undefined
+  ): Promise<Response> {
     if (!hubName) {
       return new Response('name required', { status: 400 });
     }
@@ -151,6 +163,8 @@ export class HubSession {
       role: 'client',
       name: hubName,
       sessionId,
+      clientIp,
+      clientUserAgent,
     } satisfies Attachment);
     this.#trySend(server, {
       v: PROTOCOL_VERSION,
@@ -317,10 +331,37 @@ export class HubSession {
     // uses to construct its RTCPeerConnection. ICE / abort don't carry
     // iceServers, so STUN defaults are fine (and pass-through is sync).
     const ice = msg.kind === 'client.offer' ? await this.#mergedIceServers() : DEFAULT_ICE_SERVERS;
-    hub.send(encodeSignaling(translateFromClient(msg, att.sessionId, ice)));
+    hub.send(
+      encodeSignaling(
+        translateFromClient(msg, att.sessionId, ice, {
+          clientIp: att.clientIp,
+          clientUserAgent: att.clientUserAgent,
+        })
+      )
+    );
   }
 
   #findClient(sessionId: string): WebSocket | undefined {
     return this.#state.getWebSockets(`session:${sessionId}`)[0];
   }
+}
+
+/**
+ * Best-available client IP from a WebSocket upgrade request. In Cloudflare
+ * `cf-connecting-ip` is canonical; behind a reverse proxy (or in dev) we
+ * fall back to the first hop in `x-forwarded-for`, then `x-real-ip`.
+ */
+function clientIpFromRequest(req: Request): string | undefined {
+  const cf = req.headers.get('cf-connecting-ip');
+  if (cf) {
+    return cf;
+  }
+  const xff = req.headers.get('x-forwarded-for');
+  if (xff) {
+    const first = xff.split(',')[0]?.trim();
+    if (first) {
+      return first;
+    }
+  }
+  return req.headers.get('x-real-ip') ?? undefined;
 }

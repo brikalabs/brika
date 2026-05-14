@@ -102,6 +102,16 @@ export interface SessionOfferMessage extends SignalingEnvelope {
   readonly clientCaps?: ReadonlyArray<string>;
   /** ICE servers (STUN + optional TURN) the hub should advertise. */
   readonly iceServers: ReadonlyArray<IceServer>;
+  /**
+   * Captured by the coordinator from the client's WebSocket upgrade — the
+   * hub can never see these directly (the data channel hides the upstream
+   * connection). Used as `remoteIp` for rate-limiting + the audit IP stamped
+   * onto auth-session records, and as the `user-agent` header on synthesized
+   * Requests so the auth flow knows what browser opened the session. Both
+   * optional: an older coordinator may not include them.
+   */
+  readonly clientIp?: string;
+  readonly clientUserAgent?: string;
 }
 
 /** Coordinator forwards a hub answer to the originating client. */

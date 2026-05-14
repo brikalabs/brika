@@ -13,6 +13,7 @@
  * decoded RPC frames and emits encoded ones via the supplied `send` callback.
  */
 
+import { TRANSPORT_HEADER } from '@brika/auth';
 import {
   type AbortMessage,
   PROTOCOL_VERSION,
@@ -29,6 +30,12 @@ export interface RpcServerOptions {
   readonly baseOrigin: string;
   readonly apiServer: ApiServer;
   readonly remoteIp: string;
+  /**
+   * `user-agent` to stamp on synthesized requests. Captured by the
+   * coordinator at the WebSocket upgrade — harder to spoof than the
+   * value the page bridge forwards over the data channel.
+   */
+  readonly remoteUserAgent?: string;
   readonly log: SignalingLogger;
 }
 
@@ -123,6 +130,10 @@ export class RpcServer {
     // Stamp the source so downstream middleware can apply rate limiting and
     // logging based on the remote peer rather than the loopback "socket".
     request.headers.set('x-real-ip', this.#options.remoteIp);
+    if (this.#options.remoteUserAgent) {
+      request.headers.set('user-agent', this.#options.remoteUserAgent);
+    }
+    request.headers.set(TRANSPORT_HEADER, 'rtc');
 
     let response: Response;
     try {

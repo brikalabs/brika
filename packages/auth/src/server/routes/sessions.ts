@@ -22,6 +22,7 @@ const listSessions = route.get({
         id: s.id,
         ip: s.ip,
         userAgent: s.userAgent,
+        connectionType: s.connectionType,
         createdAt: s.createdAt,
         lastSeenAt: s.lastSeenAt,
         current: s.id === session.id,

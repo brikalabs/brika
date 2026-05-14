@@ -60,10 +60,18 @@ export function translateFromHub(
   }
 }
 
+export interface ClientContext {
+  /** Real client IP captured from the WebSocket upgrade. Undefined when unknown. */
+  readonly clientIp?: string;
+  /** `user-agent` header from the WebSocket upgrade. Undefined when unknown. */
+  readonly clientUserAgent?: string;
+}
+
 export function translateFromClient(
   msg: ClientInbound,
   sessionId: string,
-  iceServers: ReadonlyArray<IceServer>
+  iceServers: ReadonlyArray<IceServer>,
+  context: ClientContext = {}
 ): SessionOfferMessage | SessionIceMessage | SessionErrorMessage {
   switch (msg.kind) {
     case 'client.offer':
@@ -74,6 +82,8 @@ export function translateFromClient(
         sdp: msg.sdp,
         clientCaps: msg.caps,
         iceServers,
+        clientIp: context.clientIp,
+        clientUserAgent: context.clientUserAgent,
       };
     case 'client.ice':
       return {

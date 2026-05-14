@@ -7,6 +7,7 @@ import { inject } from '@brika/di';
 import type { HonoContext, Middleware } from '@brika/router';
 import { getAuthConfig } from '../config';
 import { SessionService } from '../services/SessionService';
+import { parseTransportHeader, TRANSPORT_HEADER } from '../types';
 
 function getCookieValue(header: string | undefined, name: string): string | undefined {
   if (!header) {
@@ -44,7 +45,14 @@ export function verifyToken(): Middleware {
     }
 
     const ip = context.req.header('x-forwarded-for') ?? context.req.header('x-real-ip');
-    const session = sessionService.validateSession(token, ip ?? undefined);
+    const userAgent = context.req.header('user-agent');
+    const connectionType = parseTransportHeader(context.req.header(TRANSPORT_HEADER));
+    const session = sessionService.validateSession(
+      token,
+      ip ?? undefined,
+      userAgent ?? undefined,
+      connectionType
+    );
 
     context.set('session', session);
     await next();

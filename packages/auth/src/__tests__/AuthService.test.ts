@@ -84,7 +84,12 @@ describe('AuthService', () => {
       expect(result.token).toBe('test-session-token');
       expect(result.user.email).toBe('test@example.com');
       expect(result.expiresIn).toBe(604800);
-      expect(mockSessionService.createSession).toHaveBeenCalledWith('1', '127.0.0.1', 'TestAgent');
+      expect(mockSessionService.createSession).toHaveBeenCalledWith(
+        '1',
+        '127.0.0.1',
+        'TestAgent',
+        'http'
+      );
     });
 
     it('should reject invalid email', async () => {

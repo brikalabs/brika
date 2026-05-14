@@ -35,6 +35,22 @@ export interface Session {
   scopes: Scope[];
 }
 
+/** Transport a session was opened over. */
+export type ConnectionType = 'http' | 'rtc' | 'ws';
+
+/**
+ * Header the hub's WebRTC `RpcServer` stamps on requests it synthesizes from
+ * data-channel frames. Read by the auth flow (login + per-request middleware)
+ * to record how each session was opened. Single source of truth — don't
+ * hardcode this string elsewhere.
+ */
+export const TRANSPORT_HEADER = 'x-brika-transport';
+
+/** Parse a `x-brika-transport` header value. Defaults to 'http' for unknown/missing. */
+export function parseTransportHeader(value: string | null | undefined): ConnectionType {
+  return value === 'rtc' || value === 'ws' ? value : 'http';
+}
+
 /**
  * Session record stored in DB
  */
@@ -44,6 +60,7 @@ export interface SessionRecord {
   tokenHash: string;
   ip: string | null;
   userAgent: string | null;
+  connectionType: ConnectionType;
   createdAt: number;
   lastSeenAt: number;
   expiresAt: number;

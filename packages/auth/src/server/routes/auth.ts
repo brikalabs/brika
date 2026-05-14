@@ -7,7 +7,7 @@ import { RateLimitStore, rateLimit, route } from '@brika/router';
 import { LoginSchema } from '../../schemas';
 import { AuthService } from '../../services/AuthService';
 import { UserService } from '../../services/UserService';
-import type { Session } from '../../types';
+import { parseTransportHeader, type Session, TRANSPORT_HEADER } from '../../types';
 import { requireSession } from '../requireSession';
 import { sessionCookie } from './cookie';
 
@@ -36,6 +36,7 @@ const login = route.post({
     const ip =
       ctx.req.headers.get('x-forwarded-for') ?? ctx.req.headers.get('x-real-ip') ?? undefined;
     const userAgent = ctx.req.headers.get('user-agent') ?? undefined;
+    const connectionType = parseTransportHeader(ctx.req.headers.get(TRANSPORT_HEADER));
 
     const usernameKey = email.toLowerCase();
     const { allowed, resetAt } = USERNAME_RATE_LIMIT.check(usernameKey);
@@ -56,7 +57,7 @@ const login = route.post({
     }
 
     try {
-      const result = await authService.login(email, password, ip, userAgent);
+      const result = await authService.login(email, password, ip, userAgent, connectionType);
 
       return new Response(
         JSON.stringify({

@@ -420,7 +420,10 @@ export class RemoteAccessService {
   #onSignalingMessage(msg: SignalingMessage): void {
     switch (msg.kind) {
       case 'session.offer':
-        void this.#openSession(msg.sessionId, msg.sdp, msg.iceServers);
+        void this.#openSession(msg.sessionId, msg.sdp, msg.iceServers, {
+          clientIp: msg.clientIp,
+          clientUserAgent: msg.clientUserAgent,
+        });
         return;
       case 'session.ice': {
         const entry = this.#sessions.get(msg.sessionId);
@@ -448,7 +451,8 @@ export class RemoteAccessService {
   async #openSession(
     sessionId: string,
     offerSdp: string,
-    iceServers: ReadonlyArray<IceServer>
+    iceServers: ReadonlyArray<IceServer>,
+    clientInfo: { clientIp?: string; clientUserAgent?: string } = {}
   ): Promise<void> {
     if (this.#sessions.has(sessionId)) {
       this.#log.warn('duplicate session.offer ignored', { sessionId });
@@ -467,11 +471,12 @@ export class RemoteAccessService {
       sessionId,
       baseOrigin,
       apiServer: this.#apiServer,
-      // Per-session identifier so each remote browser gets its own rate-limit
-      // bucket. A literal `'rtc:peer'` shared across all sessions collapses
-      // the per-IP throttle into a single global bucket — one bad-password
-      // streak from any remote user would 429 every other remote user.
-      remoteIp: `rtc:${sessionId}`,
+      // Prefer the real client IP captured by the signaling server from the
+      // WebSocket upgrade — that's what we want in auth-session records and
+      // rate-limit buckets. Fall back to `rtc:<sessionId>` if the coordinator
+      // didn't supply one (older signaling server, or local in-process tests).
+      remoteIp: clientInfo.clientIp || `rtc:${sessionId}`,
+      remoteUserAgent: clientInfo.clientUserAgent,
       log: this.#log,
     });
 
