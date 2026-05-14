@@ -52,6 +52,7 @@ For production or quick testing, use Docker:
 
 ```bash
 docker run -d \
+  --pull=always \
   --name brika \
   -p 3001:3001 \
   -v ./config:/app/.brika \
@@ -64,6 +65,7 @@ docker run -d \
 services:
   brika:
     image: ghcr.io/brikalabs/brika:latest
+    pull_policy: always
     container_name: brika
     restart: unless-stopped
     ports:

@@ -42,8 +42,10 @@ iwr -useb https://brika.dev/install.ps1 | iex
 ### Docker
 
 ```sh
-docker run -d -p 3001:3001 --name brika ghcr.io/brikalabs/brika
+docker run -d --pull=always -p 3001:3001 --name brika ghcr.io/brikalabs/brika
 ```
+
+`--pull=always` ensures Docker fetches the latest image on every run, even if a stale local copy exists.
 
 The installer downloads the binary for your platform, places it in `~/.brika/bin/` (or `%LOCALAPPDATA%\brika\bin\` on Windows), and adds it to your shell PATH. A bundled Bun runtime is included — no separate Node.js or Bun install needed.
 
@@ -223,6 +225,7 @@ On Windows the install directory is `%LOCALAPPDATA%\brika\bin\`.
 
 ```bash
 docker run -d \
+  --pull=always \
   --name brika \
   -p 3001:3001 \
   -v ./config:/app/.brika \
@@ -235,6 +238,7 @@ docker run -d \
 services:
   brika:
     image: ghcr.io/brikalabs/brika:latest
+    pull_policy: always
     container_name: brika
     restart: unless-stopped
     ports:
