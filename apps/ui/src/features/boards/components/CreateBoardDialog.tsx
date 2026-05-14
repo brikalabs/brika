@@ -38,7 +38,7 @@ export function CreateBoardDialog() {
   const trimmedName = name.trim();
   const canSubmit = trimmedName.length > 0 && !creating;
 
-  const handleSubmit: React.FormEventHandler<HTMLFormElement> = (e) => {
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>): void => {
     e.preventDefault();
     if (!canSubmit) {
       return;

@@ -16,13 +16,15 @@
  * values after validation.
  */
 
-const ROOT_RE = /\$\{root\}/g;
-const ENV_RE = /\$\{env:([A-Za-z_][A-Za-z0-9_]*)\}/g;
+// `${env:NAME}` — name starts with a non-digit word char, body is word chars.
+// `\w` is `[A-Za-z0-9_]`; the leading `[^\d\W]` rules out a leading digit
+// while still being a single character class.
+const ENV_RE = /\$\{env:([^\d\W]\w*)\}/g;
 
 export function expandVars(value: string, vars: { readonly root: string }): string {
   return value
-    .replace(ROOT_RE, vars.root)
-    .replace(ENV_RE, (_, name: string) => process.env[name] ?? '');
+    .replaceAll('${root}', vars.root)
+    .replaceAll(ENV_RE, (_, name: string) => process.env[name] ?? '');
 }
 
 /**

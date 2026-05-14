@@ -245,16 +245,7 @@ function collectScripts(doc: Document): ModuleScriptRef[] {
   return out;
 }
 
-export async function buildAssetGraph(
-  peer: PeerHandle,
-  hubName: string,
-  hasServiceWorker: boolean,
-  onProgress?: ProgressListener
-): Promise<AssetGraph> {
-  if (!hasServiceWorker) {
-    throw new ServiceWorkerUnavailableError();
-  }
-
+async function fetchHubIndexHtml(peer: PeerHandle, hubName: string): Promise<string> {
   const res = await peer.request('GET', '/');
   if (res.status === 404) {
     throw new HubNotFoundError(hubName);
@@ -262,18 +253,10 @@ export async function buildAssetGraph(
   if (!res.ok) {
     throw new HubUpstreamError('/index.html', res.status);
   }
-  const html = await res.text();
+  return res.text();
+}
 
-  const doc = new DOMParser().parseFromString(html, 'text/html');
-  const scripts = collectScripts(doc);
-  if (scripts.length === 0) {
-    throw new HubOutdatedError();
-  }
-
-  const cssLinks = Array.from(doc.querySelectorAll('link[rel="stylesheet"][href^="/"]'))
-    .map((el) => el.getAttribute('href'))
-    .filter((href): href is string => href !== null);
-
+function collectInitialUrls(scripts: ModuleScriptRef[], cssLinks: string[]): Set<string> {
   const initial = new Set<string>();
   for (const s of scripts) {
     if (s.src && isAbsolutePath(s.src)) {
@@ -290,7 +273,31 @@ export async function buildAssetGraph(
       initial.add(css);
     }
   }
+  return initial;
+}
 
+export async function buildAssetGraph(
+  peer: PeerHandle,
+  hubName: string,
+  hasServiceWorker: boolean,
+  onProgress?: ProgressListener
+): Promise<AssetGraph> {
+  if (!hasServiceWorker) {
+    throw new ServiceWorkerUnavailableError();
+  }
+
+  const html = await fetchHubIndexHtml(peer, hubName);
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  const scripts = collectScripts(doc);
+  if (scripts.length === 0) {
+    throw new HubOutdatedError();
+  }
+
+  const cssLinks = Array.from(doc.querySelectorAll('link[rel="stylesheet"][href^="/"]'))
+    .map((el) => el.getAttribute('href'))
+    .filter((href): href is string => href !== null);
+
+  const initial = collectInitialUrls(scripts, cssLinks);
   await primeCache(peer, Array.from(initial), onProgress);
   return { scripts, cssLinks, title: doc.title, hubName };
 }
