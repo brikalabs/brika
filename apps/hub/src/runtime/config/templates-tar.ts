@@ -5,8 +5,8 @@
  * at runtime using Bun's native Archive API.
  */
 
-import { join } from "node:path";
-import type { Logger } from "../logs/log-router";
+import { join } from 'node:path';
+import type { Logger } from '../logs/log-router';
 
 /**
  * Unpack a gzipped tar archive and extract files to target directory.
@@ -15,7 +15,7 @@ import type { Logger } from "../logs/log-router";
 export async function unpackTemplates(
   compressedData: Uint8Array<ArrayBuffer>,
   targetDir: string,
-  logger: Logger,
+  logger: Logger
 ): Promise<void> {
   const tarData = Bun.gunzipSync(compressedData);
   const archive = new Bun.Archive(tarData);
@@ -25,11 +25,11 @@ export async function unpackTemplates(
     const filePath = join(targetDir, '.brika', relativePath);
     const targetFile = Bun.file(filePath);
     if (await targetFile.exists()) {
-      logger.debug("Skipping template file (already exists)", { file: relativePath });
+      logger.debug('Skipping template file (already exists)', { file: relativePath });
       continue;
     }
     const content = await file.arrayBuffer();
     await Bun.write(filePath, content);
-    logger.debug("Created template file", { file: relativePath });
+    logger.debug('Created template file', { file: relativePath });
   }
 }

@@ -7,6 +7,8 @@ import { generateHelp as defaultGenerateHelp } from './help';
 export type HelpFormatter = (commands: Command[], specific?: Command, prefix?: string) => string;
 
 export interface CliConfig {
+  /** Binary / program name used in help text (default: 'brika') */
+  name?: string;
   /** Default command when no args given (default: 'start') */
   defaultCommand?: string;
   /** Hook to run before any command handler (skipped for help) */
@@ -121,7 +123,7 @@ function stripFlag(argv: string[], ...names: string[]): string[] {
 }
 
 export function createCli(config?: CliConfig): Cli {
-  let prefix = 'brika';
+  let prefix = config?.name ?? 'brika';
   const defaultCommand = config?.defaultCommand ?? 'start';
   const beforeFn = config?.before;
   const generateHelp = config?.helpFormatter ?? defaultGenerateHelp;
