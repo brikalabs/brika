@@ -1,0 +1,22 @@
+# Brika local dev stack. Run with `bun run up` (or `mortar` directly).
+#
+# `cwd:` + `bun run dev` is preferred over `bun --filter <pkg>` —
+# `--filter` uses terminal redraws for its task-progress UI which
+# stack as duplicate frames when its stdout is piped (which is how
+# mortar captures logs).
+
+services:
+  ui:
+    label: UI (Vite)
+    cwd: apps/ui
+    command: bun run dev
+    port: 5173
+
+  hub:
+    label: Hub
+    cwd: apps/hub
+    command: bun run dev
+    port: 3001
+    env:
+      BRIKA_DEV_UI_PROXY: http://localhost:5173
+    dependsOn: [ui]

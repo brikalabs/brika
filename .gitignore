@@ -15,6 +15,9 @@ config/
 .brika/
 **/.brika/
 
+# mortar exported logs (`s` keybind in the TUI dumps here)
+.mortar-logs/
+
 # Plugin persistent data
 plugins/*/data/
 
