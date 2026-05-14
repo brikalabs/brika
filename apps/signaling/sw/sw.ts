@@ -26,7 +26,7 @@
 // the global itself collides with the lib's existing declaration.
 const sw = globalThis as unknown as ServiceWorkerGlobalScope;
 
-const ASSET_CACHE = 'brika-assets-v5';
+const ASSET_CACHE = 'brika-assets-v6';
 
 // Visible in the SW's own DevTools console (Application → Service Workers →
 // click the SW link). Pairs with the page-side `[brika-sw]` logs so a failed
