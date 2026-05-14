@@ -58,4 +58,18 @@ services:
 #       url:       <string> (when kind: http)
 #       timeoutMs: <int>    (override default deadline)
 #     url:         string — explicit browser URL override (deep link / query)
+#
+# ─── Variable substitution ─────────────────────────────────────────────
+#
+# String fields (env values, command, cwd, url) accept two placeholders:
+#
+#   \${root}     — absolute path to the directory containing this
+#                  mortar.yml. Use to pin runtime state to the repo
+#                  root even when a service runs from a sub-cwd, e.g.
+#                  \`BRIKA_HOME: \${root}/.brika\`.
+#   \${env:NAME} — value of process.env.NAME at config load time;
+#                  empty string when unset.
+#
+# Bare \`\${NAME}\` (without the \`env:\` prefix) is left unchanged so it
+# can flow through to the spawned service's own runtime.
 `;

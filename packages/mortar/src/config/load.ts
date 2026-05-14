@@ -8,6 +8,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { dirname, join, parse as parsePath, resolve } from 'node:path';
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 import { CONFIG_FILENAME, DEFAULT_CONFIG_YAML } from './defaults';
+import { expandServiceVars } from './expandVars';
 import type { MortarConfig, ResolvedConfig } from './types';
 import { validateConfig } from './validate';
 
@@ -59,7 +60,12 @@ export async function loadConfig(cwd: string = process.cwd()): Promise<ResolvedC
     );
   }
   const raw = await readFile(path, 'utf8');
-  return { path, root: dirname(path), config: validateConfig(parseYaml(raw)) };
+  const root = dirname(path);
+  const parsed = validateConfig(parseYaml(raw));
+  const config: MortarConfig = {
+    services: parsed.services.map((svc) => expandServiceVars(svc, { root })),
+  };
+  return { path, root, config };
 }
 
 export async function saveDefaultConfig(cwd: string = process.cwd()): Promise<string> {

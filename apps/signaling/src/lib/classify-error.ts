@@ -38,12 +38,11 @@ export function classifyError(err: unknown, hubName: string): ErrorClassificatio
 
   if (err instanceof HubOutdatedError || err instanceof ServiceWorkerUnavailableError) {
     return {
-      title:
-        err instanceof HubOutdatedError ? 'Your hub needs an update' : 'Browser not supported',
+      title: err instanceof HubOutdatedError ? 'Your hub needs an update' : 'Browser not supported',
       detail:
         err instanceof HubOutdatedError
           ? `"${hubName}" is running an older version of Brika that doesn't serve its UI through the bridge yet. Update the hub and reload this page.`
-          : "This browser blocked the service worker the bootstrap needs. Try a regular (non-private) window, or a Chromium/Firefox/Safari build that supports service workers.",
+          : 'This browser blocked the service worker the bootstrap needs. Try a regular (non-private) window, or a Chromium/Firefox/Safari build that supports service workers.',
       kind: 'help',
     };
   }
