@@ -450,6 +450,19 @@ describe('Supervisor (restart)', () => {
     track(sup);
     await sup.restart('ghost'); // does not throw
   });
+
+  test('restartAll() reboots every service back to healthy', async () => {
+    const sup = new Supervisor([longRunning('a'), longRunning('b')]);
+    track(sup);
+    sup.start();
+    await waitFor(sup, (states) => states.every((s) => s.status.kind === 'healthy'), {
+      label: 'all healthy first',
+    });
+    await sup.restartAll();
+    await waitFor(sup, (states) => states.every((s) => s.status.kind === 'healthy'), {
+      label: 'all healthy after restartAll',
+    });
+  });
 });
 
 // ─── shutdown ───────────────────────────────────────────────────────────────

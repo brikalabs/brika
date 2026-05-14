@@ -2,6 +2,7 @@
  * Service-action keybinds: things you do to the focused service.
  *
  *   r   restart it
+ *   R   restart every service (whole tree)
  *   o   open its URL in the default browser
  *   s   save its log buffer to .mortar-logs/<id>-<ts>.log
  *   c   copy its log buffer to the system clipboard
@@ -24,6 +25,15 @@ export function useServiceActionKeys(enabled: boolean): void {
       if (focused) {
         void supervisor.restart(focused.spec.id);
       }
+    },
+    enabled
+  );
+
+  useKey(
+    'R',
+    () => {
+      toast.showToast('Restarting all services…');
+      void supervisor.restartAll();
     },
     enabled
   );
