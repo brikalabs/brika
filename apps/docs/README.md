@@ -81,6 +81,7 @@ Interactive CLI scaffolds a complete plugin with TypeScript config, block/brick 
 
 ```bash
 docker run -d \
+  --pull=always \
   --name brika \
   -p 3001:3001 \
   -v ./config:/app/.brika \

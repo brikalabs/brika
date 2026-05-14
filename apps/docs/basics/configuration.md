@@ -104,6 +104,7 @@ When running in Docker, mount your configuration:
 
 ```bash
 docker run -d \
+  --pull=always \
   -v ./brika.yml:/app/brika.yml \
   -v ./workflows:/app/workflows \
   -v ./data:/app/.brika \
