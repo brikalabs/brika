@@ -23,12 +23,19 @@
  *      specifier resolution per the HTML spec).
  */
 
+import {
+  HubDevProxyError,
+  HubNotFoundError,
+  HubOutdatedError,
+  HubUpstreamError,
+  ServiceWorkerUnavailableError,
+} from './errors';
 import type { PeerHandle } from './peer';
 
 // Keep in sync with `public/sw.js` — they must agree on the cache name
 // for the bootstrap's `cache.put()` to be visible to the SW's
 // `cache.match()`.
-const ASSET_CACHE = 'brika-assets-v4';
+const ASSET_CACHE = 'brika-assets-v5';
 
 /**
  * Absolute-path module specifiers in ES module source. Captures static
@@ -183,35 +190,19 @@ function isCSSContentType(contentType: string): boolean {
   return /\bcss\b/i.test(contentType);
 }
 
-/**
- * Thrown by {@link fetchThroughPeer} when the hub returns HTML for a URL
- * that should have produced a JS module. Almost always means the dev
- * UI proxy lost its upstream Vite server and every unknown path is
- * getting the SPA-fallback `index.html`. Distinct class so primeCache
- * can tell it apart from normal 404s (which it tolerates).
- */
-class HtmlForModuleError extends Error {
-  readonly url: string;
-  constructor(url: string) {
-    super(`Hub returned HTML for ${url} — is the dev UI proxy reachable (Vite running)?`);
-    this.name = 'HtmlForModuleError';
-    this.url = url;
-  }
-}
-
 async function fetchThroughPeer(
   peer: PeerHandle,
   url: string
 ): Promise<{ response: Response; text: string | null; contentType: string }> {
   const res = await peer.request('GET', url);
   if (!res.ok) {
-    throw new Error(`Hub ${url} → ${res.status}`);
+    throw new HubUpstreamError(url, res.status);
   }
   const bytes = await res.arrayBuffer();
   const headerType = res.headers.get('content-type');
   const guessed = guessAssetMime(url);
   if (headerType?.includes('text/html') && guessed === 'text/javascript') {
-    throw new HtmlForModuleError(url);
+    throw new HubDevProxyError(url);
   }
   const contentType = headerType ?? guessed ?? 'application/octet-stream';
   const isText = /\b(javascript|ecmascript|json|css|text)\b/i.test(contentType);
@@ -306,7 +297,7 @@ async function primeCache(
     }
   }
   let fetched = 0;
-  let stop: Error | null = null;
+  let stop: HubDevProxyError | null = null;
   const inflight = new Set<Promise<void>>();
 
   const processOne = async (url: string): Promise<void> => {
@@ -338,7 +329,7 @@ async function primeCache(
       // returns HTML for every module URL; that's a user-actionable
       // setup error — propagate it so the bootstrap can surface the
       // specific error card.
-      if (err instanceof HtmlForModuleError) {
+      if (err instanceof HubDevProxyError) {
         stop = err;
       }
       // 404s on optional resources (some `?import` queries Vite emits)
@@ -403,6 +394,17 @@ function collectScripts(doc: Document): ModuleScriptRef[] {
  * Fetch the hub's `/index.html`, extract the module entries + CSS links,
  * then prime the SW cache with the entire reachable graph.
  */
+async function fetchHubIndex(peer: PeerHandle, hubName: string): Promise<string> {
+  const res = await peer.request('GET', '/');
+  if (res.status === 404) {
+    throw new HubNotFoundError(hubName);
+  }
+  if (!res.ok) {
+    throw new HubUpstreamError('/index.html', res.status);
+  }
+  return res.text();
+}
+
 export async function buildAssetGraph(
   peer: PeerHandle,
   hubName: string,
@@ -410,19 +412,14 @@ export async function buildAssetGraph(
   onProgress?: ProgressListener
 ): Promise<AssetGraph> {
   if (!hasServiceWorker) {
-    throw new Error('Service worker required — browser does not support SW or it was blocked');
+    throw new ServiceWorkerUnavailableError();
   }
 
-  const res = await peer.request('GET', '/');
-  if (!res.ok) {
-    throw new Error(`Hub /index.html → ${res.status}`);
-  }
-  const html = await res.text();
-
+  const html = await fetchHubIndex(peer, hubName);
   const doc = new DOMParser().parseFromString(html, 'text/html');
   const scripts = collectScripts(doc);
   if (scripts.length === 0) {
-    throw new Error('Hub UI is missing a module entry — outdated hub?');
+    throw new HubOutdatedError();
   }
 
   const cssLinks = Array.from(doc.querySelectorAll('link[rel="stylesheet"][href^="/"]'))
@@ -546,7 +543,7 @@ function swapRoot(rootId: string): void {
  * doesn't respond with this exact string the SW is stale and we force
  * a one-time auto-reload to pick up the fresh worker.
  */
-const EXPECTED_SW_VERSION = '4';
+const EXPECTED_SW_VERSION = '5';
 const SW_PING_PATH = '/__brika_sw_ping__';
 const RELOAD_FLAG = 'brika-bootstrap-sw-reloaded';
 
@@ -726,16 +723,35 @@ function waitForControllerChange(timeoutMs = 8_000): Promise<void> {
  * expected version on the sentinel path. Old SWs that only intercepted
  * `/assets/*` fall through to the network here, which returns the CF
  * Worker SPA-fallback HTML — never matches the version string.
+ *
+ * Polls a few times before declaring stale: on a fresh page load there is
+ * a brief window where `navigator.serviceWorker.controller` is set but
+ * the SW isn't yet routing fetches, so the first ping bypasses it and
+ * lands on the network (Worker SPA fallback → text/html). Without this
+ * tolerance the bootstrap interprets that as "stale" and reload-loops,
+ * which was the visible flashing in dev.
  */
 async function isStaleController(): Promise<boolean> {
-  try {
-    const res = await fetch(SW_PING_PATH, { cache: 'no-store' });
-    if (!res.ok) {
-      return true;
+  const ATTEMPTS = 6;
+  const DELAY_MS = 250;
+  for (let i = 0; i < ATTEMPTS; i++) {
+    try {
+      const res = await fetch(SW_PING_PATH, { cache: 'no-store' });
+      if (res.ok) {
+        const contentType = res.headers.get('content-type') ?? '';
+        // The SW responds text/plain. Anything else (notably text/html
+        // from the SPA fallback) means the SW didn't intercept — retry.
+        if (contentType.includes('text/plain')) {
+          const version = (await res.text()).trim();
+          return version !== EXPECTED_SW_VERSION;
+        }
+      }
+    } catch {
+      // network error → retry
     }
-    const version = (await res.text()).trim();
-    return version !== EXPECTED_SW_VERSION;
-  } catch {
-    return true;
+    if (i < ATTEMPTS - 1) {
+      await new Promise((resolve) => setTimeout(resolve, DELAY_MS));
+    }
   }
+  return true;
 }

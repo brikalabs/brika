@@ -73,6 +73,20 @@ function originAllowed(req: Request, env: Env): boolean {
     // CLI, server-to-server, or same-origin GET → no Origin header. Allow.
     return true;
   }
+  // Localhost is always trusted. The browser sets `Origin` to the actual
+  // page origin and cannot be forged by a cross-origin attacker, so a
+  // localhost value here proves the request came from a page on this
+  // machine — exactly the dev path. Without this `bun run dev` would 403
+  // on every `/v1/*` mutating call because the dev server defaults to
+  // serving the bootstrap on http://localhost:<port>.
+  try {
+    const { hostname } = new URL(origin);
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+      return true;
+    }
+  } catch {
+    // Malformed Origin → fall through to explicit allowlist check.
+  }
   const list = env.ALLOWED_ORIGINS
     ? env.ALLOWED_ORIGINS.split(',')
         .map((s) => s.trim())

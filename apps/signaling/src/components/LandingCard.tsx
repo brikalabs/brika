@@ -14,7 +14,7 @@ import {
 import { ArrowRight, BookOpen, Code2, ExternalLink } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import { isValidHubName } from '@/lib/hub-name';
-import { storeHubName, suggestHubName } from '@/lib/hub-storage';
+import { suggestHubName } from '@/lib/hub-storage';
 
 /**
  * Shown at the bare `hub.brika.dev/` URL. `LoaderScreen` already
@@ -36,7 +36,7 @@ export function LandingCard(): React.ReactElement {
     }
   }, []);
 
-  const onSubmit = async (e: React.SyntheticEvent<HTMLFormElement>): Promise<void> => {
+  const onSubmit = (e: React.SyntheticEvent<HTMLFormElement>): void => {
     e.preventDefault();
     if (!isValidHubName(trimmed)) {
       setError(
@@ -44,13 +44,12 @@ export function LandingCard(): React.ReactElement {
       );
       return;
     }
-    // Await the store — it purges stale `brika-*` caches when the prior
-    // hub differs, and we MUST let that finish before the page reload or
-    // the new SW will keep serving the prior hub's cached modules.
-    await storeHubName(trimmed);
-    // Clean the URL: drop any legacy `/<name>` path and `?hub=` query
-    // so subsequent navigation is the hub UI's responsibility.
-    globalThis.location.replace('/');
+    // Pass the candidate name via `?hub=` only — DO NOT persist it yet.
+    // `useBootstrap` will write it to localStorage after the WebRTC
+    // handshake completes; that way a typo or a nonexistent hub doesn't
+    // trap the user (they were stuck retrying the bad name on every
+    // refresh until they manually cleared storage).
+    globalThis.location.replace(`/?hub=${encodeURIComponent(trimmed)}`);
   };
 
   return (

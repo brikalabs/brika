@@ -1,5 +1,5 @@
 // Brika bootstrap Service Worker — intercepts same-origin GETs and serves
-// from the `brika-assets-v2` Cache. The page-side bootstrap pre-populates
+// from the `brika-assets-v5` Cache. The page-side bootstrap pre-populates
 // this cache via WebRTC BEFORE injecting the hub's `<script>` / `<link>`
 // tags, so every browser fetch hits the cache locally. On miss we fall
 // through to the network — keeps the SW transparent for resources the
@@ -14,7 +14,7 @@
 // Bump the cache name (v1 → v2 → …) whenever the cached-shape semantics
 // change. The activate handler deletes every prior `brika-assets-*`
 // cache so users carrying a stale one get a clean slate automatically.
-const ASSET_CACHE = 'brika-assets-v4';
+const ASSET_CACHE = 'brika-assets-v5';
 
 globalThis.addEventListener('install', () => {
   // skipWaiting() lets the new SW replace any previous version as soon
@@ -22,16 +22,30 @@ globalThis.addEventListener('install', () => {
   globalThis.skipWaiting();
 });
 
-// Backstop for skipWaiting: the bootstrap can post SKIP_WAITING if it
-// detects a waiting SW. Some browsers don't propagate the install-time
-// skipWaiting() call reliably across page navigations. Only accept the
-// message when the sender's origin matches our own scope.
+// Set of FetchEvent clientIds that have installed the page-side proxy
+// listener (apps/ui/src/lib/api/sw-proxy.ts) and explicitly told us so
+// via `BRIKA_PROXY_READY`. We only proxy through clients we've seen
+// register — without this signal we couldn't tell the bootstrap document
+// (which has no listener) apart from the hub-UI document (which does),
+// and posting to a client with no listener hangs until the head timer
+// expires (504). Cleared automatically when the SW restarts.
+const proxyReadyClients = new Set();
+
 globalThis.addEventListener('message', (event) => {
   if (event.origin !== globalThis.location.origin) {
     return;
   }
-  if (event.data?.type === 'SKIP_WAITING') {
+  const data = event.data;
+  if (data?.type === 'SKIP_WAITING') {
     globalThis.skipWaiting();
+    return;
+  }
+  // The hub-UI's installSwProxyListener posts this immediately after
+  // wiring its message handler. event.source is the originating client;
+  // its `.id` matches what FetchEvent.clientId will be for sub-resource
+  // requests from that document.
+  if (data?.type === 'BRIKA_PROXY_READY' && event.source && 'id' in event.source) {
+    proxyReadyClients.add(event.source.id);
   }
 });
 
@@ -54,7 +68,7 @@ globalThis.addEventListener('activate', (event) => {
 
 // Sentinel URL the bootstrap pings to verify it's talking to a fresh
 // SW. Bump alongside ASSET_CACHE whenever the SW contract changes.
-const SW_VERSION = '4';
+const SW_VERSION = '5';
 const SW_PING_PATH = '/__brika_sw_ping__';
 
 globalThis.addEventListener('fetch', (event) => {
@@ -63,20 +77,23 @@ globalThis.addEventListener('fetch', (event) => {
   if (url.origin !== globalThis.location.origin) {
     return;
   }
+  // Navigation requests (top-level document loads) must never be
+  // proxied. The bootstrap origin serves the SPA-fallback HTML; the
+  // bootstrap then runs, registers this SW, and loads the hub via
+  // WebRTC. If we intercepted nav and tried to proxy through a stale
+  // client (or no client at all), refreshes would 503/504 the user's
+  // own tab instead of re-running the bootstrap.
+  if (req.mode === 'navigate') {
+    return;
+  }
   // Live `/api/*` requests can't be pre-cached (brick modules are loaded
   // on-demand, REST endpoints have request-specific bodies). Forward them
   // to the controlling page over postMessage so it can re-issue the call
   // through the WebRTC bridge — for EVERY method, not just GET. A mutating
   // verb like POST /api/auth/login would otherwise fall through to the
   // network and hit `hub.brika.dev` (which has no app surface).
-  //
-  // Route to the *originating* client (the page that made this request).
-  // Falling back to `allClients[0]` would let a request emitted from tab A
-  // be answered by tab B's transport — across hub bindings if the two tabs
-  // target different hubs. Same-tab proxying preserves the hub identity
-  // end-to-end.
   if (url.pathname.startsWith('/api/')) {
-    event.respondWith(proxyThroughClient(req, event.clientId));
+    event.respondWith(proxyOr503(req, event.clientId));
     return;
   }
   // Everything below this point is the static-asset cache path — GET-only.
@@ -99,48 +116,81 @@ globalThis.addEventListener('fetch', (event) => {
       if (cached) {
         return cached;
       }
-      // Cache miss. In Vite dev the BFS can't statically discover every
-      // dynamic / conditional import (~3000 modules), so falling through
-      // to the network here would hit the bootstrap origin and 404 →
-      // SPA-fallback HTML with the wrong MIME → "Failed to load module
-      // script". Instead route the miss through the page bridge so the
-      // hub's dev-ui-proxy can serve the module from Vite. Slow on first
-      // hit, cached for subsequent loads.
-      const res = await proxyThroughClient(req, event.clientId);
-      // Write the proxied result back into the cache so the next request
-      // for the same URL hits locally. Clone first — Response bodies are
-      // one-shot.
-      if (res.ok) {
-        const cacheable = res.clone();
-        event.waitUntil(cache.put(req, cacheable).catch(() => {}));
+      // Cache miss. Two distinct callers reach here:
+      //  - The hub UI loaded via WebRTC, dynamically importing a Vite-
+      //    served module the BFS didn't statically discover (~3000 modules
+      //    in dev). Route through the page bridge so the hub's dev-ui-proxy
+      //    can serve the module; cache the response for next time.
+      //  - The bootstrap document itself, fetching its own resources
+      //    (favicon.ico, /sw.js, vite HMR assets in local dev). These
+      //    have no proxy listener — fall through to the origin network.
+      // We use the proxyReadyClients gate to distinguish the two: a
+      // hub-UI document has explicitly registered; the bootstrap hasn't.
+      const client = await resolveProxyClient(event.clientId);
+      if (client) {
+        const res = await proxyThroughClient(req, client);
+        if (res.ok) {
+          const cacheable = res.clone();
+          event.waitUntil(cache.put(req, cacheable).catch(() => {}));
+        }
+        return res;
       }
-      return res;
+      try {
+        return await fetch(req);
+      } catch (err) {
+        return new Response(`SW network fallback failed: ${err}`, {
+          status: 502,
+          headers: { 'content-type': 'text/plain' },
+        });
+      }
     })()
   );
 });
 
 /**
- * Ask the originating page to re-issue this request through its WebRTC
- * bridge and stream the result back. The page wires up the listener
- * in `apps/ui/src/lib/api/sw-proxy.ts`. Returns 503 when the originating
- * client can't be resolved (e.g. during a hard refresh before the page
- * reconnects, or for navigation requests with no clientId).
+ * `/api/*` request that we can't fulfil without a hub bridge: if no
+ * ready client is around, return a clear 503 instead of hanging on the
+ * head timer. The hub UI never calls /api before installSwProxyListener
+ * runs (the import is top-level-awaited), so this 503 only fires when
+ * something has gone wrong — usually a refresh interrupting the boot.
  */
-async function proxyThroughClient(req, clientId) {
-  // Prefer the FetchEvent's `clientId` — the page that actually emitted
-  // the request. Only fall back to "any window client" when clientId is
-  // empty (top-level navigation, no controlling client yet).
-  let client = clientId ? await globalThis.clients.get(clientId) : null;
-  if (!client) {
-    const windowClients = await globalThis.clients.matchAll({ type: 'window' });
-    client = windowClients[0] ?? null;
-  }
+async function proxyOr503(req, clientId) {
+  const client = await resolveProxyClient(clientId);
   if (!client) {
     return new Response('No controlling page available to proxy /api', {
       status: 503,
       headers: { 'content-type': 'text/plain' },
     });
   }
+  return proxyThroughClient(req, client);
+}
+
+/**
+ * Return the originating Client iff it has registered as proxy-ready.
+ * Never falls back to "any window client" — cross-tab proxying would
+ * route a request emitted from tab A through tab B's bridge, possibly
+ * targeting a different hub.
+ */
+async function resolveProxyClient(clientId) {
+  if (!clientId || !proxyReadyClients.has(clientId)) {
+    return null;
+  }
+  const client = await globalThis.clients.get(clientId);
+  if (!client) {
+    // Client went away — purge so the Set doesn't grow unbounded over
+    // long-lived SWs. (Browsers also kill the SW periodically.)
+    proxyReadyClients.delete(clientId);
+    return null;
+  }
+  return client;
+}
+
+/**
+ * Ask the page to re-issue this request through its WebRTC bridge and
+ * stream the result back. The page-side listener lives in
+ * `apps/ui/src/lib/api/sw-proxy.ts`.
+ */
+async function proxyThroughClient(req, client) {
   const headers = [];
   for (const [k, v] of req.headers) {
     headers.push([k, v]);
@@ -203,6 +253,20 @@ async function proxyThroughClient(req, clientId) {
         return;
       }
       if (msg.kind === 'error') {
+        // If the error arrives before head, resolve with a 502 so the
+        // browser sees an actual response instead of waiting on the head
+        // timer. Otherwise abort the in-flight stream.
+        if (!headSeen) {
+          headSeen = true;
+          clearTimeout(headTimer);
+          resolve(
+            new Response(`Bridge proxy error: ${msg.message ?? 'unknown'}`, {
+              status: 502,
+              headers: { 'content-type': 'text/plain' },
+            })
+          );
+          return;
+        }
         void writer.abort(new Error(msg.message ?? 'bridge error'));
       }
     };

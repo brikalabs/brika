@@ -1,41 +1,70 @@
 # @brika/signaling
 
-Self-host signaling coordinator for Brika remote access — a single Bun process that brokers WebRTC SDP and ICE between home hubs and browsers, then drops out once the data channel is open.
+Brika's remote-access front door. One Cloudflare Worker deployed at `hub.brika.dev` that:
 
-> Looking for the **production** coordinator? That's [`@brika/signaling-worker`](../signaling-worker/) — same protocol, Cloudflare Workers + Durable Objects + D1. This Bun build is meant for local dev and on-prem deployments where you don't want to depend on `signaling.brika.dev`.
+- Owns the **`/v1/*` coordinator API** — claims, tickets, WebSocket signaling — backed by D1 (claims) and a `HubSession` Durable Object per hub (live socket + per-session client sockets).
+- Serves the **bootstrap SPA** at every other path — a ~15 KB shell that opens a WebRTC bridge to the hub, RPC-fetches the hub's `/index.html` + `/assets/*` chunks through the data channel, then hands the page over to the hub's UI.
 
-## What it does
+Both halves live in this single package and ship as one Worker (the SPA is attached via the static asset binding). The hub name lives in `localStorage` after the bootstrap reads it; the URL no longer carries it.
 
-- `POST /v1/hubs/claim` — first-come-first-serve name claim, returns a bearer token
-- `POST /v1/hubs/:name/rotate` — rotate the bearer token (requires the current one)
-- `DELETE /v1/hubs/:name` — release a claim
-- `POST /v1/tickets` — mint a short-lived signed ticket for a browser session
-- `WS /v1/hub` — long-lived hub signaling channel, authenticated via `bearer.<token>` in `Sec-WebSocket-Protocol`
-- `WS /v1/client?hub=&ticket=` — per-session browser channel, authenticated via the ticket
-- `GET /v1/health` — liveness probe
+## Layout
 
-## Running
-
-```bash
-bun --filter @brika/signaling dev      # watch mode on :8787
-bun --filter @brika/signaling start    # one-shot
+```
+apps/signaling/
+  server/              Cloudflare Worker
+    worker.ts          HTTP router + WebSocket dispatch into the right DO
+    hub-session.ts     Durable Object — owns the hub WS + per-session client sockets
+    hub-resolution.ts  extracts the hub name from a request URL; stamps <meta> into the shell
+    claims-d1.ts       D1-backed ClaimStore
+    tickets.ts         re-exports mint/verify from @brika/remote-access-protocol
+  src/                 React SPA (bootstrap shell)
+    hooks/, lib/, components/, screens/
+  public/sw.js         service worker that proxies /api/* requests over the data channel
+  index.html
+  migrations/          D1 SQL migrations
+  vite.config.ts       @cloudflare/vite-plugin — one dev server for SPA + worker
+  wrangler.toml        custom domain hub.brika.dev; assets dir = ./dist/client
 ```
 
-Environment:
+## Routes
 
-| Var                          | Default                                                           |
-| ---------------------------- | ----------------------------------------------------------------- |
-| `PORT`                       | `8787`                                                            |
-| `SIGNALING_TICKET_SECRET`    | `dev-only-secret-change-me` — **set this in production**          |
-| `SIGNALING_CLAIMS_PATH`      | `./.signaling-claims.json`                                        |
-| `SIGNALING_ICE_SERVERS`      | JSON array; defaults to Google + Cloudflare public STUN           |
+| Method   | Path                          | Auth                | What                                                |
+| -------- | ----------------------------- | ------------------- | --------------------------------------------------- |
+| `GET`    | `/v1/health`                  | —                   | Liveness probe                                      |
+| `GET`    | `/v1/hubs/:name/status`       | —                   | Whether a name is claimed (no token / session info) |
+| `POST`   | `/v1/hubs/claim`              | —                   | Claim a name; receive a bearer token                |
+| `POST`   | `/v1/hubs/:name/rotate`       | `Bearer <token>`    | Rotate the bearer                                   |
+| `DELETE` | `/v1/hubs/:name`              | `Bearer <token>`    | Release the claim                                   |
+| `POST`   | `/v1/tickets`                 | —                   | Mint a 60-second signed ticket for a hub name       |
+| `WS`     | `/v1/hub`                     | `bearer.<token>`    | Long-lived hub signaling channel                    |
+| `WS`     | `/v1/client?hub=&ticket=`     | `ticket.<token>`    | Per-session browser signaling channel               |
 
-## Storage
+Auth tokens are carried in the `Sec-WebSocket-Protocol` header (browsers strip everything else on upgrade).
 
-Claims live in a single JSON file written atomically via `rename()`. Good enough for one coordinator and a few thousand hubs. The `@brika/signaling-worker` variant swaps this for D1 to scale horizontally.
+## Local dev
+
+```bash
+bun --filter @brika/signaling dev        # vite + miniflare, one process, HMR on the SPA
+bun --filter @brika/signaling d1:migrate:local
+```
+
+Vite serves the SPA on `http://localhost:5174` with HMR; `@cloudflare/vite-plugin` runs `server/worker.ts` inside miniflare on the same origin, so `/v1/*` and WebSocket upgrades hit the real Worker code with real DO + D1 bindings.
+
+`?debug=1` (or `localStorage.setItem('brikaBootstrapDebug', '1')`) prints every bootstrap step. `?coordinator=<origin>` overrides the coordinator origin without touching the page URL.
+
+## Deploy
+
+```bash
+wrangler secret put TICKET_SECRET                  # one-time
+bun --filter @brika/signaling d1:migrate:prod
+bun --filter @brika/signaling deploy               # vite build + wrangler deploy
+```
+
+`wrangler.toml` pins the route to `hub.brika.dev` and binds the D1 database + `HUB_SESSION` Durable Object namespace.
 
 ## Design
 
-- The coordinator never sees application traffic — it only ferries SDP/ICE frames. Once the data channel opens, browser and hub talk directly.
-- Bearer-token lookups go through a constant-time compare so probing prefixes doesn't leak.
-- Wire format + ticket signing + name validation come from [`@brika/remote-access-protocol`](../../packages/remote-access-protocol/), so this app and the Cloudflare Worker stay byte-for-byte compatible.
+- Stateless ticket mint/verify keeps the request hot path off D1 — only bearer auth on `/rotate` and `/release` touches the database.
+- The DO owns the hub's WebSocket, so a hub reconnect cleanly replaces the previous socket without races.
+- All wire-format types + crypto helpers come from [`@brika/remote-access-protocol`](../../packages/remote-access-protocol/).
+- The bootstrap is tiny on purpose — every byte loads BEFORE the WebRTC handshake.

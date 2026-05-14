@@ -1,0 +1,66 @@
+@import "tailwindcss";
+@import "@brika/clay/styles";
+@import "@brika/components/styles";
+
+/* Make sure Tailwind scans the bootstrap's own source for utility classes. */
+@source "../index.html";
+@source "../src/**/*.{ts,tsx}";
+@source "../../../packages/components/src/**/*.{ts,tsx}";
+
+/*
+ * Reset + page-level styling for the bootstrap shell. Clay handles every
+ * other surface (Card, Button, Input) and @brika/components ships the
+ * animated mark + its keyframes, so this file only contains things
+ * neither owns: page background and the aurora backdrop.
+ */
+
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+  background: var(--background);
+  color: var(--foreground);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Aurora — two slow radial gradients drifting behind everything. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: -20%;
+  background:
+    radial-gradient(
+      ellipse 40% 30% at 20% 30%,
+      color-mix(in srgb, var(--primary) 12%, transparent),
+      transparent 60%
+    ),
+    radial-gradient(
+      ellipse 30% 20% at 80% 70%,
+      color-mix(in srgb, var(--foreground) 8%, transparent),
+      transparent 60%
+    );
+  filter: blur(60px);
+  z-index: -2;
+  animation: brika-aurora 16s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+
+@keyframes brika-aurora {
+  0% {
+    transform: translate3d(-3%, -2%, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(3%, 2%, 0) scale(1.05);
+  }
+  100% {
+    transform: translate3d(-2%, 3%, 0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body::before {
+    animation: none !important;
+  }
+}

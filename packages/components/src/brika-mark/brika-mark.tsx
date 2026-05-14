@@ -1,31 +1,40 @@
-import type React from 'react';
-import type { BootstrapPhase } from '@/hooks/useBootstrap';
+import { cn } from '@brika/clay/primitives/cn';
+import type { CSSProperties, ReactElement } from 'react';
 
-interface MarkProps {
-  readonly phase: BootstrapPhase;
+export type BrikaMarkState = 'loading' | 'idle' | 'error';
+
+export interface BrikaMarkProps {
+  /**
+   * Visual + animation state.
+   * - `loading`: build-in + per-shape shimmer + halo pulse.
+   * - `idle`:    static, shapes at rest, no halo animation.
+   * - `error`:   top brick falls onto the pile + destructive-tinted halo + ring pulse.
+   */
+  readonly state: BrikaMarkState;
+  /** Wrapper edge length in pixels. Defaults to 96 (matches `size-24`). */
+  readonly size?: number;
+  /** Extra classes for the wrapper. */
+  readonly className?: string;
 }
 
-const STATIC_PHASES = new Set<BootstrapPhase>(['landing', 'error', 'done']);
-
-/**
- * Brika mark with the per-shape build + shimmer animations. We can't use
- * Clay's `<BrikaLogo>` here because we need per-shape `data-pos` attributes
- * to drive the staggered keyframes; this component is the mark's "loading"
- * variant authored locally.
- */
-export function Mark({ phase }: MarkProps): React.ReactElement {
-  const isStatic = STATIC_PHASES.has(phase);
+export function BrikaMark({ state, size = 96, className }: Readonly<BrikaMarkProps>): ReactElement {
+  const isStatic = state !== 'loading';
+  const isError = state === 'error';
+  const wrapperStyle: CSSProperties = { width: size, height: size };
   return (
     <div
-      className="relative mx-auto mb-6 grid size-24 place-items-center rounded-[26px] bg-foreground shadow-foreground/15 shadow-lg"
+      className={cn(
+        'relative grid place-items-center rounded-[26px] bg-foreground shadow-foreground/15 shadow-lg transition-shadow duration-300',
+        className
+      )}
+      style={wrapperStyle}
       data-brika-static={isStatic ? '' : undefined}
-      data-brika-error={phase === 'error' ? '' : undefined}
+      data-brika-error={isError ? '' : undefined}
       aria-hidden="true"
     >
-      <span className="brika-status-dot" />
       <span className="brika-mark-halo" />
       <svg
-        className="size-20 overflow-visible text-background"
+        className="size-5/6 overflow-visible text-background"
         viewBox="0 0 240 240"
         fill="currentColor"
       >

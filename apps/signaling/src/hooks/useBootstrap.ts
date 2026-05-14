@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { buildAssetGraph, ensureServiceWorker, injectGraph } from '@/lib/asset-graph';
 import { classifyError, type ErrorClassification } from '@/lib/classify-error';
+import { BootstrapTimeoutError } from '@/lib/errors';
 import { resolveCoordinator } from '@/lib/hub-name';
-import { commitQueryHub } from '@/lib/hub-storage';
+import { storeHubName } from '@/lib/hub-storage';
 import { mintTicket, openPeer, type PeerHandle } from '@/lib/peer';
 
 export type BootstrapPhase = 'landing' | 'connecting' | 'fetching' | 'loading' | 'error' | 'done';
@@ -65,7 +66,7 @@ export function useBootstrap(hubName: string | null): BootstrapState {
         peerRef.current.close();
         peerRef.current = null;
       }
-      setError(classifyError(new Error('open timed out'), hubName));
+      setError(classifyError(new BootstrapTimeoutError(), hubName));
       setPhase('error');
     }, OVERALL_TIMEOUT_MS);
 
@@ -109,19 +110,10 @@ async function runAttempt(
   peerRef: { current: PeerHandle | null },
   cb: AttemptCallbacks
 ): Promise<void> {
-  // If we got here via `?hub=<name>`, persist the override AND purge any
-  // stale `brika-*` caches BEFORE issuing the first request. Doing this in
-  // the pure `loadHubName` read would drop the purge promise on the floor
-  // and let the SW continue serving the prior hub's modules.
-  await commitQueryHub();
-  if (signal.aborted) {
-    return;
-  }
-
   const coordinator = resolveCoordinator();
   const swPromise = ensureServiceWorker();
 
-  const ticket = await mintTicket(hubName, coordinator);
+  const ticket = await mintTicket(hubName, coordinator, signal);
   if (signal.aborted) {
     return;
   }
@@ -132,6 +124,15 @@ async function runAttempt(
     peerRef.current = null;
     return;
   }
+
+  // Handshake succeeded — only now do we persist the hub name. Writing
+  // earlier (on landing-card submit) would trap the user on a bad name:
+  // every refresh would re-attempt the failing hub. `storeHubName` also
+  // purges `brika-*` caches if the prior hub differs, so the BFS below
+  // sees a clean slate. Drop `?hub=` from the URL once committed so the
+  // address bar stays clean for subsequent navigation.
+  await storeHubName(hubName);
+  stripHubQueryFromUrl();
 
   cb.setPhase('fetching');
   cb.setStatus('Loading app from your hub…');
@@ -158,6 +159,18 @@ async function runAttempt(
   }
 
   cb.setPhase('done');
+}
+
+function stripHubQueryFromUrl(): void {
+  if (globalThis.location === undefined || globalThis.history === undefined) {
+    return;
+  }
+  const url = new URL(globalThis.location.href);
+  if (!url.searchParams.has('hub')) {
+    return;
+  }
+  url.searchParams.delete('hub');
+  globalThis.history.replaceState(null, '', url.pathname + url.search + url.hash);
 }
 
 function stripHubPrefixFromUrl(hubName: string): void {

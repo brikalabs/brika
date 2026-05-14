@@ -5,9 +5,8 @@ Wire-format definitions and pure helpers for Brika's WebRTC remote-access stack 
 This package is intentionally **runtime-agnostic**: types, encoders/decoders, validators, and crypto wrappers around the Web Crypto API. Its only runtime dependency is [`zod`](https://zod.dev/) — used for hostile-wire shape validation in `codec.ts` — which works unchanged in workerd, Bun, and the browser. It is consumed identically by:
 
 - `apps/hub` (Bun) — the home hub that publishes itself
-- `apps/signaling` (Bun, self-host) — the local-dev signaling coordinator
-- `apps/signaling-worker` (Cloudflare Workers + D1 + Durable Objects) — the production coordinator at `hub.brika.dev`
-- `apps/ui` (browser) — the remote shell served from the same `hub.brika.dev` origin; the hub name lives in `localStorage` (see `apps/signaling-bootstrap`)
+- `apps/signaling` (Cloudflare Workers + D1 + Durable Objects) — coordinator at `hub.brika.dev`, with the bootstrap SPA served from the same Worker
+- `apps/ui` (browser) — the dashboard that gets handed off from the bootstrap; the hub name lives in `localStorage`
 
 ## What's in the box
 

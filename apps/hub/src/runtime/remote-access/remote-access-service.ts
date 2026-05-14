@@ -225,9 +225,9 @@ export class RemoteAccessService {
     if (!requested) {
       return null;
     }
-    // Wait up to 30 s for the coordinator to come up — `bun run dev:remote`
+    // Wait up to 30 s for the coordinator to come up — `bun run dev`
     // starts the worker and the hub in parallel, so there's a brief window
-    // when /v1/hubs/claim 404s while wrangler is still booting.
+    // when /v1/hubs/claim 404s while miniflare is still booting.
     const deadline = Date.now() + 30_000;
     let lastError: unknown = null;
     while (Date.now() < deadline) {

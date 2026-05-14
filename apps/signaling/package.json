@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "description": "Brika signaling coordinator on Cloudflare Workers + bootstrap SPA. One Vite dev server runs both with HMR; `wrangler deploy` ships them as a single Worker with a static asset binding.",
   "homepage": "https://github.com/brikalabs/brika",
   "repository": {
     "type": "git",
@@ -10,16 +11,35 @@
     "directory": "apps/signaling"
   },
   "scripts": {
-    "dev": "bun --watch src/main.ts",
-    "start": "bun src/main.ts",
+    "dev": "wrangler d1 migrations apply brika-signaling --local && bunx vite",
+    "build": "bunx vite build",
+    "preview": "bunx vite preview",
+    "deploy": "bunx vite build && wrangler deploy",
+    "tail": "wrangler tail",
     "test": "bun test",
-    "typecheck": "tsgo --noEmit"
+    "typecheck": "tsgo --build",
+    "d1:migrate:local": "wrangler d1 migrations apply brika-signaling --local",
+    "d1:migrate:prod": "wrangler d1 migrations apply brika-signaling --remote"
   },
   "dependencies": {
+    "@brika/clay": "^0.1.0",
+    "@brika/components": "workspace:*",
     "@brika/remote-access-protocol": "workspace:*",
-    "hono": "^4.12.2"
+    "@tanstack/react-router": "^1.163.2",
+    "hono": "^4.12.2",
+    "lucide-react": "^0.475.0",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3"
   },
   "devDependencies": {
-    "@types/bun": "^1.3.5"
+    "@cloudflare/vite-plugin": "^1.36.4",
+    "@cloudflare/workers-types": "^4.20251101.0",
+    "@tailwindcss/vite": "^4.2.1",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^5.1.4",
+    "tailwindcss": "^4.2.1",
+    "vite": "^7.3.0",
+    "wrangler": "^4.0.0"
   }
 }

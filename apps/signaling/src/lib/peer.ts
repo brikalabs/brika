@@ -20,6 +20,12 @@ import {
   type RpcMessage,
   type SignalingMessage,
 } from '@brika/remote-access-protocol';
+import {
+  CoordinatorUnreachableError,
+  HubNotFoundError,
+  HubUnreachableError,
+  TicketError,
+} from './errors';
 import { isValidHubName } from './hub-name';
 
 export interface TicketResponse {
@@ -38,17 +44,30 @@ const TEXT_DECODER = new TextDecoder();
 /** Per-request inflight timeout. Bounds slot lifetime even if a hub goes silent. */
 const REQUEST_TIMEOUT_MS = 30_000;
 
-export async function mintTicket(hubName: string, coordinator: string): Promise<TicketResponse> {
+export async function mintTicket(
+  hubName: string,
+  coordinator: string,
+  signal?: AbortSignal
+): Promise<TicketResponse> {
   if (!isValidHubName(hubName)) {
     throw new Error(`Refusing to mint ticket for invalid hub name "${hubName}"`);
   }
-  const res = await fetch(`${coordinator}/v1/tickets`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ hubName }),
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${coordinator}/v1/tickets`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ hubName }),
+      signal,
+    });
+  } catch (cause) {
+    throw new CoordinatorUnreachableError(cause);
+  }
+  if (res.status === 404) {
+    throw new HubNotFoundError(hubName);
+  }
   if (!res.ok) {
-    throw new Error(`/v1/tickets failed: ${res.status} ${await res.text()}`);
+    throw new TicketError(res.status, await res.text());
   }
   const data: TicketResponse = await res.json();
   return data;
@@ -99,7 +118,10 @@ function pickIceServers(servers: TicketResponse['iceServers']): RTCIceServer[] {
 
 function waitForWsOpen(ws: WebSocket, timeoutMs: number): Promise<void> {
   return new Promise<void>((resolve, reject) => {
-    const t = setTimeout(() => reject(new Error('Signaling WS open timed out')), timeoutMs);
+    const t = setTimeout(
+      () => reject(new HubUnreachableError('ws-open-timeout', 'Signaling WS open timed out')),
+      timeoutMs
+    );
     ws.addEventListener(
       'open',
       () => {
@@ -112,7 +134,7 @@ function waitForWsOpen(ws: WebSocket, timeoutMs: number): Promise<void> {
       'error',
       () => {
         clearTimeout(t);
-        reject(new Error('Signaling WS errored before open'));
+        reject(new HubUnreachableError('ws-errored', 'Signaling WS errored before open'));
       },
       { once: true }
     );
@@ -127,7 +149,10 @@ interface DataChannelReady {
 
 function makeDataChannelReady(channel: RTCDataChannel, pc: RTCPeerConnection): DataChannelReady {
   const { promise, resolve, reject } = Promise.withResolvers<void>();
-  const timer = setTimeout(() => reject(new Error('Data channel open timed out')), 30_000);
+  const timer = setTimeout(
+    () => reject(new HubUnreachableError('data-channel-timeout', 'Data channel open timed out')),
+    30_000
+  );
   const settle = (cb: () => void): void => {
     clearTimeout(timer);
     cb();
@@ -139,7 +164,14 @@ function makeDataChannelReady(channel: RTCDataChannel, pc: RTCPeerConnection): D
     channel.addEventListener('open', () => settle(resolve), { once: true });
     pc.addEventListener('connectionstatechange', () => {
       if (pc.connectionState === 'failed' || pc.connectionState === 'closed') {
-        settle(() => reject(new Error(`WebRTC connection ${pc.connectionState}`)));
+        settle(() =>
+          reject(
+            new HubUnreachableError(
+              pc.connectionState === 'failed' ? 'webrtc-failed' : 'webrtc-closed',
+              `WebRTC connection ${pc.connectionState}`
+            )
+          )
+        );
       }
     });
   }
@@ -325,12 +357,19 @@ export async function openPeer(
       return;
     }
     if (msg.kind === 'session.error') {
-      dcReady.fail(new Error(`Signaling error: ${msg.code} ${msg.message ?? ''}`));
+      dcReady.fail(
+        new HubUnreachableError(
+          'signaling-error',
+          `Signaling error: ${msg.code} ${msg.message ?? ''}`
+        )
+      );
     }
   });
 
   ws.addEventListener('close', () => {
-    dcReady.fail(new Error('Signaling WS closed before data channel opened'));
+    dcReady.fail(
+      new HubUnreachableError('ws-closed', 'Signaling WS closed before data channel opened')
+    );
   });
 
   await dcReady.promise;

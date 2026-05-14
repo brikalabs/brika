@@ -8,7 +8,7 @@
  * those modules because they're loaded on-demand based on the board's
  * brick instances.
  *
- * Our SW (`apps/signaling-bootstrap/public/sw.js`) detects `/api/*`
+ * Our SW (`apps/signaling/public/sw.js`) detects `/api/*`
  * requests and posts a `brika:sw-proxy` message to the controlling
  * page with a `MessagePort` for the reply. This module is that
  * listener: it accepts the proxied request, runs it through the
@@ -47,6 +47,18 @@ export function installSwProxyListener(transport: Transport): void {
     }
     void handleProxiedRequest(transport, data, port);
   });
+  // Tell the SW we're ready to receive proxied requests. Without this
+  // the SW falls back to network for cache misses (it can't distinguish
+  // a hub-UI document from the bare bootstrap document, which has no
+  // listener and would just hang for 30s on every proxied message).
+  notifySwReady();
+  // A controller swap (new SW takes over after activation) loses the
+  // ready-set, so re-announce.
+  navigator.serviceWorker.addEventListener('controllerchange', () => notifySwReady());
+}
+
+function notifySwReady(): void {
+  navigator.serviceWorker.controller?.postMessage({ type: 'BRIKA_PROXY_READY' });
 }
 
 async function handleProxiedRequest(

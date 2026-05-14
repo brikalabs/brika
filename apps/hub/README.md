@@ -8,19 +8,18 @@ The Brika home hub — a Bun runtime that hosts plugins, runs workflows, and ser
 - **Workflow engine** — runs `@brika/flow` graphs that connect plugin ports
 - **Brick runtime** — backs the dashboard's interactive Brick widgets (`@brika/sdk/bricks`)
 - **Local HTTP API** — `/api/*` served via `@brika/router`, consumed by the UI over HTTPS on the LAN
-- **Remote access** — opt-in WebRTC bridge through a signaling coordinator (see [`@brika/signaling-worker`](../signaling-worker/))
+- **Remote access** — opt-in WebRTC bridge through a signaling coordinator (see [`@brika/signaling`](../signaling/))
 - **CLI** — `brika start | stop | logs` lives at [`src/cli.ts`](src/cli.ts)
 
 ## Quick start
 
 ```bash
-bun run dev                      # hub + Vite UI, proxy + HMR wired
-                                 # → open http://localhost:7878 (hub-proxied UI, HMR works)
-                                 # → or http://localhost:5173 (Vite direct, also HMR)
-bun run dev:remote               # hub + Vite UI + wrangler-dev worker
-                                 # → open http://localhost:8787/devhub?debug=1
-                                 # (full end-to-end WebRTC loop, auto-claim, HMR)
+bun run dev                      # full stack: signaling (Worker via miniflare) + hub + Vite UI
+                                 # auto-claims `devhub`, proxies UI to Vite, HMR everywhere
+                                 # → open http://localhost:7878 (LAN path)
+                                 # → or http://localhost:5174/devhub?debug=1 (remote-access path)
 bun --filter @brika/hub dev      # hub only (UI served only if BRIKA_STATIC_DIR set)
+bun run dev:signaling            # signaling only (Worker + bootstrap shell, HMR)
 brika start                      # production binary (after `bun run compile`)
 brika logs --follow
 ```
@@ -46,19 +45,15 @@ The root `bun run dev` script does this automatically.
 "visit Settings → Remote access" step every fresh worktree. Combines well
 with `BRIKA_COORDINATOR_URL` pointing at a local `wrangler dev` instance.
 
-### End-to-end remote loop in one command
+### End-to-end remote loop
 
-```bash
-bun run dev:remote
-```
+`bun run dev` is that command. It spins up:
 
-Spins up:
+- `vite dev` on :5174  — coordinator (Workers via miniflare) + bootstrap shell with HMR
+- `vite dev` on :5173  — hub UI with HMR
+- hub        on :7878  — auto-claims `devhub`, proxies UI to Vite
 
-- `wrangler dev`  on :8787  — coordinator + bootstrap shell
-- `vite dev`      on :5173  — UI with HMR
-- hub             on :7878  — auto-claims `devhub`, proxies UI to Vite
-
-Then open `http://localhost:8787/devhub?debug=1` and you have the full
+Then open `http://localhost:5174/devhub?debug=1` and you have the full
 production code path locally: bootstrap → WebRTC → hub → UI through the
 data channel. `?debug=1` prints every bootstrap step to the console.
 

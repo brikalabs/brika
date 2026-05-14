@@ -1,10 +1,10 @@
 {
   "extends": "../../tsconfig.json",
   "compilerOptions": {
-    "outDir": "./dist",
+    "composite": true,
+    "noEmit": true,
     "types": ["@cloudflare/workers-types", "bun-types"],
     "lib": ["ESNext"]
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist"]
+  "include": ["server/**/*"]
 }

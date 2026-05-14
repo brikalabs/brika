@@ -11,7 +11,7 @@
 # the dashboard.
 
 name = "brika-signaling"
-main = "src/worker.ts"
+main = "server/worker.ts"
 compatibility_date = "2025-10-01"
 # Keep the *.workers.dev URL alive alongside the custom domain so links in
 # this repo and existing hubs that point at it don't break.
@@ -26,9 +26,10 @@ compatibility_flags = ["nodejs_compat"]
 # Worker means the version the browser runs always matches the version the
 # hub is running; new hub features ship without redeploying the Worker.
 #
-# Built by `bun --filter @brika/signaling-bootstrap build`.
+# Built by `bun run build` (Vite) — the SPA lives in `client/` and emits to
+# `dist/client/` alongside the worker bundle, all in a single package.
 [assets]
-directory = "../signaling-bootstrap/dist"
+directory = "./dist/client"
 binding = "ASSETS"
 # SPA fallback: every unknown path returns `/index.html` so the bootstrap
 # runs regardless of which URL the user typed (hub.brika.dev/<name>,

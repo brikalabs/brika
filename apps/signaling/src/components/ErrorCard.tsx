@@ -7,11 +7,11 @@ import {
   EmptyStateIcon,
   EmptyStateTitle,
 } from '@brika/clay';
-import { Link } from '@tanstack/react-router';
 import { Eraser, ExternalLink, RotateCw, SearchX } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
 import { clearBootstrapState } from '@/lib/asset-graph';
 import type { ErrorClassification } from '@/lib/classify-error';
+import { clearHubName } from '@/lib/hub-storage';
 
 interface ErrorCardProps {
   readonly error: ErrorClassification;
@@ -41,6 +41,18 @@ export function ErrorCard({ error, onRetry }: ErrorCardProps): React.ReactElemen
     return () => clearTimeout(t);
   }, [remaining]);
 
+  // "Different hub" / "Pick a different hub" navigates back to the
+  // landing card. We must drop the stored hub name first — otherwise
+  // `loadHubName()` on the next render reads the bad name out of
+  // localStorage and the bootstrap immediately retries the failing hub
+  // (trap reported by users: typed a nonexistent name, couldn't go
+  // back). `clearHubName` also purges `brika-*` caches, so the new
+  // attempt starts from a clean slate.
+  const handlePickDifferent = async (): Promise<void> => {
+    await clearHubName();
+    globalThis.location.replace('/');
+  };
+
   // The "no such hub" case isn't really an error — it's an empty/not-found
   // state. Render with EmptyState so the affordance reads "pick another"
   // rather than "something broke".
@@ -53,9 +65,7 @@ export function ErrorCard({ error, onRetry }: ErrorCardProps): React.ReactElemen
         <EmptyStateTitle>{error.title}</EmptyStateTitle>
         <EmptyStateDescription>{error.detail}</EmptyStateDescription>
         <EmptyStateActions>
-          <Button asChild>
-            <Link to="/">Pick a different hub</Link>
-          </Button>
+          <Button onClick={() => void handlePickDifferent()}>Pick a different hub</Button>
         </EmptyStateActions>
       </EmptyState>
     );
@@ -97,8 +107,8 @@ export function ErrorCard({ error, onRetry }: ErrorCardProps): React.ReactElemen
               </a>
             </Button>
           )}
-          <Button asChild variant="outline">
-            <Link to="/">Different hub</Link>
+          <Button variant="outline" onClick={() => void handlePickDifferent()}>
+            Different hub
           </Button>
         </div>
         <div className="border-border/40 border-t pt-3">

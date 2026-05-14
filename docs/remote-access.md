@@ -4,18 +4,19 @@ Branch: `feat/remote-access` · Audience: new contributor familiar with TypeScri
 
 ## 1. Overview
 
-A user types `hub.brika.dev/` in a coffee shop. They reach the UI of a Brika hub running on their home network, behind NAT, with no port forward and no public IP. The hub never exposes an HTTP server to the internet. The coordinator (CF Worker in prod, Bun in dev) never sees app payloads — it brokers SDP/ICE and drops out. Three actors:
+A user types `hub.brika.dev/` in a coffee shop. They reach the UI of a Brika hub running on their home network, behind NAT, with no port forward and no public IP. The hub never exposes an HTTP server to the internet. The coordinator (a Cloudflare Worker — same code in prod and local dev via miniflare) never sees app payloads — it brokers SDP/ICE and drops out. Three actors:
 
 - **Hub** (`apps/hub`, Bun + werift) — source of truth. Owns a claimed name + bearer token in the OS keychain. Holds one persistent outbound WebSocket to the coordinator. Answers incoming offers and serves its own in-process Hono `ApiServer` over each data channel.
-- **Coordinator** (`apps/signaling` for dev, `apps/signaling-worker` for prod). Stateless ticket mint; first-come-first-serve name claims; pure SDP/ICE relay.
-- **Browser** (`apps/signaling-bootstrap` shell → `apps/ui` app). Loads a small shell, opens a peer to the hub, RPC-fetches the hub's `/index.html` + `/assets/*` over the data channel, swaps its mount for the hub's UI, then installs a global `fetch` interceptor so every subsequent `/api/*` flows back over the same channel.
+- **Coordinator** (`apps/signaling/server`). Stateless ticket mint; first-come-first-serve name claims; pure SDP/ICE relay. Cloudflare Workers + D1 + one Durable Object per hub.
+- **Browser** (`apps/signaling/src` shell → `apps/ui` app). The bootstrap SPA is served from the same Worker as a static asset. Loads a small shell, opens a peer to the hub, RPC-fetches the hub's `/index.html` + `/assets/*` over the data channel, swaps its mount for the hub's UI, then installs a global `fetch` interceptor so every subsequent `/api/*` flows back over the same channel.
 
 ## 2. Components
 
 - **`@brika/remote-access-protocol`** (`packages/remote-access-protocol/`). Pure, dependency-free wire format + crypto. Web Crypto only — runs in workerd, Bun, and the browser unchanged. `PROTOCOL_VERSION = 1` (`src/version.ts`) is checked on every frame.
-- **`@brika/signaling`** (`apps/signaling/`). Self-host Bun coordinator. JSON-file claims store, in-memory `Registry`. One process.
-- **`@brika/signaling-worker`** (`apps/signaling-worker/`). Production coordinator at `signaling.brika.dev`. D1 for claims, one Durable Object per hub for live session state. Also serves the bootstrap UI shell from `ASSETS`.
-- **`apps/signaling-bootstrap`**. The React shell embedded in the Worker. Resolves the hub name, opens a WebRTC peer, primes the SW cache with the hub's bundle, then injects scripts + CSS so the hub's UI takes over the page.
+- **`@brika/signaling`** (`apps/signaling/`). One package, two halves:
+  - `server/` — Cloudflare Worker at `hub.brika.dev`. D1 for claims, one Durable Object per hub for live session state. Also serves the bootstrap SPA via the `ASSETS` binding.
+  - `src/` — React shell (`apps/signaling/src/`) shipped as that asset. Resolves the hub name, opens a WebRTC peer, primes the SW cache with the hub's bundle, then injects scripts + CSS so the hub's UI takes over the page.
+  - Dev runs both halves in one Vite server via `@cloudflare/vite-plugin` (miniflare for the Worker, Vite HMR for the SPA).
 - **`apps/hub/src/runtime/remote-access/`**. Hub-side wiring: `SignalingClient` (WS + reconnect), `PeerSession` (one per browser), `RpcServer` (frames → `ApiServer.fetchInternal`), `RemoteAccessService` (DI singleton, owns identity + session map).
 - **`apps/ui/src/lib/api/`**. `DataChannelTransport`, `CookieJar`, the module-load-time `fetch` interceptor, and the SW-to-page bridge.
 
@@ -32,10 +33,7 @@ DELETE /v1/hubs/:name        Authorization: Bearer <token>
   → 200 { ok: true }
 ```
 
-Storage:
-
-- **Dev (Bun)**: `ClaimStore` (`apps/signaling/src/claims.ts`) — a `Map<name, Claim>` mirrored to `./.signaling-claims.json` via atomic write-rename, serialised through a write chain.
-- **Prod (Worker)**: `D1ClaimStore` (`apps/signaling-worker/src/claims-d1.ts`) — single `claims` table with `claims_token_idx` for indexed `findByToken`. UNIQUE constraint on `name` → `ClaimError('taken')`.
+Storage: `D1ClaimStore` (`apps/signaling/server/claims-d1.ts`) — single `claims` table with `claims_token_idx` for indexed `findByToken`. UNIQUE constraint on `name` → `ClaimError('taken')`. Local dev uses miniflare's emulated D1 (`bun run d1:migrate:local`).
 
 Tokens are opaque (32 random bytes, base64url; `generateToken` in `claims-validation.ts`). Bearer comparison runs through `constantTimeEqual` (`subprotocols.ts`). The bearer-check path is indexed-lookup-then-constant-compare; the comparison is meaningful only against second-preimage timing on a hit.
 
@@ -65,7 +63,7 @@ The Worker's `serveUiShell` (`worker.ts`) calls `resolveHubFromUrl` (`hub-resolu
 
 ### 4.2 Hub-name resolution (browser side)
 
-`apps/signaling-bootstrap/src/lib/hub-storage.ts` — priority:
+`apps/signaling/src/lib/hub-storage.ts` — priority:
 
 1. `?hub=<name>` URL override (persisted to `localStorage`).
 2. `localStorage['brika.bootstrap.hubName']`.
@@ -80,7 +78,7 @@ POST {coordinator}/v1/tickets   { hubName }
   → 200 { ticket, expiresAt, iceServers }
 ```
 
-Handler: `handleTickets` (`signaling/src/main.ts`, worker `worker.ts`). Validates the hub is claimed (404 otherwise), then calls `mintTicket` (`packages/remote-access-protocol/src/tickets.ts`):
+Handler: the `POST /v1/tickets` route in `apps/signaling/server/worker.ts`. Validates the hub is claimed (404 otherwise), then calls `mintTicket` (`packages/remote-access-protocol/src/tickets.ts`):
 
 ```
 ticket = base64url(header).base64url(claims).base64url(HMAC_SHA256)
@@ -175,7 +173,7 @@ globalThis.fetch = (input, init) => {
 };
 ```
 
-Dynamic `import('/api/bricks/modules/...')` doesn't go through `globalThis.fetch` — it goes through the SW. `apps/signaling-bootstrap/public/sw.js` detects `/api/*` and `postMessage`s a `brika:sw-proxy` envelope to the controlling page with a `MessagePort`. `installSwProxyListener` (`sw-proxy.ts`) receives the message, runs the request through the same `DataChannelTransport`, and posts the body back through the port. The SW returns it as a normal `Response`.
+Dynamic `import('/api/bricks/modules/...')` doesn't go through `globalThis.fetch` — it goes through the SW. `apps/signaling/public/sw.js` detects `/api/*` and `postMessage`s a `brika:sw-proxy` envelope to the controlling page with a `MessagePort`. `installSwProxyListener` (`sw-proxy.ts`) receives the message, runs the request through the same `DataChannelTransport`, and posts the body back through the port. The SW returns it as a normal `Response`.
 
 ## 5. RPC protocol
 
@@ -220,7 +218,7 @@ this.#extractSetCookies(msg);
 
 ## 7. Failure modes & recovery
 
-`classifyError` (`apps/signaling-bootstrap/src/lib/classify-error.ts`) maps the error message to user-facing copy + retry hint:
+`classifyError` (`apps/signaling/src/lib/classify-error.ts`) maps the error message to user-facing copy + retry hint:
 
 | Error pattern                          | Title                                  | Kind         |
 | -------------------------------------- | -------------------------------------- | ------------ |
@@ -244,26 +242,16 @@ this.#extractSetCookies(msg);
 
 **Asset 404** — `primeCache` tolerates 404 on optional resources but re-throws `HtmlForModuleError`. The hub returning HTML for a JS URL is treated as user-actionable (Vite down, dev UI proxy misrouting).
 
-## 8. Coordinator modes
+## 8. Coordinator
 
-Both speak `@brika/remote-access-protocol` byte-for-byte; pick one with `BRIKA_COORDINATOR_URL`.
+Cloudflare Worker fronts; one Durable Object per hub holds the live signaling state (`HubSession` + WebSocket Hibernation API). Hub-WS replace-on-reconnect loops `getWebSockets('hub')` and closes the old one with code 4001. `/v1/hubs/:name/status` is synthesised by the DO via `GET /internal/status`. Claims live in D1 (`claims` table with `claims_token_idx`). ICE servers default to STUN; `CF_REALTIME_APP_ID` / `CF_REALTIME_APP_TOKEN` enable Cloudflare Realtime TURN credentials.
 
-| Concern                     | Bun (`@brika/signaling`)             | Worker (`@brika/signaling-worker`)             |
-| --------------------------- | ------------------------------------ | ---------------------------------------------- |
-| Process model               | one Bun process                      | Worker fronts; one DO per hub                  |
-| Claims storage              | JSON file + atomic rename            | D1 table with `claims_token_idx`               |
-| Session state               | in-memory `Registry`                 | DO + WebSocket Hibernation API                 |
-| Hub WS replace-on-reconnect | `Registry.registerHub` evicts prior  | DO loops `getWebSockets('hub')` + close(4001)  |
-| ICE servers                 | `SIGNALING_ICE_SERVERS` env, JSON    | Hard-coded STUN-only                           |
-| `/v1/hubs/:name/status`     | not implemented                      | DO synthesises a `GET /internal/status`        |
-| Static UI shell             | not served                           | Worker serves bootstrap + injects `<meta>`     |
-
-Identity model + bearer/ticket auth + frame shape are identical.
+Local dev uses the same Worker code under miniflare (via `@cloudflare/vite-plugin`), so DO + D1 behaviour matches prod.
 
 ## 9. Happy-path sequence
 
 ```
-Browser              Coordinator (Worker/Bun)         Hub (apps/hub)
+Browser              Coordinator (Worker)             Hub (apps/hub)
    │                         │                            │
    │  GET hub.brika.dev/     │                            │
    ├────────────────────────►│  ASSETS.fetch + injectHubMeta
@@ -320,15 +308,15 @@ When a browser has bound to multiple hubs over time, leakage **between** hubs is
 
 - **Cookie jar is per-hub** (`apps/ui/src/lib/api/cookie-jar.ts`). Storage key is `brika.remote.cookies::<hub>`; the constructor sweeps stale entries from other hubs. Cookies issued by hub A can't ride a request to hub B in the same browser.
 - **Set-Cookie Path enforcement.** Cookies whose `Path` falls outside `/api` are rejected at the jar boundary — the jar is only consulted for `/api/*` requests, so off-surface paths are pure attack surface with no benefit.
-- **SW cross-tab guard** (`apps/signaling-bootstrap/public/sw.js`). The `/api/*` proxy routes to the originating client (`event.clientId`), not `allClients[0]`. A request emitted by tab A bound to hub X cannot be answered by tab B bound to hub Y.
-- **Cache purge on rebind** (`apps/signaling-bootstrap/src/lib/hub-storage.ts`). `storeHubName` / `clearHubName` drop every `brika-*` cache when the prior name differs from the new one — the next page load fetches a fresh asset graph from the new hub.
+- **SW cross-tab guard** (`apps/signaling/public/sw.js`). The `/api/*` proxy routes to the originating client (`event.clientId`), not `allClients[0]`. A request emitted by tab A bound to hub X cannot be answered by tab B bound to hub Y.
+- **Cache purge on rebind** (`apps/signaling/src/lib/hub-storage.ts`). `storeHubName` / `clearHubName` drop every `brika-*` cache when the prior name differs from the new one — the next page load fetches a fresh asset graph from the new hub.
 - **CORS/Origin allowlist on the coordinator.** `/v1/hubs/claim` and `/v1/tickets` reject cross-origin browser POSTs from any `Origin` not in the allowlist. A malicious page on another domain can't mint a ticket against the user's session.
 
 ### Server-side hardening
 
 - **Bridge URL validation** (`packages/remote-access-protocol/src/bridge.ts`). `rpcRequestToFetch` rejects non-absolute or protocol-relative URLs so a peer cannot bypass the host-allowlist middleware via `msg.url = "https://attacker/..."`.
-- **Hostile-CSS smuggling** (`apps/signaling-bootstrap/src/lib/asset-graph.ts`). `CSS_URL_RE` excludes whitespace inside `url(...)` so a hub-served CSS body cannot drive CRLF into the BFS fetcher's request line.
-- **Ticket secret refusal** (`apps/signaling/src/main.ts`). The Bun coordinator refuses to start with the well-known dev default when `NODE_ENV=production`.
+- **Hostile-CSS smuggling** (`apps/signaling/src/lib/asset-graph.ts`). `CSS_URL_RE` excludes whitespace inside `url(...)` so a hub-served CSS body cannot drive CRLF into the BFS fetcher's request line.
+- **Ticket-secret bound to Worker secret store.** `TICKET_SECRET` is a `wrangler secret put`-managed value; the Worker has no fallback default to mint forgeable tickets if the secret is unset (request handler reads it directly per-request).
 
 ### What we don't have
 
@@ -341,10 +329,9 @@ If you need per-hub origin isolation, the realistic move is `<iframe sandbox>` (
 ## 11. Key files
 
 - Protocol: `packages/remote-access-protocol/src/{rpc,signaling,bridge,codec,tickets,claims-validation,subprotocols,version}.ts`
-- Bun coordinator: `apps/signaling/src/{main,router,registry,claims,tickets}.ts`
-- CF Worker: `apps/signaling-worker/src/{worker,hub-session,claims-d1,hub-resolution,tickets}.ts`
-- Bootstrap: `apps/signaling-bootstrap/src/{hooks/useBootstrap,lib/{peer,asset-graph,hub-storage,hub-name,classify-error}}.ts`
-- Bootstrap SW: `apps/signaling-bootstrap/public/sw.js`
+- CF Worker: `apps/signaling/server/{worker,hub-session,claims-d1,hub-resolution,tickets}.ts`
+- Bootstrap: `apps/signaling/src/{hooks/useBootstrap,lib/{peer,asset-graph,hub-storage,hub-name,classify-error}}.ts`
+- Bootstrap SW: `apps/signaling/public/sw.js`
 - Hub runtime: `apps/hub/src/runtime/remote-access/{peer-session,rpc-server,signaling-client,remote-access-service,index}.ts`
 - UI transport: `apps/ui/src/lib/api/{data-channel-transport,cookie-jar,sw-proxy,index}.ts`
 - UI claim flow: `apps/ui/src/features/settings/components/remote-access/{index,hooks}.ts`
