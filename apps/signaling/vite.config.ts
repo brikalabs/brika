@@ -1,7 +1,7 @@
-import { spawn } from 'node:child_process';
 import { cloudflare } from '@cloudflare/vite-plugin';
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
+import { build as esbuild } from 'esbuild';
 import { defineConfig, type Plugin } from 'vite';
 
 /**
@@ -20,38 +20,31 @@ import { defineConfig, type Plugin } from 'vite';
  */
 
 /**
- * Compile `src/sw.ts` into `public/sw.js` so the browser receives plain JS at
+ * Compile `sw/sw.ts` into `public/sw.js` so the browser receives plain JS at
  * `/sw.js` while we keep the SW source TypeScript-typed (`lib: "WebWorker"`).
  * Vite serves files from `public/` as-is in dev and copies them into the build
  * output, so emitting there is the simplest path — no rollup input wiring, no
- * extra dev middleware. Uses Bun's bundler (already in our toolchain).
+ * extra dev middleware.
  */
 function brikaSwPlugin(): Plugin {
   const entry = new URL('./sw/sw.ts', import.meta.url).pathname;
-  const outdir = new URL('./public', import.meta.url).pathname;
+  const outfile = new URL('./public/sw.js', import.meta.url).pathname;
 
-  const compile = (): Promise<void> =>
-    new Promise<void>((resolve) => {
-      // Shell out to `bun build` — Vite itself runs under Node here (the
-      // `vite` shebang is `#!/usr/bin/env node`), so `Bun.build` isn't in
-      // scope and Vite's bundled esbuild isn't exposed for direct import.
-      // Bun is part of the toolchain so its CLI is always available.
-      const proc = spawn(
-        'bun',
-        ['build', entry, '--outdir', outdir, '--target', 'browser', '--outfile', 'sw.js'],
-        { stdio: ['ignore', 'ignore', 'inherit'] }
-      );
-      proc.on('exit', (code) => {
-        if (code !== 0) {
-          console.error(`[brika-sw] build exited with code ${code}`);
-        }
-        resolve();
+  const compile = async (): Promise<void> => {
+    try {
+      await esbuild({
+        entryPoints: [entry],
+        outfile,
+        bundle: true,
+        format: 'iife',
+        target: 'es2022',
+        platform: 'browser',
+        logLevel: 'silent',
       });
-      proc.on('error', (err) => {
-        console.error('[brika-sw] failed to spawn bun build', err);
-        resolve();
-      });
-    });
+    } catch (err) {
+      console.error('[brika-sw] build failed', err);
+    }
+  };
 
   return {
     name: 'brika-sw',

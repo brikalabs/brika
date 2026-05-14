@@ -10,13 +10,7 @@ import { injectable } from '@brika/di';
 import { getAuthConfig } from '../config';
 import { ROLE_SCOPES } from '../roles';
 import { ConnectionTypeSchema } from '../schemas';
-import {
-  type ConnectionType,
-  Role,
-  Scope,
-  type Session,
-  type SessionRecord,
-} from '../types';
+import { type ConnectionType, Role, Scope, type Session, type SessionRecord } from '../types';
 
 interface SessionRow {
   id: string;

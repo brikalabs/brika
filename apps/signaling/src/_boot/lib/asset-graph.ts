@@ -317,8 +317,7 @@ export async function injectGraph(graph: AssetGraph, rootId: string): Promise<vo
   document.head.appendChild(meta);
   console.log('[brika-bootstrap] meta stamped', {
     hubName: graph.hubName,
-    readBack:
-      document.querySelector('meta[name="brika:hub"]')?.getAttribute('content') ?? null,
+    readBack: document.querySelector('meta[name="brika:hub"]')?.getAttribute('content') ?? null,
     metaCount: document.querySelectorAll('meta[name="brika:hub"]').length,
   });
 
@@ -337,8 +336,7 @@ export async function injectGraph(graph: AssetGraph, rootId: string): Promise<vo
   document.body.appendChild(fresh);
 
   console.log('[brika-bootstrap] about to append scripts', {
-    metaPresent:
-      document.querySelector('meta[name="brika:hub"]')?.getAttribute('content') ?? null,
+    metaPresent: document.querySelector('meta[name="brika:hub"]')?.getAttribute('content') ?? null,
     scriptCount: graph.scripts.length,
   });
   for (const s of graph.scripts) {

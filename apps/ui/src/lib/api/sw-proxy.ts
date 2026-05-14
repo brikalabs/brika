@@ -58,12 +58,18 @@ export function installSwProxyListener(transport: Transport): void {
   notifySwReady('install');
   // A controller swap (new SW takes over after activation) loses the
   // ready-set, so re-announce.
-  navigator.serviceWorker.addEventListener('controllerchange', () => notifySwReady('controllerchange'));
+  navigator.serviceWorker.addEventListener('controllerchange', () =>
+    notifySwReady('controllerchange')
+  );
 }
 
 function notifySwReady(trigger: string): void {
   const controller = navigator.serviceWorker.controller;
-  log('notifySwReady', { trigger, hasController: !!controller, scriptURL: controller?.scriptURL ?? null });
+  log('notifySwReady', {
+    trigger,
+    hasController: !!controller,
+    scriptURL: controller?.scriptURL ?? null,
+  });
   controller?.postMessage({ type: 'BRIKA_PROXY_READY' });
 }
 

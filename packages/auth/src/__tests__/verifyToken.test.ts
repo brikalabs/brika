@@ -110,7 +110,12 @@ describe('verifyToken', () => {
 
     await middleware(ctx as never, next);
 
-    expect(mockSessionService.validateSession).toHaveBeenCalledWith('my-token-value', undefined, undefined, 'http');
+    expect(mockSessionService.validateSession).toHaveBeenCalledWith(
+      'my-token-value',
+      undefined,
+      undefined,
+      'http'
+    );
     expect(ctx.set).toHaveBeenCalledWith('session', fakeSession);
     expect(next).toHaveBeenCalledTimes(1);
   });

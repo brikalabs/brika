@@ -59,6 +59,14 @@ export function derivePublicOrigin(name: string, coordinatorOrigin: string): str
  * path. To bootstrap a hub for tests/CI, call the coordinator's claim API
  * directly and let SecretStore persist the result.
  */
+function stripTrailingSlashes(input: string): string {
+  let end = input.length;
+  while (end > 0 && input.charCodeAt(end - 1) === 47) {
+    end--;
+  }
+  return end === input.length ? input : input.slice(0, end);
+}
+
 export interface RemoteAccessConfig {
   /** Coordinator HTTP origin (e.g. `https://api.brika.dev`). */
   readonly coordinatorOrigin: string;
@@ -104,7 +112,7 @@ export class HubConfig {
     // Dev-only UI proxy. Set to Vite's dev server (typically
     // `http://localhost:5173`) and the hub will serve the live UI without
     // a build step. Stripped of trailing slash so URL concatenation is clean.
-    this.devUiProxy = (process.env.BRIKA_DEV_UI_PROXY ?? '').replace(/\/+$/, '');
+    this.devUiProxy = stripTrailingSlashes(process.env.BRIKA_DEV_UI_PROXY ?? '');
 
     const coordinatorOrigin =
       process.env.BRIKA_COORDINATOR_URL?.trim() || DEFAULT_COORDINATOR_ORIGIN;
