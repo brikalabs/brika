@@ -3,9 +3,15 @@
  * pre-composed face glyphs (already including brackets — Brix's
  * `bracket` prop only affects static moods, not animations).
  *
- * Animations are designed to be rendered by a `<BrixAnimated>` component
- * that walks `frames[i % frames.length]` on `intervalMs`. Frame counts
- * are kept short so the cycle feels deliberate, not jittery.
+ * Animations are walked by `useFrameSeq` (and the components built on
+ * it: `<BrixAnimated>`, `<BrixIdle>`). The `loop` and `tag` fields are
+ * defaults that callers can override per-mount.
+ *
+ *   - `loop: false`  →  one-shot. Sits on the last frame when done.
+ *   - `tag: 'narrative'`  →  storytelling sequence, not for loops.
+ *   - `tag: 'emote'`  →  short interjection; idle program picks these.
+ *   - `tag: 'reaction'` →  triggered by state changes (wave/oops/sleep).
+ *   - `tag: 'baseline'` →  ambient (breathing); the canvas idle sits on.
  */
 
 export type AnimationKind =
@@ -28,19 +34,32 @@ export type AnimationKind =
   | 'love'
   | 'wink';
 
+/** Classification used by composers (idle program, reaction picker, etc.). */
+export type AnimationTag = 'baseline' | 'emote' | 'reaction' | 'narrative' | 'spinner';
+
 export interface Animation {
   readonly frames: ReadonlyArray<string>;
   readonly intervalMs: number;
+  /** Default loop behavior — overridden per-mount. Defaults to `true`. */
+  readonly loop?: boolean;
+  /** Hint for layout: the cell width to reserve regardless of frame variance. */
+  readonly width?: number;
+  /** Used by composers to filter the animation library. */
+  readonly tag?: AnimationTag;
 }
 
 export const ANIMATIONS: Readonly<Record<AnimationKind, Animation>> = {
   loading: {
     frames: ['(•  •)', '(•▁•)', '(•▃•)', '(•▄•)', '(•▆•)', '(•█•)'],
     intervalMs: 120,
+    tag: 'spinner',
+    width: 5,
   },
   thinking: {
     frames: ['(•◡•)', '(◔◡◔)', '(◔▿◔)', '(◔◡◔)'],
     intervalMs: 220,
+    tag: 'reaction',
+    width: 5,
   },
   /**
    * Idle breathing — a soft in/out cycle with a single closed-eye
@@ -50,27 +69,37 @@ export const ANIMATIONS: Readonly<Record<AnimationKind, Animation>> = {
   breathing: {
     frames: ['(•◡•)', '(•ᴗ•)', '(•◡•)', '(-◡-)', '(•◡•)'],
     intervalMs: 600,
+    tag: 'baseline',
+    width: 5,
   },
   talking: {
     frames: ['(◕◡◕)', '(◕▿◕)', '(◕◠◕)', '(◕◡◕)'],
     intervalMs: 140,
+    tag: 'spinner',
+    width: 5,
   },
   sleep: {
     frames: ['(-◡-)', '(-◡-) z', '(-◡-) zZ', '(-◡-) zZz'],
     intervalMs: 600,
+    tag: 'reaction',
+    width: 9,
   },
   panic: {
     frames: ['(⊙▂⊙)', '(⊙▃⊙)', '(⊙▂⊙)'],
     intervalMs: 110,
+    tag: 'reaction',
+    width: 5,
   },
   error: {
     frames: ['(×◠×)', '(×▂×)', '(x_x)'],
     intervalMs: 220,
+    loop: false,
+    tag: 'reaction',
+    width: 5,
   },
   /**
-   * Startup is a *narrative* sequence rather than a loop — callers
-   * usually render it once with `loop: false` so it lands on
-   * `(^◡^) runtime ready`.
+   * Startup is a *narrative* sequence rather than a loop — lands on
+   * `(^◡^) runtime ready`. `loop: false` makes that default behavior.
    */
   startup: {
     frames: [
@@ -81,6 +110,8 @@ export const ANIMATIONS: Readonly<Record<AnimationKind, Animation>> = {
       '(^◡^) runtime ready',
     ],
     intervalMs: 450,
+    loop: false,
+    tag: 'narrative',
   },
   /**
    * Single-shot blink — useful as an overlay sprinkled into an idle
@@ -89,6 +120,9 @@ export const ANIMATIONS: Readonly<Record<AnimationKind, Animation>> = {
   blink: {
     frames: ['(•◡•)', '(-◡-)', '(•◡•)'],
     intervalMs: 90,
+    loop: false,
+    tag: 'emote',
+    width: 5,
   },
   /**
    * Eyes glance left, center, right, back. Used for "looking around"
@@ -97,6 +131,9 @@ export const ANIMATIONS: Readonly<Record<AnimationKind, Animation>> = {
   glance: {
     frames: ['(•◡•)', '(◔◡•)', '(•◡•)', '(•◡◔)', '(•◡•)'],
     intervalMs: 260,
+    loop: false,
+    tag: 'emote',
+    width: 5,
   },
   /**
    * A friendly hello-wave with a tiny hand. Brix's body alternates
@@ -105,6 +142,8 @@ export const ANIMATIONS: Readonly<Record<AnimationKind, Animation>> = {
   wave: {
     frames: ['(^◡^)/', '(^◡^)~', '(^◡^)/', '\\(^◡^)'],
     intervalMs: 180,
+    tag: 'reaction',
+    width: 6,
   },
   /**
    * Cheeky little dance with musical notes. The face moves with the
@@ -113,6 +152,8 @@ export const ANIMATIONS: Readonly<Record<AnimationKind, Animation>> = {
   dance: {
     frames: ['♪ (◕▿◕) ♪', '♫ (◕◡◕) ♫', '♪ (^◡^) ♪', '♫ (◕▿◕) ♫'],
     intervalMs: 200,
+    tag: 'reaction',
+    width: 10,
   },
   /**
    * Processing as eating — mouth opens, closes, opens, swallows.
@@ -121,6 +162,9 @@ export const ANIMATIONS: Readonly<Record<AnimationKind, Animation>> = {
   nom: {
     frames: ['(◕ᴗ◕)', '(◕▿◕)', '(◕◡◕)', '(◕‿◕)'],
     intervalMs: 160,
+    loop: false,
+    tag: 'emote',
+    width: 5,
   },
   /**
    * Two-frame bounce — Brix scoots a hair to the right. Pair with a
@@ -130,6 +174,9 @@ export const ANIMATIONS: Readonly<Record<AnimationKind, Animation>> = {
   hop: {
     frames: ['(•ᴗ•)', ' (•ᴗ•)', '(•ᴗ•)', ' (•ᴗ•)'],
     intervalMs: 220,
+    loop: false,
+    tag: 'emote',
+    width: 6,
   },
   /**
    * A soft recoil — gentler than `error` / `panic`. Lands on a
@@ -138,6 +185,9 @@ export const ANIMATIONS: Readonly<Record<AnimationKind, Animation>> = {
   oops: {
     frames: ['(>﹏<)', '(>◡<)', '(•◡•)'],
     intervalMs: 280,
+    loop: false,
+    tag: 'reaction',
+    width: 5,
   },
   /**
    * Celebration with sparkles. Lands on a starry-eyed face.
@@ -146,6 +196,9 @@ export const ANIMATIONS: Readonly<Record<AnimationKind, Animation>> = {
   celebrate: {
     frames: ['(◕▿◕)', '✦ (◕▿◕) ✦', '✧ (^◡^) ✧', '✦ (✦◡✦) ✦', '  (✦◡✦)  '],
     intervalMs: 200,
+    loop: false,
+    tag: 'reaction',
+    width: 10,
   },
   /**
    * Heartbeat — for `love` mood / very-happy moments. The heart
@@ -154,6 +207,8 @@ export const ANIMATIONS: Readonly<Record<AnimationKind, Animation>> = {
   love: {
     frames: ['(♡◡♡)  ', '(♡◡♡) ♥', '(♡◡♡) ♡', '(♡◡♡)  '],
     intervalMs: 320,
+    tag: 'reaction',
+    width: 7,
   },
   /**
    * One-shot wink — open, close, open. Tiny and disarming.
@@ -161,5 +216,8 @@ export const ANIMATIONS: Readonly<Record<AnimationKind, Animation>> = {
   wink: {
     frames: ['(^◡^)', '(^◡-)', '(^◡^)'],
     intervalMs: 180,
+    loop: false,
+    tag: 'emote',
+    width: 5,
   },
 };

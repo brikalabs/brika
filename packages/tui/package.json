@@ -17,7 +17,8 @@
     "./state": "./src/state/index.ts",
     "./utils": "./src/utils/index.ts",
     "./router": "./src/router/index.ts",
-    "./shell": "./src/shell/index.ts"
+    "./shell": "./src/shell/index.ts",
+    "./forms": "./src/forms/index.ts"
   },
   "scripts": {
     "test": "bun test",

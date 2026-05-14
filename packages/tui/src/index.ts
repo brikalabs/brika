@@ -9,6 +9,7 @@
  */
 
 export * from './components';
+export * from './forms';
 export * from './keys';
 export * from './router';
 export * from './shell';

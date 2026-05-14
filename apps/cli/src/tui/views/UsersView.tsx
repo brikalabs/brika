@@ -1,51 +1,41 @@
 /**
- * Users section — list via `/api/users` + clack-style Wizard to add
- * a new user. While the Wizard is open it captures input via
- * `useCaptureInput()` so global hotkeys (s/x/r/o/etc.) stay quiet.
+ * Users section — list via `/api/users` + composable `<Form>` to add
+ * a new user. While the Form is mounted it calls `useCaptureInput()`
+ * internally so global hotkeys (s/x/r/o/etc.) stay quiet.
  */
 
-import { useKey } from '@brika/tui';
+import {
+  Form,
+  FormField,
+  FormInput,
+  FormPassword,
+  FormSelect,
+  type FormValues,
+  useKey,
+} from '@brika/tui';
 import { Box, Text } from 'ink';
 import type React from 'react';
 import { useState } from 'react';
 import { fetchUsers, type UserDto } from '../../cli/hub-api';
 import { hubFetch } from '../../cli/hub-client';
-import { Wizard, type WizardStep, type WizardValues } from '../components/Wizard';
 import { useCli } from '../useCli';
 import { useHubResource } from '../useHubResource';
 
-const ADD_USER_STEPS: ReadonlyArray<WizardStep> = [
-  {
-    name: 'name',
-    kind: 'text',
-    label: 'Full name',
-    placeholder: 'Ada Lovelace',
-    validate: (v) => (v.trim().length === 0 ? 'name is required' : null),
-  },
-  {
-    name: 'email',
-    kind: 'text',
-    label: 'Email',
-    placeholder: 'ada@example.com',
-    validate: (v) => (/^.+@.+\..+/.test(v) ? null : 'looks like that email is malformed'),
-  },
-  {
-    name: 'role',
-    kind: 'select',
-    label: 'Role',
-    options: [
-      { value: 'user', label: 'User', hint: 'regular access' },
-      { value: 'admin', label: 'Admin', hint: 'full control' },
-    ],
-    initial: 'user',
-  },
-  {
-    name: 'password',
-    kind: 'password',
-    label: 'Password',
-    validate: (v) => (v.length < 8 ? 'must be at least 8 characters' : null),
-  },
+const ROLE_OPTIONS = [
+  { value: 'user', label: 'User', hint: 'regular access' },
+  { value: 'admin', label: 'Admin', hint: 'full control' },
 ];
+
+const required = (v: string | boolean): string | null =>
+  typeof v === 'string' && v.trim().length === 0 ? 'this field is required' : null;
+
+const emailish = (v: string | boolean): string | null =>
+  typeof v === 'string' && /^.+@.+\..+/.test(v) ? null : 'looks like that email is malformed';
+
+const minLen =
+  (n: number) =>
+  (v: string | boolean): string | null =>
+    typeof v === 'string' && v.length >= n ? null : `must be at least ${n} characters`;
 
 export function UsersView(): React.ReactElement {
   const cli = useCli();
@@ -81,17 +71,34 @@ export function UsersView(): React.ReactElement {
 
       {adding && (
         <Box marginBottom={1}>
-          <Wizard
+          <Form
             title="Add user"
             subtitle="Esc to cancel any step"
-            steps={ADD_USER_STEPS}
             onSubmit={async (values) => {
               await postUser(values);
               setAdding(false);
               list.refresh();
             }}
             onCancel={() => setAdding(false)}
-          />
+          >
+            <FormField name="name" label="Full name" validate={required}>
+              <FormInput placeholder="Ada Lovelace" />
+            </FormField>
+            <FormField name="email" label="Email" validate={emailish}>
+              <FormInput placeholder="ada@example.com" />
+            </FormField>
+            <FormField name="role" label="Role" initialValue="user">
+              <FormSelect options={ROLE_OPTIONS} />
+            </FormField>
+            <FormField
+              name="password"
+              label="Password"
+              validate={minLen(8)}
+              summarize={(v) => '•'.repeat(typeof v === 'string' ? v.length : 0)}
+            >
+              <FormPassword />
+            </FormField>
+          </Form>
         </Box>
       )}
 
@@ -116,7 +123,7 @@ export function UsersView(): React.ReactElement {
   );
 }
 
-async function postUser(values: WizardValues): Promise<void> {
+async function postUser(values: FormValues): Promise<void> {
   const res = await hubFetch('/api/users/', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },

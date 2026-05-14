@@ -1,120 +1,93 @@
 /**
- * `<BrixIdle />` — a living idle state. Combines a calm breathing
- * loop with rare blinks, side-glances, and the occasional one-shot
- * emote (wink, hop, sparkle). The picks are deterministic-ish — a
- * small LCG, seeded per-mount — so two Brixes on the same screen
- * don't blink in unison and a single Brix doesn't loop a tic.
+ * `<BrixIdle />` — a living idle state. Brix sits on the program's
+ * baseline animation (default `breathing`) and occasionally drops a
+ * one-shot emote from the weighted pool — a blink, a glance, a wink,
+ * a tiny hop. The picks come from a seeded LCG (`makeRng`) so two
+ * Brixes on the same screen never sync up and tests can be made
+ * deterministic.
  *
- *   <BrixIdle />                          // calm, lively idle
- *   <BrixIdle mood="curious" />           // breathes with curious eyes
- *   <BrixIdle emoteChance={0.12} />       // turn up the chaos
+ *   <BrixIdle />                                  // default program
+ *   <BrixIdle program={{ baseline: 'breathing',  // custom emote pool
+ *     emotes: [{ kind: 'wink', weight: 1 }],
+ *     emoteChance: 0.05 }} />
+ *   <BrixIdle program={{ ...DEFAULT_IDLE_PROGRAM, emoteChance: 0 }} />  // just breathing
  *
- * Use this anywhere Brix is "there but not doing anything" — the
- * dashboard hub card, the corner of a long-running view, an empty
- * state. It cleans up its timer on unmount.
+ * The component is composed of two states:
+ *   1. baseline — `useFrameSeq` walks the breathing loop. On every
+ *      tick the LCG rolls for an emote.
+ *   2. emote — a child `<EmoteOverlay>` mounts, plays the one-shot,
+ *      and unmounts back to baseline. Keeps the React tree clean and
+ *      avoids running two `useFrameSeq` instances in parallel.
  */
 
 import { Text } from 'ink';
 import type React from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { ANIMATIONS, type AnimationKind } from './animations';
-import { type Bracket, faceOf, type Mood } from './moods';
+import {
+  DEFAULT_IDLE_PROGRAM,
+  type IdleProgram,
+  makeRng,
+  pickIdleEmote,
+} from './idle';
+import { type Bracket, type Mood } from './moods';
+import { useFrameSeq } from './useFrameSeq';
 
 export interface BrixIdleProps {
-  /** Base mood while breathing. Default `idle`. */
   readonly mood?: Mood;
   readonly bracket?: Bracket;
   readonly color?: string;
-  /** Probability per breath tick of triggering a one-shot emote. Default 0.08. */
-  readonly emoteChance?: number;
-  /** Override the breathing tick (ms). */
-  readonly breathMs?: number;
-  /** Set to false to skip the rare emote bursts and just breathe. */
-  readonly emotes?: boolean;
-}
-
-/** One-shot animations the idle loop can sprinkle in between breaths. */
-const EMOTE_KINDS: ReadonlyArray<AnimationKind> = [
-  'blink',
-  'glance',
-  'wink',
-  'hop',
-  'nom',
-];
-
-/**
- * Small LCG. Math.random would do, but a seeded generator means two
- * Brixes mounted at the same tick still desynchronize naturally (the
- * seed varies on Date.now + a mount-time salt) and tests can swap it
- * out without monkey-patching globals.
- */
-function makeRng(seed: number): () => number {
-  let s = seed >>> 0;
-  return () => {
-    s = (s * 1_664_525 + 1_013_904_223) >>> 0;
-    return s / 0x100000000;
-  };
-}
-
-interface EmoteRun {
-  readonly kind: AnimationKind;
-  readonly frame: number;
+  /** Override the idle program (baseline + emote weights + chance). */
+  readonly program?: IdleProgram;
+  /** Seed the picker — useful for tests. Default: `Date.now() ^ random`. */
+  readonly seed?: number;
 }
 
 export function BrixIdle({
-  mood = 'idle',
-  bracket = 'round',
   color,
-  emoteChance = 0.08,
-  breathMs,
-  emotes = true,
+  program = DEFAULT_IDLE_PROGRAM,
+  seed,
 }: Readonly<BrixIdleProps>): React.ReactElement {
-  const breath = ANIMATIONS.breathing;
-  const interval = breathMs ?? breath.intervalMs;
+  const baseline = ANIMATIONS[program.baseline];
+  const { frame, index } = useFrameSeq(baseline, { loop: true });
 
-  const rng = useRef<() => number>(makeRng(Date.now() ^ Math.floor(Math.random() * 0xffff)));
-  const [breathFrame, setBreathFrame] = useState(0);
-  const [emote, setEmote] = useState<EmoteRun | null>(null);
+  const rng = useRef<() => number>(
+    makeRng(seed ?? (Date.now() ^ Math.floor(Math.random() * 0xffff)))
+  );
+  const [emote, setEmote] = useState<AnimationKind | null>(null);
 
-  // Breath tick — also rolls the dice for triggering an emote.
+  // Roll the dice on every baseline tick. We only consider a roll
+  // when no emote is currently playing — emotes never stack.
   useEffect(() => {
     if (emote) {
       return;
     }
-    const t = setInterval(() => {
-      setBreathFrame((f) => (f + 1) % breath.frames.length);
-      if (emotes && rng.current() < emoteChance) {
-        const pick = EMOTE_KINDS[Math.floor(rng.current() * EMOTE_KINDS.length)];
-        if (pick) {
-          setEmote({ kind: pick, frame: 0 });
-        }
+    if (rng.current() < program.emoteChance) {
+      const picked = pickIdleEmote(program.emotes, rng.current);
+      if (picked) {
+        setEmote(picked);
       }
-    }, interval);
-    return () => clearInterval(t);
-  }, [emote, interval, breath.frames.length, emotes, emoteChance]);
-
-  // Emote tick — walks the chosen animation once, then hands control
-  // back to the breathing loop.
-  useEffect(() => {
-    if (!emote) {
-      return;
     }
-    const anim = ANIMATIONS[emote.kind];
-    if (emote.frame >= anim.frames.length) {
-      setEmote(null);
-      return;
-    }
-    const t = setTimeout(() => {
-      setEmote({ kind: emote.kind, frame: emote.frame + 1 });
-    }, anim.intervalMs);
-    return () => clearTimeout(t);
-  }, [emote]);
+  }, [index, emote, program.emoteChance, program.emotes]);
 
-  const glyph = emote
-    ? (ANIMATIONS[emote.kind].frames[emote.frame] ??
-      ANIMATIONS[emote.kind].frames[ANIMATIONS[emote.kind].frames.length - 1] ??
-      faceOf(mood, bracket))
-    : (breath.frames[breathFrame] ?? faceOf(mood, bracket));
+  if (emote) {
+    return <EmoteOverlay kind={emote} color={color} onEnd={() => setEmote(null)} />;
+  }
+  return <Text color={color}>{frame}</Text>;
+}
 
-  return <Text color={color}>{glyph}</Text>;
+interface EmoteOverlayProps {
+  readonly kind: AnimationKind;
+  readonly color?: string;
+  readonly onEnd: () => void;
+}
+
+/**
+ * Mounts for the duration of a single one-shot emote. Owns its own
+ * `useFrameSeq` so frame state resets cleanly whenever a new emote
+ * starts — and tears down on unmount.
+ */
+function EmoteOverlay({ kind, color, onEnd }: Readonly<EmoteOverlayProps>): React.ReactElement {
+  const { frame } = useFrameSeq(ANIMATIONS[kind], { loop: false, onEnd });
+  return <Text color={color}>{frame}</Text>;
 }

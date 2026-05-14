@@ -13,7 +13,7 @@
  *   R        reload focused plugin
  */
 
-import { useKey } from '@brika/tui';
+import { Form, FormField, FormInput, useKey } from '@brika/tui';
 import { Box, Text } from 'ink';
 import type React from 'react';
 import { useEffect, useState } from 'react';
@@ -25,19 +25,11 @@ import {
   pluginAction,
 } from '../../cli/hub-api';
 import { Markdown } from '../components/Markdown';
-import { Wizard, type WizardStep } from '../components/Wizard';
 import { useCli } from '../useCli';
 import { useHubResource } from '../useHubResource';
 
-const INSTALL_STEPS: ReadonlyArray<WizardStep> = [
-  {
-    name: 'source',
-    kind: 'text',
-    label: 'Source',
-    placeholder: '@brika/plugin-timer or https://…',
-    validate: (v) => (v.trim().length === 0 ? 'source is required' : null),
-  },
-];
+const requireSource = (v: string | boolean): string | null =>
+  typeof v === 'string' && v.trim().length > 0 ? null : 'source is required';
 
 export function PluginsView(): React.ReactElement {
   const cli = useCli();
@@ -151,17 +143,20 @@ export function PluginsView(): React.ReactElement {
 
       {installing && (
         <Box marginBottom={1}>
-          <Wizard
+          <Form
             title="Install plugin"
             subtitle="paste a registry name or URL"
-            steps={INSTALL_STEPS}
             onSubmit={async (values) => {
               await loadPlugin(String(values.source));
               setInstalling(false);
               list.refresh();
             }}
             onCancel={() => setInstalling(false)}
-          />
+          >
+            <FormField name="source" label="Source" validate={requireSource}>
+              <FormInput placeholder="@brika/plugin-timer or https://…" />
+            </FormField>
+          </Form>
         </Box>
       )}
 
