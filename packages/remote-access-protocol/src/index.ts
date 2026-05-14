@@ -1,7 +1,8 @@
 export {
   type EmitFrame,
+  emitRequest,
+  RequestAssembler,
   ResponseAssembler,
-  requestToFrames,
   responseToFrames,
   rpcRequestToFetch,
 } from './bridge';
@@ -24,6 +25,8 @@ export {
 export {
   type AbortMessage,
   type HelloMessage,
+  type RequestChunkMessage,
+  type RequestEndMessage,
   type RequestMessage,
   type ResponseChunkMessage,
   type ResponseEndMessage,

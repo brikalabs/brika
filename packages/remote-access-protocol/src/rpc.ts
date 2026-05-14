@@ -47,10 +47,20 @@ export interface HelloMessage extends RpcEnvelope {
 // ─── Request side (client → hub) ───────────────────────────────────────────
 
 /**
- * Encodes an HTTP request. `id` is a monotonically increasing integer chosen
- * by the client; the hub echoes it on every response frame so the client can
- * correlate. Ids are scoped to a single data channel and may be reused after
- * the request completes.
+ * Encodes an HTTP request head — `request` carries metadata only; the body
+ * (if any) streams over subsequent {@link RequestChunkMessage} frames and
+ * terminates with {@link RequestEndMessage}.
+ *
+ * `id` is a monotonically increasing integer chosen by the client; the hub
+ * echoes it on every response frame so the client can correlate. Ids are
+ * scoped to a single data channel and may be reused after the request
+ * completes.
+ *
+ * The request → chunks → end shape mirrors the response side
+ * (`response.head` + `response.chunk*` + `response.end`/`error`) so the
+ * channel can carry uploads larger than SCTP's per-message cap (~64 KiB in
+ * Chrome). The previous inline `bodyText`/`bodyB64` shape silently truncated
+ * once the JSON-escaped base64 envelope crossed that limit; chunking fixes it.
  */
 export interface RequestMessage extends RpcEnvelope {
   readonly kind: 'request';
@@ -67,15 +77,34 @@ export interface RequestMessage extends RpcEnvelope {
    * stripped by both sides.
    */
   readonly headers: ReadonlyArray<readonly [string, string]>;
-  /** Inline request body as UTF-8 text. Mutually exclusive with `bodyB64`. */
-  readonly bodyText?: string;
-  /** Inline request body as base64-encoded bytes. */
-  readonly bodyB64?: string;
+  /**
+   * `true` when one or more {@link RequestChunkMessage} frames follow before
+   * {@link RequestEndMessage}. Absent/`false` means the request has no body
+   * and the hub should dispatch immediately on receiving the head frame.
+   */
+  readonly hasBody?: boolean;
+}
+
+/** A request body chunk. Sent zero-or-more times between `request` and `request.end`. */
+export interface RequestChunkMessage extends RpcEnvelope {
+  readonly kind: 'request.chunk';
+  readonly id: number;
+  /** UTF-8 text chunk. Mutually exclusive with `dataB64`. */
+  readonly dataText?: string;
+  /** Base64-encoded binary chunk. */
+  readonly dataB64?: string;
+}
+
+/** Final frame for a request body. Triggers dispatch on the hub side. */
+export interface RequestEndMessage extends RpcEnvelope {
+  readonly kind: 'request.end';
+  readonly id: number;
 }
 
 /**
  * Cancel an in-flight request. The hub MUST stop streaming chunks and emit a
- * final `response.error` with `code: 'aborted'`.
+ * final `response.error` with `code: 'aborted'`. Also valid mid-upload —
+ * cancels the pending request assembler before dispatch.
  */
 export interface AbortMessage extends RpcEnvelope {
   readonly kind: 'abort';
@@ -127,6 +156,8 @@ export interface ResponseErrorMessage extends RpcEnvelope {
 export type RpcMessage =
   | HelloMessage
   | RequestMessage
+  | RequestChunkMessage
+  | RequestEndMessage
   | AbortMessage
   | ResponseHeadMessage
   | ResponseChunkMessage

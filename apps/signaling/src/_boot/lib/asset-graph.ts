@@ -23,8 +23,10 @@ import type { PeerHandle } from './peer';
 const ASSET_CACHE = 'brika-assets-v6';
 const PRIME_PARALLELISM = 16;
 
-// Absolute-path module specifiers: static + side-effect + dynamic imports.
-const IMPORT_RE = /\b(?:import\s*\(|(?:import|export)[^'"]*?from\s*|import\s+)['"]([^'"]+)['"]/g;
+// Module specifiers: static + side-effect + dynamic imports. The
+// side-effect form needs `\s*` (not `\s+`) — Vite's minifier emits
+// `import"./foo.js"` with zero whitespace, and `\s+` would miss those.
+const IMPORT_RE = /\b(?:import\s*\(|(?:import|export)[^'"]*?from\s*|import\s*)['"]([^'"]+)['"]/g;
 // Asset URLs referenced from CSS (`url(...)`). Bounded quantifiers keep matching linear.
 const CSS_URL_RE = /url\(\s{0,8}['"]?([^\s)'"]{1,2048})['"]?\s{0,8}\)/g;
 
@@ -242,6 +244,27 @@ async function primeCache(
     });
   };
 
+  // Re-scan a cache-hit body for transitive refs. Without this, a prior
+  // session that primed the entry but failed mid-BFS (a vendor chunk
+  // 404'd, an RPC timed out) leaves the cache in a state where every
+  // subsequent boot short-circuits on the entry without ever queueing
+  // its imports — the user is stuck on a partial prime forever. Reading
+  // the body costs one cache-roundtrip per cached node, cheap compared
+  // to the WebRTC round-trip we'd otherwise pay to refetch.
+  const rescanCached = async (url: string, existing: Response): Promise<void> => {
+    const ct = existing.headers.get('content-type') ?? '';
+    if (!isJS(ct) && !isCSS(ct)) {
+      return;
+    }
+    let text: string;
+    try {
+      text = await existing.text();
+    } catch {
+      return;
+    }
+    enqueueRefs(nextRefs(text, ct, url));
+  };
+
   const processOne = async (url: string): Promise<void> => {
     if (stopErr) {
       return;
@@ -249,6 +272,7 @@ async function primeCache(
     const existing = await cache.match(url);
     if (existing) {
       noteCacheHit(url, existing);
+      await rescanCached(url, existing);
       return;
     }
     if (isViteHmr(url)) {

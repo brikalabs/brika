@@ -1,32 +1,53 @@
 import { describe, expect, it } from 'bun:test';
-import { ResponseAssembler, requestToFrames, responseToFrames, rpcRequestToFetch } from '../bridge';
+import {
+  emitRequest,
+  RequestAssembler,
+  ResponseAssembler,
+  responseToFrames,
+  rpcRequestToFetch,
+} from '../bridge';
 import type {
+  RequestChunkMessage,
+  RequestEndMessage,
+  RequestMessage,
   ResponseChunkMessage,
   ResponseEndMessage,
   ResponseErrorMessage,
   ResponseHeadMessage,
+  RpcMessage,
 } from '../rpc';
+import { PROTOCOL_VERSION } from '../version';
+
+async function collectFrames(id: number, req: Request): Promise<RpcMessage[]> {
+  const frames: RpcMessage[] = [];
+  await emitRequest(id, req, (f) => {
+    frames.push(f);
+  });
+  return frames;
+}
 
 describe('bridge', () => {
-  describe('requestToFrames / rpcRequestToFetch', () => {
-    it('roundtrips a GET request preserving headers', async () => {
+  describe('emitRequest / RequestAssembler / rpcRequestToFetch', () => {
+    it('roundtrips a GET request preserving headers (no body frames)', async () => {
       const req = new Request('https://hub.brika.dev/api/health?x=1', {
         method: 'GET',
         headers: { 'X-Custom': 'v1', Accept: 'application/json' },
       });
-      const msg = await requestToFrames(1, req);
-      expect(msg.method).toBe('GET');
-      expect(msg.url).toBe('/api/health?x=1');
-      expect(msg.bodyText).toBeUndefined();
-      expect(msg.bodyB64).toBeUndefined();
-      expect(msg.headers.find(([n]) => n.toLowerCase() === 'x-custom')?.[1]).toBe('v1');
+      const frames = await collectFrames(1, req);
+      expect(frames).toHaveLength(1);
+      const head = frames[0] as RequestMessage;
+      expect(head.kind).toBe('request');
+      expect(head.method).toBe('GET');
+      expect(head.url).toBe('/api/health?x=1');
+      expect(head.hasBody).toBeUndefined();
+      expect(head.headers.find(([n]) => n.toLowerCase() === 'x-custom')?.[1]).toBe('v1');
 
-      const reconstructed = rpcRequestToFetch(msg, 'https://hub.brika.dev');
+      const reconstructed = rpcRequestToFetch(head, 'https://hub.brika.dev', null);
       expect(reconstructed.method).toBe('GET');
       expect(new URL(reconstructed.url).pathname).toBe('/api/health');
     });
 
-    it('drops hop-by-hop headers', async () => {
+    it('drops hop-by-hop headers from a POST', async () => {
       const req = new Request('https://x.brika.dev/api/x', {
         method: 'POST',
         headers: {
@@ -36,35 +57,98 @@ describe('bridge', () => {
         },
         body: '{}',
       });
-      const msg = await requestToFrames(2, req);
-      const names = msg.headers.map(([n]) => n.toLowerCase());
+      const frames = await collectFrames(2, req);
+      const head = frames[0] as RequestMessage;
+      const names = head.headers.map(([n]) => n.toLowerCase());
       expect(names).not.toContain('connection');
       expect(names).not.toContain('host');
     });
 
-    it('encodes JSON body as text, binary as base64', async () => {
-      const jsonReq = new Request('https://x.brika.dev/api/x', {
+    it('streams a JSON body as request.chunk(dataText)', async () => {
+      const req = new Request('https://x.brika.dev/api/x', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: '{"hello":"world"}',
       });
-      const jsonMsg = await requestToFrames(3, jsonReq);
-      expect(jsonMsg.bodyText).toBe('{"hello":"world"}');
-      expect(jsonMsg.bodyB64).toBeUndefined();
+      const frames = await collectFrames(3, req);
+      const head = frames[0] as RequestMessage;
+      expect(head.hasBody).toBe(true);
+      const chunks = frames.filter((f): f is RequestChunkMessage => f.kind === 'request.chunk');
+      const end = frames.find((f): f is RequestEndMessage => f.kind === 'request.end');
+      expect(chunks.length).toBeGreaterThan(0);
+      expect(chunks.every((c) => typeof c.dataText === 'string')).toBe(true);
+      expect(end).toBeDefined();
 
-      const binReq = new Request('https://x.brika.dev/api/upload', {
+      if (!end) {
+        throw new Error('expected request.end frame');
+      }
+      const assembler = new RequestAssembler();
+      for (const c of chunks) {
+        assembler.onChunk(c);
+      }
+      assembler.onEnd(end);
+      const reconstructed = rpcRequestToFetch(head, 'https://x.brika.dev', assembler.body());
+      expect(await reconstructed.text()).toBe('{"hello":"world"}');
+    });
+
+    it('streams a binary body as request.chunk(dataB64) and roundtrips bytes', async () => {
+      const bytes = new Uint8Array([0, 1, 2, 254, 255]);
+      const req = new Request('https://x.brika.dev/api/upload', {
         method: 'POST',
         headers: { 'Content-Type': 'application/octet-stream' },
-        body: new Uint8Array([0, 1, 2, 254, 255]),
+        body: bytes,
       });
-      const binMsg = await requestToFrames(4, binReq);
-      expect(binMsg.bodyText).toBeUndefined();
-      expect(binMsg.bodyB64).toBeDefined();
+      const frames = await collectFrames(4, req);
+      const head = frames[0] as RequestMessage;
+      expect(head.hasBody).toBe(true);
+      const chunks = frames.filter((f): f is RequestChunkMessage => f.kind === 'request.chunk');
+      const end = frames.find((f): f is RequestEndMessage => f.kind === 'request.end');
+      expect(chunks.every((c) => typeof c.dataB64 === 'string')).toBe(true);
 
-      // Round-trip through rpcRequestToFetch
-      const reconstructed = rpcRequestToFetch(binMsg, 'https://x.brika.dev');
-      const bytes = new Uint8Array(await reconstructed.arrayBuffer());
-      expect(Array.from(bytes)).toEqual([0, 1, 2, 254, 255]);
+      if (!end) {
+        throw new Error('expected request.end frame');
+      }
+      const assembler = new RequestAssembler();
+      for (const c of chunks) {
+        assembler.onChunk(c);
+      }
+      assembler.onEnd(end);
+      const reconstructed = rpcRequestToFetch(head, 'https://x.brika.dev', assembler.body());
+      const out = new Uint8Array(await reconstructed.arrayBuffer());
+      expect(Array.from(out)).toEqual([0, 1, 2, 254, 255]);
+    });
+
+    it('fragments large bodies into multiple chunks under the 16 KiB cap', async () => {
+      // 100 KiB body — well above SCTP's single-message limit and our 16 KiB chunk cap.
+      const bytes = new Uint8Array(100 * 1024);
+      for (let i = 0; i < bytes.length; i++) {
+        bytes[i] = i & 0xff;
+      }
+      const req = new Request('https://x.brika.dev/api/upload-large', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/octet-stream' },
+        body: bytes,
+      });
+      const frames = await collectFrames(5, req);
+      const chunks = frames.filter((f): f is RequestChunkMessage => f.kind === 'request.chunk');
+      expect(chunks.length).toBeGreaterThanOrEqual(7); // 100 KiB / 16 KiB = 6.25 → at least 7
+
+      const assembler = new RequestAssembler();
+      for (const c of chunks) {
+        assembler.onChunk(c);
+      }
+      assembler.onEnd(frames.at(-1) as RequestEndMessage);
+      const reconstructed = rpcRequestToFetch(
+        frames[0] as RequestMessage,
+        'https://x.brika.dev',
+        assembler.body()
+      );
+      const out = new Uint8Array(await reconstructed.arrayBuffer());
+      expect(out.byteLength).toBe(bytes.byteLength);
+      // Spot-check a few bytes — full equality is implied by the byte pattern.
+      expect(out[0]).toBe(0);
+      expect(out[12345]).toBe(12345 & 0xff);
+      expect(out[bytes.byteLength - 1]).toBe((bytes.byteLength - 1) & 0xff);
     });
   });
 
@@ -78,14 +162,21 @@ describe('bridge', () => {
         ResponseHeadMessage | ResponseChunkMessage | ResponseEndMessage | ResponseErrorMessage
       > = [];
       await responseToFrames(9, upstream, (f) => {
-        frames.push(f);
+        // responseToFrames only ever emits response.* frames; narrow defensively.
+        if (
+          f.kind === 'response.head' ||
+          f.kind === 'response.chunk' ||
+          f.kind === 'response.end' ||
+          f.kind === 'response.error'
+        ) {
+          frames.push(f);
+        }
       });
 
       expect(frames[0]?.kind).toBe('response.head');
       expect((frames[0] as ResponseHeadMessage).status).toBe(200);
       expect(frames.at(-1)?.kind).toBe('response.end');
 
-      // Re-assemble on the client side.
       const assembler = new ResponseAssembler();
       for (const f of frames) {
         if (f.kind === 'response.head') {
@@ -106,14 +197,14 @@ describe('bridge', () => {
     it('surfaces stream errors as a rejected body', async () => {
       const assembler = new ResponseAssembler();
       assembler.onHead({
-        v: 1,
+        v: PROTOCOL_VERSION,
         kind: 'response.head',
         id: 1,
         status: 200,
         headers: [['content-type', 'text/plain']],
       });
       assembler.onError({
-        v: 1,
+        v: PROTOCOL_VERSION,
         kind: 'response.error',
         id: 1,
         code: 'aborted',

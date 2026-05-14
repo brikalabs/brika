@@ -17,6 +17,7 @@ import { TRANSPORT_HEADER } from '@brika/auth';
 import {
   type AbortMessage,
   PROTOCOL_VERSION,
+  RequestAssembler,
   type RequestMessage,
   type RpcMessage,
   responseToFrames,
@@ -41,6 +42,8 @@ export interface RpcServerOptions {
 
 interface InFlight {
   readonly controller: AbortController;
+  /** Non-null while a body is streaming in; null for bodyless requests. */
+  readonly assembler: RequestAssembler | null;
 }
 
 export class RpcServer {
@@ -59,6 +62,12 @@ export class RpcServer {
         return;
       case 'request':
         this.#startRequest(msg, send);
+        return;
+      case 'request.chunk':
+        this.#inflight.get(msg.id)?.assembler?.onChunk(msg);
+        return;
+      case 'request.end':
+        this.#inflight.get(msg.id)?.assembler?.onEnd(msg);
         return;
       case 'abort':
         this.#abort(msg);
@@ -80,8 +89,9 @@ export class RpcServer {
 
   /** Cancel everything (peer session is closing). */
   shutdown(): void {
-    for (const { controller } of this.#inflight.values()) {
-      controller.abort();
+    for (const entry of this.#inflight.values()) {
+      entry.controller.abort();
+      entry.assembler?.abort(new Error('session-closed'));
     }
     this.#inflight.clear();
   }
@@ -100,22 +110,25 @@ export class RpcServer {
     }
 
     const controller = new AbortController();
-    this.#inflight.set(msg.id, { controller });
+    const assembler = msg.hasBody ? new RequestAssembler() : null;
+    this.#inflight.set(msg.id, { controller, assembler });
 
-    // Run the request fully async; do not block the caller.
-    void this.#runRequest(msg, send, controller.signal).finally(() => {
+    // Dispatch eagerly — the assembler's stream backs the Request body so
+    // `app.fetch()` reads chunks as `request.chunk` frames arrive.
+    void this.#runRequest(msg, assembler, send, controller.signal).finally(() => {
       this.#inflight.delete(msg.id);
     });
   }
 
   async #runRequest(
     msg: RequestMessage,
+    assembler: RequestAssembler | null,
     send: (frame: RpcMessage) => void,
     signal: AbortSignal
   ): Promise<void> {
     let request: Request;
     try {
-      request = rpcRequestToFetch(msg, this.#options.baseOrigin);
+      request = rpcRequestToFetch(msg, this.#options.baseOrigin, assembler?.body() ?? null);
     } catch (err) {
       send({
         v: PROTOCOL_VERSION,
@@ -172,5 +185,9 @@ export class RpcServer {
       return;
     }
     entry.controller.abort();
+    // If the upload was still streaming in, surface the abort to the body
+    // stream so `app.fetch()`'s reader sees an error instead of hanging on
+    // a half-uploaded body.
+    entry.assembler?.abort(new Error('aborted'));
   }
 }

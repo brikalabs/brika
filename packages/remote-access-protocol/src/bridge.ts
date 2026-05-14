@@ -1,33 +1,38 @@
 /**
  * HTTP ↔ RPC frame bridge.
  *
- * Two functions:
+ * Symmetric streaming in both directions:
  *
- * - {@link requestToFrames} — encode a `Request` (browser-side) into the
- *   {@link RequestMessage} that goes onto the data channel. Used by the FE.
+ * Client → hub (request side):
+ * - {@link emitRequest} — encode a browser `Request` as `request` head +
+ *   N × `request.chunk` + `request.end`. The body streams over the channel
+ *   in 16 KiB slices so uploads larger than SCTP's per-message cap (~64 KiB
+ *   in Chrome) survive.
+ * - {@link RequestAssembler} — hub-side state machine that turns the stream
+ *   of `request.chunk` frames back into a `ReadableStream<Uint8Array>` that
+ *   `app.fetch()` can consume directly.
+ * - {@link rpcRequestToFetch} — wraps `RequestAssembler.body()` into a real
+ *   `Request` instance for `app.fetch()`.
  *
- * - {@link framesToResponse} — assemble a streaming `Response` from the
- *   sequence of `response.head` + `response.chunk*` + `response.end`/`error`
- *   frames received from the hub. Used by the FE.
- *
- * And on the hub side:
- *
- * - {@link rpcRequestToFetch} — turn an incoming `RequestMessage` into the
- *   `Request` instance passed to `app.fetch()`.
- *
- * - {@link responseToFrames} — stream a `Response` returned by `app.fetch()`
- *   back over the channel as `response.head` + chunks + `end`/`error`.
+ * Hub → client (response side):
+ * - {@link responseToFrames} — stream a `Response` as `response.head` +
+ *   `response.chunk*` + `response.end` / `response.error`.
+ * - {@link ResponseAssembler} — client-side state machine that rebuilds a
+ *   streaming `Response` from the incoming chunks.
  *
  * All helpers preserve repeated headers via the `[name, value][]` shape used
  * by the wire types.
  */
 
 import type {
+  RequestChunkMessage,
+  RequestEndMessage,
   RequestMessage,
   ResponseChunkMessage,
   ResponseEndMessage,
   ResponseErrorMessage,
   ResponseHeadMessage,
+  RpcMessage,
 } from './rpc';
 import { PROTOCOL_VERSION } from './version';
 
@@ -119,6 +124,57 @@ function base64ToBytes(b64: string): Uint8Array {
   return bytes;
 }
 
+// Shared across all chunk assemblers — `TextEncoder` is stateless, so a
+// single instance is safe to reuse and saves an allocation per inbound chunk.
+const TEXT_ENCODER = new TextEncoder();
+
+/**
+ * Body-stream sink shared by {@link ResponseAssembler} (response.chunk/end)
+ * and {@link RequestAssembler} (request.chunk/end). Exposes a
+ * `ReadableStream<Uint8Array>` that consumers (the FE's `Response`, the hub's
+ * `Request`) can read incrementally as frames arrive.
+ */
+class ChunkBodySink {
+  #controller: ReadableStreamDefaultController<Uint8Array> | null = null;
+  readonly stream: ReadableStream<Uint8Array>;
+  #closed = false;
+
+  constructor() {
+    this.stream = new ReadableStream<Uint8Array>({
+      start: (controller) => {
+        this.#controller = controller;
+      },
+    });
+  }
+
+  enqueue(chunk: { dataText?: string; dataB64?: string }): void {
+    if (!this.#controller || this.#closed) {
+      return;
+    }
+    if (chunk.dataText !== undefined) {
+      this.#controller.enqueue(TEXT_ENCODER.encode(chunk.dataText));
+    } else if (chunk.dataB64 !== undefined) {
+      this.#controller.enqueue(base64ToBytes(chunk.dataB64));
+    }
+  }
+
+  close(): void {
+    if (this.#closed) {
+      return;
+    }
+    this.#closed = true;
+    this.#controller?.close();
+  }
+
+  error(err: Error): void {
+    if (this.#closed) {
+      return;
+    }
+    this.#closed = true;
+    this.#controller?.error(err);
+  }
+}
+
 /** True for content-types whose body is safely UTF-8 text. */
 function isTextContentType(contentType: string | null): boolean {
   if (!contentType) {
@@ -136,56 +192,149 @@ function isTextContentType(contentType: string | null): boolean {
   );
 }
 
-// ─── Client side: encode a Request → RequestMessage ────────────────────────
+// ─── Chunked body streaming (used by both directions) ──────────────────────
 
-export async function requestToFrames(id: number, request: Request): Promise<RequestMessage> {
-  const headerPairs = headersToPairs(request.headers);
+/**
+ * Max payload bytes per chunk frame before we fragment.
+ *
+ * WebRTC SCTP data channels cap a single `send()` at the negotiated
+ * `maxMessageSize` — commonly 64 KiB in Chrome, but the JSON envelope + UTF-8
+ * + JSON-escape blow-up for control chars can multiply the payload size 2–6x
+ * on the wire. 16 KiB raw keeps every frame comfortably under any realistic
+ * limit even after worst-case escaping.
+ */
+const MAX_CHUNK_PAYLOAD_BYTES = 16 * 1024;
 
-  // GET/HEAD never carry bodies.
-  const method = request.method.toUpperCase();
-  if (method === 'GET' || method === 'HEAD') {
-    return {
-      v: PROTOCOL_VERSION,
-      kind: 'request',
-      id,
-      method,
-      url: new URL(request.url).pathname + new URL(request.url).search,
-      headers: headerPairs,
-    };
+/**
+ * Read a body stream and emit chunk frames built by `buildChunk`. Returns
+ * `true` if the stream completed normally, `false` if aborted mid-stream.
+ * Used by both `emitRequest` and `responseToFrames` for symmetric chunking.
+ *
+ * `stream: true` on the decoder keeps incomplete UTF-8 sequences buffered
+ * across calls — splitting on byte boundaries never corrupts multi-byte
+ * characters. The tail flush at EOF drains the remaining bytes.
+ */
+async function streamBodyAsChunks<T extends RpcMessage>(
+  body: ReadableStream<Uint8Array>,
+  decoder: TextDecoder | null,
+  buildChunk: (data: { dataText?: string; dataB64?: string }) => T,
+  emit: (frame: T) => void | Promise<void>,
+  abortSignal: AbortSignal | undefined
+): Promise<boolean> {
+  const reader = body.getReader();
+  try {
+    while (true) {
+      if (abortSignal?.aborted) {
+        return false;
+      }
+      const { done, value } = await reader.read();
+      if (done) {
+        break;
+      }
+      if (!value || value.byteLength === 0) {
+        continue;
+      }
+      for (let offset = 0; offset < value.byteLength; offset += MAX_CHUNK_PAYLOAD_BYTES) {
+        const slice = value.subarray(
+          offset,
+          Math.min(offset + MAX_CHUNK_PAYLOAD_BYTES, value.byteLength)
+        );
+        if (decoder) {
+          await emit(buildChunk({ dataText: decoder.decode(slice, { stream: true }) }));
+        } else {
+          await emit(buildChunk({ dataB64: bytesToBase64(slice) }));
+        }
+      }
+    }
+    if (decoder) {
+      const tail = decoder.decode();
+      if (tail) {
+        await emit(buildChunk({ dataText: tail }));
+      }
+    }
+    return true;
+  } finally {
+    reader.releaseLock();
   }
+}
 
-  const buffer = await request.arrayBuffer();
-  const bytes = new Uint8Array(buffer);
-  const contentType = request.headers.get('content-type');
+// ─── Client side: encode a Request as request + chunks + end ───────────────
 
-  const base: RequestMessage = {
+/**
+ * Emit a browser `Request` over the channel as a `request` head frame plus
+ * (for bodied requests) a stream of `request.chunk` frames terminated by
+ * `request.end`. The caller provides `emit` to push each frame onto the
+ * data channel.
+ *
+ * GET/HEAD never carry a body — emit a single head frame.
+ *
+ * For POST/PUT/PATCH/DELETE with a body, the head frame carries
+ * `hasBody: true` so the hub-side dispatcher knows to wait for the chunks.
+ * Bodyless POST/PUT (e.g., `fetch(url, { method: 'POST' })` with no body)
+ * emits just the head — no chunks, no end frame needed.
+ *
+ * If `abortSignal` fires mid-upload, chunk emission stops; the caller is
+ * responsible for following up with an `abort` frame so the hub clears its
+ * pending assembler.
+ */
+export async function emitRequest(
+  id: number,
+  request: Request,
+  emit: EmitFrame,
+  options: { abortSignal?: AbortSignal } = {}
+): Promise<void> {
+  const headerPairs = headersToPairs(request.headers);
+  const method = request.method.toUpperCase();
+  const parsed = new URL(request.url);
+  const pathQuery = parsed.pathname + parsed.search;
+
+  const head: RequestMessage = {
     v: PROTOCOL_VERSION,
     kind: 'request',
     id,
     method,
-    url: new URL(request.url).pathname + new URL(request.url).search,
+    url: pathQuery,
     headers: headerPairs,
   };
 
-  if (bytes.byteLength === 0) {
-    return base;
+  if (method === 'GET' || method === 'HEAD' || !request.body) {
+    await emit(head);
+    return;
   }
 
-  if (isTextContentType(contentType)) {
-    return { ...base, bodyText: new TextDecoder().decode(bytes) };
+  await emit({ ...head, hasBody: true });
+
+  const decoder = isTextContentType(request.headers.get('content-type')) ? new TextDecoder() : null;
+  const completed = await streamBodyAsChunks<RequestChunkMessage>(
+    request.body,
+    decoder,
+    (data) => ({ v: PROTOCOL_VERSION, kind: 'request.chunk', id, ...data }),
+    emit,
+    options.abortSignal
+  );
+  if (completed) {
+    await emit({ v: PROTOCOL_VERSION, kind: 'request.end', id });
   }
-  return { ...base, bodyB64: bytesToBase64(bytes) };
+  // Aborted: caller must follow up with an `abort` frame; emitting an end
+  // here would let the hub dispatch with a truncated body.
 }
 
 // ─── Hub side: incoming RequestMessage → Request for app.fetch() ───────────
 
 /**
- * Turn an incoming `RequestMessage` into a standard `Request` to feed into
- * `app.fetch()`. The hub must supply `baseOrigin` (e.g. `https://hub.brika.dev`)
- * so the produced request has an absolute URL and downstream middleware can
- * inspect the canonical origin.
+ * Turn a `RequestMessage` head + an optional body stream into a standard
+ * `Request` to feed into `app.fetch()`. The hub must supply `baseOrigin`
+ * (e.g. `https://hub.brika.dev`) so the produced request has an absolute URL
+ * and downstream middleware can inspect the canonical origin.
+ *
+ * If `msg.hasBody` is true, pass the body stream produced by
+ * {@link RequestAssembler.body}; otherwise pass `null`.
  */
-export function rpcRequestToFetch(msg: RequestMessage, baseOrigin: string): Request {
+export function rpcRequestToFetch(
+  msg: RequestMessage,
+  baseOrigin: string,
+  body: ReadableStream<Uint8Array> | null
+): Request {
   // Refuse absolute URLs and protocol-relative URLs — they would discard
   // baseOrigin and let a malicious peer set an attacker-controlled host on
   // the synthesized Request, bypassing any host-allowlist middleware.
@@ -196,36 +345,33 @@ export function rpcRequestToFetch(msg: RequestMessage, baseOrigin: string): Requ
   const headers = pairsToHeaders(msg.headers);
   // The Host header was stripped on the FE side (hop-by-hop) and the wire
   // shape never carries it. Set it explicitly from `baseOrigin` so any
-  // host-allowlist middleware on the hub sees the canonical hub host
-  // rather than `null`.
+  // host-allowlist middleware on the hub sees the canonical hub host.
   headers.set('host', url.host);
 
-  // `BodyInit` is part of lib.dom but our hub tsconfig is stricter; use
-  // `string | ArrayBuffer | null` directly since those are the only shapes we produce.
-  let body: string | ArrayBuffer | null = null;
-  if (msg.bodyText !== undefined) {
-    body = msg.bodyText;
-  } else if (msg.bodyB64 !== undefined) {
-    const bytes = base64ToBytes(msg.bodyB64);
-    // Copy into a fresh ArrayBuffer — Bun's BodyInit accepts ArrayBuffer
-    // (but not Uint8Array or SharedArrayBuffer) under strict typings.
-    const ab = new ArrayBuffer(bytes.byteLength);
-    new Uint8Array(ab).set(bytes);
-    body = ab;
-  }
-
-  return new Request(url.toString(), {
+  // `duplex: 'half'` is required when constructing a Request with a stream
+  // body — without it Bun and modern fetch implementations throw. Cast via
+  // `RequestInit & { duplex }` since lib.dom hasn't caught up with the spec.
+  type ExtendedInit = RequestInit & { duplex?: 'half' };
+  const init: ExtendedInit = {
     method: msg.method,
     headers,
     body,
-  });
+  };
+  if (body) {
+    init.duplex = 'half';
+  }
+
+  return new Request(url.toString(), init);
 }
 
 // ─── Hub side: stream a Response back as RPC frames ────────────────────────
 
-export type EmitFrame = (
-  frame: ResponseHeadMessage | ResponseChunkMessage | ResponseEndMessage | ResponseErrorMessage
-) => void | Promise<void>;
+/**
+ * Frame-emit callback. Accepts any RPC frame so the same helper works for
+ * both request-side (client → hub) and response-side (hub → client) emission.
+ * Callers wire it to `channel.send(encodeRpc(frame))`.
+ */
+export type EmitFrame = (frame: RpcMessage) => void | Promise<void>;
 
 /**
  * Stream a `Response` over the data channel as a sequence of RPC frames.
@@ -234,111 +380,9 @@ export type EmitFrame = (
  * outbound channel. `responseToFrames` does not touch the channel directly,
  * keeping this module free of any WebRTC dependency.
  *
- * Streaming bodies are forwarded as multiple `response.chunk` frames; the
- * function awaits each `emit` so the peer manager can apply backpressure.
+ * Body streaming reuses `streamBodyAsChunks`, the same helper used by
+ * {@link emitRequest} — both directions use the same 16 KiB chunk cap.
  */
-
-/**
- * Max payload bytes per `response.chunk` frame before we fragment.
- *
- * WebRTC SCTP data channels cap a single `send()` at the negotiated
- * `maxMessageSize` — commonly 64 KiB, but unreliable channels with
- * partial-reliability can be smaller, and the JSON envelope + UTF-8
- * + JSON-escape blow-up for control chars can multiply the payload
- * size 2–6x on the wire. 16 KiB raw keeps every frame comfortably
- * under any realistic limit even after worst-case escaping.
- *
- * The cost of small frames is the JSON parse/encode overhead — but
- * that's the same overhead the FE handles for naturally-streamed
- * responses, and avoiding the silent send-fail (which truncates the
- * body and corrupts the next response on the wire) is worth far more
- * than a few hundred extra frame round-trips per MB.
- */
-const MAX_CHUNK_PAYLOAD_BYTES = 16 * 1024;
-
-async function emitChunk(
-  id: number,
-  bytes: Uint8Array,
-  decoder: TextDecoder | null,
-  emit: EmitFrame
-): Promise<void> {
-  // Vite can hand back a multi-megabyte body in a single `read()`. If
-  // we forwarded that as one frame, `channel.send()` would throw with
-  // "Message too large" and the peer-session's catch would silently
-  // drop the frame, leaving the FE waiting for chunks that never come.
-  for (let offset = 0; offset < bytes.byteLength; offset += MAX_CHUNK_PAYLOAD_BYTES) {
-    const slice = bytes.subarray(
-      offset,
-      Math.min(offset + MAX_CHUNK_PAYLOAD_BYTES, bytes.byteLength)
-    );
-    if (decoder) {
-      await emit({
-        v: PROTOCOL_VERSION,
-        kind: 'response.chunk',
-        id,
-        // `stream: true` keeps incomplete UTF-8 sequences buffered in
-        // the decoder until the next call, so splitting on byte
-        // boundaries never corrupts multi-byte characters. The tail
-        // flush in `streamBodyToFrames` empties the buffer at EOF.
-        dataText: decoder.decode(slice, { stream: true }),
-      });
-    } else {
-      await emit({
-        v: PROTOCOL_VERSION,
-        kind: 'response.chunk',
-        id,
-        dataB64: bytesToBase64(slice),
-      });
-    }
-  }
-}
-
-async function streamBodyToFrames(
-  id: number,
-  body: ReadableStream<Uint8Array>,
-  decoder: TextDecoder | null,
-  emit: EmitFrame,
-  abortSignal: AbortSignal | undefined
-): Promise<void> {
-  const reader = body.getReader();
-  try {
-    while (true) {
-      if (abortSignal?.aborted) {
-        await emit({
-          v: PROTOCOL_VERSION,
-          kind: 'response.error',
-          id,
-          code: 'aborted',
-          message: 'Request aborted by client',
-        });
-        return;
-      }
-      const { done, value } = await reader.read();
-      if (done) {
-        break;
-      }
-      if (value && value.byteLength > 0) {
-        await emitChunk(id, value, decoder, emit);
-      }
-    }
-    // Flush any pending bytes still buffered by the streaming decoder.
-    if (decoder) {
-      const tail = decoder.decode();
-      if (tail) {
-        await emit({
-          v: PROTOCOL_VERSION,
-          kind: 'response.chunk',
-          id,
-          dataText: tail,
-        });
-      }
-    }
-    await emit({ v: PROTOCOL_VERSION, kind: 'response.end', id });
-  } finally {
-    reader.releaseLock();
-  }
-}
-
 export async function responseToFrames(
   id: number,
   response: Response,
@@ -363,7 +407,24 @@ export async function responseToFrames(
     : null;
 
   try {
-    await streamBodyToFrames(id, response.body, decoder, emit, options.abortSignal);
+    const completed = await streamBodyAsChunks<ResponseChunkMessage>(
+      response.body,
+      decoder,
+      (data) => ({ v: PROTOCOL_VERSION, kind: 'response.chunk', id, ...data }),
+      emit,
+      options.abortSignal
+    );
+    if (completed) {
+      await emit({ v: PROTOCOL_VERSION, kind: 'response.end', id });
+    } else {
+      await emit({
+        v: PROTOCOL_VERSION,
+        kind: 'response.error',
+        id,
+        code: 'aborted',
+        message: 'Request aborted by client',
+      });
+    }
   } catch (err) {
     await emit({
       v: PROTOCOL_VERSION,
@@ -389,8 +450,7 @@ export class ResponseAssembler {
   #headResolve: ((res: Response) => void) | null = null;
   #headReject: ((err: Error) => void) | null = null;
   readonly #headPromise: Promise<Response>;
-  #controller: ReadableStreamDefaultController<Uint8Array> | null = null;
-  #closed = false;
+  readonly #body = new ChunkBodySink();
 
   constructor() {
     this.#headPromise = new Promise<Response>((resolve, reject) => {
@@ -408,12 +468,7 @@ export class ResponseAssembler {
     if (!this.#headResolve) {
       return;
     }
-    const stream = new ReadableStream<Uint8Array>({
-      start: (controller) => {
-        this.#controller = controller;
-      },
-    });
-    const response = new Response(stream, {
+    const response = new Response(this.#body.stream, {
       status: msg.status,
       headers: pairsToHeaders(msg.headers),
     });
@@ -423,35 +478,48 @@ export class ResponseAssembler {
   }
 
   onChunk(msg: ResponseChunkMessage): void {
-    if (!this.#controller || this.#closed) {
-      return;
-    }
-    if (msg.dataText !== undefined) {
-      this.#controller.enqueue(new TextEncoder().encode(msg.dataText));
-    } else if (msg.dataB64 !== undefined) {
-      this.#controller.enqueue(base64ToBytes(msg.dataB64));
-    }
+    this.#body.enqueue(msg);
   }
 
   onEnd(_msg: ResponseEndMessage): void {
-    if (this.#closed) {
-      return;
-    }
-    this.#closed = true;
-    this.#controller?.close();
+    this.#body.close();
   }
 
   onError(msg: ResponseErrorMessage): void {
-    if (this.#closed) {
-      return;
-    }
-    this.#closed = true;
     const err = new Error(`${msg.code}: ${msg.message}`);
     if (this.#headReject) {
       this.#headReject(err);
       this.#headReject = null;
       this.#headResolve = null;
     }
-    this.#controller?.error(err);
+    this.#body.error(err);
+  }
+}
+
+// ─── Hub side: assemble a Request body from incoming chunk frames ──────────
+
+/**
+ * Hub-side state machine: `request.chunk` frames enqueue onto a body stream
+ * that the dispatcher hands directly to `new Request(..., { body: stream })`,
+ * so the hub's app reads chunks as they arrive — not after the full upload.
+ */
+export class RequestAssembler {
+  readonly #sink = new ChunkBodySink();
+
+  /** Body stream — pass to `rpcRequestToFetch` as the body argument. */
+  body(): ReadableStream<Uint8Array> {
+    return this.#sink.stream;
+  }
+
+  onChunk(msg: RequestChunkMessage): void {
+    this.#sink.enqueue(msg);
+  }
+
+  onEnd(_msg: RequestEndMessage): void {
+    this.#sink.close();
+  }
+
+  abort(err: Error): void {
+    this.#sink.error(err);
   }
 }

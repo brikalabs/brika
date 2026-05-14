@@ -66,10 +66,33 @@ describe('codec', () => {
         method: 'POST',
         url: '/api/login',
         headers: [['content-type', 'application/json']],
-        bodyText: '{"email":"a@b"}',
+        hasBody: true,
       };
       const decoded = decodeRpc(encodeRpc(msg));
       expect(decoded).toEqual(msg);
+    });
+
+    it('roundtrips a request.chunk frame', () => {
+      const raw = JSON.stringify({
+        v: PROTOCOL_VERSION,
+        kind: 'request.chunk',
+        id: 7,
+        dataText: '{"x":1}',
+      });
+      const decoded = decodeRpc(raw);
+      expect(decoded).not.toBeNull();
+      expect(decoded?.kind).toBe('request.chunk');
+    });
+
+    it('roundtrips a request.end frame', () => {
+      const raw = JSON.stringify({ v: PROTOCOL_VERSION, kind: 'request.end', id: 7 });
+      const decoded = decodeRpc(raw);
+      expect(decoded?.kind).toBe('request.end');
+    });
+
+    it('rejects a request.chunk missing both data fields', () => {
+      const raw = JSON.stringify({ v: PROTOCOL_VERSION, kind: 'request.chunk', id: 7 });
+      expect(decodeRpc(raw)).toBeNull();
     });
 
     it('rejects wrong major version', () => {
