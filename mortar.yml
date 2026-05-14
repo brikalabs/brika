@@ -1,11 +1,27 @@
 # Brika local dev stack. Run with `bun run up` (or `mortar` directly).
 #
+# Three services:
+#
+#   • signaling — Cloudflare-Worker coordinator + bootstrap SPA, served
+#     by Vite + miniflare. Hub talks to this for remote-access claims
+#     and WebSocket signaling.
+#   • ui        — the Brika UI Vite dev server. Hub proxies it during
+#     dev so you get HMR through the hub origin.
+#   • hub       — the Brika hub. Depends on both: coordinator URL for
+#     signaling, dev-proxy URL for the UI.
+#
 # `cwd:` + `bun run dev` is preferred over `bun --filter <pkg>` —
 # `--filter` uses terminal redraws for its task-progress UI which
 # stack as duplicate frames when its stdout is piped (which is how
 # mortar captures logs).
 
 services:
+  signaling:
+    label: Signaling (Vite + miniflare)
+    cwd: apps/signaling
+    command: bun run dev
+    port: 5174
+
   ui:
     label: UI (Vite)
     cwd: apps/ui
@@ -18,5 +34,7 @@ services:
     command: bun run dev
     port: 3001
     env:
+      BRIKA_COORDINATOR_URL: http://localhost:5174
       BRIKA_DEV_UI_PROXY: http://localhost:5173
-    dependsOn: [ui]
+      BRIKA_DEV_AUTOCLAIM: devhub
+    dependsOn: [signaling, ui]
