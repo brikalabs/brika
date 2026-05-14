@@ -14,10 +14,9 @@
  * on next boot.
  */
 
-import { inject, singleton } from '@brika/di';
-import { BrikaInitializer } from '../config/brika-initializer';
+import { singleton } from '@brika/di';
+import { brikaContext } from '../context/brika-context';
 
-const SERVICE_BASE = 'dev.brika.hub';
 const SEPARATOR = '::';
 /**
  * Reserved namespace for hub-internal secrets (signaling token, etc.).
@@ -28,11 +27,9 @@ const HUB_NAMESPACE = '__hub__';
 
 @singleton()
 export class SecretStore {
-  readonly #init = inject(BrikaInitializer);
-
   /** Per-instance Keychain service identifier (e.g. `dev.brika.hub.7f3e8a2c`). */
   get #service(): string {
-    return `${SERVICE_BASE}.${this.#init.instanceId}`;
+    return brikaContext.serviceName;
   }
 
   #qualify(pluginName: string, key: string): string {

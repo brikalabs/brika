@@ -1,8 +1,11 @@
 import 'reflect-metadata';
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { get, reset } from '@brika/di/testing';
+import { brikaContext } from '@/runtime/context/brika-context';
 import { SecretStore } from '@/runtime/secrets/secret-store';
 import { type BunSecretsMock, installBunSecretsMock } from './_bun-secrets-mock';
+
+const SERVICE = brikaContext.serviceName;
 
 describe('SecretStore', () => {
   let store: SecretStore;
@@ -85,9 +88,9 @@ describe('SecretStore', () => {
     expect(await store.get('@brika/plugin-b', 'one')).toBe('kept');
   });
 
-  test('keychain entries are namespaced under com.brika.hub service', async () => {
+  test('keychain entries are namespaced under the per-instance service', async () => {
     await store.set('@brika/plugin-a', 'apiKey', 'value');
-    expect(mock.store.has('com.brika.hub::@brika/plugin-a::apiKey')).toBe(true);
+    expect(mock.store.has(`${SERVICE}::@brika/plugin-a::apiKey`)).toBe(true);
   });
 
   // ─── Namespace boundary (security) ────────────────────────────────────────
@@ -103,7 +106,7 @@ describe('SecretStore', () => {
     test('the wire format is exactly service::pluginName::key', async () => {
       await store.set('@plugin-a', 'a-key', 'a-value');
       const keys = [...mock.store.keys()];
-      expect(keys).toEqual(['com.brika.hub::@plugin-a::a-key']);
+      expect(keys).toEqual([`${SERVICE}::@plugin-a::a-key`]);
     });
 
     test('declared password pref and SDK user-secret with same name occupy different slots', async () => {
@@ -129,8 +132,8 @@ describe('SecretStore', () => {
       expect(await store.get('@plugin-a', 'b::stolen')).toBe('attacker-secret');
       expect(await store.get('@plugin-b', 'stolen')).toBe('victim-secret');
       // The two qualified names are distinct keys in the keychain.
-      expect(mock.store.has('com.brika.hub::@plugin-a::b::stolen')).toBe(true);
-      expect(mock.store.has('com.brika.hub::@plugin-b::stolen')).toBe(true);
+      expect(mock.store.has(`${SERVICE}::@plugin-a::b::stolen`)).toBe(true);
+      expect(mock.store.has(`${SERVICE}::@plugin-b::stolen`)).toBe(true);
     });
 
     test('deleteAllForPlugin only removes the listed keys for the named plugin', async () => {

@@ -30,38 +30,15 @@ import {
 } from '@brika/remote-access-protocol';
 import { Hono } from 'hono';
 import { ClaimError, D1ClaimStore } from './claims-d1';
+import { type Env, EnvConfigError, validateEnvOnce } from './env';
 import { injectHubMeta, resolveHubFromUrl } from './hub-resolution';
 import { mintTicket, verifyTicket } from './tickets';
 
+export type { Env } from './env';
 // Cloudflare needs the Durable Object class exported from the entry module so
 // it can instantiate it. `export ... from` keeps the re-export pure (rather
 // than via an import + named re-export which the linter rightly flags).
 export { HubSession } from './hub-session';
-
-export interface Env {
-  HUB_SESSION: DurableObjectNamespace;
-  DB: D1Database;
-  /** HMAC key for ticket signing. Set with `wrangler secret put TICKET_SECRET`. */
-  TICKET_SECRET: string;
-  /** Static asset binding (the bundled UI shell). Configured in wrangler.toml. */
-  ASSETS: Fetcher;
-  /**
-   * Comma-separated list of origins allowed to call the state-changing browser
-   * endpoints (`/v1/hubs/claim`, `/v1/tickets`). Cross-origin POSTs from any
-   * other host are rejected with 403 — CSRF defense for cookie-bearing UIs that
-   * might be tricked into minting a ticket against an attacker's hub.
-   * Unset → defaults to `https://hub.brika.dev`.
-   */
-  ALLOWED_ORIGINS?: string;
-  /**
-   * Cloudflare Realtime app ID for minting short-lived TURN credentials.
-   * Unset → the coordinator returns STUN-only; symmetric/CGNAT users
-   * (most mobile/5G) will fail to connect.
-   */
-  CF_REALTIME_APP_ID?: string;
-  /** Cloudflare Realtime app token (Bearer). Set via `wrangler secret put`. */
-  CF_REALTIME_APP_TOKEN?: string;
-}
 
 const DEFAULT_ALLOWED_ORIGINS: readonly string[] = ['https://hub.brika.dev'];
 
@@ -136,6 +113,28 @@ async function resolveIceServers(env: Env): Promise<ReadonlyArray<unknown>> {
 // ─── App ────────────────────────────────────────────────────────────────────
 
 const app = new Hono<{ Bindings: Env }>();
+
+// First-request validation of required secrets. Workers has no startup hook
+// that sees `env`, so this is the closest equivalent to boot-time assertion:
+// the check runs once per cold isolate and short-circuits on every subsequent
+// request. A misconfigured deploy fails loudly on the first hit (including
+// /v1/health) instead of crashing deep inside `crypto.subtle.importKey` when
+// someone later tries to mint a ticket.
+app.use('*', async (c, next) => {
+  validateEnvOnce(c.env);
+  await next();
+});
+
+// Surface missing/empty secrets as an actionable 500 instead of letting the
+// crash bubble up as a cryptic crypto DataError. The body names the offending
+// var and the file to fix — much faster path for a new contributor than
+// "DOMException: Imported HMAC key length (0)…".
+app.onError((err, c) => {
+  if (err instanceof EnvConfigError) {
+    return c.json({ error: 'env-misconfigured', detail: err.message }, 500);
+  }
+  throw err;
+});
 
 app.get('/v1/health', async (c) => {
   const claims = new D1ClaimStore(c.env.DB);

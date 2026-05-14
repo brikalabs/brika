@@ -1,28 +1,24 @@
 import { existsSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-
-const isCompiled = import.meta.path.startsWith('/$bunfs/');
-
-/** Directory where the binary lives (e.g., ~/.brika/bin). */
-export const installDir = dirname(process.execPath);
+import { join } from 'node:path';
+import { brikaContext } from '@/runtime/context/brika-context';
 
 /**
- * Root data directory for Brika state (PID file, database, etc.).
- * Precedence: BRIKA_HOME env var → auto-detect from binary / cwd.
- * Production: parent of installDir (e.g., ~/.brika/bin → ~/.brika).
- * Dev: .brika in the current working directory.
+ * Re-exports for callers that previously imported these from `runtime.ts`.
+ * New code should `import { brikaContext } from '@/runtime/context/brika-context'`
+ * and read `brikaContext.installDir` / `brikaContext.brikaDir` directly —
+ * one source of truth for "where does this Brika install live?".
  */
-export const dataDir =
-  process.env.BRIKA_HOME ?? (isCompiled ? dirname(installDir) : join(process.cwd(), '.brika'));
+export const installDir = brikaContext.installDir;
+export const dataDir = brikaContext.brikaDir;
 
 /** Absolute path of a bundled asset next to the binary, or `''` if missing. */
 export function detect(asset: string): string {
-  const path = join(installDir, asset);
+  const path = join(brikaContext.installDir, asset);
   return existsSync(path) ? path : '';
 }
 
 /** Argv prefix to re-invoke the current process (compiled binary vs dev). */
-const selfArgv = isCompiled ? [process.execPath] : Bun.argv.slice(0, 2);
+const selfArgv = brikaContext.isCompiled ? [process.execPath] : Bun.argv.slice(0, 2);
 
 /** Spawn a detached child re-invoking this CLI with the given args. */
 export function spawnDetached(args: string[]): {

@@ -8,10 +8,10 @@ import { join } from 'node:path';
 import { configureDatabases } from '@brika/db';
 import pc from 'picocolors';
 import type { BootstrapPlugin } from '@/runtime/bootstrap/plugin';
-import { dataDir } from './utils/runtime';
+import { brikaContext } from '@/runtime/context/brika-context';
 
 export async function bootstrapCLI(...plugins: BootstrapPlugin[]) {
-  configureDatabases(dataDir);
+  configureDatabases(brikaContext.brikaDir);
   for (const p of plugins) {
     p.setup?.({} as never);
   }
@@ -32,5 +32,5 @@ export async function bootstrapCLI(...plugins: BootstrapPlugin[]) {
 }
 
 export function printDatabaseInfo(): void {
-  console.log(`\n${pc.dim('Database:')} ${join(dataDir, 'auth.db')}`);
+  console.log(`\n${pc.dim('Database:')} ${join(brikaContext.brikaDir, 'auth.db')}`);
 }

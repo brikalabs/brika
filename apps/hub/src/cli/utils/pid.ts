@@ -1,8 +1,8 @@
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { dataDir } from './runtime';
+import { brikaContext } from '@/runtime/context/brika-context';
 
-export const PID_FILE = join(dataDir, 'brika.pid');
+export const PID_FILE = join(brikaContext.brikaDir, 'brika.pid');
 
 export type PidStatus =
   | {
@@ -74,7 +74,7 @@ export async function claimPidFile(): Promise<number | null> {
   if (status.state === 'stale') {
     await removePidFile();
   }
-  await mkdir(dataDir, {
+  await mkdir(brikaContext.brikaDir, {
     recursive: true,
   });
   await writeFile(PID_FILE, String(process.pid), 'utf8');

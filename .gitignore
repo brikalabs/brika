@@ -5,6 +5,10 @@ node_modules
 **/.cache
 **/.DS_Store
 .env
+# Cloudflare Workers local secrets (loaded by miniflare). The committed
+# `.dev.vars.example` is the template — real values stay out of git.
+.dev.vars
+**/.dev.vars
 *.log
 *.tsbuildinfo
 

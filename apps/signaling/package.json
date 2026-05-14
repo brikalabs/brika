@@ -29,7 +29,8 @@
     "hono": "^4.12.2",
     "lucide-react": "^0.475.0",
     "react": "^19.2.3",
-    "react-dom": "^19.2.3"
+    "react-dom": "^19.2.3",
+    "zod": "^4.3.4"
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "^1.36.4",

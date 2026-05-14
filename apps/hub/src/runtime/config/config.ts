@@ -1,5 +1,5 @@
 import { inject, singleton } from '@brika/di';
-import { dataDir } from '@/cli/utils/runtime';
+import { brikaContext } from '../context/brika-context';
 import { ConfigLoader } from './config-loader';
 
 /** Canonical host. One Worker serves both /v1/* (API) and /<name>/... (UI). */
@@ -97,7 +97,7 @@ export class HubConfig {
       // Config not loaded yet, use env/defaults
       this.host = process.env.BRIKA_HOST ?? '127.0.0.1';
       this.port = Number(process.env.BRIKA_PORT ?? '3001');
-      this.homeDir = process.env.BRIKA_HOME ?? dataDir;
+      this.homeDir = process.env.BRIKA_HOME ?? brikaContext.brikaDir;
     }
     // Static file serving directory (empty = disabled, used in production Docker)
     this.staticDir = process.env.BRIKA_STATIC_DIR ?? '';
