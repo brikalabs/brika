@@ -1,8 +1,7 @@
+import { Kbd, ScreenChrome, useRouter } from '@brika/tui';
 import { Box, Text, useInput } from 'ink';
 import type React from 'react';
-import { useRouter } from '../../router';
-import { Kbd } from '../components/Kbd';
-import { ScreenChrome } from '../components/ScreenChrome';
+import { BRAND_LINE, MORTAR_WORDMARK } from '../../brand';
 import type { Routes } from '../routes';
 
 /**
@@ -91,7 +90,12 @@ export function HelpView(): React.ReactElement {
   });
 
   return (
-    <ScreenChrome title="Help" hint="? or Esc to close">
+    <ScreenChrome
+      wordmark={MORTAR_WORDMARK}
+      brand={BRAND_LINE}
+      title="Help"
+      hint="? or Esc to close"
+    >
       <Box flexDirection="row" gap={4}>
         <Column sections={LEFT_COLUMN} />
         <Column sections={RIGHT_COLUMN} />

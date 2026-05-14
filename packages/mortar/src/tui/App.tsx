@@ -14,8 +14,9 @@
  * is: write the component + add one entry to `routes`.
  */
 
+import { Outlet, RouterProvider, TuiShellProvider, useRouterInstance } from '@brika/tui';
 import type React from 'react';
-import { Outlet, RouterProvider, useRouterInstance } from '../router';
+import { TUI_CHROME_LINES } from '../constants';
 import type { Supervisor } from '../supervisor';
 import { useGlobalQuit } from './keys/useGlobalQuit';
 import { MortarProvider } from './MortarProvider';
@@ -30,10 +31,12 @@ export function App({ supervisor, onQuit }: Readonly<Props>): React.ReactElement
   const router = useRouterInstance<Routes>({ routes, initial: { name: 'main' } });
   return (
     <RouterProvider router={router}>
-      <MortarProvider supervisor={supervisor} onQuit={onQuit}>
-        <GlobalKeybinds />
-        <Outlet />
-      </MortarProvider>
+      <TuiShellProvider onQuit={onQuit} initialChromeHeight={TUI_CHROME_LINES}>
+        <MortarProvider supervisor={supervisor}>
+          <GlobalKeybinds />
+          <Outlet />
+        </MortarProvider>
+      </TuiShellProvider>
     </RouterProvider>
   );
 }

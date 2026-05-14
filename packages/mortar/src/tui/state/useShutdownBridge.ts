@@ -8,9 +8,9 @@
  * router-specific types.
  */
 
+import { useRouter } from '@brika/tui';
 import { useApp } from 'ink';
 import { useEffect } from 'react';
-import { useRouter } from '../../router';
 import type { Supervisor } from '../../supervisor';
 import type { Routes } from '../routes';
 

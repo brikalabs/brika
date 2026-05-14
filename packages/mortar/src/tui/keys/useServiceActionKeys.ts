@@ -8,12 +8,9 @@
  *   c   copy its log buffer to the system clipboard
  */
 
+import { copyLogsToClipboard, openInBrowser, saveLogsToFile, useKey } from '@brika/tui';
 import { serviceUrl } from '../../config';
 import { useMortar } from '../useMortar';
-import { openInBrowser } from '../utils/browser';
-import { copyLogsToClipboard } from '../utils/clipboard';
-import { saveLogsToFile } from '../utils/saveLog';
-import { useKey } from './useKey';
 
 export function useServiceActionKeys(enabled: boolean): void {
   const { supervisor, focus, toast } = useMortar();

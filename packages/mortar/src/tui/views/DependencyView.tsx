@@ -11,16 +11,22 @@
  * Reached via `d` from main, dismissed via `d` or Esc.
  */
 
+import {
+  Card,
+  ScreenChrome,
+  statusColor,
+  statusGlyph,
+  statusLabel,
+  summarizeCrash,
+  useRouter,
+} from '@brika/tui';
 import { Box, Text, useInput } from 'ink';
 import type React from 'react';
+import { BRAND_LINE, MORTAR_WORDMARK } from '../../brand';
 import { serviceUrl, topologicalLayers } from '../../config';
-import { useRouter } from '../../router';
 import type { ServiceState, ServiceStatus } from '../../supervisor';
-import { Card } from '../components/Card';
-import { ScreenChrome } from '../components/ScreenChrome';
 import type { Routes } from '../routes';
 import { useMortar } from '../useMortar';
-import { statusColor, statusGlyph, statusLabel, summarizeCrash } from '../utils/status';
 
 export function DependencyView(): React.ReactElement {
   const { services } = useMortar();
@@ -37,7 +43,13 @@ export function DependencyView(): React.ReactElement {
   const layers = topologicalLayers(services.map((s) => s.spec));
 
   return (
-    <ScreenChrome title="Dependencies" titleColor="magenta" hint="d or Esc to return">
+    <ScreenChrome
+      wordmark={MORTAR_WORDMARK}
+      brand={BRAND_LINE}
+      title="Dependencies"
+      titleColor="magenta"
+      hint="d or Esc to return"
+    >
       <Box marginBottom={1}>
         <Text dimColor>
           {services.length} service{services.length === 1 ? '' : 's'} · {layers.length} layer

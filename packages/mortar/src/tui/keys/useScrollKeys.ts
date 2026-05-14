@@ -8,9 +8,9 @@
  *   G              snap back to live-tail
  */
 
+import { useKey } from '@brika/tui';
 import { TUI_FAST_SCROLL_LINES } from '../../constants';
 import { useMortar } from '../useMortar';
-import { useKey } from './useKey';
 
 export function useScrollKeys(enabled: boolean): void {
   const { scroll, layout } = useMortar();

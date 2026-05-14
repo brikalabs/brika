@@ -10,7 +10,7 @@
  * needed. Adding a new screen is: one component + one entry here.
  */
 
-import { defineRoute, type RoutesShape } from '../router';
+import { defineRoute, type RoutesShape } from '@brika/tui';
 import { DependencyView } from './views/DependencyView';
 import { HelpView } from './views/HelpView';
 import { InputView } from './views/InputView';

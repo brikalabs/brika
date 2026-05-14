@@ -1,8 +1,8 @@
+import { statusColor, statusGlyph } from '@brika/tui';
 import { Box, Text } from 'ink';
 import type React from 'react';
 import { useMemo } from 'react';
 import type { ServiceState } from '../../supervisor';
-import { statusColor, statusGlyph } from '../utils/status';
 
 interface Props {
   readonly services: ReadonlyArray<ServiceState>;

@@ -1,12 +1,11 @@
 import { describe, expect, test } from 'bun:test';
-import type { ServiceStatus } from '../../supervisor';
-import { statusColor, statusGlyph, statusLabel, summarizeCrash } from './status';
+import { statusColor, statusGlyph, statusLabel, summarizeCrash, type TuiStatus } from './status';
 
-const pending: ServiceStatus = { kind: 'pending' };
-const starting: ServiceStatus = { kind: 'starting' };
-const healthy: ServiceStatus = { kind: 'healthy' };
+const pending: TuiStatus = { kind: 'pending' };
+const starting: TuiStatus = { kind: 'starting' };
+const healthy: TuiStatus = { kind: 'healthy' };
 
-function crashed(exitCode: number | null, reason = ''): ServiceStatus {
+function crashed(exitCode: number | null, reason = ''): TuiStatus {
   return { kind: 'crashed', exitCode, reason };
 }
 

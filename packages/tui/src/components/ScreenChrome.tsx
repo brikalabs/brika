@@ -1,10 +1,15 @@
 /**
  * Common chrome for full-screen views (Help, Deps, Shutdown). Renders a
- * title bar at the top, the brand line at the bottom, and the view's
- * own content in between — so every view has a consistent visual
+ * title bar at the top, an optional brand line at the bottom, and the
+ * view's own content in between — so every view has a consistent visual
  * skeleton without each one re-inventing it.
  *
- *   <ScreenChrome title="Help" hint="? or Esc to close">
+ *   <ScreenChrome
+ *     wordmark="▰▰ mortar"
+ *     brand="mortar v0.3.1 · built by the Brika Labs team"
+ *     title="Help"
+ *     hint="? or Esc to close"
+ *   >
  *     …content…
  *   </ScreenChrome>
  *
@@ -15,12 +20,15 @@
 
 import { Box, Text } from 'ink';
 import type React from 'react';
-import { BRAND_LINE, MORTAR_WORDMARK } from '../../brand';
 
 export interface ScreenChromeProps {
-  /** Short label shown in the title bar (e.g. "Help", "Dependencies"). */
+  /** App wordmark shown bold at the top-left ("▰▰ mortar", etc.). */
+  readonly wordmark: string;
+  /** Short label shown right of the wordmark (e.g. "Help", "Dependencies"). */
   readonly title: string;
-  /** Optional accent color for the title — defaults to cyan. */
+  /** Optional brand line shown dim at the bottom. Omit to hide. */
+  readonly brand?: string;
+  /** Optional accent color for the wordmark — defaults to cyan. */
   readonly titleColor?: string;
   /** Optional one-line hint shown right of the title (keybinds, etc.). */
   readonly hint?: string;
@@ -28,7 +36,9 @@ export interface ScreenChromeProps {
 }
 
 export function ScreenChrome({
+  wordmark,
   title,
+  brand,
   titleColor = 'cyan',
   hint,
   children,
@@ -37,7 +47,7 @@ export function ScreenChrome({
     <Box flexDirection="column" flexGrow={1}>
       <Box paddingX={2} paddingY={0} flexDirection="row">
         <Text bold color={titleColor}>
-          {MORTAR_WORDMARK}
+          {wordmark}
         </Text>
         <Text dimColor> · </Text>
         <Text bold>{title}</Text>
@@ -51,9 +61,11 @@ export function ScreenChrome({
       <Box flexGrow={1} flexDirection="column" paddingX={2} paddingY={1}>
         {children}
       </Box>
-      <Box paddingX={2}>
-        <Text dimColor>{BRAND_LINE}</Text>
-      </Box>
+      {brand && (
+        <Box paddingX={2}>
+          <Text dimColor>{brand}</Text>
+        </Box>
+      )}
     </Box>
   );
 }

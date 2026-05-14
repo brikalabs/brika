@@ -1,11 +1,19 @@
 /**
- * Presentation helpers for `ServiceStatus` — color, glyph, label,
- * crash-reason parsing. Pure functions, no state, no React.
+ * Presentation helpers for a generic 4-state status — color, glyph,
+ * label, crash-reason parsing. Pure functions, no state, no React.
+ *
+ * `TuiStatus` is structurally the same tagged union mortar's
+ * `ServiceStatus` uses; any caller can pass its own status type as
+ * long as it has these four shapes.
  */
 
-import type { ServiceStatus } from '../../supervisor';
+export type TuiStatus =
+  | { kind: 'pending' }
+  | { kind: 'starting' }
+  | { kind: 'healthy' }
+  | { kind: 'crashed'; exitCode: number | null; reason: string };
 
-export function statusColor(status: ServiceStatus): string {
+export function statusColor(status: TuiStatus): string {
   switch (status.kind) {
     case 'pending':
       return 'cyan';
@@ -30,7 +38,7 @@ export function statusColor(status: ServiceStatus): string {
  * The earlier gray ● for pending was indistinguishable from healthy
  * for users with weak color rendering or colorblind palettes.
  */
-export function statusGlyph(status: ServiceStatus): string {
+export function statusGlyph(status: TuiStatus): string {
   switch (status.kind) {
     case 'pending':
       return '◌';
@@ -52,7 +60,7 @@ export function statusGlyph(status: ServiceStatus): string {
  *   healthy   →  "healthy"
  *   crashed   →  "exit 1"  or  "killed (SIGTERM)"  or  "spawn error"
  */
-export function statusLabel(status: ServiceStatus): string {
+export function statusLabel(status: TuiStatus): string {
   switch (status.kind) {
     case 'pending':
       return 'waiting on deps';
@@ -73,7 +81,7 @@ export interface CrashSummary {
 }
 
 /**
- * Parse a crashed `ServiceStatus` into a structured summary. The
+ * Parse a crashed `TuiStatus` into a structured summary. The
  * supervisor stores the reason as a free-form string built from either
  * `error.message` or a synthesized `"exited with code N"`. We pattern-
  * match those known shapes here so views can render them consistently.
@@ -82,7 +90,7 @@ export interface CrashSummary {
  * code 137 = SIGKILL (9), 143 = SIGTERM (15), etc. We surface the
  * signal name when we recognize it — much clearer than a bare number.
  */
-export function summarizeCrash(status: Extract<ServiceStatus, { kind: 'crashed' }>): CrashSummary {
+export function summarizeCrash(status: Extract<TuiStatus, { kind: 'crashed' }>): CrashSummary {
   const code = status.exitCode;
 
   if (code !== null) {

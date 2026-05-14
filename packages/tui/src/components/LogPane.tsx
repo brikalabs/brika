@@ -1,46 +1,58 @@
 import { Box, Text } from 'ink';
 import type React from 'react';
-import type { ServiceState } from '../../supervisor';
-import { statusColor, statusLabel, summarizeCrash } from '../utils/status';
+import { statusColor, statusLabel, summarizeCrash, type TuiStatus } from '../utils/status';
 
 interface Props {
-  readonly service: ServiceState;
+  /** Header label for the pane — usually the source's display name. */
+  readonly label: string;
+  /** The full log buffer (oldest first). */
+  readonly lines: ReadonlyArray<string>;
+  /** Monotonic counter that ticks when `lines` changes — used for stable React keys. */
+  readonly revision: number;
   /** Number of lines that fit in the pane. */
   readonly visible: number;
   /** Lines above the tail; `null` = live-tail (auto-scroll). */
   readonly scrollFromBottom: number | null;
-  /** Max valid scroll offset (`logs.length - visible`). */
+  /** Max valid scroll offset (`lines.length - visible`). */
   readonly maxScroll: number;
   /** Active search query (empty = no highlighting). */
   readonly searchQuery: string;
-  /** Line index in `service.logs` for the focused match, or `null`. */
+  /** Line index in `lines` for the focused match, or `null`. */
   readonly currentMatchLine: number | null;
+  /** Optional status — drives the colored label next to the title. */
+  readonly status?: TuiStatus;
 }
 
-/** Right pane: tail / windowed view of the focused service's log buffer. */
+/** Right pane: tail / windowed view of a log buffer. */
 export function LogPane({
-  service,
+  label,
+  lines,
+  revision,
   visible,
   scrollFromBottom,
   maxScroll,
   searchQuery,
   currentMatchLine,
+  status,
 }: Readonly<Props>): React.ReactElement {
-  const total = service.logs.length;
+  const total = lines.length;
   const offset = scrollFromBottom ?? 0;
   const end = Math.max(visible, total - offset);
   const start = Math.max(0, end - visible);
-  const window = service.logs.slice(start, end);
+  const window = lines.slice(start, end);
   const hasSearch = Boolean(searchQuery);
 
-  const crashDetail =
-    service.status.kind === 'crashed' ? summarizeCrash(service.status).detail : null;
+  const crashDetail = status?.kind === 'crashed' ? summarizeCrash(status).detail : null;
   return (
     <Box flexDirection="column" flexGrow={1} borderStyle="single" borderColor="gray" paddingX={1}>
       <Box>
-        <Text bold>{service.spec.label}</Text>
-        <Text dimColor>{'  '}</Text>
-        <Text color={statusColor(service.status)}>{statusLabel(service.status)}</Text>
+        <Text bold>{label}</Text>
+        {status && (
+          <>
+            <Text dimColor>{'  '}</Text>
+            <Text color={statusColor(status)}>{statusLabel(status)}</Text>
+          </>
+        )}
         <Text dimColor>
           {scrollFromBottom === null
             ? ` · live · ${total} lines`
@@ -62,7 +74,7 @@ export function LogPane({
             const absIdx = start + i;
             return (
               <HighlightLine
-                key={`${service.revision}-${absIdx}`}
+                key={`${revision}-${absIdx}`}
                 line={line}
                 query={searchQuery}
                 isCurrent={absIdx === currentMatchLine}

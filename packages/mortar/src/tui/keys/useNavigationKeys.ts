@@ -10,10 +10,9 @@
  * {@link useGlobalQuit} so it works from every screen.
  */
 
-import { useRouter } from '../../router';
+import { useKey, useRouter } from '@brika/tui';
 import type { Routes } from '../routes';
 import { useMortar } from '../useMortar';
-import { useKey } from './useKey';
 
 export function useNavigationKeys(enabled: boolean): void {
   const { services, focus, scroll, search, toast, fullscreen } = useMortar();
