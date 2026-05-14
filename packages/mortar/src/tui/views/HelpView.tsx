@@ -56,6 +56,7 @@ const ACTIONS: Section = {
   accent: 'green',
   entries: [
     { keys: ['r'], description: 'restart focused service' },
+    { keys: ['R'], description: 'restart all services' },
     { keys: ['o'], description: 'open URL in browser' },
     { keys: ['i'], description: 'forward stdin to service' },
     { keys: ['s'], description: 'save logs to file' },

@@ -193,6 +193,33 @@ export class Supervisor {
   }
 
   /**
+   * Restart every service (kill + respawn the whole tree). All children are
+   * terminated in parallel, then a single `scheduleReady()` walks the
+   * dependency graph so startup order still respects `dependsOn`.
+   *
+   * No-op while a shutdown is in flight — the user is leaving anyway and
+   * spawning fresh children would race the shutdown loop.
+   */
+  async restartAll(): Promise<void> {
+    if (this.shuttingDown) {
+      return;
+    }
+    const all = Array.from(this.services.values());
+    for (const svc of all) {
+      svc.healthAbort?.abort();
+    }
+    await Promise.all(all.map((svc) => terminateService(svc.proc)));
+    for (const svc of all) {
+      svc.proc = null;
+      svc.terminated = false;
+      svc.state.detectedPort = null;
+      svc.state.status = { kind: 'pending' };
+      this.bumpState(svc);
+    }
+    this.scheduleReady();
+  }
+
+  /**
    * SIGTERM every running child + every descendant in their process
    * group, wait the grace period, then SIGKILL leftovers. Idempotent —
    * a second call is a fast no-op.
