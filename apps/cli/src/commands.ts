@@ -1,26 +1,25 @@
 /**
- * Command registration for the Brika CLI. Add new commands by
- * importing them and chaining `addCommand`. The dashboard is the
- * default — running `brika` with no args lands there.
+ * Brika CLI command registration.
+ *
+ * Surface is intentionally tiny — `brika` IS the TUI. Hub control,
+ * plugin management, users, logs, etc. all happen inside it.
+ *
+ *   brika                  full TUI
+ *   brika hub              headless hub boot (for TUI spawn + CI)
+ *   brika version          short non-TUI version line (script-friendly)
+ *   brika completions      shell tab-completion install
+ *   brika help             auto-generated help
  */
 
 import { createCli } from '@brika/cli';
 import completions from './commands/completions';
 import dashboard from './commands/dashboard';
-import open from './commands/open';
-import restart from './commands/restart';
-import start from './commands/start';
-import status from './commands/status';
-import stop from './commands/stop';
+import hub from './commands/hub';
 import version from './commands/version';
 
 export const cli = createCli({ name: 'brika', defaultCommand: 'dashboard' })
   .addCommand(dashboard)
-  .addCommand(start)
-  .addCommand(stop)
-  .addCommand(restart)
-  .addCommand(status)
-  .addCommand(open)
+  .addCommand(hub)
   .addCommand(version)
   .addCommand(completions)
   .addHelp();

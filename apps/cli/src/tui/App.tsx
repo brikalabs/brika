@@ -3,22 +3,23 @@
  *
  *   <RouterProvider>
  *     <TuiShellProvider onQuit=…>
- *       <CliProvider version=…>
- *         <Outlet />
+ *       <CliProvider>
+ *         <GlobalKeys/>
+ *         <ShellLayout>          ← sidebar + outlet + footer
+ *           <Outlet/>
+ *         </ShellLayout>
  *       </CliProvider>
  *     </TuiShellProvider>
  *   </RouterProvider>
- *
- * Ink's `useApp().exit()` is what actually tears down the render, so
- * we own `onQuit` here (instead of taking it as a prop) — that lets us
- * call it without a back-channel out to `cli.ts`.
  */
 
-import { Outlet, RouterProvider, TuiShellProvider, useRouterInstance } from '@brika/tui';
+import { RouterProvider, TuiShellProvider, useRouterInstance } from '@brika/tui';
 import { useApp } from 'ink';
 import type React from 'react';
 import { useCallback } from 'react';
 import { CliProvider } from './CliProvider';
+import { ShellLayout } from './components/ShellLayout';
+import { useShellKeys } from './keys/useShellKeys';
 import { type Routes, routes } from './routes';
 
 interface Props {
@@ -34,9 +35,20 @@ export function App({ version }: Readonly<Props>): React.ReactElement {
     <RouterProvider router={router}>
       <TuiShellProvider onQuit={onQuit}>
         <CliProvider version={version}>
-          <Outlet />
+          <GlobalKeys />
+          <ShellLayout />
         </CliProvider>
       </TuiShellProvider>
     </RouterProvider>
   );
+}
+
+/**
+ * Marker component — mounts the global keybinds at the root so they
+ * work from every section. Returns null since `<ShellLayout>` owns
+ * the actual render.
+ */
+function GlobalKeys(): null {
+  useShellKeys();
+  return null;
 }

@@ -1,10 +1,11 @@
 /**
- * Domain state for the Brika CLI's TUI surface. Tracks hub status,
- * plugin/workflow counts, and a Brix mood that views can read to
- * keep the mascot in sync with what's happening.
+ * Domain state for the brika TUI. Holds hub status, the lists every
+ * section reads from, Brix's current mood + status line, and the
+ * action callbacks (start/stop/restart/open) that the sidebar's
+ * hotkeys dispatch to.
  *
- * Generic shell concerns (chrome height, onQuit) live in
- * `useTuiShell()` from `@brika/tui` — keep them out of here.
+ * Generic shell concerns — chrome height, app-level onQuit — live in
+ * `useTuiShell()` from `@brika/tui`. Don't duplicate them here.
  */
 
 import type { Mood } from '@brika/brix';
@@ -28,16 +29,35 @@ export interface WorkflowSummary {
   readonly state: 'idle' | 'running' | 'failed';
 }
 
-export interface CliState {
+export interface UserSummary {
+  readonly id: string;
+  readonly name: string;
+  readonly role: string;
+}
+
+export interface CliActions {
+  /** Spawn `brika hub` as a detached child. No-op if already running. */
+  readonly startHub: () => Promise<void>;
+  /** Send SIGTERM to the supervisor. No-op if not running. */
+  readonly stopHub: () => Promise<void>;
+  /** Send SIGUSR1. No-op if not running. */
+  readonly restartHub: () => Promise<void>;
+  /** Open the hub URL in the default browser. No-op if not running. */
+  readonly openUi: () => Promise<void>;
+}
+
+export interface CliState extends CliActions {
   readonly workspace: string;
   readonly version: string;
   readonly hub: HubStatus;
   readonly plugins: ReadonlyArray<PluginSummary>;
   readonly workflows: ReadonlyArray<WorkflowSummary>;
-  /** Most recent log lines for the dashboard preview. */
+  readonly users: ReadonlyArray<UserSummary>;
   readonly recentLogs: ReadonlyArray<string>;
-  /** Mood the mascot should display right now. */
+  /** Mood the mascot displays in the header + footer right now. */
   readonly mood: Mood;
+  /** One-line caption the footer's BrixStatusline reads. */
+  readonly statusText: string;
 }
 
 export const CliContext = createContext<CliState | null>(null);
