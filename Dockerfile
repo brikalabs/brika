@@ -38,7 +38,12 @@ ENV NODE_ENV=production \
     BRIKA_HOST=0.0.0.0 \
     BRIKA_PORT=3001 \
     BRIKA_STATIC_DIR=/app/ui \
-    BRIKA_BUN_PATH=/usr/local/bin/bun
+    BRIKA_BUN_PATH=/usr/local/bin/bun \
+    # Headless containers have no Secret Service (libsecret + D-Bus). Default
+    # to the AES-256-GCM file backend under /app/.brika. Mount BRIKA_SECRET_KEY
+    # (base64 of 32 random bytes) via Docker/K8s secrets in production so the
+    # master key isn't co-located with the ciphertext.
+    BRIKA_SECRETS_BACKEND=file
 
 EXPOSE 3001
 VOLUME ["/app/.brika"]

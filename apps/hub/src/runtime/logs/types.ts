@@ -13,7 +13,8 @@ export type LogSource =
   | 'i18n'
   | 'state'
   | 'updates'
-  | 'remote-access';
+  | 'remote-access'
+  | 'secrets';
 
 /** Available log levels as a constant array */
 export const LOG_LEVELS: LogLevel[] = ['debug', 'info', 'warn', 'error'];
@@ -32,6 +33,7 @@ export const LOG_SOURCES: LogSource[] = [
   'state',
   'updates',
   'remote-access',
+  'secrets',
 ];
 
 export interface LogError {
