@@ -9,5 +9,5 @@
  * Capability flags in the {@link HelloMessage} let peers negotiate features
  * added between major bumps without breaking older clients.
  */
-export const PROTOCOL_VERSION = 2 as const;
+export const PROTOCOL_VERSION = 1 as const;
 export type ProtocolVersion = typeof PROTOCOL_VERSION;
