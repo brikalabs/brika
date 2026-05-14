@@ -9,7 +9,6 @@
  */
 
 import {
-  BootstrapError,
   HubDevProxyError,
   HubNotFoundError,
   HubOutdatedError,
@@ -18,8 +17,10 @@ import {
 } from './errors';
 import type { PeerHandle } from './peer';
 
-// Must match `public/sw.js`. Bump together when the cached-shape contract changes.
-const ASSET_CACHE = 'brika-assets-v5';
+// Must match `apps/signaling/sw/sw.ts`. Bump together when the cached-shape
+// contract changes OR when a deploy has poisoned client caches and needs a
+// forced wipe (the SW's `activate` deletes prior `brika-assets-*` entries).
+const ASSET_CACHE = 'brika-assets-v6';
 const PRIME_PARALLELISM = 16;
 
 // Absolute-path module specifiers: static + side-effect + dynamic imports.
@@ -183,11 +184,28 @@ async function primeCache(
   const essential = new Set<string>(initial);
   const queue = [...initial];
   const inflight = new Set<Promise<void>>();
-  let stopErr: BootstrapError | null = null;
+  let stopErr: Error | null = null;
   let fetched = 0;
 
   const processOne = async (url: string): Promise<void> => {
-    if (stopErr || (await cache.match(url))) {
+    if (stopErr) {
+      return;
+    }
+    const existing = await cache.match(url);
+    if (existing) {
+      // A stale cache entry can mask a broken deploy: if a prior session
+      // cached the hub UI's entry under a content-type the browser then
+      // rejects (or with HTML bytes that JS parsing chokes on), every
+      // subsequent boot short-circuits here and the user sees the same
+      // MIME error forever. Log essential cache hits so the next debug
+      // session can see what's actually being served.
+      if (essential.has(url)) {
+        console.log('[brika-bootstrap] prime cache hit', {
+          url,
+          status: existing.status,
+          contentType: existing.headers.get('content-type'),
+        });
+      }
       return;
     }
     if (isViteHmr(url)) {
@@ -212,9 +230,11 @@ async function primeCache(
       // directly references — non-optional. Silently dropping them lets
       // the bootstrap reach "done" with an empty cache, and the browser
       // then hits the SPA-origin fallback with a misleading text/html
-      // MIME error. Surface the real cause instead.
-      if (essential.has(url) && err instanceof BootstrapError) {
-        stopErr = err;
+      // MIME error. Propagate ANY error here (not just BootstrapError —
+      // `peer.request` rejects with a plain `Error` on timeout / channel
+      // close / mid-stream abort, which would otherwise slip past).
+      if (essential.has(url)) {
+        stopErr = err instanceof Error ? err : new Error(String(err));
         return;
       }
       // Transitive refs can legitimately 404 (a stale asset URL in CSS,
