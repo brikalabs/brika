@@ -1,17 +1,21 @@
 /**
  * Minimal generic context shared by every `@brika/tui` consumer.
  *
- * Holds the two pieces of state that primitives in this package need
- * to talk to but that *every* TUI app has: a measured chrome height
- * (so the log pane can size itself) and an `onQuit()` sink (so global
- * keybinds know how to leave).
+ * Holds three pieces of state that primitives in this package need
+ * to talk to but that every TUI app has:
+ *
+ *   - a measured chrome height (so the log pane can size itself),
+ *   - an `onQuit()` sink (so global keybinds know how to leave),
+ *   - an input-capture counter (so forms can suspend global keybinds
+ *     while they're typing — keystrokes don't leak into hub-control
+ *     hotkeys, etc.).
  *
  * Apps wrap their tree with `<TuiShellProvider onQuit={…}>` and layer
- * their own app-specific contexts on top (mortar has `<MortarProvider>`,
- * brika-cli has `<CliProvider>`).
+ * their own app-specific contexts on top. Forms call
+ * `useCaptureInput()` to mute global binds for their lifetime.
  */
 
-import { createContext, useContext } from 'react';
+import { createContext, useContext, useEffect } from 'react';
 
 export interface TuiShellState {
   /** Lines reserved for chrome (borders, header, footer). */
@@ -20,6 +24,15 @@ export interface TuiShellState {
   readonly setChromeHeight: (height: number) => void;
   /** Trigger app-defined graceful shutdown (q / Ctrl+C handlers call this). */
   readonly onQuit: () => void;
+  /**
+   * Refcounted "something has focus and wants exclusive input". When
+   * non-zero, callers wiring global keybinds should pass `enabled=false`
+   * so a form's keystrokes don't double-fire as hub actions, route
+   * jumps, etc.
+   */
+  readonly isInputCaptured: boolean;
+  /** Increment the capture counter. Returns a release function. */
+  readonly captureInput: () => () => void;
 }
 
 export const TuiShellContext = createContext<TuiShellState | null>(null);
@@ -30,4 +43,31 @@ export function useTuiShell(): TuiShellState {
     throw new Error('useTuiShell() called outside <TuiShellProvider>');
   }
   return ctx;
+}
+
+/**
+ * Mount-scoped input capture: while the calling component is mounted
+ * (and `active` is true), global keybinds wired via `useKey` with
+ * `enabled=!isInputCaptured` will suspend.
+ *
+ * Use from any form / overlay / modal that owns the keyboard:
+ *
+ *   function MyForm(): React.ReactElement {
+ *     useCaptureInput();
+ *     return …;
+ *   }
+ *
+ * Pass `active={false}` to temporarily release without unmounting.
+ */
+export function useCaptureInput(active: boolean = true): void {
+  const { captureInput } = useTuiShell();
+  useEffect(() => {
+    if (!active) {
+      return;
+    }
+    const release = captureInput();
+    return () => {
+      release();
+    };
+  }, [active, captureInput]);
 }

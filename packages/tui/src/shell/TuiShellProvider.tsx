@@ -1,8 +1,6 @@
 /**
- * Provider for the shared TUI shell context — chrome height + onQuit.
- * See `useTuiShell` for the contract.
- *
- * Wrap your tree like:
+ * Provider for the shared TUI shell context — chrome height, onQuit,
+ * and the input-capture counter. See `useTuiShell` for the contract.
  *
  *   <RouterProvider router={router}>
  *     <TuiShellProvider onQuit={onQuit} initialChromeHeight={9}>
@@ -14,6 +12,8 @@
  *
  * The initial chrome height is a fallback for the first frame; the
  * real height arrives as soon as `<MeasuredChrome>` has rendered once.
+ * Input capture is a refcount: forms / overlays bump it via
+ * `useCaptureInput()` and global keybinds read `isInputCaptured`.
  */
 
 import type React from 'react';
@@ -33,14 +33,33 @@ export function TuiShellProvider({
   children,
 }: Readonly<TuiShellProviderProps>): React.ReactElement {
   const [chromeHeight, setChromeHeightRaw] = useState(initialChromeHeight);
+  const [captureCount, setCaptureCount] = useState(0);
 
   const setChromeHeight = useCallback((h: number) => {
     setChromeHeightRaw((prev) => (prev === h ? prev : h));
   }, []);
 
+  const captureInput = useCallback((): (() => void) => {
+    setCaptureCount((n) => n + 1);
+    let released = false;
+    return () => {
+      if (released) {
+        return;
+      }
+      released = true;
+      setCaptureCount((n) => Math.max(0, n - 1));
+    };
+  }, []);
+
   const value = useMemo<TuiShellState>(
-    () => ({ chromeHeight, setChromeHeight, onQuit }),
-    [chromeHeight, setChromeHeight, onQuit]
+    () => ({
+      chromeHeight,
+      setChromeHeight,
+      onQuit,
+      isInputCaptured: captureCount > 0,
+      captureInput,
+    }),
+    [chromeHeight, setChromeHeight, onQuit, captureCount, captureInput]
   );
 
   return <TuiShellContext.Provider value={value}>{children}</TuiShellContext.Provider>;

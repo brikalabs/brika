@@ -1,8 +1,7 @@
 /**
- * Users section — list users via `/api/users` (requires admin auth)
- * and add new ones through a small inline form. Tokens + edit + delete
- * are tracked as follow-ups; the form here exercises the same plumbing
- * any future flow will reuse.
+ * Users section — list via `/api/users` + clack-style Wizard to add
+ * a new user. While the Wizard is open it captures input via
+ * `useCaptureInput()` so global hotkeys (s/x/r/o/etc.) stay quiet.
  */
 
 import { useKey } from '@brika/tui';
@@ -11,31 +10,49 @@ import type React from 'react';
 import { useState } from 'react';
 import { fetchUsers, type UserDto } from '../../cli/hub-api';
 import { hubFetch } from '../../cli/hub-client';
-import { TextInput } from '../components/TextInput';
+import { Wizard, type WizardStep, type WizardValues } from '../components/Wizard';
 import { useCli } from '../useCli';
 import { useHubResource } from '../useHubResource';
 
-type FormField = 'name' | 'email' | 'role' | 'password';
-
-const FIELDS: ReadonlyArray<FormField> = ['name', 'email', 'role', 'password'];
+const ADD_USER_STEPS: ReadonlyArray<WizardStep> = [
+  {
+    name: 'name',
+    kind: 'text',
+    label: 'Full name',
+    placeholder: 'Ada Lovelace',
+    validate: (v) => (v.trim().length === 0 ? 'name is required' : null),
+  },
+  {
+    name: 'email',
+    kind: 'text',
+    label: 'Email',
+    placeholder: 'ada@example.com',
+    validate: (v) => (/^.+@.+\..+/.test(v) ? null : 'looks like that email is malformed'),
+  },
+  {
+    name: 'role',
+    kind: 'select',
+    label: 'Role',
+    options: [
+      { value: 'user', label: 'User', hint: 'regular access' },
+      { value: 'admin', label: 'Admin', hint: 'full control' },
+    ],
+    initial: 'user',
+  },
+  {
+    name: 'password',
+    kind: 'password',
+    label: 'Password',
+    validate: (v) => (v.length < 8 ? 'must be at least 8 characters' : null),
+  },
+];
 
 export function UsersView(): React.ReactElement {
   const cli = useCli();
   const list = useHubResource<UserDto[]>(fetchUsers, []);
   const [adding, setAdding] = useState(false);
-  const [field, setField] = useState<FormField>('name');
-  const [draft, setDraft] = useState({ name: '', email: '', role: 'user', password: '' });
-  const [formError, setFormError] = useState<string | null>(null);
 
   useKey('a', () => setAdding(true), !adding);
-  useKey(
-    'tab',
-    () => {
-      const i = FIELDS.indexOf(field);
-      setField(FIELDS[(i + 1) % FIELDS.length] ?? 'name');
-    },
-    adding
-  );
 
   if (cli.hub.state !== 'running') {
     return (
@@ -51,6 +68,7 @@ export function UsersView(): React.ReactElement {
   }
 
   const items = list.data ?? [];
+  const errorLabel = list.error?.includes('401') ? 'admin login required' : list.error;
 
   return (
     <Box flexDirection="column">
@@ -58,73 +76,22 @@ export function UsersView(): React.ReactElement {
         <Text bold>Users </Text>
         <Text dimColor>{items.length}</Text>
         {list.loading && <Text dimColor> · loading…</Text>}
-        {list.error && (
-          <Text color="red">
-            {' '}
-            · {list.error.includes('401') ? 'admin login required' : list.error}
-          </Text>
-        )}
+        {errorLabel && <Text color="red"> · {errorLabel}</Text>}
       </Box>
 
       {adding && (
-        <Box
-          flexDirection="column"
-          marginBottom={1}
-          borderStyle="round"
-          borderColor="cyan"
-          paddingX={1}
-        >
-          <Text dimColor>Add user — Tab cycles fields, Enter submits, Esc cancels.</Text>
-          <TextInput
-            label="name"
-            value={draft.name}
-            onChange={(v) => setDraft((d) => ({ ...d, name: v }))}
-            focused={field === 'name'}
-          />
-          <TextInput
-            label="email"
-            value={draft.email}
-            onChange={(v) => setDraft((d) => ({ ...d, email: v }))}
-            focused={field === 'email'}
-          />
-          <TextInput
-            label="role"
-            value={draft.role}
-            onChange={(v) => setDraft((d) => ({ ...d, role: v }))}
-            placeholder="user | admin"
-            focused={field === 'role'}
-          />
-          <TextInput
-            label="password"
-            value={draft.password}
-            onChange={(v) => setDraft((d) => ({ ...d, password: v }))}
-            mask
-            focused={field === 'password'}
-            onSubmit={async () => {
-              try {
-                setFormError(null);
-                const res = await hubFetch('/api/users/', {
-                  method: 'POST',
-                  headers: { 'content-type': 'application/json' },
-                  body: JSON.stringify(draft),
-                });
-                if (!res.ok) {
-                  throw new Error(`${res.status} ${await res.text()}`);
-                }
-                setAdding(false);
-                setDraft({ name: '', email: '', role: 'user', password: '' });
-                setField('name');
-                list.refresh();
-              } catch (e) {
-                setFormError(e instanceof Error ? e.message : String(e));
-              }
-            }}
-            onCancel={() => {
+        <Box marginBottom={1}>
+          <Wizard
+            title="Add user"
+            subtitle="Esc to cancel any step"
+            steps={ADD_USER_STEPS}
+            onSubmit={async (values) => {
+              await postUser(values);
               setAdding(false);
-              setFormError(null);
+              list.refresh();
             }}
+            onCancel={() => setAdding(false)}
           />
-          {formError && <Text color="red">{formError}</Text>}
         </Box>
       )}
 
@@ -143,8 +110,19 @@ export function UsersView(): React.ReactElement {
       )}
 
       <Box marginTop={1}>
-        <Text dimColor>a add · tab cycle fields</Text>
+        <Text dimColor>a add</Text>
       </Box>
     </Box>
   );
+}
+
+async function postUser(values: WizardValues): Promise<void> {
+  const res = await hubFetch('/api/users/', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(values),
+  });
+  if (!res.ok) {
+    throw new Error(`${res.status} ${await res.text()}`);
+  }
 }

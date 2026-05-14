@@ -7,13 +7,11 @@
  *   callbacks the CliProvider exposes.
  * - `q` / `Ctrl+C` quit via the shell's `onQuit`.
  *
- * Mounted once from `<App>` so they're alive on every route. Section
- * views can still register their OWN `useKey` calls for in-section
- * navigation — ink stacks `useInput` registrations.
- *
- * Each section's hotkey is bound explicitly (rather than in a loop)
- * to keep the `useKey` call order stable across renders — that's
- * what React's rules of hooks require.
+ * Every binding suspends when `isInputCaptured` is set — so a form's
+ * keystrokes don't double-fire as hub actions / route jumps. Forms
+ * call `useCaptureInput()` to bump the counter for their lifetime.
+ * `Ctrl+C` is the one exception: we keep it live so a stuck form
+ * can always be killed.
  */
 
 import { useKey, useRouter, useTuiShell } from '@brika/tui';
@@ -22,25 +20,26 @@ import { useCli } from '../useCli';
 
 export function useShellKeys(): void {
   const router = useRouter<Routes>();
-  const { onQuit } = useTuiShell();
+  const { onQuit, isInputCaptured } = useTuiShell();
   const cli = useCli();
+  const active = !isInputCaptured;
 
-  useKey('q', () => onQuit());
-  useKey('ctrl+c', () => onQuit());
+  useKey('q', () => onQuit(), active);
+  useKey('ctrl+c', () => onQuit()); // always live — escape hatch
 
-  // Section hotkeys — keep in sync with `SIDEBAR_SECTIONS` in routes.ts.
-  useKey('d', () => router.navigate('dashboard'));
-  useKey('p', () => router.navigate('plugins'));
-  useKey('w', () => router.navigate('workflows'));
-  useKey('l', () => router.navigate('logs'));
-  useKey('u', () => router.navigate('users'));
-  useKey('g', () => router.navigate('updates'));
-  useKey(',', () => router.navigate('settings'));
-  useKey('?', () => router.navigate('help'));
+  // Section hotkeys.
+  useKey('d', () => router.navigate('dashboard'), active);
+  useKey('p', () => router.navigate('plugins'), active);
+  useKey('w', () => router.navigate('workflows'), active);
+  useKey('l', () => router.navigate('logs'), active);
+  useKey('u', () => router.navigate('users'), active);
+  useKey('g', () => router.navigate('updates'), active);
+  useKey(',', () => router.navigate('settings'), active);
+  useKey('?', () => router.navigate('help'), active);
 
-  // Hub-control actions, global so they work from any section.
-  useKey('s', () => void cli.startHub());
-  useKey('x', () => void cli.stopHub());
-  useKey('r', () => void cli.restartHub());
-  useKey('o', () => void cli.openUi());
+  // Hub control.
+  useKey('s', () => void cli.startHub(), active);
+  useKey('x', () => void cli.stopHub(), active);
+  useKey('r', () => void cli.restartHub(), active);
+  useKey('o', () => void cli.openUi(), active);
 }

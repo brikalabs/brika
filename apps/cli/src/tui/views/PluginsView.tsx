@@ -25,9 +25,19 @@ import {
   pluginAction,
 } from '../../cli/hub-api';
 import { Markdown } from '../components/Markdown';
-import { TextInput } from '../components/TextInput';
+import { Wizard, type WizardStep } from '../components/Wizard';
 import { useCli } from '../useCli';
 import { useHubResource } from '../useHubResource';
+
+const INSTALL_STEPS: ReadonlyArray<WizardStep> = [
+  {
+    name: 'source',
+    kind: 'text',
+    label: 'Source',
+    placeholder: '@brika/plugin-timer or https://…',
+    validate: (v) => (v.trim().length === 0 ? 'source is required' : null),
+  },
+];
 
 export function PluginsView(): React.ReactElement {
   const cli = useCli();
@@ -37,8 +47,6 @@ export function PluginsView(): React.ReactElement {
   const [readmeError, setReadmeError] = useState<string | null>(null);
   const [readmeLoading, setReadmeLoading] = useState(false);
   const [installing, setInstalling] = useState(false);
-  const [installSource, setInstallSource] = useState('');
-  const [installError, setInstallError] = useState<string | null>(null);
 
   const items = list.data ?? [];
   const focused = items[focusIndex];
@@ -142,38 +150,18 @@ export function PluginsView(): React.ReactElement {
       </Box>
 
       {installing && (
-        <Box
-          flexDirection="column"
-          marginBottom={1}
-          borderStyle="round"
-          borderColor="cyan"
-          paddingX={1}
-        >
-          <Text dimColor>
-            Install plugin — paste a source URL or registry name. Enter to install, Esc to cancel.
-          </Text>
-          <TextInput
-            value={installSource}
-            onChange={setInstallSource}
-            placeholder="@brika/plugin-timer or https://…"
-            onSubmit={async (v) => {
-              try {
-                setInstallError(null);
-                await loadPlugin(v);
-                setInstalling(false);
-                setInstallSource('');
-                list.refresh();
-              } catch (e) {
-                setInstallError(e instanceof Error ? e.message : String(e));
-              }
-            }}
-            onCancel={() => {
+        <Box marginBottom={1}>
+          <Wizard
+            title="Install plugin"
+            subtitle="paste a registry name or URL"
+            steps={INSTALL_STEPS}
+            onSubmit={async (values) => {
+              await loadPlugin(String(values.source));
               setInstalling(false);
-              setInstallSource('');
-              setInstallError(null);
+              list.refresh();
             }}
+            onCancel={() => setInstalling(false)}
           />
-          {installError && <Text color="red">{installError}</Text>}
         </Box>
       )}
 
