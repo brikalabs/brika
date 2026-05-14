@@ -242,6 +242,27 @@ async function primeCache(
     });
   };
 
+  // Re-scan a cache-hit body for transitive refs. Without this, a prior
+  // session that primed the entry but failed mid-BFS (a vendor chunk
+  // 404'd, an RPC timed out) leaves the cache in a state where every
+  // subsequent boot short-circuits on the entry without ever queueing
+  // its imports — the user is stuck on a partial prime forever. Reading
+  // the body costs one cache-roundtrip per cached node, cheap compared
+  // to the WebRTC round-trip we'd otherwise pay to refetch.
+  const rescanCached = async (url: string, existing: Response): Promise<void> => {
+    const ct = existing.headers.get('content-type') ?? '';
+    if (!isJS(ct) && !isCSS(ct)) {
+      return;
+    }
+    let text: string;
+    try {
+      text = await existing.text();
+    } catch {
+      return;
+    }
+    enqueueRefs(nextRefs(text, ct, url));
+  };
+
   const processOne = async (url: string): Promise<void> => {
     if (stopErr) {
       return;
@@ -249,6 +270,7 @@ async function primeCache(
     const existing = await cache.match(url);
     if (existing) {
       noteCacheHit(url, existing);
+      await rescanCached(url, existing);
       return;
     }
     if (isViteHmr(url)) {
