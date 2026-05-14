@@ -12,7 +12,7 @@ import {
   InputGroupText,
 } from '@brika/clay';
 import { ArrowRight, BookOpen, Code2, ExternalLink } from 'lucide-react';
-import React, { useEffect, useState } from 'react';
+import { type ReactElement, type SyntheticEvent, useEffect, useState } from 'react';
 import { isValidHubName } from '@/lib/hub-name';
 import { suggestHubName } from '@/lib/hub-storage';
 
@@ -21,7 +21,7 @@ import { suggestHubName } from '@/lib/hub-storage';
  * renders the `<Mark>` above every phase, so this card is just
  * heading + description + name picker + footer.
  */
-export function LandingCard(): React.ReactElement {
+export function LandingCard(): ReactElement {
   const [name, setName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const trimmed = name.trim().toLowerCase();
@@ -36,7 +36,7 @@ export function LandingCard(): React.ReactElement {
     }
   }, []);
 
-  const onSubmit = (e: React.SyntheticEvent<HTMLFormElement>): void => {
+  const onSubmit = (e: SyntheticEvent<HTMLFormElement>): void => {
     e.preventDefault();
     if (!isValidHubName(trimmed)) {
       setError(

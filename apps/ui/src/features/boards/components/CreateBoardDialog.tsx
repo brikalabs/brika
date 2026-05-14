@@ -9,7 +9,7 @@ import {
   Separator,
 } from '@brika/clay';
 import { useNavigate } from '@tanstack/react-router';
-import { useState } from 'react';
+import { type FormEvent, useState } from 'react';
 import { useLocale } from '@/lib/use-locale';
 import { paths } from '@/routes/paths';
 import { useCreateBoard } from '../hooks';
@@ -38,7 +38,7 @@ export function CreateBoardDialog() {
   const trimmedName = name.trim();
   const canSubmit = trimmedName.length > 0 && !creating;
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>): void => {
+  const handleSubmit = (e: FormEvent<HTMLFormElement>): void => {
     e.preventDefault();
     if (!canSubmit) {
       return;

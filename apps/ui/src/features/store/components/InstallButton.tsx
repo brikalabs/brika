@@ -2,7 +2,7 @@ import { Button } from '@brika/clay/components/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@brika/clay/components/tooltip';
 import { useQueryClient } from '@tanstack/react-query';
 import { Check, Download, Loader2, Trash2 } from 'lucide-react';
-import React from 'react';
+import { type MouseEvent, useState } from 'react';
 import { pluginsKeys } from '@/features/plugins/api';
 import { registryApi, registryKeys } from '@/features/plugins/registry-api';
 import { useLocale } from '@/lib/use-locale';
@@ -22,16 +22,16 @@ export function InstallButton({
 }: Readonly<InstallButtonProps>) {
   const { t } = useLocale();
   const queryClient = useQueryClient();
-  const [isWorking, setIsWorking] = React.useState(false);
-  const [showInstallDialog, setShowInstallDialog] = React.useState(false);
+  const [isWorking, setIsWorking] = useState(false);
+  const [showInstallDialog, setShowInstallDialog] = useState(false);
 
-  const handleInstall = (e: React.MouseEvent) => {
+  const handleInstall = (e: MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setShowInstallDialog(true);
   };
 
-  const handleUninstall = async (e: React.MouseEvent) => {
+  const handleUninstall = async (e: MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
 

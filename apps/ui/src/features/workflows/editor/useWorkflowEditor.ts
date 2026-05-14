@@ -21,7 +21,7 @@ import {
   useEdgesState,
   useNodesState,
 } from '@xyflow/react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { type MouseEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Workflow, WorkflowBlock } from '../api';
 import type { BlockNodeData, BlockPort } from './BlockNode';
 import type { BlockDefinition, BlockTypeInfo } from './BlockToolbar';
@@ -245,7 +245,7 @@ export function useWorkflowEditor(
   );
 
   // Handle node selection
-  const onNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
+  const onNodeClick = useCallback((_: MouseEvent, node: Node) => {
     setSelectedNodeId(node.id);
   }, []);
 

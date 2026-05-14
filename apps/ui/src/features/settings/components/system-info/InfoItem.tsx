@@ -1,12 +1,12 @@
 import { cn } from '@brika/clay';
 import type { LucideIcon } from 'lucide-react';
 import { Check, Copy } from 'lucide-react';
-import { useState } from 'react';
+import { type MouseEvent, type ReactNode, useState } from 'react';
 
 export interface InfoItemProps {
   icon: LucideIcon;
   label: string;
-  value: React.ReactNode;
+  value: ReactNode;
   copyable?: boolean;
   href?: string;
   mono?: boolean;
@@ -25,7 +25,7 @@ export function InfoItem({
   const [copied, setCopied] = useState(false);
   const canCopy = copyable && typeof value === 'string';
 
-  const handleCopy = async (e: React.MouseEvent) => {
+  const handleCopy = async (e: MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     if (!canCopy) {

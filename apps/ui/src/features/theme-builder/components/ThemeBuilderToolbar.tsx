@@ -38,7 +38,7 @@ import {
   Undo2,
   Upload,
 } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { type ChangeEvent, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ThemeConfig } from '../types';
 
@@ -100,7 +100,7 @@ export function ThemeBuilderToolbar({
   const justSaved = useJustSaved(lastSavedMs);
 
   const handleImportClick = () => fileInputRef.current?.click();
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       onImport(file);

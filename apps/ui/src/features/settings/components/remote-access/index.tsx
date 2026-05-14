@@ -24,7 +24,7 @@ import {
   Trash2,
   XCircle,
 } from 'lucide-react';
-import { memo, useEffect, useState } from 'react';
+import { memo, type SyntheticEvent, useEffect, useState } from 'react';
 import { useLocale } from '@/lib/use-locale';
 import {
   type RemoteAccessStatus,
@@ -74,7 +74,7 @@ function CoordinatorEditor({
     setDraft(coordinatorOrigin);
   }, [coordinatorOrigin]);
 
-  const save = (e: React.SyntheticEvent<HTMLFormElement>) => {
+  const save = (e: SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     const trimmed = draft.trim();
     if (!trimmed || trimmed === coordinatorOrigin) {
@@ -181,7 +181,7 @@ function ClaimForm({ coordinatorOrigin }: Readonly<{ coordinatorOrigin: string }
   const claim = useClaimRemoteAccessName();
   const [name, setName] = useState('');
 
-  const submit = (e: React.SyntheticEvent<HTMLFormElement>) => {
+  const submit = (e: SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     const trimmed = name.trim().toLowerCase();
     if (trimmed.length < 4) {

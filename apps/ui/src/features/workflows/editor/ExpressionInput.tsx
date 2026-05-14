@@ -1,6 +1,14 @@
 import { cn, Input, ScrollArea, Textarea } from '@brika/clay';
 import { Braces, Variable } from 'lucide-react';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  type ChangeEvent,
+  type KeyboardEvent,
+  type RefObject,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 
 interface VariableInfo {
   name: string;
@@ -123,7 +131,7 @@ export function ExpressionInput({
   );
 
   // Handle input change
-  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>) => {
+  const handleChange = (e: ChangeEvent<HTMLTextAreaElement | HTMLInputElement>) => {
     const newValue = e.target.value;
     const cursor = e.target.selectionStart || 0;
     setCursorPosition(cursor);
@@ -132,7 +140,7 @@ export function ExpressionInput({
   };
 
   // Handle key navigation
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: KeyboardEvent) => {
     if (!showAutocomplete) {
       return;
     }
@@ -210,13 +218,9 @@ export function ExpressionInput({
   return (
     <div className="relative">
       {multiline ? (
-        <Textarea
-          ref={inputRef as React.RefObject<HTMLTextAreaElement>}
-          {...commonProps}
-          rows={4}
-        />
+        <Textarea ref={inputRef as RefObject<HTMLTextAreaElement>} {...commonProps} rows={4} />
       ) : (
-        <Input ref={inputRef as React.RefObject<HTMLInputElement>} {...commonProps} />
+        <Input ref={inputRef as RefObject<HTMLInputElement>} {...commonProps} />
       )}
 
       {/* Variable hint button */}

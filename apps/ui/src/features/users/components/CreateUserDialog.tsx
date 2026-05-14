@@ -15,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@brika/clay';
-import { useState } from 'react';
+import { type SyntheticEvent, useState } from 'react';
 import { useLocale } from '@/lib/use-locale';
 import { useUserMutations } from '../hooks';
 
@@ -51,7 +51,7 @@ export function CreateUserDialog({ open, onOpenChange }: Readonly<CreateUserDial
     onOpenChange(next);
   };
 
-  const handleSubmit = (e: React.SyntheticEvent<HTMLFormElement>) => {
+  const handleSubmit = (e: SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError('');
 
