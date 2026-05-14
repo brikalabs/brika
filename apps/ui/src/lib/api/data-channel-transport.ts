@@ -27,14 +27,14 @@ import {
   DEFAULT_ICE_SERVERS,
   decodeRpc,
   decodeSignaling,
+  emitRequest,
   encodeRpc,
   encodeSignaling,
   type IceServer,
   PROTOCOL_VERSION,
-  type RequestMessage,
   ResponseAssembler,
   type ResponseHeadMessage,
-  requestToFrames,
+  type RpcMessage,
   type SignalingMessage,
 } from '@brika/remote-access-protocol';
 import { CookieJar } from './cookie-jar';
@@ -78,6 +78,38 @@ interface Inflight {
 const RECONNECT_BASE_MS = 1_000;
 const RECONNECT_MAX_MS = 30_000;
 const CONNECT_TIMEOUT_MS = 15_000;
+
+/**
+ * Upload backpressure thresholds. Pause emitting chunk frames when SCTP's
+ * `bufferedAmount` crosses HIGH; resume once it drains below LOW. Tuned for
+ * a comfortable margin under the typical 16 MiB Chrome SCTP buffer while
+ * keeping memory pressure bounded for multi-megabyte uploads.
+ */
+const BUFFER_HIGH_WATER_BYTES = 1 * 1024 * 1024;
+const BUFFER_LOW_WATER_BYTES = 256 * 1024;
+
+/**
+ * Splice the cookie-jar header into a `request` head frame. Cookie is a
+ * forbidden request header in browsers — `new Request(url, { headers })`
+ * silently drops it — so we inject at the wire-frame layer where it
+ * survives the round-trip.
+ */
+function injectCookieIntoHead<T extends RpcMessage & { kind: 'request' }>(
+  frame: T,
+  cookieHeader: string
+): T {
+  if (!cookieHeader) {
+    return frame;
+  }
+  const headers: Array<[string, string]> = frame.headers.map(([n, v]) => [n, v]);
+  const existingIndex = headers.findIndex(([n]) => n.toLowerCase() === 'cookie');
+  if (existingIndex >= 0) {
+    headers[existingIndex] = ['Cookie', `${headers[existingIndex][1]}; ${cookieHeader}`];
+  } else {
+    headers.push(['Cookie', cookieHeader]);
+  }
+  return { ...frame, headers };
+}
 
 /**
  * Lightweight transport tracer.
@@ -176,13 +208,10 @@ export class DataChannelTransport implements Transport {
 
     const request = await this.#buildRequest(input, init);
     const id = this.#nextRequestId++;
-    const baseFrame = await requestToFrames(id, request);
-    // Cookie is a forbidden request header in browsers — `new Request(url, { headers })`
-    // silently drops any `Cookie` we try to set, even when the request is bound for
-    // our data-channel transport. We bypass that by inlining the Cookie pair
-    // into the wire frame *after* serialization, so the hub still sees it.
-    const frame = this.#withCookieHeader(baseFrame, request);
-    debug('→ request', { id, method: frame.method, url: frame.url });
+    const path = new URL(request.url).pathname;
+    const cookieHeader = this.#cookies.cookieHeader(path);
+    debug('cookie jar lookup', { path, attached: cookieHeader || '(none)' });
+    debug('→ request', { id, method: request.method, url: request.url });
 
     const assembler = new ResponseAssembler();
     const responsePromise = new Promise<Response>((resolve, reject) => {
@@ -223,8 +252,39 @@ export class DataChannelTransport implements Transport {
       );
     }
 
-    this.#channel.send(encodeRpc(frame));
+    // Stream the request as `request` head + N × `request.chunk` + `request.end`.
+    // The head emit gets the cookie spliced in (Cookie is a forbidden request
+    // header in browsers — `new Request(url, { headers })` silently drops it,
+    // so we inject at the wire-frame layer instead).
+    void this.#emitRequestFrames(id, request, cookieHeader).catch((err: unknown) => {
+      // emitRequest already routed transport failures through
+      // #onUnexpectedClose, which rejects the inflight assembler with a
+      // TransportError. Nothing more to do here beyond keeping the
+      // unhandled-rejection surface clean.
+      debug('emit failed', { id, err: err instanceof Error ? err.message : String(err) });
+    });
+
     return responsePromise;
+  }
+
+  /**
+   * Emit a request as head + chunks + end through {@link emitRequest},
+   * injecting the cookie header on the head frame and routing every
+   * `channel.send()` through {@link #sendFrame} so a send failure tears
+   * the transport down cleanly instead of silently truncating the upload.
+   */
+  async #emitRequestFrames(id: number, request: Request, cookieHeader: string): Promise<void> {
+    let headSent = false;
+    const emit = async (frame: RpcMessage): Promise<void> => {
+      let next = frame;
+      if (!headSent && frame.kind === 'request') {
+        headSent = true;
+        next = injectCookieIntoHead(frame, cookieHeader);
+      }
+      await this.#awaitDrain();
+      this.#sendFrame(next);
+    };
+    await emitRequest(id, request, emit);
   }
 
   // ─── Connection lifecycle ──────────────────────────────────────────────
@@ -603,29 +663,6 @@ export class DataChannelTransport implements Transport {
   }
 
   /**
-   * Return a frame with the matching `Cookie` header inlined. We can't go
-   * through `new Request(url, { headers })` because the browser's Request
-   * constructor enforces Fetch's forbidden-header list and silently drops
-   * Cookie. The wire frame is plain JSON pairs, so it survives.
-   */
-  #withCookieHeader(frame: RequestMessage, request: Request): RequestMessage {
-    const path = new URL(request.url).pathname;
-    const header = this.#cookies.cookieHeader(path);
-    debug('cookie jar lookup', { path, attached: header || '(none)' });
-    if (!header) {
-      return frame;
-    }
-    const headers: Array<[string, string]> = frame.headers.map(([n, v]) => [n, v]);
-    const existingIndex = headers.findIndex(([n]) => n.toLowerCase() === 'cookie');
-    if (existingIndex >= 0) {
-      headers[existingIndex] = ['Cookie', `${headers[existingIndex][1]}; ${header}`];
-    } else {
-      headers.push(['Cookie', header]);
-    }
-    return { ...frame, headers };
-  }
-
-  /**
    * Pull `Set-Cookie` values out of a response head and feed them into the
    * jar. The wire shape preserves repeated header names as separate pairs,
    * so multiple cookies in one response are handled correctly.
@@ -636,6 +673,51 @@ export class DataChannelTransport implements Transport {
         this.#cookies.store(value);
       }
     }
+  }
+
+  /**
+   * Send a single RPC frame, routing channel failures (e.g. "Message too
+   * large", "InvalidStateError" when the channel has closed mid-flight)
+   * through {@link #onUnexpectedClose} instead of letting them surface as
+   * silent send-throws that would otherwise truncate the next frame on the
+   * wire. Bumps the inflight-rejection chain so all callers see a real
+   * `TransportError`.
+   */
+  #sendFrame(frame: RpcMessage): void {
+    const channel = this.#channel;
+    if (!channel || channel.readyState !== 'open') {
+      this.#onUnexpectedClose('channel-closed', 'Channel not open at send time');
+      throw new TransportError('channel-closed', 'Channel not open at send time');
+    }
+    try {
+      channel.send(encodeRpc(frame));
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      this.#onUnexpectedClose('send-failed', message);
+      throw err instanceof Error ? err : new Error(message);
+    }
+  }
+
+  /**
+   * Backpressure for streaming uploads. SCTP's send buffer is bounded; if we
+   * blindly fire chunk frames for a multi-MB upload we'll either spike memory
+   * or trip the "Message too large"/InvalidStateError path. Pause emission
+   * when `bufferedAmount` crosses the high-water mark and resume when the
+   * channel drains below the low-water mark.
+   */
+  async #awaitDrain(): Promise<void> {
+    const channel = this.#channel;
+    if (!channel || channel.bufferedAmount <= BUFFER_HIGH_WATER_BYTES) {
+      return;
+    }
+    channel.bufferedAmountLowThreshold = BUFFER_LOW_WATER_BYTES;
+    await new Promise<void>((resolve) => {
+      const onLow = (): void => {
+        channel.removeEventListener('bufferedamountlow', onLow);
+        resolve();
+      };
+      channel.addEventListener('bufferedamountlow', onLow);
+    });
   }
 
   // ─── Failure / teardown / reconnect ────────────────────────────────────

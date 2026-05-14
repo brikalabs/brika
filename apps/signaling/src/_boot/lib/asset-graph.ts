@@ -23,8 +23,10 @@ import type { PeerHandle } from './peer';
 const ASSET_CACHE = 'brika-assets-v6';
 const PRIME_PARALLELISM = 16;
 
-// Absolute-path module specifiers: static + side-effect + dynamic imports.
-const IMPORT_RE = /\b(?:import\s*\(|(?:import|export)[^'"]*?from\s*|import\s+)['"]([^'"]+)['"]/g;
+// Module specifiers: static + side-effect + dynamic imports. The
+// side-effect form needs `\s*` (not `\s+`) — Vite's minifier emits
+// `import"./foo.js"` with zero whitespace, and `\s+` would miss those.
+const IMPORT_RE = /\b(?:import\s*\(|(?:import|export)[^'"]*?from\s*|import\s*)['"]([^'"]+)['"]/g;
 // Asset URLs referenced from CSS (`url(...)`). Bounded quantifiers keep matching linear.
 const CSS_URL_RE = /url\(\s{0,8}['"]?([^\s)'"]{1,2048})['"]?\s{0,8}\)/g;
 

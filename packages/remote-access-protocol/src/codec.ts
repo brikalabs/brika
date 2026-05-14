@@ -82,6 +82,17 @@ const rpcSchema = z.discriminatedUnion('kind', [
       headers: z.array(z.unknown()),
     })
     .loose(),
+  z
+    .object({
+      v: V,
+      kind: z.literal('request.chunk'),
+      id: z.int(),
+    })
+    .loose()
+    .refine((m) => typeof m.dataText === 'string' || typeof m.dataB64 === 'string', {
+      message: 'request.chunk requires dataText or dataB64',
+    }),
+  z.object({ v: V, kind: z.literal('request.end'), id: z.int() }).loose(),
   z.object({ v: V, kind: z.literal('abort'), id: z.int() }).loose(),
   z
     .object({

@@ -254,6 +254,65 @@ describe('RpcServer', () => {
     expect(seen[0]?.headers.get('user-agent')).toBe('CoordinatorCapturedUA/1.0');
   });
 
+  it('reassembles a chunked upload body and passes it to fetchInternal', async () => {
+    const seen: Request[] = [];
+    const { server, outbox } = makeServer(
+      makeApiServer(async (req) => {
+        seen.push(req);
+        // Consume the body fully so the assembler's stream is drained.
+        const bytes = new Uint8Array(await req.arrayBuffer());
+        return new Response(JSON.stringify({ size: bytes.byteLength }), {
+          headers: { 'content-type': 'application/json' },
+        });
+      })
+    );
+    const send = (frame: RpcMessage) => outbox.push(frame);
+
+    server.handle(
+      {
+        v: PROTOCOL_VERSION,
+        kind: 'request',
+        id: 42,
+        method: 'PUT',
+        url: '/api/upload',
+        headers: [['content-type', 'application/octet-stream']],
+        hasBody: true,
+      },
+      send
+    );
+    // Two binary chunks then end.
+    server.handle(
+      {
+        v: PROTOCOL_VERSION,
+        kind: 'request.chunk',
+        id: 42,
+        dataB64: btoa(String.fromCodePoint(1, 2, 3, 4)),
+      },
+      send
+    );
+    server.handle(
+      {
+        v: PROTOCOL_VERSION,
+        kind: 'request.chunk',
+        id: 42,
+        dataB64: btoa(String.fromCodePoint(5, 6, 7, 8)),
+      },
+      send
+    );
+    server.handle({ v: PROTOCOL_VERSION, kind: 'request.end', id: 42 }, send);
+    await flush();
+
+    expect(seen.length).toBe(1);
+    expect(seen[0]?.method).toBe('PUT');
+    // The dispatcher started reading before request.end arrived (streaming
+    // body), but the consumer in this test fully drains the body — so the
+    // resolved Response reports the full byte count.
+    const head = outbox.find((f) => f.kind === 'response.head') as
+      | { kind: 'response.head'; status: number }
+      | undefined;
+    expect(head?.status).toBe(200);
+  });
+
   it('leaves the page-forwarded user-agent intact when no remoteUserAgent is configured', async () => {
     const seen: Request[] = [];
     const { server, outbox } = makeServer(

@@ -17,6 +17,9 @@ import { TRANSPORT_HEADER } from '@brika/auth';
 import {
   type AbortMessage,
   PROTOCOL_VERSION,
+  RequestAssembler,
+  type RequestChunkMessage,
+  type RequestEndMessage,
   type RequestMessage,
   type RpcMessage,
   responseToFrames,
@@ -41,6 +44,13 @@ export interface RpcServerOptions {
 
 interface InFlight {
   readonly controller: AbortController;
+  /**
+   * Set while the request body is still streaming in. `onChunk` / `onEnd` /
+   * client-side `abort` drive it. Once the body completes, the dispatcher
+   * doesn't touch the assembler again — the running fetch reads chunks
+   * directly off the stream the assembler exposes.
+   */
+  readonly assembler: RequestAssembler | null;
 }
 
 export class RpcServer {
@@ -59,6 +69,12 @@ export class RpcServer {
         return;
       case 'request':
         this.#startRequest(msg, send);
+        return;
+      case 'request.chunk':
+        this.#onRequestChunk(msg);
+        return;
+      case 'request.end':
+        this.#onRequestEnd(msg);
         return;
       case 'abort':
         this.#abort(msg);
@@ -80,8 +96,9 @@ export class RpcServer {
 
   /** Cancel everything (peer session is closing). */
   shutdown(): void {
-    for (const { controller } of this.#inflight.values()) {
-      controller.abort();
+    for (const entry of this.#inflight.values()) {
+      entry.controller.abort();
+      entry.assembler?.abort(new Error('session-closed'));
     }
     this.#inflight.clear();
   }
@@ -100,22 +117,44 @@ export class RpcServer {
     }
 
     const controller = new AbortController();
-    this.#inflight.set(msg.id, { controller });
+    const assembler = msg.hasBody ? new RequestAssembler() : null;
+    this.#inflight.set(msg.id, { controller, assembler });
 
-    // Run the request fully async; do not block the caller.
-    void this.#runRequest(msg, send, controller.signal).finally(() => {
+    // Dispatch immediately. For bodied requests the assembler exposes a
+    // ReadableStream that `app.fetch()` consumes as `request.chunk` frames
+    // arrive — `app.fetch()` doesn't have to wait for `request.end` before
+    // starting. For bodyless requests we pass null.
+    void this.#runRequest(msg, assembler, send, controller.signal).finally(() => {
       this.#inflight.delete(msg.id);
     });
   }
 
+  #onRequestChunk(msg: RequestChunkMessage): void {
+    const entry = this.#inflight.get(msg.id);
+    if (!entry?.assembler) {
+      // Chunk for an unknown / bodyless request — peer is confused. Drop.
+      return;
+    }
+    entry.assembler.onChunk(msg);
+  }
+
+  #onRequestEnd(msg: RequestEndMessage): void {
+    const entry = this.#inflight.get(msg.id);
+    if (!entry?.assembler) {
+      return;
+    }
+    entry.assembler.onEnd(msg);
+  }
+
   async #runRequest(
     msg: RequestMessage,
+    assembler: RequestAssembler | null,
     send: (frame: RpcMessage) => void,
     signal: AbortSignal
   ): Promise<void> {
     let request: Request;
     try {
-      request = rpcRequestToFetch(msg, this.#options.baseOrigin);
+      request = rpcRequestToFetch(msg, this.#options.baseOrigin, assembler?.body() ?? null);
     } catch (err) {
       send({
         v: PROTOCOL_VERSION,
@@ -172,5 +211,9 @@ export class RpcServer {
       return;
     }
     entry.controller.abort();
+    // If the upload was still streaming in, surface the abort to the body
+    // stream so `app.fetch()`'s reader sees an error instead of hanging on
+    // a half-uploaded body.
+    entry.assembler?.abort(new Error('aborted'));
   }
 }
