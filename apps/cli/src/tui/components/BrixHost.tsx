@@ -43,7 +43,7 @@ type HubState = 'running' | 'stale' | 'stopped' | 'unknown';
 const REACTIONS: Readonly<Record<HubState, Reaction | null>> = {
   running: { kind: 'wave', color: 'green', line: 'hub is awake — hi!' },
   stale: { kind: 'oops', color: 'yellow', line: 'that pid looks stale.' },
-  stopped: { kind: 'sleep', color: 'gray', line: 'hub is asleep — press s.' },
+  stopped: { kind: 'sleep', color: 'gray', line: 'hub is asleep — Ctrl+S to wake.' },
   unknown: null,
 };
 
@@ -222,7 +222,7 @@ function useIdleLines(cli: ReturnType<typeof useCli>): ReadonlyArray<string> {
       lines.push('all systems quiet.');
     }
     if (cli.hub.state === 'stopped') {
-      lines.push('hub is sleeping — press s to wake it.');
+      lines.push('hub is sleeping — Ctrl+S to wake it.');
       lines.push('nothing to watch — yet.');
     }
     if (cli.hub.state === 'stale') {

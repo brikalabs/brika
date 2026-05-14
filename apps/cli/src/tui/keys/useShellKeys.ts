@@ -1,17 +1,17 @@
 /**
  * Global keybinds active on every section of the brika TUI.
  *
- * - Section letters (`d`, `p`, `w`, `l`, `u`, `g`, `,`, `?`) jump
- *   straight to that route.
- * - Action letters (`s`, `x`, `r`, `o`) trigger the hub-control
- *   callbacks the CliProvider exposes.
- * - `q` / `Ctrl+C` quit via the shell's `onQuit`.
+ * Two tiers:
  *
- * Every binding suspends when `isInputCaptured` is set — so a form's
- * keystrokes don't double-fire as hub actions / route jumps. Forms
- * call `useCaptureInput()` to bump the counter for their lifetime.
- * `Ctrl+C` is the one exception: we keep it live so a stuck form
- * can always be killed.
+ *   - Plain letters for *navigation* (`d`/`p`/`w`/`l`/`u`/`g`/`,`/`?`)
+ *     and `q` for quit — universal terminal convention. Gated by
+ *     `isInputCaptured` so forms own their keystrokes.
+ *   - **Ctrl-modified** for *actions* that change state
+ *     (`Ctrl+S`/`Ctrl+X`/`Ctrl+R`/`Ctrl+O`). These can't be typed by
+ *     accident in a text field, so they're discoverable + safe even
+ *     if a form forgets to call `useCaptureInput()`.
+ *
+ * `Ctrl+C` stays live regardless of capture, as a hard escape hatch.
  */
 
 import { useKey, useRouter, useTuiShell } from '@brika/tui';
@@ -27,7 +27,7 @@ export function useShellKeys(): void {
   useKey('q', () => onQuit(), active);
   useKey('ctrl+c', () => onQuit()); // always live — escape hatch
 
-  // Section hotkeys.
+  // Section hotkeys (navigation — plain letters).
   useKey('d', () => router.navigate('dashboard'), active);
   useKey('p', () => router.navigate('plugins'), active);
   useKey('w', () => router.navigate('workflows'), active);
@@ -37,9 +37,10 @@ export function useShellKeys(): void {
   useKey(',', () => router.navigate('settings'), active);
   useKey('?', () => router.navigate('help'), active);
 
-  // Hub control.
-  useKey('s', () => void cli.startHub(), active);
-  useKey('x', () => void cli.stopHub(), active);
-  useKey('r', () => void cli.restartHub(), active);
-  useKey('o', () => void cli.openUi(), active);
+  // Hub control (state-changing — Ctrl-modified so a plain `s` in a
+  // password field can never stop the hub).
+  useKey('ctrl+s', () => void cli.startHub());
+  useKey('ctrl+x', () => void cli.stopHub());
+  useKey('ctrl+r', () => void cli.restartHub());
+  useKey('ctrl+o', () => void cli.openUi());
 }

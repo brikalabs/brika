@@ -71,7 +71,7 @@ function HubBody({ cli }: Readonly<{ cli: ReturnType<typeof useCli> }>): React.R
     return (
       <Box flexDirection="column">
         <Text color="gray">stopped</Text>
-        <Text dimColor>press s to start</Text>
+        <Text dimColor>Ctrl+S to start</Text>
       </Box>
     );
   }

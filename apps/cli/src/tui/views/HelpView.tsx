@@ -39,10 +39,10 @@ export function HelpView(): React.ReactElement {
         <Section
           title="Hub control"
           items={[
-            [<Kbd key="ka1">s</Kbd>, 'Start hub'],
-            [<Kbd key="ka2">x</Kbd>, 'Stop hub'],
-            [<Kbd key="ka3">r</Kbd>, 'Restart hub'],
-            [<Kbd key="ka4">o</Kbd>, 'Open UI'],
+            [<Kbd key="ka1">Ctrl+S</Kbd>, 'Start hub'],
+            [<Kbd key="ka2">Ctrl+X</Kbd>, 'Stop hub'],
+            [<Kbd key="ka3">Ctrl+R</Kbd>, 'Restart hub'],
+            [<Kbd key="ka4">Ctrl+O</Kbd>, 'Open UI'],
           ]}
         />
         <Section

@@ -15,15 +15,13 @@ export function ShellFooter(): React.ReactElement {
     <Box flexDirection="column" paddingX={1} marginTop={1}>
       <BrixHost />
       <Box marginTop={0}>
-        <Kbd>tab</Kbd>
-        <Text dimColor> section </Text>
-        <Kbd>s</Kbd>
+        <Kbd>^S</Kbd>
         <Text dimColor> start </Text>
-        <Kbd>x</Kbd>
+        <Kbd>^X</Kbd>
         <Text dimColor> stop </Text>
-        <Kbd>r</Kbd>
+        <Kbd>^R</Kbd>
         <Text dimColor> restart </Text>
-        <Kbd>o</Kbd>
+        <Kbd>^O</Kbd>
         <Text dimColor> open </Text>
         <Kbd>?</Kbd>
         <Text dimColor> help </Text>

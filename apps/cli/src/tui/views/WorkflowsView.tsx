@@ -20,8 +20,8 @@ export function WorkflowsView(): React.ReactElement {
       <Box flexDirection="column">
         <Text bold>Workflows</Text>
         <Box marginTop={1}>
-          <Text dimColor>hub isn't running — press </Text>
-          <Text color="yellow">s</Text>
+          <Text dimColor>hub isn't running — </Text>
+          <Text color="yellow">Ctrl+S</Text>
           <Text dimColor> to start it.</Text>
         </Box>
       </Box>
