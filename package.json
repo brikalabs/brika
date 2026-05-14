@@ -19,6 +19,7 @@
     "dev:ui": "bun --filter @brika/ui dev",
     "dev:signaling": "bun --filter @brika/signaling dev",
     "up": "mortar",
+    "brika": "bun apps/cli/src/main.ts",
     "test": "bun --filter '*' test --parallel",
     "test:coverage": "bun --filter '*' test --parallel",
     "typecheck": "bun --filter '*' typecheck",
