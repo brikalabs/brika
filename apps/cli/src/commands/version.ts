@@ -1,9 +1,14 @@
 /**
- * Print the CLI's version. Brix says it.
+ * `brika version` — Brix types the wordmark + version. Falls back to
+ * a plain line when stdout isn't a TTY (so `brika version | grep …`
+ * still works).
  */
 
 import { brix } from '@brika/brix/log';
 import { defineCommand } from '@brika/cli';
+import React from 'react';
+import { runCommandTui } from '../tui/runCommandTui';
+import { VersionView } from '../tui/views/VersionView';
 import { CLI_VERSION } from '../version';
 
 export default defineCommand({
@@ -11,7 +16,9 @@ export default defineCommand({
   aliases: ['-v', '--version'],
   description: "Show Brika's version",
   examples: ['brika version', 'brika -v'],
-  handler() {
-    brix.say(`Brika Runtime v${CLI_VERSION}`);
+  async handler() {
+    await runCommandTui(React.createElement(VersionView), () => {
+      brix.say(`Brika Runtime v${CLI_VERSION}`);
+    });
   },
 });
