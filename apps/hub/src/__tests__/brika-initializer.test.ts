@@ -1,98 +1,87 @@
 /**
- * Test for BrikaInitializer
- * Verifies that the simplified initializer correctly creates the .brika directory structure
+ * Tests for the template unpacking that {@link BrikaInitializer.init}
+ * delegates to. The initializer itself is now a thin wrapper around
+ * `brikaContext` paths and `unpackTemplates` — independently testing
+ * its `brikaDir`/`rootDir` getters is just re-asserting context shape
+ * (covered in `runtime/context/__tests__/brika-context.test.ts`).
+ *
+ * These tests target `unpackTemplates` against a tmp dir so the real
+ * `${brikaContext.brikaDir}` isn't polluted.
  */
 
-import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
-import { mkdir, readdir, rm } from 'node:fs/promises';
+import { describe, expect, test } from 'bun:test';
+import { mkdtemp, readdir, readFile, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { BrikaInitializer } from '@/runtime/config/brika-initializer';
+import { loadTarBytes } from '@brika/db/macros' with { type: 'macro' };
+import { unpackTemplates } from '@/runtime/config/templates-tar';
+import type { Logger } from '@/runtime/logs/log-router';
 
-const TEST_DIR = join(import.meta.dir, '.test-brika-init');
+function silentLogger(): Logger {
+  const noop = () => {};
+  return {
+    debug: noop,
+    info: noop,
+    warn: noop,
+    error: noop,
+    withSource: () => silentLogger(),
+  } as unknown as Logger;
+}
 
-describe('BrikaInitializer', () => {
-  let originalCwd: string;
+async function withTmpDir<T>(fn: (dir: string) => Promise<T>): Promise<T> {
+  const dir = await mkdtemp(join(tmpdir(), 'brika-init-test-'));
+  try {
+    return await fn(dir);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+}
 
-  beforeAll(async () => {
-    // Save original directory and create test directory
-    originalCwd = process.cwd();
-    await rm(TEST_DIR, {
-      recursive: true,
-      force: true,
+async function unpackInto(rootDir: string): Promise<void> {
+  const archive = new Uint8Array(await loadTarBytes('apps/hub/src/templates'));
+  await unpackTemplates(archive, rootDir, silentLogger());
+}
+
+describe('unpackTemplates (BrikaInitializer.init internals)', () => {
+  test('unpacks templates into `${rootDir}/.brika/`', async () => {
+    await withTmpDir(async (dir) => {
+      await unpackInto(dir);
+      const files = await readdir(join(dir, '.brika'));
+      expect(files).toContain('brika.yml');
+      expect(files).toContain('workflows');
     });
-    await mkdir(TEST_DIR, {
-      recursive: true,
+  });
+
+  test('default brika.yml carries the expected sections', async () => {
+    await withTmpDir(async (dir) => {
+      await unpackInto(dir);
+      const content = await readFile(join(dir, '.brika', 'brika.yml'), 'utf8');
+      expect(content).toContain('hub:');
+      expect(content).toContain('port: 3001');
+      expect(content).toContain('plugins:');
+      expect(content).toContain('@brika/blocks-builtin');
+      expect(content).toContain('rules: []');
+      expect(content).toContain('schedules: []');
     });
-    process.chdir(TEST_DIR);
   });
 
-  afterAll(async () => {
-    // Restore original directory and cleanup
-    process.chdir(originalCwd);
-    await rm(TEST_DIR, {
-      recursive: true,
-      force: true,
+  test('does not overwrite an existing brika.yml', async () => {
+    await withTmpDir(async (dir) => {
+      await unpackInto(dir);
+      const configPath = join(dir, '.brika', 'brika.yml');
+      const customContent = '# Custom config\nhub:\n  port: 9999\n';
+      await Bun.write(configPath, customContent);
+      await unpackInto(dir);
+      const content = await readFile(configPath, 'utf8');
+      expect(content).toBe(customContent);
     });
   });
 
-  test('creates .brika directory in current working directory', async () => {
-    const initializer = new BrikaInitializer();
-
-    expect(initializer.rootDir).toBe(TEST_DIR);
-    expect(initializer.brikaDir).toBe(join(TEST_DIR, '.brika'));
-
-    await initializer.init();
-
-    // Check .brika directory exists
-    const brikaDir = join(TEST_DIR, '.brika');
-    const files = await readdir(brikaDir);
-
-    expect(files).toContain('brika.yml');
-    expect(files).toContain('workflows');
-  });
-
-  test('creates default brika.yml with correct content', async () => {
-    const initializer = new BrikaInitializer();
-    await initializer.init();
-
-    const configPath = join(TEST_DIR, '.brika', 'brika.yml');
-    const configFile = Bun.file(configPath);
-    const content = await configFile.text();
-
-    // Check for key configuration sections
-    expect(content).toContain('hub:');
-    expect(content).toContain('port: 3001');
-    expect(content).toContain('plugins:');
-    expect(content).toContain('@brika/blocks-builtin');
-    expect(content).toContain('rules: []');
-    expect(content).toContain('schedules: []');
-  });
-
-  test('does not overwrite existing brika.yml', async () => {
-    const initializer = new BrikaInitializer();
-    await initializer.init();
-
-    const configPath = join(TEST_DIR, '.brika', 'brika.yml');
-    const customContent = '# Custom config\nhub:\n  port: 9999\n';
-    await Bun.write(configPath, customContent);
-
-    // Run init again
-    await initializer.init();
-
-    // Config should not be overwritten
-    const configFile = Bun.file(configPath);
-    const content = await configFile.text();
-    expect(content).toBe(customContent);
-  });
-
-  test('creates workflows subdirectory', async () => {
-    const initializer = new BrikaInitializer();
-    await initializer.init();
-
-    const workflowsDir = join(TEST_DIR, '.brika', 'workflows');
-
-    // Directory should exist (checking if we can list it)
-    const files = await readdir(workflowsDir);
-    expect(Array.isArray(files)).toBe(true);
+  test('creates the workflows subdirectory', async () => {
+    await withTmpDir(async (dir) => {
+      await unpackInto(dir);
+      const files = await readdir(join(dir, '.brika', 'workflows'));
+      expect(Array.isArray(files)).toBe(true);
+    });
   });
 });

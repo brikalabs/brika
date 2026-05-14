@@ -3,13 +3,22 @@
  */
 
 import { inject } from '@brika/di';
-import { rateLimit, route } from '@brika/router';
+import { RateLimitStore, rateLimit, route } from '@brika/router';
 import { LoginSchema } from '../../schemas';
 import { AuthService } from '../../services/AuthService';
 import { UserService } from '../../services/UserService';
-import type { Session } from '../../types';
+import { parseTransportHeader, type Session, TRANSPORT_HEADER } from '../../types';
 import { requireSession } from '../requireSession';
 import { sessionCookie } from './cookie';
+
+/**
+ * Per-username rate limit on login.
+ *
+ * Complements the per-IP rate limit middleware: defends against credential
+ * stuffing where the attacker rotates IPs but hammers a single account.
+ * 10 attempts per 15-minute window per email (case-insensitive).
+ */
+const USERNAME_RATE_LIMIT = new RateLimitStore(15 * 60 * 1000, 10, 60_000);
 
 /** POST /login — Login with email and password */
 const login = route.post({
@@ -27,9 +36,28 @@ const login = route.post({
     const ip =
       ctx.req.headers.get('x-forwarded-for') ?? ctx.req.headers.get('x-real-ip') ?? undefined;
     const userAgent = ctx.req.headers.get('user-agent') ?? undefined;
+    const connectionType = parseTransportHeader(ctx.req.headers.get(TRANSPORT_HEADER));
+
+    const usernameKey = email.toLowerCase();
+    const { allowed, resetAt } = USERNAME_RATE_LIMIT.check(usernameKey);
+    if (!allowed) {
+      const retryAfter = Math.max(1, Math.ceil((resetAt - Date.now()) / 1000));
+      return new Response(
+        JSON.stringify({
+          error: 'Too many attempts for this account',
+        }),
+        {
+          status: 429,
+          headers: {
+            'Content-Type': 'application/json',
+            'Retry-After': String(retryAfter),
+          },
+        }
+      );
+    }
 
     try {
-      const result = await authService.login(email, password, ip, userAgent);
+      const result = await authService.login(email, password, ip, userAgent, connectionType);
 
       return new Response(
         JSON.stringify({

@@ -4,7 +4,7 @@
  */
 
 import { inject, injectable } from '@brika/di';
-import { LoginResponse, User } from '../types';
+import { type ConnectionType, LoginResponse, User } from '../types';
 import { ScopeService } from './ScopeService';
 import { SessionService } from './SessionService';
 import { UserService } from './UserService';
@@ -38,7 +38,8 @@ export class AuthService {
     email: string,
     password: string,
     ip?: string,
-    userAgent?: string
+    userAgent?: string,
+    connectionType: ConnectionType = 'http'
   ): Promise<LoginResponse> {
     const user = this.userService.getUserByEmail(email);
     if (!user) {
@@ -55,7 +56,7 @@ export class AuthService {
       throw new Error('Invalid credentials');
     }
 
-    const token = this.sessionService.createSession(user.id, ip, userAgent);
+    const token = this.sessionService.createSession(user.id, ip, userAgent, connectionType);
 
     return {
       token,

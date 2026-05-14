@@ -5,10 +5,13 @@
  * SessionDetailDialog.
  */
 
+import type { ConnectionType } from '@brika/auth';
+
 export interface SessionInfo {
   id: string;
   ip: string | null;
   userAgent: string | null;
+  connectionType: ConnectionType;
   createdAt: number;
   lastSeenAt: number;
   current: boolean;

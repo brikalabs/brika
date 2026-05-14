@@ -10,6 +10,8 @@
  *   await auth.logout()
  */
 
+import type { ConnectionType } from '../types';
+
 export class AuthError extends Error {
   constructor(
     message: string,
@@ -21,12 +23,19 @@ export class AuthError extends Error {
 
 export interface AuthClientConfig {
   apiUrl?: string;
+  /**
+   * Optional fetch implementation. Defaults to `globalThis.fetch`. The UI
+   * passes its own transport here when running over WebRTC so the auth
+   * endpoints travel through the data channel like every other API call.
+   */
+  fetch?: typeof fetch;
 }
 
 export interface SessionInfo {
   id: string;
   ip: string | null;
   userAgent: string | null;
+  connectionType: ConnectionType;
   createdAt: number;
   lastSeenAt: number;
   current: boolean;
@@ -51,6 +60,7 @@ export interface Session {
 
 export class AuthClient {
   private readonly apiUrl: string;
+  private readonly fetch: typeof fetch;
 
   constructor(config: AuthClientConfig = {}) {
     this.apiUrl =
@@ -58,6 +68,7 @@ export class AuthClient {
       (globalThis.window === undefined
         ? 'http://localhost:3001'
         : globalThis.window.location.origin);
+    this.fetch = config.fetch ?? globalThis.fetch.bind(globalThis);
 
     // Clean up legacy localStorage keys from pre-cookie auth
     if (globalThis.window !== undefined) {
@@ -96,7 +107,7 @@ export class AuthClient {
    */
   async logout(): Promise<void> {
     try {
-      await fetch(`${this.apiUrl}/api/auth/logout`, {
+      await this.fetch(`${this.apiUrl}/api/auth/logout`, {
         method: 'POST',
         credentials: 'include',
       });
@@ -282,7 +293,7 @@ export class AuthClient {
    * Make authenticated request (cookie sent automatically).
    */
   async request<T>(url: string, options: RequestInit = {}): Promise<T> {
-    const response = await fetch(`${this.apiUrl}${url}`, {
+    const response = await this.fetch(`${this.apiUrl}${url}`, {
       ...options,
       credentials: 'include',
     });

@@ -36,6 +36,7 @@ export function SessionDetailDialog({
     { label: t('auth:sessions.browser'), value: parsed.browser },
     { label: t('auth:sessions.os'), value: parsed.os },
     { label: t('auth:sessions.ip'), value: session.ip ?? '—' },
+    { label: t('auth:sessions.connectionType'), value: session.connectionType.toUpperCase() },
     { label: t('auth:sessions.created'), value: formatDateTime(session.createdAt) },
     { label: t('auth:sessions.lastActive'), value: formatDateTime(session.lastSeenAt) },
   ];

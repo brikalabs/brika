@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "composite": true,
+    "noEmit": true,
+    "types": ["@cloudflare/workers-types", "bun-types"],
+    "lib": ["ESNext"]
+  },
+  "include": ["server/**/*"]
+}

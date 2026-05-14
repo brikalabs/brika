@@ -29,6 +29,7 @@ export const sessions = sqliteTable(
     tokenHash: text('token_hash').notNull().unique(),
     ip: text('ip'),
     userAgent: text('user_agent'),
+    connectionType: text('connection_type').notNull().default('http'),
     createdAt: integer('created_at').notNull(),
     lastSeenAt: integer('last_seen_at').notNull(),
     expiresAt: integer('expires_at').notNull(),

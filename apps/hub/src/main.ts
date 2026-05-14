@@ -11,6 +11,7 @@ import {
   loader,
   PluginLoader,
   processGuard,
+  remoteAccess,
   routes,
   sparks,
   trapSignals,
@@ -40,5 +41,6 @@ await bootstrap()
   .use(loader(WorkflowsLoader))
   .use(loader(BoardsLoader))
   .use(updates())
+  .use(remoteAccess())
   .use(trapSignals())
   .start();

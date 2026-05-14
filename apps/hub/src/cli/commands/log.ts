@@ -1,19 +1,19 @@
 import { Database } from 'bun:sqlite';
 import { join } from 'node:path';
 import pc from 'picocolors';
+import { brikaContext } from '@/runtime/context/brika-context';
 import { TerminalFormatter } from '@/runtime/logs/formatters/terminal-formatter';
 import type { LogEvent, LogLevel, LogSource } from '@/runtime/logs/types';
 import type { Json } from '@/types';
 import { defineCommand } from '../command';
 import { CliError } from '../errors';
 import { hubFetch, requireRunningHub } from '../utils/hub-client';
-import { dataDir } from '../utils/runtime';
 import { streamSseEvents } from '../utils/sse';
 
 const fmt = new TerminalFormatter({
   color: process.stdout.isTTY ?? false,
 });
-const DB_PATH = join(dataDir, 'logs.db');
+const DB_PATH = join(brikaContext.brikaDir, 'logs.db');
 
 interface Filters {
   level?: LogLevel;

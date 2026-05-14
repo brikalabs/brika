@@ -1,5 +1,11 @@
 /**
  * Brika UI Router
+ *
+ * The remote-access bootstrap now stores the hub name in
+ * `localStorage` and stamps it into `<meta name="brika:hub">` before
+ * mounting this UI — so the URL no longer carries the hub identifier.
+ * Every router path is therefore root-relative on both LAN
+ * (`localhost`) and remote (`hub.brika.dev`).
  */
 
 import { createRouter, RouterProvider } from '@tanstack/react-router';

@@ -48,6 +48,7 @@ const mockUserSessions: SessionRecord[] = [
     lastSeenAt: now,
     expiresAt: now + 604800000,
     revokedAt: null,
+    connectionType: 'http' as const,
   },
   {
     id: 'sess-user-2',
@@ -59,6 +60,7 @@ const mockUserSessions: SessionRecord[] = [
     lastSeenAt: now - 5000,
     expiresAt: now + 604800000,
     revokedAt: null,
+    connectionType: 'http' as const,
   },
 ];
 

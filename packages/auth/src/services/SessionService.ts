@@ -9,7 +9,8 @@ import { createHash, randomBytes } from 'node:crypto';
 import { injectable } from '@brika/di';
 import { getAuthConfig } from '../config';
 import { ROLE_SCOPES } from '../roles';
-import { Role, Scope, type Session, type SessionRecord } from '../types';
+import { ConnectionTypeSchema } from '../schemas';
+import { type ConnectionType, Role, Scope, type Session, type SessionRecord } from '../types';
 
 interface SessionRow {
   id: string;
@@ -17,10 +18,15 @@ interface SessionRow {
   token_hash: string;
   ip: string | null;
   user_agent: string | null;
+  connection_type: string;
   created_at: number;
   last_seen_at: number;
   expires_at: number;
   revoked_at: number | null;
+}
+
+function normalizeConnectionType(value: string | undefined | null): ConnectionType {
+  return ConnectionTypeSchema.safeParse(value).data ?? 'http';
 }
 
 interface SessionWithUserRow extends SessionRow {
@@ -67,6 +73,7 @@ function toSessionRecord(row: SessionRow): SessionRecord {
     tokenHash: row.token_hash,
     ip: row.ip,
     userAgent: row.user_agent,
+    connectionType: normalizeConnectionType(row.connection_type),
     createdAt: row.created_at,
     lastSeenAt: row.last_seen_at,
     expiresAt: row.expires_at,
@@ -89,7 +96,12 @@ export class SessionService {
    * Create a new session. Returns the raw token (only time it's available).
    * Automatically revokes the oldest sessions if the per-user limit is exceeded.
    */
-  createSession(userId: string, ip?: string, userAgent?: string): string {
+  createSession(
+    userId: string,
+    ip?: string,
+    userAgent?: string,
+    connectionType: ConnectionType = 'http'
+  ): string {
     const id = generateId();
     const token = generateToken();
     const tokenHash = hashToken(token);
@@ -98,10 +110,20 @@ export class SessionService {
 
     this.db
       .query(
-        `INSERT INTO sessions (id, user_id, token_hash, ip, user_agent, created_at, last_seen_at, expires_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+        `INSERT INTO sessions (id, user_id, token_hash, ip, user_agent, connection_type, created_at, last_seen_at, expires_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
-      .run(id, userId, tokenHash, ip ?? null, userAgent ?? null, now, now, expiresAt);
+      .run(
+        id,
+        userId,
+        tokenHash,
+        ip ?? null,
+        userAgent ?? null,
+        connectionType,
+        now,
+        now,
+        expiresAt
+      );
 
     // Enforce per-user session limit — revoke oldest sessions beyond the cap
     this.#enforceSessionLimit(userId, now);
@@ -136,11 +158,17 @@ export class SessionService {
   }
 
   /**
-   * Validate a session token.
-   * Returns the session if valid, null if expired/revoked/unknown.
-   * Updates last_seen_at and ip on each successful validation (sliding expiration).
+   * Validate a session token. Returns the session if valid, null if
+   * expired/revoked/unknown. On success: extends expiry and back-fills any
+   * passed metadata via `COALESCE`, so legacy NULL rows heal once the caller
+   * has the value.
    */
-  validateSession(token: string, ip?: string): Session | null {
+  validateSession(
+    token: string,
+    ip?: string,
+    userAgent?: string,
+    connectionType?: ConnectionType
+  ): Session | null {
     const tokenHash = hashToken(token);
     const now = Date.now();
 
@@ -163,13 +191,18 @@ export class SessionService {
       return null;
     }
 
-    // Sliding expiration: extend session + update last_seen_at & ip
     const newExpiresAt = now + this.sessionTTL * 1000;
     this.db
       .query(
-        `UPDATE sessions SET last_seen_at = ?, expires_at = ?, ip = COALESCE(?, ip) WHERE id = ?`
+        `UPDATE sessions SET
+           last_seen_at = ?,
+           expires_at = ?,
+           ip = COALESCE(?, ip),
+           user_agent = COALESCE(?, user_agent),
+           connection_type = COALESCE(?, connection_type)
+         WHERE id = ?`
       )
-      .run(now, newExpiresAt, ip ?? null, row.id);
+      .run(now, newExpiresAt, ip ?? null, userAgent ?? null, connectionType ?? null, row.id);
 
     const role = (row.role as Role) ?? Role.USER;
 

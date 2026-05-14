@@ -10,6 +10,7 @@ import 'reflect-metadata';
 import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from 'bun:test';
 import { get, provide, stub, useTestBed } from '@brika/di/testing';
 import { PluginManagerConfig } from '@/runtime/config';
+import { brikaContext } from '@/runtime/context/brika-context';
 import { EventSystem } from '@/runtime/events/event-system';
 import { I18nService } from '@/runtime/i18n';
 import { Logger } from '@/runtime/logs/log-router';
@@ -468,15 +469,17 @@ describe('PluginLifecycle (with mocked spawn)', () => {
 
       // The hub hardcodes the `user.` prefix; plugin-supplied keys can never
       // collide with declared password prefs or __secret_* SDK keys.
-      expect(secretsMock.store.get('com.brika.hub::@test/plugin::user.session-token')).toBe(
-        'tok-123'
-      );
-      expect(secretsMock.store.get('com.brika.hub::@test/plugin::session-token')).toBeUndefined();
+      expect(
+        secretsMock.store.get(`${brikaContext.serviceName}::@test/plugin::user.session-token`)
+      ).toBe('tok-123');
+      expect(
+        secretsMock.store.get(`${brikaContext.serviceName}::@test/plugin::session-token`)
+      ).toBeUndefined();
     });
 
     test('onGetPluginSecret reads from the user.* namespace', async () => {
       const callbacks = await loadPlugin();
-      secretsMock.store.set('com.brika.hub::@test/plugin::user.api-key', 'sk-real');
+      secretsMock.store.set(`${brikaContext.serviceName}::@test/plugin::user.api-key`, 'sk-real');
 
       expect(await callbacks.onGetPluginSecret('@test/plugin', 'api-key')).toBe('sk-real');
     });
@@ -507,10 +510,10 @@ describe('PluginLifecycle (with mocked spawn)', () => {
 
       // Pretend the plugin had set `apiKey` (a declared password pref). It lives
       // at `@test/plugin::apiKey`.
-      secretsMock.store.set('com.brika.hub::@test/plugin::apiKey', 'pref-secret');
+      secretsMock.store.set(`${brikaContext.serviceName}::@test/plugin::apiKey`, 'pref-secret');
       // And a hub-managed OAuth token at the SDK __secret_* namespace.
       secretsMock.store.set(
-        'com.brika.hub::@test/plugin::__secret_oauth_test_token',
+        `${brikaContext.serviceName}::@test/plugin::__secret_oauth_test_token`,
         '"oauth-blob"'
       );
 

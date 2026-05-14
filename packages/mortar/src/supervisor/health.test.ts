@@ -105,7 +105,7 @@ describe('waitForTcp', () => {
   });
 
   test('rejects when the timeout elapses with nothing listening', async () => {
-    await expect(waitForTcp(1, 300)).rejects.toThrow(/Timed out waiting for 127\.0\.0\.1:1/);
+    await expect(waitForTcp(1, 300)).rejects.toThrow(/Timed out waiting for localhost:1/);
   });
 
   test('rejects when the abort signal trips before success', async () => {

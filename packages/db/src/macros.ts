@@ -1,3 +1,4 @@
+import { existsSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { readMigrationFiles } from 'drizzle-orm/migrator';
 
@@ -11,6 +12,16 @@ export function loadMigrations(repoRelativePath: string) {
 
 export async function loadTarBytes(repoRelativePath: string): Promise<number[]> {
   const folderPath = resolve(REPO_ROOT, repoRelativePath);
+
+  // Don't throw when the directory is missing — some callers (e.g. the UI
+  // archive embedded into the hub binary) tolerate an empty bundle during
+  // development / CI builds that don't run the UI build first. Returning an
+  // empty array lets the consumer detect the "nothing to embed" case via
+  // `byteLength === 0` and fall through to a different code path.
+  if (!existsSync(folderPath) || !statSync(folderPath).isDirectory()) {
+    return [];
+  }
+
   const glob = new Bun.Glob('**/*');
   const files: Record<string, Uint8Array> = {};
 
@@ -30,6 +41,10 @@ export async function loadTarBytes(repoRelativePath: string): Promise<number[]> 
         // skip directories or unreadable files
       }
     }
+  }
+
+  if (Object.keys(files).length === 0) {
+    return [];
   }
 
   const archive = new Bun.Archive(files, { compress: 'gzip', level: 9 });

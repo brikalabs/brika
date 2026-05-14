@@ -1,0 +1,92 @@
+# Brika signaling coordinator on Cloudflare Workers.
+#
+# Two Cloudflare primitives:
+#   - HubSession Durable Object holds one hub's live WebSocket + per-session
+#     client WebSockets. WebSocket Hibernation keeps idle cost near zero.
+#   - D1 SQLite database holds the persistent claims table (name → token).
+#
+# Production custom hostname (api.brika.dev) is intentionally NOT configured
+# here in the first iteration — deploy lands on <worker>.workers.dev,
+# verified live, then a route can be added with `wrangler routes add` or in
+# the dashboard.
+
+name = "brika-signaling"
+main = "server/worker.ts"
+compatibility_date = "2025-10-01"
+# Keep the *.workers.dev URL alive alongside the custom domain so links in
+# this repo and existing hubs that point at it don't break.
+workers_dev = true
+# `nodejs_compat` is needed for `crypto.subtle` in some configurations and is
+# the modern default; harmless when unused.
+compatibility_flags = ["nodejs_compat"]
+
+# Static bootstrap shell. This is NOT the Brika UI bundle — it's the tiny
+# bootstrap loader (~10 KB) that opens a WebRTC bridge to the hub and then
+# dynamic-imports the actual app code FROM that hub. Keeping the UI off the
+# Worker means the version the browser runs always matches the version the
+# hub is running; new hub features ship without redeploying the Worker.
+#
+# Built by `bun run build` (Vite) — the SPA lives in `client/` and emits to
+# `dist/client/` alongside the worker bundle, all in a single package.
+[assets]
+directory = "./dist/client"
+binding = "ASSETS"
+# SPA fallback: every unknown path returns `/index.html` so the bootstrap
+# runs regardless of which URL the user typed (hub.brika.dev/<name>,
+# hub.brika.dev/<name>/dashboard, …).
+not_found_handling = "single-page-application"
+# Worker runs first for every request. It owns /v1/* (signaling API) plus
+# the hub-name resolution that stamps the resolved name into the bootstrap
+# shell as <meta name="brika:hub">.
+run_worker_first = true
+
+# ─── Custom domains ─────────────────────────────────────────────────────────
+# One Worker, one host. `hub.brika.dev` serves:
+#   - GET/POST/WS  /v1/*              — coordinator API (health, claim,
+#                                       rotate, release, tickets, status,
+#                                       and the /v1/hub + /v1/client
+#                                       WebSocket upgrades)
+#   - GET          /<name>/...        — per-hub UI shell (the worker stamps
+#                                       <meta name="brika:hub" content=…>
+#                                       into the index.html before serving)
+# Single-host Custom Domain — Cloudflare auto-creates the proxied DNS record.
+
+[[routes]]
+pattern = "hub.brika.dev"
+custom_domain = true
+
+# Note: earlier iterations used two separate hostnames:
+#   - signaling.brika.dev for /v1/*
+#   - *.hubs.brika.dev    as a wildcard for per-hub UI shells
+# Both are intentionally removed. The wildcard had fragile TLS provisioning,
+# and there is no functional reason to split the API and UI surfaces across
+# two hostnames when the Worker handles both. The corresponding DNS records
+# on the brika.dev zone (`signaling A …` and `*.hubs CNAME …`) should be
+# deleted alongside this change.
+
+# Durable Object that owns a single hub's signaling state.
+[[durable_objects.bindings]]
+name = "HUB_SESSION"
+class_name = "HubSession"
+
+# Migration block — required by Workers to track DO class lifecycle.
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["HubSession"]
+
+# D1 database for the claims table. The database itself is created out-of-band
+# via `wrangler d1 create brika-signaling`; the resulting database_id is
+# substituted here.
+[[d1_databases]]
+binding = "DB"
+database_name = "brika-signaling"
+database_id = "5778b6af-da1b-4b0e-8a69-9ee7d5fb5512"
+migrations_dir = "migrations"
+
+# Secret bindings — set with `wrangler secret put <NAME>`.
+# Listed here so they're discoverable; values live in Cloudflare's secret store.
+#   TICKET_SECRET:         HMAC key for browser tickets (32+ random bytes recommended)
+#   CF_REALTIME_APP_ID:    Cloudflare Realtime App ID for TURN credentials
+#   CF_REALTIME_APP_TOKEN: Cloudflare Realtime App Token (Bearer)
+# Unset CF_REALTIME_* → coordinator returns STUN-only; symmetric/CGNAT users
+# (most mobile/5G) will fail to connect. Free tier: 1TB/month relayed traffic.

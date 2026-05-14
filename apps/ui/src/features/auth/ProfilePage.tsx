@@ -18,7 +18,7 @@ import {
   Separator,
 } from '@brika/clay';
 import { Camera, Check, Loader2, Trash2, UserPen } from 'lucide-react';
-import { useRef, useState } from 'react';
+import { type ChangeEvent, useRef, useState } from 'react';
 import { useLocale } from '@/lib/use-locale';
 import { PasswordSection } from './password';
 import { SessionsSection } from './SessionsSection';
@@ -62,7 +62,7 @@ export function ProfilePage() {
     }
   };
 
-  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarUpload = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) {
       return;

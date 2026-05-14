@@ -3,34 +3,31 @@
  *
  * Ensures the .brika directory structure exists with default files.
  * Templates are packed via a Bun macro (inlined into the compiled binary).
+ *
+ * Paths + instance identity come from {@link brikaContext} — this class
+ * only owns the template-unpack step.
  */
 
-import { dirname, join } from 'node:path';
 import { loadTarBytes } from '@brika/db/macros' with { type: 'macro' };
 import { inject, singleton } from '@brika/di';
-import { installDir } from '@/cli/utils/runtime';
+import { brikaContext } from '../context/brika-context';
 import { Logger } from '../logs/log-router';
 import { unpackTemplates } from './templates-tar';
-
-const isCompiled = import.meta.path.startsWith('/$bunfs/');
-
-function resolveDataDir(): string {
-  const autoDetected = isCompiled ? dirname(installDir) : join(process.cwd(), '.brika');
-  return process.env.BRIKA_HOME ?? autoDetected;
-}
 
 @singleton()
 export class BrikaInitializer {
   readonly #logger = inject(Logger);
-  readonly #brikaDir = resolveDataDir();
-  readonly #rootDir = dirname(this.#brikaDir);
 
   get brikaDir(): string {
-    return this.#brikaDir;
+    return brikaContext.brikaDir;
   }
 
   get rootDir(): string {
-    return this.#rootDir;
+    return brikaContext.rootDir;
+  }
+
+  get instanceId(): string {
+    return brikaContext.instanceId;
   }
 
   /**
@@ -39,10 +36,11 @@ export class BrikaInitializer {
    */
   async init(): Promise<void> {
     this.#logger.info('Initializing Brika workspace directory', {
-      brikaDir: this.#brikaDir,
+      brikaDir: brikaContext.brikaDir,
+      instanceId: brikaContext.instanceId,
     });
     const archive = new Uint8Array(await loadTarBytes('apps/hub/src/templates'));
-    await unpackTemplates(archive, this.#rootDir, this.#logger);
+    await unpackTemplates(archive, brikaContext.rootDir, this.#logger);
     this.#logger.info('Brika workspace directory initialized successfully');
   }
 }

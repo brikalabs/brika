@@ -1,0 +1,20 @@
+# Local-only secrets loaded by miniflare (via @cloudflare/vite-plugin) when you
+# run `bun --filter @brika/signaling dev`. Copy this file to `.dev.vars` and
+# fill in real values — `.dev.vars` is gitignored.
+#
+# Production secrets live in Cloudflare's secret store; set them with
+# `wrangler secret put <NAME>`.
+
+# HMAC key for browser tickets. Any 32+ random bytes — generate with:
+#   openssl rand -hex 32
+TICKET_SECRET=""
+
+# Optional: Cloudflare Realtime TURN credentials. Without these the coordinator
+# returns STUN-only, which is fine on most local networks but breaks
+# symmetric/CGNAT users (mobile/5G) in production-like setups.
+#CF_REALTIME_APP_ID=""
+#CF_REALTIME_APP_TOKEN=""
+
+# Optional: comma-separated allowed origins for state-changing /v1/* endpoints.
+# Localhost is always trusted; unset → defaults to https://hub.brika.dev.
+#ALLOWED_ORIGINS=""

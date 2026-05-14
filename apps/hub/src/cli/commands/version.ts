@@ -1,8 +1,8 @@
 import pc from 'picocolors';
 import { buildInfo } from '@/build-info';
 import { hub } from '@/hub';
+import { brikaContext } from '@/runtime/context/brika-context';
 import { defineCommand } from '../command';
-import { dataDir, installDir } from '../utils/runtime';
 
 export default defineCommand({
   name: 'version',
@@ -36,7 +36,8 @@ export default defineCommand({
     console.log(`  ${pc.dim('Platform:')}  ${process.platform}/${process.arch}`);
     console.log(`  ${pc.dim('Runtime:')}   Bun ${Bun.version}`);
     console.log(`  ${pc.dim('Built:')}     ${new Date(buildInfo.date).toLocaleString()}`);
-    console.log(`  ${pc.dim('Install:')}   ${installDir}`);
-    console.log(`  ${pc.dim('Data:')}      ${dataDir}`);
+    console.log(`  ${pc.dim('Install:')}   ${brikaContext.installDir}`);
+    console.log(`  ${pc.dim('Data:')}      ${brikaContext.brikaDir}`);
+    console.log(`  ${pc.dim('Instance:')}  ${brikaContext.instanceId}`);
   },
 });

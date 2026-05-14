@@ -11,7 +11,61 @@
     "time": "Date et heure",
     "location": "Localisation",
     "hub": "Hub",
+    "remoteAccess": "Accès distant",
     "system": "Système"
+  },
+  "remoteAccess": {
+    "title": "Accès distant",
+    "description": "Accédez à ce hub depuis l'extérieur de votre réseau local — sans ouvrir de port, chiffré de bout en bout via WebRTC.",
+    "section": {
+      "title": "Connexion",
+      "description": "État du tunnel pair à pair et sessions navigateur actives."
+    },
+    "status": {
+      "idle": "Inactif",
+      "connecting": "Connexion…",
+      "reconnecting": "Reconnexion…",
+      "connected": "Connecté",
+      "closed": "Fermé"
+    },
+    "stateDescription": {
+      "idle": "En attente d'une revendication de nom avant de contacter le coordinateur.",
+      "connecting": "Ouverture de la connexion de signalisation…",
+      "reconnecting": "Connexion au coordinateur perdue — nouvelle tentative.",
+      "connected": "En ligne et prêt à accepter des sessions navigateur.",
+      "closed": "Déconnecté. Cliquez sur « Oublier » ou redémarrez le hub pour vous reconnecter."
+    },
+    "fields": {
+      "name": "Nom du hub",
+      "status": "Signalisation",
+      "publicOrigin": "Lien de partage",
+      "activeSessions": "Sessions actives",
+      "coordinator": "URL du coordinateur"
+    },
+    "shareUrl": {
+      "copy": "Copier le lien",
+      "open": "Ouvrir dans un nouvel onglet"
+    },
+    "coordinator": {
+      "test": "Tester la connexion",
+      "edit": "Modifier",
+      "testing": "Test en cours…",
+      "testOk": "Coordinateur joignable.",
+      "testFailed": "Le coordinateur a renvoyé le statut {{status}}."
+    },
+    "claim": {
+      "help": "Choisissez un nom unique. Premier arrivé, premier servi — une fois revendiqué, personne d'autre ne peut l'utiliser.",
+      "placeholder": "monhub",
+      "submit": "Revendiquer"
+    },
+    "forget": {
+      "title": "Déconnecter",
+      "description": "Libère le nom sur le coordinateur et supprime le jeton local. Le nom pourra être revendiqué à nouveau plus tard.",
+      "action": "Oublier ce hub",
+      "confirmTitle": "Libérer « {name} » ?",
+      "confirmDescription": "Le nom redeviendra disponible et n'importe qui pourra le revendiquer. L'accès distant à ce hub sera perdu tant qu'un nom ne sera pas revendiqué à nouveau.",
+      "confirm": "Libérer et oublier"
+    }
   },
   "time": {
     "title": "Date et heure",

@@ -5,17 +5,51 @@ import { ZodError, z } from 'zod';
 import { HttpException } from './exceptions';
 import type { Middleware, RouteContext, RouteDefinition, Schema } from './types';
 
-/**
- * CORS: Reflect the request origin so the browser accepts credentialed
- * responses (cookies). A literal '*' cannot be combined with credentials.
- * In production, replace with an explicit allowlist of trusted origins.
- */
-const CORS_CONFIG = {
-  origin: (origin: string) => origin,
-  allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowHeaders: ['Content-Type', 'Authorization'],
-  credentials: true,
-};
+export type CorsOriginMatcher =
+  | string
+  | RegExp
+  | ((origin: string) => boolean)
+  | Array<string | RegExp | ((origin: string) => boolean)>;
+
+export interface CreateAppOptions {
+  /**
+   * CORS origin policy. Defaults to reflect-any-origin for backwards compatibility
+   * with dev setups (Vite on a different port). Production hubs should pass an
+   * explicit allowlist (LAN host + remote origin) to prevent cross-site credential theft.
+   * Pass the string '*' to reflect any origin.
+   */
+  cors?: CorsOriginMatcher;
+}
+
+function matchOrigin(origin: string, matcher: CorsOriginMatcher | undefined): boolean {
+  if (matcher === undefined || matcher === '*') {
+    return true;
+  }
+  const matchers = Array.isArray(matcher) ? matcher : [matcher];
+  for (const m of matchers) {
+    if (typeof m === 'string') {
+      if (m === '*' || m === origin) {
+        return true;
+      }
+    } else if (m instanceof RegExp) {
+      if (m.test(origin)) {
+        return true;
+      }
+    } else if (m(origin)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function buildCorsConfig(matcher: CorsOriginMatcher | undefined) {
+  return {
+    origin: (origin: string) => (matchOrigin(origin, matcher) ? origin : null),
+    allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowHeaders: ['Content-Type', 'Authorization', 'X-Brika-Csrf'],
+    credentials: true,
+  };
+}
 
 /**
  * Parse query string into a plain object.
@@ -152,10 +186,14 @@ function createHandler(routeDef: RouteDefinition) {
  * Bun.serve({ fetch: app.fetch, port: 3000 });
  * ```
  */
-export function createApp(routes: RouteDefinition[], middleware: Middleware[] = []): Hono {
+export function createApp(
+  routes: RouteDefinition[],
+  middleware: Middleware[] = [],
+  options: CreateAppOptions = {}
+): Hono {
   const app = new Hono();
 
-  app.use('*', cors(CORS_CONFIG));
+  app.use('*', cors(buildCorsConfig(options.cors)));
 
   for (const mw of middleware) {
     app.use('*', mw);

@@ -1,0 +1,329 @@
+/**
+ * Brika bootstrap Service Worker — intercepts same-origin GETs and serves
+ * from the `brika-assets-v5` Cache. The page-side bootstrap pre-populates
+ * this cache via WebRTC BEFORE injecting the hub's `<script>` / `<link>`
+ * tags, so every browser fetch hits the cache locally. On miss we fall
+ * through to the network — keeps the SW transparent for resources the
+ * bootstrap didn't pre-cache (its own assets, /sw.js itself, etc.).
+ *
+ * This must intercept every path (not just `/assets/`) because Vite dev
+ * HTML pulls modules from `/src/`, `/@fs/`, `/@vite/`, and
+ * `/node_modules/.vite/deps/`, none of which match a `/assets/` prefix.
+ * Intercepting everything is safe because the cache key is the full
+ * Request — anything we didn't `cache.put()` is a miss and falls through.
+ *
+ * Bump the cache name (v1 → v2 → …) whenever the cached-shape semantics
+ * change. The activate handler deletes every prior `brika-assets-*`
+ * cache so users carrying a stale one get a clean slate automatically.
+ */
+
+/// <reference lib="webworker" />
+
+// `lib: "WebWorker"` alone types `globalThis` as `WorkerGlobalScope` — the
+// broad base scope, missing SW-specific events (`install`, `activate`,
+// `fetch`) and the `clients` / `skipWaiting()` surface. Alias once as
+// `ServiceWorkerGlobalScope` and use the alias throughout — redeclaring
+// the global itself collides with the lib's existing declaration.
+const sw = globalThis as unknown as ServiceWorkerGlobalScope;
+
+const ASSET_CACHE = 'brika-assets-v5';
+
+// Visible in the SW's own DevTools console (Application → Service Workers →
+// click the SW link). Pairs with the page-side `[brika-sw]` logs so a failed
+// boot can be traced across both sides.
+const log = (...args: unknown[]): void => console.log('[brika-sw][worker]', ...args);
+
+log('script loaded', { scope: sw.registration?.scope ?? null });
+
+sw.addEventListener('install', (event: ExtendableEvent) => {
+  log('install');
+  event.waitUntil(sw.skipWaiting().then(() => log('skipWaiting resolved')));
+});
+
+// Set of FetchEvent clientIds that have installed the page-side proxy
+// listener (apps/ui/src/lib/api/sw-proxy.ts) and explicitly told us so
+// via `BRIKA_PROXY_READY`. We only proxy through clients we've seen
+// register — without this signal we couldn't tell the bootstrap document
+// (which has no listener) apart from the hub-UI document (which does),
+// and posting to a client with no listener hangs until the head timer
+// expires (504). Cleared automatically when the SW restarts.
+const proxyReadyClients = new Set<string>();
+
+interface SwMessage {
+  type?: string;
+}
+
+sw.addEventListener('message', (event: ExtendableMessageEvent) => {
+  const data = event.data as SwMessage | undefined;
+  log('message received', {
+    type: data?.type,
+    origin: event.origin,
+    swOrigin: sw.location.origin,
+    sourceId: event.source && 'id' in event.source ? event.source.id : null,
+    sourceType: event.source?.constructor.name ?? null,
+  });
+  if (event.origin !== sw.location.origin) {
+    log('message dropped — origin mismatch');
+    return;
+  }
+  if (data?.type === 'SKIP_WAITING') {
+    void sw.skipWaiting();
+    return;
+  }
+  // Page-initiated claim. `clients.claim()` normally runs only inside the
+  // `activate` handler; on a subsequent page load the SW is *already*
+  // activated, so claim() never re-fires and the new page can come up
+  // uncontrolled (especially with DevTools "Bypass for network" or after an
+  // HMR-triggered reload). The page-side `ensureServiceWorker` posts this
+  // when it finds itself with `navigator.serviceWorker.controller === null`
+  // but a registration that does have an `active` worker.
+  if (data?.type === 'CLAIM') {
+    log('CLAIM requested by page');
+    void sw.clients.claim().then(() => log('clients.claim() resolved'));
+    return;
+  }
+  // The hub-UI's installSwProxyListener posts this immediately after
+  // wiring its message handler. event.source is the originating client;
+  // its `.id` matches what FetchEvent.clientId will be for sub-resource
+  // requests from that document.
+  if (data?.type === 'BRIKA_PROXY_READY' && event.source && 'id' in event.source) {
+    proxyReadyClients.add(event.source.id);
+    log('proxy registered', {
+      clientId: event.source.id,
+      totalReady: proxyReadyClients.size,
+    });
+  }
+});
+
+sw.addEventListener('activate', (event: ExtendableEvent) => {
+  log('activate');
+  event.waitUntil(
+    (async () => {
+      const names = await caches.keys();
+      const stale = names.filter((n) => n.startsWith('brika-assets-') && n !== ASSET_CACHE);
+      if (stale.length > 0) {
+        log('dropping stale caches', stale);
+      }
+      await Promise.all(stale.map((n) => caches.delete(n)));
+      // clients.claim() takes control of any pages already open under
+      // a previous SW — so an in-flight bootstrap visit auto-heals
+      // without forcing a manual unregister + hard refresh.
+      await sw.clients.claim();
+      log('clients.claim resolved');
+    })()
+  );
+});
+
+sw.addEventListener('fetch', (event: FetchEvent) => {
+  const req = event.request;
+  const url = new URL(req.url);
+  if (url.origin !== sw.location.origin) {
+    return;
+  }
+  // Navigation requests (top-level document loads) must never be
+  // proxied. The bootstrap origin serves the SPA-fallback HTML; the
+  // bootstrap then runs, registers this SW, and loads the hub via
+  // WebRTC. If we intercepted nav and tried to proxy through a stale
+  // client (or no client at all), refreshes would 503/504 the user's
+  // own tab instead of re-running the bootstrap.
+  if (req.mode === 'navigate') {
+    return;
+  }
+  // Live `/api/*` requests can't be pre-cached (brick modules are loaded
+  // on-demand, REST endpoints have request-specific bodies). Forward them
+  // to the controlling page over postMessage so it can re-issue the call
+  // through the WebRTC bridge — for EVERY method, not just GET. A mutating
+  // verb like POST /api/auth/login would otherwise fall through to the
+  // network and hit `hub.brika.dev` (which has no app surface).
+  if (url.pathname.startsWith('/api/')) {
+    event.respondWith(proxyOr503(req, event.clientId));
+    return;
+  }
+  // Everything below this point is the static-asset cache path — GET-only.
+  if (req.method !== 'GET') {
+    return;
+  }
+
+  event.respondWith(
+    (async () => {
+      const cache = await caches.open(ASSET_CACHE);
+      const cached = await cache.match(req);
+      if (cached) {
+        return cached;
+      }
+      // Cache miss. Two distinct callers reach here:
+      //  - The hub UI loaded via WebRTC, dynamically importing a Vite-
+      //    served module the BFS didn't statically discover (~3000 modules
+      //    in dev). Route through the page bridge so the hub's dev-ui-proxy
+      //    can serve the module; cache the response for next time.
+      //  - The bootstrap document itself, fetching its own resources
+      //    (favicon.ico, /sw.js, vite HMR assets in local dev). These
+      //    have no proxy listener — fall through to the origin network.
+      // We use the proxyReadyClients gate to distinguish the two: a
+      // hub-UI document has explicitly registered; the bootstrap hasn't.
+      const client = await resolveProxyClient(event.clientId);
+      if (client) {
+        const res = await proxyThroughClient(req, client);
+        if (res.ok) {
+          const cacheable = res.clone();
+          event.waitUntil(cache.put(req, cacheable).catch(() => {}));
+        }
+        return res;
+      }
+      try {
+        return await fetch(req);
+      } catch (err) {
+        return new Response(`SW network fallback failed: ${err}`, {
+          status: 502,
+          headers: { 'content-type': 'text/plain' },
+        });
+      }
+    })()
+  );
+});
+
+/**
+ * `/api/*` request that we can't fulfil without a hub bridge: if no
+ * ready client is around, return a clear 503 instead of hanging on the
+ * head timer. The hub UI never calls /api before installSwProxyListener
+ * runs (the import is top-level-awaited), so this 503 only fires when
+ * something has gone wrong — usually a refresh interrupting the boot.
+ */
+async function proxyOr503(req: Request, clientId: string): Promise<Response> {
+  const client = await resolveProxyClient(clientId);
+  if (!client) {
+    log('/api 503', {
+      url: req.url,
+      fetchClientId: clientId || '<empty>',
+      ready: [...proxyReadyClients],
+    });
+    return new Response('No controlling page available to proxy /api', {
+      status: 503,
+      headers: { 'content-type': 'text/plain' },
+    });
+  }
+  return proxyThroughClient(req, client);
+}
+
+/**
+ * Return the originating Client iff it has registered as proxy-ready.
+ * Never falls back to "any window client" — cross-tab proxying would
+ * route a request emitted from tab A through tab B's bridge, possibly
+ * targeting a different hub.
+ */
+async function resolveProxyClient(clientId: string): Promise<Client | null> {
+  if (!clientId || !proxyReadyClients.has(clientId)) {
+    return null;
+  }
+  const client = await sw.clients.get(clientId);
+  if (!client) {
+    // Client went away — purge so the Set doesn't grow unbounded over
+    // long-lived SWs. (Browsers also kill the SW periodically.)
+    proxyReadyClients.delete(clientId);
+    return null;
+  }
+  return client;
+}
+
+interface ProxyHead {
+  kind: 'head';
+  status?: number;
+  headers?: Array<[string, string]>;
+}
+interface ProxyChunk {
+  kind: 'chunk';
+  bytes?: ArrayBuffer;
+}
+interface ProxyEnd {
+  kind: 'end';
+}
+interface ProxyError {
+  kind: 'error';
+  message?: string;
+}
+type ProxyMessage = ProxyHead | ProxyChunk | ProxyEnd | ProxyError;
+
+/**
+ * Ask the page to re-issue this request through its WebRTC bridge and
+ * stream the result back. The page-side listener lives in
+ * `apps/ui/src/lib/api/sw-proxy.ts`.
+ */
+async function proxyThroughClient(req: Request, client: Client): Promise<Response> {
+  const headers: Array<[string, string]> = [];
+  for (const [k, v] of req.headers) {
+    headers.push([k, v]);
+  }
+  const body = req.method !== 'GET' && req.method !== 'HEAD' ? await req.arrayBuffer() : null;
+  const channel = new MessageChannel();
+  client.postMessage(
+    {
+      type: 'brika:sw-proxy',
+      url: req.url,
+      method: req.method,
+      headers,
+      body,
+    },
+    [channel.port2]
+  );
+  // Stream the body chunk-by-chunk through the MessagePort. The previous
+  // shape buffered the entire response via `arrayBuffer()` on the page
+  // side, which hangs forever on streaming responses (SSE / long-poll /
+  // `text/event-stream`) — bricks-not-loading was the visible symptom.
+  // Head arrives first; chunks flow until end/error. The 30s timeout only
+  // covers head arrival; once the head lands the stream lifetime is
+  // governed by the chunks.
+  return new Promise<Response>((resolve) => {
+    const { readable, writable } = new TransformStream<Uint8Array, Uint8Array>();
+    const writer = writable.getWriter();
+    let headSeen = false;
+    const headTimer = setTimeout(() => {
+      if (!headSeen) {
+        resolve(
+          new Response('Bridge proxy timed out before head', {
+            status: 504,
+            headers: { 'content-type': 'text/plain' },
+          })
+        );
+      }
+    }, 30_000);
+    channel.port1.onmessage = (event: MessageEvent<ProxyMessage>) => {
+      const msg = event.data;
+      if (msg.kind === 'head' && !headSeen) {
+        headSeen = true;
+        clearTimeout(headTimer);
+        resolve(
+          new Response(readable, {
+            status: msg.status ?? 502,
+            headers: msg.headers ?? [],
+          })
+        );
+        return;
+      }
+      if (msg.kind === 'chunk' && msg.bytes) {
+        void writer.write(new Uint8Array(msg.bytes));
+        return;
+      }
+      if (msg.kind === 'end') {
+        void writer.close();
+        return;
+      }
+      if (msg.kind === 'error') {
+        // If the error arrives before head, resolve with a 502 so the
+        // browser sees an actual response instead of waiting on the head
+        // timer. Otherwise abort the in-flight stream.
+        if (!headSeen) {
+          headSeen = true;
+          clearTimeout(headTimer);
+          resolve(
+            new Response(`Bridge proxy error: ${msg.message ?? 'unknown'}`, {
+              status: 502,
+              headers: { 'content-type': 'text/plain' },
+            })
+          );
+          return;
+        }
+        void writer.abort(new Error(msg.message ?? 'bridge error'));
+      }
+    };
+  });
+}

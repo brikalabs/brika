@@ -13,9 +13,11 @@
   },
   "workspaces": ["apps/*", "packages/*", "plugins/*"],
   "scripts": {
-    "dev": "bun --filter @brika/hub --filter @brika/ui dev",
+    "dev": "BRIKA_COORDINATOR_URL=http://localhost:5174 BRIKA_DEV_UI_PROXY=http://localhost:5173 BRIKA_DEV_AUTOCLAIM=devhub bun --filter @brika/signaling --filter @brika/ui --filter @brika/hub dev",
     "dev:hub": "bun --filter @brika/hub dev",
+    "dev:hub:proxied": "BRIKA_DEV_UI_PROXY=http://localhost:5173 bun --filter @brika/hub dev",
     "dev:ui": "bun --filter @brika/ui dev",
+    "dev:signaling": "bun --filter @brika/signaling dev",
     "up": "mortar",
     "test": "bun --filter '*' test --parallel",
     "test:coverage": "bun --filter '*' test --parallel",

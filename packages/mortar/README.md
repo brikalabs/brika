@@ -51,6 +51,8 @@ services:
     port: 3000                       # ← declare the port, recommended
     env:                             # optional; merged on top of process.env
       DEBUG: "true"
+      STATE_DIR: ${root}/.state      # ${root} expands to mortar.yml's dir
+      TOKEN: ${env:CI_TOKEN}         # ${env:NAME} expands process.env.NAME
     dependsOn: [other-id, ...]       # optional; waits for those to be healthy
     health:                          # optional; defaults derived from `port:`
       kind: auto | tcp | http | none
@@ -58,6 +60,30 @@ services:
       url: http://localhost:3000/healthz   # when kind: http
       timeoutMs: 15000
     url: http://localhost:3000/?foo  # optional override (deep links, query strings)
+```
+
+### Variable substitution
+
+String fields (`env` values, `command`, `cwd`, `url`) accept two
+placeholders, expanded at config-load time:
+
+| Placeholder | Expands to |
+| --- | --- |
+| `${root}` | absolute path to the directory containing `mortar.yml` |
+| `${env:NAME}` | `process.env.NAME` at load time (empty string if unset) |
+
+Bare `${NAME}` (without the `env:` prefix) is left unchanged so it can
+flow through to the spawned service's runtime.
+
+Useful for pinning runtime state to the repo root even when the service
+runs from a sub-cwd:
+
+```yaml
+hub:
+  cwd: apps/hub
+  command: bun run dev
+  env:
+    BRIKA_HOME: ${root}/.brika  # → /<repo>/.brika, not apps/hub/.brika
 ```
 
 ### Declared `port:` vs. auto-detection

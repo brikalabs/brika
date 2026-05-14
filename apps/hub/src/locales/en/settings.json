@@ -11,7 +11,61 @@
     "time": "Date & time",
     "location": "Location",
     "hub": "Hub",
+    "remoteAccess": "Remote access",
     "system": "System"
+  },
+  "remoteAccess": {
+    "title": "Remote access",
+    "description": "Reach this hub from outside your local network — no port forwarding, end-to-end encrypted via WebRTC.",
+    "section": {
+      "title": "Connection",
+      "description": "Status of the peer-to-peer tunnel and active browser sessions."
+    },
+    "status": {
+      "idle": "Idle",
+      "connecting": "Connecting…",
+      "reconnecting": "Reconnecting…",
+      "connected": "Connected",
+      "closed": "Closed"
+    },
+    "stateDescription": {
+      "idle": "Waiting for a name claim before connecting to the coordinator.",
+      "connecting": "Opening the signaling connection…",
+      "reconnecting": "Lost connection to the coordinator — retrying with backoff.",
+      "connected": "Online and accepting browser sessions.",
+      "closed": "Disconnected. Click \"Forget\" or restart the hub to reconnect."
+    },
+    "fields": {
+      "name": "Hub name",
+      "status": "Signaling",
+      "publicOrigin": "Share link",
+      "activeSessions": "Active sessions",
+      "coordinator": "Coordinator URL"
+    },
+    "shareUrl": {
+      "copy": "Copy link",
+      "open": "Open in a new tab"
+    },
+    "coordinator": {
+      "test": "Test connection",
+      "edit": "Change",
+      "testing": "Testing…",
+      "testOk": "Coordinator reachable.",
+      "testFailed": "Coordinator returned status {{status}}."
+    },
+    "claim": {
+      "help": "Pick a unique name. First-come, first-served — once claimed, no one else can use it on this coordinator.",
+      "placeholder": "yourhub",
+      "submit": "Claim name"
+    },
+    "forget": {
+      "title": "Disconnect",
+      "description": "Releases the name on the coordinator and removes the local bearer token. You can claim the same name again later.",
+      "action": "Forget this hub",
+      "confirmTitle": "Release \"{name}\"?",
+      "confirmDescription": "The name will become available for anyone else to claim. You'll lose remote access to this hub until you claim a name again.",
+      "confirm": "Release and forget"
+    }
   },
   "time": {
     "title": "Date & time",

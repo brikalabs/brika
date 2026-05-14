@@ -1,7 +1,7 @@
 import { useAuth } from '@brika/auth/react';
 import { Avatar, AvatarFallback, AvatarImage } from '@brika/clay';
 import { AlertCircle, Camera, Loader2 } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { type ChangeEvent, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StepBody, StepHeader, StepNav } from './shared';
 
@@ -32,7 +32,7 @@ export function AvatarStep() {
         .slice(0, 2)
     : '?';
 
-  const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleUpload = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) {
       return;

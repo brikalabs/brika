@@ -17,6 +17,7 @@ interface LogListProps {
 }
 
 const AT_TOP_THRESHOLD = 40;
+const LOAD_MORE_THRESHOLD = 240;
 
 export function LogList({
   logs,
@@ -84,6 +85,17 @@ export function LogList({
     }
   }, [pendingCount, onRevealPending]);
 
+  const maybeLoadMore = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el || !hasMore || isFetchingMore || !onLoadMore) {
+      return;
+    }
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    if (distanceFromBottom < LOAD_MORE_THRESHOLD) {
+      onLoadMore();
+    }
+  }, [hasMore, isFetchingMore, onLoadMore]);
+
   const handleScroll = useCallback(() => {
     const el = scrollRef.current;
     if (!el) { return; }
@@ -93,15 +105,18 @@ export function LogList({
       onRevealPending?.();
     }
     isAtTopRef.current = atTop;
-  }, [onRevealPending]);
 
-  // Trigger infinite scroll when the last visible row reaches the end of the list.
-  const lastVirtualIndex = virtualizer.getVirtualItems().at(-1)?.index ?? -1;
+    // Infinite scroll: scroll event drives it (not a virtualizer-keyed
+    // effect that would fire every tick).
+    maybeLoadMore();
+  }, [onRevealPending, maybeLoadMore]);
+
+  // Cover the case where the list underfills the viewport: the user CAN'T
+  // scroll, so `handleScroll` never fires, but we still have more rows.
+  // Re-check whenever the data set or capacity changes.
   useEffect(() => {
-    if (lastVirtualIndex >= logs.length - 1 && hasMore && !isFetchingMore) {
-      onLoadMore?.();
-    }
-  }, [lastVirtualIndex, logs.length, hasMore, isFetchingMore, onLoadMore]);
+    maybeLoadMore();
+  }, [maybeLoadMore, logs.length]);
 
   const scrollToTopAndReveal = useCallback(() => {
     const el = scrollRef.current;

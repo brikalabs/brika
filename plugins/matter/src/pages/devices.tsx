@@ -41,7 +41,7 @@ import {
   Trash2,
   Wrench,
 } from '@brika/sdk/ui-kit/icons';
-import { useState } from 'react';
+import { type ChangeEvent, type KeyboardEvent, useState } from 'react';
 import { commission, getDevices, remove, scan } from '../actions';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -529,9 +529,9 @@ export default function DevicesPage() {
           <div className="flex gap-2">
             <Input
               value={pairingCode}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPairingCode(e.target.value)}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => setPairingCode(e.target.value)}
               placeholder={t('devicesPage.commissionPlaceholder')}
-              onKeyDown={(e: React.KeyboardEvent) => {
+              onKeyDown={(e: KeyboardEvent) => {
                 if (e.key === 'Enter') handleCommission();
               }}
             />
