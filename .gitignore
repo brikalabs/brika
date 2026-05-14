@@ -8,8 +8,9 @@ node_modules
 *.log
 *.tsbuildinfo
 
-# Docker volume mount folder
-config/
+# Docker volume mount folder (root-only — don't shadow nested `config/` dirs
+# inside packages, e.g. packages/mortar/src/config/).
+/config/
 
 # BRIKA runtime data
 .brika/
