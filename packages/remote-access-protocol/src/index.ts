@@ -1,4 +1,6 @@
 export {
+  BODY_TOO_LARGE_CODE,
+  BodyTooLargeError,
   type EmitFrame,
   emitRequest,
   RequestAssembler,

@@ -16,6 +16,8 @@
 import { TRANSPORT_HEADER } from '@brika/auth';
 import {
   type AbortMessage,
+  BODY_TOO_LARGE_CODE,
+  BodyTooLargeError,
   PROTOCOL_VERSION,
   RequestAssembler,
   type RequestMessage,
@@ -37,7 +39,33 @@ export interface RpcServerOptions {
    * value the page bridge forwards over the data channel.
    */
   readonly remoteUserAgent?: string;
+  /**
+   * Per-request upload cap (bytes). A peer streaming more than this many
+   * body bytes trips a {@link BodyTooLargeError} on the assembler's stream;
+   * the dispatcher catches it and replies with `code: 'body-too-large'`.
+   * Hub-side defence against unbounded-upload DoS — without it, a peer can
+   * drive the hub OOM by streaming chunks the app handler never consumes.
+   * Defaults to 50 MiB if omitted.
+   */
+  readonly maxRequestBodyBytes?: number;
   readonly log: SignalingLogger;
+}
+
+const DEFAULT_MAX_REQUEST_BODY_BYTES = 50 * 1024 * 1024;
+
+// Walk an error and its `cause` chain looking for our typed marker. The body
+// stream's error gets re-thrown through fetch/Hono machinery and often arrives
+// as a `TypeError` wrapping the original — we don't want a `body-too-large`
+// outcome to surface as a generic `internal` 500.
+function findBodyTooLarge(err: unknown): BodyTooLargeError | null {
+  let cursor: unknown = err;
+  for (let depth = 0; depth < 5 && cursor; depth++) {
+    if (cursor instanceof BodyTooLargeError) {
+      return cursor;
+    }
+    cursor = cursor instanceof Error ? cursor.cause : null;
+  }
+  return null;
 }
 
 interface InFlight {
@@ -110,7 +138,8 @@ export class RpcServer {
     }
 
     const controller = new AbortController();
-    const assembler = msg.hasBody ? new RequestAssembler() : null;
+    const maxBodyBytes = this.#options.maxRequestBodyBytes ?? DEFAULT_MAX_REQUEST_BODY_BYTES;
+    const assembler = msg.hasBody ? new RequestAssembler({ maxBodyBytes }) : null;
     this.#inflight.set(msg.id, { controller, assembler });
 
     // Dispatch eagerly — the assembler's stream backs the Request body so
@@ -152,6 +181,27 @@ export class RpcServer {
     try {
       response = await this.#options.apiServer.fetchInternal(request);
     } catch (err) {
+      // Look through wrapping layers — Hono/fetch may re-wrap the stream error
+      // as a `TypeError: The stream is errored` whose `cause` is the original
+      // `BodyTooLargeError`.
+      const tooLarge = findBodyTooLarge(err);
+      if (tooLarge) {
+        this.#options.log.warn('rpc upload exceeded limit', {
+          sessionId: this.#options.sessionId,
+          id: msg.id,
+          url: msg.url,
+          limit: tooLarge.limit,
+        });
+        send({
+          v: PROTOCOL_VERSION,
+          kind: 'response.error',
+          id: msg.id,
+          code: BODY_TOO_LARGE_CODE,
+          message: tooLarge.message,
+          status: 413,
+        });
+        return;
+      }
       this.#options.log.error('rpc dispatch threw', {
         sessionId: this.#options.sessionId,
         id: msg.id,

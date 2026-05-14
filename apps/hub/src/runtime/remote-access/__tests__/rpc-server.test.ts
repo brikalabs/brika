@@ -313,6 +313,68 @@ describe('RpcServer', () => {
     expect(head?.status).toBe(200);
   });
 
+  it('replies with response.error{code: body-too-large, status: 413} when an upload exceeds maxRequestBodyBytes', async () => {
+    const outbox: RpcMessage[] = [];
+    const apiServer = {
+      // Drain the body so the assembler's stream raises the typed error.
+      fetchInternal: async (req: Request) => {
+        await req.arrayBuffer();
+        return new Response('unreachable');
+      },
+    } as unknown as ApiServer;
+    const server = new RpcServer({
+      sessionId: 'sess-cap',
+      baseOrigin: 'https://hub.local',
+      apiServer,
+      remoteIp: '203.0.113.1',
+      // 10-byte cap so the second chunk overflows.
+      maxRequestBodyBytes: 10,
+      log: silentLog,
+    });
+    const send = (frame: RpcMessage) => outbox.push(frame);
+
+    server.handle(
+      {
+        v: PROTOCOL_VERSION,
+        kind: 'request',
+        id: 9,
+        method: 'POST',
+        url: '/api/upload',
+        headers: [['content-type', 'application/octet-stream']],
+        hasBody: true,
+      },
+      send
+    );
+    server.handle(
+      {
+        v: PROTOCOL_VERSION,
+        kind: 'request.chunk',
+        id: 9,
+        dataText: 'abcdef',
+      },
+      send
+    );
+    server.handle(
+      {
+        v: PROTOCOL_VERSION,
+        kind: 'request.chunk',
+        id: 9,
+        dataText: 'ghijkl', // total 12 > 10 → trips the cap.
+      },
+      send
+    );
+    server.handle({ v: PROTOCOL_VERSION, kind: 'request.end', id: 9 }, send);
+    await flush();
+
+    const errFrame = outbox.find((f) => f.kind === 'response.error') as
+      | { kind: 'response.error'; code: string; status?: number }
+      | undefined;
+    expect(errFrame?.code).toBe('body-too-large');
+    expect(errFrame?.status).toBe(413);
+    // No response.head was emitted — the cap fired before dispatch returned a Response.
+    expect(outbox.some((f) => f.kind === 'response.head')).toBe(false);
+  });
+
   it('leaves the page-forwarded user-agent intact when no remoteUserAgent is configured', async () => {
     const seen: Request[] = [];
     const { server, outbox } = makeServer(

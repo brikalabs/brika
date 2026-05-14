@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'bun:test';
 import {
+  BODY_TOO_LARGE_CODE,
+  BodyTooLargeError,
   emitRequest,
   RequestAssembler,
   ResponseAssembler,
@@ -212,6 +214,73 @@ describe('bridge', () => {
       });
       const res = await assembler.response();
       await expect(res.text()).rejects.toThrow();
+    });
+  });
+
+  describe('size cap', () => {
+    it('RequestAssembler errors the body stream once maxBodyBytes is exceeded', async () => {
+      const assembler = new RequestAssembler({ maxBodyBytes: 10 });
+      // Start reading first so the controller can deliver chunks (and the
+      // eventual error) to a real consumer — matching how `app.fetch()` uses
+      // the assembler's stream.
+      const reader = assembler.body().getReader();
+      assembler.onChunk({
+        v: PROTOCOL_VERSION,
+        kind: 'request.chunk',
+        id: 1,
+        dataText: 'abcdef', // 6 bytes — under the cap.
+      });
+      // Drain the first chunk before the overflow trips the cap. Without
+      // this, the spec drops the queue when `error()` is called and we
+      // can't observe that the first chunk was accepted.
+      const first = await reader.read();
+      expect(first.done).toBe(false);
+      expect(first.value?.byteLength).toBe(6);
+
+      // 6 more bytes — total 12 > 10. Must trip the cap.
+      assembler.onChunk({
+        v: PROTOCOL_VERSION,
+        kind: 'request.chunk',
+        id: 1,
+        dataText: 'ghijkl',
+      });
+
+      let caught: unknown = null;
+      try {
+        await reader.read();
+      } catch (err) {
+        caught = err;
+      }
+      expect(caught).toBeInstanceOf(BodyTooLargeError);
+      expect((caught as BodyTooLargeError).code).toBe(BODY_TOO_LARGE_CODE);
+      expect((caught as BodyTooLargeError).limit).toBe(10);
+    });
+
+    it('RequestAssembler without a cap accepts arbitrarily large bodies', async () => {
+      const assembler = new RequestAssembler();
+      // Drain in the background so the controller has room to enqueue.
+      const drain = (async () => {
+        const reader = assembler.body().getReader();
+        let total = 0;
+        for (;;) {
+          const { done, value } = await reader.read();
+          if (done) {
+            break;
+          }
+          total += value?.byteLength ?? 0;
+        }
+        return total;
+      })();
+      for (let i = 0; i < 50; i++) {
+        assembler.onChunk({
+          v: PROTOCOL_VERSION,
+          kind: 'request.chunk',
+          id: 1,
+          dataText: 'x'.repeat(1024),
+        });
+      }
+      assembler.onEnd({ v: PROTOCOL_VERSION, kind: 'request.end', id: 1 });
+      expect(await drain).toBe(50 * 1024);
     });
   });
 });
