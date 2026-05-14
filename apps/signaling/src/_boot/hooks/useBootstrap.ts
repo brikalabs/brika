@@ -131,7 +131,7 @@ async function runAttempt(
   }
   log('ticket ok', {
     ticket: `${ticket.ticket.slice(0, 12)}…`,
-    expiresIn: `${ticket.expiresAt - Math.floor(Date.now() / 1000)}s`,
+    expiresAt: new Date(ticket.expiresAt * 1000).toISOString(),
   });
 
   log('opening peer');

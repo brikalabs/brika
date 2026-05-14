@@ -9,6 +9,7 @@
  */
 
 import {
+  BootstrapError,
   HubDevProxyError,
   HubNotFoundError,
   HubOutdatedError,
@@ -179,9 +180,10 @@ async function primeCache(
 ): Promise<void> {
   const cache = await caches.open(ASSET_CACHE);
   const visited = new Set<string>(initial);
+  const essential = new Set<string>(initial);
   const queue = [...initial];
   const inflight = new Set<Promise<void>>();
-  let stopErr: HubDevProxyError | null = null;
+  let stopErr: BootstrapError | null = null;
   let fetched = 0;
 
   const processOne = async (url: string): Promise<void> => {
@@ -201,10 +203,27 @@ async function primeCache(
     try {
       result = await fetchThroughPeer(peer, url);
     } catch (err) {
+      // Dev-proxy fault is always fatal — same UX regardless of which URL tripped it.
       if (err instanceof HubDevProxyError) {
         stopErr = err;
+        return;
       }
-      // 404s on optional resources shouldn't abort the whole graph.
+      // Initial URLs are the entry scripts + CSS the hub's index.html
+      // directly references — non-optional. Silently dropping them lets
+      // the bootstrap reach "done" with an empty cache, and the browser
+      // then hits the SPA-origin fallback with a misleading text/html
+      // MIME error. Surface the real cause instead.
+      if (essential.has(url) && err instanceof BootstrapError) {
+        stopErr = err;
+        return;
+      }
+      // Transitive refs can legitimately 404 (a stale asset URL in CSS,
+      // a removed dynamic import). Log so a future debug session isn't
+      // blind, but don't abort the graph.
+      console.warn('[brika-bootstrap] prime skipped', {
+        url,
+        err: err instanceof Error ? `${err.name}: ${err.message}` : String(err),
+      });
       return;
     }
     await cache.put(url, result.response);
