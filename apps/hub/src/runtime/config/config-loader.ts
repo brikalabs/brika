@@ -109,13 +109,15 @@ export class ConfigLoader {
   }
 
   async load(): Promise<BrikaConfig> {
-    if (this.#config) return this.#config;
+    if (this.#config) {
+      return this.#config;
+    }
 
     try {
       const file = Bun.file(this.configPath);
       if (!(await file.exists())) {
-        this.#logger.info("Configuration file not found, using default configuration", {
-          configPath: this.configPath
+        this.#logger.info('Configuration file not found, using default configuration', {
+          configPath: this.configPath,
         });
         this.#config = DEFAULT_CONFIG;
         return this.#config;
@@ -147,7 +149,7 @@ export class ConfigLoader {
         schedules: (parsed.schedules as ScheduleEntry[]) ?? [],
       };
 
-      this.#logger.info("Configuration loaded successfully", {
+      this.#logger.info('Configuration loaded successfully', {
         configPath: this.configPath,
         pluginCount: this.#config.plugins.length,
         ruleCount: this.#config.rules.length,
@@ -156,7 +158,7 @@ export class ConfigLoader {
       return this.#config;
     } catch (err) {
       this.#logger.error(
-        "Failed to load configuration file, falling back to defaults",
+        'Failed to load configuration file, falling back to defaults',
         { configPath: this.configPath },
         { error: err }
       );
@@ -234,7 +236,7 @@ export class ConfigLoader {
       this.#config = config;
     }
 
-    this.#logger.info("Configuration saved successfully", {
+    this.#logger.info('Configuration saved successfully', {
       configPath: this.configPath,
       pluginCount: configToSave.plugins.length,
     });
@@ -301,7 +303,9 @@ export class ConfigLoader {
     // workspace:* → find package by name in ./plugins/
     if (version === 'workspace:*') {
       const result = await this.#findWorkspacePackage(name);
-      if (result) return result;
+      if (result) {
+        return result;
+      }
       throw new Error(`Workspace package not found: ${name}`);
     }
 
@@ -314,7 +318,9 @@ export class ConfigLoader {
         : `${workspaceRoot}/${relativePath}`;
 
       const result = await this.#resolveWorkspacePackage(pluginDir, name);
-      if (result) return result;
+      if (result) {
+        return result;
+      }
       throw new Error(`Workspace package not found at: ${pluginDir}`);
     }
 
@@ -377,7 +383,7 @@ export class ConfigLoader {
     return null;
   }
 
-  async getWorkspaceRoot(): Promise<string> {
+  getWorkspaceRoot(): Promise<string> {
     return this.#findWorkspaceRoot();
   }
 
@@ -390,14 +396,18 @@ export class ConfigLoader {
       if (await Bun.file(bunLockPath).exists()) {
         try {
           const pkg = await Bun.file(`${dir}/package.json`).json();
-          if (pkg.workspaces) return dir;
+          if (pkg.workspaces) {
+            return dir;
+          }
         } catch {
           // Continue
         }
       }
 
       const parent = dirname(dir);
-      if (parent === dir) break;
+      if (parent === dir) {
+        break;
+      }
       dir = parent;
     }
 
@@ -409,7 +419,9 @@ export class ConfigLoader {
     fallbackName: string
   ): Promise<{ name: string; rootDirectory: string } | null> {
     const pkgPath = `${pluginDir}/package.json`;
-    if (!(await Bun.file(pkgPath).exists())) return null;
+    if (!(await Bun.file(pkgPath).exists())) {
+      return null;
+    }
 
     const pkg = await Bun.file(pkgPath).json();
     return { name: pkg.name || fallbackName, rootDirectory: pluginDir };

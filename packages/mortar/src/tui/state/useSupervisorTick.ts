@@ -9,7 +9,7 @@
  * Also calls `supervisor.start()` once on mount.
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useReducer } from 'react';
 import type { Supervisor } from '../../supervisor';
 
 /**
@@ -25,14 +25,17 @@ import type { Supervisor } from '../../supervisor';
 const RENDER_FRAME_MS = 1000 / 30;
 
 export function useSupervisorTick(supervisor: Supervisor): void {
-  const [, setTick] = useState(0);
+  // Canonical force-render pattern. We only need a function that
+  // triggers a render — the counter value itself is never read, so
+  // useReducer is a cleaner fit than `useState`.
+  const [, forceRender] = useReducer((n: number) => n + 1, 0);
   useEffect(() => {
     let scheduled = false;
     let pendingTimer: ReturnType<typeof setTimeout> | null = null;
     const flush = (): void => {
       pendingTimer = null;
       scheduled = false;
-      setTick((n) => n + 1);
+      forceRender();
     };
     const off = supervisor.subscribe((event) => {
       // Only state events drive scheduled re-renders. Lifecycle events

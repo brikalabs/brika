@@ -103,10 +103,16 @@ export function summarizeCrash(status: Extract<ServiceStatus, { kind: 'crashed' 
     return { headline: 'spawn error', detail: null };
   }
   // The `error.message` for ENOENT is typically "ENOENT: no such file…";
-  // promote that prefix to the headline.
-  const errCodeMatch = msg.match(/^(E[A-Z]+):\s*(.*)$/);
-  if (errCodeMatch) {
-    return { headline: errCodeMatch[1] ?? 'spawn error', detail: errCodeMatch[2] ?? null };
+  // promote that prefix to the headline. Split on the first `:` and
+  // pattern-test only the code half — avoids ReDoS-prone alternating
+  // greedy quantifiers (`\s*(.*)$`).
+  const colon = msg.indexOf(':');
+  if (colon > 0) {
+    const code = msg.slice(0, colon);
+    if (/^E[A-Z]+$/.test(code)) {
+      const detail = msg.slice(colon + 1).trim();
+      return { headline: code, detail: detail.length > 0 ? detail : null };
+    }
   }
   return { headline: 'spawn error', detail: msg };
 }

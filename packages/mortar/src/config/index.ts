@@ -6,7 +6,14 @@
 
 export { CONFIG_FILENAME, DEFAULT_CONFIG_YAML } from './defaults';
 export { topologicalLayers } from './graph';
-export { configExists, configPath, findConfig, loadConfig, saveConfig, saveDefaultConfig } from './load';
+export {
+  configExists,
+  configPath,
+  findConfig,
+  loadConfig,
+  saveConfig,
+  saveDefaultConfig,
+} from './load';
 export type { HealthCheck, MortarConfig, ResolvedConfig, ServiceSpec } from './types';
 export { serviceUrl } from './url';
 export { validateConfig } from './validate';

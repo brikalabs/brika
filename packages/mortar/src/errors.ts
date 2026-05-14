@@ -39,9 +39,6 @@ export class ConfigError extends MortarError {
 /** Thrown when {@link splitCommand} can't parse a YAML command string. */
 export class CommandParseError extends MortarError {
   override readonly name = 'CommandParseError';
-  constructor(message: string) {
-    super(message);
-  }
 }
 
 /**
@@ -76,9 +73,8 @@ export class HealthCheckTimeoutError extends MortarError {
     cause: unknown
   ) {
     const tail = cause instanceof Error ? `: ${cause.message}` : '';
-    const verb = kind === 'auto' ? 'Timed out waiting for' : 'Timed out waiting for';
     const subject = kind === 'auto' ? `pid ${target} to bind a TCP port` : target;
-    super(`${verb} ${subject} after ${timeoutMs}ms${tail}`);
+    super(`Timed out waiting for ${subject} after ${timeoutMs}ms${tail}`);
     this.cause = cause;
   }
 }

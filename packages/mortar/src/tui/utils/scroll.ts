@@ -7,7 +7,7 @@ export function clampScroll(value: number, max: number): number {
   if (value <= 0) {
     return 0;
   }
-  return value > max ? max : value;
+  return Math.min(value, max);
 }
 
 /** Returns the new scroll offset after scrolling down `by` lines. */

@@ -57,7 +57,9 @@ export function Outlet(): React.ReactElement | null {
     return null;
   }
   const params: unknown = 'params' in active ? active.params : undefined;
-  // biome-ignore lint/suspicious/noExplicitAny: route components are heterogeneous at the table level
-  const C = Component as React.ComponentType<any>;
-  return <C {...(params ?? {})} />;
+  // `Component` is already typed as `React.ComponentType<any>` via the
+  // route definition; the heterogeneous prop set is what makes the
+  // table-level any necessary. The spread is type-safe at runtime
+  // because each route's params shape matches its component's props.
+  return <Component {...(params ?? {})} />;
 }

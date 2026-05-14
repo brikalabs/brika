@@ -107,7 +107,7 @@ export async function runHealthcheck(
  * already-dead process is a fast no-op.
  */
 export async function terminateService(proc: Subprocess | null): Promise<void> {
-  if (!proc || proc.exitCode !== null) {
+  if (proc?.exitCode !== null) {
     return;
   }
   await killTree(proc, 'SIGTERM');

@@ -83,10 +83,10 @@ function namedKeyToBytes(key: Key): string | null {
  * Ctrl+], etc.) common enough to support without bloating the matcher.
  */
 function ctrlToBytes(input: string): string | null {
-  const code = input.toLowerCase().charCodeAt(0);
-  if (code >= 0x61 && code <= 0x7a) {
+  const code = input.toLowerCase().codePointAt(0);
+  if (code !== undefined && code >= 0x61 && code <= 0x7a) {
     // 'a' (0x61) → 0x01, 'z' (0x7a) → 0x1a
-    return String.fromCharCode(code - 0x60);
+    return String.fromCodePoint(code - 0x60);
   }
   if (input === ' ') {
     return '\x00'; // Ctrl+Space = NUL

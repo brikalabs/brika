@@ -47,7 +47,11 @@ export function DependencyView(): React.ReactElement {
       <Box flexDirection="column" gap={1}>
         {layers.map((layer, layerIdx) => (
           <Card
-            key={`layer-${layerIdx}`}
+            // Layer cards are positional (their identity IS their index),
+            // and the parent array only grows on config reload. Stable
+            // across renders within a single session, but we still derive
+            // the key from the layer's own contents for robustness.
+            key={layer.map((s) => s.id).join('|') || `empty-${layerIdx}`}
             title={`Layer ${layerIdx}`}
             accent="cyan"
             tag={layerIdx === 0 ? 'starts first · no deps' : `waits on layer ${layerIdx - 1}`}

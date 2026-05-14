@@ -21,15 +21,18 @@ export async function killTree(
   proc: Subprocess | null,
   signal: 'SIGTERM' | 'SIGKILL'
 ): Promise<void> {
-  if (!proc || proc.exitCode !== null || !proc.pid) {
+  if (proc?.exitCode !== null || !proc.pid) {
     return;
   }
   // 1. group kill
   safeKill(-proc.pid, signal);
-  // 2. tree walk (descendants that escaped the group)
+  // 2. tree walk (descendants that escaped the group). Reverse a copy
+  // so we don't mutate the array returned by `collectPidTree` (some
+  // callers may keep a reference).
   try {
     const pids = await collectPidTree(proc.pid);
-    for (const pid of pids.reverse()) {
+    const childrenFirst = [...pids].reverse();
+    for (const pid of childrenFirst) {
       safeKill(pid, signal);
     }
   } catch {

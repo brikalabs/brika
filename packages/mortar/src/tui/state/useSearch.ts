@@ -69,7 +69,7 @@ export function useSearch(logs: readonly string[], scopeKey: string): SearchCont
     const out: number[] = [];
     for (let i = 0; i < logs.length; i++) {
       const line = logs[i];
-      if (line && line.toLowerCase().includes(needle)) {
+      if (line?.toLowerCase().includes(needle)) {
         out.push(i);
       }
     }

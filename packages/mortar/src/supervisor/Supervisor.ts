@@ -158,10 +158,11 @@ export class Supervisor {
    */
   writeStdin(serviceId: string, data: string): boolean {
     const svc = this.services.get(serviceId);
-    if (!svc?.proc || svc.proc.exitCode !== null) {
+    const proc = svc?.proc;
+    if (!proc || proc.exitCode !== null) {
       return false;
     }
-    const stdin = svc.proc.stdin;
+    const stdin = proc.stdin;
     // When `stdin` is the inherited fd (number), there's no writer to call.
     // We only ever spawn with `stdin: 'pipe'`, so this is a defensive guard
     // against future config changes — not a path we exercise today.

@@ -5,19 +5,17 @@
  * Templates are packed via a Bun macro (inlined into the compiled binary).
  */
 
-import { dirname, join } from "node:path";
-import { loadTarBytes } from "@brika/db/macros" with { type: "macro" };
-import { inject, singleton } from "@brika/di";
-import { installDir } from "@/cli/utils/runtime";
-import { Logger } from "../logs/log-router";
-import { unpackTemplates } from "./templates-tar";
+import { dirname, join } from 'node:path';
+import { loadTarBytes } from '@brika/db/macros' with { type: 'macro' };
+import { inject, singleton } from '@brika/di';
+import { installDir } from '@/cli/utils/runtime';
+import { Logger } from '../logs/log-router';
+import { unpackTemplates } from './templates-tar';
 
 const isCompiled = import.meta.path.startsWith('/$bunfs/');
 
 function resolveDataDir(): string {
-  const autoDetected = isCompiled 
-    ? dirname(installDir) 
-    : join(process.cwd(), '.brika');
+  const autoDetected = isCompiled ? dirname(installDir) : join(process.cwd(), '.brika');
   return process.env.BRIKA_HOME ?? autoDetected;
 }
 
@@ -40,11 +38,11 @@ export class BrikaInitializer {
    * Unpacks templates from the embedded archive.
    */
   async init(): Promise<void> {
-    this.#logger.info("Initializing Brika workspace directory", {
+    this.#logger.info('Initializing Brika workspace directory', {
       brikaDir: this.#brikaDir,
     });
     const archive = new Uint8Array(await loadTarBytes('apps/hub/src/templates'));
     await unpackTemplates(archive, this.#rootDir, this.#logger);
-    this.#logger.info("Brika workspace directory initialized successfully");
+    this.#logger.info('Brika workspace directory initialized successfully');
   }
 }

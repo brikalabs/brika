@@ -69,7 +69,7 @@ export function useKey(
 
 function parseSpec(spec: string): Parsed {
   const parts = spec.split('+');
-  const last = parts[parts.length - 1];
+  const last = parts.at(-1);
   if (last === undefined || last.length === 0) {
     throw new Error(`useKey: invalid key spec ${JSON.stringify(spec)}`);
   }

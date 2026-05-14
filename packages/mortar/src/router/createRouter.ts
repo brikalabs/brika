@@ -30,7 +30,7 @@ export function createRouter<R extends RoutesShape>(options: CreateRouterOptions
     get current(): ActiveRoute<R> {
       // Stack is non-empty by construction (seeded with `initial`,
       // and `back()` refuses to pop the last entry).
-      return history[history.length - 1] as ActiveRoute<R>;
+      return history.at(-1) as ActiveRoute<R>;
     },
     navigate<K extends keyof R>(name: K, ...args: NavigateArgs<R, K>): void {
       const params = args[0];

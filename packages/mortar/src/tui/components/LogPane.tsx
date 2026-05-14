@@ -100,15 +100,19 @@ function HighlightLine({
   return (
     <Text>
       {gutter}
-      {segments.map((seg, idx) =>
-        seg.match ? (
-          <Text key={idx} backgroundColor="yellow" color="black">
+      {segments.map((seg) => {
+        // Each segment owns a unique offset within its parent line, so
+        // `match:offset` is a stable key across renders even when the
+        // text content of two adjacent segments happens to coincide.
+        const segKey = `${seg.match ? 'm' : 't'}:${seg.offset}`;
+        return seg.match ? (
+          <Text key={segKey} backgroundColor="yellow" color="black">
             {seg.text}
           </Text>
         ) : (
-          <Text key={idx}>{seg.text}</Text>
-        )
-      )}
+          <Text key={segKey}>{seg.text}</Text>
+        );
+      })}
     </Text>
   );
 }
@@ -123,6 +127,8 @@ function computeGutter(showGutter: boolean, isCurrent: boolean): string {
 interface Segment {
   readonly text: string;
   readonly match: boolean;
+  /** Start index in the parent line — stable identity for React keys. */
+  readonly offset: number;
 }
 
 function splitOnMatches(line: string, query: string): Segment[] {
@@ -133,13 +139,13 @@ function splitOnMatches(line: string, query: string): Segment[] {
   while (i < line.length) {
     const next = lower.indexOf(needle, i);
     if (next < 0) {
-      segments.push({ text: line.slice(i), match: false });
+      segments.push({ text: line.slice(i), match: false, offset: i });
       break;
     }
     if (next > i) {
-      segments.push({ text: line.slice(i, next), match: false });
+      segments.push({ text: line.slice(i, next), match: false, offset: i });
     }
-    segments.push({ text: line.slice(next, next + query.length), match: true });
+    segments.push({ text: line.slice(next, next + query.length), match: true, offset: next });
     i = next + query.length;
   }
   return segments;
