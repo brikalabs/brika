@@ -8,6 +8,7 @@ import { defineRoute, type RoutesShape } from '@brika/tui';
 import { DashboardView } from './views/DashboardView';
 import { HelpView } from './views/HelpView';
 import { LogsView } from './views/LogsView';
+import { PlaygroundView } from './views/PlaygroundView';
 import { PluginsView } from './views/PluginsView';
 import { SettingsView } from './views/SettingsView';
 import { UpdatesView } from './views/UpdatesView';
@@ -22,6 +23,7 @@ export const routes = {
   users: defineRoute({ component: UsersView }),
   updates: defineRoute({ component: UpdatesView }),
   settings: defineRoute({ component: SettingsView }),
+  playground: defineRoute({ component: PlaygroundView }),
   help: defineRoute({ component: HelpView }),
 } as const satisfies RoutesShape;
 
@@ -47,4 +49,5 @@ export const SIDEBAR_SECTIONS: ReadonlyArray<SectionEntry> = [
   { key: 'users', label: 'Users', hotkey: 'u' },
   { key: 'updates', label: 'Updates', hotkey: 'g' },
   { key: 'settings', label: 'Settings', hotkey: ',' },
+  { key: 'playground', label: 'Playground', hotkey: 'x' },
 ];

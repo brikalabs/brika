@@ -15,6 +15,7 @@
   },
   "scripts": {
     "dev": "bun run src/main.ts",
+    "dev:hot": "tui src/main.ts",
     "test": "bun test",
     "typecheck": "tsgo --noEmit"
   },

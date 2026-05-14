@@ -68,6 +68,21 @@ export function useKey(
 }
 
 export function parseSpec(spec: string): Parsed {
+  // Edge case: `+` is also the modifier separator, so a bare `+` (or
+  // `ctrl++` etc.) trips a naive `split('+')`. Handle it explicitly:
+  // a spec ending with `+` always represents the literal `+` char,
+  // with everything before the trailing `+` as modifiers.
+  if (spec.endsWith('+')) {
+    const modPart = spec.length === 1 ? '' : spec.slice(0, -2);
+    const mods = new Set(modPart === '' ? [] : modPart.split('+'));
+    return {
+      special: null,
+      char: '+',
+      ctrl: mods.has('ctrl'),
+      shift: mods.has('shift'),
+      meta: mods.has('meta'),
+    };
+  }
   const parts = spec.split('+');
   const last = parts.at(-1);
   if (last === undefined || last.length === 0) {

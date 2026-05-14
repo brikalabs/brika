@@ -35,6 +35,7 @@ export function useShellKeys(): void {
   useKey('u', () => router.navigate('users'), active);
   useKey('g', () => router.navigate('updates'), active);
   useKey(',', () => router.navigate('settings'), active);
+  useKey('x', () => router.navigate('playground'), active);
   useKey('?', () => router.navigate('help'), active);
 
   // Hub control (state-changing — Ctrl-modified so a plain `s` in a

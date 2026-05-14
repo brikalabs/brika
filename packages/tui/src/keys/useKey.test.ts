@@ -83,8 +83,34 @@ describe('parseSpec', () => {
     expect(() => parseSpec('')).toThrow(/invalid key spec/);
   });
 
-  test('throws on trailing +', () => {
-    expect(() => parseSpec('ctrl+')).toThrow(/invalid key spec/);
+  test('bare + is the literal plus char (special-cased because + is the mod separator)', () => {
+    expect(parseSpec('+')).toEqual({
+      special: null,
+      char: '+',
+      ctrl: false,
+      shift: false,
+      meta: false,
+    });
+  });
+
+  test('ctrl++ binds ctrl with the literal plus char', () => {
+    expect(parseSpec('ctrl++')).toEqual({
+      special: null,
+      char: '+',
+      ctrl: true,
+      shift: false,
+      meta: false,
+    });
+  });
+
+  test('shift+meta++ stacks modifiers around the literal plus', () => {
+    expect(parseSpec('shift+meta++')).toEqual({
+      special: null,
+      char: '+',
+      ctrl: false,
+      shift: true,
+      meta: true,
+    });
   });
 });
 

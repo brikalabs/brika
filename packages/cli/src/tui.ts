@@ -9,8 +9,26 @@
  * install command.
  */
 
-import type { ReactElement } from 'react';
+import {
+  createElement,
+  Fragment,
+  type ComponentType,
+  type PropsWithChildren,
+  type ReactElement,
+} from 'react';
 import type { Command, CommandOption, HandlerArgs } from './command';
+
+declare global {
+  // Set by `@brika/tui/refresh`'s preload when running in dev. We
+  // auto-wrap the rendered tree with the boundary (catches render-
+  // and commit-time throws so they don't tear down the Ink root)
+  // and the sibling overlay (shows the error message). In production
+  // both globals are unset and the branches below are dead.
+  // biome-ignore lint/style/noVar: required for global augmentation
+  var __brikaHmrOverlay: ComponentType | undefined;
+  // biome-ignore lint/style/noVar: required for global augmentation
+  var __brikaHmrBoundary: ComponentType<PropsWithChildren> | undefined;
+}
 
 export interface RunTuiOptions {
   /**
@@ -27,7 +45,13 @@ export interface RunTuiOptions {
  */
 export async function runTui(element: ReactElement, options: RunTuiOptions = {}): Promise<void> {
   const ink = await loadInk();
-  const instance = ink.render(element, {
+  const Overlay = globalThis.__brikaHmrOverlay;
+  const Boundary = globalThis.__brikaHmrBoundary;
+  const wrapped = Boundary ? createElement(Boundary, null, element) : element;
+  const tree = Overlay
+    ? createElement(Fragment, null, wrapped, createElement(Overlay))
+    : wrapped;
+  const instance = ink.render(tree, {
     exitOnCtrlC: options.exitOnCtrlC ?? true,
   });
   await instance.waitUntilExit();
