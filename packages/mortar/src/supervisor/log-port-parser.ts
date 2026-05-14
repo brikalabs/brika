@@ -19,8 +19,9 @@ const ANSI_RE = /\x1b\[[0-9;?]*[A-Za-z]/g;
 
 const URL_PORT_RE = /\bhttps?:\/\/[\w.-]*?:(\d{2,5})\b/i;
 const URL_BRACKETED_RE = /\bhttps?:\/\/\[[^\]]+\]:(\d{2,5})\b/i;
-const LISTENING_RE = /\b(?:listening|listen|bound)\b(?:[^\n]{0,40}?)(?:port[\s:=]+|:)(\d{2,5})\b/i;
-const RUNNING_RE = /\b(?:running|server|started|ready|live)\b[^\n]{0,40}?:(\d{2,5})\b/i;
+const LISTENING_RE =
+  /\b(?:listening|listen|bound)\b[^\n]{0,40}?(?:(?:port|on)[\s:=]+|:[ \t]*)(\d{2,5})\b/i;
+const RUNNING_RE = /\b(?:running|server|started|ready|live)\b[^\n]{0,40}?:[ \t]*(\d{2,5})\b/i;
 const PORT_KV_RE = /\bport[\s:=]+(\d{2,5})\b/i;
 
 const PATTERNS: ReadonlyArray<RegExp> = [

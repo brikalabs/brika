@@ -45,13 +45,14 @@ export function stripFilterPrefix(line: string): string {
 
 // ESC (0x1b) and BEL (0x07) are intentional ANSI control bytes that we MUST
 // match to strip non-SGR sequences. Constructing the regex via `new RegExp`
-// with `String.fromCharCode` keeps the control characters out of the source
-// (which is what linters / Sonar flag) without changing runtime behavior.
-const ESC = String.fromCharCode(0x1b);
-const BEL = String.fromCharCode(0x07);
-const NON_SGR_CSI_RE = new RegExp(`${ESC}\\[[?\\d;]*[ABCDEFGHJKLMSTfsu]`, 'g');
-const PRIVATE_MODE_RE = new RegExp(`${ESC}\\[\\?\\d+[hl]`, 'g');
-const OSC_RE = new RegExp(`${ESC}\\][^${BEL}${ESC}]*(?:${BEL}|${ESC}\\\\)`, 'g');
+// with `String.fromCodePoint` + `String.raw` keeps the control characters
+// and the backslash escapes out of the source (which is what linters and
+// Sonar flag) without changing runtime behavior.
+const ESC = String.fromCodePoint(0x1b);
+const BEL = String.fromCodePoint(0x07);
+const NON_SGR_CSI_RE = new RegExp(String.raw`${ESC}\[[?\d;]*[ABCDEFGHJKLMSTfsu]`, 'g');
+const PRIVATE_MODE_RE = new RegExp(String.raw`${ESC}\[\?\d+[hl]`, 'g');
+const OSC_RE = new RegExp(String.raw`${ESC}\][^${BEL}${ESC}]*(?:${BEL}|${ESC}\\)`, 'g');
 
 /**
  * Strip non-SGR ANSI control sequences from `line`. Keeps SGR codes

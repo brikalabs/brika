@@ -159,7 +159,7 @@ export class Supervisor {
   writeStdin(serviceId: string, data: string): boolean {
     const svc = this.services.get(serviceId);
     const proc = svc?.proc;
-    if (!proc || proc.exitCode !== null) {
+    if (proc?.exitCode !== null) {
       return false;
     }
     const stdin = proc.stdin;

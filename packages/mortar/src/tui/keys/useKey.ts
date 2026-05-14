@@ -41,7 +41,7 @@ const SPECIAL_KEYS = [
 
 type SpecialKey = (typeof SPECIAL_KEYS)[number];
 
-interface Parsed {
+export interface Parsed {
   readonly special: SpecialKey | null;
   /** Printable character to match against `input` (null for special keys). */
   readonly char: string | null;
@@ -67,7 +67,7 @@ export function useKey(
   );
 }
 
-function parseSpec(spec: string): Parsed {
+export function parseSpec(spec: string): Parsed {
   const parts = spec.split('+');
   const last = parts.at(-1);
   if (last === undefined || last.length === 0) {
@@ -84,7 +84,7 @@ function parseSpec(spec: string): Parsed {
   };
 }
 
-function matches(parsed: Parsed, input: string, key: Key): boolean {
+export function matches(parsed: Parsed, input: string, key: Key): boolean {
   if (parsed.ctrl !== key.ctrl) {
     return false;
   }
