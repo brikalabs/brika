@@ -129,17 +129,43 @@ function base64ToBytes(b64: string): Uint8Array {
 const TEXT_ENCODER = new TextEncoder();
 
 /**
+ * Stable error code emitted when a peer streams more body bytes than the
+ * assembler's `maxBodyBytes`. Surfaced on the stream's error so callers
+ * (the hub dispatcher, the FE transport) can map it to a 413 / typed error.
+ */
+export const BODY_TOO_LARGE_CODE = 'body-too-large';
+
+export class BodyTooLargeError extends Error {
+  readonly code = BODY_TOO_LARGE_CODE;
+  readonly limit: number;
+  constructor(limit: number) {
+    super(`Body exceeded ${limit} bytes`);
+    this.name = 'BodyTooLargeError';
+    this.limit = limit;
+  }
+}
+
+/**
  * Body-stream sink shared by {@link ResponseAssembler} (response.chunk/end)
  * and {@link RequestAssembler} (request.chunk/end). Exposes a
  * `ReadableStream<Uint8Array>` that consumers (the FE's `Response`, the hub's
  * `Request`) can read incrementally as frames arrive.
+ *
+ * If `maxBodyBytes` is set, the sink errors the stream with a
+ * {@link BodyTooLargeError} once the running byte total would exceed it. This
+ * is the hub's primary defence against a peer streaming unbounded chunks to
+ * exhaust memory — without it, the sink buffers every byte the peer sends
+ * until the consumer reads.
  */
 class ChunkBodySink {
   #controller: ReadableStreamDefaultController<Uint8Array> | null = null;
   readonly stream: ReadableStream<Uint8Array>;
   #closed = false;
+  #received = 0;
+  readonly #maxBodyBytes: number | null;
 
-  constructor() {
+  constructor(options: { maxBodyBytes?: number } = {}) {
+    this.#maxBodyBytes = options.maxBodyBytes ?? null;
     this.stream = new ReadableStream<Uint8Array>({
       start: (controller) => {
         this.#controller = controller;
@@ -147,15 +173,27 @@ class ChunkBodySink {
     });
   }
 
-  enqueue(chunk: { dataText?: string; dataB64?: string }): void {
+  enqueue(chunk: { dataText?: string; dataB64?: string; dataBin?: Uint8Array }): void {
     if (!this.#controller || this.#closed) {
       return;
     }
-    if (chunk.dataText !== undefined) {
-      this.#controller.enqueue(TEXT_ENCODER.encode(chunk.dataText));
+    let bytes: Uint8Array | null = null;
+    if (chunk.dataBin !== undefined) {
+      bytes = chunk.dataBin;
+    } else if (chunk.dataText !== undefined) {
+      bytes = TEXT_ENCODER.encode(chunk.dataText);
     } else if (chunk.dataB64 !== undefined) {
-      this.#controller.enqueue(base64ToBytes(chunk.dataB64));
+      bytes = base64ToBytes(chunk.dataB64);
     }
+    if (!bytes) {
+      return;
+    }
+    if (this.#maxBodyBytes !== null && this.#received + bytes.byteLength > this.#maxBodyBytes) {
+      this.error(new BodyTooLargeError(this.#maxBodyBytes));
+      return;
+    }
+    this.#received += bytes.byteLength;
+    this.#controller.enqueue(bytes);
   }
 
   close(): void {
@@ -206,9 +244,30 @@ function isTextContentType(contentType: string | null): boolean {
 const MAX_CHUNK_PAYLOAD_BYTES = 16 * 1024;
 
 /**
+ * Callback to send a raw-binary body chunk. Invoked instead of `emit` for
+ * non-text bodies when the peer has advertised `binary-frames`. The transport
+ * implementation wraps the bytes in {@link encodeBinaryChunk} and pushes
+ * them onto the data channel.
+ *
+ * Callees MUST consume the buffer synchronously (typical
+ * `channel.send(encodeBinaryChunk(...))` does — `encodeBinaryChunk` copies
+ * into a fresh ArrayBuffer immediately). Retaining the `bytes` view past
+ * an `await` is unsafe: the underlying stream-reader buffer may be reused
+ * by the next read.
+ */
+export type SendBinaryChunk = (bytes: Uint8Array) => void | Promise<void>;
+
+/**
  * Read a body stream and emit chunk frames built by `buildChunk`. Returns
  * `true` if the stream completed normally, `false` if aborted mid-stream.
  * Used by both `emitRequest` and `responseToFrames` for symmetric chunking.
+ *
+ * Body routing:
+ * - **text** content-type → `emit(buildChunk({ dataText }))`. Always.
+ * - **binary**, peer supports `binary-frames` → `sendBinary(bytes)`. Raw
+ *   bytes on the wire — no base64 inflation, no JSON parse on either side.
+ * - **binary**, peer does NOT support binary-frames → `emit(buildChunk({ dataB64 }))`.
+ *   Fallback for cross-version compat.
  *
  * `stream: true` on the decoder keeps incomplete UTF-8 sequences buffered
  * across calls — splitting on byte boundaries never corrupts multi-byte
@@ -219,7 +278,8 @@ async function streamBodyAsChunks<T extends RpcMessage>(
   decoder: TextDecoder | null,
   buildChunk: (data: { dataText?: string; dataB64?: string }) => T,
   emit: (frame: T) => void | Promise<void>,
-  abortSignal: AbortSignal | undefined
+  abortSignal: AbortSignal | undefined,
+  sendBinary?: SendBinaryChunk
 ): Promise<boolean> {
   const reader = body.getReader();
   try {
@@ -241,6 +301,10 @@ async function streamBodyAsChunks<T extends RpcMessage>(
         );
         if (decoder) {
           await emit(buildChunk({ dataText: decoder.decode(slice, { stream: true }) }));
+        } else if (sendBinary) {
+          // `channel.send` consumes synchronously per WebRTC spec, so forward
+          // the subarray view directly — no defensive copy needed.
+          await sendBinary(slice);
         } else {
           await emit(buildChunk({ dataB64: bytesToBase64(slice) }));
         }
@@ -281,7 +345,7 @@ export async function emitRequest(
   id: number,
   request: Request,
   emit: EmitFrame,
-  options: { abortSignal?: AbortSignal } = {}
+  options: { abortSignal?: AbortSignal; sendBinary?: SendBinaryChunk } = {}
 ): Promise<void> {
   const headerPairs = headersToPairs(request.headers);
   const method = request.method.toUpperCase();
@@ -310,7 +374,8 @@ export async function emitRequest(
     decoder,
     (data) => ({ v: PROTOCOL_VERSION, kind: 'request.chunk', id, ...data }),
     emit,
-    options.abortSignal
+    options.abortSignal,
+    options.sendBinary
   );
   if (completed) {
     await emit({ v: PROTOCOL_VERSION, kind: 'request.end', id });
@@ -387,7 +452,7 @@ export async function responseToFrames(
   id: number,
   response: Response,
   emit: EmitFrame,
-  options: { abortSignal?: AbortSignal } = {}
+  options: { abortSignal?: AbortSignal; sendBinary?: SendBinaryChunk } = {}
 ): Promise<void> {
   await emit({
     v: PROTOCOL_VERSION,
@@ -412,7 +477,8 @@ export async function responseToFrames(
       decoder,
       (data) => ({ v: PROTOCOL_VERSION, kind: 'response.chunk', id, ...data }),
       emit,
-      options.abortSignal
+      options.abortSignal,
+      options.sendBinary
     );
     if (completed) {
       await emit({ v: PROTOCOL_VERSION, kind: 'response.end', id });
@@ -450,9 +516,16 @@ export class ResponseAssembler {
   #headResolve: ((res: Response) => void) | null = null;
   #headReject: ((err: Error) => void) | null = null;
   readonly #headPromise: Promise<Response>;
-  readonly #body = new ChunkBodySink();
+  readonly #body: ChunkBodySink;
 
-  constructor() {
+  /**
+   * `maxBodyBytes`: defensive cap so a misbehaving / hostile hub can't make
+   * the FE buffer unbounded response bytes. Default omits the cap (responses
+   * are trusted in the normal hub/client relationship), but tests + paranoid
+   * consumers can pin a limit.
+   */
+  constructor(options: { maxBodyBytes?: number } = {}) {
+    this.#body = new ChunkBodySink({ maxBodyBytes: options.maxBodyBytes });
     this.#headPromise = new Promise<Response>((resolve, reject) => {
       this.#headResolve = resolve;
       this.#headReject = reject;
@@ -504,7 +577,19 @@ export class ResponseAssembler {
  * so the hub's app reads chunks as they arrive — not after the full upload.
  */
 export class RequestAssembler {
-  readonly #sink = new ChunkBodySink();
+  readonly #sink: ChunkBodySink;
+
+  /**
+   * `maxBodyBytes`: hub-side cap on upload size. A peer streaming more bytes
+   * than this trips a {@link BodyTooLargeError} on the body stream; the hub
+   * dispatcher catches it and replies with a `body-too-large` response.error.
+   * Required defence against unbounded-upload DoS — without it, a malicious
+   * peer can sink-fill the hub by streaming chunks the app handler never
+   * fully consumes.
+   */
+  constructor(options: { maxBodyBytes?: number } = {}) {
+    this.#sink = new ChunkBodySink({ maxBodyBytes: options.maxBodyBytes });
+  }
 
   /** Body stream — pass to `rpcRequestToFetch` as the body argument. */
   body(): ReadableStream<Uint8Array> {

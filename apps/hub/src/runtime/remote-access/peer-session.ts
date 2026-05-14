@@ -14,16 +14,32 @@
  */
 
 import {
+  type BinaryChunkKind,
+  decodeBinaryChunk,
   decodeRpc,
+  encodeBinaryChunk,
   encodeRpc,
   type IceCandidate,
   PROTOCOL_VERSION,
+  RPC_CAPABILITIES,
   type RpcMessage,
 } from '@brika/remote-access-protocol';
 import { type RTCDataChannel, RTCPeerConnection } from 'werift';
 import type { SignalingLogger } from './signaling-client';
 
-export type RpcHandler = (msg: RpcMessage, send: (frame: RpcMessage) => void) => void;
+/**
+ * Outbound API the RPC handler uses to push frames at the peer. The session
+ * owns the data-channel send path. `peerSupportsBinary()` is polled live —
+ * its value flips from `false` to `true` when the peer's hello arrives, and
+ * the dispatcher reads it at request-start to decide which wire form to use.
+ */
+export interface RpcSender {
+  send(frame: RpcMessage): void;
+  sendBinaryChunk(kind: BinaryChunkKind, id: number, bytes: Uint8Array): void;
+  peerSupportsBinary(): boolean;
+}
+
+export type RpcHandler = (msg: RpcMessage, sender: RpcSender) => void;
 
 export interface PeerSessionOptions {
   readonly sessionId: string;
@@ -42,6 +58,8 @@ export interface PeerSessionOptions {
 }
 
 const DEFAULT_IDLE_TIMEOUT_MS = 5 * 60 * 1000;
+/** Minimum gap between repeated malformed-frame WARN logs from one session. */
+const MALFORMED_LOG_INTERVAL_MS = 5_000;
 
 export class PeerSession {
   readonly #options: PeerSessionOptions;
@@ -49,9 +67,18 @@ export class PeerSession {
   #channel: RTCDataChannel | null = null;
   #idleTimer: ReturnType<typeof setTimeout> | null = null;
   #closed = false;
+  #peerSupportsBinary = false;
+  #malformedDropped = 0;
+  #lastMalformedLogAt = 0;
+  readonly #sender: RpcSender;
 
   constructor(options: PeerSessionOptions) {
     this.#options = options;
+    this.#sender = {
+      send: (frame) => this.#send(frame),
+      sendBinaryChunk: (kind, id, bytes) => this.#sendBinaryChunk(kind, id, bytes),
+      peerSupportsBinary: () => this.#peerSupportsBinary,
+    };
     // werift's RTCIceServer takes a single string for `urls`; if the caller
     // supplies an array, expand it into one server entry per URL so we
     // preserve the full set without losing credentials.
@@ -144,15 +171,11 @@ export class PeerSession {
 
     channel.onMessage.subscribe((data: string | Buffer) => {
       this.#resetIdleTimer();
-      const raw = typeof data === 'string' ? data : data.toString('utf-8');
-      const msg = decodeRpc(raw);
-      if (!msg) {
-        this.#options.log.warn('rpc: dropped malformed/wrong-version frame', {
-          sessionId: this.#options.sessionId,
-        });
-        return;
+      if (typeof data === 'string') {
+        this.#handleText(data);
+      } else {
+        this.#handleBinary(data);
       }
-      this.#options.onRpc(msg, (frame) => this.#send(frame));
     });
 
     channel.stateChanged.subscribe((state) => {
@@ -179,25 +202,97 @@ export class PeerSession {
       role: 'hub',
       softwareVersion: 'brika-hub',
       maxProtocolVersion: PROTOCOL_VERSION,
+      // Advertise everything we can decode. The peer flips on binary sends
+      // once it sees this in its own `handle` for our hello.
+      caps: [RPC_CAPABILITIES.BINARY_FRAMES],
+    });
+  }
+
+  #handleText(raw: string): void {
+    const msg = decodeRpc(raw);
+    if (!msg) {
+      this.#warnMalformed('dropped malformed/wrong-version frame');
+      return;
+    }
+    // One-way capability ratchet: a peer that advertised binary may not
+    // un-advertise within the session, so we never downgrade.
+    if (msg.kind === 'hello' && msg.caps?.includes(RPC_CAPABILITIES.BINARY_FRAMES)) {
+      this.#peerSupportsBinary = true;
+    }
+    this.#options.onRpc(msg, this.#sender);
+  }
+
+  #handleBinary(data: Buffer): void {
+    // werift hands us a Node Buffer; copy into a fresh ArrayBuffer so the
+    // decoded slice owns its bytes — Buffer pooling can otherwise alias the
+    // payload across subsequent reads.
+    const ab = data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength) as ArrayBuffer;
+    const chunk = decodeBinaryChunk(ab);
+    if (!chunk) {
+      this.#warnMalformed('dropped malformed binary frame');
+      return;
+    }
+    // Synthesize a chunk message so the RpcServer's normal switch arm
+    // handles both wire forms — no separate binary dispatch path needed.
+    this.#options.onRpc(
+      {
+        v: PROTOCOL_VERSION,
+        kind: chunk.kind,
+        id: chunk.id,
+        dataBin: chunk.payload,
+      },
+      this.#sender
+    );
+  }
+
+  /**
+   * Rate-limited malformed-frame log. A peer can stream undecodable bytes
+   * indefinitely; without rate-limiting, every frame triggers a structured-
+   * log call and amplifies into a logger-pipeline DoS even though the byte
+   * volume is bounded by SCTP.
+   */
+  #warnMalformed(reason: string): void {
+    this.#malformedDropped++;
+    if (this.#malformedDropped === 1) {
+      this.#options.log.warn(`rpc: ${reason}`, { sessionId: this.#options.sessionId });
+      return;
+    }
+    const now = Date.now();
+    if (now - this.#lastMalformedLogAt < MALFORMED_LOG_INTERVAL_MS) {
+      return;
+    }
+    this.#lastMalformedLogAt = now;
+    this.#options.log.warn(`rpc: ${reason} (${this.#malformedDropped} dropped this session)`, {
+      sessionId: this.#options.sessionId,
     });
   }
 
   #send(frame: RpcMessage): void {
+    this.#sendRaw(encodeRpc(frame), { kind: frame.kind });
+  }
+
+  #sendBinaryChunk(kind: BinaryChunkKind, id: number, bytes: Uint8Array): void {
+    this.#sendRaw(encodeBinaryChunk(kind, id, bytes), { kind, id, bytes: bytes.byteLength });
+  }
+
+  /**
+   * Common send path: gates on data-channel state, surfaces a throw as an
+   * ERROR-level log. A throw silently truncates the bridged response — the
+   * FE never sees `response.end`, the stream just stops mid-body, and the
+   * next frame is interpreted as a continuation (the bug that spliced
+   * menubar CSS mid-`import` in clay's bundle).
+   */
+  #sendRaw(payload: string | ArrayBuffer, ctx: Record<string, unknown>): void {
     if (!this.#channel || this.#channel.readyState !== 'open') {
       return;
     }
     try {
-      this.#channel.send(encodeRpc(frame));
+      // werift accepts string | Buffer; wrap ArrayBuffer as a zero-copy view.
+      this.#channel.send(typeof payload === 'string' ? payload : Buffer.from(payload));
     } catch (err) {
-      // A throw here silently truncates the bridged response — the FE
-      // never sees `response.end`, the stream just stops mid-body, and
-      // the next frame on the wire is interpreted as a continuation
-      // (which is how clay's bundle ended up with menubar CSS spliced
-      // mid-`import` statement). Log at error level so this surfaces
-      // immediately in the hub logs.
       this.#options.log.error('data channel send failed — frame dropped', {
         sessionId: this.#options.sessionId,
-        kind: frame.kind,
+        ...ctx,
         error: err instanceof Error ? err.message : String(err),
       });
     }

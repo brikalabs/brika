@@ -24,16 +24,20 @@
 
 import {
   type AbortMessage,
+  type BinaryChunkKind,
   DEFAULT_ICE_SERVERS,
+  decodeBinaryChunk,
   decodeRpc,
   decodeSignaling,
   emitRequest,
+  encodeBinaryChunk,
   encodeRpc,
   encodeSignaling,
   type IceServer,
   PROTOCOL_VERSION,
   ResponseAssembler,
   type ResponseHeadMessage,
+  RPC_CAPABILITIES,
   type RpcMessage,
   type SignalingMessage,
 } from '@brika/remote-access-protocol';
@@ -87,6 +91,14 @@ const CONNECT_TIMEOUT_MS = 15_000;
  */
 const BUFFER_HIGH_WATER_BYTES = 1 * 1024 * 1024;
 const BUFFER_LOW_WATER_BYTES = 256 * 1024;
+
+/**
+ * Per-response body cap. Defends the FE tab against a misbehaving or
+ * compromised hub streaming unbounded body bytes — without it, the
+ * `ResponseAssembler`'s sink buffers every received byte until the caller
+ * reads (or OOMs the tab). Matches the hub's upload cap for symmetry.
+ */
+const MAX_RESPONSE_BODY_BYTES = 50 * 1024 * 1024;
 
 /**
  * Splice the cookie-jar header into a `request` head frame. Cookie is a
@@ -178,6 +190,13 @@ export class DataChannelTransport implements Transport {
    * sessionId lands. Symmetric to `#pendingRemoteIce` for the inbound side.
    */
   #pendingLocalIce: RTCIceCandidateInit[] = [];
+  /**
+   * Flipped to `true` when the hub's hello frame carries `binary-frames` in
+   * its `caps`. From that point on, body chunks emitted by `emitRequest`
+   * route through `#sendBinaryChunk` (raw bytes on the wire) instead of
+   * base64-encoded JSON. One-way ratchet — never downgrades back to b64.
+   */
+  #peerSupportsBinary = false;
 
   constructor(options: DataChannelTransportOptions) {
     this.#options = options;
@@ -213,7 +232,7 @@ export class DataChannelTransport implements Transport {
     debug('cookie jar lookup', { path, attached: cookieHeader || '(none)' });
     debug('→ request', { id, method: request.method, url: request.url });
 
-    const assembler = new ResponseAssembler();
+    const assembler = new ResponseAssembler({ maxBodyBytes: MAX_RESPONSE_BODY_BYTES });
     const responsePromise = new Promise<Response>((resolve, reject) => {
       const inflight: Inflight = {
         assembler,
@@ -260,7 +279,18 @@ export class DataChannelTransport implements Transport {
       await this.#awaitDrain();
       this.#sendFrame(next);
     };
-    void emitRequest(id, request, emit).catch((err: unknown) => {
+    // Binary path is opt-in per peer: until the hub's hello arrives with
+    // `binary-frames`, body chunks travel as base64-in-JSON via `emit`. The
+    // helper is captured at request start, so a peer that upgrades mid-stream
+    // takes effect on the *next* request — fine for our use case (uploads are
+    // discrete) and avoids the FE having to reason about partial-binary streams.
+    const sendBinary = this.#peerSupportsBinary
+      ? async (bytes: Uint8Array): Promise<void> => {
+          await this.#awaitDrain();
+          this.#sendBinaryChunk('request.chunk', id, bytes);
+        }
+      : undefined;
+    void emitRequest(id, request, emit, { sendBinary }).catch((err: unknown) => {
       debug('emit failed', { id, err: err instanceof Error ? err.message : String(err) });
     });
 
@@ -385,14 +415,30 @@ export class DataChannelTransport implements Transport {
     // actually triggers — setting it inside the slow path would race with the
     // first `bufferedamountlow` event.
     channel.bufferedAmountLowThreshold = BUFFER_LOW_WATER_BYTES;
+    // Receive binary frames as ArrayBuffer (default in browsers is 'blob' on
+    // some legacy paths; pin it so the message handler's `typeof === 'string'`
+    // branch is exhaustive for the binary case).
+    channel.binaryType = 'arraybuffer';
 
     channel.addEventListener('open', () => {
       clearTimer();
+      // Announce our caps so the hub knows it can send binary response chunks.
+      // Conservative — the hub still won't send binary until it sees this.
+      this.#sendFrame({
+        v: PROTOCOL_VERSION,
+        kind: 'hello',
+        role: 'client',
+        softwareVersion: 'brika-ui',
+        maxProtocolVersion: PROTOCOL_VERSION,
+        caps: [RPC_CAPABILITIES.BINARY_FRAMES],
+      });
       resolve();
     });
     channel.addEventListener('message', (ev) => {
       if (typeof ev.data === 'string') {
         this.#onRpcMessage(ev.data);
+      } else if (ev.data instanceof ArrayBuffer) {
+        this.#onBinaryMessage(ev.data);
       }
     });
     channel.addEventListener('close', () => {
@@ -556,6 +602,28 @@ export class DataChannelTransport implements Transport {
     });
   }
 
+  #onBinaryMessage(buffer: ArrayBuffer): void {
+    const chunk = decodeBinaryChunk(buffer);
+    if (!chunk) {
+      debug('← drop malformed binary frame', { bytes: buffer.byteLength });
+      return;
+    }
+    // Only `response.chunk` is meaningful inbound on the FE. `request.chunk`
+    // in this direction means the hub is misbehaving — drop silently.
+    if (chunk.kind !== 'response.chunk') {
+      return;
+    }
+    // Route through the same `onChunk` arm the JSON path uses by synthesizing
+    // a chunk message with `dataBin` set — the sink's enqueue handles all
+    // three data shapes uniformly.
+    this.#inflight.get(chunk.id)?.assembler.onChunk({
+      v: PROTOCOL_VERSION,
+      kind: 'response.chunk',
+      id: chunk.id,
+      dataBin: chunk.payload,
+    });
+  }
+
   #onRpcMessage(raw: string): void {
     const msg = decodeRpc(raw);
     if (!msg) {
@@ -564,7 +632,13 @@ export class DataChannelTransport implements Transport {
     }
     switch (msg.kind) {
       case 'hello':
-        debug('← hello', { role: msg.role, version: msg.softwareVersion });
+        debug('← hello', { role: msg.role, version: msg.softwareVersion, caps: msg.caps });
+        // One-way capability ratchet: once the hub has advertised binary,
+        // every subsequent request emits body chunks as raw bytes. Never
+        // downgrades, even if a reconnected peer drops the cap.
+        if (msg.caps?.includes(RPC_CAPABILITIES.BINARY_FRAMES)) {
+          this.#peerSupportsBinary = true;
+        }
         return;
       case 'response.head': {
         const setCookies = msg.headers
@@ -661,23 +735,43 @@ export class DataChannelTransport implements Transport {
   }
 
   /**
-   * Send a frame, routing any `channel.send` failure (`"Message too large"`,
-   * `InvalidStateError` mid-flight) through `#onUnexpectedClose` so inflights
-   * get a real `TransportError` instead of a silently-truncated channel.
+   * Send a JSON-text RPC frame. Routes any `channel.send` failure
+   * (`"Message too large"`, `InvalidStateError` mid-flight) through
+   * `#onUnexpectedClose` so inflights get a real `TransportError` instead
+   * of a silently-truncated channel.
    */
   #sendFrame(frame: RpcMessage): void {
+    const channel = this.#assertChannelOpen();
+    try {
+      channel.send(encodeRpc(frame));
+    } catch (err) {
+      this.#routeSendError(err);
+    }
+  }
+
+  /** Same failure routing as {@link #sendFrame}, for raw-binary chunks. */
+  #sendBinaryChunk(kind: BinaryChunkKind, id: number, bytes: Uint8Array): void {
+    const channel = this.#assertChannelOpen();
+    try {
+      channel.send(encodeBinaryChunk(kind, id, bytes));
+    } catch (err) {
+      this.#routeSendError(err);
+    }
+  }
+
+  #assertChannelOpen(): RTCDataChannel {
     const channel = this.#channel;
     if (!channel || channel.readyState !== 'open') {
       this.#onUnexpectedClose('channel-closed', 'Channel not open at send time');
       throw new TransportError('channel-closed', 'Channel not open at send time');
     }
-    try {
-      channel.send(encodeRpc(frame));
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      this.#onUnexpectedClose('send-failed', message);
-      throw err instanceof Error ? err : new Error(message);
-    }
+    return channel;
+  }
+
+  #routeSendError(err: unknown): never {
+    const message = err instanceof Error ? err.message : String(err);
+    this.#onUnexpectedClose('send-failed', message);
+    throw err instanceof Error ? err : new Error(message);
   }
 
   /**
@@ -735,6 +829,9 @@ export class DataChannelTransport implements Transport {
     this.#pendingRemoteIce = [];
     this.#pendingLocalIce = [];
     this.#remoteDescriptionApplied = false;
+    // Reset so the reconnected session re-negotiates from scratch — a
+    // reconnect may land on a peer that doesn't speak binary-frames.
+    this.#peerSupportsBinary = false;
     this.#connectPromise = null;
   }
 

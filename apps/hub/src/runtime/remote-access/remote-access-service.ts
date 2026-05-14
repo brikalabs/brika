@@ -30,7 +30,6 @@ import {
   DEFAULT_ICE_SERVERS,
   type IceServer,
   PROTOCOL_VERSION,
-  type RpcMessage,
   type SignalingMessage,
 } from '@brika/remote-access-protocol';
 import { hub } from '@/hub';
@@ -508,7 +507,7 @@ export class RemoteAccessService {
           remaining: this.#sessions.size,
         });
       },
-      onRpc: (msg: RpcMessage, send) => rpc.handle(msg, send),
+      onRpc: (frame, sender) => rpc.handle(frame, sender),
     });
 
     this.#sessions.set(sessionId, { session, rpc });

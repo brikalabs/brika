@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'bun:test';
 import {
+  BODY_TOO_LARGE_CODE,
+  BodyTooLargeError,
   emitRequest,
   RequestAssembler,
   ResponseAssembler,
@@ -212,6 +214,200 @@ describe('bridge', () => {
       });
       const res = await assembler.response();
       await expect(res.text()).rejects.toThrow();
+    });
+  });
+
+  describe('binary chunks (BINARY_FRAMES capability)', () => {
+    it('emitRequest routes binary body bytes through sendBinary, not JSON dataB64', async () => {
+      const bytes = new Uint8Array([0, 1, 2, 254, 255]);
+      const req = new Request('https://x.brika.dev/api/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/octet-stream' },
+        body: bytes,
+      });
+      const jsonFrames: RpcMessage[] = [];
+      const binaryChunks: Uint8Array[] = [];
+      await emitRequest(
+        7,
+        req,
+        (f) => {
+          jsonFrames.push(f);
+        },
+        {
+          sendBinary: (b) => {
+            binaryChunks.push(b);
+          },
+        }
+      );
+
+      // The head + end frames stay JSON; the body bytes are out-of-band.
+      const kinds = jsonFrames.map((f) => f.kind);
+      expect(kinds).toEqual(['request', 'request.end']);
+      // The request head signals hasBody so the receiver waits for the
+      // binary chunks before dispatching.
+      expect((jsonFrames[0] as RequestMessage).hasBody).toBe(true);
+
+      // The binary callback received the body bytes verbatim — no base64,
+      // no JSON wrapping.
+      const joined = new Uint8Array(binaryChunks.reduce((sum, b) => sum + b.byteLength, 0));
+      let offset = 0;
+      for (const b of binaryChunks) {
+        joined.set(b, offset);
+        offset += b.byteLength;
+      }
+      expect(Array.from(joined)).toEqual([0, 1, 2, 254, 255]);
+    });
+
+    it('responseToFrames routes binary body bytes through sendBinary', async () => {
+      const bytes = new Uint8Array([1, 2, 3, 250, 251, 252]);
+      const upstream = new Response(bytes, {
+        status: 200,
+        headers: { 'Content-Type': 'application/octet-stream' },
+      });
+      const jsonFrames: RpcMessage[] = [];
+      const binaryChunks: Uint8Array[] = [];
+      await responseToFrames(
+        11,
+        upstream,
+        (f) => {
+          jsonFrames.push(f);
+        },
+        {
+          sendBinary: (b) => {
+            binaryChunks.push(b);
+          },
+        }
+      );
+
+      // Head + end as JSON, body bytes out-of-band.
+      expect(jsonFrames.map((f) => f.kind)).toEqual(['response.head', 'response.end']);
+
+      // Assemble through onChunk with the `dataBin` field set — same shape
+      // a binary-frame transport would synthesize.
+      const assembler = new ResponseAssembler();
+      assembler.onHead(jsonFrames[0] as ResponseHeadMessage);
+      for (const b of binaryChunks) {
+        assembler.onChunk({
+          v: PROTOCOL_VERSION,
+          kind: 'response.chunk',
+          id: 11,
+          dataBin: b,
+        });
+      }
+      assembler.onEnd(jsonFrames[1] as ResponseEndMessage);
+      const res = await assembler.response();
+      const out = new Uint8Array(await res.arrayBuffer());
+      expect(Array.from(out)).toEqual([1, 2, 3, 250, 251, 252]);
+    });
+
+    it('falls back to JSON dataB64 chunks when sendBinary is omitted (back-compat)', async () => {
+      const bytes = new Uint8Array([9, 8, 7, 6]);
+      const req = new Request('https://x.brika.dev/api/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/octet-stream' },
+        body: bytes,
+      });
+      const frames = await collectFrames(13, req); // No sendBinary.
+      const chunks = frames.filter((f): f is RequestChunkMessage => f.kind === 'request.chunk');
+      expect(chunks.length).toBeGreaterThan(0);
+      // Every chunk is base64-text — confirms the binary path stays opt-in.
+      expect(chunks.every((c) => typeof c.dataB64 === 'string')).toBe(true);
+    });
+
+    it('text bodies still use dataText even when sendBinary is provided', async () => {
+      const req = new Request('https://x.brika.dev/api/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{"hello":"world"}',
+      });
+      const jsonFrames: RpcMessage[] = [];
+      const binaryChunks: Uint8Array[] = [];
+      await emitRequest(
+        15,
+        req,
+        (f) => {
+          jsonFrames.push(f);
+        },
+        {
+          sendBinary: (b) => {
+            binaryChunks.push(b);
+          },
+        }
+      );
+
+      // sendBinary is only for non-text bodies; the JSON body should remain
+      // in `dataText` so the wire stays human-readable for debug.
+      const chunks = jsonFrames.filter((f): f is RequestChunkMessage => f.kind === 'request.chunk');
+      expect(chunks.length).toBeGreaterThan(0);
+      expect(chunks.every((c) => typeof c.dataText === 'string')).toBe(true);
+      expect(binaryChunks).toHaveLength(0);
+    });
+  });
+
+  describe('size cap', () => {
+    it('RequestAssembler errors the body stream once maxBodyBytes is exceeded', async () => {
+      const assembler = new RequestAssembler({ maxBodyBytes: 10 });
+      // Start reading first so the controller can deliver chunks (and the
+      // eventual error) to a real consumer — matching how `app.fetch()` uses
+      // the assembler's stream.
+      const reader = assembler.body().getReader();
+      assembler.onChunk({
+        v: PROTOCOL_VERSION,
+        kind: 'request.chunk',
+        id: 1,
+        dataText: 'abcdef', // 6 bytes — under the cap.
+      });
+      // Drain the first chunk before the overflow trips the cap. Without
+      // this, the spec drops the queue when `error()` is called and we
+      // can't observe that the first chunk was accepted.
+      const first = await reader.read();
+      expect(first.done).toBe(false);
+      expect(first.value?.byteLength).toBe(6);
+
+      // 6 more bytes — total 12 > 10. Must trip the cap.
+      assembler.onChunk({
+        v: PROTOCOL_VERSION,
+        kind: 'request.chunk',
+        id: 1,
+        dataText: 'ghijkl',
+      });
+
+      let caught: unknown = null;
+      try {
+        await reader.read();
+      } catch (err) {
+        caught = err;
+      }
+      expect(caught).toBeInstanceOf(BodyTooLargeError);
+      expect((caught as BodyTooLargeError).code).toBe(BODY_TOO_LARGE_CODE);
+      expect((caught as BodyTooLargeError).limit).toBe(10);
+    });
+
+    it('RequestAssembler without a cap accepts arbitrarily large bodies', async () => {
+      const assembler = new RequestAssembler();
+      // Drain in the background so the controller has room to enqueue.
+      const drain = (async () => {
+        const reader = assembler.body().getReader();
+        let total = 0;
+        for (;;) {
+          const { done, value } = await reader.read();
+          if (done) {
+            break;
+          }
+          total += value?.byteLength ?? 0;
+        }
+        return total;
+      })();
+      for (let i = 0; i < 50; i++) {
+        assembler.onChunk({
+          v: PROTOCOL_VERSION,
+          kind: 'request.chunk',
+          id: 1,
+          dataText: 'x'.repeat(1024),
+        });
+      }
+      assembler.onEnd({ v: PROTOCOL_VERSION, kind: 'request.end', id: 1 });
+      expect(await drain).toBe(50 * 1024);
     });
   });
 });
