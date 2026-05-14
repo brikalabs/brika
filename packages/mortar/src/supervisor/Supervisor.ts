@@ -138,7 +138,8 @@ export class Supervisor {
 
   /** True when this service has ever been spawned (`proc` is non-null). */
   hasSpawned(serviceId: string): boolean {
-    return this.services.get(serviceId)?.proc !== null;
+    const svc = this.services.get(serviceId);
+    return svc !== undefined && svc.proc !== null;
   }
 
   subscribe(listener: Listener): () => void {

@@ -620,3 +620,122 @@ describe('Supervisor (bad commands)', () => {
     });
   });
 });
+
+// ─── isAlive / hasSpawned / liveCount ───────────────────────────────────────
+
+describe('isAlive / hasSpawned', () => {
+  test('hasSpawned is false for services that never started', () => {
+    const sup = new Supervisor([
+      // A service whose dep is `unknown-dep` would never satisfy `dependsOn`,
+      // so it can never spawn. But validate() would catch that; here we
+      // just construct directly to test the predicate without `start()`.
+      longRunning('a'),
+    ]);
+    track(sup);
+    // No start() — proc is still null.
+    expect(sup.hasSpawned('a')).toBe(false);
+    expect(sup.isAlive('a')).toBe(false);
+    expect(sup.liveCount()).toBe(0);
+  });
+
+  test('hasSpawned + isAlive flip true after start', async () => {
+    const sup = new Supervisor([longRunning('a')]);
+    track(sup);
+    sup.start();
+    await waitFor(sup, (states) => states[0]?.status.kind === 'healthy', {
+      label: 'service starts',
+    });
+    expect(sup.hasSpawned('a')).toBe(true);
+    expect(sup.isAlive('a')).toBe(true);
+    expect(sup.liveCount()).toBe(1);
+  });
+
+  test('isAlive flips false after shutdown', async () => {
+    const sup = new Supervisor([longRunning('a')]);
+    sup.start();
+    await waitFor(sup, (states) => states[0]?.status.kind === 'healthy', {
+      label: 'service starts',
+    });
+    await sup.shutdown();
+    expect(sup.isAlive('a')).toBe(false);
+    expect(sup.liveCount()).toBe(0);
+    // Still counts as having been spawned.
+    expect(sup.hasSpawned('a')).toBe(true);
+  });
+
+  test('unknown service id → all predicates return false', () => {
+    const sup = new Supervisor([longRunning('a')]);
+    track(sup);
+    expect(sup.hasSpawned('ghost')).toBe(false);
+    expect(sup.isAlive('ghost')).toBe(false);
+  });
+});
+
+// ─── writeStdin ─────────────────────────────────────────────────────────────
+
+describe('writeStdin', () => {
+  test('returns false for unknown service id', () => {
+    const sup = new Supervisor([longRunning('a')]);
+    track(sup);
+    expect(sup.writeStdin('ghost', 'x')).toBe(false);
+  });
+
+  test('returns false before the service has spawned', () => {
+    const sup = new Supervisor([longRunning('a')]);
+    track(sup);
+    // Don't start — proc is null.
+    expect(sup.writeStdin('a', 'x')).toBe(false);
+  });
+
+  test('returns true for a running service with a piped stdin', async () => {
+    // Echo whatever it gets on stdin so we can confirm the write went through.
+    const sup = new Supervisor([
+      {
+        id: 'echo',
+        label: 'echo',
+        command: 'cat',
+        env: {},
+        dependsOn: [],
+        health: { kind: 'none' },
+        url: null,
+        cwd: null,
+        port: null,
+      },
+    ]);
+    track(sup);
+    sup.start();
+    // Wait for the proc object to exist (status flips to 'healthy' for
+    // health: none right after spawn).
+    await waitFor(sup, (states) => states[0]?.status.kind === 'healthy', {
+      label: 'cat spawned',
+    });
+    expect(sup.writeStdin('echo', 'hello\n')).toBe(true);
+    await waitFor(sup, (states) => states[0]?.logs.some((l) => l === 'hello') ?? false, {
+      label: 'stdin echoed back',
+    });
+  });
+});
+
+// ─── root / isShuttingDown ──────────────────────────────────────────────────
+
+describe('Supervisor metadata', () => {
+  test('root reflects the constructor argument', () => {
+    const sup = new Supervisor([longRunning('a')], '/some/where');
+    expect(sup.root).toBe('/some/where');
+  });
+
+  test('isShuttingDown flips after shutdown is called', async () => {
+    const sup = new Supervisor([longRunning('a')]);
+    sup.start();
+    expect(sup.isShuttingDown).toBe(false);
+    await sup.shutdown();
+    expect(sup.isShuttingDown).toBe(true);
+  });
+
+  test('get(serviceId) returns the state, null for unknown', () => {
+    const sup = new Supervisor([longRunning('a')]);
+    track(sup);
+    expect(sup.get('a')).not.toBeNull();
+    expect(sup.get('ghost')).toBeNull();
+  });
+});
