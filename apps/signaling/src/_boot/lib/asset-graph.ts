@@ -187,25 +187,68 @@ async function primeCache(
   let stopErr: Error | null = null;
   let fetched = 0;
 
+  const recordFetched = (url: string): void => {
+    fetched++;
+    onProgress?.({ fetched, url });
+  };
+
+  const enqueueRefs = (refs: readonly string[]): void => {
+    for (const ref of refs) {
+      if (!visited.has(ref)) {
+        visited.add(ref);
+        queue.push(ref);
+      }
+    }
+  };
+
+  // A stale cache entry can mask a broken deploy: if a prior session
+  // cached the hub UI's entry under a content-type the browser then
+  // rejects (or with HTML bytes JS parsing chokes on), every subsequent
+  // boot short-circuits and the user sees the same MIME error forever.
+  // Log essential cache hits so the next debug session can see what's
+  // actually being served.
+  const noteCacheHit = (url: string, existing: Response): void => {
+    if (!essential.has(url)) {
+      return;
+    }
+    console.log('[brika-bootstrap] prime cache hit', {
+      url,
+      status: existing.status,
+      contentType: existing.headers.get('content-type'),
+    });
+  };
+
+  // Initial URLs are the entry scripts + CSS the hub's index.html
+  // directly references — non-optional. Silently dropping them lets
+  // the bootstrap reach "done" with an empty cache, and the browser
+  // then hits the SPA-origin fallback with a misleading text/html
+  // MIME error. Propagate ANY error here (not just BootstrapError —
+  // `peer.request` rejects with a plain `Error` on timeout / channel
+  // close / mid-stream abort, which would otherwise slip past).
+  // Transitive refs can legitimately 404 (a stale asset URL in CSS,
+  // a removed dynamic import) — log but don't abort.
+  const recordFetchError = (url: string, err: unknown): void => {
+    if (err instanceof HubDevProxyError) {
+      stopErr = err;
+      return;
+    }
+    if (essential.has(url)) {
+      stopErr = err instanceof Error ? err : new Error(String(err));
+      return;
+    }
+    console.warn('[brika-bootstrap] prime skipped', {
+      url,
+      err: err instanceof Error ? `${err.name}: ${err.message}` : String(err),
+    });
+  };
+
   const processOne = async (url: string): Promise<void> => {
     if (stopErr) {
       return;
     }
     const existing = await cache.match(url);
     if (existing) {
-      // A stale cache entry can mask a broken deploy: if a prior session
-      // cached the hub UI's entry under a content-type the browser then
-      // rejects (or with HTML bytes that JS parsing chokes on), every
-      // subsequent boot short-circuits here and the user sees the same
-      // MIME error forever. Log essential cache hits so the next debug
-      // session can see what's actually being served.
-      if (essential.has(url)) {
-        console.log('[brika-bootstrap] prime cache hit', {
-          url,
-          status: existing.status,
-          contentType: existing.headers.get('content-type'),
-        });
-      }
+      noteCacheHit(url, existing);
       return;
     }
     if (isViteHmr(url)) {
@@ -213,48 +256,19 @@ async function primeCache(
         url,
         new Response(VITE_CLIENT_STUB, { headers: { 'content-type': 'text/javascript' } })
       );
-      fetched++;
-      onProgress?.({ fetched, url });
+      recordFetched(url);
       return;
     }
     let result: Awaited<ReturnType<typeof fetchThroughPeer>>;
     try {
       result = await fetchThroughPeer(peer, url);
     } catch (err) {
-      // Dev-proxy fault is always fatal — same UX regardless of which URL tripped it.
-      if (err instanceof HubDevProxyError) {
-        stopErr = err;
-        return;
-      }
-      // Initial URLs are the entry scripts + CSS the hub's index.html
-      // directly references — non-optional. Silently dropping them lets
-      // the bootstrap reach "done" with an empty cache, and the browser
-      // then hits the SPA-origin fallback with a misleading text/html
-      // MIME error. Propagate ANY error here (not just BootstrapError —
-      // `peer.request` rejects with a plain `Error` on timeout / channel
-      // close / mid-stream abort, which would otherwise slip past).
-      if (essential.has(url)) {
-        stopErr = err instanceof Error ? err : new Error(String(err));
-        return;
-      }
-      // Transitive refs can legitimately 404 (a stale asset URL in CSS,
-      // a removed dynamic import). Log so a future debug session isn't
-      // blind, but don't abort the graph.
-      console.warn('[brika-bootstrap] prime skipped', {
-        url,
-        err: err instanceof Error ? `${err.name}: ${err.message}` : String(err),
-      });
+      recordFetchError(url, err);
       return;
     }
     await cache.put(url, result.response);
-    fetched++;
-    onProgress?.({ fetched, url });
-    for (const ref of nextRefs(result.text, result.contentType, url)) {
-      if (!visited.has(ref)) {
-        visited.add(ref);
-        queue.push(ref);
-      }
-    }
+    recordFetched(url);
+    enqueueRefs(nextRefs(result.text, result.contentType, url));
   };
 
   // Worker-pool BFS: PRIME_PARALLELISM fetches in flight at once, refilled from
