@@ -55,6 +55,10 @@ export interface RpcServerOptions {
 
 const DEFAULT_MAX_REQUEST_BODY_BYTES = 50 * 1024 * 1024;
 
+function errorMessage(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
+}
+
 // Walk an error and its `cause` chain looking for our typed marker. The body
 // stream's error gets re-thrown through fetch/Hono machinery and often arrives
 // as a `TypeError` wrapping the original — we don't want a `body-too-large`
@@ -160,87 +164,116 @@ export class RpcServer {
     sender: RpcSender,
     signal: AbortSignal
   ): Promise<void> {
-    // Wire the binary path only when the peer has advertised `binary-frames`.
-    // Otherwise the bridge falls back to base64-in-JSON via `sender.send`.
-    // `peerSupportsBinary()` is a live read — if the peer's hello hasn't
-    // arrived yet, we send the first body via b64 and pay the inflation tax
-    // for that single request; later requests upgrade automatically.
-    const sendBinary: SendBinaryChunk | undefined = sender.peerSupportsBinary()
-      ? (bytes) => sender.sendBinaryChunk('response.chunk', msg.id, bytes)
-      : undefined;
+    const request = this.#buildHubRequest(msg, assembler, sender);
+    if (!request) {
+      return;
+    }
+    const response = await this.#dispatch(request, msg, sender);
+    if (!response) {
+      return;
+    }
+    await this.#streamResponse(msg.id, response, sender, signal);
+  }
+
+  /**
+   * Build the synthesized `Request` for `app.fetch()` and stamp the trusted
+   * hub-side headers. Returns `null` after emitting a `bad-request` error
+   * frame if the head can't be turned into a `Request` (e.g. non-absolute
+   * URL — rejected by `rpcRequestToFetch`).
+   */
+  #buildHubRequest(
+    msg: RequestMessage,
+    assembler: RequestAssembler | null,
+    sender: RpcSender
+  ): Request | null {
     let request: Request;
     try {
       request = rpcRequestToFetch(msg, this.#options.baseOrigin, assembler?.body() ?? null);
     } catch (err) {
-      sender.send({
-        v: PROTOCOL_VERSION,
-        kind: 'response.error',
-        id: msg.id,
-        code: 'bad-request',
-        message: err instanceof Error ? err.message : String(err),
-      });
-      return;
+      this.#sendError(sender, msg.id, 'bad-request', errorMessage(err));
+      return null;
     }
-
     request.headers.set('x-real-ip', this.#options.remoteIp);
     if (this.#options.remoteUserAgent) {
       request.headers.set('user-agent', this.#options.remoteUserAgent);
     }
     request.headers.set(TRANSPORT_HEADER, 'rtc');
+    return request;
+  }
 
-    let response: Response;
+  async #dispatch(
+    request: Request,
+    msg: RequestMessage,
+    sender: RpcSender
+  ): Promise<Response | null> {
     try {
-      response = await this.#options.apiServer.fetchInternal(request);
+      return await this.#options.apiServer.fetchInternal(request);
     } catch (err) {
-      const tooLarge = findBodyTooLarge(err);
-      if (tooLarge) {
-        this.#options.log.warn('rpc upload exceeded limit', {
-          sessionId: this.#options.sessionId,
-          id: msg.id,
-          url: msg.url,
-          limit: tooLarge.limit,
-        });
-        sender.send({
-          v: PROTOCOL_VERSION,
-          kind: 'response.error',
-          id: msg.id,
-          code: BODY_TOO_LARGE_CODE,
-          // Keep the limit out of the peer-facing message — operationally
-          // useful intel for an attacker tuning their upload. The precise
-          // limit is on the hub log above.
-          message: 'Request body too large',
-          status: 413,
-        });
-        return;
-      }
-      this.#options.log.error('rpc dispatch threw', {
+      this.#handleDispatchError(err, msg, sender);
+      return null;
+    }
+  }
+
+  #handleDispatchError(err: unknown, msg: RequestMessage, sender: RpcSender): void {
+    const tooLarge = findBodyTooLarge(err);
+    if (tooLarge) {
+      this.#options.log.warn('rpc upload exceeded limit', {
         sessionId: this.#options.sessionId,
         id: msg.id,
         url: msg.url,
-        error: err instanceof Error ? err.message : String(err),
+        limit: tooLarge.limit,
       });
-      sender.send({
-        v: PROTOCOL_VERSION,
-        kind: 'response.error',
-        id: msg.id,
-        code: 'internal',
-        message: 'Internal server error',
-      });
+      // Keep the configured limit out of the peer-facing message — useful
+      // intel for an attacker tuning their upload. Precise limit stays on
+      // the hub log above.
+      this.#sendError(sender, msg.id, BODY_TOO_LARGE_CODE, 'Request body too large', 413);
       return;
     }
+    this.#options.log.error('rpc dispatch threw', {
+      sessionId: this.#options.sessionId,
+      id: msg.id,
+      url: msg.url,
+      error: errorMessage(err),
+    });
+    this.#sendError(sender, msg.id, 'internal', 'Internal server error');
+  }
 
+  async #streamResponse(
+    id: number,
+    response: Response,
+    sender: RpcSender,
+    signal: AbortSignal
+  ): Promise<void> {
+    // Wire the binary path only when the peer advertised `binary-frames`.
+    // Live-read at request time: if the peer's hello hasn't arrived yet,
+    // this request streams as base64-in-JSON and later requests upgrade
+    // automatically.
+    const sendBinary: SendBinaryChunk | undefined = sender.peerSupportsBinary()
+      ? (bytes) => sender.sendBinaryChunk('response.chunk', id, bytes)
+      : undefined;
     try {
-      await responseToFrames(msg.id, response, (f) => sender.send(f), {
+      await responseToFrames(id, response, (f) => sender.send(f), {
         abortSignal: signal,
         sendBinary,
       });
     } catch (err) {
       this.#options.log.warn('rpc stream errored', {
         sessionId: this.#options.sessionId,
-        id: msg.id,
-        error: err instanceof Error ? err.message : String(err),
+        id,
+        error: errorMessage(err),
       });
     }
+  }
+
+  #sendError(sender: RpcSender, id: number, code: string, message: string, status?: number): void {
+    sender.send({
+      v: PROTOCOL_VERSION,
+      kind: 'response.error',
+      id,
+      code,
+      message,
+      ...(status !== undefined && { status }),
+    });
   }
 
   #abort(msg: AbortMessage): void {
