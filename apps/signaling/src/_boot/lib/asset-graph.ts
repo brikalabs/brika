@@ -118,12 +118,31 @@ async function fetchThroughPeer(
   };
 }
 
-function scanJSImports(text: string): string[] {
+/**
+ * Resolve a specifier against the importer's path, returning a same-origin
+ * pathname or null. Handles absolute (`/foo`) and relative (`./foo`, `../foo`)
+ * forms in dev and prod alike — Vite-built chunks import relatively, dev-mode
+ * Vite serves absolute paths. Cross-origin (`https://…`, `//cdn`) and `data:`
+ * specifiers are dropped before URL parsing.
+ */
+function resolveSamePath(raw: string | undefined, baseUrl: string): string | null {
+  if (!raw || /^(?:data:|https?:|\/\/)/i.test(raw)) {
+    return null;
+  }
+  try {
+    const url = new URL(raw, `${location.origin}${baseUrl}`);
+    return url.origin === location.origin && isAbsolutePath(url.pathname) ? url.pathname : null;
+  } catch {
+    return null;
+  }
+}
+
+function scanJSImports(text: string, baseUrl: string): string[] {
   const out: string[] = [];
   for (const m of text.matchAll(IMPORT_RE)) {
-    const spec = m[1];
-    if (spec && isAbsolutePath(spec)) {
-      out.push(spec);
+    const resolved = resolveSamePath(m[1], baseUrl);
+    if (resolved) {
+      out.push(resolved);
     }
   }
   return out;
@@ -132,17 +151,9 @@ function scanJSImports(text: string): string[] {
 function scanCSSUrls(text: string, baseUrl: string): string[] {
   const out: string[] = [];
   for (const m of text.matchAll(CSS_URL_RE)) {
-    const raw = m[1];
-    if (!raw || /^(?:data:|https?:)/i.test(raw)) {
-      continue;
-    }
-    try {
-      const resolved = new URL(raw, `https://placeholder${baseUrl}`).pathname;
-      if (isAbsolutePath(resolved)) {
-        out.push(resolved);
-      }
-    } catch {
-      /* skip unparseable */
+    const resolved = resolveSamePath(m[1], baseUrl);
+    if (resolved) {
+      out.push(resolved);
     }
   }
   return out;
@@ -153,7 +164,7 @@ function nextRefs(text: string | null, contentType: string, url: string): string
     return [];
   }
   if (isJS(contentType)) {
-    return scanJSImports(text);
+    return scanJSImports(text, url);
   }
   if (isCSS(contentType)) {
     return scanCSSUrls(text, url);
@@ -263,7 +274,7 @@ function collectInitialUrls(scripts: ModuleScriptRef[], cssLinks: string[]): Set
       initial.add(s.src);
     }
     if (s.inline) {
-      for (const spec of scanJSImports(s.inline)) {
+      for (const spec of scanJSImports(s.inline, '/')) {
         initial.add(spec);
       }
     }
