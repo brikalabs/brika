@@ -191,4 +191,92 @@ describe('RpcServer', () => {
     );
     expect(duplicates).toEqual([]);
   });
+
+  it('stamps x-brika-transport: rtc on every synthesized request', async () => {
+    const seen: Request[] = [];
+    const { server, outbox } = makeServer(
+      makeApiServer((req) => {
+        seen.push(req);
+        return new Response('ok');
+      })
+    );
+    const send = (frame: RpcMessage) => outbox.push(frame);
+
+    server.handle(
+      {
+        v: PROTOCOL_VERSION,
+        kind: 'request',
+        id: 1,
+        method: 'GET',
+        url: '/api/anything',
+        headers: [],
+      },
+      send
+    );
+    await flush();
+
+    expect(seen[0]?.headers.get('x-brika-transport')).toBe('rtc');
+  });
+
+  it('overrides the user-agent header with the coordinator-captured value', async () => {
+    const seen: Request[] = [];
+    const apiServer = {
+      fetchInternal: (req: Request) => {
+        seen.push(req);
+        return Promise.resolve(new Response('ok'));
+      },
+    } as unknown as ApiServer;
+    const outbox: RpcMessage[] = [];
+    const server = new RpcServer({
+      sessionId: 'sess-ua',
+      baseOrigin: 'https://hub.local',
+      apiServer,
+      remoteIp: '203.0.113.1',
+      remoteUserAgent: 'CoordinatorCapturedUA/1.0',
+      log: silentLog,
+    });
+    const send = (frame: RpcMessage) => outbox.push(frame);
+
+    server.handle(
+      {
+        v: PROTOCOL_VERSION,
+        kind: 'request',
+        id: 1,
+        method: 'GET',
+        url: '/api/x',
+        // Page bridge forwards a UA the page could've rewritten.
+        headers: [['user-agent', 'PageForwardedUA/0.0']],
+      },
+      send
+    );
+    await flush();
+
+    expect(seen[0]?.headers.get('user-agent')).toBe('CoordinatorCapturedUA/1.0');
+  });
+
+  it('leaves the page-forwarded user-agent intact when no remoteUserAgent is configured', async () => {
+    const seen: Request[] = [];
+    const { server, outbox } = makeServer(
+      makeApiServer((req) => {
+        seen.push(req);
+        return new Response('ok');
+      })
+    );
+    const send = (frame: RpcMessage) => outbox.push(frame);
+
+    server.handle(
+      {
+        v: PROTOCOL_VERSION,
+        kind: 'request',
+        id: 1,
+        method: 'GET',
+        url: '/api/y',
+        headers: [['user-agent', 'PageForwardedUA/1.0']],
+      },
+      send
+    );
+    await flush();
+
+    expect(seen[0]?.headers.get('user-agent')).toBe('PageForwardedUA/1.0');
+  });
 });

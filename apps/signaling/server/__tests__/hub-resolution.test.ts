@@ -66,6 +66,45 @@ describe('resolveHubFromUrl', () => {
       resolveHubFromUrl(new URL('https://brika-signaling.maxscharwath.workers.dev/maxime'))
     ).toEqual({ hubName: 'maxime', restPath: '/' });
   });
+
+  it('resolves the hub from a `?hub=` query on the root path', () => {
+    expect(resolveHubFromUrl(new URL('https://hub.brika.dev/?hub=maxime'))).toEqual({
+      hubName: 'maxime',
+      restPath: '/',
+    });
+  });
+
+  it('lowercases the query candidate before validating', () => {
+    expect(resolveHubFromUrl(new URL('https://hub.brika.dev/?hub=Maxime'))).toEqual({
+      hubName: 'maxime',
+      restPath: '/',
+    });
+  });
+
+  it('returns null when the `?hub=` value fails the hub-name pattern', () => {
+    expect(resolveHubFromUrl(new URL('https://hub.brika.dev/?hub=x'))).toBeNull();
+    expect(resolveHubFromUrl(new URL('https://hub.brika.dev/?hub=-bad'))).toBeNull();
+    expect(resolveHubFromUrl(new URL('https://hub.brika.dev/?hub=with_underscore'))).toBeNull();
+  });
+
+  it('prefers a valid path segment over a `?hub=` query (path wins)', () => {
+    // `/maxime?hub=other` — the path identifies the hub. The query is ignored
+    // because the path form is the canonical one and the bootstrap also
+    // strips `?hub=` once it has committed the name to storage.
+    expect(resolveHubFromUrl(new URL('https://hub.brika.dev/maxime?hub=other'))).toEqual({
+      hubName: 'maxime',
+      restPath: '/',
+    });
+  });
+
+  it('falls back to `?hub=` only when the path segment is rejected', () => {
+    // `/assets/...` is reserved → path resolution returns null, query takes over.
+    // (Edge case; real callers should filter assets out before this.)
+    expect(resolveHubFromUrl(new URL('https://hub.brika.dev/?hub=maxime#deep'))).toEqual({
+      hubName: 'maxime',
+      restPath: '/',
+    });
+  });
 });
 
 describe('injectHubMeta', () => {

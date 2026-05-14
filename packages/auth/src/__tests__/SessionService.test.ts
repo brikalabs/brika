@@ -309,3 +309,60 @@ describe('cleanExpiredSessions', () => {
     expect(count).toBe(3);
   });
 });
+
+// ─── connectionType tracking + back-fill ──────────────────────────────────────
+
+describe('connectionType', () => {
+  it("persists 'rtc' on create and surfaces it via listUserSessions", () => {
+    sessionService.createSession(userId, '203.0.113.7', 'Mozilla/5.0', 'rtc');
+    const [row] = sessionService.listUserSessions(userId);
+    expect(row?.connectionType).toBe('rtc');
+    expect(row?.ip).toBe('203.0.113.7');
+    expect(row?.userAgent).toBe('Mozilla/5.0');
+  });
+
+  it("defaults to 'http' when omitted on create", () => {
+    sessionService.createSession(userId);
+    const [row] = sessionService.listUserSessions(userId);
+    expect(row?.connectionType).toBe('http');
+  });
+
+  it('back-fills user_agent and connection_type via COALESCE on validateSession', () => {
+    // Legacy row: created before the UA/transport plumbing existed.
+    const token = sessionService.createSession(userId);
+    let [legacy] = sessionService.listUserSessions(userId);
+    expect(legacy?.userAgent).toBeNull();
+    expect(legacy?.connectionType).toBe('http');
+
+    // Next validation carries the real UA + transport observed at request time.
+    sessionService.validateSession(token, '198.51.100.1', 'Chrome/126', 'rtc');
+    [legacy] = sessionService.listUserSessions(userId);
+    expect(legacy?.ip).toBe('198.51.100.1');
+    expect(legacy?.userAgent).toBe('Chrome/126');
+    expect(legacy?.connectionType).toBe('rtc');
+  });
+
+  it('keeps existing values when validateSession is called without them', () => {
+    const token = sessionService.createSession(userId, '10.0.0.1', 'Firefox/120', 'rtc');
+    // A later request with no metadata (e.g. an internal poll) must not wipe.
+    sessionService.validateSession(token);
+    const [row] = sessionService.listUserSessions(userId);
+    expect(row?.ip).toBe('10.0.0.1');
+    expect(row?.userAgent).toBe('Firefox/120');
+    expect(row?.connectionType).toBe('rtc');
+  });
+
+  it('coerces unknown connection_type values from the DB to http', () => {
+    // Simulate an externally-written bad row (e.g. a future enum value we
+    // haven't taught the parser yet, or a corrupt manual insert).
+    const id = 'manual-bad';
+    db.query(
+      `INSERT INTO sessions (id, user_id, token_hash, ip, user_agent, connection_type, created_at, last_seen_at, expires_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run(id, userId, 'h', null, null, 'sneaky', Date.now(), Date.now(), Date.now() + 1000);
+
+    const [row] = sessionService.listUserSessions(userId);
+    expect(row?.id).toBe(id);
+    expect(row?.connectionType).toBe('http');
+  });
+});
