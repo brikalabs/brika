@@ -1,51 +1,44 @@
 /**
  * Dashboard — the landing section of the brika TUI. Renders three
- * cards (Hub / Plugins / Workflows) and a small recent-activity feed.
- * Hub control happens through the global shell keybinds (`s` / `x` /
- * `r` / `o`); we just show what state the hub is in.
+ * cards (Hub / Plugins / Workflows) populated from the hub's HTTP
+ * API. Hub control happens through the global shell keybinds (`s` /
+ * `x` / `r` / `o`); the dashboard itself is read-only.
+ *
+ * Brix is NOT painted here — he lives in the shell footer
+ * (<BrixHost>). Views narrate by setting `mood` + `statusText`
+ * through <CliProvider>; the chrome owns the face.
  */
 
-import { BrixSay, BrixTalking } from '@brika/brix';
 import { Card } from '@brika/tui';
 import { Box, Text } from 'ink';
 import type React from 'react';
-import { useState } from 'react';
+import {
+  fetchPlugins,
+  fetchWorkflows,
+  type PluginListItem,
+  type WorkflowSummaryDto,
+} from '../../cli/hub-api';
 import { useCli } from '../useCli';
+import { useHubResource } from '../useHubResource';
 
 export function DashboardView(): React.ReactElement {
   const cli = useCli();
-  const [greetingDone, setGreetingDone] = useState(false);
+  const plugins = useHubResource<PluginListItem[]>(fetchPlugins, []);
+  const workflows = useHubResource<WorkflowSummaryDto[]>(fetchWorkflows, []);
+  const pluginItems = plugins.data ?? [];
+  const workflowItems = workflows.data ?? [];
 
   return (
-    <Box flexDirection="column">
-      {!greetingDone && (
-        <Box marginBottom={1}>
-          <BrixTalking
-            mode="typewriter"
-            mood="default"
-            text="{:idle:}hi — i'm brix. {:thinking:}let's keep things tidy."
-            onDone={() => setGreetingDone(true)}
-          />
-        </Box>
-      )}
-
-      <Box gap={1}>
-        <Card title="Hub" accent="cyan">
-          <HubBody cli={cli} />
-        </Card>
-        <Card title="Plugins" accent="magenta" tag={`${cli.plugins.length}`}>
-          <PluginsBody cli={cli} />
-        </Card>
-        <Card title="Workflows" accent="yellow" tag={`${cli.workflows.length}`}>
-          <WorkflowsBody cli={cli} />
-        </Card>
-      </Box>
-
-      {cli.hub.state === 'stopped' && (
-        <Box marginTop={1}>
-          <BrixSay mood="sleep" text="hub is sleeping — press s to start" />
-        </Box>
-      )}
+    <Box gap={1}>
+      <Card title="Hub" accent="cyan">
+        <HubBody cli={cli} />
+      </Card>
+      <Card title="Plugins" accent="magenta" tag={String(pluginItems.length)}>
+        <PluginsBody items={pluginItems} />
+      </Card>
+      <Card title="Workflows" accent="yellow" tag={String(workflowItems.length)}>
+        <WorkflowsBody items={workflowItems} />
+      </Card>
     </Box>
   );
 }
@@ -85,37 +78,41 @@ function HubBody({ cli }: Readonly<{ cli: ReturnType<typeof useCli> }>): React.R
   return <Text dimColor>checking…</Text>;
 }
 
-function PluginsBody({ cli }: Readonly<{ cli: ReturnType<typeof useCli> }>): React.ReactElement {
-  if (cli.plugins.length === 0) {
+function PluginsBody({
+  items,
+}: Readonly<{ items: ReadonlyArray<PluginListItem> }>): React.ReactElement {
+  if (items.length === 0) {
     return <Text dimColor>(none yet — press p)</Text>;
   }
   return (
     <Box flexDirection="column">
-      {cli.plugins.slice(0, 4).map((p) => (
-        <Box key={p.name}>
+      {items.slice(0, 4).map((p) => (
+        <Box key={p.uid}>
           <Text>{p.enabled ? '▸' : '·'} </Text>
-          <Text>{p.name}</Text>
+          <Text>{p.displayName ?? p.name}</Text>
           <Text dimColor> v{p.version}</Text>
         </Box>
       ))}
-      {cli.plugins.length > 4 && <Text dimColor>… +{cli.plugins.length - 4} more</Text>}
+      {items.length > 4 && <Text dimColor>… +{items.length - 4} more</Text>}
     </Box>
   );
 }
 
-function WorkflowsBody({ cli }: Readonly<{ cli: ReturnType<typeof useCli> }>): React.ReactElement {
-  if (cli.workflows.length === 0) {
+function WorkflowsBody({
+  items,
+}: Readonly<{ items: ReadonlyArray<WorkflowSummaryDto> }>): React.ReactElement {
+  if (items.length === 0) {
     return <Text dimColor>(none yet — press w)</Text>;
   }
   return (
     <Box flexDirection="column">
-      {cli.workflows.slice(0, 4).map((w) => (
+      {items.slice(0, 4).map((w) => (
         <Box key={w.id}>
-          <Text>▸ {w.name} </Text>
-          <Text dimColor>{w.state}</Text>
+          <Text>▸ {w.name ?? w.id} </Text>
+          {w.state && <Text dimColor>{w.state}</Text>}
         </Box>
       ))}
-      {cli.workflows.length > 4 && <Text dimColor>… +{cli.workflows.length - 4} more</Text>}
+      {items.length > 4 && <Text dimColor>… +{items.length - 4} more</Text>}
     </Box>
   );
 }

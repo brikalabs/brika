@@ -1,9 +1,12 @@
 /**
  * Updates section — check for updates, switch channels, apply.
  * Stubbed for this PR; needs the update-channels module + checker.
+ *
+ * Brix lives in the shell footer (<BrixHost>) — this view doesn't
+ * render its own face. It publishes mood/statusText through
+ * <CliProvider> if it needs to say something.
  */
 
-import { BrixSay } from '@brika/brix';
 import { Box, Text } from 'ink';
 import type React from 'react';
 import { useCli } from '../useCli';
@@ -25,11 +28,11 @@ export function UpdatesView(): React.ReactElement {
           <Text>stable</Text>
         </Box>
       </Box>
-      <BrixSay
-        mood="curious"
-        orient="above"
-        text="update check + channel switching land once the channels module is portable"
-      />
+      <Box marginBottom={1}>
+        <Text dimColor>
+          update check + channel switching land once the channels module is portable
+        </Text>
+      </Box>
       <Box marginTop={1}>
         <Text dimColor>c check · n switch channel · enter apply</Text>
       </Box>

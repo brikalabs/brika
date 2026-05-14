@@ -1,10 +1,10 @@
 /**
- * Top strip of the brika TUI — Brix's face, the wordmark, version,
- * and a live hub-status pill on the right. Same shape on every
- * section so the header acts as a stable anchor while you navigate.
+ * Top strip of the brika TUI — wordmark, version, and a live
+ * hub-status pill on the right. Brix doesn't live here; he lives
+ * in the footer (see <BrixHost>) so the chrome only paints one
+ * mascot at a time.
  */
 
-import { Brix } from '@brika/brix';
 import { Box, Text } from 'ink';
 import type React from 'react';
 import { useCli } from '../useCli';
@@ -14,8 +14,7 @@ export function ShellHeader(): React.ReactElement {
   const { hub } = cli;
   return (
     <Box paddingX={1}>
-      <Brix mood={cli.mood} color="cyan" />
-      <Text bold> Brika Runtime </Text>
+      <Text bold>▰▰ Brika Runtime </Text>
       <Text dimColor>v{cli.version}</Text>
       <Box flexGrow={1} />
       <HubPill />

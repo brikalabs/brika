@@ -44,6 +44,15 @@ const moodColor: Readonly<Record<Mood, Painter>> = {
   cool: pc.cyan,
   loading: pc.cyan,
   success: pc.green,
+  wink: pc.magenta,
+  shy: pc.magenta,
+  proud: pc.green,
+  tired: pc.dim,
+  oops: pc.yellow,
+  woah: pc.cyan,
+  boop: pc.magenta,
+  cheeky: pc.magenta,
+  starry: pc.yellow,
 };
 
 function colorEnabled(): boolean {

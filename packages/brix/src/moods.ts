@@ -33,7 +33,16 @@ export type Mood =
   | 'love'
   | 'cool'
   | 'loading'
-  | 'success';
+  | 'success'
+  | 'wink'
+  | 'shy'
+  | 'proud'
+  | 'tired'
+  | 'oops'
+  | 'woah'
+  | 'boop'
+  | 'cheeky'
+  | 'starry';
 
 export type Bracket = 'round' | 'square' | 'angle' | 'curly';
 
@@ -63,6 +72,15 @@ const FACES: Readonly<Record<Mood, Face>> = {
   cool: { body: '⌐◡◠' },
   loading: { body: '•▁•' },
   success: { body: '◕‿◕' },
+  wink: { body: '^◡-' },
+  shy: { body: '>◡<' },
+  proud: { body: '•̀ᴗ•́' },
+  tired: { body: '╴ω╴' },
+  oops: { body: '>﹏<' },
+  woah: { body: 'o◡o' },
+  boop: { body: '•‿•' },
+  cheeky: { body: '◕ᴗ◕', suffix: ' ♪' },
+  starry: { body: '✦◡✦' },
 };
 
 const BRACKETS: Readonly<Record<Bracket, readonly [string, string]>> = {

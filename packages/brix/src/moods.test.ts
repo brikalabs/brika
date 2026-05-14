@@ -18,6 +18,18 @@ describe('faceOf', () => {
     expect(faceOf('happy', 'angle')).toBe('<^◡^>');
   });
 
+  test('wink renders the asymmetric eye', () => {
+    expect(faceOf('wink')).toBe('(^◡-)');
+  });
+
+  test('cheeky carries its musical note suffix', () => {
+    expect(faceOf('cheeky')).toBe('(◕ᴗ◕) ♪');
+  });
+
+  test('shy keeps both angled eyes inside round brackets', () => {
+    expect(faceOf('shy')).toBe('(>◡<)');
+  });
+
   test('every declared mood resolves to a non-empty face', () => {
     for (const mood of ALL_MOODS) {
       const face = faceOf(mood);
@@ -47,6 +59,15 @@ describe('ALL_MOODS', () => {
       'cool',
       'loading',
       'success',
+      'wink',
+      'shy',
+      'proud',
+      'tired',
+      'oops',
+      'woah',
+      'boop',
+      'cheeky',
+      'starry',
     ];
     expect(new Set(ALL_MOODS)).toEqual(new Set(expected));
   });
