@@ -215,8 +215,9 @@ export function decodeBinaryChunk(buffer: ArrayBuffer): DecodedBinaryChunk | nul
     return null;
   }
   const id = view.getUint32(1, /* littleEndian */ true);
-  // Slice off the header — owns its own buffer so the assembler can retain
-  // it past the call without worrying about the receive ring being reused.
-  const payload = new Uint8Array(buffer.slice(BINARY_HEADER_BYTES));
+  // View into the caller's buffer — callers MUST pass a buffer they own
+  // (both the hub's `peer-session` and the FE/bootstrap already copy out
+  // of the receive ring before calling).
+  const payload = new Uint8Array(buffer, BINARY_HEADER_BYTES);
   return { kind, id, payload };
 }

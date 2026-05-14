@@ -282,11 +282,17 @@ describe('bridge', () => {
       // Head + end as JSON, body bytes out-of-band.
       expect(jsonFrames.map((f) => f.kind)).toEqual(['response.head', 'response.end']);
 
-      // Assemble through onBinaryChunk and verify the bytes roundtrip.
+      // Assemble through onChunk with the `dataBin` field set — same shape
+      // a binary-frame transport would synthesize.
       const assembler = new ResponseAssembler();
       assembler.onHead(jsonFrames[0] as ResponseHeadMessage);
       for (const b of binaryChunks) {
-        assembler.onBinaryChunk(b);
+        assembler.onChunk({
+          v: PROTOCOL_VERSION,
+          kind: 'response.chunk',
+          id: 11,
+          dataBin: b,
+        });
       }
       assembler.onEnd(jsonFrames[1] as ResponseEndMessage);
       const res = await assembler.response();

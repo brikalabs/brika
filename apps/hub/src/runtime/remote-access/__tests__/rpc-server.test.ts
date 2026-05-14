@@ -6,7 +6,7 @@ import {
   type RpcMessageKind,
 } from '@brika/remote-access-protocol';
 import type { ApiServer } from '@/runtime/http/api-server';
-import type { InboundFrame, RpcSender } from '../peer-session';
+import type { RpcSender } from '../peer-session';
 import { RpcServer } from '../rpc-server';
 import type { SignalingLogger } from '../signaling-client';
 
@@ -20,10 +20,6 @@ interface BinaryOut {
   readonly kind: BinaryChunkKind;
   readonly id: number;
   readonly bytes: Uint8Array;
-}
-
-function rpc(msg: RpcMessage): InboundFrame {
-  return { kind: 'rpc', msg };
 }
 
 function makeSender(
@@ -72,13 +68,13 @@ describe('RpcServer', () => {
     const { server, outbox } = makeServer(makeApiServer(() => new Response('unused')));
     const sender = makeSender(outbox);
     server.handle(
-      rpc({
+      {
         v: PROTOCOL_VERSION,
         kind: 'hello',
         role: 'client',
         softwareVersion: 'test',
         maxProtocolVersion: PROTOCOL_VERSION,
-      }),
+      },
       sender
     );
     expect(outbox).toEqual([]);
@@ -94,14 +90,14 @@ describe('RpcServer', () => {
     const sender = makeSender(outbox);
 
     server.handle(
-      rpc({
+      {
         v: PROTOCOL_VERSION,
         kind: 'request',
         id: 1,
         method: 'GET',
         url: '/api/health',
         headers: [['accept', 'text/plain']],
-      }),
+      },
       sender
     );
     await flush();
@@ -124,11 +120,11 @@ describe('RpcServer', () => {
     const sender = makeSender(outbox);
 
     server.handle(
-      rpc({ v: PROTOCOL_VERSION, kind: 'request', id: 7, method: 'GET', url: '/a', headers: [] }),
+      { v: PROTOCOL_VERSION, kind: 'request', id: 7, method: 'GET', url: '/a', headers: [] },
       sender
     );
     server.handle(
-      rpc({ v: PROTOCOL_VERSION, kind: 'request', id: 7, method: 'GET', url: '/a', headers: [] }),
+      { v: PROTOCOL_VERSION, kind: 'request', id: 7, method: 'GET', url: '/a', headers: [] },
       sender
     );
     const errs = outbox.filter((f) => f.kind === 'response.error');
@@ -144,14 +140,14 @@ describe('RpcServer', () => {
     const sender = makeSender(outbox);
 
     server.handle(
-      rpc({
+      {
         v: PROTOCOL_VERSION,
         kind: 'request',
         id: 3,
         method: 'GET',
         url: '/explode',
         headers: [],
-      }),
+      },
       sender
     );
     await flush();
@@ -175,7 +171,7 @@ describe('RpcServer', () => {
     ] as const) {
       // Each branch needs the right minimum shape — handle() only switches on kind.
       const frame = { v: PROTOCOL_VERSION, kind, id: 1 } as unknown as RpcMessage;
-      server.handle(rpc(frame), sender);
+      server.handle(frame, sender);
     }
     expect(outbox).toEqual([]);
   });
@@ -183,7 +179,7 @@ describe('RpcServer', () => {
   it('abort on an unknown id is a no-op', () => {
     const { server, outbox } = makeServer(makeApiServer(() => new Response()));
     const sender = makeSender(outbox);
-    server.handle(rpc({ v: PROTOCOL_VERSION, kind: 'abort', id: 999 }), sender);
+    server.handle({ v: PROTOCOL_VERSION, kind: 'abort', id: 999 }, sender);
     expect(outbox).toEqual([]);
   });
 
@@ -195,18 +191,18 @@ describe('RpcServer', () => {
     const sender = makeSender(outbox);
 
     server.handle(
-      rpc({ v: PROTOCOL_VERSION, kind: 'request', id: 1, method: 'GET', url: '/x', headers: [] }),
+      { v: PROTOCOL_VERSION, kind: 'request', id: 1, method: 'GET', url: '/x', headers: [] },
       sender
     );
     server.handle(
-      rpc({ v: PROTOCOL_VERSION, kind: 'request', id: 2, method: 'GET', url: '/y', headers: [] }),
+      { v: PROTOCOL_VERSION, kind: 'request', id: 2, method: 'GET', url: '/y', headers: [] },
       sender
     );
 
     server.shutdown();
     // After shutdown the inflight map is empty; another request with id=1 succeeds.
     server.handle(
-      rpc({ v: PROTOCOL_VERSION, kind: 'request', id: 1, method: 'GET', url: '/z', headers: [] }),
+      { v: PROTOCOL_VERSION, kind: 'request', id: 1, method: 'GET', url: '/z', headers: [] },
       sender
     );
     await flush();
@@ -228,14 +224,14 @@ describe('RpcServer', () => {
     const sender = makeSender(outbox);
 
     server.handle(
-      rpc({
+      {
         v: PROTOCOL_VERSION,
         kind: 'request',
         id: 1,
         method: 'GET',
         url: '/api/anything',
         headers: [],
-      }),
+      },
       sender
     );
     await flush();
@@ -263,7 +259,7 @@ describe('RpcServer', () => {
     const sender = makeSender(outbox);
 
     server.handle(
-      rpc({
+      {
         v: PROTOCOL_VERSION,
         kind: 'request',
         id: 1,
@@ -271,7 +267,7 @@ describe('RpcServer', () => {
         url: '/api/x',
         // Page bridge forwards a UA the page could've rewritten.
         headers: [['user-agent', 'PageForwardedUA/0.0']],
-      }),
+      },
       sender
     );
     await flush();
@@ -294,7 +290,7 @@ describe('RpcServer', () => {
     const sender = makeSender(outbox);
 
     server.handle(
-      rpc({
+      {
         v: PROTOCOL_VERSION,
         kind: 'request',
         id: 42,
@@ -302,29 +298,29 @@ describe('RpcServer', () => {
         url: '/api/upload',
         headers: [['content-type', 'application/octet-stream']],
         hasBody: true,
-      }),
+      },
       sender
     );
     // Two binary chunks then end.
     server.handle(
-      rpc({
+      {
         v: PROTOCOL_VERSION,
         kind: 'request.chunk',
         id: 42,
         dataB64: btoa(String.fromCodePoint(1, 2, 3, 4)),
-      }),
+      },
       sender
     );
     server.handle(
-      rpc({
+      {
         v: PROTOCOL_VERSION,
         kind: 'request.chunk',
         id: 42,
         dataB64: btoa(String.fromCodePoint(5, 6, 7, 8)),
-      }),
+      },
       sender
     );
-    server.handle(rpc({ v: PROTOCOL_VERSION, kind: 'request.end', id: 42 }), sender);
+    server.handle({ v: PROTOCOL_VERSION, kind: 'request.end', id: 42 }, sender);
     await flush();
 
     expect(seen.length).toBe(1);
@@ -351,7 +347,7 @@ describe('RpcServer', () => {
     const sender = makeSender(outbox);
 
     server.handle(
-      rpc({
+      {
         v: PROTOCOL_VERSION,
         kind: 'request',
         id: 100,
@@ -359,24 +355,30 @@ describe('RpcServer', () => {
         url: '/api/upload',
         headers: [['content-type', 'application/octet-stream']],
         hasBody: true,
-      }),
+      },
       sender
     );
+    // Synthesized binary chunks — same shape the PeerSession builds from a
+    // decoded binary frame, routed through the same `request.chunk` arm.
     server.handle(
       {
-        kind: 'binary',
-        chunk: { kind: 'request.chunk', id: 100, payload: new Uint8Array([1, 2, 3]) },
+        v: PROTOCOL_VERSION,
+        kind: 'request.chunk',
+        id: 100,
+        dataBin: new Uint8Array([1, 2, 3]),
       },
       sender
     );
     server.handle(
       {
-        kind: 'binary',
-        chunk: { kind: 'request.chunk', id: 100, payload: new Uint8Array([4, 5]) },
+        v: PROTOCOL_VERSION,
+        kind: 'request.chunk',
+        id: 100,
+        dataBin: new Uint8Array([4, 5]),
       },
       sender
     );
-    server.handle(rpc({ v: PROTOCOL_VERSION, kind: 'request.end', id: 100 }), sender);
+    server.handle({ v: PROTOCOL_VERSION, kind: 'request.end', id: 100 }, sender);
     await flush();
 
     expect(seen.length).toBe(1);
@@ -398,14 +400,14 @@ describe('RpcServer', () => {
     const sender = makeSender(outbox, { binaryOutbox, peerSupportsBinary: true });
 
     server.handle(
-      rpc({
+      {
         v: PROTOCOL_VERSION,
         kind: 'request',
         id: 200,
         method: 'GET',
         url: '/api/download',
         headers: [],
-      }),
+      },
       sender
     );
     await flush();
@@ -432,14 +434,14 @@ describe('RpcServer', () => {
     const sender = makeSender(outbox, { binaryOutbox });
 
     server.handle(
-      rpc({
+      {
         v: PROTOCOL_VERSION,
         kind: 'request',
         id: 201,
         method: 'GET',
         url: '/api/legacy',
         headers: [],
-      }),
+      },
       sender
     );
     await flush();
@@ -471,7 +473,7 @@ describe('RpcServer', () => {
     const sender = makeSender(outbox);
 
     server.handle(
-      rpc({
+      {
         v: PROTOCOL_VERSION,
         kind: 'request',
         id: 9,
@@ -479,28 +481,28 @@ describe('RpcServer', () => {
         url: '/api/upload',
         headers: [['content-type', 'application/octet-stream']],
         hasBody: true,
-      }),
+      },
       sender
     );
     server.handle(
-      rpc({
+      {
         v: PROTOCOL_VERSION,
         kind: 'request.chunk',
         id: 9,
         dataText: 'abcdef',
-      }),
+      },
       sender
     );
     server.handle(
-      rpc({
+      {
         v: PROTOCOL_VERSION,
         kind: 'request.chunk',
         id: 9,
         dataText: 'ghijkl', // total 12 > 10 → trips the cap.
-      }),
+      },
       sender
     );
-    server.handle(rpc({ v: PROTOCOL_VERSION, kind: 'request.end', id: 9 }), sender);
+    server.handle({ v: PROTOCOL_VERSION, kind: 'request.end', id: 9 }, sender);
     await flush();
 
     const errFrame = outbox.find((f) => f.kind === 'response.error') as
@@ -523,14 +525,14 @@ describe('RpcServer', () => {
     const sender = makeSender(outbox);
 
     server.handle(
-      rpc({
+      {
         v: PROTOCOL_VERSION,
         kind: 'request',
         id: 1,
         method: 'GET',
         url: '/api/y',
         headers: [['user-agent', 'PageForwardedUA/1.0']],
-      }),
+      },
       sender
     );
     await flush();

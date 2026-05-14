@@ -93,6 +93,14 @@ const BUFFER_HIGH_WATER_BYTES = 1 * 1024 * 1024;
 const BUFFER_LOW_WATER_BYTES = 256 * 1024;
 
 /**
+ * Per-response body cap. Defends the FE tab against a misbehaving or
+ * compromised hub streaming unbounded body bytes — without it, the
+ * `ResponseAssembler`'s sink buffers every received byte until the caller
+ * reads (or OOMs the tab). Matches the hub's upload cap for symmetry.
+ */
+const MAX_RESPONSE_BODY_BYTES = 50 * 1024 * 1024;
+
+/**
  * Splice the cookie-jar header into a `request` head frame. Cookie is a
  * forbidden request header in browsers — `new Request(url, { headers })`
  * silently drops it — so we inject at the wire-frame layer where it
@@ -224,7 +232,7 @@ export class DataChannelTransport implements Transport {
     debug('cookie jar lookup', { path, attached: cookieHeader || '(none)' });
     debug('→ request', { id, method: request.method, url: request.url });
 
-    const assembler = new ResponseAssembler();
+    const assembler = new ResponseAssembler({ maxBodyBytes: MAX_RESPONSE_BODY_BYTES });
     const responsePromise = new Promise<Response>((resolve, reject) => {
       const inflight: Inflight = {
         assembler,
@@ -600,12 +608,20 @@ export class DataChannelTransport implements Transport {
       debug('← drop malformed binary frame', { bytes: buffer.byteLength });
       return;
     }
-    // Only `response.chunk` is meaningful on the client side. `request.chunk`
+    // Only `response.chunk` is meaningful inbound on the FE. `request.chunk`
     // in this direction means the hub is misbehaving — drop silently.
     if (chunk.kind !== 'response.chunk') {
       return;
     }
-    this.#inflight.get(chunk.id)?.assembler.onBinaryChunk(chunk.payload);
+    // Route through the same `onChunk` arm the JSON path uses by synthesizing
+    // a chunk message with `dataBin` set — the sink's enqueue handles all
+    // three data shapes uniformly.
+    this.#inflight.get(chunk.id)?.assembler.onChunk({
+      v: PROTOCOL_VERSION,
+      kind: 'response.chunk',
+      id: chunk.id,
+      dataBin: chunk.payload,
+    });
   }
 
   #onRpcMessage(raw: string): void {
@@ -718,39 +734,33 @@ export class DataChannelTransport implements Transport {
     }
   }
 
-  /**
-   * Send a frame, routing any `channel.send` failure (`"Message too large"`,
-   * `InvalidStateError` mid-flight) through `#onUnexpectedClose` so inflights
-   * get a real `TransportError` instead of a silently-truncated channel.
-   */
   #sendFrame(frame: RpcMessage): void {
-    const channel = this.#channel;
-    if (!channel || channel.readyState !== 'open') {
-      this.#onUnexpectedClose('channel-closed', 'Channel not open at send time');
-      throw new TransportError('channel-closed', 'Channel not open at send time');
-    }
-    try {
-      channel.send(encodeRpc(frame));
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      this.#onUnexpectedClose('send-failed', message);
-      throw err instanceof Error ? err : new Error(message);
-    }
+    this.#sendRaw(encodeRpc(frame));
+  }
+
+  #sendBinaryChunk(kind: BinaryChunkKind, id: number, bytes: Uint8Array): void {
+    this.#sendRaw(encodeBinaryChunk(kind, id, bytes));
   }
 
   /**
-   * Send a request body chunk as a raw binary frame. Same failure-routing as
-   * {@link #sendFrame} so a too-large/mid-flight throw propagates as a
-   * `TransportError` instead of silently truncating the upload.
+   * Common send path. Routes any `channel.send` failure
+   * (`"Message too large"`, `InvalidStateError` mid-flight) through
+   * `#onUnexpectedClose` so inflights get a real `TransportError` instead
+   * of a silently-truncated channel.
    */
-  #sendBinaryChunk(kind: BinaryChunkKind, id: number, bytes: Uint8Array): void {
+  #sendRaw(payload: string | ArrayBuffer): void {
     const channel = this.#channel;
     if (!channel || channel.readyState !== 'open') {
       this.#onUnexpectedClose('channel-closed', 'Channel not open at send time');
       throw new TransportError('channel-closed', 'Channel not open at send time');
     }
     try {
-      channel.send(encodeBinaryChunk(kind, id, bytes));
+      // Pick the right overload: send(string) vs send(ArrayBuffer).
+      if (typeof payload === 'string') {
+        channel.send(payload);
+      } else {
+        channel.send(payload);
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       this.#onUnexpectedClose('send-failed', message);

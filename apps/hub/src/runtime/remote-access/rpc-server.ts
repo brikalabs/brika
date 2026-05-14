@@ -27,7 +27,7 @@ import {
   type SendBinaryChunk,
 } from '@brika/remote-access-protocol';
 import type { ApiServer } from '@/runtime/http/api-server';
-import type { InboundFrame, RpcSender } from './peer-session';
+import type { RpcSender } from './peer-session';
 import type { SignalingLogger } from './signaling-client';
 
 export interface RpcServerOptions {
@@ -84,23 +84,14 @@ export class RpcServer {
     this.#options = options;
   }
 
-  /** Dispatch a frame received from the peer. */
-  handle(frame: InboundFrame, sender: RpcSender): void {
-    if (frame.kind === 'binary') {
-      // Only request.chunk is meaningful inbound on the hub side —
-      // response.chunk in this direction means the peer is misbehaving.
-      if (frame.chunk.kind !== 'request.chunk') {
-        return;
-      }
-      this.#inflight.get(frame.chunk.id)?.assembler?.onBinaryChunk(frame.chunk.payload);
-      return;
-    }
-    const msg = frame.msg;
+  /**
+   * Dispatch a frame received from the peer. Binary body chunks arrive as a
+   * synthesized `request.chunk` with `dataBin` set — the same switch arm
+   * handles both wire forms transparently.
+   */
+  handle(msg: RpcMessage, sender: RpcSender): void {
     switch (msg.kind) {
       case 'hello':
-        // Capability negotiation happens at the PeerSession layer (it
-        // toggles `peerSupportsBinary` based on the peer's caps). Nothing
-        // else for us to do here.
         return;
       case 'request':
         this.#startRequest(msg, sender);
@@ -169,9 +160,11 @@ export class RpcServer {
     sender: RpcSender,
     signal: AbortSignal
   ): Promise<void> {
-    const send = (frame: RpcMessage): void => sender.send(frame);
-    // Binary path is gated on the peer advertising `binary-frames` — until
-    // then we fall back to base64-in-JSON chunks so the FE can still decode.
+    // Wire the binary path only when the peer has advertised `binary-frames`.
+    // Otherwise the bridge falls back to base64-in-JSON via `sender.send`.
+    // `peerSupportsBinary()` is a live read — if the peer's hello hasn't
+    // arrived yet, we send the first body via b64 and pay the inflation tax
+    // for that single request; later requests upgrade automatically.
     const sendBinary: SendBinaryChunk | undefined = sender.peerSupportsBinary()
       ? (bytes) => sender.sendBinaryChunk('response.chunk', msg.id, bytes)
       : undefined;
@@ -179,7 +172,7 @@ export class RpcServer {
     try {
       request = rpcRequestToFetch(msg, this.#options.baseOrigin, assembler?.body() ?? null);
     } catch (err) {
-      send({
+      sender.send({
         v: PROTOCOL_VERSION,
         kind: 'response.error',
         id: msg.id,
@@ -189,8 +182,6 @@ export class RpcServer {
       return;
     }
 
-    // Stamp the source so downstream middleware can apply rate limiting and
-    // logging based on the remote peer rather than the loopback "socket".
     request.headers.set('x-real-ip', this.#options.remoteIp);
     if (this.#options.remoteUserAgent) {
       request.headers.set('user-agent', this.#options.remoteUserAgent);
@@ -201,9 +192,6 @@ export class RpcServer {
     try {
       response = await this.#options.apiServer.fetchInternal(request);
     } catch (err) {
-      // Look through wrapping layers — Hono/fetch may re-wrap the stream error
-      // as a `TypeError: The stream is errored` whose `cause` is the original
-      // `BodyTooLargeError`.
       const tooLarge = findBodyTooLarge(err);
       if (tooLarge) {
         this.#options.log.warn('rpc upload exceeded limit', {
@@ -212,12 +200,15 @@ export class RpcServer {
           url: msg.url,
           limit: tooLarge.limit,
         });
-        send({
+        sender.send({
           v: PROTOCOL_VERSION,
           kind: 'response.error',
           id: msg.id,
           code: BODY_TOO_LARGE_CODE,
-          message: tooLarge.message,
+          // Keep the limit out of the peer-facing message — operationally
+          // useful intel for an attacker tuning their upload. The precise
+          // limit is on the hub log above.
+          message: 'Request body too large',
           status: 413,
         });
         return;
@@ -228,7 +219,7 @@ export class RpcServer {
         url: msg.url,
         error: err instanceof Error ? err.message : String(err),
       });
-      send({
+      sender.send({
         v: PROTOCOL_VERSION,
         kind: 'response.error',
         id: msg.id,
@@ -239,7 +230,10 @@ export class RpcServer {
     }
 
     try {
-      await responseToFrames(msg.id, response, send, { abortSignal: signal, sendBinary });
+      await responseToFrames(msg.id, response, (f) => sender.send(f), {
+        abortSignal: signal,
+        sendBinary,
+      });
     } catch (err) {
       this.#options.log.warn('rpc stream errored', {
         sessionId: this.#options.sessionId,

@@ -85,14 +85,21 @@ export interface RequestMessage extends RpcEnvelope {
   readonly hasBody?: boolean;
 }
 
-/** A request body chunk. Sent zero-or-more times between `request` and `request.end`. */
+/**
+ * A request body chunk. Sent zero-or-more times between `request` and
+ * `request.end`. Exactly one of the three data fields is set per frame.
+ *
+ * `dataBin` is in-process only — it never travels over the wire as JSON
+ * (the codec strips it). The binary transport decodes a raw chunk frame
+ * into a synthesized `RequestChunkMessage` with `dataBin` set so the
+ * same `RpcServer` switch arm handles both wire forms.
+ */
 export interface RequestChunkMessage extends RpcEnvelope {
   readonly kind: 'request.chunk';
   readonly id: number;
-  /** UTF-8 text chunk. Mutually exclusive with `dataB64`. */
   readonly dataText?: string;
-  /** Base64-encoded binary chunk. */
   readonly dataB64?: string;
+  readonly dataBin?: Uint8Array;
 }
 
 /** Final frame for a request body. Triggers dispatch on the hub side. */
@@ -121,14 +128,17 @@ export interface ResponseHeadMessage extends RpcEnvelope {
   readonly headers: ReadonlyArray<readonly [string, string]>;
 }
 
-/** A body chunk. Sent zero-or-more times between `head` and `end`/`error`. */
+/**
+ * A body chunk. Sent zero-or-more times between `head` and `end`/`error`.
+ * Exactly one of the three data fields is set per frame. `dataBin` is
+ * in-process only; see {@link RequestChunkMessage}.
+ */
 export interface ResponseChunkMessage extends RpcEnvelope {
   readonly kind: 'response.chunk';
   readonly id: number;
-  /** UTF-8 text chunk. Mutually exclusive with `dataB64`. */
   readonly dataText?: string;
-  /** Base64-encoded binary chunk. */
   readonly dataB64?: string;
+  readonly dataBin?: Uint8Array;
 }
 
 /** Final frame for a successful response. */

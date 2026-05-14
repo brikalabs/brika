@@ -293,9 +293,20 @@ export async function openPeer(
     }
     if (ev.data instanceof ArrayBuffer) {
       const chunk = decodeBinaryChunk(ev.data);
-      if (chunk?.kind === 'response.chunk') {
-        inflight.get(chunk.id)?.assembler.onBinaryChunk(chunk.payload);
+      if (chunk?.kind !== 'response.chunk') {
+        return;
       }
+      // Synthesize a chunk message so the JSON and binary paths funnel
+      // through the same `dispatchRpcFrame` arm.
+      dispatchRpcFrame(
+        {
+          v: PROTOCOL_VERSION,
+          kind: 'response.chunk',
+          id: chunk.id,
+          dataBin: chunk.payload,
+        },
+        inflight
+      );
     }
   });
 
