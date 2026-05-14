@@ -124,6 +124,57 @@ function base64ToBytes(b64: string): Uint8Array {
   return bytes;
 }
 
+// Shared across all chunk assemblers — `TextEncoder` is stateless, so a
+// single instance is safe to reuse and saves an allocation per inbound chunk.
+const TEXT_ENCODER = new TextEncoder();
+
+/**
+ * Body-stream sink shared by {@link ResponseAssembler} (response.chunk/end)
+ * and {@link RequestAssembler} (request.chunk/end). Exposes a
+ * `ReadableStream<Uint8Array>` that consumers (the FE's `Response`, the hub's
+ * `Request`) can read incrementally as frames arrive.
+ */
+class ChunkBodySink {
+  #controller: ReadableStreamDefaultController<Uint8Array> | null = null;
+  readonly stream: ReadableStream<Uint8Array>;
+  #closed = false;
+
+  constructor() {
+    this.stream = new ReadableStream<Uint8Array>({
+      start: (controller) => {
+        this.#controller = controller;
+      },
+    });
+  }
+
+  enqueue(chunk: { dataText?: string; dataB64?: string }): void {
+    if (!this.#controller || this.#closed) {
+      return;
+    }
+    if (chunk.dataText !== undefined) {
+      this.#controller.enqueue(TEXT_ENCODER.encode(chunk.dataText));
+    } else if (chunk.dataB64 !== undefined) {
+      this.#controller.enqueue(base64ToBytes(chunk.dataB64));
+    }
+  }
+
+  close(): void {
+    if (this.#closed) {
+      return;
+    }
+    this.#closed = true;
+    this.#controller?.close();
+  }
+
+  error(err: Error): void {
+    if (this.#closed) {
+      return;
+    }
+    this.#closed = true;
+    this.#controller?.error(err);
+  }
+}
+
 /** True for content-types whose body is safely UTF-8 text. */
 function isTextContentType(contentType: string | null): boolean {
   if (!contentType) {
@@ -154,34 +205,14 @@ function isTextContentType(contentType: string | null): boolean {
  */
 const MAX_CHUNK_PAYLOAD_BYTES = 16 * 1024;
 
-async function emitBytesAsChunks<T extends RpcMessage>(
-  bytes: Uint8Array,
-  decoder: TextDecoder | null,
-  buildChunk: (data: { dataText?: string; dataB64?: string }) => T,
-  emit: (frame: T) => void | Promise<void>
-): Promise<void> {
-  for (let offset = 0; offset < bytes.byteLength; offset += MAX_CHUNK_PAYLOAD_BYTES) {
-    const slice = bytes.subarray(
-      offset,
-      Math.min(offset + MAX_CHUNK_PAYLOAD_BYTES, bytes.byteLength)
-    );
-    if (decoder) {
-      // `stream: true` keeps incomplete UTF-8 sequences buffered in the
-      // decoder until the next call — splitting on byte boundaries never
-      // corrupts multi-byte characters. Caller flushes the tail at EOF.
-      await emit(buildChunk({ dataText: decoder.decode(slice, { stream: true }) }));
-    } else {
-      await emit(buildChunk({ dataB64: bytesToBase64(slice) }));
-    }
-  }
-}
-
 /**
  * Read a body stream and emit chunk frames built by `buildChunk`. Returns
  * `true` if the stream completed normally, `false` if aborted mid-stream.
+ * Used by both `emitRequest` and `responseToFrames` for symmetric chunking.
  *
- * Used by both `emitRequest` (request-body upload) and `responseToFrames`
- * (response-body download). Symmetric chunking — same framing, same cap.
+ * `stream: true` on the decoder keeps incomplete UTF-8 sequences buffered
+ * across calls — splitting on byte boundaries never corrupts multi-byte
+ * characters. The tail flush at EOF drains the remaining bytes.
  */
 async function streamBodyAsChunks<T extends RpcMessage>(
   body: ReadableStream<Uint8Array>,
@@ -200,8 +231,19 @@ async function streamBodyAsChunks<T extends RpcMessage>(
       if (done) {
         break;
       }
-      if (value && value.byteLength > 0) {
-        await emitBytesAsChunks(value, decoder, buildChunk, emit);
+      if (!value || value.byteLength === 0) {
+        continue;
+      }
+      for (let offset = 0; offset < value.byteLength; offset += MAX_CHUNK_PAYLOAD_BYTES) {
+        const slice = value.subarray(
+          offset,
+          Math.min(offset + MAX_CHUNK_PAYLOAD_BYTES, value.byteLength)
+        );
+        if (decoder) {
+          await emit(buildChunk({ dataText: decoder.decode(slice, { stream: true }) }));
+        } else {
+          await emit(buildChunk({ dataB64: bytesToBase64(slice) }));
+        }
       }
     }
     if (decoder) {
@@ -408,8 +450,7 @@ export class ResponseAssembler {
   #headResolve: ((res: Response) => void) | null = null;
   #headReject: ((err: Error) => void) | null = null;
   readonly #headPromise: Promise<Response>;
-  #controller: ReadableStreamDefaultController<Uint8Array> | null = null;
-  #closed = false;
+  readonly #body = new ChunkBodySink();
 
   constructor() {
     this.#headPromise = new Promise<Response>((resolve, reject) => {
@@ -427,12 +468,7 @@ export class ResponseAssembler {
     if (!this.#headResolve) {
       return;
     }
-    const stream = new ReadableStream<Uint8Array>({
-      start: (controller) => {
-        this.#controller = controller;
-      },
-    });
-    const response = new Response(stream, {
+    const response = new Response(this.#body.stream, {
       status: msg.status,
       headers: pairsToHeaders(msg.headers),
     });
@@ -442,95 +478,48 @@ export class ResponseAssembler {
   }
 
   onChunk(msg: ResponseChunkMessage): void {
-    if (!this.#controller || this.#closed) {
-      return;
-    }
-    if (msg.dataText !== undefined) {
-      this.#controller.enqueue(new TextEncoder().encode(msg.dataText));
-    } else if (msg.dataB64 !== undefined) {
-      this.#controller.enqueue(base64ToBytes(msg.dataB64));
-    }
+    this.#body.enqueue(msg);
   }
 
   onEnd(_msg: ResponseEndMessage): void {
-    if (this.#closed) {
-      return;
-    }
-    this.#closed = true;
-    this.#controller?.close();
+    this.#body.close();
   }
 
   onError(msg: ResponseErrorMessage): void {
-    if (this.#closed) {
-      return;
-    }
-    this.#closed = true;
     const err = new Error(`${msg.code}: ${msg.message}`);
     if (this.#headReject) {
       this.#headReject(err);
       this.#headReject = null;
       this.#headResolve = null;
     }
-    this.#controller?.error(err);
+    this.#body.error(err);
   }
 }
 
 // ─── Hub side: assemble a Request body from incoming chunk frames ──────────
 
 /**
- * State machine the hub feeds incoming `request.chunk` / `request.end` frames
- * into. Exposes the body as a `ReadableStream<Uint8Array>` so the dispatcher
- * can hand it straight to `new Request(..., { body: stream })` — the hub's
- * app reads chunks as they arrive, not after the full upload.
- *
- * Mirrors {@link ResponseAssembler}. Lifecycle:
- *   1. `new RequestAssembler()` — set up while waiting for chunks.
- *   2. `onChunk(msg)` — enqueue each chunk into the body stream.
- *   3. `onEnd(msg)` — close the stream so the consumer reaches EOF.
- *   4. `abort(err)` — error the stream (called on `abort` frame or session close).
+ * Hub-side state machine: `request.chunk` frames enqueue onto a body stream
+ * that the dispatcher hands directly to `new Request(..., { body: stream })`,
+ * so the hub's app reads chunks as they arrive — not after the full upload.
  */
 export class RequestAssembler {
-  #controller: ReadableStreamDefaultController<Uint8Array> | null = null;
-  readonly #body: ReadableStream<Uint8Array>;
-  #closed = false;
-
-  constructor() {
-    this.#body = new ReadableStream<Uint8Array>({
-      start: (controller) => {
-        this.#controller = controller;
-      },
-    });
-  }
+  readonly #sink = new ChunkBodySink();
 
   /** Body stream — pass to `rpcRequestToFetch` as the body argument. */
   body(): ReadableStream<Uint8Array> {
-    return this.#body;
+    return this.#sink.stream;
   }
 
   onChunk(msg: RequestChunkMessage): void {
-    if (!this.#controller || this.#closed) {
-      return;
-    }
-    if (msg.dataText !== undefined) {
-      this.#controller.enqueue(new TextEncoder().encode(msg.dataText));
-    } else if (msg.dataB64 !== undefined) {
-      this.#controller.enqueue(base64ToBytes(msg.dataB64));
-    }
+    this.#sink.enqueue(msg);
   }
 
   onEnd(_msg: RequestEndMessage): void {
-    if (this.#closed) {
-      return;
-    }
-    this.#closed = true;
-    this.#controller?.close();
+    this.#sink.close();
   }
 
   abort(err: Error): void {
-    if (this.#closed) {
-      return;
-    }
-    this.#closed = true;
-    this.#controller?.error(err);
+    this.#sink.error(err);
   }
 }

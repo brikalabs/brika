@@ -252,39 +252,19 @@ export class DataChannelTransport implements Transport {
       );
     }
 
-    // Stream the request as `request` head + N × `request.chunk` + `request.end`.
-    // The head emit gets the cookie spliced in (Cookie is a forbidden request
-    // header in browsers — `new Request(url, { headers })` silently drops it,
-    // so we inject at the wire-frame layer instead).
-    void this.#emitRequestFrames(id, request, cookieHeader).catch((err: unknown) => {
-      // emitRequest already routed transport failures through
-      // #onUnexpectedClose, which rejects the inflight assembler with a
-      // TransportError. Nothing more to do here beyond keeping the
-      // unhandled-rejection surface clean.
+    // Cookie injection at the wire-frame layer: `new Request(url, { headers })`
+    // silently drops `Cookie` (forbidden request header), so we splice it onto
+    // the `request` head frame instead — `emitRequest` always emits head first.
+    const emit = async (frame: RpcMessage): Promise<void> => {
+      const next = frame.kind === 'request' ? injectCookieIntoHead(frame, cookieHeader) : frame;
+      await this.#awaitDrain();
+      this.#sendFrame(next);
+    };
+    void emitRequest(id, request, emit).catch((err: unknown) => {
       debug('emit failed', { id, err: err instanceof Error ? err.message : String(err) });
     });
 
     return responsePromise;
-  }
-
-  /**
-   * Emit a request as head + chunks + end through {@link emitRequest},
-   * injecting the cookie header on the head frame and routing every
-   * `channel.send()` through {@link #sendFrame} so a send failure tears
-   * the transport down cleanly instead of silently truncating the upload.
-   */
-  async #emitRequestFrames(id: number, request: Request, cookieHeader: string): Promise<void> {
-    let headSent = false;
-    const emit = async (frame: RpcMessage): Promise<void> => {
-      let next = frame;
-      if (!headSent && frame.kind === 'request') {
-        headSent = true;
-        next = injectCookieIntoHead(frame, cookieHeader);
-      }
-      await this.#awaitDrain();
-      this.#sendFrame(next);
-    };
-    await emitRequest(id, request, emit);
   }
 
   // ─── Connection lifecycle ──────────────────────────────────────────────
@@ -401,6 +381,10 @@ export class DataChannelTransport implements Transport {
 
     const channel = pc.createDataChannel('brika.rpc', { ordered: true });
     this.#channel = channel;
+    // Set once at channel creation so the LOW/HIGH hysteresis in `#awaitDrain`
+    // actually triggers — setting it inside the slow path would race with the
+    // first `bufferedamountlow` event.
+    channel.bufferedAmountLowThreshold = BUFFER_LOW_WATER_BYTES;
 
     channel.addEventListener('open', () => {
       clearTimer();
@@ -633,9 +617,10 @@ export class DataChannelTransport implements Transport {
     if (this.#channel?.readyState === 'open') {
       const abortFrame: AbortMessage = { v: PROTOCOL_VERSION, kind: 'abort', id };
       try {
-        this.#channel.send(encodeRpc(abortFrame));
+        this.#sendFrame(abortFrame);
       } catch {
-        /* ignore */
+        // #sendFrame already tore the transport down on a send failure;
+        // the assembler.onError below still surfaces the abort to the caller.
       }
     }
     inflight.assembler.onError({
@@ -676,12 +661,9 @@ export class DataChannelTransport implements Transport {
   }
 
   /**
-   * Send a single RPC frame, routing channel failures (e.g. "Message too
-   * large", "InvalidStateError" when the channel has closed mid-flight)
-   * through {@link #onUnexpectedClose} instead of letting them surface as
-   * silent send-throws that would otherwise truncate the next frame on the
-   * wire. Bumps the inflight-rejection chain so all callers see a real
-   * `TransportError`.
+   * Send a frame, routing any `channel.send` failure (`"Message too large"`,
+   * `InvalidStateError` mid-flight) through `#onUnexpectedClose` so inflights
+   * get a real `TransportError` instead of a silently-truncated channel.
    */
   #sendFrame(frame: RpcMessage): void {
     const channel = this.#channel;
@@ -699,24 +681,27 @@ export class DataChannelTransport implements Transport {
   }
 
   /**
-   * Backpressure for streaming uploads. SCTP's send buffer is bounded; if we
-   * blindly fire chunk frames for a multi-MB upload we'll either spike memory
-   * or trip the "Message too large"/InvalidStateError path. Pause emission
-   * when `bufferedAmount` crosses the high-water mark and resume when the
-   * channel drains below the low-water mark.
+   * Backpressure for streaming uploads. Pauses chunk emission when SCTP's
+   * `bufferedAmount` crosses HIGH and resumes once it drains below the
+   * `bufferedAmountLowThreshold` set at channel creation. Also resolves on
+   * channel close so a teardown mid-upload doesn't leak a never-resolving
+   * promise (and its captured chunk).
    */
   async #awaitDrain(): Promise<void> {
     const channel = this.#channel;
     if (!channel || channel.bufferedAmount <= BUFFER_HIGH_WATER_BYTES) {
       return;
     }
-    channel.bufferedAmountLowThreshold = BUFFER_LOW_WATER_BYTES;
     await new Promise<void>((resolve) => {
-      const onLow = (): void => {
-        channel.removeEventListener('bufferedamountlow', onLow);
+      const cleanup = (): void => {
+        channel.removeEventListener('bufferedamountlow', cleanup);
+        channel.removeEventListener('close', cleanup);
+        channel.removeEventListener('error', cleanup);
         resolve();
       };
-      channel.addEventListener('bufferedamountlow', onLow);
+      channel.addEventListener('bufferedamountlow', cleanup);
+      channel.addEventListener('close', cleanup);
+      channel.addEventListener('error', cleanup);
     });
   }
 
