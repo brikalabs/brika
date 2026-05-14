@@ -734,38 +734,44 @@ export class DataChannelTransport implements Transport {
     }
   }
 
-  #sendFrame(frame: RpcMessage): void {
-    this.#sendRaw(encodeRpc(frame));
-  }
-
-  #sendBinaryChunk(kind: BinaryChunkKind, id: number, bytes: Uint8Array): void {
-    this.#sendRaw(encodeBinaryChunk(kind, id, bytes));
-  }
-
   /**
-   * Common send path. Routes any `channel.send` failure
+   * Send a JSON-text RPC frame. Routes any `channel.send` failure
    * (`"Message too large"`, `InvalidStateError` mid-flight) through
    * `#onUnexpectedClose` so inflights get a real `TransportError` instead
    * of a silently-truncated channel.
    */
-  #sendRaw(payload: string | ArrayBuffer): void {
+  #sendFrame(frame: RpcMessage): void {
+    const channel = this.#assertChannelOpen();
+    try {
+      channel.send(encodeRpc(frame));
+    } catch (err) {
+      this.#routeSendError(err);
+    }
+  }
+
+  /** Same failure routing as {@link #sendFrame}, for raw-binary chunks. */
+  #sendBinaryChunk(kind: BinaryChunkKind, id: number, bytes: Uint8Array): void {
+    const channel = this.#assertChannelOpen();
+    try {
+      channel.send(encodeBinaryChunk(kind, id, bytes));
+    } catch (err) {
+      this.#routeSendError(err);
+    }
+  }
+
+  #assertChannelOpen(): RTCDataChannel {
     const channel = this.#channel;
     if (!channel || channel.readyState !== 'open') {
       this.#onUnexpectedClose('channel-closed', 'Channel not open at send time');
       throw new TransportError('channel-closed', 'Channel not open at send time');
     }
-    try {
-      // Pick the right overload: send(string) vs send(ArrayBuffer).
-      if (typeof payload === 'string') {
-        channel.send(payload);
-      } else {
-        channel.send(payload);
-      }
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      this.#onUnexpectedClose('send-failed', message);
-      throw err instanceof Error ? err : new Error(message);
-    }
+    return channel;
+  }
+
+  #routeSendError(err: unknown): never {
+    const message = err instanceof Error ? err.message : String(err);
+    this.#onUnexpectedClose('send-failed', message);
+    throw err instanceof Error ? err : new Error(message);
   }
 
   /**
