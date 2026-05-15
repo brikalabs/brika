@@ -33,9 +33,10 @@
  * where the pane wraps a flush component (e.g. a `<Table>`).
  */
 
-import { Box, Text } from 'ink';
+import { Box, type DOMElement, Text } from 'ink';
 import type React from 'react';
-import { createContext, type ReactNode, useContext } from 'react';
+import { createContext, type ReactNode, useContext, useRef } from 'react';
+import { useClickable } from '../mouse/useClickable';
 
 export type PaneAccent = 'default' | 'focused' | 'success' | 'warning' | 'destructive';
 
@@ -73,18 +74,32 @@ export interface PaneProps {
   readonly accent?: PaneAccent;
   /** Default `true`. Set `false` to remove horizontal padding. */
   readonly padded?: boolean;
+  /** Grow to fill the parent's cross-axis width. Use inside a flex row
+   *  when several Panes should split the row evenly (dashboard tiles,
+   *  side-by-side detail panes, etc.). Default `false` — Panes size
+   *  to their content like cards. */
+  readonly fill?: boolean;
+  /** Fire when the user left-clicks anywhere on the pane. */
+  readonly onPress?: () => void;
   readonly children?: ReactNode;
 }
 
 export function Pane({
   accent = 'default',
   padded = true,
+  fill = false,
+  onPress,
   children,
 }: Readonly<PaneProps>): React.ReactElement {
+  const ref = useRef<DOMElement>(null);
+  useClickable(ref, onPress);
   return (
     <PaneContext.Provider value={{ accent }}>
       <Box
+        ref={ref}
         flexDirection="column"
+        flexGrow={fill ? 1 : 0}
+        flexBasis={fill ? 0 : undefined}
         borderStyle="round"
         borderColor={BORDER_COLOR[accent]}
         paddingX={padded ? 1 : 0}
@@ -95,15 +110,11 @@ export function Pane({
   );
 }
 
-export function PaneHeader({
-  children,
-}: Readonly<{ children?: ReactNode }>): React.ReactElement {
+export function PaneHeader({ children }: Readonly<{ children?: ReactNode }>): React.ReactElement {
   return <Box>{children}</Box>;
 }
 
-export function PaneTitle({
-  children,
-}: Readonly<{ children?: ReactNode }>): React.ReactElement {
+export function PaneTitle({ children }: Readonly<{ children?: ReactNode }>): React.ReactElement {
   const { accent } = usePaneContext('PaneTitle');
   return (
     <Text bold color={TITLE_COLOR[accent]}>
@@ -113,9 +124,7 @@ export function PaneTitle({
 }
 
 /** Right-floats whatever you put in it (status badge, count, …). */
-export function PaneActions({
-  children,
-}: Readonly<{ children?: ReactNode }>): React.ReactElement {
+export function PaneActions({ children }: Readonly<{ children?: ReactNode }>): React.ReactElement {
   return (
     <>
       <Box flexGrow={1} />
@@ -124,9 +133,7 @@ export function PaneActions({
   );
 }
 
-export function PaneBody({
-  children,
-}: Readonly<{ children?: ReactNode }>): React.ReactElement {
+export function PaneBody({ children }: Readonly<{ children?: ReactNode }>): React.ReactElement {
   return (
     <Box marginTop={1} flexDirection="column">
       {children}
@@ -134,9 +141,7 @@ export function PaneBody({
   );
 }
 
-export function PaneFooter({
-  children,
-}: Readonly<{ children?: ReactNode }>): React.ReactElement {
+export function PaneFooter({ children }: Readonly<{ children?: ReactNode }>): React.ReactElement {
   return (
     <Box marginTop={1}>
       <Box flexGrow={1} />

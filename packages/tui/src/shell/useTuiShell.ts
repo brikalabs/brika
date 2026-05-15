@@ -45,6 +45,14 @@ export function useTuiShell(): TuiShellState {
   return ctx;
 }
 
+/** Non-throwing variant. Returns `null` when no `<TuiShellProvider>` is
+ *  mounted — useful for primitives that *should* integrate with the
+ *  shell when available but don't strictly require it (e.g. the engine
+ *  debug overlay, which may sit above the shell in the tree). */
+export function tryUseTuiShell(): TuiShellState | null {
+  return useContext(TuiShellContext);
+}
+
 /**
  * Mount-scoped input capture: while the calling component is mounted
  * (and `active` is true), global keybinds wired via `useKey` with
@@ -60,9 +68,13 @@ export function useTuiShell(): TuiShellState {
  * Pass `active={false}` to temporarily release without unmounting.
  */
 export function useCaptureInput(active: boolean = true): void {
-  const { captureInput } = useTuiShell();
+  // Soft dependency: if no shell is mounted (e.g. an `<Input>` inside
+  // the engine debug overlay sitting above `<TuiShellProvider>`), we
+  // simply skip capture — there are no shell-level binds to suspend.
+  const shell = tryUseTuiShell();
+  const captureInput = shell?.captureInput;
   useEffect(() => {
-    if (!active) {
+    if (!active || !captureInput) {
       return;
     }
     const release = captureInput();

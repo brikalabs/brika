@@ -1,11 +1,14 @@
 /**
  * Help section — keybind reference. Reached via `?` from any section.
+ * The navigation column is derived from `NAV_SECTIONS` so it always
+ * matches what `<NavBar>` renders.
  */
 
 import { Kbd, useRouter } from '@brika/tui';
 import { Box, Text, useInput } from 'ink';
 import type React from 'react';
 import type { Routes } from '../routes';
+import { NAV_SECTIONS } from '../sections';
 
 export function HelpView(): React.ReactElement {
   const router = useRouter<Routes>();
@@ -15,6 +18,16 @@ export function HelpView(): React.ReactElement {
     }
   });
 
+  const navItems: ReadonlyArray<readonly [React.ReactElement, string]> = [
+    ...NAV_SECTIONS.map((s): readonly [React.ReactElement, string] => [
+      <Kbd key={s.key}>{s.hotkey}</Kbd>,
+      s.label,
+    ]),
+    [<Kbd key="prev">[</Kbd>, 'Previous tab'],
+    [<Kbd key="next">]</Kbd>, 'Next tab'],
+    [<Kbd key="help">?</Kbd>, 'Help'],
+  ];
+
   return (
     <Box flexDirection="column">
       <Box marginBottom={1}>
@@ -23,19 +36,7 @@ export function HelpView(): React.ReactElement {
       </Box>
 
       <Box flexDirection="row" gap={6}>
-        <Section
-          title="Navigation"
-          items={[
-            [<Kbd key="k1">d</Kbd>, 'Dashboard'],
-            [<Kbd key="k2">p</Kbd>, 'Plugins'],
-            [<Kbd key="k3">w</Kbd>, 'Workflows'],
-            [<Kbd key="k4">l</Kbd>, 'Logs'],
-            [<Kbd key="k5">u</Kbd>, 'Users'],
-            [<Kbd key="k6">g</Kbd>, 'Updates'],
-            [<Kbd key="k7">,</Kbd>, 'Settings'],
-            [<Kbd key="k8">?</Kbd>, 'Help'],
-          ]}
-        />
+        <Section title="Navigation" items={navItems} />
         <Section
           title="Hub control"
           items={[

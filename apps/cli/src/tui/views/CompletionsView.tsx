@@ -5,8 +5,8 @@
  * stay in the command handler; this view just renders the result.
  */
 
-import { BrixTalking } from '@brika/brix';
 import type { Command } from '@brika/cli';
+import { Box, Text } from 'ink';
 import type React from 'react';
 import { useEffect, useState } from 'react';
 import { detectShell, installCompletions, type Shell, shellList } from '../../cli/completions';
@@ -18,6 +18,9 @@ type Phase =
   | { kind: 'installed'; shell: Shell; file: string; alreadyInstalled: boolean }
   | { kind: 'noShell' }
   | { kind: 'error'; message: string };
+
+const EXIT_DELAY_MS = 300;
+const EXIT_ERROR_DELAY_MS = 400;
 
 export interface CompletionsViewProps {
   readonly commands: Command[];
@@ -44,32 +47,48 @@ export function CompletionsView({ commands }: Readonly<CompletionsViewProps>): R
     })();
   }, [commands]);
 
-  if (phase.kind === 'detecting') {
-    return <BrixTalking mood="thinking" text="detecting shell…" />;
+  useEffect(() => {
+    if (phase.kind === 'installed') {
+      const t = setTimeout(() => exit(), EXIT_DELAY_MS);
+      return () => clearTimeout(t);
+    }
+    if (phase.kind === 'noShell' || phase.kind === 'error') {
+      const t = setTimeout(() => exit(), EXIT_ERROR_DELAY_MS);
+      return () => clearTimeout(t);
+    }
+  }, [phase, exit]);
+
+  return (
+    <Box>
+      <Text color={colorFor(phase)}>{messageFor(phase)}</Text>
+    </Box>
+  );
+}
+
+function messageFor(phase: Phase): string {
+  switch (phase.kind) {
+    case 'detecting':
+      return 'detecting shell…';
+    case 'installing':
+      return `installing ${phase.shell} completions…`;
+    case 'installed':
+      return `${phase.alreadyInstalled ? 'already installed' : 'installed'} — restart your shell to apply`;
+    case 'noShell':
+      return `couldn't detect shell — pass one of ${shellList()}`;
+    case 'error':
+      return phase.message;
   }
-  if (phase.kind === 'installing') {
-    return (
-      <BrixTalking mood="loading" text={`{:loading:}installing ${phase.shell} completions…`} />
-    );
+}
+
+function colorFor(phase: Phase): string {
+  switch (phase.kind) {
+    case 'installed':
+      return 'green';
+    case 'noShell':
+      return 'yellow';
+    case 'error':
+      return 'red';
+    default:
+      return 'cyan';
   }
-  if (phase.kind === 'installed') {
-    const verb = phase.alreadyInstalled ? 'already installed' : 'installed';
-    return (
-      <BrixTalking
-        mood="happy"
-        text={`{:happy:}${verb} — restart your shell to apply`}
-        onDone={() => exit(300)}
-      />
-    );
-  }
-  if (phase.kind === 'noShell') {
-    return (
-      <BrixTalking
-        mood="suspicious"
-        text={`{:suspicious:}couldn't detect shell — pass one of ${shellList()}`}
-        onDone={() => exit(400)}
-      />
-    );
-  }
-  return <BrixTalking mood="error" text={`{:error:}${phase.message}`} onDone={() => exit(400)} />;
 }

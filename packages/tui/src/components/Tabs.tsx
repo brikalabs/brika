@@ -29,7 +29,7 @@
  * on the context's current value, not on `TabsList`'s presence.
  */
 
-import { Box, Text } from 'ink';
+import { Box, type DOMElement, Text } from 'ink';
 import {
   createContext,
   type ReactNode,
@@ -37,9 +37,11 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react';
 import { useKey } from '../keys/useKey';
+import { useClickable } from '../mouse/useClickable';
 
 interface TabRegistration {
   readonly value: string;
@@ -218,8 +220,9 @@ export function TabsTrigger({
   children,
 }: Readonly<TabsTriggerProps>): React.ReactElement {
   const ctx = useTabsContext('TabsTrigger');
-  const { register } = ctx;
+  const { register, setValue } = ctx;
   const labelLength = typeof children === 'string' ? children.length : value.length;
+  const ref = useRef<DOMElement>(null);
 
   // Registration is still nice-to-have for shortcut binds + count,
   // but the visual is no longer driven by it.
@@ -234,12 +237,18 @@ export function TabsTrigger({
     [register, value, shortcut, labelLength]
   );
 
+  // Mouse: click anywhere on the trigger to activate it. Same hit-
+  // test pattern as `<MenuBar>` / `<Button>` so the affordance feels
+  // consistent across the app.
+  const select = useCallback(() => setValue(value), [setValue, value]);
+  useClickable(ref, select);
+
   const active = ctx.value === value;
   const prefix = shortcut ? `[${shortcut}] ` : '';
   const fullWidth = prefix.length + labelLength;
 
   return (
-    <Box flexDirection="column" marginRight={3}>
+    <Box ref={ref} flexDirection="column" marginRight={3} flexShrink={0}>
       <Box>
         {shortcut ? <Text color={active ? 'cyan' : undefined}>{prefix}</Text> : null}
         <Text bold={active} color={active ? 'cyan' : undefined}>
@@ -257,19 +266,27 @@ export function TabsTrigger({
 
 export interface TabsContentProps {
   readonly value: string;
+  /** Keep the inactive panel mounted (with `display: 'none'`) instead
+   *  of unmounting it. Default `true` — preserves form drafts, scroll
+   *  positions, ongoing fetches across tab switches. Set `false` for
+   *  panels that own expensive subscriptions you'd rather tear down
+   *  while the tab is hidden. */
+  readonly keepMounted?: boolean;
   readonly children?: ReactNode;
 }
 
 export function TabsContent({
   value,
+  keepMounted = true,
   children,
 }: Readonly<TabsContentProps>): React.ReactElement | null {
   const ctx = useTabsContext('TabsContent');
-  if (ctx.value !== value) {
+  const active = ctx.value === value;
+  if (!active && !keepMounted) {
     return null;
   }
   return (
-    <Box flexDirection="column" marginTop={1}>
+    <Box display={active ? 'flex' : 'none'} flexDirection="column" marginTop={active ? 1 : 0}>
       {children}
     </Box>
   );

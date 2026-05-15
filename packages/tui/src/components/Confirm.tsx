@@ -86,9 +86,7 @@ export function Confirm({
   );
 }
 
-export function ConfirmTitle({
-  children,
-}: Readonly<{ children?: ReactNode }>): React.ReactElement {
+export function ConfirmTitle({ children }: Readonly<{ children?: ReactNode }>): React.ReactElement {
   const { accent } = useConfirmContext('ConfirmTitle');
   return (
     <Text bold color={accent}>

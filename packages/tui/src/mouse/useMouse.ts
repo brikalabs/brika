@@ -9,24 +9,40 @@
  *   });
  *
  * Terminal mouse mode is enabled lazily on the first `useMouse`
- * call (via the global `enableMouseMode()` ref-count) and disabled
- * when the last subscriber unmounts. `runTui` does NOT toggle it
- * unconditionally so commands that don't care about mouse don't
- * eat the user's regular select-to-copy behaviour.
+ * call and disabled when the last subscriber unmounts. `runTui` does
+ * NOT toggle it unconditionally so commands that don't care about
+ * mouse don't eat the user's regular select-to-copy behaviour.
+ *
+ * **The data-stream split**
+ *
+ * SGR mouse-mode (`?1006`) reports clicks as escape sequences on the
+ * same stdin Ink is reading for keystrokes. Without intervention,
+ * Ink's keypress parser sees `\x1b[<0;53;25M`, doesn't recognise it,
+ * and forwards the raw characters to `useInput` — which an `<Input>`
+ * happily inserts as if the user typed `[<0;53;25M`. To avoid that
+ * leak we monkey-patch `process.stdin.emit('data', …)` the first
+ * time a `useMouse` mounts:
+ *
+ *   - Mouse SGR sequences are extracted and dispatched to our
+ *     subscribers directly.
+ *   - The remaining (non-mouse) bytes are re-emitted as a new
+ *     `'data'` payload that all other listeners (Ink) receive.
+ *   - When the last subscriber unmounts, the original `emit` is
+ *     restored.
  *
  * Implementation notes:
- *   - We subscribe to ink's `stdin` and parse the SGR (`?1006`)
- *     extended mouse escape sequences. Older terminals that only
- *     support `?1000` (X10) fall through unparsed.
  *   - Position is `0-based` (top-left = `{column: 0, row: 0}`),
  *     mirroring ink's coordinate system.
+ *   - Partial SGR sequences split across chunks are stashed in
+ *     `runtime.pending` and concatenated with the next chunk so a
+ *     fast click+drag burst doesn't drop bytes.
  *   - We DON'T register hit-testing here — that's a per-component
  *     concern. `useMouse` only emits raw events; consumers compute
  *     bounds via `measureElement` + a position ref of their own.
  */
 
 import { useStdin } from 'ink';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 export type MouseButton = 'left' | 'middle' | 'right' | 'wheelUp' | 'wheelDown' | 'unknown';
 export type MouseAction = 'down' | 'up' | 'click' | 'drag' | 'move' | 'scroll';
@@ -44,89 +60,105 @@ export interface MouseEvent {
 }
 
 type Subscriber = (event: MouseEvent) => void;
+type EmitFn = (event: string | symbol, ...args: unknown[]) => boolean;
 
 interface MouseRuntime {
   readonly subscribers: Set<Subscriber>;
   lastDown: { button: MouseButton; column: number; row: number } | null;
   attachedStdin: NodeJS.ReadStream | null;
-  listener: ((chunk: Buffer | string) => void) | null;
+  originalEmit: EmitFn | null;
+  /** Partial SGR sequence carried over from the previous chunk. */
+  pending: Buffer;
+  exitListener: (() => void) | null;
 }
 
 const runtime: MouseRuntime = {
   subscribers: new Set(),
   lastDown: null,
   attachedStdin: null,
-  listener: null,
+  originalEmit: null,
+  pending: Buffer.alloc(0),
+  exitListener: null,
 };
 
-/** SGR mouse-mode (`?1006`) — pairs well with `?1000` which Ink's
- *  raw mode hasn't already taken. We also enable `?1002` (button
- *  drag tracking) and `?1015` as a fallback for terminals that don't
- *  speak SGR. Disabling pairs land in `disable()`. */
+/** SGR mouse-mode (`?1006`) — pairs with `?1000` (button events)
+ *  and `?1002` (drag tracking). Disabling pairs land in `disable()`. */
 const ENABLE = '\x1b[?1000h\x1b[?1002h\x1b[?1006h';
 const DISABLE = '\x1b[?1006l\x1b[?1002l\x1b[?1000l';
 
-function attach(stdin: NodeJS.ReadStream): void {
-  if (runtime.attachedStdin === stdin) {
+const ESC = 0x1b;
+const LBRACKET = 0x5b; // '['
+const LANGLE = 0x3c; // '<'
+const M_UPPER = 0x4d; // 'M' — button down
+const M_LOWER = 0x6d; // 'm' — button up
+
+/**
+ * Split a stdin chunk into "carry on to other listeners" bytes and
+ * complete SGR mouse sequences. Any trailing partial mouse sequence
+ * (chunk ended mid-escape) is returned in `leftover` so the next
+ * call can prepend it.
+ */
+function splitChunk(input: Buffer): {
+  cleaned: Buffer;
+  sequences: Buffer[];
+  leftover: Buffer;
+} {
+  const cleanedParts: Buffer[] = [];
+  const sequences: Buffer[] = [];
+  let i = 0;
+  let cleanStart = 0;
+
+  while (i < input.length) {
+    if (input[i] === ESC && input[i + 1] === LBRACKET && input[i + 2] === LANGLE) {
+      // Flush bytes up to this escape into cleaned.
+      if (i > cleanStart) {
+        cleanedParts.push(input.subarray(cleanStart, i));
+      }
+      // Scan for terminator.
+      let j = i + 3;
+      while (j < input.length && input[j] !== M_UPPER && input[j] !== M_LOWER) {
+        j += 1;
+      }
+      if (j >= input.length) {
+        // Incomplete — stash the partial in leftover.
+        return {
+          cleaned: Buffer.concat(cleanedParts),
+          sequences,
+          leftover: input.subarray(i),
+        };
+      }
+      sequences.push(input.subarray(i, j + 1));
+      i = j + 1;
+      cleanStart = i;
+      continue;
+    }
+    i += 1;
+  }
+  if (cleanStart < input.length) {
+    cleanedParts.push(input.subarray(cleanStart));
+  }
+  return {
+    cleaned: Buffer.concat(cleanedParts),
+    sequences,
+    leftover: Buffer.alloc(0),
+  };
+}
+
+function parseSequence(seq: Buffer): void {
+  // `seq` is `\x1b[<{code};{col};{row}{M|m}`
+  const body = seq.subarray(3, seq.length - 1).toString('ascii');
+  const terminator = seq[seq.length - 1];
+  const parts = body.split(';');
+  if (parts.length !== 3) {
     return;
   }
-  detach();
-  process.stdout.write(ENABLE);
-  const listener = (chunk: Buffer | string): void => {
-    const data = typeof chunk === 'string' ? chunk : chunk.toString('utf8');
-    parseAndDispatch(data);
-  };
-  stdin.on('data', listener);
-  runtime.attachedStdin = stdin;
-  runtime.listener = listener;
-}
-
-function detach(): void {
-  if (runtime.attachedStdin && runtime.listener) {
-    runtime.attachedStdin.off('data', runtime.listener);
+  const code = Number.parseInt(parts[0] ?? '', 10);
+  const column = Number.parseInt(parts[1] ?? '', 10) - 1;
+  const row = Number.parseInt(parts[2] ?? '', 10) - 1;
+  if (Number.isNaN(code) || Number.isNaN(column) || Number.isNaN(row)) {
+    return;
   }
-  if (runtime.attachedStdin) {
-    process.stdout.write(DISABLE);
-  }
-  runtime.attachedStdin = null;
-  runtime.listener = null;
-}
-
-/** SGR event shape: `\x1b[<{button};{col};{row}{M|m}`
- *  - `M` = button down
- *  - `m` = button up
- *  Button code low 2 bits = button (0=left, 1=middle, 2=right, 3=release).
- *  Bit 4 (`+4`) = shift, bit 5 (`+8`) = meta, bit 6 (`+16`) = ctrl,
- *  bit 6 (`+32`) = drag (motion). Bit 7 (`+64`) = wheel. */
-function parseAndDispatch(data: string): void {
-  let i = 0;
-  while (i < data.length) {
-    const idx = data.indexOf('\x1b[<', i);
-    if (idx < 0) {
-      return;
-    }
-    const end = idx + 3;
-    // Find terminating M/m
-    let j = end;
-    while (j < data.length && data[j] !== 'M' && data[j] !== 'm') {
-      j += 1;
-    }
-    if (j >= data.length) {
-      return;
-    }
-    const body = data.slice(end, j);
-    const terminator = data[j];
-    const parts = body.split(';');
-    if (parts.length === 3) {
-      const code = Number.parseInt(parts[0] ?? '', 10);
-      const column = Number.parseInt(parts[1] ?? '', 10) - 1;
-      const row = Number.parseInt(parts[2] ?? '', 10) - 1;
-      if (!Number.isNaN(code) && !Number.isNaN(column) && !Number.isNaN(row)) {
-        dispatch(code, column, row, terminator === 'M');
-      }
-    }
-    i = j + 1;
-  }
+  dispatch(code, column, row, terminator === M_UPPER);
 }
 
 function decodeButton(code: number): { button: MouseButton; isWheel: boolean; isDrag: boolean } {
@@ -167,9 +199,7 @@ function dispatch(code: number, column: number, row: number, pressed: boolean): 
     action = 'up';
   }
 
-  for (const sub of runtime.subscribers) {
-    sub({ ...baseEvent, button, action });
-  }
+  emitToSubscribers({ ...baseEvent, button, action });
 
   // Synthesize a `click` when the up matches the last down at the
   // same cell — saves consumers from having to track press state.
@@ -177,29 +207,129 @@ function dispatch(code: number, column: number, row: number, pressed: boolean): 
     const { button: down, column: dc, row: dr } = runtime.lastDown;
     runtime.lastDown = null;
     if (down === button && dc === column && dr === row) {
-      for (const sub of runtime.subscribers) {
-        sub({ ...baseEvent, button, action: 'click' });
-      }
+      emitToSubscribers({ ...baseEvent, button, action: 'click' });
     }
   }
 }
 
+function emitToSubscribers(event: MouseEvent): void {
+  for (const sub of runtime.subscribers) {
+    sub(event);
+  }
+}
+
+function attach(stdin: NodeJS.ReadStream): void {
+  if (runtime.attachedStdin === stdin) {
+    return;
+  }
+  detach();
+  try {
+    process.stdout.write(ENABLE);
+  } catch {
+    // stdout may have closed already (parent process detach); the
+    // user just won't get mouse events. Don't crash the TUI.
+  }
+
+  // Monkey-patch `emit('data', …)` so we can pull mouse SGR
+  // sequences out BEFORE other listeners (notably Ink's keystroke
+  // parser) see them. All other events pass through untouched.
+  runtime.originalEmit = stdin.emit.bind(stdin) as EmitFn;
+  const orig = runtime.originalEmit;
+  stdin.emit = ((event: string | symbol, ...args: unknown[]): boolean => {
+    if (event !== 'data') {
+      return orig(event, ...args);
+    }
+    const raw = args[0];
+    const buf = toBuffer(raw);
+    const combined = runtime.pending.length > 0 ? Buffer.concat([runtime.pending, buf]) : buf;
+    const { cleaned, sequences, leftover } = splitChunk(combined);
+    runtime.pending = leftover;
+    for (const seq of sequences) {
+      parseSequence(seq);
+    }
+    if (cleaned.length === 0) {
+      // Nothing left for keystroke listeners — swallow the event.
+      return false;
+    }
+    return orig('data', cleaned);
+  }) as typeof stdin.emit;
+
+  runtime.attachedStdin = stdin;
+
+  // Best-effort terminal cleanup if the process exits without
+  // unmounting (Ctrl+C bypassing our React tree, crash, etc.) —
+  // otherwise the user's shell inherits enabled mouse mode and
+  // every click prints garbled escape sequences.
+  const onExit = (): void => {
+    try {
+      process.stdout.write(DISABLE);
+    } catch {
+      // stdout already gone — nothing else to do.
+    }
+  };
+  process.once('exit', onExit);
+  runtime.exitListener = onExit;
+}
+
+function detach(): void {
+  if (runtime.attachedStdin && runtime.originalEmit) {
+    runtime.attachedStdin.emit = runtime.originalEmit as typeof runtime.attachedStdin.emit;
+  }
+  if (runtime.attachedStdin) {
+    try {
+      process.stdout.write(DISABLE);
+    } catch {
+      // stdout closed already; nothing else to do.
+    }
+  }
+  if (runtime.exitListener) {
+    process.off('exit', runtime.exitListener);
+    runtime.exitListener = null;
+  }
+  runtime.attachedStdin = null;
+  runtime.originalEmit = null;
+  runtime.pending = Buffer.alloc(0);
+  runtime.lastDown = null;
+}
+
+function toBuffer(raw: unknown): Buffer {
+  if (Buffer.isBuffer(raw)) {
+    return raw;
+  }
+  if (typeof raw === 'string') {
+    return Buffer.from(raw, 'utf8');
+  }
+  if (raw instanceof Uint8Array) {
+    return Buffer.from(raw);
+  }
+  // Unknown shape — best effort.
+  return Buffer.from(String(raw), 'utf8');
+}
+
 export function useMouse(handler: Subscriber): void {
   const { stdin, isRawModeSupported, setRawMode } = useStdin();
+  // Stash the caller's handler in a ref + subscribe a stable
+  // proxy. Without this, every parent re-render hands us a new
+  // closure, the cleanup pulls the old one out of `subscribers`,
+  // and (if it was the only consumer) we'd thrash through detach +
+  // re-attach on each frame — visible as a brief mouse-mode flicker.
+  const handlerRef = useRef(handler);
+  handlerRef.current = handler;
   useEffect(() => {
     if (!stdin || !isRawModeSupported) {
       return;
     }
     setRawMode(true);
-    runtime.subscribers.add(handler);
+    const proxy: Subscriber = (event) => handlerRef.current(event);
+    runtime.subscribers.add(proxy);
     if (runtime.subscribers.size === 1) {
       attach(stdin);
     }
     return () => {
-      runtime.subscribers.delete(handler);
+      runtime.subscribers.delete(proxy);
       if (runtime.subscribers.size === 0) {
         detach();
       }
     };
-  }, [handler, stdin, isRawModeSupported, setRawMode]);
+  }, [stdin, isRawModeSupported, setRawMode]);
 }

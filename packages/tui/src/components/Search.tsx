@@ -31,7 +31,7 @@
  * focused without the consumer having to wire `keyOf` callbacks.
  */
 
-import { Box, Text } from 'ink';
+import { Box, type DOMElement, Text } from 'ink';
 import {
   createContext,
   type ReactNode,
@@ -44,6 +44,7 @@ import {
 } from 'react';
 import { KeyScope } from '../keys/KeyScope';
 import { useKey } from '../keys/useKey';
+import { useClickable } from '../mouse/useClickable';
 import { Input } from './Input';
 
 interface SearchItemEntry {
@@ -192,12 +193,9 @@ function SearchInner<T>({
     items.length > 0 && Boolean(onAction)
   );
 
-  const select = useCallback(
-    (item: unknown) => {
-      onSelectRef.current?.(item as T);
-    },
-    []
-  );
+  const select = useCallback((item: unknown) => {
+    onSelectRef.current?.(item as T);
+  }, []);
 
   const ctx = useMemo<SearchContextValue>(
     () => ({ query, setQuery, focusKey, setFocusKey, registerItem, items, select }),
@@ -250,9 +248,7 @@ export interface SearchResultsProps {
   readonly children?: ReactNode;
 }
 
-export function SearchResults({
-  children,
-}: Readonly<SearchResultsProps>): React.ReactElement {
+export function SearchResults({ children }: Readonly<SearchResultsProps>): React.ReactElement {
   useSearchContext('SearchResults');
   return (
     <Box marginTop={1} flexDirection="column">
@@ -277,16 +273,26 @@ export function SearchItem<T>({
   children,
 }: Readonly<SearchItemProps<T>>): React.ReactElement {
   const ctx = useSearchContext('SearchItem');
-  const { registerItem } = ctx;
+  const { registerItem, setFocusKey, select } = ctx;
   const key = itemKey ?? (typeof value === 'string' ? value : String(value));
+  const ref = useRef<DOMElement>(null);
   // Depend on the stable `registerItem` callback rather than the
   // whole `ctx` — `ctx` is re-created every time `items` changes
   // (which registerItem triggers), so depending on it here would
   // oscillate register/unregister and crash the renderer.
   useEffect(() => registerItem({ key, value }), [registerItem, key, value]);
+  // Mouse: click on a row focuses it AND fires `onSelect` (same as
+  // pressing Enter on the keyboard). `Ctrl+Enter` for `onAction`
+  // stays keyboard-only since terminal mouse doesn't reliably report
+  // modifier-clicks.
+  const onClick = useCallback(() => {
+    setFocusKey(key);
+    select(value);
+  }, [setFocusKey, select, key, value]);
+  useClickable(ref, onClick);
   const focused = ctx.focusKey === key;
   return (
-    <Box>
+    <Box ref={ref}>
       <Text color={focused ? 'cyan' : undefined}>{focused ? '▸ ' : '  '}</Text>
       <Box>{children}</Box>
     </Box>
@@ -301,9 +307,7 @@ export interface SearchEmptyProps {
  *  the "nothing yet" branch. Compose your own "no matches for X"
  *  node when the query is non-empty; Search doesn't pick a default
  *  for that case so the consumer controls the wording. */
-export function SearchEmpty({
-  children,
-}: Readonly<SearchEmptyProps>): React.ReactElement | null {
+export function SearchEmpty({ children }: Readonly<SearchEmptyProps>): React.ReactElement | null {
   const ctx = useSearchContext('SearchEmpty');
   if (ctx.items.length > 0 || ctx.query.trim().length > 0) {
     return null;

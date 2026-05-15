@@ -15,7 +15,6 @@
  * `--background` detach are deferred follow-ups.
  */
 
-import { brix } from '@brika/brix/log';
 import { defineCommand } from '@brika/cli';
 import pc from 'picocolors';
 import { removeCliToken, writeCliToken } from '../cli/auth-token';
@@ -54,7 +53,7 @@ export default defineCommand({
     // file at module-load time and wires up its staticTokenResolver.
     writeCliToken();
 
-    brix.think('booting hub…');
+    process.stdout.write(`${pc.cyan('booting hub…')}\n`);
     const child = spawnHub({
       port: values.port,
       host: values.host,
@@ -75,10 +74,10 @@ export default defineCommand({
     await removePidFile();
     removeCliToken();
     if (code === 0 || code === null) {
-      brix.ok('hub exited cleanly');
+      process.stdout.write(`${pc.green('hub exited cleanly')}\n`);
       return;
     }
-    brix.fail(`hub exited with code ${code}`);
+    process.stderr.write(`${pc.red(`hub exited with code ${code}`)}\n`);
     process.exit(code);
   },
 });

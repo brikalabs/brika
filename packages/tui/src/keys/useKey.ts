@@ -30,7 +30,7 @@
  */
 
 import { type Key, useInput } from 'ink';
-import { useTuiShell } from '../shell/useTuiShell';
+import { tryUseTuiShell } from '../shell/useTuiShell';
 import { useInKeyScope } from './KeyScope';
 
 const SPECIAL_KEYS = [
@@ -63,7 +63,11 @@ export function useKey(
   handler: (input: string, key: Key) => void,
   enabled: boolean = true
 ): void {
-  const { isInputCaptured } = useTuiShell();
+  // Soft dependency on the shell: if no `<TuiShellProvider>` is in the
+  // tree (e.g. the engine debug overlay, which sits above it), treat
+  // capture as off — every bind just behaves like a plain `useInput`.
+  const shell = tryUseTuiShell();
+  const isInputCaptured = shell?.isInputCaptured ?? false;
   const inScope = useInKeyScope();
   const isActive = enabled && (inScope || !isInputCaptured);
   const parsed = parseSpec(spec);

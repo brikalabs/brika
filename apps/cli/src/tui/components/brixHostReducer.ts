@@ -26,11 +26,14 @@
  *   5. `HOLD_OVER`  — the post-typing hold timer expired; go back idle.
  */
 
-import { type AnimationKind, expandReveal, parseMoodScript, type RevealStep } from '@brika/brix';
+import { expandReveal, parseMoodScript, type RevealStep } from '@brika/brix';
 
 export type { PacingOptions } from '@brika/brix';
 
 import type { PacingOptions } from '@brika/brix';
+
+/** Body emote names the host reacts to on hub-state changes. */
+export type ReactionKind = 'wave' | 'oops' | 'sleep';
 
 export type HostPhase = 'idle' | 'speaking' | 'reacting';
 
@@ -41,7 +44,7 @@ export interface HostState {
   /** How many stream entries have been revealed so far. 0 ≤ cursor ≤ stream.length. */
   readonly cursor: number;
   /** Reaction animation playing in the face slot (reacting phase only). */
-  readonly reaction: AnimationKind | null;
+  readonly reaction: ReactionKind | null;
   /** Color tint for the face during the current phase. */
   readonly tint: string;
 }
@@ -55,7 +58,7 @@ export const INITIAL_STATE: HostState = {
 };
 
 export interface Reaction {
-  readonly kind: AnimationKind;
+  readonly kind: ReactionKind;
   readonly color: string;
   readonly line: string;
 }

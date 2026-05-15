@@ -4,7 +4,6 @@
  * still works).
  */
 
-import { brix } from '@brika/brix/log';
 import { defineCommand } from '@brika/cli';
 import React from 'react';
 import { runCommandTui } from '../tui/runCommandTui';
@@ -18,7 +17,7 @@ export default defineCommand({
   examples: ['brika version', 'brika -v'],
   async handler() {
     await runCommandTui(React.createElement(VersionView), () => {
-      brix.say(`Brika Runtime v${CLI_VERSION}`);
+      process.stdout.write(`Brika Runtime v${CLI_VERSION}\n`);
     });
   },
 });

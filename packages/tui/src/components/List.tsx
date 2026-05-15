@@ -45,8 +45,8 @@ import {
   useState,
 } from 'react';
 import { useKey } from '../keys/useKey';
-import { hitTest, useBounds } from '../mouse/useBounds';
-import { useMouse } from '../mouse/useMouse';
+import { hitTest, readBounds } from '../mouse/useBounds';
+import { type MouseEvent, useMouse } from '../mouse/useMouse';
 
 interface ListItemEntry {
   readonly value: string;
@@ -203,12 +203,17 @@ export function ListItem({ value, children }: Readonly<ListItemProps>): React.Re
   // prefer (in addition to arrow keys).
   useFocus({ id: `list-${value}`, isActive: false });
 
-  // Mouse: click on a row focuses it and fires onSelect once.
+  // Mouse: click on a row focuses it and fires onSelect once. Bounds
+  // are read on-demand via `readBounds` so this hook adds zero
+  // per-render work — handy when a list has hundreds of items.
   const boxRef = useRef<DOMElement>(null);
-  const bounds = useBounds(boxRef);
   const handleMouse = useCallback(
-    (e: { action: string; button: string; column: number; row: number }) => {
-      if (!bounds || e.button !== 'left' || !hitTest(bounds, e)) {
+    (e: MouseEvent) => {
+      if (e.button !== 'left') {
+        return;
+      }
+      const bounds = readBounds(boxRef.current);
+      if (!bounds || !hitTest(bounds, e)) {
         return;
       }
       if (e.action === 'down') {
@@ -217,7 +222,7 @@ export function ListItem({ value, children }: Readonly<ListItemProps>): React.Re
         select(value);
       }
     },
-    [bounds, setValue, select, value]
+    [setValue, select, value]
   );
   useMouse(handleMouse);
 

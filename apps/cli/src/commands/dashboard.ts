@@ -12,8 +12,15 @@ import { CLI_VERSION } from '../version';
 export default defineCommand({
   name: 'dashboard',
   description: 'Open the Brika dashboard (default)',
-  examples: ['brika', 'brika dashboard'],
-  async handler() {
-    await runTui(React.createElement(App, { version: CLI_VERSION }));
+  options: {
+    'no-boot': {
+      type: 'boolean',
+      description: 'Skip the boot splash',
+    },
+  },
+  examples: ['brika', 'brika dashboard', 'brika --no-boot'],
+  async handler({ values }) {
+    const boot = !values['no-boot'] && process.env.BRIKA_NO_BOOT !== '1';
+    await runTui(React.createElement(App, { version: CLI_VERSION, boot }));
   },
 });

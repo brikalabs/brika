@@ -1,15 +1,16 @@
 /**
  * Tiny wrapper around `runTui` for "one-shot" commands.
  *
- * Each command's view is a React component that narrates via Brix and
- * eventually calls `exit()` from the {@link useExit} hook to tear down
- * the Ink instance. `runCommandTui()` mounts the view; the handler
- * doesn't have to know about ink's `waitUntilExit` lifecycle.
+ * Each command's view is a React component that eventually calls
+ * `exit()` from the {@link useExit} hook to tear down the Ink instance.
+ * `runCommandTui()` mounts the view; the handler doesn't have to know
+ * about ink's `waitUntilExit` lifecycle.
  *
- * Falls back to a plain `brix.*` narration when stdout isn't a TTY,
- * so piped output (`brika version | grep …`) and CI logs stay clean.
+ * Falls back to the caller-supplied `fallback` writer when stdout isn't
+ * a TTY, so piped output (`brika version | grep …`) and CI logs stay
+ * clean.
  *
- *   await runCommandTui(<StopView />, () => brix.ok('stopped'));
+ *   await runCommandTui(<StopView />, () => process.stdout.write('stopped\n'));
  */
 
 import { runTui } from '@brika/cli/tui';

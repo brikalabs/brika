@@ -27,6 +27,10 @@ export interface MoodToken {
 const TOKEN_RE = /\{:([a-z]+):\}/g;
 const KNOWN_MOODS: ReadonlySet<string> = new Set(ALL_MOODS);
 
+function isMood(candidate: string): candidate is Mood {
+  return KNOWN_MOODS.has(candidate);
+}
+
 /**
  * Split a mood-script string into ordered `(mood, text)` chunks. When
  * no tokens are present (or `defaultMood` matches throughout), returns
@@ -48,8 +52,8 @@ export function parseMoodScript(input: string, defaultMood: Mood = 'default'): M
       out.push({ mood: active, text: input.slice(cursor, idx) });
     }
     const candidate = match[1];
-    if (candidate && KNOWN_MOODS.has(candidate)) {
-      active = candidate as Mood;
+    if (candidate && isMood(candidate)) {
+      active = candidate;
     } else {
       // Preserve unknown tokens as literal text so the typo is visible.
       out.push({ mood: active, text: match[0] });

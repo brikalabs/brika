@@ -313,9 +313,7 @@ function PluginRows({
     return (
       <EmptyState>
         <EmptyStateTitle>No plugins yet</EmptyStateTitle>
-        <EmptyStateDescription>
-          Press → to switch to Search and install one.
-        </EmptyStateDescription>
+        <EmptyStateDescription>Press → to switch to Search and install one.</EmptyStateDescription>
       </EmptyState>
     );
   }

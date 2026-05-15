@@ -7,16 +7,21 @@
 import {
   Badge,
   Button,
+  compose,
   EmptyState,
   EmptyStateDescription,
   EmptyStateTitle,
+  email,
   Form,
   FormField,
   FormInput,
   FormPassword,
   FormSelect,
+  FormSubmitError,
   type FormValues,
   Heading,
+  minLength,
+  required,
 } from '@brika/tui';
 import { Box, Text } from 'ink';
 import type React from 'react';
@@ -31,32 +36,6 @@ const ROLE_OPTIONS = [
   { value: 'user', label: 'User', hint: 'regular access' },
   { value: 'admin', label: 'Admin', hint: 'full control' },
 ];
-
-const required = (v: string | boolean): string | null =>
-  typeof v === 'string' && v.trim().length === 0 ? 'this field is required' : null;
-
-const MALFORMED = 'looks like that email is malformed';
-
-// Plain string scan — no regex at all — so there's no ReDoS surface to flag.
-// Shape we accept: `<local>@<host>.<tld>`, all non-empty, no whitespace, exactly
-// one `@`, and at least one `.` in the host that isn't the first/last char.
-const emailish = (v: string | boolean): string | null => {
-  if (typeof v !== 'string' || v.length === 0 || v.includes(' ')) {
-    return MALFORMED;
-  }
-  const at = v.indexOf('@');
-  if (at <= 0 || at !== v.lastIndexOf('@')) {
-    return MALFORMED;
-  }
-  const domain = v.slice(at + 1);
-  const dot = domain.indexOf('.');
-  return dot > 0 && dot < domain.length - 1 ? null : MALFORMED;
-};
-
-const minLen =
-  (n: number) =>
-  (v: string | boolean): string | null =>
-    typeof v === 'string' && v.length >= n ? null : `must be at least ${n} characters`;
 
 export function UsersView(): React.ReactElement {
   const cli = useCli();
@@ -91,10 +70,10 @@ export function UsersView(): React.ReactElement {
             }}
             onCancel={() => setAdding(false)}
           >
-            <FormField name="name" label="Full name" validate={required}>
+            <FormField name="name" label="Full name" validate={required()}>
               <FormInput placeholder="Ada Lovelace" />
             </FormField>
-            <FormField name="email" label="Email" validate={emailish}>
+            <FormField name="email" label="Email" validate={compose(required(), email())}>
               <FormInput placeholder="ada@example.com" />
             </FormField>
             <FormField name="role" label="Role" initialValue="user">
@@ -103,8 +82,7 @@ export function UsersView(): React.ReactElement {
             <FormField
               name="password"
               label="Password"
-              validate={minLen(8)}
-              summarize={(v) => '•'.repeat(typeof v === 'string' ? v.length : 0)}
+              validate={compose(required(), minLength(8))}
             >
               <FormPassword />
             </FormField>
@@ -146,7 +124,19 @@ async function postUser(values: FormValues): Promise<void> {
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(values),
   });
-  if (!res.ok) {
-    throw new Error(`${res.status} ${await res.text()}`);
+  if (res.ok) {
+    return;
   }
+  const body = await res.text();
+  // Map known server failures onto the offending field so the form
+  // keeps the entered values and highlights the row that needs fixing.
+  if (res.status === 409) {
+    throw new FormSubmitError('could not add user', {
+      fields: { email: 'already in use' },
+    });
+  }
+  if (res.status === 401 || res.status === 403) {
+    throw new Error('admin login required');
+  }
+  throw new Error(`${res.status} ${body}`);
 }

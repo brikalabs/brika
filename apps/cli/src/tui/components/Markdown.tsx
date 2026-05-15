@@ -111,14 +111,20 @@ function isHeading(line: string): boolean {
   return hashCount >= 1 && hashCount <= 6 && line[hashCount] === ' ';
 }
 
+function isHeadingLevel(n: number): n is HeadingLevel {
+  return n === 1 || n === 2 || n === 3 || n === 4 || n === 5 || n === 6;
+}
+
 function consumeHeading(lines: string[], start: number, out: Block[]): number {
   const line = lines[start] ?? '';
   let hashCount = 0;
   while (hashCount < 6 && line[hashCount] === '#') {
     hashCount += 1;
   }
-  const level = hashCount as HeadingLevel;
-  out.push({ kind: 'heading', level, text: line.slice(hashCount).trimStart() });
+  if (!isHeadingLevel(hashCount)) {
+    return start + 1;
+  }
+  out.push({ kind: 'heading', level: hashCount, text: line.slice(hashCount).trimStart() });
   return start + 1;
 }
 

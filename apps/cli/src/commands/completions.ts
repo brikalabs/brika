@@ -7,7 +7,6 @@
  * intentionally NOT wrapped in a TUI, since the user is piping it.
  */
 
-import { brix } from '@brika/brix/log';
 import { defineCommand } from '@brika/cli';
 import pc from 'picocolors';
 import React from 'react';
@@ -38,13 +37,13 @@ export default defineCommand({
     if (values.uninstall) {
       const cleaned = await uninstallCompletions();
       if (cleaned.length === 0) {
-        brix.info('no completions to remove');
+        process.stdout.write('no completions to remove\n');
         return;
       }
       for (const file of cleaned) {
-        brix.ok(`removed ${file}`);
+        process.stdout.write(`${pc.green(`removed ${file}`)}\n`);
       }
-      brix.info('restart your shell to apply');
+      process.stdout.write('restart your shell to apply\n');
       return;
     }
 

@@ -5,13 +5,21 @@
  * `<Confirm>` / `<Form>` is mounted, every plain bind here goes
  * dormant. No flags at the call site; the engine handles it.
  *
- * The Ctrl-modified hub controls bypass the capture model the
- * same way they did before (a `Ctrl+S` in a password field is
- * never a typo).
+ * The Ctrl-modified hub controls bypass the capture model the same
+ * way they did before (a `Ctrl+S` in a password field is never a
+ * typo).
+ *
+ * Section navigation is driven by `NAV_SECTIONS` so the bindings
+ * never drift from the menu bar. Number keys (1-8) handle direct
+ * jumps; `[` and `]` cycle to the previous / next section. Numbers
+ * were chosen instead of letters because letter hotkeys collided
+ * with content-key bindings (`D` to disable a plugin, `e` to enable,
+ * `R` to reload, etc.) and felt unsafe even with the capture model.
  */
 
 import { useKey, useRouter, useTuiShell } from '@brika/tui';
 import type { Routes } from '../routes';
+import { NAV_SECTIONS } from '../sections';
 import { useCli } from '../useCli';
 
 export function useShellKeys(): void {
@@ -23,19 +31,36 @@ export function useShellKeys(): void {
   // Ctrl+C is handled by ink's `exitOnCtrlC` at the framework layer
   // (always live, never captured) — no useKey needed here.
 
-  useKey('d', () => router.navigate('dashboard'));
-  useKey('p', () => router.navigate('plugins'));
-  useKey('w', () => router.navigate('workflows'));
-  useKey('l', () => router.navigate('logs'));
-  useKey('u', () => router.navigate('users'));
-  useKey('g', () => router.navigate('updates'));
-  useKey(',', () => router.navigate('settings'));
-  useKey('x', () => router.navigate('playground'));
-  useKey('b', () => router.navigate('brix'));
+  // Direct jumps by number key.
+  NAV_SECTIONS.forEach((section) => {
+    useKey(section.hotkey, () => router.navigate(section.key));
+  });
+
+  // Cycle between sections.
+  useKey('[', () => router.navigate(prevSectionKey(router.current.name)));
+  useKey(']', () => router.navigate(nextSectionKey(router.current.name)));
+
   useKey('?', () => router.navigate('help'));
 
   useKey('ctrl+s', () => void cli.startHub());
   useKey('ctrl+x', () => void cli.stopHub());
   useKey('ctrl+r', () => void cli.restartHub());
   useKey('ctrl+o', () => void cli.openUi());
+}
+
+function indexOfRoute(name: string): number {
+  const idx = NAV_SECTIONS.findIndex((s) => s.key === name);
+  return idx === -1 ? 0 : idx;
+}
+
+function nextSectionKey(current: string): keyof Routes {
+  const idx = indexOfRoute(current);
+  const next = NAV_SECTIONS[(idx + 1) % NAV_SECTIONS.length];
+  return next?.key ?? 'dashboard';
+}
+
+function prevSectionKey(current: string): keyof Routes {
+  const idx = indexOfRoute(current);
+  const prev = NAV_SECTIONS[(idx - 1 + NAV_SECTIONS.length) % NAV_SECTIONS.length];
+  return prev?.key ?? 'dashboard';
 }

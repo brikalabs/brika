@@ -46,6 +46,14 @@ export function useBounds(ref: RefObject<DOMElement | null>): Bounds | null {
   return bounds;
 }
 
+/** Synchronous one-shot bounds read. Use this in mouse handlers
+ *  instead of `useBounds` when you only need the position at click
+ *  time — it skips the per-render `useLayoutEffect` + state churn
+ *  that hooking the bounds into React's commit cycle costs. */
+export function readBounds(element: DOMElement | null): Bounds | null {
+  return computeBounds(element);
+}
+
 export function hitTest(bounds: Bounds, point: { column: number; row: number }): boolean {
   return (
     point.column >= bounds.x &&
@@ -59,10 +67,18 @@ function computeBounds(element: DOMElement | null): Bounds | null {
   if (!element?.yogaNode) {
     return null;
   }
+  // Walk while the CURRENT node has a parent — this is the same
+  // condition Ink's own `getAbsoluteBorderPosition` uses. Including
+  // the root in the sum (the previous behaviour) double-counted the
+  // root's `getComputedTop`, which Ink applies separately when it
+  // paints output, so hit-test bounds ended up offset by the root
+  // node's position relative to its (nonexistent) parent. The
+  // visible symptom: clicks fired only when the user clicked far
+  // below where the element actually rendered.
   let x = 0;
   let y = 0;
   let node: DOMElement | undefined = element;
-  while (node?.yogaNode) {
+  while (node?.parentNode && node.yogaNode) {
     x += node.yogaNode.getComputedLeft();
     y += node.yogaNode.getComputedTop();
     node = node.parentNode;

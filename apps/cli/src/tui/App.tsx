@@ -5,41 +5,55 @@
  *     <TuiShellProvider onQuit=…>
  *       <CliProvider>
  *         <GlobalKeys/>
- *         <ShellLayout>          ← sidebar + outlet + footer
+ *         <ShellLayout>          ← AppShell + outlet + footer
  *           <Outlet/>
  *         </ShellLayout>
  *       </CliProvider>
  *     </TuiShellProvider>
  *   </RouterProvider>
+ *
+ * On launch we show a brief `<BootScreen>` splash unless the caller
+ * passed `boot={false}` (the `--no-boot` CLI flag wires that in).
+ * Pressing any key during the splash skips it instantly.
  */
 
-import { RouterProvider, TuiShellProvider, useRouterInstance } from '@brika/tui';
+import { DebugProvider, RouterProvider, TuiShellProvider, useRouterInstance } from '@brika/tui';
 import { useApp } from 'ink';
 import type React from 'react';
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { CliProvider } from './CliProvider';
+import { BootScreen } from './components/BootScreen';
 import { ShellLayout } from './components/ShellLayout';
 import { useShellKeys } from './keys/useShellKeys';
 import { type Routes, routes } from './routes';
 
 interface Props {
   readonly version: string;
+  /** Show the boot splash on launch. Default `true`. */
+  readonly boot?: boolean;
 }
 
-export function App({ version }: Readonly<Props>): React.ReactElement {
+export function App({ version, boot = true }: Readonly<Props>): React.ReactElement {
   const router = useRouterInstance<Routes>({ routes, initial: { name: 'dashboard' } });
   const { exit } = useApp();
   const onQuit = useCallback(() => exit(), [exit]);
+  const [booting, setBooting] = useState<boolean>(boot);
+
+  if (booting) {
+    return <BootScreen version={version} onComplete={() => setBooting(false)} />;
+  }
 
   return (
-    <RouterProvider router={router}>
-      <TuiShellProvider onQuit={onQuit}>
-        <CliProvider version={version}>
-          <GlobalKeys />
-          <ShellLayout />
-        </CliProvider>
-      </TuiShellProvider>
-    </RouterProvider>
+    <DebugProvider>
+      <RouterProvider router={router}>
+        <TuiShellProvider onQuit={onQuit}>
+          <CliProvider version={version}>
+            <GlobalKeys />
+            <ShellLayout />
+          </CliProvider>
+        </TuiShellProvider>
+      </RouterProvider>
+    </DebugProvider>
   );
 }
 

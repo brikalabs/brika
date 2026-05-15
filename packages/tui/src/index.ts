@@ -9,6 +9,7 @@
  */
 
 export * from './components';
+export * from './debug';
 export * from './forms';
 export * from './keys';
 export * from './mouse';

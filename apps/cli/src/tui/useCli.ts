@@ -8,7 +8,7 @@
  * `useTuiShell()` from `@brika/tui`. Don't duplicate them here.
  */
 
-import type { Mood } from '@brika/brix';
+import type { EmoteName, Mood } from '@brika/brix';
 import { createContext, useContext } from 'react';
 
 export type HubStatus =
@@ -21,24 +21,6 @@ export type HubStatus =
   | { state: 'stale'; pid: number }
   | { state: 'stopped' }
   | { state: 'unknown' };
-
-export interface PluginSummary {
-  readonly name: string;
-  readonly version: string;
-  readonly enabled: boolean;
-}
-
-export interface WorkflowSummary {
-  readonly id: string;
-  readonly name: string;
-  readonly state: 'idle' | 'running' | 'failed';
-}
-
-export interface UserSummary {
-  readonly id: string;
-  readonly name: string;
-  readonly role: string;
-}
 
 export interface CliActions {
   /** Spawn `brika hub` as a detached child. No-op if already running. */
@@ -55,14 +37,16 @@ export interface CliState extends CliActions {
   readonly workspace: string;
   readonly version: string;
   readonly hub: HubStatus;
-  readonly plugins: ReadonlyArray<PluginSummary>;
-  readonly workflows: ReadonlyArray<WorkflowSummary>;
-  readonly users: ReadonlyArray<UserSummary>;
-  readonly recentLogs: ReadonlyArray<string>;
   /** Mood the mascot displays in the header + footer right now. */
   readonly mood: Mood;
   /** One-line caption the footer's BrixStatusline reads. */
   readonly statusText: string;
+  /**
+   * Emote to play in the running-hub activity rotation. `null` when
+   * no rotation is active (hub stopped, mid-greeting, transient mood).
+   * Changes every ~10–18s to give Brix variety while idle.
+   */
+  readonly activityEmote: EmoteName | null;
 }
 
 export const CliContext = createContext<CliState | null>(null);

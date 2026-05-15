@@ -1,42 +1,66 @@
 /**
- * Multi-step form, composed via children. Walks its `<FormField>`
- * children at render time to derive the step list, then drives the
- * active step from internal state. Inputs inside each field read
- * their handle via context — no prop drilling.
+ * Multi-field form composed via children. All fields render at once;
+ * the focused field expands its editor in place, the rest collapse
+ * to a compact `[status] Label: value` row. Tab / Shift+Tab cycle
+ * through the fields and the trailing Submit button.
  *
  *   <Form
  *     title="Add user"
- *     subtitle="Esc cancels at any step"
- *     onSubmit={async (values) => { await api.create(values); }}
+ *     onSubmit={async (values) => {
+ *       const res = await api.create(values);
+ *       if (res.status === 409) {
+ *         throw new FormSubmitError('could not add user', {
+ *           fields: { email: 'already in use' },
+ *         });
+ *       }
+ *       if (!res.ok) throw new Error(await res.text());
+ *     }}
  *     onCancel={onClose}
  *   >
- *     <FormField name="email" label="Email" validate={emailish}>
+ *     <FormField name="name" label="Full name" validate={required()}>
+ *       <FormInput placeholder="Ada Lovelace" />
+ *     </FormField>
+ *     <FormField name="email" label="Email" validate={compose(required(), email())}>
  *       <FormInput placeholder="ada@example.com" />
  *     </FormField>
- *     <FormField name="role" label="Role">
- *       <FormSelect options={[{ value: 'user', label: 'User' }]} />
+ *     <FormField name="role" label="Role" initialValue="user">
+ *       <FormSelect options={ROLE_OPTIONS} />
+ *     </FormField>
+ *     <FormField name="password" label="Password" validate={minLength(8)}>
+ *       <FormPassword />
  *     </FormField>
  *   </Form>
  *
- * Chrome is clack-style:
- *   - title row with `◆`
- *   - completed steps as compact `✓ Label: value` rows
- *   - active step shown with a vertical `│` rail
- *   - validation error rendered red under the active input
- *   - "submitting…" → "✓ done" / "✗ <message>" once `onSubmit` resolves
+ * The Form owns:
+ *   - the values record, validation status, and per-field errors
+ *     (validator + server-side, merged)
+ *   - the touched bitmap (errors stay quiet until a field has been
+ *     edited or the user attempts to submit)
+ *   - submission state (idle / submitting / submitError / done) and
+ *     wiring `FormSubmitError.fields` back onto specific rows
  *
- * While mounted, the form calls `useCaptureInput()` so global
- * keybinds (s, x, r, …) don't fire on keystrokes meant for the
- * form. Ctrl+C remains live as an escape hatch.
+ * Throw `FormSubmitError` from `onSubmit` for structured field
+ * errors; any other thrown error becomes a generic form-level
+ * banner. Per-field server errors clear automatically when the user
+ * starts editing that field again — the validator takes over.
+ *
+ * Esc fires `onCancel` from anywhere inside the form. While mounted
+ * the form calls `useCaptureInput()` so global shortcuts (s, x, r,
+ * …) stay quiet during typing.
  */
 
-import { Box, Text } from 'ink';
-import React, { useMemo, useState } from 'react';
+import { Box, type DOMElement, Text, useFocus, useFocusManager, useInput } from 'ink';
+import React, { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { hitTest, useBounds } from '../mouse/useBounds';
+import { useMouse } from '../mouse/useMouse';
 import { useCaptureInput } from '../shell/useTuiShell';
 import { FormField, type FormFieldProps } from './FormField';
+import { FormSubmitError } from './FormSubmitError';
 import {
+  type FieldStatus,
   FormContext,
   type FormContextValue,
+  type FormValidator,
   type FormValue,
   type FormValues,
 } from './useFormContext';
@@ -46,23 +70,25 @@ export interface FormProps {
   readonly subtitle?: string;
   readonly onSubmit: (values: FormValues) => void | Promise<void>;
   readonly onCancel?: () => void;
-  readonly children: React.ReactNode;
+  /** Button label rendered at the end of the form. Default `Submit`. */
+  readonly submitLabel?: string;
+  readonly children: ReactNode;
 }
 
 interface FieldDescriptor {
   readonly props: FormFieldProps;
 }
 
-function collectFields(children: React.ReactNode): FieldDescriptor[] {
+function collectFields(children: ReactNode): FieldDescriptor[] {
   const out: FieldDescriptor[] = [];
   React.Children.forEach(children, (child) => {
-    if (!React.isValidElement(child)) {
+    if (!React.isValidElement<FormFieldProps>(child)) {
       return;
     }
     if (child.type !== FormField) {
       return;
     }
-    out.push({ props: child.props as FormFieldProps });
+    out.push({ props: child.props });
   });
   return out;
 }
@@ -75,86 +101,225 @@ function initialValues(fields: ReadonlyArray<FieldDescriptor>): FormValues {
   return out;
 }
 
+function isEmptyValue(v: FormValue | undefined): boolean {
+  if (v === undefined) {
+    return true;
+  }
+  if (typeof v === 'string') {
+    return v.length === 0;
+  }
+  return false;
+}
+
+function computeStatus(
+  value: FormValue | undefined,
+  validator: FormValidator | undefined,
+  values: FormValues,
+  touched: boolean,
+  serverError: string | null
+): FieldStatus {
+  const empty = isEmptyValue(value);
+  if (serverError) {
+    return 'error';
+  }
+  if (validator) {
+    const err = validator(value ?? '', values);
+    if (err) {
+      // Hide required-style errors on pristine empty fields so the
+      // form doesn't shout at the user the moment they open it.
+      return empty && !touched ? 'empty' : 'error';
+    }
+  }
+  return empty ? 'empty' : 'valid';
+}
+
 export function Form({
   title,
   subtitle,
   onSubmit,
   onCancel,
+  submitLabel = 'Submit',
   children,
 }: Readonly<FormProps>): React.ReactElement {
   useCaptureInput();
 
   const fields = useMemo(() => collectFields(children), [children]);
-  const [index, setIndex] = useState(0);
+
   const [values, setValues] = useState<FormValues>(() => initialValues(fields));
-  const [errors, setErrors] = useState<Record<string, string | null>>({});
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const [serverErrors, setServerErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [done, setDone] = useState(false);
 
-  const done = index >= fields.length;
-  const active = fields[index];
+  const { focus, focusNext } = useFocusManager();
 
-  const setValue = (name: string, next: FormValue): void => {
+  // Auto-focus the first field on mount. We don't list `focus` in
+  // deps — we want this to fire exactly once at mount, not whenever
+  // the manager re-renders.
+  useEffect(() => {
+    const first = fields[0]?.props.name;
+    if (first) {
+      focus(`formfield:${first}`);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const statuses = useMemo<Readonly<Record<string, FieldStatus>>>(() => {
+    const out: Record<string, FieldStatus> = {};
+    for (const f of fields) {
+      out[f.props.name] = computeStatus(
+        values[f.props.name],
+        f.props.validate,
+        values,
+        Boolean(touched[f.props.name]),
+        serverErrors[f.props.name] ?? null
+      );
+    }
+    return out;
+  }, [fields, values, touched, serverErrors]);
+
+  const errors = useMemo<Readonly<Record<string, string | null>>>(() => {
+    const out: Record<string, string | null> = {};
+    for (const f of fields) {
+      const name = f.props.name;
+      const server = serverErrors[name];
+      if (server) {
+        out[name] = server;
+        continue;
+      }
+      if (statuses[name] === 'error' && f.props.validate) {
+        out[name] = f.props.validate(values[name] ?? '', values);
+        continue;
+      }
+      out[name] = null;
+    }
+    return out;
+  }, [fields, statuses, values, serverErrors]);
+
+  const allValid = useMemo(() => {
+    return fields.every((f) => {
+      if (!f.props.validate) {
+        return true;
+      }
+      return f.props.validate(values[f.props.name] ?? '', values) === null;
+    });
+  }, [fields, values]);
+
+  const setValue = useCallback((name: string, next: FormValue) => {
     setValues((prev) => ({ ...prev, [name]: next }));
-    setErrors((prev) => ({ ...prev, [name]: null }));
-  };
+    setTouched((prev) => (prev[name] ? prev : { ...prev, [name]: true }));
+    // Editing clears the server error for that field — the user is
+    // fixing it, so the validator's verdict is now the source of truth.
+    setServerErrors((prev) => {
+      if (!prev[name]) {
+        return prev;
+      }
+      const { [name]: _removed, ...rest } = prev;
+      return rest;
+    });
+  }, []);
 
-  const advance = async (nextValues: FormValues): Promise<void> => {
-    if (index + 1 < fields.length) {
-      setIndex(index + 1);
+  const submitField = useCallback(
+    (name: string, override?: FormValue) => {
+      const field = fields.find((f) => f.props.name === name);
+      if (!field) {
+        return;
+      }
+      const value: FormValue = override ?? values[name] ?? '';
+      const nextValues = override === undefined ? values : { ...values, [name]: override };
+      if (override !== undefined) {
+        setValues(nextValues);
+      }
+      setTouched((prev) => (prev[name] ? prev : { ...prev, [name]: true }));
+      const err = field.props.validate?.(value, nextValues) ?? null;
+      if (err !== null) {
+        return;
+      }
+      focusNext();
+    },
+    [fields, values, focusNext]
+  );
+
+  const submitForm = useCallback(async () => {
+    // Touch all fields so any remaining validator errors surface.
+    setTouched(Object.fromEntries(fields.map((f) => [f.props.name, true])));
+    if (!allValid || submitting) {
       return;
     }
     setSubmitting(true);
     setSubmitError(null);
+    setServerErrors({});
     try {
-      await onSubmit(nextValues);
-      setIndex(fields.length);
+      await onSubmit(values);
+      setDone(true);
     } catch (e) {
-      setSubmitError(e instanceof Error ? e.message : String(e));
+      if (e instanceof FormSubmitError) {
+        setServerErrors({ ...e.fields });
+        setSubmitError(e.message || null);
+        // Focus the first server-flagged field so the user sees the
+        // problem immediately.
+        const firstBad = fields.find((f) => Boolean(e.fields[f.props.name]));
+        if (firstBad) {
+          focus(`formfield:${firstBad.props.name}`);
+        }
+      } else {
+        setSubmitError(e instanceof Error ? e.message : String(e));
+      }
     } finally {
       setSubmitting(false);
     }
-  };
+  }, [allValid, fields, focus, onSubmit, submitting, values]);
 
-  const submitField = (name: string, override?: FormValue): void => {
-    const field = fields.find((f) => f.props.name === name);
-    if (!field) {
-      return;
-    }
-    const effective = override ?? values[name] ?? '';
-    // Snapshot the values record with the effective field so async
-    // submission and validators see the latest set even if React
-    // hasn't flushed our setValue yet.
-    const nextValues = override === undefined ? values : { ...values, [name]: override };
-    if (override !== undefined) {
-      setValues(nextValues);
-    }
-    const validation = field.props.validate?.(effective, nextValues) ?? null;
-    if (validation !== null) {
-      setErrors((prev) => ({ ...prev, [name]: validation }));
-      return;
-    }
-    void advance(nextValues);
-  };
+  const cancel = useCallback(() => onCancel?.(), [onCancel]);
 
-  const cancel = (): void => onCancel?.();
+  // Esc cancels from anywhere — including the Submit button row, where
+  // no inner Input would otherwise see the keystroke.
+  useInput((_input, key) => {
+    if (key.escape) {
+      cancel();
+    }
+  });
 
-  const ctxValue: FormContextValue = {
-    values,
-    currentName: active?.props.name ?? null,
-    errors,
-    setValue,
-    submitField,
-    cancel,
-  };
+  const ctxValue = useMemo<FormContextValue>(
+    () => ({
+      values,
+      errors,
+      statuses,
+      setValue,
+      submitField,
+      cancel,
+    }),
+    [values, errors, statuses, setValue, submitField, cancel]
+  );
 
   return (
     <FormContext.Provider value={ctxValue}>
       <Box flexDirection="column">
         <Header title={title} subtitle={subtitle} />
-        <CompletedRows fields={fields.slice(0, index)} values={values} />
-        <Body done={done} submitting={submitting} submitError={submitError} active={active} />
-        {!done && !submitting && <Footer />}
+        {done ? (
+          <DoneRow error={submitError} />
+        ) : (
+          <>
+            <Box flexDirection="column" paddingLeft={2}>
+              {children}
+            </Box>
+            {submitError && (
+              <Box paddingLeft={2} marginTop={1}>
+                <Text color="red">✗ {submitError}</Text>
+              </Box>
+            )}
+            <Box paddingLeft={2} marginTop={1}>
+              <SubmitButton
+                label={submitLabel}
+                enabled={allValid && !submitting}
+                submitting={submitting}
+                onPress={submitForm}
+              />
+            </Box>
+            <Footer />
+          </>
+        )}
       </Box>
     </FormContext.Provider>
   );
@@ -179,88 +344,99 @@ function Header({
   );
 }
 
-interface CompletedRowsProps {
-  readonly fields: ReadonlyArray<FieldDescriptor>;
-  readonly values: FormValues;
-}
-
-function CompletedRows({ fields, values }: Readonly<CompletedRowsProps>): React.ReactElement {
-  if (fields.length === 0) {
-    return <Box />;
+function DoneRow({ error }: Readonly<{ error: string | null }>): React.ReactElement {
+  if (error) {
+    return (
+      <Box paddingLeft={2}>
+        <Text color="red">✗ </Text>
+        <Text color="red">{error}</Text>
+      </Box>
+    );
   }
   return (
-    <Box flexDirection="column" marginBottom={1}>
-      {fields.map((field) => {
-        const display = formatValue(field, values[field.props.name]);
-        return (
-          <Box key={field.props.name}>
-            <Text color="green">✓ </Text>
-            <Text dimColor>{field.props.label}: </Text>
-            <Text>{display}</Text>
-          </Box>
-        );
-      })}
+    <Box paddingLeft={2}>
+      <Text color="green">✓ </Text>
+      <Text>done</Text>
     </Box>
   );
-}
-
-function formatValue(field: FieldDescriptor, value: FormValue | undefined): string {
-  if (value === undefined) {
-    return '';
-  }
-  if (field.props.summarize) {
-    return field.props.summarize(value);
-  }
-  if (typeof value === 'boolean') {
-    return value ? 'yes' : 'no';
-  }
-  return value;
-}
-
-interface BodyProps {
-  readonly done: boolean;
-  readonly submitting: boolean;
-  readonly submitError: string | null;
-  readonly active: FieldDescriptor | undefined;
-}
-
-function Body({ done, submitting, submitError, active }: Readonly<BodyProps>): React.ReactElement {
-  if (done) {
-    if (submitError) {
-      return (
-        <Box paddingLeft={2}>
-          <Text color="red">✗ </Text>
-          <Text color="red">{submitError}</Text>
-        </Box>
-      );
-    }
-    return (
-      <Box paddingLeft={2}>
-        <Text color="green">✓ </Text>
-        <Text>done</Text>
-      </Box>
-    );
-  }
-  if (submitting) {
-    return (
-      <Box paddingLeft={2}>
-        <Text color="cyan">◇ </Text>
-        <Text dimColor>{active?.props.label ?? ''}: submitting…</Text>
-      </Box>
-    );
-  }
-  if (!active) {
-    return <Box />;
-  }
-  // Render the FormField element for the active step. The FormField
-  // pulls its handle from context and renders its inner input.
-  return React.createElement(FormField, active.props);
 }
 
 function Footer(): React.ReactElement {
   return (
     <Box marginTop={1} paddingLeft={2}>
-      <Text dimColor>Enter to continue · Esc to cancel</Text>
+      <Text dimColor>Tab navigate · Enter advance · Esc cancel</Text>
+    </Box>
+  );
+}
+
+interface SubmitButtonProps {
+  readonly label: string;
+  readonly enabled: boolean;
+  readonly submitting: boolean;
+  readonly onPress: () => void;
+}
+
+/**
+ * Plain focusable Submit button. Lives inside the focus cycle so
+ * Tab from the last field lands here naturally. Enter or Space
+ * activates; click activates on `up`.
+ */
+function SubmitButton({
+  label,
+  enabled,
+  submitting,
+  onPress,
+}: Readonly<SubmitButtonProps>): React.ReactElement {
+  const buttonId = 'formfield:__submit__';
+  const { isFocused } = useFocus({ id: buttonId, isActive: enabled });
+  const boxRef = useRef<DOMElement>(null);
+  const bounds = useBounds(boxRef);
+  const { focus } = useFocusManager();
+
+  useInput(
+    (input, key) => {
+      if (!enabled) {
+        return;
+      }
+      if (key.return || input === ' ') {
+        onPress();
+      }
+    },
+    { isActive: isFocused && enabled }
+  );
+
+  const handleMouse = useCallback(
+    (e: { action: string; button: string; column: number; row: number }) => {
+      if (!enabled || !bounds || e.button !== 'left') {
+        return;
+      }
+      if (!hitTest(bounds, e)) {
+        return;
+      }
+      if (e.action === 'down') {
+        focus(buttonId);
+      } else if (e.action === 'click') {
+        onPress();
+      }
+    },
+    [enabled, bounds, focus, onPress]
+  );
+  useMouse(handleMouse);
+
+  if (submitting) {
+    return (
+      <Box>
+        <Text dimColor>⠋ submitting…</Text>
+      </Box>
+    );
+  }
+
+  const color = enabled ? 'green' : undefined;
+  return (
+    <Box ref={boxRef}>
+      <Text color={color} bold={isFocused} dimColor={!enabled}>
+        {isFocused ? '▸ ' : '  '}[ {label} ]
+      </Text>
     </Box>
   );
 }

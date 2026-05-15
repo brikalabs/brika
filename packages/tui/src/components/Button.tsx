@@ -30,8 +30,8 @@ import { Box, type DOMElement, Text, useFocus, useFocusManager, useInput } from 
 import type React from 'react';
 import { type ReactNode, useCallback, useRef } from 'react';
 import { useKey } from '../keys/useKey';
-import { hitTest, useBounds } from '../mouse/useBounds';
-import { useMouse } from '../mouse/useMouse';
+import { hitTest, readBounds } from '../mouse/useBounds';
+import { type MouseEvent, useMouse } from '../mouse/useMouse';
 
 export type ButtonVariant = 'default' | 'success' | 'warning' | 'destructive' | 'ghost';
 
@@ -82,7 +82,6 @@ export function Button({
   const { isFocused } = useFocus({ autoFocus, id, isActive: enabled });
   const { focus } = useFocusManager();
   const boxRef = useRef<DOMElement>(null);
-  const bounds = useBounds(boxRef);
 
   useKey(shortcut, onPress, enabled);
   useInput(
@@ -94,15 +93,17 @@ export function Button({
     { isActive: enabled && isFocused }
   );
 
-  // Mouse: focus on hover-press, fire on click — only when the
-  // bounds are within the clicked cell. `useMouse` returns events
-  // for the whole terminal, so each button filters on its own rect.
+  // Mouse: focus on press-down, fire on click. Bounds are read once
+  // per event (via `readBounds`) instead of tracked through React
+  // state — keeps per-render work to zero so a screen full of
+  // buttons doesn't slow keystrokes down.
   const handleMouse = useCallback(
-    (e: { action: string; button: string; column: number; row: number }) => {
-      if (!enabled || !bounds || e.button !== 'left') {
+    (e: MouseEvent) => {
+      if (!enabled || e.button !== 'left') {
         return;
       }
-      if (!hitTest(bounds, e)) {
+      const bounds = readBounds(boxRef.current);
+      if (!bounds || !hitTest(bounds, e)) {
         return;
       }
       if (e.action === 'down' && id) {
@@ -111,7 +112,7 @@ export function Button({
         onPress();
       }
     },
-    [enabled, bounds, id, focus, onPress]
+    [enabled, id, focus, onPress]
   );
   useMouse(handleMouse);
 

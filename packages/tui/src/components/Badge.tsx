@@ -24,13 +24,7 @@ import { Box, Text } from 'ink';
 import type React from 'react';
 import type { ReactNode } from 'react';
 
-export type BadgeVariant =
-  | 'default'
-  | 'secondary'
-  | 'success'
-  | 'warning'
-  | 'destructive'
-  | 'info';
+export type BadgeVariant = 'default' | 'secondary' | 'success' | 'warning' | 'destructive' | 'info';
 
 export interface BadgeProps {
   readonly variant?: BadgeVariant;

@@ -3,12 +3,12 @@
  * poll loop and exposes the four hub-control actions
  * (start/stop/restart/open) the rest of the TUI dispatches to.
  *
- * Plugin / workflow / user / log lists are stubbed for now — they'll
- * land once the hub exposes the matching HTTP endpoints (#9 in
- * docs/cli-tui/tasks.md).
+ * Per-resource lists (plugins / workflows / users / logs) are fetched
+ * by each view via `useHubResource`, not centralised here — the
+ * provider only owns global state every view needs.
  */
 
-import type { Mood } from '@brika/brix';
+import type { EmoteName, Mood } from '@brika/brix';
 import type React from 'react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { hubUrl } from '../cli/hub-client';
@@ -16,16 +16,14 @@ import { spawnHubDetached } from '../cli/hub-spawn-detached';
 import { openBrowser } from '../cli/open';
 import { brikaHome } from '../cli/paths';
 import { checkPid, type PidStatus, removePidFile } from '../cli/pid';
-import {
-  CliContext,
-  type CliState,
-  type HubStatus,
-  type PluginSummary,
-  type UserSummary,
-  type WorkflowSummary,
-} from './useCli';
+import { CliContext, type CliState, type HubStatus } from './useCli';
 
 const POLL_INTERVAL_MS = 1000;
+/** Wait this long after the hub greeting before rotation kicks in,
+ *  so the "hi!" wave gets a moment on stage. */
+const ACTIVITY_INITIAL_DELAY_MS = 4_000;
+const ACTIVITY_MIN_MS = 10_000;
+const ACTIVITY_MAX_MS = 18_000;
 
 export interface CliProviderProps {
   readonly version: string;
@@ -48,10 +46,68 @@ interface MoodLine {
   readonly statusText: string;
 }
 
-function defaultMoodFor(hub: HubStatus): MoodLine {
+interface Activity extends MoodLine {
+  readonly emote: EmoteName;
+}
+
+/** Activities Brix cycles through while the hub is up. Each pairs a
+ *  short "-ing" status caption with a fitting mood and an existing
+ *  emote animation. Order doesn't matter — the rotation picks at
+ *  random, avoiding the previous entry. */
+const RUNNING_ACTIVITIES: ReadonlyArray<Activity> = [
+  // Quiet / in-place beats.
+  { mood: 'idle', statusText: 'watching', emote: 'idle' },
+  { mood: 'thinking', statusText: 'pondering', emote: 'think' },
+  { mood: 'cheeky', statusText: 'snacking', emote: 'nom' },
+  { mood: 'happy', statusText: 'humming', emote: 'dance' },
+  { mood: 'tired', statusText: 'stretching', emote: 'yawn' },
+  { mood: 'cool', statusText: 'vibing', emote: 'cool' },
+  { mood: 'shy', statusText: 'pooping', emote: 'poop' },
+  { mood: 'wink', statusText: 'people-watching', emote: 'wink' },
+  { mood: 'focused', statusText: 'debugging', emote: 'think' },
+  { mood: 'proud', statusText: 'nodding along', emote: 'nod' },
+  { mood: 'starry', statusText: 'daydreaming', emote: 'love' },
+
+  // Movement beats — body actually goes places.
+  { mood: 'focused', statusText: 'patrolling', emote: 'patrol' },
+  { mood: 'curious', statusText: 'wandering', emote: 'wandering' },
+  { mood: 'curious', statusText: 'peeking around', emote: 'peek' },
+  { mood: 'excited', statusText: 'running errands', emote: 'dash' },
+  { mood: 'panic', statusText: 'fleeing a bug', emote: 'flee' },
+  { mood: 'cheeky', statusText: 'looping the block', emote: 'wraparound' },
+  { mood: 'cheeky', statusText: 'boogying', emote: 'boogie' },
+  { mood: 'starry', statusText: 'showing off', emote: 'somersault' },
+  { mood: 'cheeky', statusText: 'goofing off', emote: 'hop' },
+];
+
+function pickActivity(prev: number): number {
+  if (RUNNING_ACTIVITIES.length <= 1) {
+    return 0;
+  }
+  let next = randomInt(RUNNING_ACTIVITIES.length);
+  if (next === prev) {
+    next = (next + 1) % RUNNING_ACTIVITIES.length;
+  }
+  return next;
+}
+
+function randomInt(max: number): number {
+  if (max <= 0) {
+    return 0;
+  }
+  const buf = new Uint32Array(1);
+  crypto.getRandomValues(buf);
+  return (buf[0] ?? 0) % max;
+}
+
+function randomGapMs(): number {
+  return ACTIVITY_MIN_MS + randomInt(ACTIVITY_MAX_MS - ACTIVITY_MIN_MS);
+}
+
+function defaultMoodFor(hub: HubStatus, activity: Activity | null): MoodLine {
   switch (hub.state) {
     case 'running':
-      return { mood: 'idle', statusText: 'watching' };
+      return activity ?? { mood: 'idle', statusText: 'watching' };
     case 'stopped':
       return { mood: 'sleep', statusText: "hub is sleeping — press 'ctrl+s' to start" };
     case 'stale':
@@ -64,6 +120,7 @@ function defaultMoodFor(hub: HubStatus): MoodLine {
 export function CliProvider({ version, children }: Readonly<CliProviderProps>): React.ReactElement {
   const [hub, setHub] = useState<HubStatus>({ state: 'unknown' });
   const [transient, setTransient] = useState<MoodLine | null>(null);
+  const [activityIndex, setActivityIndex] = useState<number | null>(null);
 
   // Hub PID polling.
   useEffect(() => {
@@ -91,6 +148,34 @@ export function CliProvider({ version, children }: Readonly<CliProviderProps>): 
     const t = setTimeout(() => setTransient(null), 2500);
     return () => clearTimeout(t);
   }, [transient]);
+
+  // Activity rotation: while the hub is running, swap Brix's "-ing"
+  // status every 10–18s. The first swap waits ACTIVITY_INITIAL_DELAY_MS
+  // so the "hi!" greeting wave plays out first.
+  useEffect(() => {
+    if (hub.state !== 'running') {
+      setActivityIndex(null);
+      return;
+    }
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const schedule = (delayMs: number): void => {
+      timer = setTimeout(() => {
+        if (cancelled) {
+          return;
+        }
+        setActivityIndex((prev) => pickActivity(prev ?? 0));
+        schedule(randomGapMs());
+      }, delayMs);
+    };
+    schedule(ACTIVITY_INITIAL_DELAY_MS);
+    return () => {
+      cancelled = true;
+      if (timer) {
+        clearTimeout(timer);
+      }
+    };
+  }, [hub.state]);
 
   const startHub = useCallback(async (): Promise<void> => {
     const status = await checkPid();
@@ -180,25 +265,23 @@ export function CliProvider({ version, children }: Readonly<CliProviderProps>): 
     setTransient({ mood: 'excited', statusText: `opening ${url}` });
   }, []);
 
-  // Placeholder lists — wired up once the hub exposes HTTP endpoints.
-  const plugins: ReadonlyArray<PluginSummary> = [];
-  const workflows: ReadonlyArray<WorkflowSummary> = [];
-  const users: ReadonlyArray<UserSummary> = [];
-  const recentLogs: ReadonlyArray<string> = [];
-
-  const moodLine = transient ?? defaultMoodFor(hub);
+  const activity =
+    hub.state === 'running' && activityIndex !== null
+      ? (RUNNING_ACTIVITIES[activityIndex] ?? null)
+      : null;
+  const moodLine = transient ?? defaultMoodFor(hub, activity);
+  // Activity emote only drives the stage when no transient mood is
+  // hijacking the bubble — otherwise the transient should keep priority.
+  const activityEmote = transient === null && activity ? activity.emote : null;
 
   const value = useMemo<CliState>(
     () => ({
       workspace: brikaHome(),
       version,
       hub,
-      plugins,
-      workflows,
-      users,
-      recentLogs,
       mood: moodLine.mood,
       statusText: moodLine.statusText,
+      activityEmote,
       startHub,
       stopHub,
       restartHub,
@@ -207,12 +290,9 @@ export function CliProvider({ version, children }: Readonly<CliProviderProps>): 
     [
       version,
       hub,
-      plugins,
-      workflows,
-      users,
-      recentLogs,
       moodLine.mood,
       moodLine.statusText,
+      activityEmote,
       startHub,
       stopHub,
       restartHub,

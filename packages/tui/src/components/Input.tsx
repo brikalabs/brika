@@ -62,9 +62,9 @@
 
 import { Box, type DOMElement, Text, useFocus, useFocusManager, useInput } from 'ink';
 import type React from 'react';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { hitTest, useBounds } from '../mouse/useBounds';
-import { useMouse } from '../mouse/useMouse';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
+import { hitTest, readBounds, useBounds } from '../mouse/useBounds';
+import { type MouseEvent, useMouse } from '../mouse/useMouse';
 import { useCaptureInput } from '../shell/useTuiShell';
 
 export type InputType = 'text' | 'password' | 'search';
@@ -100,6 +100,11 @@ export interface InputProps {
    *  `type`-default glyph. Use plain text or emoji (`'🔍 '`,
    *  `'$ '`, `'»'`, …). Pass empty string to suppress the default. */
   readonly prefix?: string;
+  /** Controlled focus. When defined, the Input ignores Ink's focus
+   *  manager entirely — `useFocus` makes no claim and `useInput`
+   *  follows the prop. Use this when an outer container (e.g. the
+   *  Form engine) drives focus and the Input should defer. */
+  readonly focused?: boolean;
 }
 
 /** Cursor blink period (ms). `0` keeps the cursor solid. */
@@ -111,33 +116,10 @@ const PREFIX_BY_TYPE: Readonly<Record<InputType, string>> = {
   search: '> ',
 };
 
-export function Input({
-  value,
-  onChange,
-  placeholder,
-  type = 'text',
-  onFocus,
-  onBlur,
-  onSubmit,
-  onCancel,
-  maxLength = 256,
-  border = true,
-  accentColor = 'cyan',
-  autoFocus = true,
-  id,
-  flex = false,
-  width,
-  disabled = false,
-  prefix,
-}: Readonly<InputProps>): React.ReactElement {
-  const { isFocused } = useFocus({ autoFocus: autoFocus && !disabled, id, isActive: !disabled });
-  const { focus } = useFocusManager();
-  const boxRef = useRef<DOMElement>(null);
-  const bounds = useBounds(boxRef);
-
-  // Blink the cursor while focused so the user knows the input is
-  // actively listening. Solid (no blink) is also fine — set
-  // `CURSOR_BLINK_MS = 0` to keep it on always.
+/** Cursor visibility — toggles every `CURSOR_BLINK_MS` while focused,
+ *  solid (always on) when blurred. Pulling this out keeps the Input
+ *  function under Biome's cognitive-complexity ceiling. */
+function useCursorBlink(isFocused: boolean): boolean {
   const [cursorOn, setCursorOn] = useState(true);
   useEffect(() => {
     if (!isFocused || CURSOR_BLINK_MS === 0) {
@@ -147,42 +129,30 @@ export function Input({
     const t = setInterval(() => setCursorOn((on) => !on), CURSOR_BLINK_MS);
     return () => clearInterval(t);
   }, [isFocused]);
+  return cursorOn;
+}
 
-  // Capture input only while focused — siblings (other inputs,
-  // buttons) get a clean shell when Tab moves focus away.
-  useCaptureInput(isFocused);
+interface KeystrokesOptions {
+  readonly value: string;
+  readonly isActive: boolean;
+  readonly maxLength: number;
+  readonly onChange: (next: string) => void;
+  readonly onSubmit?: (value: string) => void;
+  readonly onCancel?: () => void;
+}
 
-  // Fire onFocus / onBlur as focus state flips. Refs hide rendering
-  // jitter (handlers don't need to be stable to avoid loops).
-  const focusedRef = useRef(false);
-  const onFocusRef = useRef(onFocus);
-  const onBlurRef = useRef(onBlur);
-  onFocusRef.current = onFocus;
-  onBlurRef.current = onBlur;
-  useEffect(() => {
-    if (isFocused && !focusedRef.current) {
-      focusedRef.current = true;
-      onFocusRef.current?.();
-    } else if (!isFocused && focusedRef.current) {
-      focusedRef.current = false;
-      onBlurRef.current?.();
-    }
-  }, [isFocused]);
-
-  // Mouse: clicking the input focuses it. Ignore clicks outside box.
-  const handleMouse = useCallback(
-    (e: { action: string; button: string; column: number; row: number }) => {
-      if (disabled || !bounds || e.button !== 'left' || e.action !== 'down') {
-        return;
-      }
-      if (hitTest(bounds, e) && id) {
-        focus(id);
-      }
-    },
-    [disabled, bounds, focus, id]
-  );
-  useMouse(handleMouse);
-
+/** Single-line text editing keystrokes — Esc / Enter / Backspace /
+ *  printable. Lives outside the Input function so the cognitive-
+ *  complexity counter doesn't fold all these branches into Input's
+ *  score. */
+function useKeystrokes({
+  value,
+  isActive,
+  maxLength,
+  onChange,
+  onSubmit,
+  onCancel,
+}: KeystrokesOptions): void {
   useInput(
     (input, key) => {
       if (key.escape) {
@@ -204,34 +174,201 @@ export function Input({
         onChange(value + input);
       }
     },
-    { isActive: isFocused && !disabled }
+    { isActive }
   );
+}
+
+interface Chrome {
+  readonly borderColor: string;
+  readonly prefixColor?: string;
+  readonly prefixDim: boolean;
+  readonly placeholderColor?: string;
+}
+
+/** Map (focus, disabled) into the input's visible chrome — border /
+ *  prefix / placeholder colours. Disabled wins; otherwise focused
+ *  inputs pick up the accent. Pulled out so Input itself doesn't
+ *  juggle three coupled ternaries inline. */
+function computeChrome(isFocused: boolean, disabled: boolean, accentColor: string): Chrome {
+  const accent = !disabled && isFocused;
+  let placeholderColor: string | undefined;
+  if (!disabled) {
+    placeholderColor = isFocused ? accentColor : 'gray';
+  }
+  return {
+    borderColor: accent ? accentColor : 'gray',
+    prefixColor: accent ? accentColor : undefined,
+    prefixDim: disabled || !isFocused,
+    placeholderColor,
+  };
+}
+
+interface ScrollMetrics {
+  readonly width: number;
+}
+
+/** Horizontal-scroll slice of the (masked) value. Returns the value
+ *  unchanged when no width was pinned, or when it already fits — so
+ *  content-sized inputs grow naturally with their value. */
+function computeDisplay(
+  masked: string,
+  bounds: ScrollMetrics | null,
+  canScroll: boolean,
+  border: boolean,
+  prefixLen: number
+): string {
+  if (!canScroll || !bounds) {
+    return masked;
+  }
+  const innerWidth = Math.max(0, bounds.width - (border ? 4 : 0) - prefixLen - 1);
+  if (innerWidth <= 0 || masked.length <= innerWidth) {
+    return masked;
+  }
+  return masked.slice(masked.length - innerWidth);
+}
+
+/** Fire `onFocus` / `onBlur` as the resolved focus state flips. The
+ *  ref dance keeps the callbacks fresh without making them dep-stable. */
+function useFireFocusEvents(
+  isFocused: boolean,
+  onFocus: (() => void) | undefined,
+  onBlur: (() => void) | undefined
+): void {
+  const focusedRef = useRef(false);
+  const onFocusRef = useRef(onFocus);
+  const onBlurRef = useRef(onBlur);
+  onFocusRef.current = onFocus;
+  onBlurRef.current = onBlur;
+  useEffect(() => {
+    if (isFocused && !focusedRef.current) {
+      focusedRef.current = true;
+      onFocusRef.current?.();
+    } else if (!isFocused && focusedRef.current) {
+      focusedRef.current = false;
+      onBlurRef.current?.();
+    }
+  }, [isFocused]);
+}
+
+export function Input({
+  value,
+  onChange,
+  placeholder,
+  type = 'text',
+  onFocus,
+  onBlur,
+  onSubmit,
+  onCancel,
+  maxLength = 256,
+  border = true,
+  accentColor = 'cyan',
+  autoFocus = true,
+  id,
+  flex = false,
+  width,
+  disabled = false,
+  prefix,
+  focused,
+}: Readonly<InputProps>): React.ReactElement {
+  const isControlled = focused !== undefined;
+  // Auto-assign a stable focus id when the caller didn't provide one
+  // so click-to-focus always works. Without this an `<Input>` that's
+  // not given an `id` couldn't be activated by mouse — only the
+  // global Tab cycle would land on it.
+  const autoId = useId();
+  const focusId = id ?? autoId;
+  const native = useFocus({
+    autoFocus: !isControlled && autoFocus && !disabled,
+    id: focusId,
+    isActive: !isControlled && !disabled,
+  });
+  const isFocused = !disabled && (isControlled ? focused : native.isFocused);
+  const { focus } = useFocusManager();
+  const boxRef = useRef<DOMElement>(null);
+  // Reactive bounds — Input genuinely needs the live box dimensions
+  // for `computeDisplay` to slice the visible window of the string.
+  // Mouse clicks read bounds on-demand below (cheap + separate).
+  const bounds = useBounds(boxRef);
+
+  // Blink the cursor while focused; capture input + fire focus
+  // events as the resolved focus state flips.
+  const cursorOn = useCursorBlink(isFocused);
+  useCaptureInput(isFocused);
+  useFireFocusEvents(isFocused, onFocus, onBlur);
+
+  // Mouse: clicking the input focuses it. Skipped in controlled
+  // mode — the outer container (Form) owns hit-testing for its rows.
+  // Bounds are read on-demand so this hook adds no per-render work.
+  const handleMouse = useCallback(
+    (e: MouseEvent) => {
+      if (isControlled || disabled || e.button !== 'left' || e.action !== 'down') {
+        return;
+      }
+      const bounds = readBounds(boxRef.current);
+      if (bounds && hitTest(bounds, e)) {
+        focus(focusId);
+      }
+    },
+    [isControlled, disabled, focus, focusId]
+  );
+  useMouse(handleMouse);
+
+  useKeystrokes({
+    value,
+    isActive: isFocused && !disabled,
+    maxLength,
+    onChange,
+    onSubmit,
+    onCancel,
+  });
 
   const masked = type === 'password' ? '•'.repeat(value.length) : value;
   const showPlaceholder = value.length === 0 && Boolean(placeholder);
   const resolvedPrefix = prefix ?? PREFIX_BY_TYPE[type];
-
-  // Visual states:
-  //   - disabled    → everything muted; no cursor.
-  //   - focused     → accent border + accent prefix + accent cursor.
-  //   - resting     → soft gray border, dim prefix, no cursor.
-  const borderColor = disabled ? 'gray' : isFocused ? accentColor : 'gray';
-  const prefixColor = disabled ? undefined : isFocused ? accentColor : undefined;
-  const prefixDim = disabled || !isFocused;
-  const placeholderColor = disabled ? undefined : isFocused ? accentColor : 'gray';
-
-  // Horizontal scroll: when the box has a measured width that
-  // can't fit the full value (+ prefix + cursor + border padding),
-  // slice the value so the cursor stays at the right edge.
-  const innerWidth = bounds
-    ? Math.max(0, bounds.width - (border ? 4 : 0) - resolvedPrefix.length - 1)
-    : null;
-  const display =
-    innerWidth !== null && masked.length > innerWidth
-      ? masked.slice(masked.length - innerWidth)
-      : masked;
+  const { borderColor, prefixColor, prefixDim, placeholderColor } = computeChrome(
+    isFocused,
+    disabled,
+    accentColor
+  );
+  const display = computeDisplay(
+    masked,
+    bounds,
+    flex || width !== undefined,
+    border,
+    resolvedPrefix.length
+  );
 
   const showCursor = isFocused && !disabled && cursorOn;
+
+  // Inverse-block cursor — a solid cell that contrasts against
+  // whatever's underneath. Hidden when blinking-off so the eye
+  // can track typing without the cursor masking the last char.
+  const cursor = showCursor ? (
+    <Text color={accentColor} inverse>
+      {' '}
+    </Text>
+  ) : (
+    <Text> </Text>
+  );
+
+  // Cursor position rule:
+  //   - placeholder visible (empty value)  → cursor at column 0,
+  //     before the dim placeholder text.
+  //   - value present                      → cursor trails the
+  //     displayed value (typing position).
+  const content = showPlaceholder ? (
+    <>
+      {cursor}
+      <Text color={placeholderColor} dimColor={!isFocused || disabled}>
+        {placeholder}
+      </Text>
+    </>
+  ) : (
+    <>
+      <Text dimColor={disabled}>{display}</Text>
+      {cursor}
+    </>
+  );
 
   const body = (
     <Box>
@@ -240,23 +377,7 @@ export function Input({
           {resolvedPrefix}
         </Text>
       ) : null}
-      {showPlaceholder ? (
-        <Text color={placeholderColor} dimColor={!isFocused || disabled}>
-          {placeholder}
-        </Text>
-      ) : (
-        <Text dimColor={disabled}>{display}</Text>
-      )}
-      {/* Inverse-block cursor — a solid cell that contrasts against
-          whatever's underneath. Hidden when blinking-off so the eye
-          can track typing without the cursor masking the last char. */}
-      {showCursor ? (
-        <Text color={accentColor} inverse>
-          {' '}
-        </Text>
-      ) : (
-        <Text> </Text>
-      )}
+      {content}
     </Box>
   );
 

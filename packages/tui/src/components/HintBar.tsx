@@ -23,8 +23,8 @@
  */
 
 import { Box, Text } from 'ink';
-import { Children, type ReactElement, type ReactNode } from 'react';
 import type React from 'react';
+import { Children, type ReactNode } from 'react';
 
 export type HintAccent = 'default' | 'info' | 'success' | 'warning' | 'destructive';
 
@@ -47,10 +47,9 @@ export function HintBar({ children }: Readonly<HintBarProps>): React.ReactElemen
   return (
     <Box marginTop={1}>
       {items.map((child, i) => (
-        // biome-ignore lint/suspicious/noArrayIndexKey: hint order is stable per parent render
         <Box key={`hb-${i}`}>
           {i > 0 ? <Text dimColor> · </Text> : null}
-          {child as ReactElement}
+          {child}
         </Box>
       ))}
     </Box>

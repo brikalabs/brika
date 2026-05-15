@@ -18,7 +18,8 @@
     "./utils": "./src/utils/index.ts",
     "./router": "./src/router/index.ts",
     "./shell": "./src/shell/index.ts",
-    "./forms": "./src/forms/index.ts"
+    "./forms": "./src/forms/index.ts",
+    "./debug": "./src/debug/index.ts"
   },
   "bin": {
     "tui": "./src/refresh/cli.ts"

@@ -9,6 +9,9 @@ import { useState } from 'react';
 
 export interface ConfirmInputProps {
   readonly value?: boolean;
+  /** Fires on each y/n toggle. Forms wire this to commit-on-navigation
+   *  so Tab-ing away mid-pick still records the most recent choice. */
+  readonly onChange?: (value: boolean) => void;
   readonly onSubmit?: (value: boolean) => void;
   readonly onCancel?: () => void;
   readonly focused?: boolean;
@@ -16,11 +19,17 @@ export interface ConfirmInputProps {
 
 export function ConfirmInput({
   value = true,
+  onChange,
   onSubmit,
   onCancel,
   focused = true,
 }: Readonly<ConfirmInputProps>): React.ReactElement {
   const [yes, setYes] = useState(value);
+
+  const set = (next: boolean): void => {
+    setYes(next);
+    onChange?.(next);
+  };
 
   useInput(
     (input, key) => {
@@ -33,15 +42,15 @@ export function ConfirmInput({
         return;
       }
       if (input === 'y' || input === 'Y') {
-        setYes(true);
+        set(true);
         return;
       }
       if (input === 'n' || input === 'N') {
-        setYes(false);
+        set(false);
         return;
       }
       if (key.leftArrow || key.rightArrow) {
-        setYes((v) => !v);
+        set(!yes);
       }
     },
     { isActive: focused }

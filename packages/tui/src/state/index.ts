@@ -1,3 +1,12 @@
+export {
+  BREAKPOINTS,
+  type Breakpoint,
+  type BreakpointState,
+  type Responsive,
+  resolveResponsive,
+  useBreakpoint,
+  useResponsiveValue,
+} from './useBreakpoint';
 export { type FullscreenControls, useFullscreen } from './useFullscreen';
 export { type LayoutDimensions, useLayoutDimensions } from './useLayoutDimensions';
 export { type BoxSize, useMeasure } from './useMeasure';
