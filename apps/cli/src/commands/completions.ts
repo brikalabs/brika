@@ -41,7 +41,8 @@ export default defineCommand({
         return;
       }
       for (const file of cleaned) {
-        process.stdout.write(`${pc.green(`removed ${file}`)}\n`);
+        const label = pc.green(`removed ${file}`);
+        process.stdout.write(`${label}\n`);
       }
       process.stdout.write('restart your shell to apply\n');
       return;

@@ -157,22 +157,19 @@ export function CliProvider({ version, children }: Readonly<CliProviderProps>): 
       setActivityIndex(null);
       return;
     }
-    let cancelled = false;
-    let timer: ReturnType<typeof setTimeout> | null = null;
-    const schedule = (delayMs: number): void => {
-      timer = setTimeout(() => {
-        if (cancelled) {
-          return;
-        }
-        setActivityIndex((prev) => pickActivity(prev ?? 0));
-        schedule(randomGapMs());
-      }, delayMs);
+    const state = { cancelled: false, timer: null as ReturnType<typeof setTimeout> | null };
+    const tick = (): void => {
+      if (state.cancelled) {
+        return;
+      }
+      setActivityIndex((prev) => pickActivity(prev ?? 0));
+      state.timer = setTimeout(tick, randomGapMs());
     };
-    schedule(ACTIVITY_INITIAL_DELAY_MS);
+    state.timer = setTimeout(tick, ACTIVITY_INITIAL_DELAY_MS);
     return () => {
-      cancelled = true;
-      if (timer) {
-        clearTimeout(timer);
+      state.cancelled = true;
+      if (state.timer) {
+        clearTimeout(state.timer);
       }
     };
   }, [hub.state]);

@@ -16,7 +16,7 @@ import { Conflict, group, route, UnprocessableEntity } from '@brika/router';
 import { z } from 'zod';
 
 const CreateUserBodySchema = z.object({
-  email: z.string().email().max(254),
+  email: z.email().max(254),
   name: z.string().min(1).max(120),
   role: z.enum([Role.ADMIN, Role.USER]).default(Role.USER),
   password: z.string().min(8).max(128).optional(),

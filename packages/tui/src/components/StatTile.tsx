@@ -71,11 +71,11 @@ export function StatTile({
       <PaneHeader>
         {icon ? <TileIcon icon={icon} /> : null}
         <PaneTitle>{title}</PaneTitle>
-        {status !== undefined ? (
+        {status === undefined ? null : (
           <PaneActions>
             {typeof status === 'number' ? <Text dimColor>{status}</Text> : status}
           </PaneActions>
-        ) : null}
+        )}
       </PaneHeader>
       <PaneBody>{children}</PaneBody>
       {footer ? <PaneFooter>{footer}</PaneFooter> : null}

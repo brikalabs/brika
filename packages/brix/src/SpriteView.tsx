@@ -40,7 +40,7 @@ function rowToRuns(row: SpriteRow): Run[] {
   for (const cell of row) {
     const ch = cell?.ch ?? ' ';
     const c: Cell | undefined = cell ?? undefined;
-    const last = runs[runs.length - 1];
+    const last = runs.at(-1);
     if (last && styleEq(last, c?.color, c?.dim, c?.bold)) {
       last.text += ch;
     } else {
@@ -50,18 +50,41 @@ function rowToRuns(row: SpriteRow): Run[] {
   return runs;
 }
 
+function runKey(run: Run): string {
+  return `${run.text}|${run.color ?? ''}|${run.dim ? 1 : 0}|${run.bold ? 1 : 0}`;
+}
+
+function rowKey(runs: ReadonlyArray<Run>): string {
+  return runs.map(runKey).join('§');
+}
+
+/** Disambiguate identical neighbours so React doesn't warn about
+ *  duplicate keys when a sprite has multiple blank rows or repeating
+ *  text runs. The counter is appended after the content, so the same
+ *  position always produces the same key for the same content. */
+function uniqueKeys(seeds: ReadonlyArray<string>): string[] {
+  const seen = new Map<string, number>();
+  return seeds.map((seed) => {
+    const n = seen.get(seed) ?? 0;
+    seen.set(seed, n + 1);
+    return n === 0 ? seed : `${seed}#${n}`;
+  });
+}
+
 export function SpriteView({ sprite }: Readonly<SpriteViewProps>): React.ReactElement {
+  const rows = sprite.rows.map(rowToRuns);
+  const rowKeys = uniqueKeys(rows.map(rowKey));
   return (
     <Box flexDirection="column">
-      {sprite.rows.map((row, ri) => {
-        const runs = rowToRuns(row);
+      {rows.map((runs, ri) => {
+        const runKeys = uniqueKeys(runs.map(runKey));
         return (
-          <Box key={`row-${ri}`}>
+          <Box key={rowKeys[ri]}>
             {runs.length === 0 ? (
               <Text> </Text>
             ) : (
               runs.map((run, i) => (
-                <Text key={`run-${i}`} color={run.color} dimColor={run.dim} bold={run.bold}>
+                <Text key={runKeys[i]} color={run.color} dimColor={run.dim} bold={run.bold}>
                   {run.text}
                 </Text>
               ))

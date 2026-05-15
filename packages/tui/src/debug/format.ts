@@ -52,7 +52,10 @@ function formatNonObject(value: Exclude<unknown, object | null>): string {
     const name = 'name' in value && typeof value.name === 'string' ? value.name : '';
     return name ? `[Function: ${name}]` : '[Function]';
   }
-  return String(value);
+  // Unreachable in practice — the typeof checks above are exhaustive
+  // for the (excluded object) input — but the return makes the type
+  // checker happy without leaning on `String()` of an unknown shape.
+  return '';
 }
 
 function formatArray(arr: ReadonlyArray<unknown>, depth: number, seen: WeakSet<object>): string {

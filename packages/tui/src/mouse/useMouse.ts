@@ -146,7 +146,7 @@ function splitChunk(input: Buffer): {
 
 function parseSequence(seq: Buffer): void {
   // `seq` is `\x1b[<{code};{col};{row}{M|m}`
-  const body = seq.subarray(3, seq.length - 1).toString('ascii');
+  const body = seq.subarray(3, -1).toString('ascii');
   const terminator = seq[seq.length - 1];
   const parts = body.split(';');
   if (parts.length !== 3) {

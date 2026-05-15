@@ -87,15 +87,9 @@ export function RadioGroup({
   );
 
   const register = useCallback((entry: RadioEntry): (() => void) => {
-    setItems((prev) => {
-      if (prev.some((it) => it.value === entry.value)) {
-        return prev;
-      }
-      return [...prev, entry];
-    });
-    return () => {
-      setItems((prev) => prev.filter((it) => it.value !== entry.value));
-    };
+    setItems((prev) => (prev.some((it) => it.value === entry.value) ? prev : [...prev, entry]));
+    const isOther = (it: RadioEntry): boolean => it.value !== entry.value;
+    return () => setItems((prev) => prev.filter(isOther));
   }, []);
 
   const ctx = useMemo<RadioGroupContextValue>(

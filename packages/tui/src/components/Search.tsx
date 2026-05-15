@@ -131,15 +131,9 @@ function SearchInner<T>({
   );
 
   const registerItem = useCallback((entry: SearchItemEntry): (() => void) => {
-    setItems((prev) => {
-      if (prev.some((it) => it.key === entry.key)) {
-        return prev;
-      }
-      return [...prev, entry];
-    });
-    return () => {
-      setItems((prev) => prev.filter((it) => it.key !== entry.key));
-    };
+    setItems((prev) => (prev.some((it) => it.key === entry.key) ? prev : [...prev, entry]));
+    const isOther = (it: SearchItemEntry): boolean => it.key !== entry.key;
+    return () => setItems((prev) => prev.filter(isOther));
   }, []);
 
   // Snap focus to the first item whenever the registered set changes

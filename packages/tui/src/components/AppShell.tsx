@@ -127,13 +127,14 @@ export function AppShell({
   // children — children stay mounted (`display="none"`) so in-flight
   // component state (form drafts, scroll positions, ongoing fetches)
   // survives the resize. Without this, every dip below the threshold
-  // would wipe whatever the user was typing.
+  // would wipe whatever the user was typing. The context still wraps
+  // the hidden subtree so AppShellSection/Divider don't throw.
   if (tooSmall) {
     return (
-      <>
+      <AppShellContext.Provider value={ctxValue}>
         <Box display="none">{children}</Box>
         <TerminalTooSmall minColumns={minColumns} minRows={minRows} mascot={tooSmallMascot} />
-      </>
+      </AppShellContext.Provider>
     );
   }
 

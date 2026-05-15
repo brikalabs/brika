@@ -64,9 +64,8 @@ export function Properties({
 
   const register = useCallback((name: string): (() => void) => {
     setNames((prev) => (prev.includes(name) ? prev : [...prev, name]));
-    return () => {
-      setNames((prev) => prev.filter((n) => n !== name));
-    };
+    const isOther = (n: string): boolean => n !== name;
+    return () => setNames((prev) => prev.filter(isOther));
   }, []);
 
   const columnWidth = useMemo(() => {

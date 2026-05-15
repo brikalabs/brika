@@ -273,7 +273,7 @@ function BrandLogo(): React.ReactElement {
   return (
     <Box flexDirection="column" alignItems="flex-start">
       {LOGO.map((line, i) => (
-        <Text key={`logo-${i}`} color={LOGO_TINTS[i] ?? 'cyan'} bold>
+        <Text key={line} color={LOGO_TINTS[i] ?? 'cyan'} bold>
           {line}
         </Text>
       ))}

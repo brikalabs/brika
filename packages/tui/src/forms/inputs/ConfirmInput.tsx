@@ -56,6 +56,7 @@ export function ConfirmInput({
     { isActive: focused }
   );
 
+  const no = !yes;
   return (
     <Box>
       <Text color={yes ? 'cyan' : 'gray'}>{yes ? '◆ ' : '○ '}</Text>
@@ -63,8 +64,8 @@ export function ConfirmInput({
         Yes
       </Text>
       <Text dimColor> </Text>
-      <Text color={!yes ? 'cyan' : 'gray'}>{!yes ? '◆ ' : '○ '}</Text>
-      <Text color={!yes ? 'cyan' : undefined} bold={!yes}>
+      <Text color={no ? 'cyan' : 'gray'}>{no ? '◆ ' : '○ '}</Text>
+      <Text color={no ? 'cyan' : undefined} bold={no}>
         No
       </Text>
     </Box>

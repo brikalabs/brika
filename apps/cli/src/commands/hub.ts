@@ -77,7 +77,8 @@ export default defineCommand({
       process.stdout.write(`${pc.green('hub exited cleanly')}\n`);
       return;
     }
-    process.stderr.write(`${pc.red(`hub exited with code ${code}`)}\n`);
+    const label = pc.red(`hub exited with code ${code}`);
+    process.stderr.write(`${label}\n`);
     process.exit(code);
   },
 });

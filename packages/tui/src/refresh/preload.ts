@@ -116,9 +116,7 @@ async function flushBatch(paths: readonly string[], tick: number): Promise<void>
       if (isFileMissing(err)) {
         continue;
       }
-      if (!firstError) {
-        firstError = { path, err };
-      }
+      firstError ??= { path, err };
     }
   }
   if (firstError) {
@@ -141,12 +139,7 @@ async function flushBatch(paths: readonly string[], tick: number): Promise<void>
 /** Recognise the `readFile` ENOENT we get when a watched file was deleted
  *  between the watcher event firing and our read. */
 function isFileMissing(err: unknown): boolean {
-  return (
-    typeof err === 'object' &&
-    err !== null &&
-    'code' in err &&
-    (err as { code: unknown }).code === 'ENOENT'
-  );
+  return typeof err === 'object' && err !== null && 'code' in err && err.code === 'ENOENT';
 }
 
 function reportError(path: string, err: unknown): void {

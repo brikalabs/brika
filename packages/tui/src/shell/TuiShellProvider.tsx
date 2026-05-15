@@ -32,12 +32,8 @@ export function TuiShellProvider({
   initialChromeHeight = 9,
   children,
 }: Readonly<TuiShellProviderProps>): React.ReactElement {
-  const [chromeHeight, setChromeHeightRaw] = useState(initialChromeHeight);
+  const [chromeHeight, setChromeHeight] = useState(initialChromeHeight);
   const [captureCount, setCaptureCount] = useState(0);
-
-  const setChromeHeight = useCallback((h: number) => {
-    setChromeHeightRaw((prev) => (prev === h ? prev : h));
-  }, []);
 
   const captureInput = useCallback((): (() => void) => {
     setCaptureCount((n) => n + 1);

@@ -632,7 +632,7 @@ function SearchTab(): React.ReactElement {
               <Text bold>{r.displayName ?? r.name}</Text>
               <Text dimColor> v{r.version}</Text>
               {isInstalled(r) ? <Text color="green"> · installed</Text> : null}
-              {!r.compatible ? <Text color="yellow"> · incompatible</Text> : null}
+              {r.compatible ? null : <Text color="yellow"> · incompatible</Text>}
               {r.description ? <Text dimColor>{` — ${r.description}`}</Text> : null}
             </SearchItem>
           ))}

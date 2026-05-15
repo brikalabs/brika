@@ -31,16 +31,34 @@ export interface MarkdownProps {
 
 const DEFAULT_RULE_WIDTH = 60;
 
+/** Disambiguate identical neighbours by suffixing a `#n` counter so
+ *  React doesn't warn about duplicate keys when blocks repeat (e.g.
+ *  two blank table cells, two `<hr>`s). */
+function uniqueKeys(seeds: ReadonlyArray<string>): string[] {
+  const seen = new Map<string, number>();
+  return seeds.map((seed) => {
+    const n = seen.get(seed) ?? 0;
+    seen.set(seed, n + 1);
+    return n === 0 ? seed : `${seed}#${n}`;
+  });
+}
+
+function renderCodeLines(lines: ReadonlyArray<string>): React.ReactElement[] {
+  const keys = uniqueKeys(lines);
+  return lines.map((l, idx) => (
+    <Text key={keys[idx]} color="cyan">
+      {l.length === 0 ? ' ' : l}
+    </Text>
+  ));
+}
+
 export function Markdown({ source, width }: Readonly<MarkdownProps>): React.ReactElement {
   const blocks = parseBlocks(source);
+  const blockKeys = uniqueKeys(blocks.map((b) => b.kind));
   return (
     <Box flexDirection="column">
       {blocks.map((block, i) => (
-        <Block
-          key={`block-${i}-${block.kind}`}
-          block={block}
-          ruleWidth={width ?? DEFAULT_RULE_WIDTH}
-        />
+        <Block key={blockKeys[i]} block={block} ruleWidth={width ?? DEFAULT_RULE_WIDTH} />
       ))}
     </Box>
   );
@@ -378,10 +396,11 @@ function List({
 }
 
 function Quote({ lines }: Readonly<{ lines: ReadonlyArray<string> }>): React.ReactElement {
+  const keys = uniqueKeys(lines);
   return (
     <Box flexDirection="column">
       {lines.map((line, idx) => (
-        <Box key={`q-${idx}`}>
+        <Box key={keys[idx]}>
           <Text color="magenta" dimColor>
             {'│ '}
           </Text>
@@ -405,15 +424,7 @@ function CodeBlock({
           </Text>
         </Box>
       ) : null}
-      {lines.length === 0 ? (
-        <Text dimColor> </Text>
-      ) : (
-        lines.map((l, idx) => (
-          <Text key={`code-${idx}`} color="cyan">
-            {l.length === 0 ? ' ' : l}
-          </Text>
-        ))
-      )}
+      {lines.length === 0 ? <Text dimColor> </Text> : renderCodeLines(lines)}
     </Box>
   );
 }
@@ -436,11 +447,14 @@ function Table({
     widths.push(w);
   }
 
+  const headerKeys = uniqueKeys(header.map((cell, c) => cell || `h-${c}`));
+  const sepKeys = widths.map((w, c) => `sep-${c}-${w}`);
+  const rowKeys = uniqueKeys(rows.map((row, r) => row.join('|') || `r-${r}`));
   return (
     <Box flexDirection="column" marginY={1}>
       <Box>
         {header.map((cell, c) => (
-          <Box key={`th-${c}`} width={(widths[c] ?? 0) + 2}>
+          <Box key={headerKeys[c]} width={(widths[c] ?? 0) + 2}>
             <Text bold color="cyan">
               {(cell ?? '').padEnd(widths[c] ?? 0)}
             </Text>
@@ -449,18 +463,33 @@ function Table({
       </Box>
       <Box>
         {widths.map((w, c) => (
-          <Box key={`thr-${c}`} width={w + 2}>
+          <Box key={sepKeys[c]} width={w + 2}>
             <Text dimColor>{'─'.repeat(w)}</Text>
           </Box>
         ))}
       </Box>
       {rows.map((row, r) => (
-        <Box key={`tr-${r}`}>
-          {Array.from({ length: colCount }).map((_, c) => (
-            <Box key={`td-${r}-${c}`} width={(widths[c] ?? 0) + 2}>
-              <Text>{(row[c] ?? '').padEnd(widths[c] ?? 0)}</Text>
-            </Box>
-          ))}
+        <TableRow key={rowKeys[r]} row={row} colCount={colCount} widths={widths} />
+      ))}
+    </Box>
+  );
+}
+
+function TableRow({
+  row,
+  colCount,
+  widths,
+}: Readonly<{
+  row: ReadonlyArray<string>;
+  colCount: number;
+  widths: ReadonlyArray<number>;
+}>): React.ReactElement {
+  const cellKeys = uniqueKeys(Array.from({ length: colCount }, (_, c) => row[c] ?? `c-${c}`));
+  return (
+    <Box>
+      {Array.from({ length: colCount }).map((_, c) => (
+        <Box key={cellKeys[c]} width={(widths[c] ?? 0) + 2}>
+          <Text>{(row[c] ?? '').padEnd(widths[c] ?? 0)}</Text>
         </Box>
       ))}
     </Box>
@@ -563,57 +592,65 @@ function tryInline(
   out: Inline[],
   flushTextUpTo: (end: number) => void
 ): number {
-  // **bold** (must be checked before *italic*)
-  if (source.startsWith('**', i)) {
-    const end = source.indexOf('**', i + 2);
-    if (end > i + 2) {
-      flushTextUpTo(i);
-      out.push({ kind: 'bold', text: source.slice(i + 2, end) });
-      return end + 2 - i;
-    }
+  const paired = tryPaired(source, i, out, flushTextUpTo);
+  if (paired > 0) {
+    return paired;
   }
-  // ~~strike~~
-  if (source.startsWith('~~', i)) {
-    const end = source.indexOf('~~', i + 2);
-    if (end > i + 2) {
-      flushTextUpTo(i);
-      out.push({ kind: 'strike', text: source.slice(i + 2, end) });
-      return end + 2 - i;
+  return tryLink(source, i, out, flushTextUpTo);
+}
+
+/** Bold / strike / italic / inline-code — opener and closer share the
+ *  same delimiter run (`**`, `~~`, `*`, `` ` ``). Order matters: the
+ *  two-char delimiters must be checked before their single-char prefixes. */
+function tryPaired(
+  source: string,
+  i: number,
+  out: Inline[],
+  flushTextUpTo: (end: number) => void
+): number {
+  for (const { open, kind } of PAIRED) {
+    if (!source.startsWith(open, i)) {
+      continue;
     }
-  }
-  // *italic*
-  if (source[i] === '*') {
-    const end = source.indexOf('*', i + 1);
-    if (end > i + 1) {
+    const end = source.indexOf(open, i + open.length);
+    if (end > i + open.length) {
       flushTextUpTo(i);
-      out.push({ kind: 'italic', text: source.slice(i + 1, end) });
-      return end + 1 - i;
-    }
-  }
-  // `code`
-  if (source[i] === '`') {
-    const end = source.indexOf('`', i + 1);
-    if (end > i + 1) {
-      flushTextUpTo(i);
-      out.push({ kind: 'code', text: source.slice(i + 1, end) });
-      return end + 1 - i;
-    }
-  }
-  // [text](url)
-  if (source[i] === '[') {
-    const bracketEnd = source.indexOf(']', i + 1);
-    if (bracketEnd > i + 1 && source[bracketEnd + 1] === '(') {
-      const parenEnd = source.indexOf(')', bracketEnd + 2);
-      if (parenEnd > bracketEnd + 2) {
-        flushTextUpTo(i);
-        out.push({
-          kind: 'link',
-          text: source.slice(i + 1, bracketEnd),
-          url: source.slice(bracketEnd + 2, parenEnd),
-        });
-        return parenEnd + 1 - i;
-      }
+      out.push({ kind, text: source.slice(i + open.length, end) });
+      return end + open.length - i;
     }
   }
   return 0;
+}
+
+const PAIRED: ReadonlyArray<{ open: string; kind: 'bold' | 'strike' | 'italic' | 'code' }> = [
+  { open: '**', kind: 'bold' },
+  { open: '~~', kind: 'strike' },
+  { open: '*', kind: 'italic' },
+  { open: '`', kind: 'code' },
+];
+
+function tryLink(
+  source: string,
+  i: number,
+  out: Inline[],
+  flushTextUpTo: (end: number) => void
+): number {
+  if (source[i] !== '[') {
+    return 0;
+  }
+  const bracketEnd = source.indexOf(']', i + 1);
+  if (bracketEnd <= i + 1 || source[bracketEnd + 1] !== '(') {
+    return 0;
+  }
+  const parenEnd = source.indexOf(')', bracketEnd + 2);
+  if (parenEnd <= bracketEnd + 2) {
+    return 0;
+  }
+  flushTextUpTo(i);
+  out.push({
+    kind: 'link',
+    text: source.slice(i + 1, bracketEnd),
+    url: source.slice(bracketEnd + 2, parenEnd),
+  });
+  return parenEnd + 1 - i;
 }

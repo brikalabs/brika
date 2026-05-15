@@ -29,5 +29,3 @@ if (cwd) {
 
 const { cli } = await import('./commands');
 await cli.run();
-
-export {};

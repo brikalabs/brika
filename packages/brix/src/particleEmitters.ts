@@ -135,7 +135,7 @@ export function notes(origin: Origin, opts?: EmitterTuning): Emitter {
         x: p.x,
         y: p.y,
         vx: rng() * 1.5 - 0.2,
-        vy: -1.0,
+        vy: -1,
         ax: 0,
         ay: 0.2,
         age: 0,

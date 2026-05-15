@@ -40,6 +40,13 @@ export interface HintBarProps {
   readonly children?: ReactNode;
 }
 
+function childKey(child: ReactNode, fallback: number): string {
+  if (typeof child === 'object' && child !== null && 'key' in child && child.key !== null) {
+    return String(child.key);
+  }
+  return `hb-${fallback}`;
+}
+
 export function HintBar({ children }: Readonly<HintBarProps>): React.ReactElement {
   // Insert a dim ` · ` between each child so consumers don't have
   // to interleave separators themselves.
@@ -47,7 +54,7 @@ export function HintBar({ children }: Readonly<HintBarProps>): React.ReactElemen
   return (
     <Box marginTop={1}>
       {items.map((child, i) => (
-        <Box key={`hb-${i}`}>
+        <Box key={childKey(child, i)}>
           {i > 0 ? <Text dimColor> · </Text> : null}
           {child}
         </Box>

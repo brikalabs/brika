@@ -103,15 +103,9 @@ export function Tabs({
   }, [value, internal, tabs]);
 
   const register = useCallback((entry: TabRegistration): (() => void) => {
-    setTabs((prev) => {
-      if (prev.some((t) => t.value === entry.value)) {
-        return prev;
-      }
-      return [...prev, entry];
-    });
-    return () => {
-      setTabs((prev) => prev.filter((t) => t.value !== entry.value));
-    };
+    setTabs((prev) => (prev.some((t) => t.value === entry.value) ? prev : [...prev, entry]));
+    const isOther = (t: TabRegistration): boolean => t.value !== entry.value;
+    return () => setTabs((prev) => prev.filter(isOther));
   }, []);
 
   const ctx = useMemo<TabsContextValue>(

@@ -83,14 +83,14 @@ class DebugBuffer {
       // biome-ignore lint/suspicious/noConsole: this buffer is the runtime sink for console.*; capturing the originals is the point
       debug: console.debug,
     };
-    const wrap = (level: DebugLevel, original: (...args: unknown[]) => void) => {
+    // The `original` argument is intentionally unused — writing to
+    // stdout while Ink owns the screen corrupts the render, so the
+    // debug overlay is the single sink. Apps that need a side-channel
+    // log can subscribe via `useDebug()`. We keep the parameter so the
+    // call sites read symmetrically across the five wrapped methods.
+    const wrap = (level: DebugLevel, _original: (...args: unknown[]) => void) => {
       return (...args: unknown[]): void => {
         this.push(level, formatArgs(args), 'console');
-        // We deliberately do NOT forward to the original — writing to
-        // stdout while Ink owns the screen corrupts the render. The
-        // debug overlay is now the single sink. Apps that need to keep
-        // a side-channel log can subscribe via `useDebug()`.
-        void original;
       };
     };
     console.log = wrap('log', this.original.log);

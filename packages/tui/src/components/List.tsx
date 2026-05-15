@@ -18,7 +18,6 @@
  *
  * Interactions:
  *   - `↑` / `↓`       move focus
- *   - `Home` / `End`  jump to first / last  (not yet bound — TODO)
  *   - `Enter`         calls `onSelect(value)` against the focused item
  *   - **Mouse click** on a row focuses + selects it
  *
@@ -107,15 +106,9 @@ export function List({
   );
 
   const registerItem = useCallback((entry: ListItemEntry): (() => void) => {
-    setItems((prev) => {
-      if (prev.some((it) => it.value === entry.value)) {
-        return prev;
-      }
-      return [...prev, entry];
-    });
-    return () => {
-      setItems((prev) => prev.filter((it) => it.value !== entry.value));
-    };
+    setItems((prev) => (prev.some((it) => it.value === entry.value) ? prev : [...prev, entry]));
+    const isOther = (it: ListItemEntry): boolean => it.value !== entry.value;
+    return () => setItems((prev) => prev.filter(isOther));
   }, []);
 
   // Auto-focus first item when uncontrolled and nothing's focused.
