@@ -298,22 +298,6 @@ function ScrollAreaInner({
           <Button shortcut="g" tabIndex={-1} enabled={!atTop} onPress={() => jumpTo('top')}>
             top
           </Button>
-          <Button
-            shortcut="ctrl+u"
-            tabIndex={-1}
-            enabled={!atTop}
-            onPress={() => move(-pageStepRef.current)}
-          >
-            up
-          </Button>
-          <Button
-            shortcut="ctrl+d"
-            tabIndex={-1}
-            enabled={!atBottom}
-            onPress={() => move(pageStepRef.current)}
-          >
-            down
-          </Button>
           <Button shortcut="G" tabIndex={-1} enabled={!atBottom} onPress={() => jumpTo('bottom')}>
             bottom
           </Button>
