@@ -80,6 +80,7 @@ class DebugBuffer {
       info: console.info,
       warn: console.warn,
       error: console.error,
+      // biome-ignore lint/suspicious/noConsole: this buffer is the runtime sink for console.*; capturing the originals is the point
       debug: console.debug,
     };
     const wrap = (level: DebugLevel, original: (...args: unknown[]) => void) => {

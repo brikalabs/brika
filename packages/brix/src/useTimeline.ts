@@ -7,7 +7,7 @@
  *   const { sprite, done } = useTimeline(myTimeline, { fps: 30 });
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { compose, EMPTY_SPRITE, type Sprite } from './sprite';
 import { type Timeline, timelineDone, timelineDuration, tracksAt } from './timeline';
 
@@ -32,6 +32,11 @@ export function useTimeline(tl: Timeline, opts: UseTimelineOptions = {}): Timeli
   const active = opts.active ?? true;
   const [t, setT] = useState(0);
 
+  // Stash onEnd in a ref so the clock effect can read the latest
+  // callback without re-binding (which would restart the interval).
+  const onEndRef = useRef(opts.onEnd);
+  onEndRef.current = opts.onEnd;
+
   useEffect(() => {
     if (!active) {
       return;
@@ -45,14 +50,11 @@ export function useTimeline(tl: Timeline, opts: UseTimelineOptions = {}): Timeli
       setT(elapsed);
       if (!tl.loop && !endFired && elapsed >= total) {
         endFired = true;
-        opts.onEnd?.();
+        onEndRef.current?.();
         clearInterval(id);
       }
     }, interval);
     return () => clearInterval(id);
-    // `opts.onEnd` intentionally not a dep: re-binding it shouldn't restart
-    // the clock. Callers that need to re-arm should change `tl`.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tl, interval, active]);
 
   const sprites = tracksAt(tl, t);

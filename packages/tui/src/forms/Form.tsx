@@ -154,16 +154,20 @@ export function Form({
 
   const { focus, focusNext } = useFocusManager();
 
-  // Auto-focus the first field on mount. We don't list `focus` in
-  // deps — we want this to fire exactly once at mount, not whenever
-  // the manager re-renders.
+  // Auto-focus the first field as soon as one is registered. A ref
+  // gates the call so it fires exactly once, even if `fields` mutates
+  // later (e.g. children load asynchronously after the first render).
+  const didAutoFocus = useRef(false);
   useEffect(() => {
+    if (didAutoFocus.current) {
+      return;
+    }
     const first = fields[0]?.props.name;
     if (first) {
+      didAutoFocus.current = true;
       focus(`formfield:${first}`);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [fields, focus]);
 
   const statuses = useMemo<Readonly<Record<string, FieldStatus>>>(() => {
     const out: Record<string, FieldStatus> = {};

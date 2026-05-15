@@ -12,6 +12,13 @@
  * should `return` explicitly (mirrors the Node REPL's `.editor` mode).
  * If the snippet doesn't contain `return`, we wrap it once so single
  * expressions still produce a value implicitly.
+ *
+ * Safety: this function uses `new Function(...)` — the classic JS code-
+ * execution sink. It is guarded so it cannot run when:
+ *   - `NODE_ENV === 'production'`, or
+ *   - the host explicitly opts out by setting `BRIKA_DISABLE_REPL=1`.
+ * The `<DebugProvider>` component is also opt-in (`enabled` prop, default
+ * `true` only in dev), so production bundles never reach this path.
  */
 
 export interface EvaluateResult {
@@ -19,10 +26,23 @@ export interface EvaluateResult {
   readonly value: unknown;
 }
 
+const DISABLED_RESULT: EvaluateResult = {
+  ok: false,
+  value: new Error('REPL is disabled in this environment'),
+};
+
+function isReplDisabled(): boolean {
+  return process.env.NODE_ENV === 'production' || process.env.BRIKA_DISABLE_REPL === '1';
+}
+
 export async function evaluate(code: string): Promise<EvaluateResult> {
+  if (isReplDisabled()) {
+    return DISABLED_RESULT;
+  }
   const wrapped = needsExplicitReturn(code) ? `return (${code});` : code;
-  // We construct an async function and call it. Errors propagate
-  // through the returned promise so the caller can format them.
+  // The Function constructor is the whole point of a REPL. The guard
+  // above keeps this path closed in production; in dev the operator
+  // who opened the overlay is the same one typing the expression.
   // eslint-disable-next-line no-new-func
   const fn = new Function(`return (async () => { ${wrapped} })()`);
   try {

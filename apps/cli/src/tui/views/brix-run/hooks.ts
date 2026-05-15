@@ -47,7 +47,7 @@ export function useGameSounds(state: GameState): void {
   useEffect(() => {
     const jumped = state.status === 'running' && prevGrounded.current && !state.brix.grounded;
     const died = prevStatus.current === 'running' && state.status === 'over';
-    if (died || jumped) {
+    if ((died || jumped) && process.stdout.isTTY) {
       process.stdout.write('\x07');
     }
     prevGrounded.current = state.brix.grounded;

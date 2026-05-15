@@ -154,44 +154,65 @@ function makeGrid(width: number, height: number): (Cell | null)[][] {
  */
 export function compose(layers: ReadonlyArray<LayerInput>, size: CanvasSize = {}): Sprite {
   const placements = layers.map(normalize);
+  const { width, height } = resolveCanvas(placements, size);
+  const grid = makeGrid(width, height);
+  for (const p of placements) {
+    paintLayer(grid, width, p);
+  }
+  return { rows: grid, width, height };
+}
+
+function resolveCanvas(
+  placements: ReadonlyArray<LayerPlacement>,
+  size: CanvasSize
+): { width: number; height: number } {
+  if (size.width !== undefined && size.height !== undefined) {
+    return { width: size.width, height: size.height };
+  }
   let width = size.width ?? 0;
   let height = size.height ?? 0;
-  if (size.width === undefined || size.height === undefined) {
-    for (const p of placements) {
-      const x = p.x ?? 0;
-      const y = p.y ?? 0;
-      if (size.width === undefined && x + p.sprite.width > width) {
-        width = x + p.sprite.width;
-      }
-      if (size.height === undefined && y + p.sprite.height > height) {
-        height = y + p.sprite.height;
-      }
-    }
-  }
-  const grid = makeGrid(width, height);
   for (const p of placements) {
     const x = p.x ?? 0;
     const y = p.y ?? 0;
-    for (let r = 0; r < p.sprite.height; r += 1) {
-      const targetRow = grid[y + r];
-      const sourceRow = p.sprite.rows[r];
-      if (!targetRow || !sourceRow) {
-        continue;
-      }
-      for (let c = 0; c < p.sprite.width; c += 1) {
-        const cell = sourceRow[c];
-        if (!cell) {
-          continue;
-        }
-        const tc = x + c;
-        if (tc < 0 || tc >= width) {
-          continue;
-        }
-        targetRow[tc] = applyOverrides(cell, p);
-      }
+    if (size.width === undefined) {
+      width = Math.max(width, x + p.sprite.width);
+    }
+    if (size.height === undefined) {
+      height = Math.max(height, y + p.sprite.height);
     }
   }
-  return { rows: grid, width, height };
+  return { width, height };
+}
+
+function paintLayer(grid: (Cell | null)[][], width: number, placement: LayerPlacement): void {
+  const x = placement.x ?? 0;
+  const y = placement.y ?? 0;
+  for (let r = 0; r < placement.sprite.height; r += 1) {
+    paintRow(grid[y + r], placement.sprite.rows[r], x, width, placement);
+  }
+}
+
+function paintRow(
+  targetRow: (Cell | null)[] | undefined,
+  sourceRow: SpriteRow | undefined,
+  xOffset: number,
+  width: number,
+  placement: LayerPlacement
+): void {
+  if (!targetRow || !sourceRow) {
+    return;
+  }
+  for (let c = 0; c < placement.sprite.width; c += 1) {
+    const cell = sourceRow[c];
+    if (!cell) {
+      continue;
+    }
+    const tc = xOffset + c;
+    if (tc < 0 || tc >= width) {
+      continue;
+    }
+    targetRow[tc] = applyOverrides(cell, placement);
+  }
 }
 
 /** Recolor every opaque cell. Cheap — allocates one new Sprite. */

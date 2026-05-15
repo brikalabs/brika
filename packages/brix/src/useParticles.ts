@@ -30,10 +30,7 @@ export function useParticles(emitter: Emitter | null, opts: UseParticlesOpts): S
   const [field, setField] = useState<ParticleField>(() => emptyField(width, height));
 
   useEffect(() => {
-    if (!active) {
-      return;
-    }
-    if (!emitter && field.particles.length === 0) {
+    if (!active || !emitter) {
       return;
     }
     const rng = makeRng(seed ?? randomSeed());
@@ -46,9 +43,6 @@ export function useParticles(emitter: Emitter | null, opts: UseParticlesOpts): S
       setField((f) => stepField(f, dt, emitter, rng));
     }, interval);
     return () => clearInterval(id);
-    // field.particles.length intentionally not a dep — the effect should
-    // only start/stop on emitter changes, not every particle update.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [emitter, fps, seed, active]);
 
   useEffect(() => {
