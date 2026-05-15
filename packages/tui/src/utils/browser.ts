@@ -6,16 +6,30 @@
  * The URL is validated against http(s) only and the spawn uses the
  * array form (no shell) so neither `javascript:` schemes nor shell
  * metacharacters in the URL can escape into a command.
+ *
+ * The platform-opener call is injectable via `deps.spawn` so tests can
+ * exercise this function without physically launching the user's
+ * browser.
  */
 
 const SAFE_SCHEME = /^https?:\/\//i;
 
-export function openInBrowser(url: string): void {
+export interface OpenInBrowserDeps {
+  /** Override the default `Bun.spawn`. Useful for tests. */
+  readonly spawn?: (cmd: ReadonlyArray<string>) => void;
+}
+
+function defaultSpawn(cmd: ReadonlyArray<string>): void {
+  Bun.spawn([...cmd], { stdout: 'ignore', stderr: 'ignore' });
+}
+
+export function openInBrowser(url: string, deps: OpenInBrowserDeps = {}): void {
   if (!SAFE_SCHEME.test(url)) {
     return;
   }
+  const spawn = deps.spawn ?? defaultSpawn;
   try {
-    Bun.spawn(openCmd(url), { stdout: 'ignore', stderr: 'ignore' });
+    spawn(openCmd(url));
   } catch {
     /* user can copy from screen */
   }

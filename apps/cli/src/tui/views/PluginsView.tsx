@@ -158,8 +158,8 @@ function InstalledTab(): React.ReactElement {
   useKey('/', () => setFilterMode(true));
 
   return (
-    <Box flexDirection="column">
-      <Box>
+    <Box flexDirection="column" flexGrow={1}>
+      <Box flexShrink={0}>
         <Text dimColor>{items.length} installed</Text>
         {filter && (
           <>
@@ -213,8 +213,8 @@ function InstalledTab(): React.ReactElement {
         </Box>
       )}
 
-      <Box>
-        <Box flexDirection="column" minWidth={32} marginRight={2}>
+      <Box flexGrow={1} flexShrink={1} minHeight={6}>
+        <Box flexDirection="column" minWidth={32} marginRight={2} flexShrink={0}>
           <PluginRows
             items={items}
             allCount={allItems.length}
@@ -224,7 +224,7 @@ function InstalledTab(): React.ReactElement {
           {focused && <PluginMeta plugin={focused} />}
         </Box>
 
-        <Box flexDirection="column" flexGrow={1}>
+        <Box flexDirection="column" flexGrow={1} flexShrink={1}>
           <ReadmePane
             hasFocus={Boolean(focused)}
             loading={readmeLoading}
@@ -235,7 +235,7 @@ function InstalledTab(): React.ReactElement {
         </Box>
       </Box>
 
-      <Box marginTop={1}>
+      <Box marginTop={1} flexShrink={0}>
         <Button shortcut="e" variant="success" enabled={interactive} onPress={runAction('enable')}>
           enable
         </Button>

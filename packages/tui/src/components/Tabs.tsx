@@ -115,7 +115,9 @@ export function Tabs({
 
   return (
     <TabsContext.Provider value={ctx}>
-      <Box flexDirection="column">{children}</Box>
+      <Box flexDirection="column" flexGrow={1}>
+        {children}
+      </Box>
     </TabsContext.Provider>
   );
 }
@@ -280,7 +282,12 @@ export function TabsContent({
     return null;
   }
   return (
-    <Box display={active ? 'flex' : 'none'} flexDirection="column" marginTop={active ? 1 : 0}>
+    <Box
+      display={active ? 'flex' : 'none'}
+      flexDirection="column"
+      flexGrow={active ? 1 : 0}
+      marginTop={active ? 1 : 0}
+    >
       {children}
     </Box>
   );

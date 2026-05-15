@@ -16,6 +16,12 @@
  *   - `Ctrl+G`              — jump to bottom
  *   - `Esc`                 — release focus (hands it to the next focusable)
  *
+ * **Event isolation.** While focused, the area calls
+ * `useCaptureInput()` so every plain `useKey` outside any `<KeyScope>`
+ * suspends — section-jump hotkeys (1-8), `/`, `q`, etc. don't fire
+ * while the user is scrolling. The area's own scroll keybinds live
+ * inside a `<KeyScope>` so they bypass that suspend and keep firing.
+ *
  * How the scroll works: children render at their natural height inside
  * an outer Box that's clipped to `height` rows. A negative `marginTop`
  * on the inner Box shifts the children up by `offset` rows. The inner
@@ -29,9 +35,11 @@
 import { Box, type DOMElement, Text, useFocus, useFocusManager } from 'ink';
 import type React from 'react';
 import { type ReactNode, useCallback, useEffect, useId, useRef, useState } from 'react';
+import { KeyScope } from '../keys/KeyScope';
 import { useKey } from '../keys/useKey';
 import { hitTest, readBounds } from '../mouse/useBounds';
 import { type MouseEvent, useMouse } from '../mouse/useMouse';
+import { useCaptureInput } from '../shell/useTuiShell';
 import { useMeasure } from '../state/useMeasure';
 
 export interface ScrollAreaProps {
@@ -67,9 +75,23 @@ export interface ScrollState {
   readonly focused: boolean;
 }
 
+/**
+ * Outer wrapper. Renders a `<KeyScope>` so the inner component's
+ * `useKey` hooks bypass the shell's capture-suspend mechanism — every
+ * external `useKey` outside a scope auto-suspends when we call
+ * `useCaptureInput(true)` from the inner, but ours keeps firing.
+ */
+export function ScrollArea(props: Readonly<ScrollAreaProps>): React.ReactElement {
+  return (
+    <KeyScope>
+      <ScrollAreaInner {...props} />
+    </KeyScope>
+  );
+}
+
 const MIN_HEIGHT = 1;
 
-export function ScrollArea({
+function ScrollAreaInner({
   height,
   children,
   initialOffset = 0,
@@ -85,14 +107,13 @@ export function ScrollArea({
   const { isFocused } = useFocus({ autoFocus, id: focusId, isActive: focusable });
   const { focus, focusNext } = useFocusManager();
 
-  // Two refs: one measures the inner content's natural height (for max
-  // offset), the other measures the windowed Box's actual height when
-  // the consumer didn't pass an explicit row count.
+  // While focused, suspend every plain `useKey` (i.e. those outside a
+  // KeyScope) so section-jump hotkeys / quick filters / etc. don't
+  // double-fire alongside the scroll keys.
+  useCaptureInput(isFocused);
+
   const [innerRef, innerSize] = useMeasure();
   const [windowRef, windowSize] = useMeasure();
-  // 1 row for the status chrome — keeps the user's `height` intuitive
-  // ("show 20 rows of content") and lets the auto-fill path subtract
-  // the chrome from the measured window height.
   const STATUS_ROWS = statusLine === null ? 0 : 1;
   const visibleRows = height
     ? Math.max(MIN_HEIGHT, height)
@@ -102,8 +123,7 @@ export function ScrollArea({
 
   const [offset, setOffset] = useState(initialOffset);
 
-  // Re-clamp whenever content shrinks under the cursor. We deliberately
-  // don't memo this — the comparison inside `setOffset` keeps it cheap.
+  // Re-clamp whenever content shrinks under the cursor.
   useEffect(() => {
     setOffset((cur) => (cur > maxOffset ? maxOffset : cur));
   }, [maxOffset]);
@@ -135,7 +155,6 @@ export function ScrollArea({
   useKey('ctrl+g', () => setClamped(maxOffset), isFocused);
   useKey('escape', () => focusNext(), isFocused);
 
-  // Click anywhere in the pane focuses it.
   const containerRef = useRef<DOMElement>(null);
   const onMouse = useCallback(
     (e: MouseEvent) => {
@@ -155,9 +174,6 @@ export function ScrollArea({
   const state: ScrollState = { offset, contentHeight, height: visibleRows, focused: isFocused };
   const chrome = renderStatus(statusLine, state, accent);
 
-  // When the caller passed an explicit height, give the window an
-  // explicit size; otherwise let it grow to fill the flex parent and
-  // we'll size from the measurement.
   const windowProps = height
     ? { height: visibleRows }
     : { flexGrow: 1, flexBasis: 0 as const, flexShrink: 1 };
