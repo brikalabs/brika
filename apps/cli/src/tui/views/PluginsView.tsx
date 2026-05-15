@@ -21,9 +21,14 @@
  */
 
 import {
+  Badge,
+  type BadgeVariant,
   Confirm,
   ConfirmDescription,
   ConfirmTitle,
+  EmptyState,
+  EmptyStateDescription,
+  EmptyStateTitle,
   Input,
   Search,
   SearchEmpty,
@@ -263,27 +268,19 @@ function PluginRow({
     <Box>
       <Text color={focused ? 'cyan' : undefined}>{focused ? '▸ ' : '  '}</Text>
       <Text bold={focused}>{plugin.displayName ?? plugin.name}</Text>
-      <Text dimColor> v{plugin.version}</Text>
-      <Text> </Text>
-      <StateBadge state={state} />
+      <Text dimColor> v{plugin.version} </Text>
+      <Badge variant={STATE_VARIANT[state] ?? 'secondary'}>{state}</Badge>
     </Box>
   );
 }
 
-const STATE_COLOR: Readonly<Record<string, string>> = {
-  running: 'green',
-  crashed: 'red',
-  loading: 'yellow',
-  disabled: 'gray',
+const STATE_VARIANT: Readonly<Record<string, BadgeVariant>> = {
+  running: 'success',
+  crashed: 'destructive',
+  loading: 'warning',
+  disabled: 'secondary',
+  idle: 'secondary',
 };
-
-function StateBadge({ state }: Readonly<{ state: string }>): React.ReactElement {
-  return (
-    <Text color={STATE_COLOR[state]} dimColor={state === 'disabled' || state === 'idle'}>
-      · {state}
-    </Text>
-  );
-}
 
 interface PluginListProps {
   readonly items: ReadonlyArray<PluginListItem>;
@@ -297,10 +294,22 @@ function PluginList({
   focusIndex,
 }: Readonly<PluginListProps>): React.ReactElement {
   if (allCount === 0) {
-    return <Text dimColor>(no plugins yet — press i to install)</Text>;
+    return (
+      <EmptyState>
+        <EmptyStateTitle>No plugins yet</EmptyStateTitle>
+        <EmptyStateDescription>Tab to Search to install one.</EmptyStateDescription>
+      </EmptyState>
+    );
   }
   if (items.length === 0) {
-    return <Text dimColor>(filter matches nothing — Esc / clear with `/`+Enter)</Text>;
+    return (
+      <EmptyState>
+        <EmptyStateTitle>Filter matches nothing</EmptyStateTitle>
+        <EmptyStateDescription>
+          Press <Text bold>/</Text> then Enter on an empty input to clear.
+        </EmptyStateDescription>
+      </EmptyState>
+    );
   }
   return (
     <>

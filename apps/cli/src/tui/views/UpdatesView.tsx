@@ -7,6 +7,7 @@
  * <CliProvider> if it needs to say something.
  */
 
+import { Properties, Property } from '@brika/tui';
 import { Box, Text } from 'ink';
 import type React from 'react';
 import { useCli } from '../useCli';
@@ -18,17 +19,11 @@ export function UpdatesView(): React.ReactElement {
       <Box marginBottom={1}>
         <Text bold>Updates</Text>
       </Box>
-      <Box flexDirection="column" marginBottom={1}>
-        <Box>
-          <Text dimColor>current: </Text>
-          <Text>v{cli.version}</Text>
-        </Box>
-        <Box>
-          <Text dimColor>channel: </Text>
-          <Text>stable</Text>
-        </Box>
-      </Box>
-      <Box marginBottom={1}>
+      <Properties>
+        <Property name="current">{`v${cli.version}`}</Property>
+        <Property name="channel">stable</Property>
+      </Properties>
+      <Box marginTop={1}>
         <Text dimColor>
           update check + channel switching land once the channels module is portable
         </Text>

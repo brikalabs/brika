@@ -9,7 +9,7 @@
  * through <CliProvider>; the chrome owns the face.
  */
 
-import { Card } from '@brika/tui';
+import { Badge, Card, EmptyState, EmptyStateDescription, EmptyStateTitle } from '@brika/tui';
 import { Box, Text } from 'ink';
 import type React from 'react';
 import {
@@ -48,13 +48,10 @@ function HubBody({ cli }: Readonly<{ cli: ReturnType<typeof useCli> }>): React.R
   if (hub.state === 'running') {
     return (
       <Box flexDirection="column">
-        <Box>
-          <Text color="green" bold>
-            ●
-          </Text>
-          <Text> running</Text>
-        </Box>
-        <Text dimColor>pid {hub.pid}</Text>
+        <Badge variant="success" dot bold>
+          running
+        </Badge>
+        <Text dimColor>{hub.pid === null ? 'external' : `pid ${hub.pid}`}</Text>
         <Text dimColor>{cli.workspace}</Text>
       </Box>
     );
@@ -62,7 +59,7 @@ function HubBody({ cli }: Readonly<{ cli: ReturnType<typeof useCli> }>): React.R
   if (hub.state === 'stale') {
     return (
       <Box flexDirection="column">
-        <Text color="yellow">stale pid {hub.pid}</Text>
+        <Badge variant="warning" dot>{`stale pid ${hub.pid}`}</Badge>
         <Text dimColor>not actually running</Text>
       </Box>
     );
@@ -70,7 +67,9 @@ function HubBody({ cli }: Readonly<{ cli: ReturnType<typeof useCli> }>): React.R
   if (hub.state === 'stopped') {
     return (
       <Box flexDirection="column">
-        <Text color="gray">stopped</Text>
+        <Badge variant="secondary" dot>
+          stopped
+        </Badge>
         <Text dimColor>Ctrl+S to start</Text>
       </Box>
     );
@@ -82,7 +81,12 @@ function PluginsBody({
   items,
 }: Readonly<{ items: ReadonlyArray<PluginListItem> }>): React.ReactElement {
   if (items.length === 0) {
-    return <Text dimColor>(none yet — press p)</Text>;
+    return (
+      <EmptyState>
+        <EmptyStateTitle>No plugins yet</EmptyStateTitle>
+        <EmptyStateDescription>press p to manage</EmptyStateDescription>
+      </EmptyState>
+    );
   }
   return (
     <Box flexDirection="column">
@@ -102,7 +106,12 @@ function WorkflowsBody({
   items,
 }: Readonly<{ items: ReadonlyArray<WorkflowSummaryDto> }>): React.ReactElement {
   if (items.length === 0) {
-    return <Text dimColor>(none yet — press w)</Text>;
+    return (
+      <EmptyState>
+        <EmptyStateTitle>No workflows yet</EmptyStateTitle>
+        <EmptyStateDescription>press w to manage</EmptyStateDescription>
+      </EmptyState>
+    );
   }
   return (
     <Box flexDirection="column">

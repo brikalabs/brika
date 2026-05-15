@@ -4,6 +4,7 @@
  * default host) land once we have a place to persist them.
  */
 
+import { Properties, Property } from '@brika/tui';
 import { Box, Text } from 'ink';
 import type React from 'react';
 import { useCli } from '../useCli';
@@ -15,26 +16,17 @@ export function SettingsView(): React.ReactElement {
       <Box marginBottom={1}>
         <Text bold>Settings</Text>
       </Box>
-      <Row label="BRIKA_HOME" value={cli.workspace} />
-      <Row label="version" value={`v${cli.version}`} />
-      <Row label="hub host" value={process.env.BRIKA_HOST || '127.0.0.1'} />
-      <Row label="hub port" value={process.env.BRIKA_PORT || '3001'} />
-      <Row label="runtime" value={`Bun ${Bun.version}`} />
-      <Row label="platform" value={`${process.platform}/${process.arch}`} />
+      <Properties>
+        <Property name="BRIKA_HOME">{cli.workspace}</Property>
+        <Property name="version">{`v${cli.version}`}</Property>
+        <Property name="hub host">{process.env.BRIKA_HOST || '127.0.0.1'}</Property>
+        <Property name="hub port">{process.env.BRIKA_PORT || '3001'}</Property>
+        <Property name="runtime">{`Bun ${Bun.version}`}</Property>
+        <Property name="platform">{`${process.platform}/${process.arch}`}</Property>
+      </Properties>
       <Box marginTop={1}>
         <Text dimColor>read-only for now · edit env vars on the host shell</Text>
       </Box>
-    </Box>
-  );
-}
-
-function Row({ label, value }: Readonly<{ label: string; value: string }>): React.ReactElement {
-  return (
-    <Box>
-      <Box width={14}>
-        <Text dimColor>{label}</Text>
-      </Box>
-      <Text>{value}</Text>
     </Box>
   );
 }
