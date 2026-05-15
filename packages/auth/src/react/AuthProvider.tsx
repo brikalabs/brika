@@ -15,8 +15,12 @@ export interface AuthContextType {
   session: Session | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  /** True when no admin exists and initial setup is required. */
+  /** True when initial setup (admin creation OR onboarding wizard) is still required. */
   needsSetup: boolean;
+  /** True once an admin user exists (e.g. created via CLI or the setup wizard). */
+  hasAdmin: boolean;
+  /** True once the onboarding wizard has been marked complete. */
+  setupCompleted: boolean;
   error: string | null;
   client: AuthClient;
   /** Clear the client-side session (e.g. after a 401 response). Does not call logout API. */
@@ -50,7 +54,11 @@ export function AuthProvider({ children, apiUrl, fetch }: Readonly<AuthProviderP
 
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [needsSetup, setNeedsSetup] = useState(false);
+  const [setupStatus, setSetupStatus] = useState<{
+    hasAdmin: boolean;
+    setupCompleted: boolean;
+    needsSetup: boolean;
+  }>({ hasAdmin: false, setupCompleted: true, needsSetup: false });
   const [error, setError] = useState<string | null>(null);
 
   // Check for active session on mount (cookie is HttpOnly, invisible to JS)
@@ -63,7 +71,7 @@ export function AuthProvider({ children, apiUrl, fetch }: Readonly<AuthProviderP
           client.checkSetupStatus(),
         ]);
         setSession(loaded);
-        setNeedsSetup(status.needsSetup);
+        setSetupStatus(status);
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to load session';
         setError(message);
@@ -82,7 +90,7 @@ export function AuthProvider({ children, apiUrl, fetch }: Readonly<AuthProviderP
     try {
       const [loaded, status] = await Promise.all([client.getSession(), client.checkSetupStatus()]);
       setSession(loaded);
-      setNeedsSetup(status.needsSetup);
+      setSetupStatus(status);
     } catch {
       setSession(null);
     }
@@ -94,14 +102,16 @@ export function AuthProvider({ children, apiUrl, fetch }: Readonly<AuthProviderP
       session,
       isAuthenticated: session !== null,
       isLoading,
-      needsSetup,
+      needsSetup: setupStatus.needsSetup,
+      hasAdmin: setupStatus.hasAdmin,
+      setupCompleted: setupStatus.setupCompleted,
       error,
       client,
       clearSession,
       updateSession,
       refreshSession,
     }),
-    [session, isLoading, needsSetup, error, client, clearSession, updateSession, refreshSession]
+    [session, isLoading, setupStatus, error, client, clearSession, updateSession, refreshSession]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

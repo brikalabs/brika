@@ -1,5 +1,6 @@
 import { Box, Text } from 'ink';
 import type React from 'react';
+import { useMeasure } from '../state/useMeasure';
 import { statusColor, statusLabel, summarizeCrash, type TuiStatus } from '../utils/status';
 
 interface Props {
@@ -9,11 +10,15 @@ interface Props {
   readonly lines: ReadonlyArray<string>;
   /** Monotonic counter that ticks when `lines` changes — used for stable React keys. */
   readonly revision: number;
-  /** Number of lines that fit in the pane. */
+  /** First-frame fallback for the slice size before the body Box has
+   *  been measured. Once `useMeasure` returns a real height we use
+   *  that instead, so the rendered slice always matches the actual
+   *  rendered box height — no empty rows below, no clipped tail. */
   readonly visible: number;
   /** Lines above the tail; `null` = live-tail (auto-scroll). */
   readonly scrollFromBottom: number | null;
-  /** Max valid scroll offset (`lines.length - visible`). */
+  /** Max valid scroll offset. Shown in the header chrome; the actual
+   *  windowing math uses the live measured height. */
   readonly maxScroll: number;
   /** Active search query (empty = no highlighting). */
   readonly searchQuery: string;
@@ -44,17 +49,24 @@ export function LogPane({
   status,
   renderLine,
 }: Readonly<Props>): React.ReactElement {
+  // The body Box has `flexGrow={1}` — we measure its actual rendered
+  // height and slice against THAT, so the windowed lines always
+  // match the visible area exactly. Before the first measurement
+  // we fall back to the caller's `visible` estimate.
+  const [bodyRef, bodySize] = useMeasure();
+  const slice = bodySize.height > 0 ? bodySize.height : visible;
+
   const total = lines.length;
   const offset = scrollFromBottom ?? 0;
-  const end = Math.max(visible, total - offset);
-  const start = Math.max(0, end - visible);
+  const end = Math.max(0, total - offset);
+  const start = Math.max(0, end - slice);
   const window = lines.slice(start, end);
   const hasSearch = Boolean(searchQuery);
 
   const crashDetail = status?.kind === 'crashed' ? summarizeCrash(status).detail : null;
   return (
     <Box flexDirection="column" flexGrow={1} borderStyle="single" borderColor="gray" paddingX={1}>
-      <Box>
+      <Box flexShrink={0}>
         <Text bold>{label}</Text>
         {status && (
           <>
@@ -69,13 +81,20 @@ export function LogPane({
         </Text>
       </Box>
       {crashDetail && (
-        <Box>
+        <Box flexShrink={0}>
           <Text color="red" dimColor>
             ↳ {crashDetail}
           </Text>
         </Box>
       )}
-      <Box marginTop={1} flexDirection="column">
+      <Box
+        ref={bodyRef}
+        marginTop={1}
+        flexDirection="column"
+        flexGrow={1}
+        flexShrink={1}
+        overflow="hidden"
+      >
         {window.length === 0 ? (
           <Text dimColor>(no output yet)</Text>
         ) : (

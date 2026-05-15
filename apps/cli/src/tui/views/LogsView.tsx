@@ -34,7 +34,10 @@ import { useCli } from '../useCli';
 
 const RING_BUFFER_LINES = 5_000;
 /** Vertical space LogsView reserves around the LogPane: title row (2),
- *  pane border + label + top margin (4), key-hint footer (2). */
+ *  pane border + label + top margin (4), key-hint footer (2). The
+ *  conditional action-buttons row (live / next / prev) adds 2 more
+ *  when visible, but LogPane now measures its own body so the slice
+ *  size stays correct regardless. */
 const VIEW_CHROME = 8;
 
 function formatEvent(e: LogEventDto): string {
@@ -198,24 +201,34 @@ export function LogsView(): React.ReactElement {
           return event ? <ColoredLogLine event={event} /> : _text;
         }}
       />
-      <Box marginTop={1}>
-        <Button shortcut="G" onPress={() => scroll.goLive()} enabled={scroll.offset !== null}>
-          live
-        </Button>
-        <Button shortcut="n" onPress={() => search.next()} enabled={Boolean(search.query)}>
-          next
-        </Button>
-        <Button shortcut="N" onPress={() => search.prev()} enabled={Boolean(search.query)}>
-          prev
-        </Button>
+      {(scroll.offset !== null || Boolean(search.query)) && (
+        <Box flexShrink={0} marginTop={1}>
+          {scroll.offset !== null ? (
+            <Button shortcut="G" onPress={() => scroll.goLive()}>
+              live
+            </Button>
+          ) : null}
+          {search.query ? (
+            <>
+              <Button shortcut="n" onPress={() => search.next()}>
+                next
+              </Button>
+              <Button shortcut="N" onPress={() => search.prev()}>
+                prev
+              </Button>
+            </>
+          ) : null}
+        </Box>
+      )}
+      <Box flexShrink={0}>
+        <HintBar>
+          <Hint k="↑↓">scroll</Hint>
+          <Hint k="^U/^D">page</Hint>
+          <Hint k="/" accent="info">
+            search
+          </Hint>
+        </HintBar>
       </Box>
-      <HintBar>
-        <Hint k="↑↓">scroll</Hint>
-        <Hint k="^U/^D">page</Hint>
-        <Hint k="/" accent="info">
-          search
-        </Hint>
-      </HintBar>
     </Box>
   );
 }
