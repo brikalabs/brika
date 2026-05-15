@@ -19,6 +19,10 @@ export interface PluginListItem {
   readonly version: string;
   readonly enabled: boolean;
   readonly description?: string;
+  readonly author?: string | { name?: string };
+  readonly homepage?: string;
+  readonly repository?: string | { url?: string };
+  readonly state?: 'idle' | 'running' | 'stopped' | 'crashed' | 'loading';
 }
 
 export interface PluginListResponse {
@@ -59,6 +63,17 @@ export async function pluginAction(
   });
   if (!res.ok) {
     throw new Error(`${action} failed: ${res.status}`);
+  }
+}
+
+/** Uninstall = disable + unload + remove from `brika.yml` + clean
+ *  state/secrets. Hub handles the full teardown; we just call DELETE. */
+export async function uninstallPlugin(uid: string): Promise<void> {
+  const res = await hubFetch(`/api/plugins/${encodeURIComponent(uid)}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) {
+    throw new Error(`uninstall failed: ${res.status} ${await res.text()}`);
   }
 }
 
