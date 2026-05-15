@@ -38,6 +38,7 @@ import {
   type Mood,
   useFrameSeq,
 } from '@brika/brix';
+import { useTerminalSize } from '@brika/tui';
 import { Box, Text } from 'ink';
 import type React from 'react';
 import { useEffect, useMemo, useReducer, useRef } from 'react';
@@ -62,8 +63,14 @@ const REACTIONS: Readonly<Record<HubState, Reaction | null>> = {
 
 /** Face slot width — fits the widest reaction frame (sleep's `(-◡-) zZz`). */
 const FACE_SLOT = 9;
-/** Total bubble width including the tail glyph column. */
-const BUBBLE_WIDTH = 56;
+/** Outer footer chrome we must leave headroom for around the bubble:
+ *  shell `paddingX={1}` (2) + footer `paddingX={1}` (2) + face slot (9).
+ *  The bubble's own left padding lives inside that 9. */
+const BUBBLE_CHROME = 2 + 2 + FACE_SLOT;
+/** Lower bound so the bubble never collapses below "useful" on narrow terminals. */
+const BUBBLE_MIN_WIDTH = 32;
+/** Upper bound so we don't paint a 200-column bubble on ultrawides. */
+const BUBBLE_MAX_WIDTH = 120;
 
 /**
  * Typewriter pacing for the host. Tuned to feel like Brix is reading
@@ -90,6 +97,11 @@ export function BrixHost(): React.ReactElement {
   const cli = useCli();
   const { hub, mood, statusText } = cli;
   const [state, dispatch] = useReducer(reduce, INITIAL_STATE);
+  const { columns } = useTerminalSize();
+  const bubbleWidth = Math.min(
+    BUBBLE_MAX_WIDTH,
+    Math.max(BUBBLE_MIN_WIDTH, columns - BUBBLE_CHROME)
+  );
 
   // ── Effect 1: hub state changes ──────────────────────────────────
   const lastHub = useRef<HubState>(hub.state);
@@ -177,7 +189,7 @@ export function BrixHost(): React.ReactElement {
       </Box>
       <Bubble
         text={bubbleText}
-        width={BUBBLE_WIDTH}
+        width={bubbleWidth}
         variant="speech"
         tail="left"
         borderColor="gray"
