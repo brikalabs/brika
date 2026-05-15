@@ -21,6 +21,7 @@
 
 import {
   Button,
+  FocusScope,
   Heading,
   Hint,
   HintBar,
@@ -242,33 +243,35 @@ export function LogsView(): React.ReactElement {
       />
 
       {showActions ? (
-        <Box flexShrink={0} marginTop={1}>
-          {scroll.offset !== null ? (
-            <Button shortcut="G" variant="success" onPress={() => scroll.goLive()}>
-              live
-            </Button>
-          ) : null}
-          {search.query ? (
-            <>
-              <Button shortcut="n" onPress={() => search.next()}>
-                next
+        <FocusScope autoFocus>
+          <Box flexShrink={0} marginTop={1}>
+            {scroll.offset !== null ? (
+              <Button shortcut="G" variant="success" onPress={() => scroll.goLive()}>
+                live
               </Button>
-              <Button shortcut="N" onPress={() => search.prev()}>
-                prev
-              </Button>
-              <Button
-                shortcut="c"
-                variant="warning"
-                onPress={() => {
-                  search.clear();
-                  setSearchDraft('');
-                }}
-              >
-                clear
-              </Button>
-            </>
-          ) : null}
-        </Box>
+            ) : null}
+            {search.query ? (
+              <>
+                <Button shortcut="n" onPress={() => search.next()}>
+                  next
+                </Button>
+                <Button shortcut="N" onPress={() => search.prev()}>
+                  prev
+                </Button>
+                <Button
+                  shortcut="c"
+                  variant="warning"
+                  onPress={() => {
+                    search.clear();
+                    setSearchDraft('');
+                  }}
+                >
+                  clear
+                </Button>
+              </>
+            ) : null}
+          </Box>
+        </FocusScope>
       ) : null}
 
       <Box flexShrink={0}>

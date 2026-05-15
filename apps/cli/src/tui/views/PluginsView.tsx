@@ -25,6 +25,7 @@ import {
   EmptyState,
   EmptyStateDescription,
   EmptyStateTitle,
+  FocusScope,
   Heading,
   Hint,
   HintBar,
@@ -305,26 +306,28 @@ function InstalledPluginDetail({
         />
       </Box>
 
-      <Box marginTop={1} flexShrink={0}>
-        <Button shortcut="escape" onPress={onBack}>
-          back
-        </Button>
-        <Button shortcut="e" variant="success" onPress={runAction('enable')}>
-          enable
-        </Button>
-        <Button shortcut="D" variant="warning" onPress={runAction('disable')}>
-          disable
-        </Button>
-        <Button shortcut="R" onPress={runAction('reload')}>
-          reload
-        </Button>
-        <Button shortcut="k" onPress={runAction('kill')}>
-          kill
-        </Button>
-        <Button shortcut="X" variant="destructive" onPress={() => setPendingUninstall(true)}>
-          uninstall
-        </Button>
-      </Box>
+      <FocusScope autoFocus>
+        <Box marginTop={1} flexShrink={0}>
+          <Button shortcut="escape" onPress={onBack}>
+            back
+          </Button>
+          <Button shortcut="e" variant="success" onPress={runAction('enable')}>
+            enable
+          </Button>
+          <Button shortcut="D" variant="warning" onPress={runAction('disable')}>
+            disable
+          </Button>
+          <Button shortcut="R" onPress={runAction('reload')}>
+            reload
+          </Button>
+          <Button shortcut="k" onPress={runAction('kill')}>
+            kill
+          </Button>
+          <Button shortcut="X" variant="destructive" onPress={() => setPendingUninstall(true)}>
+            uninstall
+          </Button>
+        </Box>
+      </FocusScope>
 
       <HintBar>
         <Hint k="Esc">back</Hint>
@@ -990,16 +993,18 @@ function RegistryDetail({
         </Box>
       ) : null}
 
-      <Box marginTop={1} flexShrink={0}>
-        <Button shortcut="escape" onPress={onBack}>
-          back
-        </Button>
-        {!installed && !installing ? (
-          <Button shortcut="i" variant="success" enabled={item.compatible} onPress={onInstall}>
-            install
+      <FocusScope autoFocus>
+        <Box marginTop={1} flexShrink={0}>
+          <Button shortcut="escape" onPress={onBack}>
+            back
           </Button>
-        ) : null}
-      </Box>
+          {!installed && !installing ? (
+            <Button shortcut="i" variant="success" enabled={item.compatible} onPress={onInstall}>
+              install
+            </Button>
+          ) : null}
+        </Box>
+      </FocusScope>
 
       <HintBar>
         <Hint k="Esc">back</Hint>

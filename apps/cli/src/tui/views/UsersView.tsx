@@ -12,6 +12,7 @@ import {
   EmptyStateDescription,
   EmptyStateTitle,
   email,
+  FocusScope,
   Form,
   FormField,
   FormInput,
@@ -109,11 +110,13 @@ export function UsersView(): React.ReactElement {
         </Box>
       )}
 
-      <Box marginTop={1}>
-        <Button shortcut="a" variant="success" enabled={!adding} onPress={() => setAdding(true)}>
-          add user
-        </Button>
-      </Box>
+      <FocusScope autoFocus={!adding}>
+        <Box marginTop={1}>
+          <Button shortcut="a" variant="success" enabled={!adding} onPress={() => setAdding(true)}>
+            add user
+          </Button>
+        </Box>
+      </FocusScope>
     </Box>
   );
 }

@@ -30,7 +30,6 @@ export function ShellFooter(): React.ReactElement {
         <Button
           shortcut="ctrl+s"
           variant="success"
-          tabIndex={-1}
           enabled={!running}
           onPress={() => void cli.startHub()}
         >
@@ -41,7 +40,6 @@ export function ShellFooter(): React.ReactElement {
         <Button
           shortcut="ctrl+x"
           variant="warning"
-          tabIndex={-1}
           enabled={running}
           onPress={() => void cli.stopHub()}
         >
@@ -49,17 +47,12 @@ export function ShellFooter(): React.ReactElement {
         </Button>
       ) : null}
       {bp.md ? (
-        <Button
-          shortcut="ctrl+r"
-          tabIndex={-1}
-          enabled={running}
-          onPress={() => void cli.restartHub()}
-        >
+        <Button shortcut="ctrl+r" enabled={running} onPress={() => void cli.restartHub()}>
           restart
         </Button>
       ) : null}
       {bp.md ? (
-        <Button shortcut="ctrl+o" tabIndex={-1} enabled={running} onPress={() => void cli.openUi()}>
+        <Button shortcut="ctrl+o" enabled={running} onPress={() => void cli.openUi()}>
           open
         </Button>
       ) : null}

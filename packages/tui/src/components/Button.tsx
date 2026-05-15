@@ -1,18 +1,17 @@
 /**
  * `<Button>` — keyboard-shortcut action, the TUI equivalent of a
- * shadcn button. There's no concept of mouse focus in our shell, so
- * "clickable" means "a key is bound to this action and the user sees
- * which one." The visible glyph IS the shortcut hint:
+ * shadcn button. The visible glyph IS the shortcut hint:
  *
  *   <Button shortcut="e" onPress={enable} variant="success">Enable</Button>
  *   <Button shortcut="X" onPress={uninstall} variant="destructive">Uninstall</Button>
  *
  *   →  [e] Enable     [X] Uninstall
  *
- * The button registers its own `useKey(shortcut, onPress)` so the
- * binding lives next to the label that documents it — no separate
- * footer hint to keep in sync. Disable the binding when the action
- * isn't applicable via `enabled={…}` (mirrors `useKey`'s third arg).
+ * Activation lives in the dispatch tree, not on the button itself.
+ * The shortcut registers with the nearest `<FocusScope>` ancestor via
+ * `useShortcut`, so it fires only while that scope is on the focus
+ * path — no `<FocusScope>` ancestor = the chip is decorative + the
+ * mouse click still works, but the keybind is inert by design.
  *
  * Variants:
  *   - `default`     — cyan accent, the neutral action.
@@ -20,40 +19,27 @@
  *   - `warning`     — yellow.
  *   - `destructive` — red.
  *   - `ghost`       — no accent on the label, just the shortcut.
- *
- * A row of buttons is just `<Box>` of `<Button>`s — no wrapper
- * primitive needed. Use `<Box gap={2}>` (Ink ≥ 6) or `<Button>`'s
- * built-in `marginRight={2}` (the default) to space them out.
  */
 
-import { Box, type DOMElement, Text, useFocusManager } from 'ink';
+import { Box, type DOMElement, Text } from 'ink';
 import type React from 'react';
 import { type ReactNode, useCallback, useRef } from 'react';
-import { useFocusable } from '../keys/useFocusable';
-import { useKey } from '../keys/useKey';
+import { useShortcut } from '../keys/dispatch';
 import { hitTest, readBounds } from '../mouse/useBounds';
 import { type MouseEvent, useMouse } from '../mouse/useMouse';
 
 export type ButtonVariant = 'default' | 'success' | 'warning' | 'destructive' | 'ghost';
 
 export interface ButtonProps {
-  /** Key spec passed to `useKey` — `e`, `D`, `ctrl+s`, `enter`,
+  /** Key spec passed to `useShortcut` — `e`, `D`, `ctrl+s`, `enter`,
    *  `escape`, etc. The display in `[…]` is pretty-printed (`^S`,
-   *  `↵`, `Esc`). Pass an empty string to disable the shortcut chip
-   *  while keeping click + Tab+Enter behaviour. */
+   *  `↵`, `Esc`). Pass an empty string to skip the chip + keybind
+   *  entirely while keeping the click target. */
   readonly shortcut: string;
   readonly onPress: () => void;
   /** Disable the binding (and dim the label). Default `true`. */
   readonly enabled?: boolean;
   readonly variant?: ButtonVariant;
-  /** Grab focus on mount. Default `false` (Buttons usually let an
-   *  Input take focus first). */
-  readonly autoFocus?: boolean;
-  /** Opt-in stable id for ink's focus manager. */
-  readonly id?: string;
-  /** DOM-style tab order — `-1` opts out of the Tab cycle. Click and
-   *  shortcut still work. Default `0`. */
-  readonly tabIndex?: number;
   readonly children?: ReactNode;
 }
 
@@ -65,62 +51,32 @@ const VARIANT_COLOR: Readonly<Record<ButtonVariant, string | undefined>> = {
   ghost: undefined,
 };
 
-/**
- * Two ways to activate a Button:
- *
- *   - **Shortcut** — type the key in brackets. Always live (subject
- *     to the usual capture rules of `useKey`).
- *   - **Focus + Enter** — Tab onto the button (ink's native focus
- *     cycle) and press Enter / Space. Useful when the user is
- *     already navigating with Tab from an adjacent Input.
- *
- * Focused state shows `▸ ` before the bracket so the eye can find
- * the active button without scanning shortcuts.
- */
 export function Button({
   shortcut,
   onPress,
   enabled = true,
   variant = 'default',
-  autoFocus = false,
-  id,
-  tabIndex,
   children,
 }: Readonly<ButtonProps>): React.ReactElement {
-  const { isFocused, focusId } = useFocusable({
-    id,
-    tabIndex,
-    autoFocus,
-    enabled,
-    onPress,
-  });
-  const { focus } = useFocusManager();
   const boxRef = useRef<DOMElement>(null);
 
-  // The shortcut chip is optional — `shortcut=""` skips the keybind so
-  // the Button stays click+focus-only (useful for layout-only buttons).
-  useKey(shortcut, onPress, enabled && shortcut.length > 0);
+  // Scope-gated keybind. Fires only when an ancestor `<FocusScope>` is
+  // on the current focus path; no scope = no keybind (click only).
+  useShortcut(shortcut, onPress, enabled && shortcut.length > 0);
 
-  // Mouse: focus on press-down, fire on click. Bounds are read once
-  // per event (via `readBounds`) instead of tracked through React
-  // state — keeps per-render work to zero so a screen full of
-  // buttons doesn't slow keystrokes down.
+  // Mouse: click fires `onPress` regardless of scope — clicks are
+  // intentional in a way arbitrary keystrokes aren't.
   const handleMouse = useCallback(
     (e: MouseEvent) => {
-      if (!enabled || e.button !== 'left') {
+      if (!enabled || e.button !== 'left' || e.action !== 'click') {
         return;
       }
       const bounds = readBounds(boxRef.current);
-      if (!bounds || !hitTest(bounds, e)) {
-        return;
-      }
-      if (e.action === 'down') {
-        focus(focusId);
-      } else if (e.action === 'click') {
+      if (bounds && hitTest(bounds, e)) {
         onPress();
       }
     },
-    [enabled, focusId, focus, onPress]
+    [enabled, onPress]
   );
   useMouse(handleMouse);
 
@@ -128,17 +84,12 @@ export function Button({
   const showShortcut = shortcut.length > 0;
   return (
     <Box ref={boxRef} marginRight={2}>
-      {isFocused ? (
-        <Text color={accent} bold>
-          ▸{' '}
-        </Text>
-      ) : null}
       {showShortcut ? (
-        <Text color={enabled ? accent : undefined} dimColor={!enabled} bold={enabled || isFocused}>
+        <Text color={enabled ? accent : undefined} dimColor={!enabled} bold={enabled}>
           [{formatShortcut(shortcut)}]
         </Text>
       ) : null}
-      <Text dimColor={!enabled} bold={isFocused}>
+      <Text dimColor={!enabled}>
         {showShortcut ? ' ' : ''}
         {children}
       </Text>

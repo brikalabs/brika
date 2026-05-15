@@ -1,3 +1,12 @@
+export {
+  FocusScope,
+  type FocusScopeProps,
+  type KeyDispatchProviderProps,
+  KeyDispatchProvider,
+  type KeyEvent,
+  useScopeId,
+  useShortcut,
+} from './dispatch';
 export { KeyScope, type KeyScopeProps, useInKeyScope } from './KeyScope';
 export { keyToBytes } from './keyToBytes';
 export { type FocusableState, type UseFocusableOptions, useFocusable } from './useFocusable';

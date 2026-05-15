@@ -17,7 +17,13 @@
  * Pressing any key during the splash skips it instantly.
  */
 
-import { DebugProvider, RouterProvider, TuiShellProvider, useRouterInstance } from '@brika/tui';
+import {
+  DebugProvider,
+  KeyDispatchProvider,
+  RouterProvider,
+  TuiShellProvider,
+  useRouterInstance,
+} from '@brika/tui';
 import { useApp } from 'ink';
 import type React from 'react';
 import { useCallback, useState } from 'react';
@@ -46,12 +52,14 @@ export function App({ version, boot = true }: Readonly<Props>): React.ReactEleme
   return (
     <DebugProvider>
       <RouterProvider router={router}>
-        <TuiShellProvider onQuit={onQuit}>
-          <CliProvider version={version}>
-            <GlobalKeys />
-            <ShellLayout />
-          </CliProvider>
-        </TuiShellProvider>
+        <KeyDispatchProvider>
+          <TuiShellProvider onQuit={onQuit}>
+            <CliProvider version={version}>
+              <GlobalKeys />
+              <ShellLayout />
+            </CliProvider>
+          </TuiShellProvider>
+        </KeyDispatchProvider>
       </RouterProvider>
     </DebugProvider>
   );

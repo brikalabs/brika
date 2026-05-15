@@ -302,10 +302,10 @@ function ScrollAreaInner({
       </Box>
       {showActions ? (
         <Box flexShrink={0}>
-          <Button shortcut="g" tabIndex={-1} enabled={!atTop} onPress={() => jumpTo('top')}>
+          <Button shortcut="g" enabled={!atTop} onPress={() => jumpTo('top')}>
             top
           </Button>
-          <Button shortcut="G" tabIndex={-1} enabled={!atBottom} onPress={() => jumpTo('bottom')}>
+          <Button shortcut="G" enabled={!atBottom} onPress={() => jumpTo('bottom')}>
             bottom
           </Button>
         </Box>

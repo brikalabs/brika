@@ -23,7 +23,7 @@
  * own status line near the buttons.
  */
 
-import { Badge, Button, Heading, Properties, Property, Spinner } from '@brika/tui';
+import { Badge, Button, FocusScope, Heading, Properties, Property, Spinner } from '@brika/tui';
 import { Box, Text } from 'ink';
 import type React from 'react';
 import { useCallback, useEffect, useState } from 'react';
@@ -166,26 +166,28 @@ export function UpdatesView(): React.ReactElement {
         </Box>
       ) : null}
 
-      <Box marginTop={1}>
-        <Button shortcut="c" enabled={!applying} onPress={() => void check()}>
-          check
-        </Button>
-        <Button
-          shortcut="n"
-          enabled={!applying && channel !== null}
-          onPress={() => void cycleChannel()}
-        >
-          channel
-        </Button>
-        <Button
-          shortcut="enter"
-          variant="success"
-          enabled={!applying && (info?.updateAvailable ?? false)}
-          onPress={() => void startApply()}
-        >
-          apply
-        </Button>
-      </Box>
+      <FocusScope autoFocus>
+        <Box marginTop={1}>
+          <Button shortcut="c" enabled={!applying} onPress={() => void check()}>
+            check
+          </Button>
+          <Button
+            shortcut="n"
+            enabled={!applying && channel !== null}
+            onPress={() => void cycleChannel()}
+          >
+            channel
+          </Button>
+          <Button
+            shortcut="enter"
+            variant="success"
+            enabled={!applying && (info?.updateAvailable ?? false)}
+            onPress={() => void startApply()}
+          >
+            apply
+          </Button>
+        </Box>
+      </FocusScope>
     </Box>
   );
 }
