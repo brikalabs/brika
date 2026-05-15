@@ -173,13 +173,16 @@ function PluginsTile({
         </EmptyState>
       ) : (
         <Box flexDirection="column">
-          {items.slice(0, MAX_ROWS).map((p) => (
-            <Box key={p.uid}>
-              <Text color={p.enabled ? 'green' : 'gray'}>{p.enabled ? '▸ ' : '· '}</Text>
-              <Text wrap="truncate-end">{p.displayName ?? p.name}</Text>
-              <Text dimColor>{` v${p.version}`}</Text>
-            </Box>
-          ))}
+          {items.slice(0, MAX_ROWS).map((p) => {
+            const running = p.status === 'running';
+            return (
+              <Box key={p.uid}>
+                <Text color={running ? 'green' : 'gray'}>{running ? '▸ ' : '· '}</Text>
+                <Text wrap="truncate-end">{p.displayName ?? p.name}</Text>
+                <Text dimColor>{` v${p.version}`}</Text>
+              </Box>
+            );
+          })}
           {items.length > MAX_ROWS && <Text dimColor>+ {items.length - MAX_ROWS} more</Text>}
         </Box>
       )}

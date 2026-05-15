@@ -61,6 +61,7 @@ import {
   fetchRegistryReadme,
   type InstallProgress,
   installFromRegistry,
+  type PluginHealth,
   type PluginListItem,
   type PluginMetrics,
   pluginAction,
@@ -109,7 +110,7 @@ function InstalledTab(): React.ReactElement {
   const allItems = list.data ?? [];
   const items = useMemo(() => filterPlugins(allItems, filter), [allItems, filter]);
   const focused = focusedUid ? (items.find((p) => p.uid === focusedUid) ?? null) : null;
-  const focusedMetrics = useLiveMetrics(focused?.uid ?? null, Boolean(focused?.enabled));
+  const focusedMetrics = useLiveMetrics(focused?.uid ?? null, focused?.status === 'running');
 
   // Load README whenever the focused plugin changes.
   useEffect(() => {
@@ -221,7 +222,6 @@ function InstalledTab(): React.ReactElement {
             allCount={allItems.length}
             focusedUid={focusedUid}
             onFocusChange={setFocusedUid}
-            focusedMetrics={focusedMetrics}
           />
           {focused && <PluginMeta plugin={focused} metrics={focusedMetrics} />}
         </Box>
@@ -276,12 +276,16 @@ function InstalledTab(): React.ReactElement {
 
 // ─── List rows + metadata strip ───────────────────────────────────────────
 
-const STATE_VARIANT: Readonly<Record<string, BadgeVariant>> = {
+const STATUS_VARIANT: Readonly<Record<PluginHealth, BadgeVariant>> = {
   running: 'success',
   crashed: 'destructive',
-  loading: 'warning',
-  disabled: 'secondary',
-  idle: 'secondary',
+  'crash-loop': 'destructive',
+  restarting: 'warning',
+  installing: 'warning',
+  updating: 'warning',
+  degraded: 'warning',
+  incompatible: 'warning',
+  stopped: 'secondary',
 };
 
 interface PluginRowsProps {
@@ -289,7 +293,6 @@ interface PluginRowsProps {
   readonly allCount: number;
   readonly focusedUid: string | null;
   readonly onFocusChange: (uid: string) => void;
-  readonly focusedMetrics: PluginMetrics | null;
 }
 
 function PluginRows({
@@ -297,7 +300,6 @@ function PluginRows({
   allCount,
   focusedUid,
   onFocusChange,
-  focusedMetrics,
 }: Readonly<PluginRowsProps>): React.ReactElement {
   if (allCount === 0) {
     return (
@@ -320,22 +322,12 @@ function PluginRows({
   return (
     <List value={focusedUid ?? undefined} onValueChange={onFocusChange}>
       {items.map((p) => {
-        const state = p.enabled ? (p.state ?? 'idle') : 'disabled';
         const isFocusedRow = focusedUid === p.uid;
-        const live = isFocusedRow ? (focusedMetrics?.current ?? null) : null;
         return (
           <ListItem key={p.uid} value={p.uid}>
             <Text bold={isFocusedRow}>{p.displayName ?? p.name}</Text>
             <Text dimColor> v{p.version} </Text>
-            <Badge variant={STATE_VARIANT[state] ?? 'secondary'}>{state}</Badge>
-            {live ? (
-              <>
-                <Text dimColor> · </Text>
-                <Text color={cpuColor(live.cpu)}>{live.cpu.toFixed(1)}%</Text>
-                <Text dimColor> · </Text>
-                <Text dimColor>{formatBytes(live.memory)}</Text>
-              </>
-            ) : null}
+            <Badge variant={STATUS_VARIANT[p.status] ?? 'secondary'}>{p.status}</Badge>
           </ListItem>
         );
       })}
@@ -398,7 +390,10 @@ function PluginMeta({
         {author ? <Property name="author">{author}</Property> : null}
         {plugin.homepage ? <Property name="homepage">{plugin.homepage}</Property> : null}
         {repo && repo !== plugin.homepage ? <Property name="repo">{repo}</Property> : null}
-        <PidProperty pid={metrics?.pid ?? null} enabled={plugin.enabled} />
+        <PidProperty
+          pid={metrics?.pid ?? plugin.pid ?? null}
+          running={plugin.status === 'running'}
+        />
         {metrics?.current ? (
           <>
             <Property name="cpu">
@@ -412,24 +407,14 @@ function PluginMeta({
   );
 }
 
-function cpuColor(percent: number): string {
-  if (percent >= 80) {
-    return 'red';
-  }
-  if (percent >= 40) {
-    return 'yellow';
-  }
-  return 'cyan';
-}
-
 function PidProperty({
   pid,
-  enabled,
-}: Readonly<{ pid: number | null; enabled: boolean }>): React.ReactElement | null {
+  running,
+}: Readonly<{ pid: number | null; running: boolean }>): React.ReactElement | null {
   if (pid !== null) {
     return <Property name="pid">{String(pid)}</Property>;
   }
-  if (enabled) {
+  if (running) {
     return <Property name="pid">—</Property>;
   }
   return null;

@@ -172,18 +172,24 @@ function ScrollAreaInner({
   // Line / fast / page / jump keybinds. All read pageStepRef.current
   // at handler-fire time so the first frame doesn't move 1 line on
   // PgDn just because windowSize hasn't measured yet.
+  //
+  // Note: `useKey`'s matcher discriminates printable keys by the
+  // literal char (Ink reports uppercase as `K`, not as `k` with
+  // shift). A `shift+k` spec would *also* fire on plain `k` and the
+  // two handlers would stack — that's the "j press scrolls 6 lines"
+  // and "g jumps to bottom" bug. Use the uppercase form directly.
   useKey('upArrow', () => move(-1), isFocused);
   useKey('downArrow', () => move(1), isFocused);
   useKey('k', () => move(-1), isFocused);
   useKey('j', () => move(1), isFocused);
-  useKey('shift+k', () => move(-fastScrollLines), isFocused);
-  useKey('shift+j', () => move(fastScrollLines), isFocused);
+  useKey('K', () => move(-fastScrollLines), isFocused);
+  useKey('J', () => move(fastScrollLines), isFocused);
   useKey('pageUp', () => move(-pageStepRef.current), isFocused);
   useKey('pageDown', () => move(pageStepRef.current), isFocused);
   useKey('ctrl+u', () => move(-pageStepRef.current), isFocused);
   useKey('ctrl+d', () => move(pageStepRef.current), isFocused);
   useKey('g', () => jumpTo('top'), isFocused);
-  useKey('shift+g', () => jumpTo('bottom'), isFocused);
+  useKey('G', () => jumpTo('bottom'), isFocused);
   useKey('ctrl+b', () => jumpTo('top'), isFocused);
   useKey('ctrl+g', () => jumpTo('bottom'), isFocused);
   useKey('escape', () => focusNext(), isFocused);

@@ -12,17 +12,28 @@
 import { hubFetch } from './hub-client';
 import { streamSseEvents } from './sse';
 
+export type PluginHealth =
+  | 'running'
+  | 'stopped'
+  | 'crashed'
+  | 'degraded'
+  | 'installing'
+  | 'updating'
+  | 'restarting'
+  | 'crash-loop'
+  | 'incompatible';
+
 export interface PluginListItem {
   readonly uid: string;
   readonly name: string;
-  readonly displayName?: string;
+  readonly displayName?: string | null;
   readonly version: string;
-  readonly enabled: boolean;
-  readonly description?: string;
-  readonly author?: string | { name?: string };
-  readonly homepage?: string;
-  readonly repository?: string | { url?: string };
-  readonly state?: 'idle' | 'running' | 'stopped' | 'crashed' | 'loading';
+  readonly status: PluginHealth;
+  readonly pid: number | null;
+  readonly description?: string | null;
+  readonly author?: string | { name?: string } | null;
+  readonly homepage?: string | null;
+  readonly repository?: string | { url?: string } | null;
 }
 
 export interface PluginListResponse {
