@@ -82,6 +82,11 @@ mkdirSync(tempDir, { recursive: true });
     if (
       !filename ||
       filename.includes('node_modules/') ||
+      filename.includes('/.cache/') ||
+      filename.includes('/__tests__/') ||
+      filename.includes('/.test-fixtures/') ||
+      filename.endsWith('.test.tsx') ||
+      filename.endsWith('.test.jsx') ||
       !(filename.endsWith('.tsx') || filename.endsWith('.jsx'))
     ) {
       return;
@@ -105,6 +110,12 @@ async function flushBatch(paths: readonly string[], tick: number): Promise<void>
     try {
       await reloadOne(path, tick);
     } catch (err) {
+      // File was deleted between the watch event and our read — the
+      // tree handles unmounts on its own, so we just skip rather than
+      // splashing an overlay for the user.
+      if (isFileMissing(err)) {
+        continue;
+      }
       if (!firstError) {
         firstError = { path, err };
       }
@@ -125,6 +136,17 @@ async function flushBatch(paths: readonly string[], tick: number): Promise<void>
   } catch (err) {
     reportError(paths[0] ?? '<unknown>', err);
   }
+}
+
+/** Recognise the `readFile` ENOENT we get when a watched file was deleted
+ *  between the watcher event firing and our read. */
+function isFileMissing(err: unknown): boolean {
+  return (
+    typeof err === 'object' &&
+    err !== null &&
+    'code' in err &&
+    (err as { code: unknown }).code === 'ENOENT'
+  );
 }
 
 function reportError(path: string, err: unknown): void {

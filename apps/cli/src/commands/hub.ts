@@ -18,6 +18,7 @@
 import { brix } from '@brika/brix/log';
 import { defineCommand } from '@brika/cli';
 import pc from 'picocolors';
+import { removeCliToken, writeCliToken } from '../cli/auth-token';
 import { CliError } from '../cli/errors';
 import { spawnHub } from '../cli/hub-spawn';
 import { removePidFile } from '../cli/pid';
@@ -47,6 +48,12 @@ export default defineCommand({
       );
     }
 
+    // Local-trust auth — every `/api/*` call from this user's machine
+    // authenticates as admin via `Authorization: Bearer <cli-token>`.
+    // Must land BEFORE we spawn the hub child so the child sees the
+    // file at module-load time and wires up its staticTokenResolver.
+    writeCliToken();
+
     brix.think('booting hub…');
     const child = spawnHub({
       port: values.port,
@@ -66,6 +73,7 @@ export default defineCommand({
 
     const code = await child.exited;
     await removePidFile();
+    removeCliToken();
     if (code === 0 || code === null) {
       brix.ok('hub exited cleanly');
       return;
