@@ -16,7 +16,14 @@ import { chmodSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:
 import { join } from 'node:path';
 import { brikaContext } from '@/runtime/context/brika-context';
 
-export const CLI_TOKEN_FILE = join(brikaContext.brikaDir, 'cli-token');
+/**
+ * Path is resolved lazily — `BRIKA_HOME` can change between hub
+ * restarts (or in tests), and we want every call to honour the
+ * current value rather than the one captured at module load.
+ */
+function tokenPath(): string {
+  return join(process.env.BRIKA_HOME ?? brikaContext.brikaDir, 'cli-token');
+}
 
 /** 32 random bytes → 64 hex chars. Same shape as a session token. */
 function generateToken(): string {
@@ -30,12 +37,13 @@ function generateToken(): string {
  */
 export function writeCliToken(): string {
   const token = generateToken();
-  mkdirSync(brikaContext.brikaDir, { recursive: true });
-  writeFileSync(CLI_TOKEN_FILE, token, { encoding: 'utf8', mode: 0o600 });
+  const file = tokenPath();
+  mkdirSync(process.env.BRIKA_HOME ?? brikaContext.brikaDir, { recursive: true });
+  writeFileSync(file, token, { encoding: 'utf8', mode: 0o600 });
   // mode in writeFileSync only applies on file creation — re-apply
   // explicitly so a pre-existing token gets locked down too.
   try {
-    chmodSync(CLI_TOKEN_FILE, 0o600);
+    chmodSync(file, 0o600);
   } catch {
     /* not all filesystems support chmod (e.g. Windows) */
   }
@@ -45,7 +53,7 @@ export function writeCliToken(): string {
 /** Read the current token, or `null` if the file is missing or unreadable. */
 export function readCliToken(): string | null {
   try {
-    const raw = readFileSync(CLI_TOKEN_FILE, 'utf8').trim();
+    const raw = readFileSync(tokenPath(), 'utf8').trim();
     return raw.length > 0 ? raw : null;
   } catch {
     return null;
@@ -54,5 +62,5 @@ export function readCliToken(): string | null {
 
 /** Remove the token file. Safe to call when it doesn't exist. */
 export function removeCliToken(): void {
-  rmSync(CLI_TOKEN_FILE, { force: true });
+  rmSync(tokenPath(), { force: true });
 }
