@@ -35,6 +35,13 @@ export interface RunTuiOptions {
    * supervisor that needs to flush before exit).
    */
   readonly exitOnCtrlC?: boolean;
+  /**
+   * Clear the terminal scrollback + reset the cursor before rendering.
+   * Default `true` so the TUI starts on a fresh canvas. Set `false` if
+   * the caller wants to preserve previous shell output (e.g. a wrapper
+   * that prints a banner first).
+   */
+  readonly clearOnStart?: boolean;
 }
 
 /**
@@ -43,6 +50,15 @@ export interface RunTuiOptions {
  */
 export async function runTui(element: ReactElement, options: RunTuiOptions = {}): Promise<void> {
   const ink = await loadInk();
+  // Clear the scrollback + cursor so the TUI starts on a fresh canvas.
+  // Without this, anything the parent shell printed (prompts, build
+  // logs, the user's previous command) bleeds through ink's alt-screen
+  // and shifts the layout on the first render. Skipped when stdout
+  // isn't a TTY (piped output, CI) so we don't emit escape codes to
+  // log files.
+  if (options.clearOnStart !== false && process.stdout.isTTY) {
+    process.stdout.write('\x1b[2J\x1b[3J\x1b[H');
+  }
   const Overlay = globalThis.__brikaHmrOverlay;
   const Boundary = globalThis.__brikaHmrBoundary;
   const wrapped = Boundary ? createElement(Boundary, null, element) : element;

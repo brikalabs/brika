@@ -21,6 +21,14 @@ interface Props {
   readonly currentMatchLine: number | null;
   /** Optional status — drives the colored label next to the title. */
   readonly status?: TuiStatus;
+  /**
+   * Per-line custom renderer. Used only when no search query is
+   * active — when search is on we fall back to the plain string so
+   * the yellow match overlay keeps working. The callback receives
+   * the line and its absolute index in `lines`, so consumers can
+   * pull from a parallel typed buffer (e.g. `events[i]`).
+   */
+  readonly renderLine?: (line: string, absIdx: number) => React.ReactNode;
 }
 
 /** Right pane: tail / windowed view of a log buffer. */
@@ -34,6 +42,7 @@ export function LogPane({
   searchQuery,
   currentMatchLine,
   status,
+  renderLine,
 }: Readonly<Props>): React.ReactElement {
   const total = lines.length;
   const offset = scrollFromBottom ?? 0;
@@ -76,9 +85,11 @@ export function LogPane({
               <HighlightLine
                 key={`${revision}-${absIdx}`}
                 line={line}
+                absIdx={absIdx}
                 query={searchQuery}
                 isCurrent={absIdx === currentMatchLine}
                 showGutter={hasSearch}
+                renderLine={renderLine}
               />
             );
           })
@@ -95,18 +106,27 @@ export function LogPane({
  */
 function HighlightLine({
   line,
+  absIdx,
   query,
   isCurrent,
   showGutter,
+  renderLine,
 }: Readonly<{
   line: string;
+  absIdx: number;
   query: string;
   isCurrent: boolean;
   showGutter: boolean;
+  renderLine?: (line: string, absIdx: number) => React.ReactNode;
 }>): React.ReactElement {
   const gutter = computeGutter(showGutter, isCurrent);
   if (!query) {
-    return <Text>{`${gutter}${line}`}</Text>;
+    return (
+      <Text>
+        {gutter}
+        {renderLine ? renderLine(line, absIdx) : line}
+      </Text>
+    );
   }
   const segments = splitOnMatches(line, query);
   return (
