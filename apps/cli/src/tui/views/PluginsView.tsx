@@ -1,24 +1,18 @@
 /**
- * Plugins section — tabbed surface.
+ * Plugins section — tabbed surface with list → detail navigation.
  *
- *   [Installed]  filterable list of installed plugins + per-plugin
- *                README + enable/disable/reload/kill/uninstall.
- *   [Search]     type-to-search the registry; Enter installs.
+ *   [Installed]  filterable list of installed plugins; Enter opens the
+ *                detail page (status / pid / cpu / memory + README +
+ *                enable / disable / reload / kill / uninstall).
+ *   [Search]     type-to-search the registry; Enter opens the detail
+ *                page (description / downloads / README + install).
  *
  * Tab navigation is handled by `<TabsList>` (`Tab` / `Shift+Tab` /
- * `←` / `→`). Inside a tab, each panel owns its own keybinds.
+ * `←` / `→`). Inside a tab, each view owns its own keybinds:
  *
- * Installed-tab keys (active when no overlay is open):
- *   ↑ / ↓        move selection
- *   Tab          focus the README pane → arrow / page keys scroll it;
- *                Esc returns focus to the list
- *   /            filter the list — type to narrow, Enter / Esc exits
- *   e            enable focused plugin
- *   D            disable focused plugin (shift, so `d` keeps its
- *                global "dashboard" role)
- *   R            reload focused plugin
- *   k            kill focused plugin
- *   X            uninstall focused plugin (y/n confirm)
+ *   List view:   ↑ / ↓ select · Enter open · / filter (Installed only)
+ *   Detail view: Esc back · Tab scroll readme · e/D/R/k/X actions
+ *                (Installed) · i install (Search)
  */
 
 import {
@@ -70,7 +64,7 @@ import {
   searchRegistry,
   uninstallPlugin,
 } from '../../cli/hub-api';
-import { Markdown } from '../components/Markdown';
+import { MarkdownStream } from '../components/MarkdownStream';
 import { NotConnected } from '../components/NotConnected';
 import { useCli } from '../useCli';
 import { useHubResource } from '../useHubResource';
@@ -99,64 +93,51 @@ export function PluginsView(): React.ReactElement {
 
 function InstalledTab(): React.ReactElement {
   const list = useHubResource<PluginListItem[]>(fetchPlugins, []);
-  const [focusedUid, setFocusedUid] = useState<string | null>(null);
-  const [readme, setReadme] = useState<{ uid: string; text: string } | null>(null);
-  const [readmeError, setReadmeError] = useState<string | null>(null);
-  const [readmeLoading, setReadmeLoading] = useState(false);
-  const [filterMode, setFilterMode] = useState(false);
-  const [filter, setFilter] = useState('');
-  const [pendingUninstall, setPendingUninstall] = useState<PluginListItem | null>(null);
-  const [actionError, setActionError] = useState<string | null>(null);
+  const [selectedUid, setSelectedUid] = useState<string | null>(null);
 
   const allItems = list.data ?? [];
+  const selected = selectedUid ? (allItems.find((p) => p.uid === selectedUid) ?? null) : null;
+
+  if (selected) {
+    return (
+      <InstalledPluginDetail
+        plugin={selected}
+        onBack={() => setSelectedUid(null)}
+        onRefresh={list.refresh}
+        onUninstalled={() => {
+          setSelectedUid(null);
+          list.refresh();
+        }}
+      />
+    );
+  }
+
+  return (
+    <InstalledList
+      items={allItems}
+      loading={list.loading}
+      error={list.error}
+      onOpen={setSelectedUid}
+    />
+  );
+}
+
+function InstalledList({
+  items: allItems,
+  loading,
+  error,
+  onOpen,
+}: Readonly<{
+  items: ReadonlyArray<PluginListItem>;
+  loading: boolean;
+  error: string | null;
+  onOpen: (uid: string) => void;
+}>): React.ReactElement {
+  const [focusedUid, setFocusedUid] = useState<string | null>(null);
+  const [filterMode, setFilterMode] = useState(false);
+  const [filter, setFilter] = useState('');
+
   const items = useMemo(() => filterPlugins(allItems, filter), [allItems, filter]);
-  const focused = focusedUid ? (items.find((p) => p.uid === focusedUid) ?? null) : null;
-  const focusedMetrics = useLiveMetrics(focused?.uid ?? null, focused?.status === 'running');
-
-  // Load README whenever the focused plugin changes.
-  useEffect(() => {
-    if (!focused) {
-      setReadme(null);
-      return;
-    }
-    if (readme?.uid === focused.uid) {
-      return;
-    }
-    let cancelled = false;
-    setReadmeLoading(true);
-    setReadmeError(null);
-    void (async () => {
-      try {
-        const text = await fetchPluginReadme(focused.uid);
-        if (!cancelled) {
-          setReadme({ uid: focused.uid, text });
-        }
-      } catch (e) {
-        if (!cancelled) {
-          setReadmeError(e instanceof Error ? e.message : String(e));
-        }
-      } finally {
-        if (!cancelled) {
-          setReadmeLoading(false);
-        }
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [focused, readme?.uid]);
-
-  const interactive = Boolean(focused);
-
-  const runAction = (action: 'enable' | 'disable' | 'kill' | 'reload') => () => {
-    if (!focused) {
-      return;
-    }
-    setActionError(null);
-    void pluginAction(focused.uid, action)
-      .then(list.refresh)
-      .catch((e: unknown) => setActionError(e instanceof Error ? e.message : String(e)));
-  };
 
   useKey('/', () => setFilterMode(true));
 
@@ -170,10 +151,13 @@ function InstalledTab(): React.ReactElement {
             <Text color="cyan">/{filter}/</Text>
           </>
         )}
-        {list.loading && <Text dimColor> · loading…</Text>}
-        {list.error && <Text color="red"> · {list.error}</Text>}
-        {actionError && <Text color="red"> · {actionError}</Text>}
+        {loading && <Text dimColor> · loading…</Text>}
       </Box>
+      {error && (
+        <Box flexShrink={0}>
+          <Text color="red">✗ {error}</Text>
+        </Box>
+      )}
 
       {filterMode && (
         <Box marginBottom={1}>
@@ -189,26 +173,121 @@ function InstalledTab(): React.ReactElement {
         </Box>
       )}
 
+      <PluginRows
+        items={items}
+        allCount={allItems.length}
+        focusedUid={focusedUid}
+        onFocusChange={setFocusedUid}
+        onSelect={onOpen}
+      />
+
+      <HintBar>
+        <Hint k="↑↓">select</Hint>
+        <Hint k="↵" accent="info">
+          open
+        </Hint>
+        <Hint k="/" accent="info">
+          filter
+        </Hint>
+        <Hint k="→" accent="info">
+          search
+        </Hint>
+      </HintBar>
+    </Box>
+  );
+}
+
+/**
+ * Detail page for one installed plugin. Owns its own README fetch,
+ * live metrics polling, action buttons, and uninstall confirmation.
+ * Esc / `back` button returns to the list.
+ */
+function InstalledPluginDetail({
+  plugin,
+  onBack,
+  onRefresh,
+  onUninstalled,
+}: Readonly<{
+  plugin: PluginListItem;
+  onBack: () => void;
+  onRefresh: () => void;
+  onUninstalled: () => void;
+}>): React.ReactElement {
+  const metrics = useLiveMetrics(plugin.uid, plugin.status === 'running');
+  const [readme, setReadme] = useState<string | null>(null);
+  const [readmeError, setReadmeError] = useState<string | null>(null);
+  const [readmeLoading, setReadmeLoading] = useState(false);
+  const [pendingUninstall, setPendingUninstall] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setReadme(null);
+    setReadmeError(null);
+    setReadmeLoading(true);
+    void (async () => {
+      try {
+        const text = await fetchPluginReadme(plugin.uid);
+        if (!cancelled) {
+          setReadme(text);
+        }
+      } catch (e) {
+        if (!cancelled) {
+          setReadmeError(e instanceof Error ? e.message : String(e));
+        }
+      } finally {
+        if (!cancelled) {
+          setReadmeLoading(false);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [plugin.uid]);
+
+  const runAction = (action: 'enable' | 'disable' | 'kill' | 'reload') => () => {
+    setActionError(null);
+    void pluginAction(plugin.uid, action)
+      .then(onRefresh)
+      .catch((e: unknown) => setActionError(e instanceof Error ? e.message : String(e)));
+  };
+
+  return (
+    <Box flexDirection="column" flexGrow={1}>
+      <Box flexShrink={0}>
+        <Text bold>{plugin.displayName ?? plugin.name}</Text>
+        <Text dimColor> v{plugin.version} </Text>
+        <Badge variant={STATUS_VARIANT[plugin.status] ?? 'secondary'}>{plugin.status}</Badge>
+      </Box>
+
+      {actionError && (
+        <Box flexShrink={0}>
+          <Text color="red">✗ {actionError}</Text>
+        </Box>
+      )}
+
+      <Box flexShrink={0}>
+        <PluginMeta plugin={plugin} metrics={metrics} />
+      </Box>
+
       {pendingUninstall && (
-        <Box marginBottom={1}>
+        <Box marginTop={1} flexShrink={0}>
           <Confirm
             variant="destructive"
             onConfirm={async () => {
-              const target = pendingUninstall;
-              setPendingUninstall(null);
+              setPendingUninstall(false);
               setActionError(null);
               try {
-                await uninstallPlugin(target.uid);
-                list.refresh();
+                await uninstallPlugin(plugin.uid);
+                onUninstalled();
               } catch (e) {
                 setActionError(e instanceof Error ? e.message : String(e));
               }
             }}
-            onCancel={() => setPendingUninstall(null)}
+            onCancel={() => setPendingUninstall(false)}
           >
-            <ConfirmTitle>
-              Uninstall {pendingUninstall.displayName ?? pendingUninstall.name}?
-            </ConfirmTitle>
+            <ConfirmTitle>Uninstall {plugin.displayName ?? plugin.name}?</ConfirmTitle>
             <ConfirmDescription>
               Removes the plugin from brika.yml and clears its state + secrets.
             </ConfirmDescription>
@@ -216,64 +295,40 @@ function InstalledTab(): React.ReactElement {
         </Box>
       )}
 
-      <Box flexGrow={1} flexShrink={1} minHeight={6}>
-        <Box flexDirection="column" minWidth={32} marginRight={2} flexShrink={0} flexGrow={0}>
-          <PluginRows
-            items={items}
-            allCount={allItems.length}
-            focusedUid={focusedUid}
-            onFocusChange={setFocusedUid}
-          />
-          {focused && (
-            <Box flexShrink={0}>
-              <PluginMeta plugin={focused} metrics={focusedMetrics} />
-            </Box>
-          )}
-        </Box>
-
-        <Box flexDirection="column" flexGrow={1} flexShrink={1}>
-          <ReadmePane
-            hasFocus={Boolean(focused)}
-            loading={readmeLoading}
-            error={readmeError}
-            text={readme?.text ?? null}
-            uid={focused?.uid ?? null}
-          />
-        </Box>
+      <Box marginTop={1} flexGrow={1} flexShrink={1} minHeight={4}>
+        <ReadmePane
+          hasFocus
+          loading={readmeLoading}
+          error={readmeError}
+          text={readme}
+          uid={plugin.uid}
+        />
       </Box>
 
       <Box marginTop={1} flexShrink={0}>
-        <Button shortcut="e" variant="success" enabled={interactive} onPress={runAction('enable')}>
+        <Button shortcut="escape" onPress={onBack}>
+          back
+        </Button>
+        <Button shortcut="e" variant="success" onPress={runAction('enable')}>
           enable
         </Button>
-        <Button shortcut="D" variant="warning" enabled={interactive} onPress={runAction('disable')}>
+        <Button shortcut="D" variant="warning" onPress={runAction('disable')}>
           disable
         </Button>
-        <Button shortcut="R" enabled={interactive} onPress={runAction('reload')}>
+        <Button shortcut="R" onPress={runAction('reload')}>
           reload
         </Button>
-        <Button shortcut="k" enabled={interactive} onPress={runAction('kill')}>
+        <Button shortcut="k" onPress={runAction('kill')}>
           kill
         </Button>
-        <Button
-          shortcut="X"
-          variant="destructive"
-          enabled={interactive}
-          onPress={() => focused && setPendingUninstall(focused)}
-        >
+        <Button shortcut="X" variant="destructive" onPress={() => setPendingUninstall(true)}>
           uninstall
         </Button>
       </Box>
 
       <HintBar>
-        <Hint k="↑↓">select</Hint>
+        <Hint k="Esc">back</Hint>
         <Hint k="Tab">scroll readme</Hint>
-        <Hint k="/" accent="info">
-          filter
-        </Hint>
-        <Hint k="→" accent="info">
-          search
-        </Hint>
       </HintBar>
     </Box>
   );
@@ -541,8 +596,8 @@ function ReadmePane({
     return <Text dimColor>no readme</Text>;
   }
   return (
-    <ScrollArea key={uid ?? 'no-uid'} id={`readme-${uid ?? 'none'}`}>
-      <Markdown source={text} />
+    <ScrollArea key={uid ?? 'no-uid'} id={`readme-${uid ?? 'none'}`} autoFocus>
+      <MarkdownStream source={text} />
     </ScrollArea>
   );
 }
@@ -680,13 +735,26 @@ function SearchTab(): React.ReactElement {
     [installed, installingName, isInstalled]
   );
 
+  if (selected) {
+    return (
+      <RegistryDetail
+        item={selected}
+        installed={isInstalled(selected)}
+        installing={installingName === selected.name}
+        progress={installingName === selected.name ? progress : null}
+        error={installingName === selected.name ? installError : null}
+        onInstall={() => void startInstall(selected)}
+        onBack={() => setSelected(null)}
+      />
+    );
+  }
+
   return (
-    <Box flexDirection="column">
+    <Box flexDirection="column" flexGrow={1}>
       <Search<RegistrySearchResult>
         value={query}
         onValueChange={setQuery}
         onSelect={(r) => setSelected(r)}
-        onAction={(r) => void startInstall(r)}
       >
         <SearchInput placeholder="search registry — `@brika/plugin-spotify`, `weather`, …" />
         <SearchResults>
@@ -708,18 +776,15 @@ function SearchTab(): React.ReactElement {
           resultCount={results.length}
         />
       </Search>
-      {selected ? (
-        <Box marginTop={1}>
-          <RegistryDetail
-            item={selected}
-            installed={isInstalled(selected)}
-            installing={installingName === selected.name}
-            progress={installingName === selected.name ? progress : null}
-            error={installingName === selected.name ? installError : null}
-            onInstall={() => void startInstall(selected)}
-          />
-        </Box>
-      ) : null}
+      <HintBar>
+        <Hint k="↑↓">select</Hint>
+        <Hint k="↵" accent="info">
+          open
+        </Hint>
+        <Hint k="←" accent="info">
+          installed
+        </Hint>
+      </HintBar>
     </Box>
   );
 }
@@ -805,8 +870,12 @@ function RegistryReadme({
   }
   if (source && source.trim().length > 0) {
     return (
-      <ScrollArea key={packageName ?? 'no-pkg'} id={`registry-readme-${packageName ?? 'none'}`}>
-        <Markdown source={source} />
+      <ScrollArea
+        key={packageName ?? 'no-pkg'}
+        id={`registry-readme-${packageName ?? 'none'}`}
+        autoFocus
+      >
+        <MarkdownStream source={source} />
       </ScrollArea>
     );
   }
@@ -814,14 +883,9 @@ function RegistryReadme({
 }
 
 /**
- * Detail panel for the focused registry hit — only ever one shown at a
- * time, so it renders inline (no card chrome). Layout:
- *
- *   - header: display name + version + status badge
- *   - <Properties> strip with package / source / downloads
- *   - description line from the manifest
- *   - the package's README via <Markdown>
- *   - install progress / error / button when applicable
+ * Detail page for one registry search hit. Mirrors `InstalledPluginDetail`'s
+ * shape — header / meta / README / actions / hints — but the action set
+ * is just "install". Esc / back button returns to the search list.
  */
 function RegistryDetail({
   item,
@@ -830,6 +894,7 @@ function RegistryDetail({
   progress,
   error,
   onInstall,
+  onBack,
 }: Readonly<{
   item: RegistrySearchResult;
   installed: boolean;
@@ -837,6 +902,7 @@ function RegistryDetail({
   progress: InstallProgress | null;
   error: string | null;
   onInstall: () => void;
+  onBack: () => void;
 }>): React.ReactElement {
   const [readme, setReadme] = useState<string | null>(null);
   const [readmeLoading, setReadmeLoading] = useState(false);
@@ -872,8 +938,8 @@ function RegistryDetail({
   }, [item.name]);
 
   return (
-    <Box flexDirection="column">
-      <Box>
+    <Box flexDirection="column" flexGrow={1}>
+      <Box flexShrink={0}>
         <Text bold>{item.displayName ?? item.name}</Text>
         <Text dimColor> v{item.version} </Text>
         <RegistryStatusBadge
@@ -883,7 +949,7 @@ function RegistryDetail({
         />
       </Box>
 
-      <Box marginTop={1}>
+      <Box marginTop={1} flexShrink={0}>
         <Properties>
           <Property name="package">{item.name}</Property>
           <Property name="source">{item.source}</Property>
@@ -895,12 +961,12 @@ function RegistryDetail({
       </Box>
 
       {item.description ? (
-        <Box marginTop={1}>
+        <Box marginTop={1} flexShrink={0}>
           <Text>{item.description}</Text>
         </Box>
       ) : null}
 
-      <Box marginTop={1} flexDirection="column">
+      <Box marginTop={1} flexGrow={1} flexShrink={1} minHeight={4}>
         <RegistryReadme
           loading={readmeLoading}
           error={readmeError}
@@ -910,7 +976,7 @@ function RegistryDetail({
       </Box>
 
       {installing && progress ? (
-        <Box marginTop={1}>
+        <Box marginTop={1} flexShrink={0}>
           <Text>
             <Text color="yellow">⠿ </Text>
             <Text bold>{progress.phase}</Text>
@@ -919,22 +985,26 @@ function RegistryDetail({
         </Box>
       ) : null}
       {error ? (
-        <Box marginTop={1}>
-          <Text color="red">{error}</Text>
+        <Box marginTop={1} flexShrink={0}>
+          <Text color="red">✗ {error}</Text>
         </Box>
       ) : null}
-      {!installed && !installing && !error ? (
-        <Box marginTop={1}>
-          <Button
-            shortcut="ctrl+enter"
-            variant="success"
-            enabled={item.compatible}
-            onPress={onInstall}
-          >
+
+      <Box marginTop={1} flexShrink={0}>
+        <Button shortcut="escape" onPress={onBack}>
+          back
+        </Button>
+        {!installed && !installing ? (
+          <Button shortcut="i" variant="success" enabled={item.compatible} onPress={onInstall}>
             install
           </Button>
-        </Box>
-      ) : null}
+        ) : null}
+      </Box>
+
+      <HintBar>
+        <Hint k="Esc">back</Hint>
+        <Hint k="Tab">scroll readme</Hint>
+      </HintBar>
     </Box>
   );
 }
