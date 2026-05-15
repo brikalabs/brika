@@ -18,6 +18,7 @@ import { sparksRoutes } from './sparks';
 import { healthRoute, systemRoute } from './status';
 import { streamsRoutes } from './streams';
 import { systemRoutes, updateRoutes } from './updates';
+import { usersRoutes } from './users';
 import { workflowsRoutes } from './workflows';
 
 /**
@@ -50,6 +51,7 @@ export const allRoutes = combineRoutes(
       settingsRoutes,
       updateRoutes,
       systemRoutes,
+      usersRoutes,
     ],
   })
 );
