@@ -21,7 +21,6 @@ import { Box, type DOMElement, Text } from 'ink';
 import type React from 'react';
 import { type ReactNode, useRef } from 'react';
 import { useFocusable } from '../keys/useFocusable';
-import { useClickable } from '../mouse/useClickable';
 
 export interface ClickableProps {
   readonly onPress?: () => void;
@@ -61,8 +60,8 @@ export function Clickable({
     tabIndex,
     onPress,
     enabled: enabled && Boolean(onPress),
+    ref,
   });
-  useClickable(ref, onPress, enabled);
   return (
     <Box ref={ref} flexGrow={flexGrow} flexShrink={flexShrink} flexBasis={flexBasis}>
       {isFocused && showFocusMarker ? (

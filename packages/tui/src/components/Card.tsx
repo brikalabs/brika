@@ -20,7 +20,6 @@ import { Box, type DOMElement, Text } from 'ink';
 import type React from 'react';
 import { useRef } from 'react';
 import { useFocusable } from '../keys/useFocusable';
-import { useClickable } from '../mouse/useClickable';
 
 export interface CardProps {
   readonly title: string;
@@ -52,8 +51,8 @@ export function Card({
     tabIndex,
     onPress,
     enabled: Boolean(onPress),
+    ref,
   });
-  useClickable(ref, onPress);
   const focusable = Boolean(onPress);
   return (
     <Box

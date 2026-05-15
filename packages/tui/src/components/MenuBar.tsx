@@ -34,7 +34,6 @@ import { Box, type DOMElement, Text } from 'ink';
 import type React from 'react';
 import { useRef } from 'react';
 import { useFocusable } from '../keys/useFocusable';
-import { useClickable } from '../mouse/useClickable';
 import { useTerminalSize } from '../state/useTerminalSize';
 
 export interface MenuBarItem<K extends string = string> {
@@ -119,8 +118,8 @@ function MenuBarItemView({
     id: `menubar-${item.key}`,
     onPress,
     enabled: Boolean(onPress),
+    ref,
   });
-  useClickable(ref, onPress);
   const labelWidth = (item.hotkey ? `[${item.hotkey}] ` : '').length + item.label.length;
   const highlighted = active || isFocused;
   const tint = highlighted ? accent : undefined;
@@ -193,8 +192,8 @@ function CompactChip({
     id: `menubar-compact-${item.key}`,
     onPress,
     enabled: Boolean(onPress),
+    ref,
   });
-  useClickable(ref, onPress);
   const highlighted = active || isFocused;
   return (
     <Box ref={ref} flexShrink={0}>

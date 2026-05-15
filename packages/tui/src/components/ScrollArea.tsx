@@ -44,6 +44,7 @@ import { KeyScope } from '../keys/KeyScope';
 import { hitTest, readBounds } from '../mouse/useBounds';
 import { type MouseEvent, useMouse } from '../mouse/useMouse';
 import { useMeasure } from '../state/useMeasure';
+import { useTerminalSize } from '../state/useTerminalSize';
 import { Button } from './Button';
 
 export interface ScrollAreaProps {
@@ -161,6 +162,12 @@ function ScrollAreaInner({
   // (We deliberately don't call useCaptureInput — Tab navigation and
   //  sibling focus stays free; the single useInput below is gated on
   //  isFocused, which is enough isolation on its own.)
+
+  // Subscribe to terminal size so the area re-renders on resize.
+  // `useMeasure` only re-measures inside a render pass — without this
+  // trigger the pane would stay stale at the previous columns/rows
+  // until something else upstream re-rendered it.
+  useTerminalSize();
 
   // We only measure the WINDOW box (to know how many rows to slice).
   // The inner content height comes from the child's source / lines

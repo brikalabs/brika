@@ -42,7 +42,6 @@ import {
 } from 'react';
 import { useFocusable } from '../keys/useFocusable';
 import { useKey } from '../keys/useKey';
-import { useClickable } from '../mouse/useClickable';
 
 interface TabRegistration {
   readonly value: string;
@@ -238,8 +237,7 @@ export function TabsTrigger({
   // test pattern as `<MenuBar>` / `<Button>` so the affordance feels
   // consistent across the app.
   const select = useCallback(() => setValue(value), [setValue, value]);
-  useClickable(ref, select);
-  const { isFocused } = useFocusable({ id: `tab-${value}`, onPress: select });
+  const { isFocused } = useFocusable({ id: `tab-${value}`, onPress: select, ref });
 
   const active = ctx.value === value;
   const prefix = shortcut ? `[${shortcut}] ` : '';
