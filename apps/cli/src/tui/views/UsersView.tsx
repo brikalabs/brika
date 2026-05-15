@@ -131,7 +131,7 @@ export function UsersView(): React.ReactElement {
 }
 
 async function postUser(values: FormValues): Promise<void> {
-  const res = await hubFetch('/api/users/', {
+  const res = await hubFetch('/api/users', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(values),

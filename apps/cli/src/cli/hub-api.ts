@@ -26,7 +26,7 @@ export interface PluginListResponse {
 }
 
 export async function fetchPlugins(): Promise<PluginListItem[]> {
-  const res = await hubFetch('/api/plugins/');
+  const res = await hubFetch('/api/plugins');
   if (!res.ok) {
     throw new Error(`plugins fetch failed: ${res.status}`);
   }
@@ -65,7 +65,7 @@ export interface WorkflowSummaryDto {
 }
 
 export async function fetchWorkflows(): Promise<WorkflowSummaryDto[]> {
-  const res = await hubFetch('/api/workflows/');
+  const res = await hubFetch('/api/workflows');
   if (!res.ok) {
     throw new Error(`workflows fetch failed: ${res.status}`);
   }
@@ -165,7 +165,7 @@ export interface UserDto {
 }
 
 export async function fetchUsers(): Promise<UserDto[]> {
-  const res = await hubFetch('/api/users/');
+  const res = await hubFetch('/api/users');
   if (!res.ok) {
     throw new Error(`users fetch failed: ${res.status}`);
   }
