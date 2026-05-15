@@ -1,41 +1,46 @@
 /**
- * `<ScrollArea>` — focus-aware scrollable wrapper. Wrap any tall block
- * of content in one and it becomes a windowed view with keyboard
- * scroll controls:
+ * `<ScrollArea>` — focus-aware scrollable wrapper for long content.
  *
- *   <ScrollArea height={20}>
+ *   <ScrollArea>
  *     <Markdown source={readme} />
  *   </ScrollArea>
+ *
+ * **How it computes total / percent.** ScrollArea inspects its single
+ * child for a `source: string` (most markdown / text renderers) or a
+ * `lines: string[]` (line-based components) prop. When found, total
+ * = `source.split('\n').length` (or `lines.length`), and the child is
+ * re-rendered each frame via `React.cloneElement` with a sliced
+ * source. The math is then pure integer arithmetic — no `useMeasure`
+ * guesswork against a Yoga-clipped subtree, no "total shrinks as you
+ * scroll" jitter. The user sees an honest `12-31 / 240` indicator.
+ *
+ * For arbitrary children with no `source` / `lines` prop, ScrollArea
+ * falls back to the older `marginTop`-based wrapper mode — it works
+ * for short content but is best effort on large trees where Yoga and
+ * `useMeasure` disagree about the natural content height.
  *
  * Focus model:
  *   - Tab into the area or click it to grab scroll keys.
  *   - `↑` / `↓` / `j` / `k`     — one line up / down
  *   - `J` / `K`                  — fast scroll (5 lines at a time)
- *   - `PageUp` / `PageDown`      — one page (height − 1 lines)
+ *   - `PageUp` / `PageDown`      — one page (visible − 1 lines)
  *   - `Ctrl+U` / `Ctrl+D`        — same (Mac-keyboard friendly)
  *   - `Home` / `g` / `Ctrl+B`    — jump to top
  *   - `End`  / `G` / `Ctrl+G`    — jump to bottom
  *   - `Esc`                      — release focus
  *
  * **Event isolation.** While focused, the area calls
- * `useCaptureInput()` so every plain `useKey` outside any `<KeyScope>`
- * suspends — section-jump hotkeys (1-8), `/`, `q`, etc. don't fire
- * while the user is scrolling. The area's own scroll keybinds live
- * inside a `<KeyScope>` so they bypass that suspend and keep firing.
+ * `useCaptureInput()` so plain `useKey` calls outside any `<KeyScope>`
+ * suspend — section-jump hotkeys, `/`, `q`, etc. don't fire while
+ * scrolling. The area's own scroll keybinds live inside a `<KeyScope>`
+ * so they bypass that suspend and keep firing.
  *
- * How the scroll works: children render at their natural height inside
- * an outer Box that's clipped to `height` rows. A negative `marginTop`
- * on the inner Box shifts the children up by `offset` rows. The inner
- * Box's measured height (via `useMeasure`) tells us the upper bound so
- * the cursor never scrolls past the last screenful.
- *
- * A status row at the bottom shows where the cursor is ("12-31 / 84 ·
- * Esc to exit" while focused). Pass `statusLine={null}` to hide it.
+ * The status row shows `12-31 / 240  37%` plus an `Esc to exit` hint
+ * while focused. Pass `statusLine={null}` to hide it.
  */
 
 import { Box, type DOMElement, Text, useFocus, useFocusManager, useInput } from 'ink';
-import type React from 'react';
-import { type ReactNode, useCallback, useEffect, useId, useRef, useState } from 'react';
+import React, { type ReactNode, useCallback, useEffect, useId, useRef, useState } from 'react';
 import { KeyScope } from '../keys/KeyScope';
 import { useKey } from '../keys/useKey';
 import { hitTest, readBounds } from '../mouse/useBounds';
@@ -46,7 +51,7 @@ import { Button } from './Button';
 
 export interface ScrollAreaProps {
   /** Explicit visible row count. Omit to fill the flex parent — the
-   *  pane will measure its own height and use that as the window
+   *  pane measures its own window height and uses that as the slice
    *  size. The status row (1 line) always sits below the window. */
   readonly height?: number;
   readonly children?: ReactNode;
@@ -59,7 +64,7 @@ export interface ScrollAreaProps {
   readonly id?: string;
   /** Skip Ink's tab-cycle for this area. Default `true`. */
   readonly focusable?: boolean;
-  /** Lines per Shift+arrow / `J` / `K` press. Default `5`. */
+  /** Lines per `J` / `K` press. Default `5`. */
   readonly fastScrollLines?: number;
   /** Fires when the scroll offset changes. */
   readonly onScrollChange?: (offset: number) => void;
@@ -72,19 +77,20 @@ export interface ScrollAreaProps {
 export interface ScrollState {
   /** Top row currently visible (0-based). */
   readonly offset: number;
-  /** Rendered content height in rows. */
-  readonly contentHeight: number;
+  /** Total rows the area is scrolling through. */
+  readonly totalRows: number;
   /** Visible window size. */
   readonly height: number;
   readonly focused: boolean;
 }
 
-/**
- * Outer wrapper. Renders a `<KeyScope>` so the inner component's
- * `useKey` hooks bypass the shell's capture-suspend mechanism — every
- * external `useKey` outside a scope auto-suspends when we call
- * `useCaptureInput(true)` from the inner, but ours keeps firing.
- */
+const MIN_HEIGHT = 1;
+/** Floor for page-step size before the first measurement lands. */
+const MIN_PAGE = 10;
+
+const HOME_SEQUENCES: ReadonlySet<string> = new Set(['[H', '[1~', 'OH']);
+const END_SEQUENCES: ReadonlySet<string> = new Set(['[F', '[4~', 'OF']);
+
 export function ScrollArea(props: Readonly<ScrollAreaProps>): React.ReactElement {
   return (
     <KeyScope>
@@ -93,13 +99,50 @@ export function ScrollArea(props: Readonly<ScrollAreaProps>): React.ReactElement
   );
 }
 
-const MIN_HEIGHT = 1;
-/** Floor for page-step size before the first measurement lands. Keeps
- *  the very first PageDown from advancing only a single line. */
-const MIN_PAGE = 10;
+/** Probe the single child for a slice-able source. */
+interface Sliceable {
+  readonly kind: 'source' | 'lines';
+  readonly element: React.ReactElement;
+  readonly totalLines: number;
+  /** Build the props patch we'll hand to `cloneElement` for the
+   *  visible window. */
+  readonly slice: (from: number, to: number) => Record<string, unknown>;
+}
 
-const HOME_SEQUENCES: ReadonlySet<string> = new Set(['[H', '[1~', 'OH']);
-const END_SEQUENCES: ReadonlySet<string> = new Set(['[F', '[4~', 'OF']);
+function isReadableProps(p: unknown): p is Record<string, unknown> {
+  return typeof p === 'object' && p !== null;
+}
+
+function detectSliceable(children: ReactNode): Sliceable | null {
+  const arr = React.Children.toArray(children).filter(React.isValidElement);
+  if (arr.length !== 1) {
+    return null;
+  }
+  const only = arr[0];
+  if (!only || !isReadableProps(only.props)) {
+    return null;
+  }
+  const source = only.props.source;
+  if (typeof source === 'string') {
+    const lines = source.split('\n');
+    return {
+      kind: 'source',
+      element: only,
+      totalLines: lines.length,
+      slice: (from, to) => ({ source: lines.slice(from, to).join('\n') }),
+    };
+  }
+  const linesProp = only.props.lines;
+  if (Array.isArray(linesProp)) {
+    return {
+      kind: 'lines',
+      element: only,
+      totalLines: linesProp.length,
+      slice: (from, to) => ({ lines: linesProp.slice(from, to) }),
+    };
+  }
+  return null;
+}
 
 function ScrollAreaInner({
   height,
@@ -120,25 +163,28 @@ function ScrollAreaInner({
 
   useCaptureInput(isFocused);
 
-  const [innerRef, innerSize] = useMeasure();
+  // We only measure the WINDOW box (to know how many rows to slice).
+  // The inner content height comes from the child's source / lines
+  // when available; we never have to ask Yoga "how tall did this get?"
   const [windowRef, windowSize] = useMeasure();
   const STATUS_ROWS = statusLine === null ? 0 : 1;
   const visibleRows = height
     ? Math.max(MIN_HEIGHT, height)
     : Math.max(MIN_HEIGHT, windowSize.height - STATUS_ROWS);
-  const contentHeight = innerSize.height;
-  const maxOffset = Math.max(0, contentHeight - visibleRows);
+
+  const sliceable = detectSliceable(children);
+  // Wrapper-mode fallback also needs a measurable inner-content height
+  // for max-offset math. Source/lines mode bypasses this entirely.
+  const [innerRef, innerSize] = useMeasure();
+  const totalRows = sliceable ? sliceable.totalLines : Math.max(innerSize.height, visibleRows);
+  const maxOffset = Math.max(0, totalRows - visibleRows);
 
   const [offset, setOffset] = useState(initialOffset);
 
-  // Re-clamp whenever content shrinks under the cursor.
   useEffect(() => {
     setOffset((cur) => (cur > maxOffset ? maxOffset : cur));
   }, [maxOffset]);
 
-  // Stash live values in refs so the keybind closures don't capture
-  // stale offset / max / page — that's the source of the "double-press
-  // does nothing" pagination bug.
   const maxOffsetRef = useRef(maxOffset);
   maxOffsetRef.current = maxOffset;
   const pageStepRef = useRef(MIN_PAGE);
@@ -147,9 +193,6 @@ function ScrollAreaInner({
   const onChangeRef = useRef(onScrollChange);
   onChangeRef.current = onScrollChange;
 
-  /** Move by `delta` lines using the state-updater pattern so we read
-   *  the latest offset on every press — no stale-closure issues even
-   *  if React batches several presses into one render. */
   const move = useCallback((delta: number) => {
     setOffset((cur) => {
       const next = clamp(cur + delta, 0, maxOffsetRef.current);
@@ -170,15 +213,6 @@ function ScrollAreaInner({
     });
   }, []);
 
-  // Line / fast / page / jump keybinds. All read pageStepRef.current
-  // at handler-fire time so the first frame doesn't move 1 line on
-  // PgDn just because windowSize hasn't measured yet.
-  //
-  // Note: `useKey`'s matcher discriminates printable keys by the
-  // literal char (Ink reports uppercase as `K`, not as `k` with
-  // shift). A `shift+k` spec would *also* fire on plain `k` and the
-  // two handlers would stack — that's the "j press scrolls 6 lines"
-  // and "g jumps to bottom" bug. Use the uppercase form directly.
   useKey('upArrow', () => move(-1), isFocused);
   useKey('downArrow', () => move(1), isFocused);
   useKey('k', () => move(-1), isFocused);
@@ -195,8 +229,6 @@ function ScrollAreaInner({
   useKey('ctrl+g', () => jumpTo('bottom'), isFocused);
   useKey('escape', () => focusNext(), isFocused);
 
-  // Home / End — Ink doesn't expose these as `key.*` flags, so we match
-  // the raw escape sequences via `useInput`.
   useInput(
     (input) => {
       if (HOME_SEQUENCES.has(input)) {
@@ -224,19 +256,28 @@ function ScrollAreaInner({
   );
   useMouse(onMouse);
 
-  const state: ScrollState = { offset, contentHeight, height: visibleRows, focused: isFocused };
+  const state: ScrollState = { offset, totalRows, height: visibleRows, focused: isFocused };
   const chrome = renderStatus(statusLine, state, accent);
 
-  const windowProps = height
-    ? { height: visibleRows }
-    : { flexGrow: 1, flexBasis: 0 as const, flexShrink: 1 };
-
-  // Action buttons only render while the area has focus — they'd take
-  // a chrome row otherwise and most users will just scroll with the
-  // keyboard. While focused, they let the user click their way around.
-  const showActions = isFocused;
   const atTop = offset === 0;
   const atBottom = offset >= maxOffset;
+  const showActions = isFocused;
+
+  // Render the body — slice mode (cloneElement with sliced source/
+  // lines) when the child supports it, marginTop fallback otherwise.
+  let body: ReactNode;
+  if (sliceable) {
+    const sliced = sliceable.slice(offset, offset + visibleRows);
+    body = React.cloneElement(sliceable.element, sliced);
+  } else {
+    body = (
+      <Box ref={innerRef} flexDirection="column" flexShrink={0} marginTop={-offset}>
+        {children}
+      </Box>
+    );
+  }
+
+  const windowProps = height ? { height: visibleRows } : { flexGrow: 1, flexShrink: 1 };
 
   return (
     <Box
@@ -249,17 +290,11 @@ function ScrollAreaInner({
       borderDimColor={!isFocused}
       paddingX={1}
     >
-      <Box ref={windowRef} overflow="hidden" {...windowProps}>
-        {/* `flexShrink=0` keeps Yoga from collapsing the inner Box's
-         *  height when its negative marginTop pushes the bottom past
-         *  the parent's bounds — otherwise `measureElement` reports a
-         *  shrinking total as the user scrolls. */}
-        <Box ref={innerRef} flexDirection="column" flexShrink={0} marginTop={-offset}>
-          {children}
-        </Box>
+      <Box ref={windowRef} flexDirection="column" overflow="hidden" {...windowProps}>
+        {body}
       </Box>
       {showActions ? (
-        <Box flexShrink={0} marginTop={0}>
+        <Box flexShrink={0}>
           <Button shortcut="g" tabIndex={-1} enabled={!atTop} onPress={() => jumpTo('top')}>
             top
           </Button>
@@ -317,15 +352,15 @@ function DefaultStatus({
   state,
   accent,
 }: Readonly<{ state: ScrollState; accent: string }>): React.ReactElement {
-  const { offset, contentHeight, height, focused } = state;
-  const end = Math.min(contentHeight, offset + height);
+  const { offset, totalRows, height, focused } = state;
+  const end = Math.min(totalRows, offset + height);
   const atTop = offset === 0;
-  const atBot = end >= contentHeight;
-  const position = contentHeight === 0 ? '0/0' : `${offset + 1}-${end}/${contentHeight}`;
+  const atBot = end >= totalRows;
+  const position = totalRows === 0 ? '0/0' : `${offset + 1}-${end}/${totalRows}`;
   const pct =
-    contentHeight <= height
+    totalRows <= height
       ? '100%'
-      : `${Math.round((offset / Math.max(1, contentHeight - height)) * 100)}%`;
+      : `${Math.round((offset / Math.max(1, totalRows - height)) * 100)}%`;
   const arrows = `${atTop ? '·' : '↑'} ${atBot ? '·' : '↓'}`;
   return (
     <Text dimColor>
