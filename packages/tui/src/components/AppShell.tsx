@@ -123,24 +123,20 @@ export function AppShell({
   // same hook order on every render (Rules of Hooks).
   const ctxValue = useMemo(() => ({ innerWidth, accentColor }), [innerWidth, accentColor]);
 
-  // When the terminal is too small we render the warning OVER the
-  // children — children stay mounted (`display="none"`) so in-flight
+  // Single Provider + a single Box wrapper keeps React's tree identity
+  // stable when the terminal flips between "too small" and back. The
+  // warning sits over a hidden copy of the children so in-flight
   // component state (form drafts, scroll positions, ongoing fetches)
-  // survives the resize. Without this, every dip below the threshold
-  // would wipe whatever the user was typing. The context still wraps
-  // the hidden subtree so AppShellSection/Divider don't throw.
-  if (tooSmall) {
-    return (
-      <AppShellContext.Provider value={ctxValue}>
-        <Box display="none">{children}</Box>
-        <TerminalTooSmall minColumns={minColumns} minRows={minRows} mascot={tooSmallMascot} />
-      </AppShellContext.Provider>
-    );
-  }
-
+  // survives the resize.
   return (
     <AppShellContext.Provider value={ctxValue}>
-      <Box flexDirection="column" width={columns} height={frameHeight} overflow="hidden">
+      <Box
+        flexDirection="column"
+        width={columns}
+        height={frameHeight}
+        overflow="hidden"
+        display={tooSmall ? 'none' : 'flex'}
+      >
         {/* Top border row — manually drawn so the inline title can sit
          *  in the border. */}
         <Box flexShrink={0}>
@@ -176,6 +172,9 @@ export function AppShell({
           </Text>
         </Box>
       </Box>
+      {tooSmall ? (
+        <TerminalTooSmall minColumns={minColumns} minRows={minRows} mascot={tooSmallMascot} />
+      ) : null}
     </AppShellContext.Provider>
   );
 }
