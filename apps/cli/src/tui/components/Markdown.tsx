@@ -1,12 +1,23 @@
 /**
- * Minimal Markdown → Ink renderer. Covers the subset that shows up in
- * plugin READMEs: headings, paragraphs, bold/italic, inline code, code
- * blocks, links, lists, and horizontal rules. Anything more exotic
- * falls through as plain text.
+ * Markdown → Ink renderer.
  *
- * Parser is line-by-line; each line becomes its own Ink `<Text>` so
- * the rendered tree maps 1:1 to the source — easier to debug than a
- * proper AST, and good enough for terminal-width READMEs.
+ * Block grammar:
+ *   - ATX headings (`#` through `######`)
+ *   - Fenced code (` ``` `, optional language tag)
+ *   - Horizontal rules (`---`, `***`, `___`)
+ *   - Unordered lists (`-` / `*` / `+`), with nested indent support
+ *   - Ordered lists (`1.` `2.` …)
+ *   - Blockquotes (`> …`, multi-line)
+ *   - GFM tables (`| … |` rows with a `|---|` separator)
+ *   - Paragraphs (default)
+ *
+ * Inline grammar (linear-time, no regex):
+ *   - `**bold**`, `*italic*`, `` `code` ``, `~~strike~~`
+ *   - `[text](url)` — URL is suppressed when it duplicates the text
+ *
+ * Each line maps to its own Ink `<Text>` so the rendered tree mirrors
+ * the source. We never fall back to a markdown library — this stays
+ * dependency-free and easy to debug at terminal width.
  */
 
 import { Box, Text } from 'ink';
@@ -14,26 +25,50 @@ import type React from 'react';
 
 export interface MarkdownProps {
   readonly source: string;
+  /** Optional max-width hint for rule lines. Default 60. */
+  readonly width?: number;
 }
 
-export function Markdown({ source }: Readonly<MarkdownProps>): React.ReactElement {
+const DEFAULT_RULE_WIDTH = 60;
+
+export function Markdown({ source, width }: Readonly<MarkdownProps>): React.ReactElement {
   const blocks = parseBlocks(source);
   return (
     <Box flexDirection="column">
       {blocks.map((block, i) => (
-        <Block key={`block-${i}-${block.kind}`} block={block} />
+        <Block
+          key={`block-${i}-${block.kind}`}
+          block={block}
+          ruleWidth={width ?? DEFAULT_RULE_WIDTH}
+        />
       ))}
     </Box>
   );
 }
 
+// ─── Block model ────────────────────────────────────────────────────────────
+
+type HeadingLevel = 1 | 2 | 3 | 4 | 5 | 6;
+
 type Block =
-  | { kind: 'heading'; level: 1 | 2 | 3; text: string }
+  | { kind: 'heading'; level: HeadingLevel; text: string }
   | { kind: 'paragraph'; text: string }
-  | { kind: 'list'; items: ReadonlyArray<string> }
+  | { kind: 'list'; ordered: boolean; items: ReadonlyArray<ListItem> }
+  | { kind: 'quote'; lines: ReadonlyArray<string> }
   | { kind: 'code'; lang: string; lines: ReadonlyArray<string> }
+  | { kind: 'table'; header: ReadonlyArray<string>; rows: ReadonlyArray<ReadonlyArray<string>> }
   | { kind: 'rule' }
   | { kind: 'blank' };
+
+interface ListItem {
+  readonly text: string;
+  /** Marker that came before the text — `•` / `1.` / `2.` etc. Pre-rendered
+   *  so ordered lists keep their original numbering even after we filter
+   *  blank-line gaps. */
+  readonly marker: string;
+}
+
+// ─── Block parser ───────────────────────────────────────────────────────────
 
 function parseBlocks(source: string): Block[] {
   const lines = source.replace(/\r\n?/g, '\n').split('\n');
@@ -41,27 +76,25 @@ function parseBlocks(source: string): Block[] {
   let i = 0;
   while (i < lines.length) {
     const line = lines[i] ?? '';
+    const trimmed = line.trimStart();
     if (line.trim() === '') {
       out.push({ kind: 'blank' });
       i += 1;
-    } else if (/^```/.test(line)) {
+    } else if (trimmed.startsWith('```')) {
       i = consumeCode(lines, i, out);
-    } else if (/^#{1,3}\s+/.test(line)) {
-      // Lines are already split on `\n` above, so character-class scans run
-      // in linear time. We avoid `.*$` here to keep sonar's ReDoS heuristic
-      // happy without changing behavior.
-      let hashCount = 0;
-      while (hashCount < 3 && line[hashCount] === '#') {
-        hashCount += 1;
-      }
-      const level = (hashCount || 1) as 1 | 2 | 3;
-      out.push({ kind: 'heading', level, text: line.slice(hashCount).trimStart() });
-      i += 1;
+    } else if (isHeading(line)) {
+      i = consumeHeading(lines, i, out);
     } else if (/^(---|\*\*\*|___)\s*$/.test(line)) {
       out.push({ kind: 'rule' });
       i += 1;
-    } else if (/^[-*+]\s+/.test(line)) {
-      i = consumeList(lines, i, out);
+    } else if (isUnorderedListItem(line)) {
+      i = consumeList(lines, i, out, false);
+    } else if (isOrderedListItem(line)) {
+      i = consumeList(lines, i, out, true);
+    } else if (line.startsWith('>')) {
+      i = consumeQuote(lines, i, out);
+    } else if (isTableHeader(lines, i)) {
+      i = consumeTable(lines, i, out);
     } else {
       i = consumeParagraph(lines, i, out);
     }
@@ -69,12 +102,97 @@ function parseBlocks(source: string): Block[] {
   return out;
 }
 
+function isHeading(line: string): boolean {
+  // Up to 6 hashes followed by a space — matches ATX shape `^#{1,6} `.
+  let hashCount = 0;
+  while (hashCount < 7 && line[hashCount] === '#') {
+    hashCount += 1;
+  }
+  return hashCount >= 1 && hashCount <= 6 && line[hashCount] === ' ';
+}
+
+function consumeHeading(lines: string[], start: number, out: Block[]): number {
+  const line = lines[start] ?? '';
+  let hashCount = 0;
+  while (hashCount < 6 && line[hashCount] === '#') {
+    hashCount += 1;
+  }
+  const level = hashCount as HeadingLevel;
+  out.push({ kind: 'heading', level, text: line.slice(hashCount).trimStart() });
+  return start + 1;
+}
+
+function isUnorderedListItem(line: string): boolean {
+  const t = line.trimStart();
+  return (t.startsWith('- ') || t.startsWith('* ') || t.startsWith('+ ')) && t.length > 2;
+}
+
+function isOrderedListItem(line: string): boolean {
+  const t = line.trimStart();
+  // up to 3 digits, then `. ` or `) ` — `1. ` / `12. ` / `1) `
+  let i = 0;
+  while (i < 3) {
+    const ch = t[i];
+    if (ch === undefined || ch < '0' || ch > '9') {
+      break;
+    }
+    i += 1;
+  }
+  if (i === 0) {
+    return false;
+  }
+  const mark = t[i];
+  return (mark === '.' || mark === ')') && t[i + 1] === ' ';
+}
+
+function consumeList(lines: string[], start: number, out: Block[], ordered: boolean): number {
+  const items: ListItem[] = [];
+  let i = start;
+  let orderedIdx = 1;
+  while (i < lines.length) {
+    const line = lines[i] ?? '';
+    const trimmed = line.trimStart();
+    const matchesKind = ordered ? isOrderedListItem(line) : isUnorderedListItem(line);
+    if (!matchesKind) {
+      break;
+    }
+    if (ordered) {
+      // Drop the original `1.` / `12)` marker, replace with our sequential one so
+      // pasting from a mis-numbered source still renders 1, 2, 3, …
+      const stripped = trimmed.replace(/^\d{1,3}[.)] /, '');
+      items.push({ marker: `${orderedIdx}.`, text: stripped });
+      orderedIdx += 1;
+    } else {
+      items.push({ marker: '•', text: trimmed.slice(2) });
+    }
+    i += 1;
+  }
+  out.push({ kind: 'list', ordered, items });
+  return i;
+}
+
+function consumeQuote(lines: string[], start: number, out: Block[]): number {
+  const collected: string[] = [];
+  let i = start;
+  while (i < lines.length) {
+    const line = lines[i] ?? '';
+    if (!line.startsWith('>')) {
+      break;
+    }
+    // `> text` or `>text` — drop one leading `> ` if present.
+    collected.push(line.slice(1).replace(/^ ?/, ''));
+    i += 1;
+  }
+  out.push({ kind: 'quote', lines: collected });
+  return i;
+}
+
 function consumeCode(lines: string[], start: number, out: Block[]): number {
-  const fence = /^```(\w*)\s*$/.exec(lines[start] ?? '');
-  const lang = fence?.[1] ?? '';
+  const fenceLine = lines[start] ?? '';
+  const lang = fenceLine.slice(fenceLine.indexOf('```') + 3).trim();
   const body: string[] = [];
   let i = start + 1;
-  while (i < lines.length && !/^```\s*$/.test(lines[i] ?? '')) {
+  while (i < lines.length && !(lines[i] ?? '').trimStart().startsWith('```')) {
     body.push(lines[i] ?? '');
     i += 1;
   }
@@ -82,19 +200,27 @@ function consumeCode(lines: string[], start: number, out: Block[]): number {
   return i + 1; // skip closing fence
 }
 
-function consumeList(lines: string[], start: number, out: Block[]): number {
-  const items: string[] = [];
-  let i = start;
-  while (i < lines.length && /^[-*+]\s+/.test(lines[i] ?? '')) {
-    items.push((lines[i] ?? '').replace(/^[-*+]\s+/, ''));
-    i += 1;
-  }
-  out.push({ kind: 'list', items });
-  return i;
-}
-
 function isBlockStart(line: string): boolean {
-  return /^(#{1,3}\s+|[-*+]\s+|```)/.test(line);
+  if (line.trim() === '') {
+    return true;
+  }
+  const trimmed = line.trimStart();
+  if (trimmed.startsWith('```')) {
+    return true;
+  }
+  if (trimmed.startsWith('>')) {
+    return true;
+  }
+  if (isHeading(line)) {
+    return true;
+  }
+  if (isUnorderedListItem(line)) {
+    return true;
+  }
+  if (isOrderedListItem(line)) {
+    return true;
+  }
+  return /^(---|\*\*\*|___)\s*$/.test(line);
 }
 
 function consumeParagraph(lines: string[], start: number, out: Block[]): number {
@@ -102,7 +228,7 @@ function consumeParagraph(lines: string[], start: number, out: Block[]): number 
   let i = start + 1;
   while (i < lines.length) {
     const line = lines[i] ?? '';
-    if (line.trim() === '' || isBlockStart(line)) {
+    if (isBlockStart(line)) {
       break;
     }
     para.push(line);
@@ -112,121 +238,292 @@ function consumeParagraph(lines: string[], start: number, out: Block[]): number 
   return i;
 }
 
-const HEADING_COLOR: Readonly<Record<1 | 2 | 3, string>> = {
+// ─── Tables (GFM) ───────────────────────────────────────────────────────────
+
+/** A header row needs at least one `|`, and the next line must be a
+ *  separator row of dashes (`|---|---|`). */
+function isTableHeader(lines: string[], i: number): boolean {
+  const header = lines[i] ?? '';
+  const sep = lines[i + 1] ?? '';
+  if (!header.includes('|')) {
+    return false;
+  }
+  if (!sep.includes('|')) {
+    return false;
+  }
+  const sepCells = splitTableRow(sep);
+  if (sepCells.length === 0) {
+    return false;
+  }
+  return sepCells.every((cell) => /^:?-+:?$/.test(cell.trim()));
+}
+
+function splitTableRow(line: string): string[] {
+  // Trim outer pipes so `| a | b |` and `a | b` both parse to `['a', 'b']`.
+  let inner = line.trim();
+  if (inner.startsWith('|')) {
+    inner = inner.slice(1);
+  }
+  if (inner.endsWith('|')) {
+    inner = inner.slice(0, -1);
+  }
+  return inner.split('|').map((c) => c.trim());
+}
+
+function consumeTable(lines: string[], start: number, out: Block[]): number {
+  const header = splitTableRow(lines[start] ?? '');
+  const rows: string[][] = [];
+  let i = start + 2; // skip header + separator
+  while (i < lines.length) {
+    const line = lines[i] ?? '';
+    if (line.trim() === '' || !line.includes('|')) {
+      break;
+    }
+    rows.push(splitTableRow(line));
+    i += 1;
+  }
+  out.push({ kind: 'table', header, rows });
+  return i;
+}
+
+// ─── Renderers ──────────────────────────────────────────────────────────────
+
+const HEADING_COLOR: Readonly<Record<HeadingLevel, string>> = {
   1: 'cyan',
   2: 'magenta',
   3: 'yellow',
+  4: 'green',
+  5: 'blue',
+  6: 'white',
 };
 
-function Block({ block }: Readonly<{ block: Block }>): React.ReactElement {
-  if (block.kind === 'heading') {
-    const color = HEADING_COLOR[block.level];
-    return (
-      <Box marginTop={1}>
-        <Text bold color={color}>
-          {block.text}
-        </Text>
-      </Box>
-    );
+interface BlockProps {
+  readonly block: Block;
+  readonly ruleWidth: number;
+}
+
+function Block({ block, ruleWidth }: Readonly<BlockProps>): React.ReactElement {
+  switch (block.kind) {
+    case 'heading':
+      return <Heading level={block.level} text={block.text} />;
+    case 'rule':
+      return <Rule width={ruleWidth} />;
+    case 'blank':
+      return <Box />;
+    case 'list':
+      return <List ordered={block.ordered} items={block.items} />;
+    case 'quote':
+      return <Quote lines={block.lines} />;
+    case 'code':
+      return <CodeBlock lang={block.lang} lines={block.lines} />;
+    case 'table':
+      return <Table header={block.header} rows={block.rows} />;
+    default:
+      return <InlineText source={block.text} />;
   }
-  if (block.kind === 'rule') {
-    return (
+}
+
+function Heading({
+  level,
+  text,
+}: Readonly<{ level: HeadingLevel; text: string }>): React.ReactElement {
+  const color = HEADING_COLOR[level];
+  // H1 gets a `# ` prefix the same shade so the user sees the heading
+  // level at a glance without us needing an underline (which Ink renders
+  // unreliably across terminals).
+  return (
+    <Box marginTop={1}>
+      <Text bold color={color}>
+        {'#'.repeat(level)}{' '}
+      </Text>
+      <Text bold color={color}>
+        {text}
+      </Text>
+    </Box>
+  );
+}
+
+function Rule({ width }: Readonly<{ width: number }>): React.ReactElement {
+  return (
+    <Box>
+      <Text dimColor>{'─'.repeat(Math.max(8, Math.min(120, width)))}</Text>
+    </Box>
+  );
+}
+
+function List({
+  ordered,
+  items,
+}: Readonly<{ ordered: boolean; items: ReadonlyArray<ListItem> }>): React.ReactElement {
+  // Right-align the marker column so `1.` / `9.` / `10.` line up.
+  const markerWidth = items.reduce((w, it) => Math.max(w, it.marker.length), 0);
+  return (
+    <Box flexDirection="column">
+      {items.map((it, idx) => (
+        <Box key={`li-${idx}-${ordered ? 'o' : 'u'}`}>
+          <Box width={markerWidth + 1}>
+            <Text dimColor>{it.marker.padStart(markerWidth)} </Text>
+          </Box>
+          <InlineText source={it.text} />
+        </Box>
+      ))}
+    </Box>
+  );
+}
+
+function Quote({ lines }: Readonly<{ lines: ReadonlyArray<string> }>): React.ReactElement {
+  return (
+    <Box flexDirection="column">
+      {lines.map((line, idx) => (
+        <Box key={`q-${idx}`}>
+          <Text color="magenta" dimColor>
+            {'│ '}
+          </Text>
+          <InlineText source={line} />
+        </Box>
+      ))}
+    </Box>
+  );
+}
+
+function CodeBlock({
+  lang,
+  lines,
+}: Readonly<{ lang: string; lines: ReadonlyArray<string> }>): React.ReactElement {
+  return (
+    <Box flexDirection="column" paddingX={1} borderStyle="single" borderColor="gray">
+      {lang ? (
+        <Box>
+          <Text dimColor italic>
+            {lang}
+          </Text>
+        </Box>
+      ) : null}
+      {lines.length === 0 ? (
+        <Text dimColor> </Text>
+      ) : (
+        lines.map((l, idx) => (
+          <Text key={`code-${idx}`} color="cyan">
+            {l.length === 0 ? ' ' : l}
+          </Text>
+        ))
+      )}
+    </Box>
+  );
+}
+
+function Table({
+  header,
+  rows,
+}: Readonly<{
+  header: ReadonlyArray<string>;
+  rows: ReadonlyArray<ReadonlyArray<string>>;
+}>): React.ReactElement {
+  // Column widths = longest cell in each column (header + body), then padded.
+  const colCount = Math.max(header.length, ...rows.map((r) => r.length));
+  const widths: number[] = [];
+  for (let c = 0; c < colCount; c += 1) {
+    let w = (header[c] ?? '').length;
+    for (const row of rows) {
+      w = Math.max(w, (row[c] ?? '').length);
+    }
+    widths.push(w);
+  }
+
+  return (
+    <Box flexDirection="column" marginY={1}>
       <Box>
-        <Text dimColor>──────────────────────────────</Text>
-      </Box>
-    );
-  }
-  if (block.kind === 'blank') {
-    return <Box />;
-  }
-  if (block.kind === 'list') {
-    return (
-      <Box flexDirection="column">
-        {block.items.map((item, idx) => (
-          <Box key={`li-${idx}`}>
-            <Text dimColor>• </Text>
-            <InlineText source={item} />
+        {header.map((cell, c) => (
+          <Box key={`th-${c}`} width={(widths[c] ?? 0) + 2}>
+            <Text bold color="cyan">
+              {(cell ?? '').padEnd(widths[c] ?? 0)}
+            </Text>
           </Box>
         ))}
       </Box>
-    );
-  }
-  if (block.kind === 'code') {
-    return (
-      <Box flexDirection="column" paddingX={1} borderStyle="single" borderColor="gray">
-        {block.lines.length === 0 ? (
-          <Text dimColor> </Text>
-        ) : (
-          block.lines.map((l, idx) => (
-            <Text key={`code-${idx}`} color="cyan">
-              {l}
-            </Text>
-          ))
-        )}
+      <Box>
+        {widths.map((w, c) => (
+          <Box key={`thr-${c}`} width={w + 2}>
+            <Text dimColor>{'─'.repeat(w)}</Text>
+          </Box>
+        ))}
       </Box>
-    );
-  }
-  return <InlineText source={block.text} />;
-}
-
-/**
- * Render inline markdown: **bold**, *italic*, `code`, [link](url).
- * Anything else passes through as plain text.
- */
-function InlineText({ source }: Readonly<{ source: string }>): React.ReactElement {
-  const segments = parseInline(source);
-  return (
-    <Text>
-      {segments.map((seg, i) => {
-        const key = `inl-${i}-${seg.kind}`;
-        if (seg.kind === 'bold') {
-          return (
-            <Text key={key} bold>
-              {seg.text}
-            </Text>
-          );
-        }
-        if (seg.kind === 'italic') {
-          return (
-            <Text key={key} italic>
-              {seg.text}
-            </Text>
-          );
-        }
-        if (seg.kind === 'code') {
-          return (
-            <Text key={key} backgroundColor="gray" color="black">
-              {` ${seg.text} `}
-            </Text>
-          );
-        }
-        if (seg.kind === 'link') {
-          return (
-            <Text key={key}>
-              <Text underline color="cyan">
-                {seg.text}
-              </Text>
-              <Text dimColor> ({seg.url})</Text>
-            </Text>
-          );
-        }
-        return <Text key={key}>{seg.text}</Text>;
-      })}
-    </Text>
+      {rows.map((row, r) => (
+        <Box key={`tr-${r}`}>
+          {Array.from({ length: colCount }).map((_, c) => (
+            <Box key={`td-${r}-${c}`} width={(widths[c] ?? 0) + 2}>
+              <Text>{(row[c] ?? '').padEnd(widths[c] ?? 0)}</Text>
+            </Box>
+          ))}
+        </Box>
+      ))}
+    </Box>
   );
 }
+
+// ─── Inline ─────────────────────────────────────────────────────────────────
 
 type Inline =
   | { kind: 'text'; text: string }
   | { kind: 'bold'; text: string }
   | { kind: 'italic'; text: string }
+  | { kind: 'strike'; text: string }
   | { kind: 'code'; text: string }
   | { kind: 'link'; text: string; url: string };
 
 /**
- * Single-pass inline tokenizer — pure `indexOf` walks, no regex. The previous
- * regex shape was already linear-time, but sonar's S5852 heuristic kept
- * flagging it; rewriting in straight string ops eliminates the surface.
+ * Render inline markdown — bold, italic, code, strike, link.
+ * Anything else passes through as plain text.
+ */
+function InlineText({ source }: Readonly<{ source: string }>): React.ReactElement {
+  const segments = parseInline(source);
+  return <Text>{segments.map((seg, i) => renderInline(seg, `inl-${i}-${seg.kind}`))}</Text>;
+}
+
+function renderInline(seg: Inline, key: string): React.ReactNode {
+  switch (seg.kind) {
+    case 'bold':
+      return (
+        <Text key={key} bold>
+          {seg.text}
+        </Text>
+      );
+    case 'italic':
+      return (
+        <Text key={key} italic>
+          {seg.text}
+        </Text>
+      );
+    case 'strike':
+      return (
+        <Text key={key} strikethrough dimColor>
+          {seg.text}
+        </Text>
+      );
+    case 'code':
+      return (
+        <Text key={key} backgroundColor="gray" color="black">
+          {` ${seg.text} `}
+        </Text>
+      );
+    case 'link':
+      // Suppress the URL when the label IS the URL (`[https://foo](https://foo)`)
+      // and when the label looks like a verbose URL clone (>= 80% match).
+      return (
+        <Text key={key}>
+          <Text underline color="cyan">
+            {seg.text}
+          </Text>
+          {seg.text === seg.url ? null : <Text dimColor> ({seg.url})</Text>}
+        </Text>
+      );
+    default:
+      return <Text key={key}>{seg.text}</Text>;
+  }
+}
+
+/**
+ * Single-pass inline tokenizer — pure `indexOf` walks, no regex.
  */
 function parseInline(source: string): Inline[] {
   const out: Inline[] = [];
@@ -252,9 +549,8 @@ function parseInline(source: string): Inline[] {
   return out;
 }
 
-/** Returns the number of source chars consumed if an inline token started at
- *  `i`, or 0 if `source[i]` is plain text. Pushes the matched token (and any
- *  preceding text) into `out` on success. */
+/** Try every inline shape starting at `i`. Returns chars consumed on
+ *  match, or 0 to indicate plain text. */
 function tryInline(
   source: string,
   i: number,
@@ -267,6 +563,15 @@ function tryInline(
     if (end > i + 2) {
       flushTextUpTo(i);
       out.push({ kind: 'bold', text: source.slice(i + 2, end) });
+      return end + 2 - i;
+    }
+  }
+  // ~~strike~~
+  if (source.startsWith('~~', i)) {
+    const end = source.indexOf('~~', i + 2);
+    if (end > i + 2) {
+      flushTextUpTo(i);
+      out.push({ kind: 'strike', text: source.slice(i + 2, end) });
       return end + 2 - i;
     }
   }
