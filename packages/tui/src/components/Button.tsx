@@ -26,10 +26,12 @@
  * built-in `marginRight={2}` (the default) to space them out.
  */
 
-import { Box, Text, useFocus, useInput } from 'ink';
+import { Box, type DOMElement, Text, useFocus, useFocusManager, useInput } from 'ink';
 import type React from 'react';
-import type { ReactNode } from 'react';
+import { type ReactNode, useCallback, useRef } from 'react';
 import { useKey } from '../keys/useKey';
+import { hitTest, useBounds } from '../mouse/useBounds';
+import { useMouse } from '../mouse/useMouse';
 
 export type ButtonVariant = 'default' | 'success' | 'warning' | 'destructive' | 'ghost';
 
@@ -78,6 +80,10 @@ export function Button({
   children,
 }: Readonly<ButtonProps>): React.ReactElement {
   const { isFocused } = useFocus({ autoFocus, id, isActive: enabled });
+  const { focus } = useFocusManager();
+  const boxRef = useRef<DOMElement>(null);
+  const bounds = useBounds(boxRef);
+
   useKey(shortcut, onPress, enabled);
   useInput(
     (input, key) => {
@@ -88,9 +94,30 @@ export function Button({
     { isActive: enabled && isFocused }
   );
 
+  // Mouse: focus on hover-press, fire on click — only when the
+  // bounds are within the clicked cell. `useMouse` returns events
+  // for the whole terminal, so each button filters on its own rect.
+  const handleMouse = useCallback(
+    (e: { action: string; button: string; column: number; row: number }) => {
+      if (!enabled || !bounds || e.button !== 'left') {
+        return;
+      }
+      if (!hitTest(bounds, e)) {
+        return;
+      }
+      if (e.action === 'down' && id) {
+        focus(id);
+      } else if (e.action === 'click') {
+        onPress();
+      }
+    },
+    [enabled, bounds, id, focus, onPress]
+  );
+  useMouse(handleMouse);
+
   const accent = VARIANT_COLOR[variant];
   return (
-    <Box marginRight={2}>
+    <Box ref={boxRef} marginRight={2}>
       {isFocused ? (
         <Text color={accent} bold>
           ▸{' '}

@@ -29,8 +29,11 @@
  * (masked with `•`), `plain` (no prefix).
  */
 
-import { Box, Text, useFocus, useInput } from 'ink';
+import { Box, type DOMElement, Text, useFocus, useFocusManager, useInput } from 'ink';
 import type React from 'react';
+import { useCallback, useRef } from 'react';
+import { hitTest, useBounds } from '../mouse/useBounds';
+import { useMouse } from '../mouse/useMouse';
 import { useCaptureInput } from '../shell/useTuiShell';
 
 export type InputKind = 'search' | 'password' | 'plain';
@@ -75,9 +78,28 @@ export function Input({
   id,
 }: Readonly<InputProps>): React.ReactElement {
   const { isFocused } = useFocus({ autoFocus, id });
+  const { focus } = useFocusManager();
+  const boxRef = useRef<DOMElement>(null);
+  const bounds = useBounds(boxRef);
+
   // Capture input only while focused — siblings (other inputs,
   // buttons) get a clean shell when Tab moves focus away.
   useCaptureInput(isFocused);
+
+  // Mouse: clicking the input focuses it (no separate `onPress` —
+  // typing follows once focused). Ignore clicks outside the box.
+  const handleMouse = useCallback(
+    (e: { action: string; button: string; column: number; row: number }) => {
+      if (!bounds || e.button !== 'left' || e.action !== 'down') {
+        return;
+      }
+      if (hitTest(bounds, e) && id) {
+        focus(id);
+      }
+    },
+    [bounds, focus, id]
+  );
+  useMouse(handleMouse);
 
   useInput(
     (input, key) => {
@@ -118,10 +140,10 @@ export function Input({
 
   if (border) {
     return (
-      <Box borderStyle="round" borderColor={borderColor} paddingX={1}>
+      <Box ref={boxRef} borderStyle="round" borderColor={borderColor} paddingX={1}>
         {body}
       </Box>
     );
   }
-  return body;
+  return <Box ref={boxRef}>{body}</Box>;
 }
