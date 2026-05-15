@@ -109,6 +109,7 @@ function InstalledTab(): React.ReactElement {
   const allItems = list.data ?? [];
   const items = useMemo(() => filterPlugins(allItems, filter), [allItems, filter]);
   const focused = focusedUid ? (items.find((p) => p.uid === focusedUid) ?? null) : null;
+  const focusedMetrics = useLiveMetrics(focused?.uid ?? null, Boolean(focused?.enabled));
 
   // Load README whenever the focused plugin changes.
   useEffect(() => {
@@ -220,8 +221,9 @@ function InstalledTab(): React.ReactElement {
             allCount={allItems.length}
             focusedUid={focusedUid}
             onFocusChange={setFocusedUid}
+            focusedMetrics={focusedMetrics}
           />
-          {focused && <PluginMeta plugin={focused} />}
+          {focused && <PluginMeta plugin={focused} metrics={focusedMetrics} />}
         </Box>
 
         <Box flexDirection="column" flexGrow={1} flexShrink={1}>
@@ -287,6 +289,7 @@ interface PluginRowsProps {
   readonly allCount: number;
   readonly focusedUid: string | null;
   readonly onFocusChange: (uid: string) => void;
+  readonly focusedMetrics: PluginMetrics | null;
 }
 
 function PluginRows({
@@ -294,6 +297,7 @@ function PluginRows({
   allCount,
   focusedUid,
   onFocusChange,
+  focusedMetrics,
 }: Readonly<PluginRowsProps>): React.ReactElement {
   if (allCount === 0) {
     return (
@@ -317,11 +321,21 @@ function PluginRows({
     <List value={focusedUid ?? undefined} onValueChange={onFocusChange}>
       {items.map((p) => {
         const state = p.enabled ? (p.state ?? 'idle') : 'disabled';
+        const isFocusedRow = focusedUid === p.uid;
+        const live = isFocusedRow ? (focusedMetrics?.current ?? null) : null;
         return (
           <ListItem key={p.uid} value={p.uid}>
-            <Text bold={focusedUid === p.uid}>{p.displayName ?? p.name}</Text>
+            <Text bold={isFocusedRow}>{p.displayName ?? p.name}</Text>
             <Text dimColor> v{p.version} </Text>
             <Badge variant={STATE_VARIANT[state] ?? 'secondary'}>{state}</Badge>
+            {live ? (
+              <>
+                <Text dimColor> · </Text>
+                <Text color={cpuColor(live.cpu)}>{live.cpu.toFixed(1)}%</Text>
+                <Text dimColor> · </Text>
+                <Text dimColor>{formatBytes(live.memory)}</Text>
+              </>
+            ) : null}
           </ListItem>
         );
       })}
@@ -330,25 +344,21 @@ function PluginRows({
 }
 
 /**
- * Metadata + live runtime stats for the focused plugin — sits below
- * the list and matches what the web UI surfaces on its plugin row:
- * version, author/source links, PID, CPU%, memory. Polls metrics
- * every 2 s while the plugin is enabled. Cheap (`ps -p` on the hub).
+ * Polls `/api/plugins/:uid/metrics` every 2 s while the plugin is
+ * enabled; returns the latest snapshot. `null` while disabled or
+ * before the first response arrives.
  */
-function PluginMeta({ plugin }: Readonly<{ plugin: PluginListItem }>): React.ReactElement {
-  const author = typeof plugin.author === 'string' ? plugin.author : plugin.author?.name;
-  const repo = typeof plugin.repository === 'string' ? plugin.repository : plugin.repository?.url;
+function useLiveMetrics(uid: string | null, enabled: boolean): PluginMetrics | null {
   const [metrics, setMetrics] = useState<PluginMetrics | null>(null);
-
   useEffect(() => {
-    if (!plugin.enabled) {
-      setMetrics(null);
+    setMetrics(null);
+    if (!uid || !enabled) {
       return;
     }
     let cancelled = false;
     const tick = async (): Promise<void> => {
       try {
-        const m = await fetchPluginMetrics(plugin.uid);
+        const m = await fetchPluginMetrics(uid);
         if (!cancelled) {
           setMetrics(m);
         }
@@ -362,8 +372,25 @@ function PluginMeta({ plugin }: Readonly<{ plugin: PluginListItem }>): React.Rea
       cancelled = true;
       clearInterval(t);
     };
-  }, [plugin.uid, plugin.enabled]);
+  }, [uid, enabled]);
+  return metrics;
+}
 
+/**
+ * Metadata + live runtime stats for the focused plugin — sits below
+ * the list and matches what the web UI surfaces on its plugin row:
+ * version, author/source links, PID, CPU%, memory. Receives the
+ * shared metrics snapshot from the parent so we don't double-poll.
+ */
+function PluginMeta({
+  plugin,
+  metrics,
+}: Readonly<{
+  plugin: PluginListItem;
+  metrics: PluginMetrics | null;
+}>): React.ReactElement {
+  const author = typeof plugin.author === 'string' ? plugin.author : plugin.author?.name;
+  const repo = typeof plugin.repository === 'string' ? plugin.repository : plugin.repository?.url;
   return (
     <Box marginTop={1} flexDirection="column">
       <Properties>
@@ -383,6 +410,16 @@ function PluginMeta({ plugin }: Readonly<{ plugin: PluginListItem }>): React.Rea
       </Properties>
     </Box>
   );
+}
+
+function cpuColor(percent: number): string {
+  if (percent >= 80) {
+    return 'red';
+  }
+  if (percent >= 40) {
+    return 'yellow';
+  }
+  return 'cyan';
 }
 
 function PidProperty({

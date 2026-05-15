@@ -33,6 +33,7 @@
 import { Box, type DOMElement, Text } from 'ink';
 import type React from 'react';
 import { useRef } from 'react';
+import { useFocusable } from '../keys/useFocusable';
 import { useClickable } from '../mouse/useClickable';
 import { useTerminalSize } from '../state/useTerminalSize';
 
@@ -114,22 +115,31 @@ function MenuBarItemView({
   onPress,
 }: Readonly<MenuBarItemViewProps>): React.ReactElement {
   const ref = useRef<DOMElement>(null);
+  const { isFocused } = useFocusable({
+    id: `menubar-${item.key}`,
+    onPress,
+    enabled: Boolean(onPress),
+  });
   useClickable(ref, onPress);
   const labelWidth = (item.hotkey ? `[${item.hotkey}] ` : '').length + item.label.length;
+  const highlighted = active || isFocused;
+  const tint = highlighted ? accent : undefined;
+  const underlineColor = highlighted ? accent : 'gray';
+  const underlineChar = active ? '━' : '─';
   return (
     <Box ref={ref} flexDirection="column" flexShrink={0}>
       <Box>
         {item.hotkey ? (
-          <Text color={active ? accent : undefined} dimColor={!active}>
+          <Text color={tint} dimColor={!highlighted}>
             [{item.hotkey}]{' '}
           </Text>
         ) : null}
-        <Text color={active ? accent : undefined} bold={active}>
+        <Text color={tint} bold={highlighted}>
           {item.label}
         </Text>
       </Box>
-      <Text color={active ? accent : 'gray'} dimColor={!active} bold={active}>
-        {(active ? '━' : '─').repeat(labelWidth)}
+      <Text color={underlineColor} dimColor={!highlighted} bold={active}>
+        {underlineChar.repeat(labelWidth)}
       </Text>
     </Box>
   );
@@ -179,13 +189,19 @@ function CompactChip({
   onPress,
 }: Readonly<MenuBarItemViewProps>): React.ReactElement {
   const ref = useRef<DOMElement>(null);
+  const { isFocused } = useFocusable({
+    id: `menubar-compact-${item.key}`,
+    onPress,
+    enabled: Boolean(onPress),
+  });
   useClickable(ref, onPress);
+  const highlighted = active || isFocused;
   return (
     <Box ref={ref} flexShrink={0}>
       <Text
-        color={active ? accent : undefined}
-        bold={active}
-        dimColor={!active}
+        color={highlighted ? accent : undefined}
+        bold={highlighted}
+        dimColor={!highlighted}
         wrap="truncate-end"
       >
         {item.hotkey ? `[${item.hotkey}]` : item.label}

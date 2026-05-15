@@ -17,15 +17,24 @@
  * `useClickable` internally so consumers don't need this wrapper.
  */
 
-import { Box, type DOMElement } from 'ink';
+import { Box, type DOMElement, Text } from 'ink';
 import type React from 'react';
 import { type ReactNode, useRef } from 'react';
+import { useFocusable } from '../keys/useFocusable';
 import { useClickable } from '../mouse/useClickable';
 
 export interface ClickableProps {
   readonly onPress?: () => void;
   /** Default `true`. Set `false` to silence clicks without unmounting. */
   readonly enabled?: boolean;
+  /** DOM-style tab order — `-1` opts out of the Tab cycle. Default `0`. */
+  readonly tabIndex?: number;
+  /** Stable focus id. Auto-generated when omitted. */
+  readonly id?: string;
+  /** Show a `▸` glyph in front of the children when focused. Default `true`.
+   *  Set `false` when the wrapped child already paints its own focus marker
+   *  (e.g. it's a `<Card>` with a focused border). */
+  readonly showFocusMarker?: boolean;
   /** Pass-through to the wrapping Box. Useful when the clickable
    *  needs to participate in the parent's flex layout the same way
    *  the unwrapped child would. */
@@ -38,15 +47,29 @@ export interface ClickableProps {
 export function Clickable({
   onPress,
   enabled = true,
+  tabIndex,
+  id,
+  showFocusMarker = true,
   flexGrow,
   flexShrink,
   flexBasis,
   children,
 }: Readonly<ClickableProps>): React.ReactElement {
   const ref = useRef<DOMElement>(null);
+  const { isFocused } = useFocusable({
+    id,
+    tabIndex,
+    onPress,
+    enabled: enabled && Boolean(onPress),
+  });
   useClickable(ref, onPress, enabled);
   return (
     <Box ref={ref} flexGrow={flexGrow} flexShrink={flexShrink} flexBasis={flexBasis}>
+      {isFocused && showFocusMarker ? (
+        <Text color="cyan" bold>
+          ▸{' '}
+        </Text>
+      ) : null}
       {children}
     </Box>
   );

@@ -19,6 +19,7 @@
 import { Box, type DOMElement, Text } from 'ink';
 import type React from 'react';
 import { useRef } from 'react';
+import { useFocusable } from '../keys/useFocusable';
 import { useClickable } from '../mouse/useClickable';
 
 export interface CardProps {
@@ -26,8 +27,13 @@ export interface CardProps {
   readonly accent?: string;
   /** Optional tag/subtitle shown right of the title (e.g. layer count). */
   readonly tag?: string;
-  /** Fire when the user left-clicks anywhere on the card. */
+  /** Fire when the user clicks the card or hits Enter / Space while it
+   *  has focus. Cards without an `onPress` aren't focusable. */
   readonly onPress?: () => void;
+  /** DOM-style tab order — `-1` opts out of the Tab cycle. Default `0`. */
+  readonly tabIndex?: number;
+  /** Stable focus id. Auto-generated when omitted. */
+  readonly id?: string;
   readonly children: React.ReactNode;
 }
 
@@ -36,20 +42,31 @@ export function Card({
   accent = 'cyan',
   tag,
   onPress,
+  tabIndex,
+  id,
   children,
 }: Readonly<CardProps>): React.ReactElement {
   const ref = useRef<DOMElement>(null);
+  const { isFocused } = useFocusable({
+    id,
+    tabIndex,
+    onPress,
+    enabled: Boolean(onPress),
+  });
   useClickable(ref, onPress);
+  const focusable = Boolean(onPress);
   return (
     <Box
       ref={ref}
       flexDirection="column"
-      borderStyle="round"
-      borderColor="gray"
+      borderStyle={focusable && isFocused ? 'bold' : 'round'}
+      borderColor={focusable && isFocused ? accent : 'gray'}
+      borderDimColor={!focusable || !isFocused}
       paddingX={1}
       paddingY={0}
     >
       <Box marginBottom={0}>
+        {focusable && isFocused ? <Text color={accent}>▸ </Text> : null}
         <Text bold color={accent}>
           {title}
         </Text>

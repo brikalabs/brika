@@ -36,6 +36,7 @@
 import { Box, type DOMElement, Text } from 'ink';
 import type React from 'react';
 import { createContext, type ReactNode, useContext, useMemo, useRef } from 'react';
+import { useFocusable } from '../keys/useFocusable';
 import { useClickable } from '../mouse/useClickable';
 
 export type PaneAccent = 'default' | 'focused' | 'success' | 'warning' | 'destructive';
@@ -79,8 +80,13 @@ export interface PaneProps {
    *  side-by-side detail panes, etc.). Default `false` — Panes size
    *  to their content like cards. */
   readonly fill?: boolean;
-  /** Fire when the user left-clicks anywhere on the pane. */
+  /** Fire when the user clicks the pane or hits Enter / Space while
+   *  it has focus. Panes without an `onPress` aren't focusable. */
   readonly onPress?: () => void;
+  /** DOM-style tab order — `-1` opts out of the Tab cycle. Default `0`. */
+  readonly tabIndex?: number;
+  /** Stable focus id. Auto-generated when omitted. */
+  readonly id?: string;
   readonly children?: ReactNode;
 }
 
@@ -89,11 +95,16 @@ export function Pane({
   padded = true,
   fill = false,
   onPress,
+  tabIndex,
+  id,
   children,
 }: Readonly<PaneProps>): React.ReactElement {
   const ref = useRef<DOMElement>(null);
+  const focusable = Boolean(onPress);
+  const { isFocused } = useFocusable({ id, tabIndex, onPress, enabled: focusable });
   useClickable(ref, onPress);
   const ctxValue = useMemo(() => ({ accent }), [accent]);
+  const focused = focusable && isFocused;
   return (
     <PaneContext.Provider value={ctxValue}>
       <Box
@@ -101,8 +112,9 @@ export function Pane({
         flexDirection="column"
         flexGrow={fill ? 1 : 0}
         flexBasis={fill ? 0 : undefined}
-        borderStyle="round"
-        borderColor={BORDER_COLOR[accent]}
+        borderStyle={focused ? 'bold' : 'round'}
+        borderColor={focused ? 'cyan' : BORDER_COLOR[accent]}
+        borderDimColor={!focused && accent === 'default'}
         paddingX={padded ? 1 : 0}
       >
         {children}

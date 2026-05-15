@@ -40,6 +40,7 @@ import {
   useRef,
   useState,
 } from 'react';
+import { useFocusable } from '../keys/useFocusable';
 import { useKey } from '../keys/useKey';
 import { useClickable } from '../mouse/useClickable';
 
@@ -238,22 +239,24 @@ export function TabsTrigger({
   // consistent across the app.
   const select = useCallback(() => setValue(value), [setValue, value]);
   useClickable(ref, select);
+  const { isFocused } = useFocusable({ id: `tab-${value}`, onPress: select });
 
   const active = ctx.value === value;
   const prefix = shortcut ? `[${shortcut}] ` : '';
   const fullWidth = prefix.length + labelLength;
+  const accent = active || isFocused ? 'cyan' : undefined;
 
   return (
     <Box ref={ref} flexDirection="column" marginRight={3} flexShrink={0}>
       <Box>
-        {shortcut ? <Text color={active ? 'cyan' : undefined}>{prefix}</Text> : null}
-        <Text bold={active} color={active ? 'cyan' : undefined}>
+        {shortcut ? <Text color={accent}>{prefix}</Text> : null}
+        <Text bold={active || isFocused} color={accent}>
           {children}
         </Text>
       </Box>
       <Box>
-        <Text color={active ? 'cyan' : 'gray'} bold={active}>
-          {(active ? '━' : '─').repeat(Math.max(1, fullWidth))}
+        <Text color={accent ?? 'gray'} bold={active}>
+          {(active || isFocused ? '━' : '─').repeat(Math.max(1, fullWidth))}
         </Text>
       </Box>
     </Box>
