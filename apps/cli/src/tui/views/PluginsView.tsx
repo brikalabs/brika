@@ -50,6 +50,7 @@ import {
   TabsList,
   TabsTrigger,
   useKey,
+  useMeasure,
 } from '@brika/tui';
 import { Box, Text } from 'ink';
 import type React from 'react';
@@ -216,14 +217,18 @@ function InstalledTab(): React.ReactElement {
       )}
 
       <Box flexGrow={1} flexShrink={1} minHeight={6}>
-        <Box flexDirection="column" minWidth={32} marginRight={2} flexShrink={0}>
+        <Box flexDirection="column" minWidth={32} marginRight={2} flexShrink={0} flexGrow={0}>
           <PluginRows
             items={items}
             allCount={allItems.length}
             focusedUid={focusedUid}
             onFocusChange={setFocusedUid}
           />
-          {focused && <PluginMeta plugin={focused} metrics={focusedMetrics} />}
+          {focused && (
+            <Box flexShrink={0}>
+              <PluginMeta plugin={focused} metrics={focusedMetrics} />
+            </Box>
+          )}
         </Box>
 
         <Box flexDirection="column" flexGrow={1} flexShrink={1}>
@@ -301,6 +306,34 @@ function PluginRows({
   focusedUid,
   onFocusChange,
 }: Readonly<PluginRowsProps>): React.ReactElement {
+  const [windowRef, windowSize] = useMeasure();
+  const focusedIdx = useMemo(
+    () => (focusedUid ? items.findIndex((p) => p.uid === focusedUid) : -1),
+    [items, focusedUid]
+  );
+  const visibleRows = Math.max(1, windowSize.height);
+  const [offset, setOffset] = useState(0);
+
+  // Keep the cursor row inside the window — scroll the slice when the
+  // user arrows past either edge. Re-clamp when the item count shrinks
+  // (filter narrows, uninstall removes a row).
+  useEffect(() => {
+    setOffset((cur) => {
+      const maxOffset = Math.max(0, items.length - visibleRows);
+      const clamped = Math.min(cur, maxOffset);
+      if (focusedIdx < 0) {
+        return clamped;
+      }
+      if (focusedIdx < clamped) {
+        return focusedIdx;
+      }
+      if (focusedIdx >= clamped + visibleRows) {
+        return focusedIdx - visibleRows + 1;
+      }
+      return clamped;
+    });
+  }, [focusedIdx, visibleRows, items.length]);
+
   if (allCount === 0) {
     return (
       <EmptyState>
@@ -319,19 +352,40 @@ function PluginRows({
       </EmptyState>
     );
   }
+
+  const clipped = items.length > visibleRows;
+  const atTop = offset === 0;
+  const atBot = offset + visibleRows >= items.length;
+
   return (
-    <List value={focusedUid ?? undefined} onValueChange={onFocusChange}>
-      {items.map((p) => {
-        const isFocusedRow = focusedUid === p.uid;
-        return (
-          <ListItem key={p.uid} value={p.uid}>
-            <Text bold={isFocusedRow}>{p.displayName ?? p.name}</Text>
-            <Text dimColor> v{p.version} </Text>
-            <Badge variant={STATUS_VARIANT[p.status] ?? 'secondary'}>{p.status}</Badge>
-          </ListItem>
-        );
-      })}
-    </List>
+    <Box flexDirection="column" flexGrow={1} flexShrink={1} flexBasis={0} minHeight={1}>
+      <Box ref={windowRef} overflow="hidden" flexGrow={1} flexShrink={1}>
+        {/* flexShrink=0 prevents Yoga from collapsing the inner box
+         *  when its negative marginTop pushes the bottom past the
+         *  window — same trick as <ScrollArea>. */}
+        <Box flexDirection="column" flexShrink={0} marginTop={-offset}>
+          <List value={focusedUid ?? undefined} onValueChange={onFocusChange}>
+            {items.map((p) => {
+              const isFocusedRow = focusedUid === p.uid;
+              return (
+                <ListItem key={p.uid} value={p.uid}>
+                  <Text bold={isFocusedRow}>{p.displayName ?? p.name}</Text>
+                  <Text dimColor> v{p.version} </Text>
+                  <Badge variant={STATUS_VARIANT[p.status] ?? 'secondary'}>{p.status}</Badge>
+                </ListItem>
+              );
+            })}
+          </List>
+        </Box>
+      </Box>
+      {clipped && (
+        <Box flexShrink={0}>
+          <Text dimColor>
+            {`${atTop ? '·' : '↑'} ${atBot ? '·' : '↓'}  ${offset + 1}-${Math.min(items.length, offset + visibleRows)}/${items.length}`}
+          </Text>
+        </Box>
+      )}
+    </Box>
   );
 }
 

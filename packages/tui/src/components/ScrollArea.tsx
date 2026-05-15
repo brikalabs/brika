@@ -42,6 +42,7 @@ import { hitTest, readBounds } from '../mouse/useBounds';
 import { type MouseEvent, useMouse } from '../mouse/useMouse';
 import { useCaptureInput } from '../shell/useTuiShell';
 import { useMeasure } from '../state/useMeasure';
+import { Button } from './Button';
 
 export interface ScrollAreaProps {
   /** Explicit visible row count. Omit to fill the flex parent — the
@@ -230,6 +231,13 @@ function ScrollAreaInner({
     ? { height: visibleRows }
     : { flexGrow: 1, flexBasis: 0 as const, flexShrink: 1 };
 
+  // Action buttons only render while the area has focus — they'd take
+  // a chrome row otherwise and most users will just scroll with the
+  // keyboard. While focused, they let the user click their way around.
+  const showActions = isFocused;
+  const atTop = offset === 0;
+  const atBottom = offset >= maxOffset;
+
   return (
     <Box
       ref={containerRef}
@@ -250,6 +258,32 @@ function ScrollAreaInner({
           {children}
         </Box>
       </Box>
+      {showActions ? (
+        <Box flexShrink={0} marginTop={0}>
+          <Button shortcut="g" tabIndex={-1} enabled={!atTop} onPress={() => jumpTo('top')}>
+            top
+          </Button>
+          <Button
+            shortcut="pageUp"
+            tabIndex={-1}
+            enabled={!atTop}
+            onPress={() => move(-pageStepRef.current)}
+          >
+            up
+          </Button>
+          <Button
+            shortcut="pageDown"
+            tabIndex={-1}
+            enabled={!atBottom}
+            onPress={() => move(pageStepRef.current)}
+          >
+            down
+          </Button>
+          <Button shortcut="G" tabIndex={-1} enabled={!atBottom} onPress={() => jumpTo('bottom')}>
+            bottom
+          </Button>
+        </Box>
+      ) : null}
       {chrome ? <Box flexShrink={0}>{chrome}</Box> : null}
     </Box>
   );

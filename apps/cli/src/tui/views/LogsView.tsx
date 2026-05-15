@@ -1,13 +1,21 @@
 /**
  * Logs section — live tail from `/api/stream/logs` (SSE). Renders the
  * in-memory ring buffer first, then appends each event as it arrives.
- * Uses `@brika/tui`'s `LogPane` for the rolling-window view and
- * `useSearch` (also from `@brika/tui`) for `/`-driven highlighting.
  *
- * Lines are kept as two parallel arrays:
- *  - `lines: string[]` — what the search index walks
- *  - `events: LogEventDto[]` — what the colored renderer pulls fields
- *    from at paint time (timestamp dim, level by severity, source cyan)
+ * Layout
+ *   ┌─ Heading ──────────── 47 logs · stream error? ─┐
+ *   │ search bar (only while searching)              │
+ *   ├─ LogPane (fills) ──────────────────────────────┤
+ *   │ 12:01:00  info   hub  hub started              │
+ *   │ 12:01:01  info   plugin  …                     │
+ *   ├─ action buttons (when paused / searching) ─────┤
+ *   │ [G] live  [n] next  [N] prev  [c] clear        │
+ *   └─ HintBar — always ─────────────────────────────┘
+ *
+ * Two parallel arrays back the pane:
+ *   - `lines: string[]` — what the search index walks
+ *   - `events: LogEventDto[]` — what the colored renderer pulls fields
+ *     from at paint time (timestamp dim, level by severity, source cyan)
  * They're appended together so `lines[i]` and `events[i]` always agree.
  */
 
@@ -16,6 +24,7 @@ import {
   Heading,
   Hint,
   HintBar,
+  Input,
   LogPane,
   useKey,
   useLayoutDimensions,
@@ -33,12 +42,10 @@ import { NotConnected } from '../components/NotConnected';
 import { useCli } from '../useCli';
 
 const RING_BUFFER_LINES = 5_000;
-/** Vertical space LogsView reserves around the LogPane: title row (2),
- *  pane border + label + top margin (4), key-hint footer (2). The
- *  conditional action-buttons row (live / next / prev) adds 2 more
- *  when visible, but LogPane now measures its own body so the slice
- *  size stays correct regardless. */
-const VIEW_CHROME = 8;
+/** Vertical space LogsView reserves around the LogPane. LogPane now
+ *  measures its own body, so this only needs to be a rough estimate
+ *  for `useLayoutDimensions.pageSize` on the first frame. */
+const VIEW_CHROME = 6;
 
 function formatEvent(e: LogEventDto): string {
   const ts = new Date(e.ts).toISOString().slice(11, 19);
@@ -47,10 +54,6 @@ function formatEvent(e: LogEventDto): string {
   return `${ts}  ${level} ${source.padEnd(20)} ${e.message}`;
 }
 
-/**
- * Map a log level to its display color. Anything we don't recognise
- * renders default (white-on-default) so unknown levels still read.
- */
 function levelColor(level: string): string | undefined {
   switch (level.toLowerCase()) {
     case 'fatal':
@@ -97,6 +100,7 @@ export function LogsView(): React.ReactElement {
   const [lines, setLines] = useState<string[]>([]);
   const [revision, setRevision] = useState(0);
   const [streamError, setStreamError] = useState<string | null>(null);
+  const [searchDraft, setSearchDraft] = useState('');
   const { chromeHeight } = useTuiShell();
   const layout = useLayoutDimensions(lines.length, chromeHeight + VIEW_CHROME);
   const scroll = useScroll(layout.maxScroll);
@@ -164,29 +168,64 @@ export function LogsView(): React.ReactElement {
   }, [cli.hub.state]);
 
   // Scroll keys stay as `useKey` — they drive the pane's internal
-  // scroll, not a discrete clickable action. PgUp/PgDn for keyboards
-  // that have them; Ctrl+U/Ctrl+D as the Mac-friendly equivalents.
+  // scroll, not a discrete clickable action.
   useKey('upArrow', () => scroll.scrollUp(1));
   useKey('downArrow', () => scroll.scrollDown(1));
   useKey('pageUp', () => scroll.scrollUp(layout.pageSize));
   useKey('pageDown', () => scroll.scrollDown(layout.pageSize));
   useKey('ctrl+u', () => scroll.scrollUp(layout.pageSize));
   useKey('ctrl+d', () => scroll.scrollDown(layout.pageSize));
-  useKey('/', () => search.enter(), search.mode !== 'searching');
-  // `G` / `n` / `N` are wired through their footer Buttons below.
+  // `/` opens the search Input; `G` / `n` / `N` / `c` live on Buttons below.
+  useKey(
+    '/',
+    () => {
+      setSearchDraft(search.query);
+      search.enter();
+    },
+    cli.hub.state === 'running' && search.mode !== 'searching'
+  );
 
   if (cli.hub.state !== 'running') {
     return <NotConnected title="Logs" />;
   }
 
+  const searching = search.mode === 'searching';
+  const showActions = scroll.offset !== null || Boolean(search.query) || searching;
+  const subtitle = buildSubtitle(lines.length, search);
+
   return (
     <Box flexDirection="column" flexGrow={1}>
-      <Heading
-        subtitle={`${lines.length} lines`}
-        meta={streamError ? <Text color="red">{streamError}</Text> : null}
-      >
-        Logs
-      </Heading>
+      <Box flexShrink={0}>
+        <Heading
+          subtitle={subtitle}
+          meta={streamError ? <Text color="red">{streamError}</Text> : null}
+        >
+          Logs
+        </Heading>
+      </Box>
+
+      {searching ? (
+        <Box flexShrink={0} marginBottom={1}>
+          <Input
+            value={searchDraft}
+            onChange={setSearchDraft}
+            onSubmit={(value) => {
+              setSearchDraft(value);
+              // commit through useSearch's input buffer
+              applyQuery(search, value);
+            }}
+            onCancel={() => {
+              search.cancel();
+              setSearchDraft('');
+            }}
+            placeholder="search logs — / to open, Enter to commit, Esc to cancel"
+            prefix="/ "
+            accentColor="cyan"
+            flex
+          />
+        </Box>
+      ) : null}
+
       <LogPane
         label="hub"
         lines={lines}
@@ -201,10 +240,11 @@ export function LogsView(): React.ReactElement {
           return event ? <ColoredLogLine event={event} /> : _text;
         }}
       />
-      {(scroll.offset !== null || Boolean(search.query)) && (
+
+      {showActions ? (
         <Box flexShrink={0} marginTop={1}>
           {scroll.offset !== null ? (
-            <Button shortcut="G" onPress={() => scroll.goLive()}>
+            <Button shortcut="G" variant="success" onPress={() => scroll.goLive()}>
               live
             </Button>
           ) : null}
@@ -216,19 +256,63 @@ export function LogsView(): React.ReactElement {
               <Button shortcut="N" onPress={() => search.prev()}>
                 prev
               </Button>
+              <Button
+                shortcut="c"
+                variant="warning"
+                onPress={() => {
+                  search.clear();
+                  setSearchDraft('');
+                }}
+              >
+                clear
+              </Button>
             </>
           ) : null}
         </Box>
-      )}
+      ) : null}
+
       <Box flexShrink={0}>
         <HintBar>
           <Hint k="↑↓">scroll</Hint>
           <Hint k="^U/^D">page</Hint>
-          <Hint k="/" accent="info">
-            search
-          </Hint>
+          {!searching ? (
+            <Hint k="/" accent="info">
+              search
+            </Hint>
+          ) : null}
         </HintBar>
       </Box>
     </Box>
   );
+}
+
+/** Compose the subtitle line. Includes line count, search-match info,
+ *  and active-query echo so the user always knows what they're seeing. */
+function buildSubtitle(total: number, search: ReturnType<typeof useSearch>): string {
+  if (search.query) {
+    const n = search.matches.length;
+    const pos = n === 0 ? '0' : `${search.currentMatchIdx + 1}/${n}`;
+    return `${total} lines · /${search.query}/ · match ${pos}`;
+  }
+  if (search.mode === 'searching') {
+    return `${total} lines · searching…`;
+  }
+  return `${total} lines`;
+}
+
+/** Commit a query into `useSearch`. The hook expects the query to be
+ *  built character-by-character via `.type()`, but the new search
+ *  Input gives us the whole string at once on submit — apply by
+ *  clearing the input buffer and replaying. */
+function applyQuery(search: ReturnType<typeof useSearch>, value: string): void {
+  // Drain whatever's in the hook's internal `input` then push the new
+  // value through, then commit.
+  const cur = search.input;
+  for (let i = 0; i < cur.length; i++) {
+    search.backspace();
+  }
+  for (const ch of value) {
+    search.type(ch);
+  }
+  search.commit();
 }
