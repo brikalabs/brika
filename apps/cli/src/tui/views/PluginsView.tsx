@@ -298,6 +298,7 @@ interface PluginRowsProps {
   readonly allCount: number;
   readonly focusedUid: string | null;
   readonly onFocusChange: (uid: string) => void;
+  readonly onSelect?: (uid: string) => void;
 }
 
 function PluginRows({
@@ -305,6 +306,7 @@ function PluginRows({
   allCount,
   focusedUid,
   onFocusChange,
+  onSelect,
 }: Readonly<PluginRowsProps>): React.ReactElement {
   const [windowRef, windowSize] = useMeasure();
   const focusedIdx = useMemo(
@@ -364,7 +366,13 @@ function PluginRows({
          *  when its negative marginTop pushes the bottom past the
          *  window — same trick as <ScrollArea>. */}
         <Box flexDirection="column" flexShrink={0} marginTop={-offset}>
-          <List value={focusedUid ?? undefined} onValueChange={onFocusChange}>
+          <List
+            autoFocus
+            id="plugins-installed-list"
+            value={focusedUid ?? undefined}
+            onValueChange={onFocusChange}
+            onSelect={onSelect}
+          >
             {items.map((p) => {
               const isFocusedRow = focusedUid === p.uid;
               return (

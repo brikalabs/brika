@@ -7,6 +7,7 @@
  *     value={focused}
  *     onValueChange={setFocused}
  *     onSelect={(id) => openDetails(id)}
+ *     autoFocus
  *   >
  *     {plugins.map((p) => (
  *       <ListItem key={p.uid} value={p.uid}>
@@ -16,22 +17,25 @@
  *     ))}
  *   </List>
  *
+ * Focus model
+ *   - `<List>` is a single focus slot (not one slot per item).
+ *   - Arrow keys + Enter fire only while the list has focus, so two
+ *     focusable regions on screen (list + readme scroller, list +
+ *     details pane, etc.) don't double-fire on the same `↑`/`↓`.
+ *   - Tab in / click to take focus. `▸` glyph reads brighter when the
+ *     list is focused, dimmer when it isn't.
+ *
  * Interactions:
- *   - `↑` / `↓`       move focus
+ *   - `↑` / `↓`       move focus (while List has focus)
  *   - `Enter`         calls `onSelect(value)` against the focused item
- *   - **Mouse click** on a row focuses + selects it
+ *   - **Mouse click** on a row focuses the list + selects it
  *
  * Controlled by `value` / `onValueChange` (or uncontrolled with
  * `defaultValue`). When no value is given and at least one item
- * registers, focus auto-snaps to the first item. Each `<ListItem>`
- * supplies a `value` that becomes its identity; the React `key` is
- * separate but typically the same string.
- *
- * `<List>` does NOT capture input (no inner `<Input>`), so global
- * shell shortcuts keep working alongside it.
+ * registers, focus auto-snaps to the first item.
  */
 
-import { Box, type DOMElement, Text, useFocus } from 'ink';
+import { Box, type DOMElement, Text, useFocus, useFocusManager } from 'ink';
 import type React from 'react';
 import {
   createContext,
@@ -39,6 +43,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useId,
   useMemo,
   useRef,
   useState,
@@ -57,6 +62,13 @@ interface ListContextValue {
   readonly registerItem: (entry: ListItemEntry) => () => void;
   readonly items: ReadonlyArray<ListItemEntry>;
   readonly select: (v: string) => void;
+  /** True when the parent `<List>` currently owns focus. ListItem uses
+   *  this to brighten its leading glyph so the user can tell which
+   *  selectable region is active. */
+  readonly listFocused: boolean;
+  /** Imperative focus claim — used by ListItem on mousedown so a
+   *  click both focuses the list and picks the row. */
+  readonly focusList: () => void;
 }
 
 const ListContext = createContext<ListContextValue | null>(null);
@@ -77,6 +89,15 @@ export interface ListProps {
   readonly onValueChange?: (value: string) => void;
   /** Fired on `Enter` against the focused item. */
   readonly onSelect?: (value: string) => void;
+  /** Claim keyboard focus on mount. Use this on the primary selectable
+   *  region of a view so arrows immediately navigate the list. */
+  readonly autoFocus?: boolean;
+  /** Stable focus id for callers that need to `focus()` the list
+   *  imperatively. */
+  readonly id?: string;
+  /** Opt out of the Tab cycle while staying clickable + arrow-active
+   *  via `value` / `onValueChange` from a parent. Default `true`. */
+  readonly focusable?: boolean;
   readonly children?: ReactNode;
 }
 
@@ -85,12 +106,27 @@ export function List({
   defaultValue,
   onValueChange,
   onSelect,
+  autoFocus = false,
+  id,
+  focusable = true,
   children,
 }: Readonly<ListProps>): React.ReactElement {
   const [internalValue, setInternalValue] = useState<string | null>(defaultValue ?? null);
   const [items, setItems] = useState<ReadonlyArray<ListItemEntry>>([]);
 
   const current = value ?? internalValue;
+
+  const autoId = useId();
+  const focusId = id ?? `list-${autoId}`;
+  // List only joins the focus cycle when it actually has items —
+  // claiming focus over an empty list confuses Tab navigation.
+  const { isFocused } = useFocus({
+    id: focusId,
+    autoFocus,
+    isActive: focusable && items.length > 0,
+  });
+  const { focus } = useFocusManager();
+  const focusList = useCallback(() => focus(focusId), [focus, focusId]);
 
   const onSelectRef = useRef<typeof onSelect>(onSelect);
   onSelectRef.current = onSelect;
@@ -152,8 +188,11 @@ export function List({
     onSelectRef.current?.(v);
   }, []);
 
-  useKey('upArrow', () => move(-1), items.length > 0);
-  useKey('downArrow', () => move(1), items.length > 0);
+  const navigable = isFocused && items.length > 0;
+  useKey('upArrow', () => move(-1), navigable);
+  useKey('downArrow', () => move(1), navigable);
+  useKey('k', () => move(-1), navigable);
+  useKey('j', () => move(1), navigable);
   useKey(
     'return',
     () => {
@@ -162,12 +201,20 @@ export function List({
         select(focused.value);
       }
     },
-    items.length > 0 && Boolean(onSelect)
+    navigable && Boolean(onSelect)
   );
 
   const ctx = useMemo<ListContextValue>(
-    () => ({ value: current, setValue, registerItem, items, select }),
-    [current, setValue, registerItem, items, select]
+    () => ({
+      value: current,
+      setValue,
+      registerItem,
+      items,
+      select,
+      listFocused: isFocused,
+      focusList,
+    }),
+    [current, setValue, registerItem, items, select, isFocused, focusList]
   );
 
   return (
@@ -184,21 +231,18 @@ export interface ListItemProps {
 }
 
 export function ListItem({ value, children }: Readonly<ListItemProps>): React.ReactElement {
-  const ctx = useListContext('ListItem');
-  const { registerItem, value: focused, setValue, select } = ctx;
+  const {
+    registerItem,
+    value: focused,
+    setValue,
+    select,
+    listFocused,
+    focusList,
+  } = useListContext('ListItem');
   const isFocused = focused === value;
 
-  // Register the item so List's keybinds can walk the set.
   useEffect(() => registerItem({ value }), [registerItem, value]);
 
-  // Tab-focus integration: each item can grab keyboard focus via ink's
-  // focus manager, letting the user navigate purely with Tab if they
-  // prefer (in addition to arrow keys).
-  useFocus({ id: `list-${value}`, isActive: false });
-
-  // Mouse: click on a row focuses it and fires onSelect once. Bounds
-  // are read on-demand via `readBounds` so this hook adds zero
-  // per-render work — handy when a list has hundreds of items.
   const boxRef = useRef<DOMElement>(null);
   const handleMouse = useCallback(
     (e: MouseEvent) => {
@@ -210,18 +254,35 @@ export function ListItem({ value, children }: Readonly<ListItemProps>): React.Re
         return;
       }
       if (e.action === 'down') {
+        // Mousedown picks the row AND focuses the list so arrows
+        // immediately navigate from this point.
+        focusList();
         setValue(value);
       } else if (e.action === 'click') {
         select(value);
       }
     },
-    [setValue, select, value]
+    [setValue, select, focusList, value]
   );
   useMouse(handleMouse);
 
+  // Leading glyph: bright cyan when both the row is selected AND the
+  // list itself has focus; muted when only the row is selected (the
+  // list is dormant). Gives an at-a-glance signal of "where do arrows
+  // currently land?".
+  const glyph = isFocused ? '▸ ' : '  ';
+  let glyphColor: string | undefined;
+  if (isFocused && listFocused) {
+    glyphColor = 'cyan';
+  } else if (isFocused) {
+    glyphColor = 'gray';
+  }
+
   return (
     <Box ref={boxRef}>
-      <Text color={isFocused ? 'cyan' : undefined}>{isFocused ? '▸ ' : '  '}</Text>
+      <Text color={glyphColor} bold={isFocused && listFocused}>
+        {glyph}
+      </Text>
       <Box>{children}</Box>
     </Box>
   );
