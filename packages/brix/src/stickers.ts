@@ -29,12 +29,21 @@ const KINDS: Readonly<Record<StickerKind, ReadonlyArray<string>>> = {
 /**
  * Pick a sticker for the given mood. Random by default; pass a seed
  * (e.g. a workflow id) for stable output across re-renders.
+ *
+ * Cosmetic only — uses `crypto.getRandomValues` instead of
+ * `Math.random` to keep Sonar happy without changing behavior.
  */
 export function pickSticker(kind: StickerKind, seed?: number): string {
   const pool = KINDS[kind];
   if (pool.length === 0) {
     return '';
   }
-  const idx = seed === undefined ? Math.floor(Math.random() * pool.length) : seed % pool.length;
+  const idx = seed === undefined ? randomIndex(pool.length) : seed % pool.length;
   return pool[idx] ?? '';
+}
+
+function randomIndex(size: number): number {
+  const buf = new Uint32Array(1);
+  crypto.getRandomValues(buf);
+  return (buf[0] ?? 0) % size;
 }

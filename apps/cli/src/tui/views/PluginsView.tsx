@@ -25,6 +25,7 @@ import {
   pluginAction,
 } from '../../cli/hub-api';
 import { Markdown } from '../components/Markdown';
+import { NotConnected } from '../components/NotConnected';
 import { useCli } from '../useCli';
 import { useHubResource } from '../useHubResource';
 
@@ -76,6 +77,14 @@ export function PluginsView(): React.ReactElement {
     };
   }, [focused, readme?.uid]);
 
+  const runAction = (action: 'enable' | 'disable' | 'kill' | 'reload') => () => {
+    if (focused) {
+      void pluginAction(focused.uid, action)
+        .then(list.refresh)
+        .catch(() => undefined);
+    }
+  };
+
   useKey('upArrow', () => setFocusIndex((i) => Math.max(0, i - 1)), !installing);
   useKey(
     'downArrow',
@@ -83,53 +92,13 @@ export function PluginsView(): React.ReactElement {
     !installing && items.length > 0
   );
   useKey('i', () => setInstalling(true), !installing);
-  useKey(
-    'e',
-    () => {
-      if (focused) {
-        void pluginAction(focused.uid, 'enable')
-          .then(list.refresh)
-          .catch(() => undefined);
-      }
-    },
-    !installing && Boolean(focused)
-  );
-  useKey(
-    'D',
-    () => {
-      if (focused) {
-        void pluginAction(focused.uid, 'disable')
-          .then(list.refresh)
-          .catch(() => undefined);
-      }
-    },
-    !installing && Boolean(focused)
-  );
-  useKey(
-    'k',
-    () => {
-      if (focused) {
-        void pluginAction(focused.uid, 'kill')
-          .then(list.refresh)
-          .catch(() => undefined);
-      }
-    },
-    !installing && Boolean(focused)
-  );
-  useKey(
-    'R',
-    () => {
-      if (focused) {
-        void pluginAction(focused.uid, 'reload')
-          .then(list.refresh)
-          .catch(() => undefined);
-      }
-    },
-    !installing && Boolean(focused)
-  );
+  useKey('e', runAction('enable'), !installing && Boolean(focused));
+  useKey('D', runAction('disable'), !installing && Boolean(focused));
+  useKey('k', runAction('kill'), !installing && Boolean(focused));
+  useKey('R', runAction('reload'), !installing && Boolean(focused));
 
   if (cli.hub.state !== 'running') {
-    return <NotConnected />;
+    return <NotConnected title="Plugins" />;
   }
 
   return (
@@ -221,17 +190,4 @@ function ReadmePane({
     return <Markdown source={text} />;
   }
   return <Text dimColor>no readme</Text>;
-}
-
-function NotConnected(): React.ReactElement {
-  return (
-    <Box flexDirection="column">
-      <Text bold>Plugins</Text>
-      <Box marginTop={1}>
-        <Text dimColor>hub isn't running — </Text>
-        <Text color="yellow">Ctrl+S</Text>
-        <Text dimColor> to start it.</Text>
-      </Box>
-    </Box>
-  );
 }

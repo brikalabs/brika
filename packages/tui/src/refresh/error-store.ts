@@ -23,7 +23,6 @@ interface State {
 }
 
 declare global {
-  // biome-ignore lint/style/noVar: required for global augmentation
   var __brikaHmrError: State | undefined;
 }
 

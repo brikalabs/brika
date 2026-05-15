@@ -9,7 +9,7 @@
 
 import { useKey } from '@brika/tui';
 import { Box, Text } from 'ink';
-import { useState, type ReactElement } from 'react';
+import { type ReactElement, useState } from 'react';
 
 export function PlaygroundView(): ReactElement {
   const [count, setCount] = useState(0);

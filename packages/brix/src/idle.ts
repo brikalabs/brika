@@ -48,8 +48,8 @@ export const DEFAULT_IDLE_PROGRAM: IdleProgram = {
 /**
  * Weighted-random pick from a pool of emotes. Returns `null` for an
  * empty pool, or when every entry has weight ≤ 0. `rng` is expected
- * to return a number in [0, 1) — pass `Math.random` for production,
- * a seeded RNG for tests.
+ * to return a number in [0, 1) — pass the seeded `makeRng()` rng for
+ * production, a deterministic-seed rng for tests.
  */
 export function pickIdleEmote(
   emotes: ReadonlyArray<IdleEmote>,

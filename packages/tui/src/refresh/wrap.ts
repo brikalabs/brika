@@ -13,11 +13,7 @@
  * bindings — so it doesn't share this helper; see `vite-poc.ts`.)
  */
 
-export function wrapWithRefresh(
-  code: string,
-  moduleId: string,
-  runtimeUrl: string
-): string {
+export function wrapWithRefresh(code: string, moduleId: string, runtimeUrl: string): string {
   const id = JSON.stringify(moduleId);
   return [
     `import { Refresh as __Refresh } from ${JSON.stringify(runtimeUrl)};`,

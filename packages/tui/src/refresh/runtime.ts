@@ -22,11 +22,8 @@ type RuntimeApi = {
 };
 
 declare global {
-  // biome-ignore lint/style/noVar: required for global augmentation
   var __brikaRefresh: RuntimeApi | undefined;
-  // biome-ignore lint/style/noVar: required for global augmentation
   var $RefreshReg$: (type: unknown, id: string) => void;
-  // biome-ignore lint/style/noVar: required for global augmentation
   var $RefreshSig$: () => <T>(type: T, ...rest: unknown[]) => T;
 }
 
@@ -45,7 +42,9 @@ const api: RuntimeApi =
 
 // Defaults for code that wasn't transformed by our pipeline. Each
 // instrumented module overrides these in its own prologue.
-globalThis.$RefreshReg$ = () => {};
+globalThis.$RefreshReg$ = () => {
+  // no-op for un-instrumented modules
+};
 globalThis.$RefreshSig$ = () => (type) => type;
 
 export const Refresh = api;

@@ -19,6 +19,7 @@ import { useEffect, useState } from 'react';
 import { fetchRecentLogs, type LogEventDto } from '../../cli/hub-api';
 import { hubFetch } from '../../cli/hub-client';
 import { streamSseEvents } from '../../cli/sse';
+import { NotConnected } from '../components/NotConnected';
 import { useCli } from '../useCli';
 
 const RING_BUFFER_LINES = 5_000;
@@ -104,16 +105,7 @@ export function LogsView(): React.ReactElement {
   useKey('N', () => search.prev(), Boolean(search.query));
 
   if (cli.hub.state !== 'running') {
-    return (
-      <Box flexDirection="column">
-        <Text bold>Logs</Text>
-        <Box marginTop={1}>
-          <Text dimColor>hub isn't running — </Text>
-          <Text color="yellow">Ctrl+S</Text>
-          <Text dimColor> to start it.</Text>
-        </Box>
-      </Box>
-    );
+    return <NotConnected title="Logs" />;
   }
 
   return (

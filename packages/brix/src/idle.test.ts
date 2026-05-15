@@ -1,10 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import {
-  DEFAULT_IDLE_PROGRAM,
-  type IdleEmote,
-  makeRng,
-  pickIdleEmote,
-} from './idle';
+import { DEFAULT_IDLE_PROGRAM, type IdleEmote, makeRng, pickIdleEmote } from './idle';
 
 describe('makeRng', () => {
   test('deterministic for the same seed', () => {
@@ -54,7 +49,7 @@ describe('pickIdleEmote', () => {
       { kind: 'wink', weight: 10 },
     ];
     const counts: Record<string, number> = {};
-    const rng = makeRng(0xDEAD);
+    const rng = makeRng(0xdead);
     for (let i = 0; i < 1000; i += 1) {
       const k = pickIdleEmote(pool, rng);
       if (k) {
@@ -69,7 +64,7 @@ describe('pickIdleEmote', () => {
   });
 
   test('default program picks from baseline animation list', () => {
-    const rng = makeRng(0xC0FFEE);
+    const rng = makeRng(0xc0ffee);
     const k = pickIdleEmote(DEFAULT_IDLE_PROGRAM.emotes, rng);
     expect(k).not.toBeNull();
     expect(DEFAULT_IDLE_PROGRAM.emotes.some((e) => e.kind === k)).toBe(true);

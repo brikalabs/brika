@@ -14,8 +14,8 @@
 
 import { readFile } from 'node:fs/promises';
 import { relative } from 'node:path';
-import type { BunPlugin } from 'bun';
 import { transform as swcTransform } from '@swc/core';
+import type { BunPlugin } from 'bun';
 import { wrapWithRefresh } from './wrap';
 
 interface PluginOptions {

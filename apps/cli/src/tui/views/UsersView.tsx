@@ -18,6 +18,7 @@ import type React from 'react';
 import { useState } from 'react';
 import { fetchUsers, type UserDto } from '../../cli/hub-api';
 import { hubFetch } from '../../cli/hub-client';
+import { NotConnected } from '../components/NotConnected';
 import { useCli } from '../useCli';
 import { useHubResource } from '../useHubResource';
 
@@ -45,16 +46,7 @@ export function UsersView(): React.ReactElement {
   useKey('a', () => setAdding(true), !adding);
 
   if (cli.hub.state !== 'running') {
-    return (
-      <Box flexDirection="column">
-        <Text bold>Users</Text>
-        <Box marginTop={1}>
-          <Text dimColor>hub isn't running — </Text>
-          <Text color="yellow">Ctrl+S</Text>
-          <Text dimColor> to start it.</Text>
-        </Box>
-      </Box>
-    );
+    return <NotConnected title="Users" />;
   }
 
   const items = list.data ?? [];

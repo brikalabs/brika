@@ -7,6 +7,7 @@
 import { Box, Text } from 'ink';
 import type React from 'react';
 import { fetchWorkflows, type WorkflowSummaryDto } from '../../cli/hub-api';
+import { NotConnected } from '../components/NotConnected';
 import { useCli } from '../useCli';
 import { useHubResource } from '../useHubResource';
 
@@ -16,16 +17,7 @@ export function WorkflowsView(): React.ReactElement {
   const items = list.data ?? [];
 
   if (cli.hub.state !== 'running') {
-    return (
-      <Box flexDirection="column">
-        <Text bold>Workflows</Text>
-        <Box marginTop={1}>
-          <Text dimColor>hub isn't running — </Text>
-          <Text color="yellow">Ctrl+S</Text>
-          <Text dimColor> to start it.</Text>
-        </Box>
-      </Box>
-    );
+    return <NotConnected title="Workflows" />;
   }
 
   return (

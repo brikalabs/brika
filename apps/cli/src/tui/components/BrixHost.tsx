@@ -89,10 +89,9 @@ export function BrixHost(): React.ReactElement {
     if (state.phase !== 'idle') {
       return;
     }
-    const delay =
-      AUTO_TALK_MIN_MS + Math.floor(Math.random() * (AUTO_TALK_MAX_MS - AUTO_TALK_MIN_MS));
+    const delay = AUTO_TALK_MIN_MS + randomInt(AUTO_TALK_MAX_MS - AUTO_TALK_MIN_MS);
     const t = setTimeout(() => {
-      const line = idleLines[Math.floor(Math.random() * idleLines.length)];
+      const line = idleLines[randomInt(idleLines.length)];
       if (line) {
         dispatch({ type: 'IDLE_LINE', text: line, tint: colorForMood(mood) });
       }
@@ -177,6 +176,19 @@ function ReactingFace({
   // host's HOLD_OVER timer eventually returns us to idle anyway.
   const { frame } = useFrameSeq(ANIMATIONS[kind]);
   return <Text color={color}>{frame}</Text>;
+}
+
+/**
+ * Cosmetic random in `[0, max)`. Uses `crypto.getRandomValues` to
+ * keep Sonar from flagging Math.random in a UI/display context.
+ */
+function randomInt(max: number): number {
+  if (max <= 0) {
+    return 0;
+  }
+  const buf = new Uint32Array(1);
+  crypto.getRandomValues(buf);
+  return (buf[0] ?? 0) % max;
 }
 
 function colorForMood(m: Mood): string {

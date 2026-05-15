@@ -10,9 +10,9 @@
  */
 
 import {
+  type ComponentType,
   createElement,
   Fragment,
-  type ComponentType,
   type PropsWithChildren,
   type ReactElement,
 } from 'react';
@@ -24,9 +24,7 @@ declare global {
   // and commit-time throws so they don't tear down the Ink root)
   // and the sibling overlay (shows the error message). In production
   // both globals are unset and the branches below are dead.
-  // biome-ignore lint/style/noVar: required for global augmentation
   var __brikaHmrOverlay: ComponentType | undefined;
-  // biome-ignore lint/style/noVar: required for global augmentation
   var __brikaHmrBoundary: ComponentType<PropsWithChildren> | undefined;
 }
 
@@ -48,9 +46,7 @@ export async function runTui(element: ReactElement, options: RunTuiOptions = {})
   const Overlay = globalThis.__brikaHmrOverlay;
   const Boundary = globalThis.__brikaHmrBoundary;
   const wrapped = Boundary ? createElement(Boundary, null, element) : element;
-  const tree = Overlay
-    ? createElement(Fragment, null, wrapped, createElement(Overlay))
-    : wrapped;
+  const tree = Overlay ? createElement(Fragment, null, wrapped, createElement(Overlay)) : wrapped;
   const instance = ink.render(tree, {
     exitOnCtrlC: options.exitOnCtrlC ?? true,
   });

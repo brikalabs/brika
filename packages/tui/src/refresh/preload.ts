@@ -15,11 +15,11 @@
 /// <reference path="./react-refresh.d.ts" />
 process.env.DEV = 'true';
 
-import { plugin } from 'bun';
-import { transform as swcTransform } from '@swc/core';
 import { mkdirSync, readFileSync, rmSync, watch, writeFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { dirname, join, relative, resolve } from 'node:path';
+import { transform as swcTransform } from '@swc/core';
+import { plugin } from 'bun';
 import { clearHmrError, installCrashGuard, setHmrError } from './error-store';
 import { HmrErrorBoundary } from './HmrErrorBoundary';
 import { HmrErrorOverlay } from './HmrErrorOverlay';
@@ -52,9 +52,7 @@ declare global {
   // Exposed to `@brika/cli`'s `runTui` so it can auto-wrap the user's
   // tree with the boundary + sibling overlay — keeps consumer
   // App.tsx files free of dev-only wiring.
-  // biome-ignore lint/style/noVar: required for global augmentation
   var __brikaHmrOverlay: typeof HmrErrorOverlay | undefined;
-  // biome-ignore lint/style/noVar: required for global augmentation
   var __brikaHmrBoundary: typeof HmrErrorBoundary | undefined;
 }
 
@@ -192,7 +190,8 @@ function safeName(moduleId: string): string {
 function rewriteRelativeImports(code: string, sourceDir: string): string {
   return code.replace(
     /(\bfrom\s+['"]|\bimport\s*\(\s*['"]|\bimport\s+['"])(\.{1,2}\/[^'"]+)(['"])/g,
-    (_, prefix: string, spec: string, suffix: string) => `${prefix}${resolve(sourceDir, spec)}${suffix}`
+    (_, prefix: string, spec: string, suffix: string) =>
+      `${prefix}${resolve(sourceDir, spec)}${suffix}`
   );
 }
 

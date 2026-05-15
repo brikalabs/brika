@@ -8,8 +8,5 @@ declare module 'react-refresh/runtime' {
   export function injectIntoGlobalHook(globalObject: object): void;
   export function performReactRefresh(): void;
   export function register(type: unknown, id: string): void;
-  export function createSignatureFunctionForTransform(): <T>(
-    type: T,
-    ...rest: unknown[]
-  ) => T;
+  export function createSignatureFunctionForTransform(): <T>(type: T, ...rest: unknown[]) => T;
 }

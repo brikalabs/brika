@@ -24,12 +24,7 @@ import { Text } from 'ink';
 import type React from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { ANIMATIONS, type AnimationKind } from './animations';
-import {
-  DEFAULT_IDLE_PROGRAM,
-  type IdleProgram,
-  makeRng,
-  pickIdleEmote,
-} from './idle';
+import { DEFAULT_IDLE_PROGRAM, type IdleProgram, makeRng, pickIdleEmote } from './idle';
 import { type Bracket, type Mood } from './moods';
 import { useFrameSeq } from './useFrameSeq';
 
@@ -51,9 +46,7 @@ export function BrixIdle({
   const baseline = ANIMATIONS[program.baseline];
   const { frame, index } = useFrameSeq(baseline, { loop: true });
 
-  const rng = useRef<() => number>(
-    makeRng(seed ?? (Date.now() ^ Math.floor(Math.random() * 0xffff)))
-  );
+  const rng = useRef<() => number>(makeRng(seed ?? Date.now() ^ randomSalt()));
   const [emote, setEmote] = useState<AnimationKind | null>(null);
 
   // Roll the dice on every baseline tick. We only consider a roll
@@ -90,4 +83,11 @@ interface EmoteOverlayProps {
 function EmoteOverlay({ kind, color, onEnd }: Readonly<EmoteOverlayProps>): React.ReactElement {
   const { frame } = useFrameSeq(ANIMATIONS[kind], { loop: false, onEnd });
   return <Text color={color}>{frame}</Text>;
+}
+
+/** 16-bit cryptographically-strong salt for desynchronising mascots. */
+function randomSalt(): number {
+  const buf = new Uint16Array(1);
+  crypto.getRandomValues(buf);
+  return buf[0] ?? 0;
 }
