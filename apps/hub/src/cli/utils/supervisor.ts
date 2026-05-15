@@ -1,4 +1,5 @@
 import pc from 'picocolors';
+import { removeCliToken, writeCliToken } from './cli-token';
 import { hubUrl } from './hub-client';
 import { openBrowser } from './open';
 import { claimPidFile, removePidFile } from './pid';
@@ -24,6 +25,11 @@ export async function runSupervisor(open = false): Promise<void> {
     );
     process.exit(1);
   }
+
+  // Fresh random per-supervisor token. The hub process reads the
+  // same file via `cli-token.readCliToken()` when wiring its auth
+  // resolver, and the CLI reads it to attach `Authorization: Bearer`.
+  writeCliToken();
 
   const env = {
     ...process.env,
@@ -57,4 +63,5 @@ export async function runSupervisor(open = false): Promise<void> {
   }
 
   await removePidFile();
+  removeCliToken();
 }

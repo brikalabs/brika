@@ -3,6 +3,8 @@ import 'reflect-metadata';
 
 import { auth } from '@brika/auth/server';
 import { inject } from '@brika/di';
+import { makeCliTokenResolver } from '@/cli/utils/cli-session';
+import { readCliToken } from '@/cli/utils/cli-token';
 import {
   BoardsLoader,
   bootstrap,
@@ -21,6 +23,13 @@ import {
 import { ApiServer } from '@/runtime/http/api-server';
 import { allRoutes } from '@/runtime/http/routes';
 
+// Local-trust token written by the supervisor (`runSupervisor`) so the
+// CLI on the same machine can authenticate as admin without a login.
+// Absent when the hub is launched outside the supervisor — in that
+// case the resolver stays unset and every request falls through to
+// normal session validation.
+const cliToken = readCliToken();
+
 /**
  * BRIKA Hub Entry Point
  *
@@ -32,6 +41,7 @@ await bootstrap()
   .use(
     auth({
       server: inject(ApiServer),
+      config: cliToken ? { staticTokenResolver: makeCliTokenResolver(cliToken) } : undefined,
     })
   )
   .use(sparks())

@@ -44,6 +44,16 @@ export function verifyToken(): Middleware {
       return;
     }
 
+    // Pre-DB hook — the hub uses this to honour the local CLI trust
+    // token written to `${BRIKA_HOME}/cli-token` on supervisor start.
+    // Falls through to normal session validation on `null`.
+    const staticSession = getAuthConfig().staticTokenResolver?.(token) ?? null;
+    if (staticSession) {
+      context.set('session', staticSession);
+      await next();
+      return;
+    }
+
     const ip = context.req.header('x-forwarded-for') ?? context.req.header('x-real-ip');
     const userAgent = context.req.header('user-agent');
     const connectionType = parseTransportHeader(context.req.header(TRANSPORT_HEADER));
