@@ -108,6 +108,29 @@ export function useKeyMap(map: KeyMap, enabled: boolean = true): void {
   );
 }
 
+/** Friendly aliases — let consumers write `enter` / `esc` / `space`
+ *  instead of remembering the Ink names. Case-insensitive. */
+const KEY_ALIASES: Readonly<Record<string, string>> = {
+  enter: 'return',
+  esc: 'escape',
+  up: 'upArrow',
+  down: 'downArrow',
+  left: 'leftArrow',
+  right: 'rightArrow',
+  pgup: 'pageUp',
+  pgdown: 'pageDown',
+  pgdn: 'pageDown',
+};
+
+function resolveSpecial(token: string): SpecialKey | null {
+  const lowered = token.toLowerCase();
+  const aliased = KEY_ALIASES[lowered] ?? lowered;
+  if ((SPECIAL_KEYS as ReadonlyArray<string>).includes(aliased)) {
+    return aliased as SpecialKey;
+  }
+  return null;
+}
+
 export function parseSpec(spec: string): Parsed {
   // Edge case: `+` is also the modifier separator, so a bare `+` (or
   // `ctrl++` etc.) trips a naive `split('+')`. Handle it explicitly:
@@ -130,10 +153,21 @@ export function parseSpec(spec: string): Parsed {
     throw new Error(`useKey: invalid key spec ${JSON.stringify(spec)}`);
   }
   const mods = new Set(parts.slice(0, -1));
-  const isSpecial = (SPECIAL_KEYS as ReadonlyArray<string>).includes(last);
+  // Treat `space` as the literal space char so consumers can write
+  // `shortcut="space"` rather than `shortcut=" "`.
+  if (last.toLowerCase() === 'space') {
+    return {
+      special: null,
+      char: ' ',
+      ctrl: mods.has('ctrl'),
+      shift: mods.has('shift'),
+      meta: mods.has('meta'),
+    };
+  }
+  const special = resolveSpecial(last);
   return {
-    special: isSpecial ? (last as SpecialKey) : null,
-    char: isSpecial ? null : last,
+    special,
+    char: special === null ? last : null,
     ctrl: mods.has('ctrl'),
     shift: mods.has('shift'),
     meta: mods.has('meta'),

@@ -5,28 +5,27 @@
  * `<Confirm>` / `<Form>` is mounted, every plain bind here goes
  * dormant. No flags at the call site; the engine handles it.
  *
- * The Ctrl-modified hub controls bypass the capture model the same
- * way they did before (a `Ctrl+S` in a password field is never a
- * typo).
- *
  * Section navigation is driven by `NAV_SECTIONS` so the bindings
  * never drift from the menu bar. Number keys (1-8) handle direct
  * jumps; `[` and `]` cycle to the previous / next section. Numbers
  * were chosen instead of letters because letter hotkeys collided
  * with content-key bindings (`D` to disable a plugin, `e` to enable,
  * `R` to reload, etc.) and felt unsafe even with the capture model.
+ *
+ * Hub controls (`Ctrl+S` / `Ctrl+X` / `Ctrl+R` / `Ctrl+O`) live on
+ * the `<Button>`s in `<ShellFooter>` — the Buttons wire the click,
+ * focus + Enter, and shortcut paths in one place, so we don't
+ * register the same keybind twice.
  */
 
 import { type KeyMap, useKey, useKeyMap, useRouter, useTuiShell } from '@brika/tui';
 import { useMemo } from 'react';
 import type { Routes } from '../routes';
 import { NAV_SECTIONS } from '../sections';
-import { useCli } from '../useCli';
 
 export function useShellKeys(): void {
   const router = useRouter<Routes>();
   const { onQuit } = useTuiShell();
-  const cli = useCli();
 
   useKey('q', () => onQuit());
   // Ctrl+C is handled by ink's `exitOnCtrlC` at the framework layer
@@ -50,11 +49,6 @@ export function useShellKeys(): void {
   useKey(']', () => router.navigate(nextSectionKey(router.current.name)));
 
   useKey('?', () => router.navigate('help'));
-
-  useKey('ctrl+s', () => void cli.startHub());
-  useKey('ctrl+x', () => void cli.stopHub());
-  useKey('ctrl+r', () => void cli.restartHub());
-  useKey('ctrl+o', () => void cli.openUi());
 }
 
 function indexOfRoute(name: string): number {

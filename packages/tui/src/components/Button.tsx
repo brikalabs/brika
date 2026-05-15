@@ -26,9 +26,10 @@
  * built-in `marginRight={2}` (the default) to space them out.
  */
 
-import { Box, type DOMElement, Text, useFocus, useFocusManager, useInput } from 'ink';
+import { Box, type DOMElement, Text, useFocusManager } from 'ink';
 import type React from 'react';
 import { type ReactNode, useCallback, useRef } from 'react';
+import { useFocusable } from '../keys/useFocusable';
 import { useKey } from '../keys/useKey';
 import { hitTest, readBounds } from '../mouse/useBounds';
 import { type MouseEvent, useMouse } from '../mouse/useMouse';
@@ -36,7 +37,10 @@ import { type MouseEvent, useMouse } from '../mouse/useMouse';
 export type ButtonVariant = 'default' | 'success' | 'warning' | 'destructive' | 'ghost';
 
 export interface ButtonProps {
-  /** Key spec passed to `useKey` — `e`, `D`, `ctrl+s`, etc. */
+  /** Key spec passed to `useKey` — `e`, `D`, `ctrl+s`, `enter`,
+   *  `escape`, etc. The display in `[…]` is pretty-printed (`^S`,
+   *  `↵`, `Esc`). Pass an empty string to disable the shortcut chip
+   *  while keeping click + Tab+Enter behaviour. */
   readonly shortcut: string;
   readonly onPress: () => void;
   /** Disable the binding (and dim the label). Default `true`. */
@@ -47,6 +51,9 @@ export interface ButtonProps {
   readonly autoFocus?: boolean;
   /** Opt-in stable id for ink's focus manager. */
   readonly id?: string;
+  /** DOM-style tab order — `-1` opts out of the Tab cycle. Click and
+   *  shortcut still work. Default `0`. */
+  readonly tabIndex?: number;
   readonly children?: ReactNode;
 }
 
@@ -77,21 +84,22 @@ export function Button({
   variant = 'default',
   autoFocus = false,
   id,
+  tabIndex,
   children,
 }: Readonly<ButtonProps>): React.ReactElement {
-  const { isFocused } = useFocus({ autoFocus, id, isActive: enabled });
+  const { isFocused, focusId } = useFocusable({
+    id,
+    tabIndex,
+    autoFocus,
+    enabled,
+    onPress,
+  });
   const { focus } = useFocusManager();
   const boxRef = useRef<DOMElement>(null);
 
-  useKey(shortcut, onPress, enabled);
-  useInput(
-    (input, key) => {
-      if (key.return || input === ' ') {
-        onPress();
-      }
-    },
-    { isActive: enabled && isFocused }
-  );
+  // The shortcut chip is optional — `shortcut=""` skips the keybind so
+  // the Button stays click+focus-only (useful for layout-only buttons).
+  useKey(shortcut, onPress, enabled && shortcut.length > 0);
 
   // Mouse: focus on press-down, fire on click. Bounds are read once
   // per event (via `readBounds`) instead of tracked through React
@@ -106,17 +114,18 @@ export function Button({
       if (!bounds || !hitTest(bounds, e)) {
         return;
       }
-      if (e.action === 'down' && id) {
-        focus(id);
+      if (e.action === 'down') {
+        focus(focusId);
       } else if (e.action === 'click') {
         onPress();
       }
     },
-    [enabled, id, focus, onPress]
+    [enabled, focusId, focus, onPress]
   );
   useMouse(handleMouse);
 
   const accent = VARIANT_COLOR[variant];
+  const showShortcut = shortcut.length > 0;
   return (
     <Box ref={boxRef} marginRight={2}>
       {isFocused ? (
@@ -124,13 +133,50 @@ export function Button({
           ▸{' '}
         </Text>
       ) : null}
-      <Text color={enabled ? accent : undefined} dimColor={!enabled} bold={enabled || isFocused}>
-        [{shortcut}]
-      </Text>
+      {showShortcut ? (
+        <Text color={enabled ? accent : undefined} dimColor={!enabled} bold={enabled || isFocused}>
+          [{formatShortcut(shortcut)}]
+        </Text>
+      ) : null}
       <Text dimColor={!enabled} bold={isFocused}>
-        {' '}
+        {showShortcut ? ' ' : ''}
         {children}
       </Text>
     </Box>
   );
+}
+
+/** Render a key spec in a way that fits a button label:
+ *  `ctrl+s` → `^S`, `enter` → `↵`, `escape` → `Esc`, `space` → `␣`,
+ *  bare printable chars stay as-is so `[e] enable` keeps reading well. */
+function formatShortcut(spec: string): string {
+  if (spec.length === 1) {
+    return spec;
+  }
+  const lower = spec.toLowerCase();
+  if (lower.startsWith('ctrl+') && spec.length === 6) {
+    return `^${spec.slice(5).toUpperCase()}`;
+  }
+  if (lower.startsWith('shift+') && spec.length === 7) {
+    return `⇧${spec.slice(6).toUpperCase()}`;
+  }
+  const labels: Readonly<Record<string, string>> = {
+    enter: '↵',
+    return: '↵',
+    escape: 'Esc',
+    esc: 'Esc',
+    tab: 'Tab',
+    space: '␣',
+    backspace: '⌫',
+    delete: 'Del',
+    uparrow: '↑',
+    downarrow: '↓',
+    leftarrow: '←',
+    rightarrow: '→',
+    pageup: 'PgUp',
+    pagedown: 'PgDn',
+    pgup: 'PgUp',
+    pgdn: 'PgDn',
+  };
+  return labels[lower] ?? spec;
 }

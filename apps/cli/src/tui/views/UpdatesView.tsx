@@ -23,7 +23,7 @@
  * own status line near the buttons.
  */
 
-import { Badge, Button, Heading, Properties, Property, Spinner, useKey } from '@brika/tui';
+import { Badge, Button, Heading, Properties, Property, Spinner } from '@brika/tui';
 import { Box, Text } from 'ink';
 import type React from 'react';
 import { useCallback, useEffect, useState } from 'react';
@@ -120,13 +120,8 @@ export function UpdatesView(): React.ReactElement {
     }
   }, [applying]);
 
-  useKey('c', () => void check(), connected && !applying);
-  useKey('n', () => void cycleChannel(), connected && !applying && channel !== null);
-  useKey(
-    'return',
-    () => void startApply(),
-    connected && !applying && (info?.updateAvailable ?? false)
-  );
+  // No standalone `useKey` here — every action below is a `<Button>`,
+  // and Button wires its own shortcut, click, and Tab+Enter handlers.
 
   if (!connected) {
     return <NotConnected title="Updates" />;
@@ -183,7 +178,7 @@ export function UpdatesView(): React.ReactElement {
           channel
         </Button>
         <Button
-          shortcut="Enter"
+          shortcut="enter"
           variant="success"
           enabled={!applying && (info?.updateAvailable ?? false)}
           onPress={() => void startApply()}

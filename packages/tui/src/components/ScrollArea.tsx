@@ -236,7 +236,11 @@ function ScrollAreaInner({
       paddingX={1}
     >
       <Box ref={windowRef} overflow="hidden" {...windowProps}>
-        <Box ref={innerRef} flexDirection="column" marginTop={-offset}>
+        {/* `flexShrink=0` keeps Yoga from collapsing the inner Box's
+         *  height when its negative marginTop pushes the bottom past
+         *  the parent's bounds — otherwise `measureElement` reports a
+         *  shrinking total as the user scrolls. */}
+        <Box ref={innerRef} flexDirection="column" flexShrink={0} marginTop={-offset}>
           {children}
         </Box>
       </Box>
