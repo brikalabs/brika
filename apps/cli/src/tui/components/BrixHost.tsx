@@ -10,18 +10,24 @@
  * whose tail (`◀┤`) attaches to the bubble's border via a T-junction
  * so the whole thing reads as a real comic-style speech bubble.
  *
+ * Speech pacing comes from `@brika/brix`'s mood-script + typewriter
+ * expander — every line is pre-compiled into a `RevealStep[]` stream
+ * where each step carries its own `pauseMs`. The host effect just
+ * walks the cursor and reads the per-step delay, so word boundaries,
+ * comma breaks, and sentence-end breaths happen automatically.
+ *
+ * The talking mouth flaps once per cursor advance (not on a separate
+ * timer), so the lip motion stays locked to actual character reveal
+ * — and the mouth naturally holds during long pauses.
+ *
  * Behavior is driven by a pure reducer (`brixHostReducer.ts`) plus
- * four thin effects that translate timer/state changes into events:
+ * five thin effects that translate timer/state changes into events:
  *
- *   1. hub.state change  → dispatch HUB    (wave / oops / sleep reaction)
- *   2. statusText change → dispatch STATUS (typewriter the new line)
- *   3. idle auto-talk    → dispatch IDLE_LINE (contextual one-liner)
- *   4. typewriter tick   → dispatch REVEAL
- *   5. hold timer        → dispatch HOLD_OVER (back to idle)
- *
- * Each face state is its own small component (`<IdleFace>`,
- * `<TalkingFace>`, `<ReactingFace>`) so the per-state `useFrameSeq`
- * lifecycle starts fresh on each phase change.
+ *   1. hub.state change  → dispatch HUB        (wave / oops / sleep)
+ *   2. statusText change → dispatch STATUS     (typewriter the new line)
+ *   3. idle auto-talk    → dispatch IDLE_LINE  (contextual one-liner)
+ *   4. typewriter tick   → dispatch REVEAL     (per-step pacing)
+ *   5. hold timer        → dispatch HOLD_OVER  (back to idle)
  */
 
 import {
@@ -36,7 +42,14 @@ import { Box, Text } from 'ink';
 import type React from 'react';
 import { useEffect, useMemo, useReducer, useRef } from 'react';
 import { useCli } from '../useCli';
-import { INITIAL_STATE, isFinished, type Reaction, reduce } from './brixHostReducer';
+import {
+  INITIAL_STATE,
+  isFinished,
+  type PacingOptions,
+  type Reaction,
+  reduce,
+  visibleText,
+} from './brixHostReducer';
 
 type HubState = 'running' | 'stale' | 'stopped' | 'unknown';
 
@@ -52,7 +65,22 @@ const FACE_SLOT = 9;
 /** Total bubble width including the tail glyph column. */
 const BUBBLE_WIDTH = 56;
 
-const TYPE_MS = 26;
+/**
+ * Typewriter pacing for the host. Tuned to feel like Brix is reading
+ * the line aloud at a relaxed pace, with real breath at punctuation.
+ * Per-step delays come from the stream built with these options —
+ * see `@brika/brix`'s `expandReveal` for the math.
+ */
+const PACING: PacingOptions = {
+  charMs: 26,
+  wordPauseMs: 110,
+  clausePauseMs: 220,
+  sentencePauseMs: 420,
+};
+
+/** Floor for the reveal tick — guards against zero/negative overrides. */
+const MIN_TICK_MS = 12;
+
 const REACTION_HOLD_MS = 1400;
 const SPEECH_HOLD_MS = 1800;
 const AUTO_TALK_MIN_MS = 18_000;
@@ -70,7 +98,7 @@ export function BrixHost(): React.ReactElement {
       return;
     }
     lastHub.current = hub.state;
-    dispatch({ type: 'HUB', reaction: REACTIONS[hub.state] });
+    dispatch({ type: 'HUB', reaction: REACTIONS[hub.state], pacing: PACING });
   }, [hub.state]);
 
   // ── Effect 2: statusText changes ─────────────────────────────────
@@ -80,7 +108,12 @@ export function BrixHost(): React.ReactElement {
       return;
     }
     lastText.current = statusText;
-    dispatch({ type: 'STATUS', text: statusText, tint: colorForMood(mood) });
+    dispatch({
+      type: 'STATUS',
+      text: statusText,
+      tint: colorForMood(mood),
+      pacing: PACING,
+    });
   }, [statusText, mood]);
 
   // ── Effect 3: idle auto-talk ─────────────────────────────────────
@@ -93,20 +126,32 @@ export function BrixHost(): React.ReactElement {
     const t = setTimeout(() => {
       const line = idleLines[randomInt(idleLines.length)];
       if (line) {
-        dispatch({ type: 'IDLE_LINE', text: line, tint: colorForMood(mood) });
+        dispatch({
+          type: 'IDLE_LINE',
+          text: line,
+          tint: colorForMood(mood),
+          pacing: PACING,
+        });
       }
     }, delay);
     return () => clearTimeout(t);
   }, [state.phase, idleLines, mood]);
 
-  // ── Effect 4: typewriter reveal ──────────────────────────────────
+  // ── Effect 4: typewriter reveal (per-step pacing) ────────────────
+  // The delay before the next char comes from the stream — long for
+  // word boundaries / commas / sentence ends, short inside a word.
   useEffect(() => {
-    if (state.phase === 'idle' || state.revealed >= state.text.length) {
+    if (state.phase === 'idle' || state.cursor >= state.stream.length) {
       return;
     }
-    const t = setTimeout(() => dispatch({ type: 'REVEAL' }), TYPE_MS);
+    const step = state.stream[state.cursor];
+    const delay = Math.max(
+      MIN_TICK_MS,
+      step?.pauseMs ?? PACING.charMs ?? MIN_TICK_MS
+    );
+    const t = setTimeout(() => dispatch({ type: 'REVEAL' }), delay);
     return () => clearTimeout(t);
-  }, [state.phase, state.revealed, state.text.length]);
+  }, [state.phase, state.cursor, state.stream]);
 
   // ── Effect 5: hold-then-back-to-idle ─────────────────────────────
   const finished = isFinished(state);
@@ -119,13 +164,19 @@ export function BrixHost(): React.ReactElement {
     return () => clearTimeout(t);
   }, [finished, state.phase]);
 
-  const bubbleText = state.phase === 'idle' ? statusText : state.text.slice(0, state.revealed);
+  const bubbleText = state.phase === 'idle' ? statusText : visibleText(state);
   const bubbleDim = state.phase === 'idle';
 
   return (
     <Box alignItems="center">
       <Box width={FACE_SLOT} height={3} alignItems="center" justifyContent="flex-end">
-        <FaceSlot phase={state.phase} reaction={state.reaction} tint={state.tint} mood={mood} />
+        <FaceSlot
+          phase={state.phase}
+          reaction={state.reaction}
+          cursor={state.cursor}
+          tint={state.tint}
+          mood={mood}
+        />
       </Box>
       <Bubble
         text={bubbleText}
@@ -142,6 +193,7 @@ export function BrixHost(): React.ReactElement {
 interface FaceSlotProps {
   readonly phase: 'idle' | 'speaking' | 'reacting';
   readonly reaction: AnimationKind | null;
+  readonly cursor: number;
   readonly tint: string;
   readonly mood: Mood;
 }
@@ -152,18 +204,35 @@ interface FaceSlotProps {
  * change, so each `useFrameSeq` lifecycle inside starts at frame 0
  * — no reset bookkeeping needed in the parent.
  */
-function FaceSlot({ phase, reaction, tint, mood }: Readonly<FaceSlotProps>): React.ReactElement {
+function FaceSlot({
+  phase,
+  reaction,
+  cursor,
+  tint,
+  mood,
+}: Readonly<FaceSlotProps>): React.ReactElement {
   if (phase === 'reacting' && reaction) {
     return <ReactingFace kind={reaction} color={tint} />;
   }
   if (phase === 'speaking') {
-    return <TalkingFace color={tint} />;
+    return <TalkingFace cursor={cursor} color={tint} />;
   }
   return <BrixIdle mood={mood} color={tint} />;
 }
 
-function TalkingFace({ color }: Readonly<{ color: string }>): React.ReactElement {
-  const { frame } = useFrameSeq(ANIMATIONS.talking);
+/**
+ * The talking mouth flaps once per cursor advance (one character
+ * revealed = one frame). `cursor % frames.length` keeps the mouth
+ * locked to the text reveal — during long pauses (sentence breaths)
+ * the cursor stops moving and the mouth holds its current shape,
+ * which is exactly how mouths behave between words in speech.
+ */
+function TalkingFace({
+  cursor,
+  color,
+}: Readonly<{ cursor: number; color: string }>): React.ReactElement {
+  const frames = ANIMATIONS.talking.frames;
+  const frame = frames[cursor % frames.length] ?? frames[0] ?? '';
   return <Text color={color}>{frame}</Text>;
 }
 

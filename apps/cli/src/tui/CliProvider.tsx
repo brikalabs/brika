@@ -53,7 +53,7 @@ function defaultMoodFor(hub: HubStatus): MoodLine {
     case 'running':
       return { mood: 'idle', statusText: 'watching' };
     case 'stopped':
-      return { mood: 'sleep', statusText: "hub is sleeping — press 's' to start" };
+      return { mood: 'sleep', statusText: "hub is sleeping — press 'ctrl+s' to start" };
     case 'stale':
       return { mood: 'suspicious', statusText: 'stale pid — start to recover' };
     case 'unknown':

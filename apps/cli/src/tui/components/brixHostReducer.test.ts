@@ -5,18 +5,21 @@ import {
   isFinished,
   type Reaction,
   reduce,
+  visibleText,
 } from './brixHostReducer';
 
 const WAVE: Reaction = { kind: 'wave', color: 'green', line: 'hi!' };
+/** Compact pacing so test math stays readable. */
+const PACING = { charMs: 10, wordPauseMs: 100, sentencePauseMs: 500, clausePauseMs: 200 };
 
 describe('reduce — HUB events', () => {
-  test('transitions to reacting when given a reaction', () => {
-    const out = reduce(INITIAL_STATE, { type: 'HUB', reaction: WAVE });
+  test('transitions to reacting and pre-computes the stream', () => {
+    const out = reduce(INITIAL_STATE, { type: 'HUB', reaction: WAVE, pacing: PACING });
     expect(out.phase).toBe('reacting');
     expect(out.reaction).toBe('wave');
-    expect(out.text).toBe('hi!');
-    expect(out.revealed).toBe(0);
+    expect(out.cursor).toBe(0);
     expect(out.tint).toBe('green');
+    expect(out.stream.length).toBe('hi!'.length);
   });
 
   test('no-op for HUB with null reaction', () => {
@@ -24,32 +27,34 @@ describe('reduce — HUB events', () => {
     expect(out).toBe(INITIAL_STATE);
   });
 
-  test('HUB during speaking interrupts and switches to reacting', () => {
+  test('HUB during speaking interrupts and resets the cursor', () => {
     const speaking: HostState = {
       phase: 'speaking',
-      text: 'hello there',
-      revealed: 4,
+      stream: [
+        { mood: 'default', token: 'x', trailing: '', pauseMs: 10 },
+        { mood: 'default', token: 'y', trailing: '', pauseMs: 10 },
+      ],
+      cursor: 1,
       reaction: null,
       tint: 'cyan',
     };
-    const out = reduce(speaking, { type: 'HUB', reaction: WAVE });
+    const out = reduce(speaking, { type: 'HUB', reaction: WAVE, pacing: PACING });
     expect(out.phase).toBe('reacting');
     expect(out.reaction).toBe('wave');
-    expect(out.text).toBe('hi!');
-    expect(out.revealed).toBe(0);
+    expect(out.cursor).toBe(0);
   });
 });
 
 describe('reduce — STATUS events', () => {
-  test('starts a new speaking line', () => {
+  test('starts a new speaking line with a per-step stream', () => {
     const out = reduce(INITIAL_STATE, {
       type: 'STATUS',
-      text: 'updating registry',
+      text: 'hi yo',
       tint: 'magenta',
+      pacing: PACING,
     });
     expect(out.phase).toBe('speaking');
-    expect(out.text).toBe('updating registry');
-    expect(out.revealed).toBe(0);
+    expect(out.stream.map((s) => s.token).join('')).toBe('hi yo');
     expect(out.tint).toBe('magenta');
   });
 
@@ -60,18 +65,34 @@ describe('reduce — STATUS events', () => {
     );
   });
 
+  test('stream carries the punctuation breath baked in', () => {
+    const out = reduce(INITIAL_STATE, {
+      type: 'STATUS',
+      text: 'hi. yo',
+      tint: 'cyan',
+      pacing: PACING,
+    });
+    const yIdx = out.stream.findIndex((s, i) => s.token === 'y' && i > 0);
+    expect(out.stream[yIdx]?.pauseMs).toBe(PACING.sentencePauseMs);
+  });
+
   test('interrupts a currently-playing reaction', () => {
     const reacting: HostState = {
       phase: 'reacting',
-      text: 'hi!',
-      revealed: 1,
+      stream: [{ mood: 'default', token: 'h', trailing: '', pauseMs: 10 }],
+      cursor: 0,
       reaction: 'wave',
       tint: 'green',
     };
-    const out = reduce(reacting, { type: 'STATUS', text: 'new line', tint: 'cyan' });
+    const out = reduce(reacting, {
+      type: 'STATUS',
+      text: 'new line',
+      tint: 'cyan',
+      pacing: PACING,
+    });
     expect(out.phase).toBe('speaking');
     expect(out.reaction).toBeNull();
-    expect(out.text).toBe('new line');
+    expect(out.stream.map((s) => s.token).join('')).toBe('new line');
   });
 });
 
@@ -81,16 +102,17 @@ describe('reduce — IDLE_LINE events', () => {
       type: 'IDLE_LINE',
       text: 'just chilling',
       tint: 'cyan',
+      pacing: PACING,
     });
     expect(out.phase).toBe('speaking');
-    expect(out.text).toBe('just chilling');
+    expect(out.stream.map((s) => s.token).join('')).toBe('just chilling');
   });
 
   test('no-op when not idle (stale timer protection)', () => {
     const reacting: HostState = {
       phase: 'reacting',
-      text: 'hi!',
-      revealed: 0,
+      stream: [{ mood: 'default', token: 'h', trailing: '', pauseMs: 10 }],
+      cursor: 0,
       reaction: 'wave',
       tint: 'green',
     };
@@ -110,23 +132,26 @@ describe('reduce — IDLE_LINE events', () => {
 });
 
 describe('reduce — REVEAL events', () => {
-  test('increments revealed by 1 while typing', () => {
-    const speaking: HostState = {
-      phase: 'speaking',
+  test('advances cursor by 1 while typing', () => {
+    const started = reduce(INITIAL_STATE, {
+      type: 'STATUS',
       text: 'hello',
-      revealed: 2,
-      reaction: null,
       tint: 'cyan',
-    };
-    const out = reduce(speaking, { type: 'REVEAL' });
-    expect(out.revealed).toBe(3);
+      pacing: PACING,
+    });
+    const next = reduce(started, { type: 'REVEAL' });
+    expect(next.cursor).toBe(1);
+    expect(visibleText(next)).toBe('h');
   });
 
-  test('no-op once fully revealed', () => {
+  test('no-op once cursor catches up to stream length', () => {
     const done: HostState = {
       phase: 'speaking',
-      text: 'hi',
-      revealed: 2,
+      stream: [
+        { mood: 'default', token: 'h', trailing: '', pauseMs: 10 },
+        { mood: 'default', token: 'i', trailing: '', pauseMs: 10 },
+      ],
+      cursor: 2,
       reaction: null,
       tint: 'cyan',
     };
@@ -142,15 +167,15 @@ describe('reduce — HOLD_OVER events', () => {
   test('drops back to idle, preserving tint for a smooth transition', () => {
     const speaking: HostState = {
       phase: 'speaking',
-      text: 'hello',
-      revealed: 5,
+      stream: [{ mood: 'default', token: 'h', trailing: '', pauseMs: 10 }],
+      cursor: 1,
       reaction: null,
       tint: 'magenta',
     };
     const out = reduce(speaking, { type: 'HOLD_OVER' });
     expect(out.phase).toBe('idle');
-    expect(out.text).toBe('');
-    expect(out.revealed).toBe(0);
+    expect(out.stream.length).toBe(0);
+    expect(out.cursor).toBe(0);
     expect(out.reaction).toBeNull();
     expect(out.tint).toBe('magenta');
   });
@@ -161,11 +186,14 @@ describe('isFinished', () => {
     expect(isFinished(INITIAL_STATE)).toBe(false);
   });
 
-  test('true once revealed has caught up to text length', () => {
+  test('true once cursor has reached stream length', () => {
     const done: HostState = {
       phase: 'speaking',
-      text: 'hi',
-      revealed: 2,
+      stream: [
+        { mood: 'default', token: 'h', trailing: '', pauseMs: 10 },
+        { mood: 'default', token: 'i', trailing: '', pauseMs: 10 },
+      ],
+      cursor: 2,
       reaction: null,
       tint: 'cyan',
     };
@@ -175,11 +203,33 @@ describe('isFinished', () => {
   test('false while still typing', () => {
     const typing: HostState = {
       phase: 'speaking',
-      text: 'hello',
-      revealed: 3,
+      stream: [
+        { mood: 'default', token: 'h', trailing: '', pauseMs: 10 },
+        { mood: 'default', token: 'i', trailing: '', pauseMs: 10 },
+      ],
+      cursor: 1,
       reaction: null,
       tint: 'cyan',
     };
     expect(isFinished(typing)).toBe(false);
+  });
+});
+
+describe('visibleText', () => {
+  test('returns the empty string when nothing is revealed', () => {
+    expect(visibleText(INITIAL_STATE)).toBe('');
+  });
+
+  test('returns the rendered prefix after a few reveals', () => {
+    let s = reduce(INITIAL_STATE, {
+      type: 'STATUS',
+      text: 'hi yo',
+      tint: 'cyan',
+      pacing: PACING,
+    });
+    for (let i = 0; i < 3; i += 1) {
+      s = reduce(s, { type: 'REVEAL' });
+    }
+    expect(visibleText(s)).toBe('hi ');
   });
 });

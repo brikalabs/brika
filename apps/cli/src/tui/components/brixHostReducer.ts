@@ -1,35 +1,46 @@
 /**
  * Pure state machine behind `<BrixHost>`. Lives in its own file
- * because the React component tangles it with five effects and a
+ * because the React component tangles it with several effects and a
  * handful of refs — but the state transitions themselves are pure,
  * so we test them here.
  *
- * State:
- *   - `idle` — Brix breathes; the bubble shows whatever the active
- *     view published as `statusText` (dimmed).
- *   - `speaking` — a new line is being revealed char-by-char. The
- *     face shows the talking mouth animation.
- *   - `reacting` — a one-shot reaction emote (wave/oops/sleep)
- *     plays in the face slot while a short line types in the bubble.
+ * State carries a pre-computed `RevealStep[]` stream (mood-script
+ * parsed + typewriter expanded) plus a cursor. The host's reveal
+ * effect just steps the cursor and reads `step.pauseMs` for the
+ * delay before the next tick — so word-boundary and punctuation
+ * pacing are encoded once, in the stream, instead of recomputed.
  *
- * Events come in from four sources (see BrixHost.tsx):
- *   1. `HUB`        — hub state transitioned (HUB_CHANGED outside).
+ * Phases:
+ *   - `idle`      — Brix breathes; bubble shows the active view's
+ *                   statusText, dimmed.
+ *   - `speaking`  — a line is being typed char-by-char. Mouth flaps
+ *                   per cursor advance.
+ *   - `reacting`  — a one-shot reaction emote (wave/oops/sleep) plays
+ *                   in the face slot while a short line types.
+ *
+ * Events:
+ *   1. `HUB`        — hub state changed (host computes the reaction).
  *   2. `STATUS`     — the active view published a new `statusText`.
  *   3. `IDLE_LINE`  — the auto-talk timer fired with a contextual line.
  *   4. `REVEAL`     — typewriter tick.
  *   5. `HOLD_OVER`  — the post-typing hold timer expired; go back idle.
  */
 
-import type { AnimationKind } from '@brika/brix';
+import {
+  type AnimationKind,
+  expandReveal,
+  parseMoodScript,
+  type RevealStep,
+} from '@brika/brix';
 
 export type HostPhase = 'idle' | 'speaking' | 'reacting';
 
 export interface HostState {
   readonly phase: HostPhase;
-  /** The full line being shown. Empty in idle. */
-  readonly text: string;
-  /** Number of revealed characters. 0 ≤ revealed ≤ text.length. */
-  readonly revealed: number;
+  /** Pre-computed reveal stream (one entry per character). Empty in idle. */
+  readonly stream: ReadonlyArray<RevealStep>;
+  /** How many stream entries have been revealed so far. 0 ≤ cursor ≤ stream.length. */
+  readonly cursor: number;
   /** Reaction animation playing in the face slot (reacting phase only). */
   readonly reaction: AnimationKind | null;
   /** Color tint for the face during the current phase. */
@@ -38,8 +49,8 @@ export interface HostState {
 
 export const INITIAL_STATE: HostState = {
   phase: 'idle',
-  text: '',
-  revealed: 0,
+  stream: [],
+  cursor: 0,
   reaction: null,
   tint: 'cyan',
 };
@@ -50,12 +61,33 @@ export interface Reaction {
   readonly line: string;
 }
 
+export interface PacingOptions {
+  readonly charMs?: number;
+  readonly wordPauseMs?: number;
+  readonly sentencePauseMs?: number;
+  readonly clausePauseMs?: number;
+}
+
 export type HostEvent =
-  | { readonly type: 'HUB'; readonly reaction: Reaction | null }
-  | { readonly type: 'STATUS'; readonly text: string; readonly tint: string }
-  | { readonly type: 'IDLE_LINE'; readonly text: string; readonly tint: string }
+  | { readonly type: 'HUB'; readonly reaction: Reaction | null; readonly pacing?: PacingOptions }
+  | {
+      readonly type: 'STATUS';
+      readonly text: string;
+      readonly tint: string;
+      readonly pacing?: PacingOptions;
+    }
+  | {
+      readonly type: 'IDLE_LINE';
+      readonly text: string;
+      readonly tint: string;
+      readonly pacing?: PacingOptions;
+    }
   | { readonly type: 'REVEAL' }
   | { readonly type: 'HOLD_OVER' };
+
+function streamFor(text: string, pacing: PacingOptions = {}): ReadonlyArray<RevealStep> {
+  return expandReveal(parseMoodScript(text), 'typewriter', pacing);
+}
 
 /** Pure reducer — no side effects, no timers. Tested in isolation. */
 export function reduce(state: HostState, event: HostEvent): HostState {
@@ -67,21 +99,20 @@ export function reduce(state: HostState, event: HostEvent): HostState {
       }
       return {
         phase: 'reacting',
-        text: r.line,
-        revealed: 0,
+        stream: streamFor(r.line, event.pacing),
+        cursor: 0,
         reaction: r.kind,
         tint: r.color,
       };
     }
     case 'STATUS': {
-      const text = event.text.trim();
-      if (text.length === 0) {
+      if (event.text.trim().length === 0) {
         return state;
       }
       return {
         phase: 'speaking',
-        text: event.text,
-        revealed: 0,
+        stream: streamFor(event.text, event.pacing),
+        cursor: 0,
         reaction: null,
         tint: event.tint,
       };
@@ -92,14 +123,13 @@ export function reduce(state: HostState, event: HostEvent): HostState {
       if (state.phase !== 'idle') {
         return state;
       }
-      const text = event.text.trim();
-      if (text.length === 0) {
+      if (event.text.trim().length === 0) {
         return state;
       }
       return {
         phase: 'speaking',
-        text: event.text,
-        revealed: 0,
+        stream: streamFor(event.text, event.pacing),
+        cursor: 0,
         reaction: null,
         tint: event.tint,
       };
@@ -108,10 +138,10 @@ export function reduce(state: HostState, event: HostEvent): HostState {
       if (state.phase === 'idle') {
         return state;
       }
-      if (state.revealed >= state.text.length) {
+      if (state.cursor >= state.stream.length) {
         return state;
       }
-      return { ...state, revealed: state.revealed + 1 };
+      return { ...state, cursor: state.cursor + 1 };
     }
     case 'HOLD_OVER': {
       return { ...INITIAL_STATE, tint: state.tint };
@@ -119,7 +149,19 @@ export function reduce(state: HostState, event: HostEvent): HostState {
   }
 }
 
-/** True when the current line is fully typed and we're waiting on HOLD_OVER. */
+/** True when the stream is fully revealed and we're waiting on HOLD_OVER. */
 export function isFinished(state: HostState): boolean {
-  return state.phase !== 'idle' && state.revealed >= state.text.length;
+  return state.phase !== 'idle' && state.cursor >= state.stream.length;
+}
+
+/** Convenience — the rendered text up to the current cursor. */
+export function visibleText(state: HostState): string {
+  let out = '';
+  for (let i = 0; i < state.cursor && i < state.stream.length; i += 1) {
+    const step = state.stream[i];
+    if (step) {
+      out += step.token + step.trailing;
+    }
+  }
+  return out;
 }
