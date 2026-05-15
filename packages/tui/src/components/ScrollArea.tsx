@@ -23,8 +23,8 @@
  *   - Tab into the area or click it to grab scroll keys.
  *   - `↑` / `↓` / `j` / `k`     — one line up / down
  *   - `J` / `K`                  — fast scroll (5 lines at a time)
- *   - `PageUp` / `PageDown`      — one page (visible − 1 lines)
- *   - `Ctrl+U` / `Ctrl+D`        — same (Mac-keyboard friendly)
+ *   - `Ctrl+U` / `Ctrl+D`        — one page (Mac-keyboard friendly)
+ *   - `PageUp` / `PageDown`      — same, when the keyboard has them
  *   - `Home` / `g` / `Ctrl+B`    — jump to top
  *   - `End`  / `G` / `Ctrl+G`    — jump to bottom
  *   - `Esc`                      — release focus
@@ -299,7 +299,7 @@ function ScrollAreaInner({
             top
           </Button>
           <Button
-            shortcut="pageUp"
+            shortcut="ctrl+u"
             tabIndex={-1}
             enabled={!atTop}
             onPress={() => move(-pageStepRef.current)}
@@ -307,7 +307,7 @@ function ScrollAreaInner({
             up
           </Button>
           <Button
-            shortcut="pageDown"
+            shortcut="ctrl+d"
             tabIndex={-1}
             enabled={!atBottom}
             onPress={() => move(pageStepRef.current)}

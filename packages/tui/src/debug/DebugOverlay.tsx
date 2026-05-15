@@ -15,8 +15,9 @@
  *
  * Keys:
  *   - Esc            close the overlay (works from inside the REPL too)
- *   - ↑ / ↓          scroll the log (line at a time) — MacBook-friendly
- *   - PgUp / PgDn    scroll the log (page at a time, when available)
+ *   - ↑ / ↓          scroll the log (line at a time)
+ *   - Ctrl+U / Ctrl+D  scroll the log (page at a time, Mac-friendly)
+ *   - PgUp / PgDn    same, on keyboards that have them
  *   - Enter          eval the REPL line
  *   - Ctrl+L         clear entries
  *
@@ -101,6 +102,8 @@ export function DebugOverlay(): React.ReactElement {
   useKey('downArrow', () => scrollDown(1), isOpen);
   useKey('pageUp', () => scrollUp(bodyHeight), isOpen);
   useKey('pageDown', () => scrollDown(bodyHeight), isOpen);
+  useKey('ctrl+u', () => scrollUp(bodyHeight), isOpen);
+  useKey('ctrl+d', () => scrollDown(bodyHeight), isOpen);
   useKey('ctrl+l', clear, isOpen);
 
   const onSubmit = useCallback(
