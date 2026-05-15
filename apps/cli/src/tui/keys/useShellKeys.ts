@@ -5,13 +5,13 @@
  *
  *   - Plain letters for *navigation* (`d`/`p`/`w`/`l`/`u`/`g`/`,`/`?`)
  *     and `q` for quit — universal terminal convention. Gated by
- *     `isInputCaptured` so forms own their keystrokes.
+ *     `!isInputCaptured` so a focused `<Input>` / `<Form>` /
+ *     `<Confirm>` eats keystrokes before they reach the shell.
  *   - **Ctrl-modified** for *actions* that change state
- *     (`Ctrl+S`/`Ctrl+X`/`Ctrl+R`/`Ctrl+O`). These can't be typed by
- *     accident in a text field, so they're discoverable + safe even
- *     if a form forgets to call `useCaptureInput()`.
+ *     (`Ctrl+S`/`Ctrl+X`/`Ctrl+R`/`Ctrl+O`). Can't be typed by
+ *     accident in a text field, so they stay live regardless.
  *
- * `Ctrl+C` stays live regardless of capture, as a hard escape hatch.
+ * `Ctrl+C` stays live as a hard escape hatch.
  */
 
 import { useKey, useRouter, useTuiShell } from '@brika/tui';
@@ -22,24 +22,22 @@ export function useShellKeys(): void {
   const router = useRouter<Routes>();
   const { onQuit, isInputCaptured } = useTuiShell();
   const cli = useCli();
-  const active = !isInputCaptured;
+  const navActive = !isInputCaptured;
 
-  useKey('q', () => onQuit(), active);
+  useKey('q', () => onQuit(), navActive);
   useKey('ctrl+c', () => onQuit()); // always live — escape hatch
 
-  // Section hotkeys (navigation — plain letters).
-  useKey('d', () => router.navigate('dashboard'), active);
-  useKey('p', () => router.navigate('plugins'), active);
-  useKey('w', () => router.navigate('workflows'), active);
-  useKey('l', () => router.navigate('logs'), active);
-  useKey('u', () => router.navigate('users'), active);
-  useKey('g', () => router.navigate('updates'), active);
-  useKey(',', () => router.navigate('settings'), active);
-  useKey('x', () => router.navigate('playground'), active);
-  useKey('?', () => router.navigate('help'), active);
+  useKey('d', () => router.navigate('dashboard'), navActive);
+  useKey('p', () => router.navigate('plugins'), navActive);
+  useKey('w', () => router.navigate('workflows'), navActive);
+  useKey('l', () => router.navigate('logs'), navActive);
+  useKey('u', () => router.navigate('users'), navActive);
+  useKey('g', () => router.navigate('updates'), navActive);
+  useKey(',', () => router.navigate('settings'), navActive);
+  useKey('x', () => router.navigate('playground'), navActive);
+  useKey('b', () => router.navigate('brix'), navActive);
+  useKey('?', () => router.navigate('help'), navActive);
 
-  // Hub control (state-changing — Ctrl-modified so a plain `s` in a
-  // password field can never stop the hub).
   useKey('ctrl+s', () => void cli.startHub());
   useKey('ctrl+x', () => void cli.stopHub());
   useKey('ctrl+r', () => void cli.restartHub());

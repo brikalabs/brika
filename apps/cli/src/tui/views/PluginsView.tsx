@@ -157,8 +157,7 @@ function InstalledTab(): React.ReactElement {
     };
   }, [focused, readme?.uid]);
 
-  const overlayOpen = filterMode || pendingUninstall !== null;
-  const interactive = !overlayOpen && Boolean(focused);
+  const interactive = Boolean(focused);
 
   const runAction = (action: 'enable' | 'disable' | 'kill' | 'reload') => () => {
     if (!focused) {
@@ -171,20 +170,21 @@ function InstalledTab(): React.ReactElement {
   };
 
   // Navigation only — actions land as <Button>s below the list and
-  // register their own keybinds.
-  useKey('upArrow', () => setFocusIndex((i) => Math.max(0, i - 1)), !overlayOpen);
+  // register their own keybinds. `useKey` is capture-aware, so the
+  // filter input / uninstall confirm automatically eat these.
+  useKey('upArrow', () => setFocusIndex((i) => Math.max(0, i - 1)));
   useKey(
     'downArrow',
     () => setFocusIndex((i) => Math.min(items.length - 1, i + 1)),
-    !overlayOpen && items.length > 0
+    items.length > 0
   );
   // PgUp/PgDn for full keyboards; Ctrl+U/Ctrl+D for Mac keyboards
   // where the page keys need Fn. Either set scrolls the README pane.
-  useKey('pageUp', () => setReadmeScroll((s) => Math.max(0, s - README_PAGE_LINES)), !overlayOpen);
-  useKey('pageDown', () => setReadmeScroll((s) => s + README_PAGE_LINES), !overlayOpen);
-  useKey('ctrl+u', () => setReadmeScroll((s) => Math.max(0, s - README_PAGE_LINES)), !overlayOpen);
-  useKey('ctrl+d', () => setReadmeScroll((s) => s + README_PAGE_LINES), !overlayOpen);
-  useKey('/', () => setFilterMode(true), !overlayOpen);
+  useKey('pageUp', () => setReadmeScroll((s) => Math.max(0, s - README_PAGE_LINES)));
+  useKey('pageDown', () => setReadmeScroll((s) => s + README_PAGE_LINES));
+  useKey('ctrl+u', () => setReadmeScroll((s) => Math.max(0, s - README_PAGE_LINES)));
+  useKey('ctrl+d', () => setReadmeScroll((s) => s + README_PAGE_LINES));
+  useKey('/', () => setFilterMode(true));
 
   return (
     <Box flexDirection="column">

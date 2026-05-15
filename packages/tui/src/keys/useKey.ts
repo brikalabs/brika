@@ -5,11 +5,11 @@
  *   useKey('ctrl+c', onQuit);
  *   useKey('shift+tab', focusPrev);
  *   useKey('upArrow', () => scroll.scrollUp(1));
- *   useKey('?', openHelp, isNormalMode);   // 4th arg disables the bind
+ *   useKey('?', openHelp, isNormalMode);   // 3rd arg disables the bind
  *
- * One ink `useInput` is registered per call. Multiple `useKey` calls
- * stack — that's idiomatic ink usage and what lets each binding live
- * next to its action (instead of one mega dispatcher).
+ * One ink `useInput` is registered per call. Multiple `useKey`
+ * calls stack — that's idiomatic ink usage and what lets each
+ * binding live next to its action (instead of one mega dispatcher).
  *
  * Spec grammar:  `[modifier+]*<key>`
  *   modifier ::= ctrl | shift | meta
@@ -21,6 +21,13 @@
  * plain 'q'. `useKey('shift+q', …)` only fires for Shift+Q. This
  * avoids the classic bug where a "shifted" binding accidentally also
  * fires on the unshifted key.
+ *
+ * Capture-awareness is the caller's responsibility — if a shell-
+ * level bind needs to suspend when an `<Input>` / `<Confirm>` /
+ * `<Form>` is mounted, pass `!isInputCaptured` from `useTuiShell()`
+ * as the third arg. Component-local binds (e.g. `<Search>` arrows
+ * for navigating its own results) just `useKey(...)` — they live
+ * inside the captured scope so they always want to fire.
  */
 
 import { type Key, useInput } from 'ink';

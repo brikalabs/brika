@@ -20,6 +20,16 @@ export { Input, type InputKind, type InputProps } from './Input';
 export { Kbd, type KbdProps } from './Kbd';
 export { LogPane } from './LogPane';
 export { MeasuredChrome, type MeasuredChromeProps } from './MeasuredChrome';
+export {
+  Pane,
+  type PaneAccent,
+  PaneActions,
+  PaneBody,
+  PaneFooter,
+  PaneHeader,
+  type PaneProps,
+  PaneTitle,
+} from './Pane';
 export { Properties, type PropertiesProps, Property, type PropertyProps } from './Properties';
 export { ScreenChrome, type ScreenChromeProps } from './ScreenChrome';
 export {
