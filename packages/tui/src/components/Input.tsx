@@ -10,6 +10,7 @@
  *     placeholder="Search…"
  *     onSubmit={() => fetchResults(q)}
  *     onFocus={() => setHelpHint('typing — Esc clears')}
+ *     flex               // take all remaining row width
  *   />
  *
  * **Props** (shadcn / HTML shape):
@@ -29,6 +30,21 @@
  *   - `border`       — draw a rounded border. Default `true`.
  *   - `accentColor`  — focused border / cursor tint. Default `cyan`.
  *
+ * **Sizing**:
+ *   - `flex`         — `flexGrow: 1`. Use inside a horizontal `<Box>`
+ *                      to stretch across remaining space.
+ *   - `width`        — fixed cell count (`width={40}`) or a layout
+ *                      string (`width="50%"`). Overrides natural
+ *                      content sizing.
+ *   - default        — content-sized (just wide enough for the
+ *                      current value + cursor + prefix + border).
+ *
+ * Long values:
+ *   When the live width can't fit the value, the visible window
+ *   scrolls so the caret column stays inside the box. The full
+ *   value still lives in `value`/`onChange` — it's only the
+ *   displayed prefix/suffix that gets clipped.
+ *
  * Interactions:
  *   - **Keyboard**: typing letters appends to `value`; Backspace
  *     pops; Enter → `onSubmit`; Esc → `onCancel`. Tab / Shift+Tab
@@ -40,13 +56,13 @@
  * the input as plain `<Text>` siblings so consumers compose freely.
  *
  *   <Text dimColor>Query</Text>
- *   <Input type="search" value={q} onChange={setQ} />
+ *   <Input type="search" value={q} onChange={setQ} flex />
  *   {err ? <Text color="red">{err}</Text> : null}
  */
 
 import { Box, type DOMElement, Text, useFocus, useFocusManager, useInput } from 'ink';
 import type React from 'react';
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { hitTest, useBounds } from '../mouse/useBounds';
 import { useMouse } from '../mouse/useMouse';
 import { useCaptureInput } from '../shell/useTuiShell';
@@ -73,7 +89,21 @@ export interface InputProps {
   /** Stable id for ink's focus manager — only needed when multiple
    *  inputs are mounted and you want to control the cycle order. */
   readonly id?: string;
+  /** `flexGrow: 1` shortcut — stretch to fill the parent row. */
+  readonly flex?: boolean;
+  /** Explicit width: a fixed cell count, or a layout string ("50%"). */
+  readonly width?: number | string;
+  /** When `true`, the input refuses focus, dims its chrome, and
+   *  ignores typing / mouse clicks. Default `false`. */
+  readonly disabled?: boolean;
+  /** Custom prefix text rendered before the value — overrides the
+   *  `type`-default glyph. Use plain text or emoji (`'🔍 '`,
+   *  `'$ '`, `'»'`, …). Pass empty string to suppress the default. */
+  readonly prefix?: string;
 }
+
+/** Cursor blink period (ms). `0` keeps the cursor solid. */
+const CURSOR_BLINK_MS: number = 530;
 
 const PREFIX_BY_TYPE: Readonly<Record<InputType, string>> = {
   text: '',
@@ -95,11 +125,28 @@ export function Input({
   accentColor = 'cyan',
   autoFocus = true,
   id,
+  flex = false,
+  width,
+  disabled = false,
+  prefix,
 }: Readonly<InputProps>): React.ReactElement {
-  const { isFocused } = useFocus({ autoFocus, id });
+  const { isFocused } = useFocus({ autoFocus: autoFocus && !disabled, id, isActive: !disabled });
   const { focus } = useFocusManager();
   const boxRef = useRef<DOMElement>(null);
   const bounds = useBounds(boxRef);
+
+  // Blink the cursor while focused so the user knows the input is
+  // actively listening. Solid (no blink) is also fine — set
+  // `CURSOR_BLINK_MS = 0` to keep it on always.
+  const [cursorOn, setCursorOn] = useState(true);
+  useEffect(() => {
+    if (!isFocused || CURSOR_BLINK_MS === 0) {
+      setCursorOn(true);
+      return;
+    }
+    const t = setInterval(() => setCursorOn((on) => !on), CURSOR_BLINK_MS);
+    return () => clearInterval(t);
+  }, [isFocused]);
 
   // Capture input only while focused — siblings (other inputs,
   // buttons) get a clean shell when Tab moves focus away.
@@ -125,14 +172,14 @@ export function Input({
   // Mouse: clicking the input focuses it. Ignore clicks outside box.
   const handleMouse = useCallback(
     (e: { action: string; button: string; column: number; row: number }) => {
-      if (!bounds || e.button !== 'left' || e.action !== 'down') {
+      if (disabled || !bounds || e.button !== 'left' || e.action !== 'down') {
         return;
       }
       if (hitTest(bounds, e) && id) {
         focus(id);
       }
     },
-    [bounds, focus, id]
+    [disabled, bounds, focus, id]
   );
   useMouse(handleMouse);
 
@@ -157,29 +204,72 @@ export function Input({
         onChange(value + input);
       }
     },
-    { isActive: isFocused }
+    { isActive: isFocused && !disabled }
   );
 
-  const display = type === 'password' ? '•'.repeat(value.length) : value;
+  const masked = type === 'password' ? '•'.repeat(value.length) : value;
   const showPlaceholder = value.length === 0 && Boolean(placeholder);
-  const borderColor = isFocused ? accentColor : 'gray';
-  const prefixColor = isFocused ? accentColor : undefined;
-  const prefix = PREFIX_BY_TYPE[type];
+  const resolvedPrefix = prefix ?? PREFIX_BY_TYPE[type];
+
+  // Visual states:
+  //   - disabled    → everything muted; no cursor.
+  //   - focused     → accent border + accent prefix + accent cursor.
+  //   - resting     → soft gray border, dim prefix, no cursor.
+  const borderColor = disabled ? 'gray' : isFocused ? accentColor : 'gray';
+  const prefixColor = disabled ? undefined : isFocused ? accentColor : undefined;
+  const prefixDim = disabled || !isFocused;
+  const placeholderColor = disabled ? undefined : isFocused ? accentColor : 'gray';
+
+  // Horizontal scroll: when the box has a measured width that
+  // can't fit the full value (+ prefix + cursor + border padding),
+  // slice the value so the cursor stays at the right edge.
+  const innerWidth = bounds
+    ? Math.max(0, bounds.width - (border ? 4 : 0) - resolvedPrefix.length - 1)
+    : null;
+  const display =
+    innerWidth !== null && masked.length > innerWidth
+      ? masked.slice(masked.length - innerWidth)
+      : masked;
+
+  const showCursor = isFocused && !disabled && cursorOn;
 
   const body = (
     <Box>
-      {prefix ? <Text color={prefixColor}>{prefix}</Text> : null}
-      {showPlaceholder ? <Text dimColor>{placeholder}</Text> : <Text>{display}</Text>}
-      {isFocused ? <Text color={accentColor}>▏</Text> : null}
+      {resolvedPrefix ? (
+        <Text color={prefixColor} dimColor={prefixDim}>
+          {resolvedPrefix}
+        </Text>
+      ) : null}
+      {showPlaceholder ? (
+        <Text color={placeholderColor} dimColor={!isFocused || disabled}>
+          {placeholder}
+        </Text>
+      ) : (
+        <Text dimColor={disabled}>{display}</Text>
+      )}
+      {/* Inverse-block cursor — a solid cell that contrasts against
+          whatever's underneath. Hidden when blinking-off so the eye
+          can track typing without the cursor masking the last char. */}
+      {showCursor ? (
+        <Text color={accentColor} inverse>
+          {' '}
+        </Text>
+      ) : (
+        <Text> </Text>
+      )}
     </Box>
   );
 
-  if (border) {
-    return (
-      <Box ref={boxRef} borderStyle="round" borderColor={borderColor} paddingX={1}>
-        {body}
-      </Box>
-    );
-  }
-  return <Box ref={boxRef}>{body}</Box>;
+  return (
+    <Box
+      ref={boxRef}
+      borderStyle={border ? 'round' : undefined}
+      borderColor={border ? borderColor : undefined}
+      paddingX={border ? 1 : 0}
+      flexGrow={flex ? 1 : undefined}
+      width={width}
+    >
+      {body}
+    </Box>
+  );
 }
