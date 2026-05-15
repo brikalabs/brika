@@ -1,17 +1,13 @@
 /**
  * Global keybinds active on every section of the brika TUI.
  *
- * Two tiers:
+ * `useKey` is capture-aware automatically — when an `<Input>` /
+ * `<Confirm>` / `<Form>` is mounted, every plain bind here goes
+ * dormant. No flags at the call site; the engine handles it.
  *
- *   - Plain letters for *navigation* (`d`/`p`/`w`/`l`/`u`/`g`/`,`/`?`)
- *     and `q` for quit — universal terminal convention. Gated by
- *     `!isInputCaptured` so a focused `<Input>` / `<Form>` /
- *     `<Confirm>` eats keystrokes before they reach the shell.
- *   - **Ctrl-modified** for *actions* that change state
- *     (`Ctrl+S`/`Ctrl+X`/`Ctrl+R`/`Ctrl+O`). Can't be typed by
- *     accident in a text field, so they stay live regardless.
- *
- * `Ctrl+C` stays live as a hard escape hatch.
+ * The Ctrl-modified hub controls bypass the capture model the
+ * same way they did before (a `Ctrl+S` in a password field is
+ * never a typo).
  */
 
 import { useKey, useRouter, useTuiShell } from '@brika/tui';
@@ -20,23 +16,23 @@ import { useCli } from '../useCli';
 
 export function useShellKeys(): void {
   const router = useRouter<Routes>();
-  const { onQuit, isInputCaptured } = useTuiShell();
+  const { onQuit } = useTuiShell();
   const cli = useCli();
-  const navActive = !isInputCaptured;
 
-  useKey('q', () => onQuit(), navActive);
-  useKey('ctrl+c', () => onQuit()); // always live — escape hatch
+  useKey('q', () => onQuit());
+  // Ctrl+C is handled by ink's `exitOnCtrlC` at the framework layer
+  // (always live, never captured) — no useKey needed here.
 
-  useKey('d', () => router.navigate('dashboard'), navActive);
-  useKey('p', () => router.navigate('plugins'), navActive);
-  useKey('w', () => router.navigate('workflows'), navActive);
-  useKey('l', () => router.navigate('logs'), navActive);
-  useKey('u', () => router.navigate('users'), navActive);
-  useKey('g', () => router.navigate('updates'), navActive);
-  useKey(',', () => router.navigate('settings'), navActive);
-  useKey('x', () => router.navigate('playground'), navActive);
-  useKey('b', () => router.navigate('brix'), navActive);
-  useKey('?', () => router.navigate('help'), navActive);
+  useKey('d', () => router.navigate('dashboard'));
+  useKey('p', () => router.navigate('plugins'));
+  useKey('w', () => router.navigate('workflows'));
+  useKey('l', () => router.navigate('logs'));
+  useKey('u', () => router.navigate('users'));
+  useKey('g', () => router.navigate('updates'));
+  useKey(',', () => router.navigate('settings'));
+  useKey('x', () => router.navigate('playground'));
+  useKey('b', () => router.navigate('brix'));
+  useKey('?', () => router.navigate('help'));
 
   useKey('ctrl+s', () => void cli.startHub());
   useKey('ctrl+x', () => void cli.stopHub());

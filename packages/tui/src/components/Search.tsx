@@ -42,6 +42,7 @@ import {
   useRef,
   useState,
 } from 'react';
+import { KeyScope } from '../keys/KeyScope';
 import { useKey } from '../keys/useKey';
 import { Input } from './Input';
 
@@ -83,7 +84,21 @@ export interface SearchProps<T> {
   readonly children?: ReactNode;
 }
 
-export function Search<T>({
+/**
+ * Outer wrapper — just opens a `<KeyScope>` so the inner component's
+ * `useKey` calls (and any user-rendered keybinds inside the picker)
+ * keep firing even though `<SearchInput>` captures input. Consumers
+ * never see KeyScope; it's a primitive engine detail.
+ */
+export function Search<T>(props: Readonly<SearchProps<T>>): React.ReactElement {
+  return (
+    <KeyScope>
+      <SearchInner {...props} />
+    </KeyScope>
+  );
+}
+
+function SearchInner<T>({
   value,
   defaultValue,
   onValueChange,

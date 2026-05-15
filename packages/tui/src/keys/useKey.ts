@@ -2,14 +2,22 @@
  * Declarative key-binding primitive on top of ink's `useInput`.
  *
  *   useKey('q', onQuit);
- *   useKey('ctrl+c', onQuit);
- *   useKey('shift+tab', focusPrev);
- *   useKey('upArrow', () => scroll.scrollUp(1));
+ *   useKey('?', () => router.navigate('help'));
+ *   useKey('upArrow', () => move(-1));
  *   useKey('?', openHelp, isNormalMode);   // 3rd arg disables the bind
  *
+ * **Capture-aware automatically.** When a primitive that takes raw
+ * keys (`<Input>`, `<Confirm>`, `<Form>`) is mounted, every plain
+ * `useKey` bind in the tree auto-suspends — so typing in a search
+ * field never fires `d`/`p`/`q` and the like. The capturing
+ * primitive wraps its tree in `<KeyScope>`, which opts its own
+ * internal binds (Search's `↑↓` / `Ctrl+Enter`, …) back in. Consumer
+ * code is just `useKey(spec, handler)` — no flags, no manual
+ * `!isInputCaptured` gating, no `system: true` opt-outs.
+ *
  * One ink `useInput` is registered per call. Multiple `useKey`
- * calls stack — that's idiomatic ink usage and what lets each
- * binding live next to its action (instead of one mega dispatcher).
+ * calls stack — that's idiomatic ink usage and lets each binding
+ * live next to its action.
  *
  * Spec grammar:  `[modifier+]*<key>`
  *   modifier ::= ctrl | shift | meta
@@ -17,20 +25,13 @@
  *              | delete | upArrow | downArrow | leftArrow | rightArrow
  *              | pageUp | pageDown
  *
- * Modifiers are matched *exactly*: `useKey('q', …)` only fires for
- * plain 'q'. `useKey('shift+q', …)` only fires for Shift+Q. This
- * avoids the classic bug where a "shifted" binding accidentally also
- * fires on the unshifted key.
- *
- * Capture-awareness is the caller's responsibility — if a shell-
- * level bind needs to suspend when an `<Input>` / `<Confirm>` /
- * `<Form>` is mounted, pass `!isInputCaptured` from `useTuiShell()`
- * as the third arg. Component-local binds (e.g. `<Search>` arrows
- * for navigating its own results) just `useKey(...)` — they live
- * inside the captured scope so they always want to fire.
+ * Modifiers match exactly: `useKey('q', …)` fires only for plain 'q'.
+ * `useKey('shift+q', …)` fires only for Shift+Q.
  */
 
 import { type Key, useInput } from 'ink';
+import { useTuiShell } from '../shell/useTuiShell';
+import { useInKeyScope } from './KeyScope';
 
 const SPECIAL_KEYS = [
   'escape',
@@ -62,6 +63,9 @@ export function useKey(
   handler: (input: string, key: Key) => void,
   enabled: boolean = true
 ): void {
+  const { isInputCaptured } = useTuiShell();
+  const inScope = useInKeyScope();
+  const isActive = enabled && (inScope || !isInputCaptured);
   const parsed = parseSpec(spec);
   useInput(
     (input, key) => {
@@ -70,7 +74,7 @@ export function useKey(
       }
       handler(input, key);
     },
-    { isActive: enabled }
+    { isActive }
   );
 }
 

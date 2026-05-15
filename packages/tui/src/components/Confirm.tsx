@@ -21,6 +21,7 @@
 
 import { Box, Text, useInput } from 'ink';
 import { createContext, type ReactNode, useContext } from 'react';
+import { KeyScope } from '../keys/KeyScope';
 import { useCaptureInput } from '../shell/useTuiShell';
 
 export type ConfirmVariant = 'default' | 'destructive';
@@ -67,19 +68,21 @@ export function Confirm({
   const verb = variant === 'destructive' ? 'delete' : 'confirm';
 
   return (
-    <ConfirmContext.Provider value={{ accent }}>
-      <Box flexDirection="column" borderStyle="round" borderColor={accent} paddingX={1}>
-        {children}
-        <Box marginTop={1}>
-          <Text>
-            <Text color={accent}>y</Text>
-            <Text dimColor>{` ${verb} · `}</Text>
-            <Text>n</Text>
-            <Text dimColor> / Esc cancel</Text>
-          </Text>
+    <KeyScope>
+      <ConfirmContext.Provider value={{ accent }}>
+        <Box flexDirection="column" borderStyle="round" borderColor={accent} paddingX={1}>
+          {children}
+          <Box marginTop={1}>
+            <Text>
+              <Text color={accent}>y</Text>
+              <Text dimColor>{` ${verb} · `}</Text>
+              <Text>n</Text>
+              <Text dimColor> / Esc cancel</Text>
+            </Text>
+          </Box>
         </Box>
-      </Box>
-    </ConfirmContext.Provider>
+      </ConfirmContext.Provider>
+    </KeyScope>
   );
 }
 
