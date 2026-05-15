@@ -1,25 +1,26 @@
 /**
- * Plugins section — two-pane view.
+ * Plugins section — tabbed surface.
  *
- *   Left:   filterable list of installed plugins from `/api/plugins`
- *           with a one-line metadata strip below.
- *   Right:  focused plugin's README, scrollable, rendered by the
- *           Markdown component on `/api/plugins/:uid/readme`.
+ *   [Installed]  filterable list of installed plugins + per-plugin
+ *                README + enable/disable/reload/kill/uninstall.
+ *   [Search]     type-to-search the registry; Enter installs.
  *
- * Keybinds (active when no overlay is open):
- *   ↑ / ↓        move selection in the list
+ * Tab navigation is handled by `<TabsList>` (`Tab` / `Shift+Tab` /
+ * `←` / `→`). Inside a tab, each panel owns its own keybinds.
+ *
+ * Installed-tab keys (active when no overlay is open):
+ *   ↑ / ↓        move selection
  *   PgUp / PgDn  scroll the README pane (10 lines at a time)
  *   /            filter the list — type to narrow, Enter / Esc exits
- *   i            open the registry search → install picker
- *   e            enable the focused plugin
- *   D            disable the focused plugin (shift, so `d` keeps its
+ *   e            enable focused plugin
+ *   D            disable focused plugin (shift, so `d` keeps its
  *                global "dashboard" role)
- *   R            reload the focused plugin
- *   k            kill the focused plugin
- *   X            uninstall the focused plugin (shows a y/n confirm)
+ *   R            reload focused plugin
+ *   k            kill focused plugin
+ *   X            uninstall focused plugin (y/n confirm)
  */
 
-import { useCaptureInput, useKey } from '@brika/tui';
+import { Tabs, TabsContent, TabsList, TabsTrigger, useCaptureInput, useKey } from '@brika/tui';
 import { Box, Text, useInput } from 'ink';
 import type React from 'react';
 import { useEffect, useMemo, useState } from 'react';
@@ -43,13 +44,35 @@ const README_PAGE_LINES = 10;
 
 export function PluginsView(): React.ReactElement {
   const cli = useCli();
+  if (cli.hub.state !== 'running') {
+    return <NotConnected title="Plugins" />;
+  }
+  return (
+    <Tabs defaultValue="installed">
+      <Box marginBottom={1}>
+        <Text bold>Plugins</Text>
+      </Box>
+      <TabsList>
+        <TabsTrigger value="installed">Installed</TabsTrigger>
+        <TabsTrigger value="search">Search</TabsTrigger>
+      </TabsList>
+      <TabsContent value="installed">
+        <InstalledTab />
+      </TabsContent>
+      <TabsContent value="search">
+        <SearchTab />
+      </TabsContent>
+    </Tabs>
+  );
+}
+
+function InstalledTab(): React.ReactElement {
   const list = useHubResource<PluginListItem[]>(fetchPlugins, []);
   const [focusIndex, setFocusIndex] = useState(0);
   const [readme, setReadme] = useState<{ uid: string; text: string } | null>(null);
   const [readmeError, setReadmeError] = useState<string | null>(null);
   const [readmeLoading, setReadmeLoading] = useState(false);
   const [readmeScroll, setReadmeScroll] = useState(0);
-  const [installing, setInstalling] = useState(false);
   const [filterMode, setFilterMode] = useState(false);
   const [filter, setFilter] = useState('');
   const [pendingUninstall, setPendingUninstall] = useState<PluginListItem | null>(null);
@@ -107,7 +130,7 @@ export function PluginsView(): React.ReactElement {
     };
   }, [focused, readme?.uid]);
 
-  const overlayOpen = installing || filterMode || pendingUninstall !== null;
+  const overlayOpen = filterMode || pendingUninstall !== null;
   const interactive = !overlayOpen && Boolean(focused);
 
   const runAction = (action: 'enable' | 'disable' | 'kill' | 'reload') => () => {
@@ -129,7 +152,6 @@ export function PluginsView(): React.ReactElement {
   );
   useKey('pageUp', () => setReadmeScroll((s) => Math.max(0, s - README_PAGE_LINES)), !overlayOpen);
   useKey('pageDown', () => setReadmeScroll((s) => s + README_PAGE_LINES), !overlayOpen);
-  useKey('i', () => setInstalling(true), !overlayOpen);
   useKey('/', () => setFilterMode(true), !overlayOpen);
   useKey('e', runAction('enable'), interactive);
   useKey('D', runAction('disable'), interactive);
@@ -137,15 +159,10 @@ export function PluginsView(): React.ReactElement {
   useKey('R', runAction('reload'), interactive);
   useKey('X', () => focused && setPendingUninstall(focused), interactive);
 
-  if (cli.hub.state !== 'running') {
-    return <NotConnected title="Plugins" />;
-  }
-
   return (
     <Box flexDirection="column">
-      <Box marginBottom={1}>
-        <Text bold>Plugins </Text>
-        <Text dimColor>{items.length}</Text>
+      <Box>
+        <Text dimColor>{items.length} installed</Text>
         {filter && (
           <>
             <Text dimColor> · filter </Text>
@@ -156,19 +173,6 @@ export function PluginsView(): React.ReactElement {
         {list.error && <Text color="red"> · {list.error}</Text>}
         {actionError && <Text color="red"> · {actionError}</Text>}
       </Box>
-
-      {installing && (
-        <Box marginBottom={1}>
-          <SearchInstall
-            onClose={() => setInstalling(false)}
-            onInstalled={() => {
-              setInstalling(false);
-              list.refresh();
-            }}
-            installedNames={new Set(allItems.map((p) => p.name))}
-          />
-        </Box>
-      )}
 
       {filterMode && (
         <Box marginBottom={1}>
@@ -474,10 +478,6 @@ function Footer(): React.ReactElement {
         /
       </Text>
       <Text dimColor> filter · </Text>
-      <Text bold color="cyan">
-        i
-      </Text>
-      <Text dimColor> install · </Text>
       <Text color="green">e</Text>
       <Text dimColor> enable · </Text>
       <Text color="yellow">D</Text>
@@ -487,8 +487,32 @@ function Footer(): React.ReactElement {
       <Text>k</Text>
       <Text dimColor> kill · </Text>
       <Text color="red">X</Text>
-      <Text dimColor> uninstall</Text>
+      <Text dimColor> uninstall · </Text>
+      <Text bold color="cyan">
+        Tab
+      </Text>
+      <Text dimColor> Search</Text>
     </Box>
+  );
+}
+
+/**
+ * Search tab — wraps the registry search/install picker. Owns its own
+ * installed-list fetch so the "installed" badge stays accurate even
+ * if the Installed tab hasn't been mounted yet this session.
+ */
+function SearchTab(): React.ReactElement {
+  const installed = useHubResource<PluginListItem[]>(fetchPlugins, []);
+  const installedNames = useMemo(
+    () => new Set((installed.data ?? []).map((p) => p.name)),
+    [installed.data]
+  );
+  return (
+    <SearchInstall
+      onClose={() => undefined}
+      onInstalled={() => installed.refresh()}
+      installedNames={installedNames}
+    />
   );
 }
 
