@@ -184,8 +184,9 @@ function ScrollAreaInner({
       flexDirection="column"
       flexGrow={height ? 0 : 1}
       flexShrink={height ? 0 : 1}
-      borderStyle={isFocused ? 'round' : 'single'}
+      borderStyle={isFocused ? 'bold' : 'round'}
       borderColor={isFocused ? accent : 'gray'}
+      borderDimColor={!isFocused}
       paddingX={1}
     >
       <Box ref={windowRef} overflow="hidden" {...windowProps}>
