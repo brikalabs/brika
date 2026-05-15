@@ -39,10 +39,9 @@
  * while focused. Pass `statusLine={null}` to hide it.
  */
 
-import { Box, type DOMElement, Text, useFocus, useFocusManager, useInput } from 'ink';
+import { Box, type DOMElement, type Key, Text, useFocus, useFocusManager, useInput } from 'ink';
 import React, { type ReactNode, useCallback, useEffect, useId, useRef, useState } from 'react';
 import { KeyScope } from '../keys/KeyScope';
-import { useKey } from '../keys/useKey';
 import { hitTest, readBounds } from '../mouse/useBounds';
 import { type MouseEvent, useMouse } from '../mouse/useMouse';
 import { useCaptureInput } from '../shell/useTuiShell';
@@ -213,35 +212,33 @@ function ScrollAreaInner({
     });
   }, []);
 
-  // All scroll keys are focus-gated. Siblings (List, etc.) own their
-  // own focus, so when this area isn't focused they keep using arrows
-  // for their own navigation. Tab into the area to start scrolling.
-  useKey('upArrow', () => move(-1), isFocused);
-  useKey('downArrow', () => move(1), isFocused);
-  useKey('k', () => move(-1), isFocused);
-  useKey('j', () => move(1), isFocused);
-  useKey('K', () => move(-fastScrollLines), isFocused);
-  useKey('J', () => move(fastScrollLines), isFocused);
-  useKey('pageUp', () => move(-pageStepRef.current), isFocused);
-  useKey('pageDown', () => move(pageStepRef.current), isFocused);
-  useKey('ctrl+u', () => move(-pageStepRef.current), isFocused);
-  useKey('ctrl+d', () => move(pageStepRef.current), isFocused);
-  useKey('g', () => jumpTo('top'), isFocused);
-  useKey('G', () => jumpTo('bottom'), isFocused);
-  useKey('ctrl+b', () => jumpTo('top'), isFocused);
-  useKey('ctrl+g', () => jumpTo('bottom'), isFocused);
-  useKey('escape', () => focusNext(), isFocused);
-
-  useInput(
-    (input) => {
+  // One direct `useInput` for every scroll key. The previous design
+  // had ~15 stacked `useKey` calls, each registering its own ink
+  // useInput subscription — that was fragile (any one of them
+  // de-activating would break navigation) and made debugging
+  // miserable. A single dispatcher is bulletproof: while focused,
+  // every key is routed through this one function.
+  const dispatch = useCallback(
+    (input: string, key: Key) => {
+      const page = pageStepRef.current;
+      if (handleNavKey(key, page, move, focusNext)) {
+        return;
+      }
+      if (key.ctrl && handleCtrlChar(input, page, move, jumpTo)) {
+        return;
+      }
+      if (!key.ctrl && handleVimChar(input, fastScrollLines, move, jumpTo)) {
+        return;
+      }
       if (HOME_SEQUENCES.has(input)) {
         jumpTo('top');
       } else if (END_SEQUENCES.has(input)) {
         jumpTo('bottom');
       }
     },
-    { isActive: isFocused }
+    [move, jumpTo, focusNext, fastScrollLines]
   );
+  useInput(dispatch, { isActive: isFocused });
 
   const containerRef = useRef<DOMElement>(null);
   const onMouse = useCallback(
@@ -309,6 +306,91 @@ function ScrollAreaInner({
       {chrome ? <Box flexShrink={0}>{chrome}</Box> : null}
     </Box>
   );
+}
+
+/** Named arrow / page / escape handler. Returns true when the key was
+ *  consumed so the parent dispatcher can stop looking. */
+function handleNavKey(
+  key: Key,
+  page: number,
+  move: (delta: number) => void,
+  focusNext: () => void
+): boolean {
+  if (key.upArrow) {
+    move(-1);
+    return true;
+  }
+  if (key.downArrow) {
+    move(1);
+    return true;
+  }
+  if (key.pageUp) {
+    move(-page);
+    return true;
+  }
+  if (key.pageDown) {
+    move(page);
+    return true;
+  }
+  if (key.escape) {
+    focusNext();
+    return true;
+  }
+  return false;
+}
+
+function handleCtrlChar(
+  input: string,
+  page: number,
+  move: (delta: number) => void,
+  jumpTo: (target: 'top' | 'bottom') => void
+): boolean {
+  switch (input) {
+    case 'u':
+      move(-page);
+      return true;
+    case 'd':
+      move(page);
+      return true;
+    case 'b':
+      jumpTo('top');
+      return true;
+    case 'g':
+      jumpTo('bottom');
+      return true;
+    default:
+      return false;
+  }
+}
+
+function handleVimChar(
+  input: string,
+  fast: number,
+  move: (delta: number) => void,
+  jumpTo: (target: 'top' | 'bottom') => void
+): boolean {
+  switch (input) {
+    case 'k':
+      move(-1);
+      return true;
+    case 'j':
+      move(1);
+      return true;
+    case 'K':
+      move(-fast);
+      return true;
+    case 'J':
+      move(fast);
+      return true;
+    case 'g':
+      jumpTo('top');
+      return true;
+    case 'G':
+      jumpTo('bottom');
+      return true;
+    default:
+      return false;
+  }
 }
 
 function clamp(value: number, min: number, max: number): number {
