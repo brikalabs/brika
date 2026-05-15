@@ -118,12 +118,15 @@ export function List({
 
   const autoId = useId();
   const focusId = id ?? `list-${autoId}`;
-  // List only joins the focus cycle when it actually has items —
-  // claiming focus over an empty list confuses Tab navigation.
+  // List joins the focus cycle whenever `focusable` is true, even
+  // before items register — otherwise the slot is invisible to Tab
+  // for the first frame after mount (items register in a useEffect),
+  // and any view that mounts the list after data load races the
+  // useFocus registration vs. data arrival.
   const { isFocused } = useFocus({
     id: focusId,
     autoFocus,
-    isActive: focusable && items.length > 0,
+    isActive: focusable,
   });
   const { focus } = useFocusManager();
   const focusList = useCallback(() => focus(focusId), [focus, focusId]);
