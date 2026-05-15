@@ -42,7 +42,12 @@ export async function fetchPluginReadme(uid: string): Promise<string> {
   if (!res.ok) {
     throw new Error(`readme fetch failed: ${res.status}`);
   }
-  return res.text();
+  // Hub returns `{ readme: string | null, filename: string | null }`.
+  // A `null` body means the plugin shipped without a README — surface
+  // that as a friendly empty string so the Markdown renderer can do
+  // its "no readme" branch.
+  const body = (await res.json()) as { readme?: string | null };
+  return body.readme ?? '';
 }
 
 export async function pluginAction(
