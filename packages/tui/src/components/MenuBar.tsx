@@ -119,6 +119,11 @@ function MenuBarItemView({
     id: `menubar-${item.key}`,
     onPress,
     enabled: Boolean(onPress),
+    // Top-nav tabs are reachable via their number hotkey or a click;
+    // keeping them out of the Tab cycle means Tab navigates within the
+    // active view's controls (which is what the user wants 99% of the
+    // time).
+    tabIndex: -1,
   });
   useClickable(ref, onPress);
   const labelWidth = (item.hotkey ? `[${item.hotkey}] ` : '').length + item.label.length;
@@ -193,6 +198,7 @@ function CompactChip({
     id: `menubar-compact-${item.key}`,
     onPress,
     enabled: Boolean(onPress),
+    tabIndex: -1,
   });
   useClickable(ref, onPress);
   const highlighted = active || isFocused;

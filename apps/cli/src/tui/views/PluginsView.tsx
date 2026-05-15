@@ -669,6 +669,7 @@ function SearchTab(): React.ReactElement {
             installing={installingName === selected.name}
             progress={installingName === selected.name ? progress : null}
             error={installingName === selected.name ? installError : null}
+            onInstall={() => void startInstall(selected)}
           />
         </Box>
       ) : null}
@@ -808,12 +809,14 @@ function RegistryDetail({
   installing,
   progress,
   error,
+  onInstall,
 }: Readonly<{
   item: RegistrySearchResult;
   installed: boolean;
   installing: boolean;
   progress: InstallProgress | null;
   error: string | null;
+  onInstall: () => void;
 }>): React.ReactElement {
   const accent = pickDetailAccent({ error, installing, installed });
   const [readme, setReadme] = useState<string | null>(null);
@@ -905,7 +908,14 @@ function RegistryDetail({
       ) : null}
       {!installed && !installing && !error ? (
         <Box marginTop={1}>
-          <Text dimColor>Ctrl+Enter to install</Text>
+          <Button
+            shortcut="ctrl+enter"
+            variant="success"
+            enabled={item.compatible}
+            onPress={onInstall}
+          >
+            install
+          </Button>
         </Box>
       ) : null}
     </Box>

@@ -12,6 +12,7 @@
  */
 
 import {
+  Button,
   Heading,
   Hint,
   HintBar,
@@ -159,18 +160,17 @@ export function LogsView(): React.ReactElement {
     };
   }, [cli.hub.state]);
 
+  // Scroll keys stay as `useKey` — they drive the pane's internal
+  // scroll, not a discrete clickable action. PgUp/PgDn for keyboards
+  // that have them; Ctrl+U/Ctrl+D as the Mac-friendly equivalents.
   useKey('upArrow', () => scroll.scrollUp(1));
   useKey('downArrow', () => scroll.scrollDown(1));
-  // PgUp/PgDn for the keyboards that have them; Ctrl+U/Ctrl+D as
-  // the Mac-friendly equivalents — those keys don't need Fn.
   useKey('pageUp', () => scroll.scrollUp(layout.pageSize));
   useKey('pageDown', () => scroll.scrollDown(layout.pageSize));
   useKey('ctrl+u', () => scroll.scrollUp(layout.pageSize));
   useKey('ctrl+d', () => scroll.scrollDown(layout.pageSize));
-  useKey('G', () => scroll.goLive());
   useKey('/', () => search.enter(), search.mode !== 'searching');
-  useKey('n', () => search.next(), Boolean(search.query));
-  useKey('N', () => search.prev(), Boolean(search.query));
+  // `G` / `n` / `N` are wired through their footer Buttons below.
 
   if (cli.hub.state !== 'running') {
     return <NotConnected title="Logs" />;
@@ -198,15 +198,23 @@ export function LogsView(): React.ReactElement {
           return event ? <ColoredLogLine event={event} /> : _text;
         }}
       />
+      <Box marginTop={1}>
+        <Button shortcut="G" onPress={() => scroll.goLive()} enabled={scroll.offset !== null}>
+          live
+        </Button>
+        <Button shortcut="n" onPress={() => search.next()} enabled={Boolean(search.query)}>
+          next
+        </Button>
+        <Button shortcut="N" onPress={() => search.prev()} enabled={Boolean(search.query)}>
+          prev
+        </Button>
+      </Box>
       <HintBar>
         <Hint k="↑↓">scroll</Hint>
         <Hint k="^U/^D">page</Hint>
-        <Hint k="G">live</Hint>
         <Hint k="/" accent="info">
           search
         </Hint>
-        <Hint k="n">next</Hint>
-        <Hint k="N">prev</Hint>
       </HintBar>
     </Box>
   );
