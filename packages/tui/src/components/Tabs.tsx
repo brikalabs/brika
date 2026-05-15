@@ -44,6 +44,10 @@ import { useKey } from '../keys/useKey';
 interface TabRegistration {
   readonly value: string;
   readonly shortcut?: string;
+  /** Visible width of the trigger label — used by `TriggerUnderlines`
+   *  to draw the indicator at exactly the right length. Defaults to
+   *  `value.length` when the label isn't a plain string child. */
+  readonly labelLength?: number;
 }
 
 interface TabsContextValue {
@@ -160,23 +164,62 @@ export function TabsList({
   useKey('rightArrow', () => move(1), enabled);
   useKey('leftArrow', () => move(-1), enabled);
 
-  // Per-trigger shortcuts — each `shortcut` registers as its own bind
-  // so the parent view's other shortcuts keep working unaffected.
   return (
-    <Box>
-      {children}
-      {ctx.tabs.map((t) =>
-        t.shortcut ? (
-          <ShortcutBind
-            key={`sc-${t.value}`}
-            shortcut={t.shortcut}
-            value={t.value}
-            enabled={enabled}
-          />
-        ) : null
-      )}
+    <Box flexDirection="column">
+      <Box>
+        {children}
+        {ctx.tabs.map((t) =>
+          t.shortcut ? (
+            <ShortcutBind
+              key={`sc-${t.value}`}
+              shortcut={t.shortcut}
+              value={t.value}
+              enabled={enabled}
+            />
+          ) : null
+        )}
+      </Box>
+      <Box>
+        <TriggerUnderlines />
+      </Box>
     </Box>
   );
+}
+
+/**
+ * Render one `─` segment per trigger. Active tab's segment is cyan
+ * (full); inactives are dim. Width = label length + 2 horizontal pad
+ * + 1 for the trailing space between triggers — kept in sync with
+ * `<TabsTrigger>`'s padding so the underline ends right under the
+ * label. We pull lengths from the registered trigger list rather
+ * than measuring DOM since Ink doesn't expose layout.
+ */
+function TriggerUnderlines(): React.ReactElement {
+  const ctx = useTabsContext('TabsList');
+  return (
+    <>
+      {ctx.tabs.map((t) => {
+        const w = labelWidth(t);
+        const active = ctx.value === t.value;
+        return (
+          <Box key={`u-${t.value}`} marginRight={1}>
+            <Text color={active ? 'cyan' : undefined} dimColor={!active}>
+              {'─'.repeat(w)}
+            </Text>
+          </Box>
+        );
+      })}
+    </>
+  );
+}
+
+/** Mirror of the visible glyph count in `<TabsTrigger>` so underlines line up. */
+function labelWidth(t: TabRegistration): number {
+  // `[s] ` prefix only renders for inactive triggers, but the underline
+  // is the same width for active/inactive to keep the row stable when
+  // the user cycles tabs.
+  const prefix = t.shortcut ? `[${t.shortcut}] ` : '';
+  return prefix.length + (t.labelLength ?? t.value.length);
 }
 
 function ShortcutBind({
@@ -204,16 +247,23 @@ export function TabsTrigger({
   const ctx = useTabsContext('TabsTrigger');
   // Register on mount, unregister on unmount — keeps the parent's
   // ordered tab list in sync with the rendered tree.
-  useEffect(() => ctx.register({ value, shortcut }), [ctx, value, shortcut]);
+  const labelLength = typeof children === 'string' ? children.length : value.length;
+  useEffect(
+    () => ctx.register({ value, shortcut, labelLength }),
+    [ctx, value, shortcut, labelLength]
+  );
 
   const active = ctx.value === value;
   return (
-    <Box marginRight={3}>
+    <Box marginRight={1}>
+      {shortcut ? (
+        <Text dimColor={!active} color={active ? 'cyan' : undefined}>
+          [{shortcut}]{' '}
+        </Text>
+      ) : null}
       <Text bold={active} color={active ? 'cyan' : undefined} dimColor={!active}>
-        {active ? '▸ ' : '  '}
         {children}
       </Text>
-      {shortcut && !active ? <Text dimColor>{`  [${shortcut}]`}</Text> : null}
     </Box>
   );
 }

@@ -20,10 +20,25 @@
  *   X            uninstall focused plugin (y/n confirm)
  */
 
-import { Tabs, TabsContent, TabsList, TabsTrigger, useCaptureInput, useKey } from '@brika/tui';
-import { Box, Text, useInput } from 'ink';
+import {
+  Confirm,
+  ConfirmDescription,
+  ConfirmTitle,
+  Input,
+  Search,
+  SearchEmpty,
+  SearchInput,
+  SearchItem,
+  SearchResults,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+  useKey,
+} from '@brika/tui';
+import { Box, Text } from 'ink';
 import type React from 'react';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   fetchPluginReadme,
   fetchPlugins,
@@ -176,7 +191,7 @@ function InstalledTab(): React.ReactElement {
 
       {filterMode && (
         <Box marginBottom={1}>
-          <FilterInput
+          <FilterDraft
             initial={filter}
             onCommit={(v) => {
               setFilter(v);
@@ -191,8 +206,7 @@ function InstalledTab(): React.ReactElement {
       {pendingUninstall && (
         <Box marginBottom={1}>
           <Confirm
-            prompt={`Uninstall ${pendingUninstall.displayName ?? pendingUninstall.name}?`}
-            details="Removes the plugin from brika.yml and clears its state + secrets."
+            variant="destructive"
             onConfirm={async () => {
               const target = pendingUninstall;
               setPendingUninstall(null);
@@ -205,7 +219,14 @@ function InstalledTab(): React.ReactElement {
               }
             }}
             onCancel={() => setPendingUninstall(null)}
-          />
+          >
+            <ConfirmTitle>
+              Uninstall {pendingUninstall.displayName ?? pendingUninstall.name}?
+            </ConfirmTitle>
+            <ConfirmDescription>
+              Removes the plugin from brika.yml and clears its state + secrets.
+            </ConfirmDescription>
+          </Confirm>
         </Box>
       )}
 
@@ -381,89 +402,28 @@ function filterPlugins(items: ReadonlyArray<PluginListItem>, filter: string): Pl
   });
 }
 
-interface FilterInputProps {
-  readonly initial: string;
-  readonly onCommit: (value: string) => void;
-  readonly onCancel: () => void;
-}
-
-function FilterInput({
+/** Thin wrapper around `<Input>` for the `/`-driven list filter:
+ *  keeps a draft buffer locally so Enter commits and Esc cancels. */
+function FilterDraft({
   initial,
   onCommit,
   onCancel,
-}: Readonly<FilterInputProps>): React.ReactElement {
-  useCaptureInput();
+}: Readonly<{
+  initial: string;
+  onCommit: (value: string) => void;
+  onCancel: () => void;
+}>): React.ReactElement {
   const [draft, setDraft] = useState(initial);
-  useInput((input, key) => {
-    if (key.escape) {
-      onCancel();
-      return;
-    }
-    if (key.return) {
-      onCommit(draft);
-      return;
-    }
-    if (key.backspace || key.delete) {
-      setDraft((d) => d.slice(0, -1));
-      return;
-    }
-    if (input && !key.ctrl && !key.meta && input.length === 1) {
-      setDraft((d) => d + input);
-    }
-  });
   return (
-    <Box borderStyle="round" borderColor="cyan" paddingX={1}>
-      <Text color="cyan">/ </Text>
-      <Text>{draft}</Text>
-      <Text color="cyan">▏</Text>
-      <Text dimColor> Enter to filter · Esc cancels</Text>
-    </Box>
-  );
-}
-
-// ─── Confirm prompt ───────────────────────────────────────────────────────
-
-interface ConfirmProps {
-  readonly prompt: string;
-  readonly details?: string;
-  readonly onConfirm: () => void;
-  readonly onCancel: () => void;
-}
-
-function Confirm({
-  prompt,
-  details,
-  onConfirm,
-  onCancel,
-}: Readonly<ConfirmProps>): React.ReactElement {
-  useCaptureInput();
-  useInput((input, key) => {
-    if (key.escape || input === 'n' || input === 'N') {
-      onCancel();
-      return;
-    }
-    if (input === 'y' || input === 'Y' || key.return) {
-      onConfirm();
-    }
-  });
-  return (
-    <Box flexDirection="column" borderStyle="round" borderColor="red" paddingX={1}>
-      <Text bold color="red">
-        {prompt}
-      </Text>
-      {details && (
-        <Box marginTop={1}>
-          <Text dimColor>{details}</Text>
-        </Box>
-      )}
-      <Box marginTop={1}>
-        <Text>
-          <Text color="red">y</Text>
-          <Text dimColor> uninstall · </Text>
-          <Text>n</Text>
-          <Text dimColor> / Esc cancel</Text>
-        </Text>
-      </Box>
+    <Box flexDirection="column">
+      <Input
+        value={draft}
+        onChange={setDraft}
+        onSubmit={onCommit}
+        onCancel={onCancel}
+        placeholder="filter plugins…"
+      />
+      <Text dimColor>Enter — apply · Esc — cancel</Text>
     </Box>
   );
 }
@@ -497,9 +457,13 @@ function Footer(): React.ReactElement {
 }
 
 /**
- * Search tab — wraps the registry search/install picker. Owns its own
- * installed-list fetch so the "installed" badge stays accurate even
- * if the Installed tab hasn't been mounted yet this session.
+ * Search tab — type to search the registry, Enter on a hit to load
+ * its details/README into a panel, Ctrl+Enter to install. Two-stage
+ * so a misfired Enter never installs something the user didn't mean.
+ *
+ * Owns its own copy of the installed-name set (refetched on tab
+ * focus) so the "installed" badge stays accurate without needing the
+ * Installed tab to be mounted.
  */
 function SearchTab(): React.ReactElement {
   const installed = useHubResource<PluginListItem[]>(fetchPlugins, []);
@@ -507,56 +471,21 @@ function SearchTab(): React.ReactElement {
     () => new Set((installed.data ?? []).map((p) => p.name)),
     [installed.data]
   );
-  return (
-    <SearchInstall
-      onClose={() => undefined}
-      onInstalled={() => installed.refresh()}
-      installedNames={installedNames}
-    />
-  );
-}
-
-/**
- * Two-stage install picker: type a query → hub searches its configured
- * registries → arrow through the results, Enter installs the focused
- * package and streams progress. Esc cancels at any stage.
- *
- * Captures global input so the shell's `s/x/r/o` shortcuts stay muted
- * while the picker is open.
- */
-interface SearchInstallProps {
-  readonly onClose: () => void;
-  readonly onInstalled: () => void;
-  /** Names of plugins already installed — used to mark them in results
-   *  and skip the install action when Enter lands on one. */
-  readonly installedNames?: ReadonlySet<string>;
-}
-
-function SearchInstall({
-  onClose,
-  onInstalled,
-  installedNames,
-}: Readonly<SearchInstallProps>): React.ReactElement {
-  // Mute global shell hotkeys (s/x/r/o/etc.) while the picker is open —
-  // the hook auto-releases when this component unmounts.
-  useCaptureInput();
 
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState<RegistrySearchResult[]>([]);
+  const [results, setResults] = useState<ReadonlyArray<RegistrySearchResult>>([]);
   const [searching, setSearching] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [focusIdx, setFocusIdx] = useState(0);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const [selected, setSelected] = useState<RegistrySearchResult | null>(null);
   const [progress, setProgress] = useState<InstallProgress | null>(null);
-  const [installing, setInstalling] = useState(false);
+  const [installError, setInstallError] = useState<string | null>(null);
+  const [installingName, setInstallingName] = useState<string | null>(null);
 
-  // Debounced search — fires 300ms after the last keystroke.
+  // Debounced async search.
   useEffect(() => {
-    if (installing) {
-      return;
-    }
     if (query.trim().length === 0) {
       setResults([]);
-      setError(null);
+      setSearchError(null);
       return;
     }
     let cancelled = false;
@@ -564,15 +493,14 @@ function SearchInstall({
       setSearching(true);
       void (async () => {
         try {
-          const found = await searchRegistry(query);
+          const hits = await searchRegistry(query);
           if (!cancelled) {
-            setResults(found);
-            setError(null);
-            setFocusIdx(0);
+            setResults(hits);
+            setSearchError(null);
           }
         } catch (e) {
           if (!cancelled) {
-            setError(e instanceof Error ? e.message : String(e));
+            setSearchError(e instanceof Error ? e.message : String(e));
           }
         } finally {
           if (!cancelled) {
@@ -585,124 +513,208 @@ function SearchInstall({
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [query, installing]);
+  }, [query]);
 
-  // Ink's raw-input hook: edit the query, navigate results, trigger install.
-  useInput((input, key) => {
-    if (installing) {
-      return;
-    }
-    if (key.escape) {
-      onClose();
-      return;
-    }
-    if (key.upArrow) {
-      setFocusIdx((i) => Math.max(0, i - 1));
-      return;
-    }
-    if (key.downArrow) {
-      setFocusIdx((i) => Math.min(Math.max(0, results.length - 1), i + 1));
-      return;
-    }
-    if (key.return) {
-      const focused = results[focusIdx];
-      if (focused && !isInstalled(focused)) {
-        void runInstall(focused);
+  const isInstalled = useCallback(
+    (r: RegistrySearchResult): boolean => r.installed || installedNames.has(r.name),
+    [installedNames]
+  );
+
+  const startInstall = useCallback(
+    async (pkg: RegistrySearchResult) => {
+      if (isInstalled(pkg) || installingName !== null) {
+        return;
       }
-      return;
-    }
-    if (key.backspace || key.delete) {
-      setQuery((q) => q.slice(0, -1));
-      return;
-    }
-    // Plain character typed.
-    if (input && !key.ctrl && !key.meta && input.length === 1) {
-      setQuery((q) => q + input);
-    }
-  });
-
-  /** Hub's `installed` flag is authoritative, but it can race with our
-   *  local list — fall back to the locally-known names too. */
-  function isInstalled(r: RegistrySearchResult): boolean {
-    return r.installed || (installedNames?.has(r.name) ?? false);
-  }
-
-  async function runInstall(pkg: RegistrySearchResult): Promise<void> {
-    setInstalling(true);
-    setProgress({ phase: 'starting', message: pkg.name });
-    try {
-      for await (const event of installFromRegistry(pkg.name, pkg.version)) {
-        setProgress(event);
-        if (event.phase === 'complete') {
-          onInstalled();
-          return;
+      setInstallingName(pkg.name);
+      setInstallError(null);
+      setProgress({ phase: 'starting', message: pkg.name });
+      try {
+        for await (const event of installFromRegistry(pkg.name, pkg.version)) {
+          setProgress(event);
+          if (event.phase === 'complete') {
+            installed.refresh();
+            setInstallingName(null);
+            return;
+          }
+          if (event.phase === 'error') {
+            setInstallError(event.message ?? 'install failed');
+            setInstallingName(null);
+            return;
+          }
         }
-        if (event.phase === 'error') {
-          setError(event.message ?? 'install failed');
-          setInstalling(false);
-          return;
-        }
+      } catch (e) {
+        setInstallError(e instanceof Error ? e.message : String(e));
+        setInstallingName(null);
       }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-      setInstalling(false);
-    }
-  }
+    },
+    [installed, installingName, isInstalled]
+  );
 
-  if (installing) {
-    return (
-      <Box flexDirection="column" borderStyle="round" borderColor="cyan" paddingX={1}>
-        <Text bold>Installing</Text>
+  return (
+    <Box flexDirection="column">
+      <Search<RegistrySearchResult>
+        value={query}
+        onValueChange={setQuery}
+        onSelect={(r) => setSelected(r)}
+        onAction={(r) => void startInstall(r)}
+      >
+        <SearchInput placeholder="search registry — `@brika/plugin-spotify`, `weather`, …" />
+        <SearchResults>
+          {results.map((r) => (
+            <SearchItem key={`${r.source}:${r.name}`} value={r} itemKey={`${r.source}:${r.name}`}>
+              <Text bold>{r.displayName ?? r.name}</Text>
+              <Text dimColor> v{r.version}</Text>
+              {isInstalled(r) ? <Text color="green"> · installed</Text> : null}
+              {!r.compatible ? <Text color="yellow"> · incompatible</Text> : null}
+              {r.description ? <Text dimColor>{` — ${r.description}`}</Text> : null}
+            </SearchItem>
+          ))}
+        </SearchResults>
+        <SearchEmpty>start typing to search the registry</SearchEmpty>
+        <SearchStatus
+          searching={searching}
+          error={searchError}
+          query={query}
+          resultCount={results.length}
+        />
+      </Search>
+      {selected ? (
         <Box marginTop={1}>
-          <Text>
-            <Text color="cyan">{progress?.phase ?? '…'}</Text>
-            {progress?.message ? <Text dimColor> · {progress.message}</Text> : null}
-          </Text>
+          <RegistryDetail
+            item={selected}
+            installed={isInstalled(selected)}
+            installing={installingName === selected.name}
+            progress={installingName === selected.name ? progress : null}
+            error={installingName === selected.name ? installError : null}
+          />
         </Box>
-        {error && (
-          <Box marginTop={1}>
-            <Text color="red">{error}</Text>
-          </Box>
-        )}
+      ) : null}
+    </Box>
+  );
+}
+
+/** Tiny status strip under the search input — `Search` is pure UI;
+ *  view-level "searching…" / "no matches" wording lives next to the
+ *  data source that produces them. */
+function SearchStatus({
+  searching,
+  error,
+  query,
+  resultCount,
+}: Readonly<{
+  searching: boolean;
+  error: string | null;
+  query: string;
+  resultCount: number;
+}>): React.ReactElement | null {
+  if (error) {
+    return (
+      <Box>
+        <Text color="red">{error}</Text>
       </Box>
     );
   }
-
-  return (
-    <Box flexDirection="column" borderStyle="round" borderColor="cyan" paddingX={1}>
+  if (searching) {
+    return (
       <Box>
-        <Text bold>Install plugin</Text>
-        <Text dimColor> · search the registry, ↑↓ + Enter to install, Esc to cancel</Text>
+        <Text dimColor>searching…</Text>
+      </Box>
+    );
+  }
+  if (query.trim().length > 0 && resultCount === 0) {
+    return (
+      <Box>
+        <Text dimColor>no matches</Text>
+      </Box>
+    );
+  }
+  if (resultCount > 0) {
+    return (
+      <Box>
+        <Text dimColor>Enter — open · Ctrl+Enter — install</Text>
+      </Box>
+    );
+  }
+  return null;
+}
+
+/** Border colour for the detail card — error wins, then in-flight
+ *  install, then "already installed", default cyan. */
+function pickDetailAccent({
+  error,
+  installing,
+  installed,
+}: Readonly<{ error: string | null; installing: boolean; installed: boolean }>): string {
+  if (error) {
+    return 'red';
+  }
+  if (installing) {
+    return 'yellow';
+  }
+  if (installed) {
+    return 'green';
+  }
+  return 'cyan';
+}
+
+/**
+ * Detail card for the focused registry hit — shown below the search
+ * list once the user presses Enter on a row. Renders the plugin's
+ * basic metadata and a live install-progress strip when Ctrl+Enter
+ * has been fired against this row.
+ */
+function RegistryDetail({
+  item,
+  installed,
+  installing,
+  progress,
+  error,
+}: Readonly<{
+  item: RegistrySearchResult;
+  installed: boolean;
+  installing: boolean;
+  progress: InstallProgress | null;
+  error: string | null;
+}>): React.ReactElement {
+  const accent = pickDetailAccent({ error, installing, installed });
+  return (
+    <Box flexDirection="column" borderStyle="round" borderColor={accent} paddingX={1}>
+      <Box>
+        <Text bold>{item.displayName ?? item.name}</Text>
+        <Text dimColor> v{item.version}</Text>
       </Box>
       <Box marginTop={1}>
-        <Text color="cyan">{'> '}</Text>
-        <Text>{query}</Text>
-        <Text color="cyan">▏</Text>
-        {searching && <Text dimColor> · searching…</Text>}
+        <Text dimColor>
+          {`source: ${item.source}`}
+          {` · ${installed ? 'installed' : 'not installed'}`}
+          {item.compatible ? '' : ' · incompatible'}
+          {` · ${item.downloadCount.toLocaleString()} downloads`}
+        </Text>
       </Box>
-      {error && (
+      {item.description ? (
+        <Box marginTop={1}>
+          <Text>{item.description}</Text>
+        </Box>
+      ) : null}
+      {installing && progress ? (
+        <Box marginTop={1}>
+          <Text>
+            <Text color="yellow">⠿ </Text>
+            <Text bold>{progress.phase}</Text>
+            {progress.message ? <Text dimColor>{` — ${progress.message}`}</Text> : null}
+          </Text>
+        </Box>
+      ) : null}
+      {error ? (
         <Box marginTop={1}>
           <Text color="red">{error}</Text>
         </Box>
-      )}
-      <Box marginTop={1} flexDirection="column">
-        {results.length === 0 && !searching && query.trim().length > 0 && !error && (
-          <Text dimColor>no matches</Text>
-        )}
-        {results.slice(0, 12).map((r, i) => {
-          const focused = i === focusIdx;
-          return (
-            <Box key={`${r.source}:${r.name}`}>
-              <Text color={focused ? 'cyan' : undefined}>{focused ? '▸ ' : '  '}</Text>
-              <Text bold={focused}>{r.displayName ?? r.name}</Text>
-              <Text dimColor> v{r.version}</Text>
-              {isInstalled(r) && <Text color="green"> · installed</Text>}
-              {!r.compatible && <Text color="yellow"> · incompatible</Text>}
-              {r.description && <Text dimColor>{` — ${r.description}`}</Text>}
-            </Box>
-          );
-        })}
-      </Box>
+      ) : null}
+      {!installed && !installing ? (
+        <Box marginTop={1}>
+          <Text dimColor>Ctrl+Enter to install</Text>
+        </Box>
+      ) : null}
     </Box>
   );
 }
