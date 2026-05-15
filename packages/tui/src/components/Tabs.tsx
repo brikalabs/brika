@@ -159,8 +159,10 @@ export function TabsList({
     [ctx]
   );
 
-  useKey('tab', () => move(1), enabled);
-  useKey('shift+tab', () => move(-1), enabled);
+  // Arrow keys switch tabs. Plain `Tab` / `Shift+Tab` are reserved
+  // for ink's focus cycle between focusable elements (Inputs,
+  // Buttons) — wrestling Tab away from focus management would
+  // mean the user couldn't escape a sub-panel input via Tab.
   useKey('rightArrow', () => move(1), enabled);
   useKey('leftArrow', () => move(-1), enabled);
 

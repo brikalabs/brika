@@ -288,7 +288,7 @@ function InstalledTab(): React.ReactElement {
         <Hint k="/" accent="info">
           filter
         </Hint>
-        <Hint k="Tab" accent="info">
+        <Hint k="→" accent="info">
           search
         </Hint>
       </HintBar>
@@ -336,7 +336,7 @@ function PluginList({
     return (
       <EmptyState>
         <EmptyStateTitle>No plugins yet</EmptyStateTitle>
-        <EmptyStateDescription>Tab to Search to install one.</EmptyStateDescription>
+        <EmptyStateDescription>Press → to switch to Search and install one.</EmptyStateDescription>
       </EmptyState>
     );
   }

@@ -26,7 +26,7 @@
  * built-in `marginRight={2}` (the default) to space them out.
  */
 
-import { Box, Text } from 'ink';
+import { Box, Text, useFocus, useInput } from 'ink';
 import type React from 'react';
 import type { ReactNode } from 'react';
 import { useKey } from '../keys/useKey';
@@ -40,6 +40,11 @@ export interface ButtonProps {
   /** Disable the binding (and dim the label). Default `true`. */
   readonly enabled?: boolean;
   readonly variant?: ButtonVariant;
+  /** Grab focus on mount. Default `false` (Buttons usually let an
+   *  Input take focus first). */
+  readonly autoFocus?: boolean;
+  /** Opt-in stable id for ink's focus manager. */
+  readonly id?: string;
   readonly children?: ReactNode;
 }
 
@@ -51,21 +56,53 @@ const VARIANT_COLOR: Readonly<Record<ButtonVariant, string | undefined>> = {
   ghost: undefined,
 };
 
+/**
+ * Two ways to activate a Button:
+ *
+ *   - **Shortcut** — type the key in brackets. Always live (subject
+ *     to the usual capture rules of `useKey`).
+ *   - **Focus + Enter** — Tab onto the button (ink's native focus
+ *     cycle) and press Enter / Space. Useful when the user is
+ *     already navigating with Tab from an adjacent Input.
+ *
+ * Focused state shows `▸ ` before the bracket so the eye can find
+ * the active button without scanning shortcuts.
+ */
 export function Button({
   shortcut,
   onPress,
   enabled = true,
   variant = 'default',
+  autoFocus = false,
+  id,
   children,
 }: Readonly<ButtonProps>): React.ReactElement {
+  const { isFocused } = useFocus({ autoFocus, id, isActive: enabled });
   useKey(shortcut, onPress, enabled);
+  useInput(
+    (input, key) => {
+      if (key.return || input === ' ') {
+        onPress();
+      }
+    },
+    { isActive: enabled && isFocused }
+  );
+
   const accent = VARIANT_COLOR[variant];
   return (
     <Box marginRight={2}>
-      <Text color={enabled ? accent : undefined} dimColor={!enabled} bold={enabled}>
+      {isFocused ? (
+        <Text color={accent} bold>
+          ▸{' '}
+        </Text>
+      ) : null}
+      <Text color={enabled ? accent : undefined} dimColor={!enabled} bold={enabled || isFocused}>
         [{shortcut}]
       </Text>
-      <Text dimColor={!enabled}> {children}</Text>
+      <Text dimColor={!enabled} bold={isFocused}>
+        {' '}
+        {children}
+      </Text>
     </Box>
   );
 }

@@ -11,6 +11,7 @@
 export * from './components';
 export * from './forms';
 export * from './keys';
+export * from './mouse';
 export * from './router';
 export * from './shell';
 export * from './state';

@@ -14,14 +14,22 @@
  *   <Input value={q} onChange={setQ} />
  *   {err ? <Text color="red">{err}</Text> : null}
  *
- * Captures global input (via `useCaptureInput`) so shell hotkeys
- * stay muted while the input is mounted.
+ * **Focus-aware.** Plugged into ink's native `useFocus` so `Tab` /
+ * `Shift+Tab` cycles between mounted Inputs and `<Button>`s
+ * automatically. When focused the border lights up cyan and the
+ * shell's `useCaptureInput` flag turns on so global hotkeys
+ * suspend. When NOT focused (sibling element has focus instead)
+ * the input is dim and keystrokes don't land here.
+ *
+ * `autoFocus` defaults to `true` for the common single-input-on-
+ * screen case (search picker, filter draft, …). Set `false` if you
+ * want the user to land on something else first.
  *
  * Variants pick the leading-glyph: `search` (`> `), `password`
  * (masked with `•`), `plain` (no prefix).
  */
 
-import { Box, Text, useInput } from 'ink';
+import { Box, Text, useFocus, useInput } from 'ink';
 import type React from 'react';
 import { useCaptureInput } from '../shell/useTuiShell';
 
@@ -38,8 +46,13 @@ export interface InputProps {
   readonly maxLength?: number;
   /** Frame the input in a rounded border. Default `true`. */
   readonly border?: boolean;
-  /** Tint for the cursor + border when active. Default `cyan`. */
+  /** Tint for the cursor + border when focused. Default `cyan`. */
   readonly accentColor?: string;
+  /** Grab focus on mount. Default `true`. */
+  readonly autoFocus?: boolean;
+  /** Stable id for ink's focus manager — only needed when multiple
+   *  inputs are mounted and you want to control the cycle order. */
+  readonly id?: string;
 }
 
 const PREFIX_BY_KIND: Readonly<Record<InputKind, string>> = {
@@ -58,44 +71,54 @@ export function Input({
   maxLength = 256,
   border = true,
   accentColor = 'cyan',
+  autoFocus = true,
+  id,
 }: Readonly<InputProps>): React.ReactElement {
-  useCaptureInput();
+  const { isFocused } = useFocus({ autoFocus, id });
+  // Capture input only while focused — siblings (other inputs,
+  // buttons) get a clean shell when Tab moves focus away.
+  useCaptureInput(isFocused);
 
-  useInput((input, key) => {
-    if (key.escape) {
-      onCancel?.();
-      return;
-    }
-    if (key.return) {
-      onSubmit?.(value);
-      return;
-    }
-    if (key.backspace || key.delete) {
-      onChange(value.slice(0, -1));
-      return;
-    }
-    if (input && !key.ctrl && !key.meta && input.length === 1) {
-      if (value.length >= maxLength) {
+  useInput(
+    (input, key) => {
+      if (key.escape) {
+        onCancel?.();
         return;
       }
-      onChange(value + input);
-    }
-  });
+      if (key.return) {
+        onSubmit?.(value);
+        return;
+      }
+      if (key.backspace || key.delete) {
+        onChange(value.slice(0, -1));
+        return;
+      }
+      if (input && !key.ctrl && !key.meta && input.length === 1) {
+        if (value.length >= maxLength) {
+          return;
+        }
+        onChange(value + input);
+      }
+    },
+    { isActive: isFocused }
+  );
 
   const display = kind === 'password' ? '•'.repeat(value.length) : value;
   const showPlaceholder = value.length === 0 && Boolean(placeholder);
+  const borderColor = isFocused ? accentColor : 'gray';
+  const prefixColor = isFocused ? accentColor : undefined;
 
   const body = (
     <Box>
-      {PREFIX_BY_KIND[kind] ? <Text color={accentColor}>{PREFIX_BY_KIND[kind]}</Text> : null}
+      {PREFIX_BY_KIND[kind] ? <Text color={prefixColor}>{PREFIX_BY_KIND[kind]}</Text> : null}
       {showPlaceholder ? <Text dimColor>{placeholder}</Text> : <Text>{display}</Text>}
-      <Text color={accentColor}>▏</Text>
+      {isFocused ? <Text color={accentColor}>▏</Text> : null}
     </Box>
   );
 
   if (border) {
     return (
-      <Box borderStyle="round" borderColor={accentColor} paddingX={1}>
+      <Box borderStyle="round" borderColor={borderColor} paddingX={1}>
         {body}
       </Box>
     );
