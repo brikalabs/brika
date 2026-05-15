@@ -4,6 +4,7 @@
  * scheduler's API; for now this is a faithful read-only mirror.
  */
 
+import { EmptyState, EmptyStateDescription, EmptyStateTitle, Heading } from '@brika/tui';
 import { Box, Text } from 'ink';
 import type React from 'react';
 import { fetchWorkflows, type WorkflowSummaryDto } from '../../cli/hub-api';
@@ -22,15 +23,20 @@ export function WorkflowsView(): React.ReactElement {
 
   return (
     <Box flexDirection="column">
-      <Box marginBottom={1}>
-        <Text bold>Workflows </Text>
-        <Text dimColor>{items.length}</Text>
-        {list.loading && <Text dimColor> · loading…</Text>}
-        {list.error && <Text color="red"> · {list.error}</Text>}
-      </Box>
+      <Heading
+        subtitle={list.loading ? `${items.length} · loading…` : `${items.length} total`}
+        meta={list.error ? <Text color="red">{list.error}</Text> : null}
+      >
+        Workflows
+      </Heading>
 
       {items.length === 0 ? (
-        <Text dimColor>(no workflows defined yet)</Text>
+        <EmptyState>
+          <EmptyStateTitle>No workflows defined yet</EmptyStateTitle>
+          <EmptyStateDescription>
+            Define workflows in `brika.yml` or via a plugin contribution.
+          </EmptyStateDescription>
+        </EmptyState>
       ) : (
         <Box flexDirection="column">
           {items.map((w) => (

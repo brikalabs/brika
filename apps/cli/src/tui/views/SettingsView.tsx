@@ -4,7 +4,7 @@
  * default host) land once we have a place to persist them.
  */
 
-import { Properties, Property } from '@brika/tui';
+import { Heading, Properties, Property } from '@brika/tui';
 import { Box, Text } from 'ink';
 import type React from 'react';
 import { useCli } from '../useCli';
@@ -13,9 +13,7 @@ export function SettingsView(): React.ReactElement {
   const cli = useCli();
   return (
     <Box flexDirection="column">
-      <Box marginBottom={1}>
-        <Text bold>Settings</Text>
-      </Box>
+      <Heading>Settings</Heading>
       <Properties>
         <Property name="BRIKA_HOME">{cli.workspace}</Property>
         <Property name="version">{`v${cli.version}`}</Property>

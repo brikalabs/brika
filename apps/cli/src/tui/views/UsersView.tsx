@@ -5,13 +5,18 @@
  */
 
 import {
+  Badge,
+  Button,
+  EmptyState,
+  EmptyStateDescription,
+  EmptyStateTitle,
   Form,
   FormField,
   FormInput,
   FormPassword,
   FormSelect,
   type FormValues,
-  useKey,
+  Heading,
 } from '@brika/tui';
 import { Box, Text } from 'ink';
 import type React from 'react';
@@ -58,8 +63,6 @@ export function UsersView(): React.ReactElement {
   const list = useHubResource<UserDto[]>(fetchUsers, []);
   const [adding, setAdding] = useState(false);
 
-  useKey('a', () => setAdding(true), !adding);
-
   if (cli.hub.state !== 'running') {
     return <NotConnected title="Users" />;
   }
@@ -69,12 +72,12 @@ export function UsersView(): React.ReactElement {
 
   return (
     <Box flexDirection="column">
-      <Box marginBottom={1}>
-        <Text bold>Users </Text>
-        <Text dimColor>{items.length}</Text>
-        {list.loading && <Text dimColor> · loading…</Text>}
-        {errorLabel && <Text color="red"> · {errorLabel}</Text>}
-      </Box>
+      <Heading
+        subtitle={list.loading ? `${items.length} · loading…` : `${items.length} total`}
+        meta={errorLabel ? <Text color="red">{errorLabel}</Text> : null}
+      >
+        Users
+      </Heading>
 
       {adding && (
         <Box marginBottom={1}>
@@ -110,13 +113,18 @@ export function UsersView(): React.ReactElement {
       )}
 
       {items.length === 0 ? (
-        <Text dimColor>(no users to show — admin login required for non-empty lists)</Text>
+        <EmptyState>
+          <EmptyStateTitle>No users to show</EmptyStateTitle>
+          <EmptyStateDescription>
+            Admin login required for non-empty lists. Press <Text bold>a</Text> to add one.
+          </EmptyStateDescription>
+        </EmptyState>
       ) : (
         <Box flexDirection="column">
           {items.map((u) => (
             <Box key={u.id}>
               <Text>▸ {u.email.padEnd(32)} </Text>
-              <Text color={u.role === 'admin' ? 'red' : 'cyan'}>{u.role.padEnd(8)}</Text>
+              <Badge variant={u.role === 'admin' ? 'destructive' : 'info'}>{u.role}</Badge>
               <Text dimColor> {u.name}</Text>
             </Box>
           ))}
@@ -124,7 +132,9 @@ export function UsersView(): React.ReactElement {
       )}
 
       <Box marginTop={1}>
-        <Text dimColor>a add</Text>
+        <Button shortcut="a" variant="success" enabled={!adding} onPress={() => setAdding(true)}>
+          add user
+        </Button>
       </Box>
     </Box>
   );

@@ -23,12 +23,16 @@
 import {
   Badge,
   type BadgeVariant,
+  Button,
   Confirm,
   ConfirmDescription,
   ConfirmTitle,
   EmptyState,
   EmptyStateDescription,
   EmptyStateTitle,
+  Heading,
+  Hint,
+  HintBar,
   Input,
   Properties,
   Property,
@@ -74,9 +78,7 @@ export function PluginsView(): React.ReactElement {
   }
   return (
     <Tabs defaultValue="installed">
-      <Box marginBottom={1}>
-        <Text bold>Plugins</Text>
-      </Box>
+      <Heading>Plugins</Heading>
       <TabsList>
         <TabsTrigger value="installed">Installed</TabsTrigger>
         <TabsTrigger value="search">Search</TabsTrigger>
@@ -168,7 +170,8 @@ function InstalledTab(): React.ReactElement {
       .catch((e: unknown) => setActionError(e instanceof Error ? e.message : String(e)));
   };
 
-  // Navigation + actions
+  // Navigation only — actions land as <Button>s below the list and
+  // register their own keybinds.
   useKey('upArrow', () => setFocusIndex((i) => Math.max(0, i - 1)), !overlayOpen);
   useKey(
     'downArrow',
@@ -182,11 +185,6 @@ function InstalledTab(): React.ReactElement {
   useKey('ctrl+u', () => setReadmeScroll((s) => Math.max(0, s - README_PAGE_LINES)), !overlayOpen);
   useKey('ctrl+d', () => setReadmeScroll((s) => s + README_PAGE_LINES), !overlayOpen);
   useKey('/', () => setFilterMode(true), !overlayOpen);
-  useKey('e', runAction('enable'), interactive);
-  useKey('D', runAction('disable'), interactive);
-  useKey('k', runAction('kill'), interactive);
-  useKey('R', runAction('reload'), interactive);
-  useKey('X', () => focused && setPendingUninstall(focused), interactive);
 
   return (
     <Box flexDirection="column">
@@ -261,7 +259,39 @@ function InstalledTab(): React.ReactElement {
         </Box>
       </Box>
 
-      <Footer />
+      <Box marginTop={1}>
+        <Button shortcut="e" variant="success" enabled={interactive} onPress={runAction('enable')}>
+          enable
+        </Button>
+        <Button shortcut="D" variant="warning" enabled={interactive} onPress={runAction('disable')}>
+          disable
+        </Button>
+        <Button shortcut="R" enabled={interactive} onPress={runAction('reload')}>
+          reload
+        </Button>
+        <Button shortcut="k" enabled={interactive} onPress={runAction('kill')}>
+          kill
+        </Button>
+        <Button
+          shortcut="X"
+          variant="destructive"
+          enabled={interactive}
+          onPress={() => focused && setPendingUninstall(focused)}
+        >
+          uninstall
+        </Button>
+      </Box>
+
+      <HintBar>
+        <Hint k="↑↓">select</Hint>
+        <Hint k="^U/^D">scroll readme</Hint>
+        <Hint k="/" accent="info">
+          filter
+        </Hint>
+        <Hint k="Tab" accent="info">
+          search
+        </Hint>
+      </HintBar>
     </Box>
   );
 }
@@ -505,34 +535,6 @@ function FilterDraft({
         placeholder="filter plugins…"
       />
       <Text dimColor>Enter — apply · Esc — cancel</Text>
-    </Box>
-  );
-}
-
-// ─── Footer ───────────────────────────────────────────────────────────────
-
-function Footer(): React.ReactElement {
-  return (
-    <Box marginTop={1}>
-      <Text dimColor>↑↓ select · PgUp/PgDn scroll readme · </Text>
-      <Text bold color="cyan">
-        /
-      </Text>
-      <Text dimColor> filter · </Text>
-      <Text color="green">e</Text>
-      <Text dimColor> enable · </Text>
-      <Text color="yellow">D</Text>
-      <Text dimColor> disable · </Text>
-      <Text>R</Text>
-      <Text dimColor> reload · </Text>
-      <Text>k</Text>
-      <Text dimColor> kill · </Text>
-      <Text color="red">X</Text>
-      <Text dimColor> uninstall · </Text>
-      <Text bold color="cyan">
-        Tab
-      </Text>
-      <Text dimColor> Search</Text>
     </Box>
   );
 }

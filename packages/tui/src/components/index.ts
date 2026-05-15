@@ -1,4 +1,5 @@
 export { Badge, type BadgeProps, type BadgeVariant } from './Badge';
+export { Button, type ButtonProps, type ButtonVariant } from './Button';
 export { Card, type CardProps } from './Card';
 export {
   Confirm,
@@ -13,6 +14,8 @@ export {
   type EmptyStateProps,
   EmptyStateTitle,
 } from './EmptyState';
+export { Heading, type HeadingLevel, type HeadingProps } from './Heading';
+export { Hint, type HintAccent, HintBar, type HintBarProps, type HintProps } from './HintBar';
 export { Input, type InputKind, type InputProps } from './Input';
 export { Kbd, type KbdProps } from './Kbd';
 export { LogPane } from './LogPane';

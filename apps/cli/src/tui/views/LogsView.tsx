@@ -12,6 +12,9 @@
  */
 
 import {
+  Heading,
+  Hint,
+  HintBar,
   LogPane,
   useKey,
   useLayoutDimensions,
@@ -175,11 +178,12 @@ export function LogsView(): React.ReactElement {
 
   return (
     <Box flexDirection="column">
-      <Box marginBottom={1}>
-        <Text bold>Logs </Text>
-        <Text dimColor>{lines.length}</Text>
-        {streamError && <Text color="red"> · {streamError}</Text>}
-      </Box>
+      <Heading
+        subtitle={`${lines.length} lines`}
+        meta={streamError ? <Text color="red">{streamError}</Text> : null}
+      >
+        Logs
+      </Heading>
       <LogPane
         label="hub"
         lines={lines}
@@ -194,9 +198,16 @@ export function LogsView(): React.ReactElement {
           return event ? <ColoredLogLine event={event} /> : _text;
         }}
       />
-      <Box marginTop={1}>
-        <Text dimColor>↑↓ scroll · ^U/^D page · G live · / search · n next · N prev</Text>
-      </Box>
+      <HintBar>
+        <Hint k="↑↓">scroll</Hint>
+        <Hint k="^U/^D">page</Hint>
+        <Hint k="G">live</Hint>
+        <Hint k="/" accent="info">
+          search
+        </Hint>
+        <Hint k="n">next</Hint>
+        <Hint k="N">prev</Hint>
+      </HintBar>
     </Box>
   );
 }
