@@ -9,7 +9,7 @@
  * to anywhere from N to 2-3N visual rows depending on width.
  *
  * `<MarkdownStream>` instead renders **each source line as a single
- * row** (`wrap="truncate-end"` enforces this). Line-level styling
+ * row** (`wrap="wrap"` enforces this). Line-level styling
  * still recognises:
  *
  *   - `# / ## / ### / #### …`   headings — bold, accent colour
@@ -18,9 +18,6 @@
  *   - `1. / 12) …`              ordered list — keeps its marker
  *   - ` ``` `                    code fence — dim cyan inside
  *   - `` `inline` ``            highlighted spans inside paragraph text
- *
- * Source.length = visible row count exactly, so `<ScrollArea>` can
- * compute total / percent / max-offset with simple integer math.
  */
 
 import { Box, Text } from 'ink';
@@ -67,7 +64,7 @@ function renderLine(line: string, inFence: boolean, isFence: boolean): React.Rea
   }
   if (inFence) {
     return (
-      <Text color="cyan" wrap="truncate-end">
+      <Text color="cyan" wrap="wrap">
         {line || ' '}
       </Text>
     );
@@ -81,7 +78,7 @@ function renderLine(line: string, inFence: boolean, isFence: boolean): React.Rea
     const level = hashMatch[1]?.length ?? 1;
     const text = hashMatch[2] ?? '';
     return (
-      <Text bold color={level <= 2 ? 'cyan' : undefined} wrap="truncate-end">
+      <Text bold color={level <= 2 ? 'cyan' : undefined} wrap="wrap">
         {indent}
         {text}
       </Text>
@@ -91,7 +88,7 @@ function renderLine(line: string, inFence: boolean, isFence: boolean): React.Rea
   // Block quote.
   if (trimmed.startsWith('> ')) {
     return (
-      <Text wrap="truncate-end">
+      <Text wrap="wrap">
         {indent}
         <Text color="magenta" dimColor>
           │{' '}
@@ -115,7 +112,7 @@ function renderLine(line: string, inFence: boolean, isFence: boolean): React.Rea
   const unordered = /^([-*+])\s+(.*)$/.exec(trimmed);
   if (unordered) {
     return (
-      <Text wrap="truncate-end">
+      <Text wrap="wrap">
         {indent}
         <Text color="cyan">• </Text>
         {renderInline(unordered[2] ?? '')}
@@ -127,7 +124,7 @@ function renderLine(line: string, inFence: boolean, isFence: boolean): React.Rea
   const ordered = /^(\d{1,3})[.)]\s+(.*)$/.exec(trimmed);
   if (ordered) {
     return (
-      <Text wrap="truncate-end">
+      <Text wrap="wrap">
         {indent}
         <Text color="cyan">{ordered[1]}.</Text> {renderInline(ordered[2] ?? '')}
       </Text>
@@ -141,7 +138,7 @@ function renderLine(line: string, inFence: boolean, isFence: boolean): React.Rea
 
   // Plain paragraph line with inline emphasis / code.
   return (
-    <Text wrap="truncate-end">
+    <Text wrap="wrap">
       {indent}
       {renderInline(trimmed)}
     </Text>

@@ -29,11 +29,10 @@
  *   - `End`  / `G` / `Ctrl+G`    — jump to bottom
  *   - `Esc`                      — release focus
  *
- * **Event isolation.** While focused, the area calls
- * `useCaptureInput()` so plain `useKey` calls outside any `<KeyScope>`
- * suspend — section-jump hotkeys, `/`, `q`, etc. don't fire while
- * scrolling. The area's own scroll keybinds live inside a `<KeyScope>`
- * so they bypass that suspend and keep firing.
+ * **Event isolation.** The scroll keys only fire while the area has
+ * focus, so siblings (List, Tabs, Buttons) keep their normal input
+ * handling. We deliberately *don't* call `useCaptureInput()` — that
+ * would suspend Tab focus cycling and view-level shortcuts too.
  *
  * The status row shows `12-31 / 240  37%` plus an `Esc to exit` hint
  * while focused. Pass `statusLine={null}` to hide it.
@@ -44,7 +43,6 @@ import React, { type ReactNode, useCallback, useEffect, useId, useRef, useState 
 import { KeyScope } from '../keys/KeyScope';
 import { hitTest, readBounds } from '../mouse/useBounds';
 import { type MouseEvent, useMouse } from '../mouse/useMouse';
-import { useCaptureInput } from '../shell/useTuiShell';
 import { useMeasure } from '../state/useMeasure';
 import { Button } from './Button';
 
@@ -160,7 +158,9 @@ function ScrollAreaInner({
   const { isFocused } = useFocus({ autoFocus, id: focusId, isActive: focusable });
   const { focus, focusNext } = useFocusManager();
 
-  useCaptureInput(isFocused);
+  // (We deliberately don't call useCaptureInput — Tab navigation and
+  //  sibling focus stays free; the single useInput below is gated on
+  //  isFocused, which is enough isolation on its own.)
 
   // We only measure the WINDOW box (to know how many rows to slice).
   // The inner content height comes from the child's source / lines
