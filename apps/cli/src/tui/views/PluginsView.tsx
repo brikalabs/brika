@@ -34,6 +34,8 @@ import {
   Hint,
   HintBar,
   Input,
+  List,
+  ListItem,
   Properties,
   Property,
   Search,
@@ -95,7 +97,7 @@ export function PluginsView(): React.ReactElement {
 
 function InstalledTab(): React.ReactElement {
   const list = useHubResource<PluginListItem[]>(fetchPlugins, []);
-  const [focusIndex, setFocusIndex] = useState(0);
+  const [focusedUid, setFocusedUid] = useState<string | null>(null);
   const [readme, setReadme] = useState<{ uid: string; text: string } | null>(null);
   const [readmeError, setReadmeError] = useState<string | null>(null);
   const [readmeLoading, setReadmeLoading] = useState(false);
@@ -107,18 +109,9 @@ function InstalledTab(): React.ReactElement {
 
   const allItems = list.data ?? [];
   const items = useMemo(() => filterPlugins(allItems, filter), [allItems, filter]);
-  const focused = items[focusIndex];
+  const focused = focusedUid ? (items.find((p) => p.uid === focusedUid) ?? null) : null;
 
-  // Keep focus index in range as the filter narrows the list.
-  useEffect(() => {
-    if (focusIndex >= items.length && items.length > 0) {
-      setFocusIndex(items.length - 1);
-    } else if (items.length === 0 && focusIndex !== 0) {
-      setFocusIndex(0);
-    }
-  }, [items.length, focusIndex]);
-
-  // Reset README scroll when focus changes.
+  // Reset README scroll when the focused plugin changes.
   useEffect(() => {
     setReadmeScroll(0);
   }, []);
@@ -169,17 +162,9 @@ function InstalledTab(): React.ReactElement {
       .catch((e: unknown) => setActionError(e instanceof Error ? e.message : String(e)));
   };
 
-  // Navigation only — actions land as <Button>s below the list and
-  // register their own keybinds. `useKey` is capture-aware, so the
-  // filter input / uninstall confirm automatically eat these.
-  useKey('upArrow', () => setFocusIndex((i) => Math.max(0, i - 1)));
-  useKey(
-    'downArrow',
-    () => setFocusIndex((i) => Math.min(items.length - 1, i + 1)),
-    items.length > 0
-  );
   // PgUp/PgDn for full keyboards; Ctrl+U/Ctrl+D for Mac keyboards
   // where the page keys need Fn. Either set scrolls the README pane.
+  // `<List>` owns the ↑↓ binds for row selection.
   useKey('pageUp', () => setReadmeScroll((s) => Math.max(0, s - README_PAGE_LINES)));
   useKey('pageDown', () => setReadmeScroll((s) => s + README_PAGE_LINES));
   useKey('ctrl+u', () => setReadmeScroll((s) => Math.max(0, s - README_PAGE_LINES)));
@@ -208,7 +193,7 @@ function InstalledTab(): React.ReactElement {
             onCommit={(v) => {
               setFilter(v);
               setFilterMode(false);
-              setFocusIndex(0);
+              setFocusedUid(null);
             }}
             onCancel={() => setFilterMode(false)}
           />
@@ -244,7 +229,12 @@ function InstalledTab(): React.ReactElement {
 
       <Box>
         <Box flexDirection="column" minWidth={32} marginRight={2}>
-          <PluginList items={items} allCount={allItems.length} focusIndex={focusIndex} />
+          <PluginRows
+            items={items}
+            allCount={allItems.length}
+            focusedUid={focusedUid}
+            onFocusChange={setFocusedUid}
+          />
           {focused && <PluginMeta plugin={focused} />}
         </Box>
 
@@ -296,22 +286,7 @@ function InstalledTab(): React.ReactElement {
   );
 }
 
-// ─── List row + metadata strip ─────────────────────────────────────────────
-
-function PluginRow({
-  plugin,
-  focused,
-}: Readonly<{ plugin: PluginListItem; focused: boolean }>): React.ReactElement {
-  const state = plugin.enabled ? (plugin.state ?? 'idle') : 'disabled';
-  return (
-    <Box>
-      <Text color={focused ? 'cyan' : undefined}>{focused ? '▸ ' : '  '}</Text>
-      <Text bold={focused}>{plugin.displayName ?? plugin.name}</Text>
-      <Text dimColor> v{plugin.version} </Text>
-      <Badge variant={STATE_VARIANT[state] ?? 'secondary'}>{state}</Badge>
-    </Box>
-  );
-}
+// ─── List rows + metadata strip ───────────────────────────────────────────
 
 const STATE_VARIANT: Readonly<Record<string, BadgeVariant>> = {
   running: 'success',
@@ -321,22 +296,26 @@ const STATE_VARIANT: Readonly<Record<string, BadgeVariant>> = {
   idle: 'secondary',
 };
 
-interface PluginListProps {
+interface PluginRowsProps {
   readonly items: ReadonlyArray<PluginListItem>;
   readonly allCount: number;
-  readonly focusIndex: number;
+  readonly focusedUid: string | null;
+  readonly onFocusChange: (uid: string) => void;
 }
 
-function PluginList({
+function PluginRows({
   items,
   allCount,
-  focusIndex,
-}: Readonly<PluginListProps>): React.ReactElement {
+  focusedUid,
+  onFocusChange,
+}: Readonly<PluginRowsProps>): React.ReactElement {
   if (allCount === 0) {
     return (
       <EmptyState>
         <EmptyStateTitle>No plugins yet</EmptyStateTitle>
-        <EmptyStateDescription>Press → to switch to Search and install one.</EmptyStateDescription>
+        <EmptyStateDescription>
+          Press → to switch to Search and install one.
+        </EmptyStateDescription>
       </EmptyState>
     );
   }
@@ -351,11 +330,18 @@ function PluginList({
     );
   }
   return (
-    <>
-      {items.map((p, i) => (
-        <PluginRow key={p.uid} plugin={p} focused={i === focusIndex} />
-      ))}
-    </>
+    <List value={focusedUid ?? undefined} onValueChange={onFocusChange}>
+      {items.map((p) => {
+        const state = p.enabled ? (p.state ?? 'idle') : 'disabled';
+        return (
+          <ListItem key={p.uid} value={p.uid}>
+            <Text bold={focusedUid === p.uid}>{p.displayName ?? p.name}</Text>
+            <Text dimColor> v{p.version} </Text>
+            <Badge variant={STATE_VARIANT[state] ?? 'secondary'}>{state}</Badge>
+          </ListItem>
+        );
+      })}
+    </List>
   );
 }
 
