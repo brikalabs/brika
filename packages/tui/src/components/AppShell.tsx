@@ -119,6 +119,10 @@ export function AppShell({
   // bumps the bottom border off the visible viewport on every render.
   const frameHeight = Math.max(3, rows - 1);
 
+  // Hook calls happen before any conditional return so React sees the
+  // same hook order on every render (Rules of Hooks).
+  const ctxValue = useMemo(() => ({ innerWidth, accentColor }), [innerWidth, accentColor]);
+
   // When the terminal is too small we render the warning OVER the
   // children — children stay mounted (`display="none"`) so in-flight
   // component state (form drafts, scroll positions, ongoing fetches)
@@ -132,8 +136,6 @@ export function AppShell({
       </>
     );
   }
-
-  const ctxValue = useMemo(() => ({ innerWidth, accentColor }), [innerWidth, accentColor]);
 
   return (
     <AppShellContext.Provider value={ctxValue}>
