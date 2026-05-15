@@ -65,4 +65,52 @@ describe('expandReveal — typewriter mode', () => {
     expect(out[3]?.pauseMs).toBe(200); // 'y' — first char after space
     expect(out[4]?.pauseMs).toBe(10); // 'o'
   });
+
+  test('sentence-end punctuation buys a longer breath before the next word', () => {
+    const segs = parseMoodScript('hi. yo');
+    const out = expandReveal(segs, 'typewriter', {
+      charMs: 10,
+      wordPauseMs: 200,
+      sentencePauseMs: 500,
+    });
+    // 'h'(200) 'i'(10) '.'(10) ' '(10) 'y'(500 — sentence breath) 'o'(10)
+    expect(out.map((s) => s.pauseMs)).toEqual([200, 10, 10, 10, 500, 10]);
+  });
+
+  test('clause break injects a moderate pause before the next word', () => {
+    const segs = parseMoodScript('hi, yo');
+    const out = expandReveal(segs, 'typewriter', {
+      charMs: 10,
+      wordPauseMs: 200,
+      clausePauseMs: 300,
+    });
+    // 'y' lands with clause-pause (300), beating the regular wordPause (200).
+    expect(out[4]?.token).toBe('y');
+    expect(out[4]?.pauseMs).toBe(300);
+  });
+
+  test('sentence breath beats clause break when both are queued', () => {
+    const segs = parseMoodScript('hi,. yo');
+    const out = expandReveal(segs, 'typewriter', {
+      charMs: 10,
+      wordPauseMs: 50,
+      clausePauseMs: 200,
+      sentencePauseMs: 500,
+    });
+    // The `.` after `,` promotes the breath to sentence-strength.
+    expect(out[5]?.token).toBe('y');
+    expect(out[5]?.pauseMs).toBe(500);
+  });
+
+  test('word-pause wins when stronger than the pending breath', () => {
+    const segs = parseMoodScript('hi: yo');
+    const out = expandReveal(segs, 'typewriter', {
+      charMs: 10,
+      wordPauseMs: 400,
+      clausePauseMs: 100,
+    });
+    // wordPause (400) > clause pending (100) → wordPause wins.
+    expect(out[4]?.token).toBe('y');
+    expect(out[4]?.pauseMs).toBe(400);
+  });
 });

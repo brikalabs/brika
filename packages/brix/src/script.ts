@@ -93,10 +93,31 @@ export interface ExpandOptions {
   readonly charMs?: number;
   /** Extra delay between words — typewriter mode only. Default 180ms. */
   readonly wordPauseMs?: number;
+  /**
+   * Delay before the next word after a sentence-end mark (`.`/`!`/`?`/`…`).
+   * Typewriter mode only. Default 420ms — long enough to read as a
+   * breath, short enough to keep momentum.
+   */
+  readonly sentencePauseMs?: number;
+  /**
+   * Delay before the next word after a clause break (`,`/`;`/`:`).
+   * Typewriter mode only. Default 240ms.
+   */
+  readonly clausePauseMs?: number;
 }
 
 const DEFAULT_TW_CHAR_MS = 28;
 const DEFAULT_TW_WORD_PAUSE_MS = 180;
+const DEFAULT_TW_SENTENCE_PAUSE_MS = 420;
+const DEFAULT_TW_CLAUSE_PAUSE_MS = 240;
+
+/**
+ * Sentence-end marks earn a long pause before the next word — Brix
+ * gets to breathe and the reader gets to land.
+ */
+const SENTENCE_END = new Set(['.', '!', '?', '…']);
+/** Clause breaks earn a moderate pause — comma-length. */
+const CLAUSE_BREAK = new Set([',', ';', ':']);
 
 export function expandReveal(
   segments: ReadonlyArray<MoodToken>,
@@ -125,16 +146,44 @@ function expandChar(segments: ReadonlyArray<MoodToken>): RevealStep[] {
 function expandTypewriter(segments: ReadonlyArray<MoodToken>, opts: ExpandOptions): RevealStep[] {
   const charMs = opts.charMs ?? DEFAULT_TW_CHAR_MS;
   const wordPauseMs = opts.wordPauseMs ?? DEFAULT_TW_WORD_PAUSE_MS;
+  const sentencePauseMs = opts.sentencePauseMs ?? DEFAULT_TW_SENTENCE_PAUSE_MS;
+  const clausePauseMs = opts.clausePauseMs ?? DEFAULT_TW_CLAUSE_PAUSE_MS;
+
   const out: RevealStep[] = [];
   let prevWasSpace = true;
+  /**
+   * Pending pause earned by a punctuation mark we just emitted. Consumed
+   * the moment the next non-space char lands — replaces the regular
+   * word-boundary pause when stronger so we don't double-up.
+   */
+  let pendingBreath = 0;
+
   for (const seg of segments) {
     for (const ch of Array.from(seg.text)) {
       const isSpace = /\s/.test(ch);
-      // Pause happens BEFORE the next char lands — so the longer wait
-      // sits just before the first char of a new word, which is what
-      // your ear expects.
-      const pauseMs = prevWasSpace && !isSpace ? wordPauseMs : charMs;
+      let pauseMs: number;
+      if (isSpace) {
+        // The space itself reveals at the in-word rate; the long pause
+        // belongs on the first letter of the next word.
+        pauseMs = charMs;
+      } else if (prevWasSpace) {
+        // First letter of a new word — pick the longest applicable pause.
+        pauseMs = Math.max(pendingBreath, wordPauseMs);
+        pendingBreath = 0;
+      } else {
+        pauseMs = charMs;
+      }
       out.push({ mood: seg.mood, token: ch, trailing: '', pauseMs });
+
+      // Queue a breath if this char is punctuation. We only set it
+      // when stronger than what's already pending — a `?!` chain
+      // doesn't compound, but a `, …` will be promoted to sentence.
+      if (SENTENCE_END.has(ch)) {
+        pendingBreath = Math.max(pendingBreath, sentencePauseMs);
+      } else if (CLAUSE_BREAK.has(ch)) {
+        pendingBreath = Math.max(pendingBreath, clausePauseMs);
+      }
+
       prevWasSpace = isSpace;
     }
   }
