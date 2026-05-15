@@ -262,8 +262,13 @@ export function SearchItem<T>({
   children,
 }: Readonly<SearchItemProps<T>>): React.ReactElement {
   const ctx = useSearchContext('SearchItem');
+  const { registerItem } = ctx;
   const key = itemKey ?? (typeof value === 'string' ? value : String(value));
-  useEffect(() => ctx.registerItem({ key, value }), [ctx, key, value]);
+  // Depend on the stable `registerItem` callback rather than the
+  // whole `ctx` — `ctx` is re-created every time `items` changes
+  // (which registerItem triggers), so depending on it here would
+  // oscillate register/unregister and crash the renderer.
+  useEffect(() => registerItem({ key, value }), [registerItem, key, value]);
   const focused = ctx.focusKey === key;
   return (
     <Box>

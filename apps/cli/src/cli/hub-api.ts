@@ -66,6 +66,26 @@ export async function pluginAction(
   }
 }
 
+export interface PluginMetrics {
+  /** PID of the plugin's process, or `null` when the plugin is
+   *  disabled / unloaded / failed to start. */
+  readonly pid: number | null;
+  /** Snapshot from `ps` — `null` when the process has gone away. */
+  readonly current: { readonly cpu: number; readonly memory: number } | null;
+  /** Rolling history kept by the hub's `MetricsStore`. */
+  readonly history: ReadonlyArray<{ readonly cpu: number; readonly memory: number; readonly ts: number }>;
+}
+
+/** Fetch live CPU + memory for a single plugin. Cheap (~`ps -p` under
+ *  the hood) so safe to poll every couple of seconds. */
+export async function fetchPluginMetrics(uid: string): Promise<PluginMetrics> {
+  const res = await hubFetch(`/api/plugins/${encodeURIComponent(uid)}/metrics`);
+  if (!res.ok) {
+    throw new Error(`plugin metrics fetch failed: ${res.status}`);
+  }
+  return (await res.json()) as PluginMetrics;
+}
+
 /** Uninstall = disable + unload + remove from `brika.yml` + clean
  *  state/secrets. Hub handles the full teardown; we just call DELETE. */
 export async function uninstallPlugin(uid: string): Promise<void> {

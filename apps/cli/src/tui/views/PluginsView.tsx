@@ -47,12 +47,14 @@ import { Box, Text } from 'ink';
 import type React from 'react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  fetchPluginMetrics,
   fetchPluginReadme,
   fetchPlugins,
   fetchRegistryReadme,
   type InstallProgress,
   installFromRegistry,
   type PluginListItem,
+  type PluginMetrics,
   pluginAction,
   type RegistrySearchResult,
   searchRegistry,
@@ -323,37 +325,100 @@ function PluginList({
   );
 }
 
+/**
+ * Metadata + live runtime stats for the focused plugin — sits below
+ * the list and matches what the web UI surfaces on its plugin row:
+ * version, author/source links, PID, CPU%, memory. Polls metrics
+ * every 2 s while the plugin is enabled. Cheap (`ps -p` on the hub).
+ */
 function PluginMeta({ plugin }: Readonly<{ plugin: PluginListItem }>): React.ReactElement {
   const author = typeof plugin.author === 'string' ? plugin.author : plugin.author?.name;
   const repo = typeof plugin.repository === 'string' ? plugin.repository : plugin.repository?.url;
-  const pieces: React.ReactNode[] = [];
-  if (author) {
-    pieces.push(<Text key="a" dimColor>{`by ${author}`}</Text>);
-  }
-  if (plugin.homepage) {
-    pieces.push(
-      <Text key="h" dimColor>
-        {plugin.homepage}
-      </Text>
-    );
-  }
-  if (repo && repo !== plugin.homepage) {
-    pieces.push(
-      <Text key="r" dimColor>
-        {repo}
-      </Text>
-    );
-  }
-  if (pieces.length === 0) {
-    return <Box />;
-  }
+  const [metrics, setMetrics] = useState<PluginMetrics | null>(null);
+
+  useEffect(() => {
+    if (!plugin.enabled) {
+      setMetrics(null);
+      return;
+    }
+    let cancelled = false;
+    const tick = async (): Promise<void> => {
+      try {
+        const m = await fetchPluginMetrics(plugin.uid);
+        if (!cancelled) {
+          setMetrics(m);
+        }
+      } catch {
+        // Metrics endpoint is best-effort — ignore transient errors.
+      }
+    };
+    void tick();
+    const t = setInterval(tick, 2_000);
+    return () => {
+      cancelled = true;
+      clearInterval(t);
+    };
+  }, [plugin.uid, plugin.enabled]);
+
   return (
     <Box marginTop={1} flexDirection="column">
-      {pieces.map((p, i) => (
-        <Box key={`pm-${i}`}>{p}</Box>
-      ))}
+      <Properties>
+        <Property name="version">{plugin.version}</Property>
+        {author ? <Property name="author">{author}</Property> : null}
+        {plugin.homepage ? <Property name="homepage">{plugin.homepage}</Property> : null}
+        {repo && repo !== plugin.homepage ? <Property name="repo">{repo}</Property> : null}
+        <PidProperty pid={metrics?.pid ?? null} enabled={plugin.enabled} />
+        {metrics?.current ? (
+          <>
+            <Property name="cpu">
+              <CpuBadge percent={metrics.current.cpu} />
+            </Property>
+            <Property name="memory">{formatBytes(metrics.current.memory)}</Property>
+          </>
+        ) : null}
+      </Properties>
     </Box>
   );
+}
+
+function PidProperty({
+  pid,
+  enabled,
+}: Readonly<{ pid: number | null; enabled: boolean }>): React.ReactElement | null {
+  if (pid !== null) {
+    return <Property name="pid">{String(pid)}</Property>;
+  }
+  if (enabled) {
+    return <Property name="pid">—</Property>;
+  }
+  return null;
+}
+
+function cpuVariant(percent: number): BadgeVariant {
+  if (percent >= 80) {
+    return 'destructive';
+  }
+  if (percent >= 40) {
+    return 'warning';
+  }
+  return 'secondary';
+}
+
+function CpuBadge({ percent }: Readonly<{ percent: number }>): React.ReactElement {
+  return <Badge variant={cpuVariant(percent)}>{`${percent.toFixed(1)}%`}</Badge>;
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) {
+    return `${bytes} B`;
+  }
+  if (bytes < 1024 * 1024) {
+    return `${(bytes / 1024).toFixed(1)} KB`;
+  }
+  if (bytes < 1024 * 1024 * 1024) {
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  }
+  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
 }
 
 // ─── README pane (scrollable) ─────────────────────────────────────────────

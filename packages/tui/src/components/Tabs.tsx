@@ -216,13 +216,20 @@ export function TabsTrigger({
   children,
 }: Readonly<TabsTriggerProps>): React.ReactElement {
   const ctx = useTabsContext('TabsTrigger');
+  const { register } = ctx;
   const labelLength = typeof children === 'string' ? children.length : value.length;
 
   // Registration is still nice-to-have for shortcut binds + count,
   // but the visual is no longer driven by it.
+  //
+  // Important: depend on the STABLE `register` callback, not the
+  // whole `ctx` object. `ctx` is re-created every time `tabs`
+  // changes (which is what register triggers) — putting `ctx` in
+  // the deps causes an effect/cleanup oscillation, which React
+  // surfaces as "Maximum update depth exceeded".
   useEffect(
-    () => ctx.register({ value, shortcut, labelLength }),
-    [ctx, value, shortcut, labelLength]
+    () => register({ value, shortcut, labelLength }),
+    [register, value, shortcut, labelLength]
   );
 
   const active = ctx.value === value;
