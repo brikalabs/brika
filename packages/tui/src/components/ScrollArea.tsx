@@ -35,9 +35,10 @@ import { type MouseEvent, useMouse } from '../mouse/useMouse';
 import { useMeasure } from '../state/useMeasure';
 
 export interface ScrollAreaProps {
-  /** Visible row count for the windowed area. The status row (1 line)
-   *  sits below it. */
-  readonly height: number;
+  /** Explicit visible row count. Omit to fill the flex parent — the
+   *  pane will measure its own height and use that as the window
+   *  size. The status row (1 line) always sits below the window. */
+  readonly height?: number;
   readonly children?: ReactNode;
   /** Where the cursor starts. Default 0 (top). */
   readonly initialOffset?: number;
@@ -79,14 +80,23 @@ export function ScrollArea({
   statusLine,
   accent = 'cyan',
 }: Readonly<ScrollAreaProps>): React.ReactElement {
-  const visibleRows = Math.max(MIN_HEIGHT, height);
-
   const autoId = useId();
   const focusId = id ?? `scrollarea-${autoId}`;
   const { isFocused } = useFocus({ autoFocus, id: focusId, isActive: focusable });
   const { focus, focusNext } = useFocusManager();
 
+  // Two refs: one measures the inner content's natural height (for max
+  // offset), the other measures the windowed Box's actual height when
+  // the consumer didn't pass an explicit row count.
   const [innerRef, innerSize] = useMeasure();
+  const [windowRef, windowSize] = useMeasure();
+  // 1 row for the status chrome — keeps the user's `height` intuitive
+  // ("show 20 rows of content") and lets the auto-fill path subtract
+  // the chrome from the measured window height.
+  const STATUS_ROWS = statusLine === null ? 0 : 1;
+  const visibleRows = height
+    ? Math.max(MIN_HEIGHT, height)
+    : Math.max(MIN_HEIGHT, windowSize.height - STATUS_ROWS);
   const contentHeight = innerSize.height;
   const maxOffset = Math.max(0, contentHeight - visibleRows);
 
@@ -145,15 +155,24 @@ export function ScrollArea({
   const state: ScrollState = { offset, contentHeight, height: visibleRows, focused: isFocused };
   const chrome = renderStatus(statusLine, state, accent);
 
+  // When the caller passed an explicit height, give the window an
+  // explicit size; otherwise let it grow to fill the flex parent and
+  // we'll size from the measurement.
+  const windowProps = height
+    ? { height: visibleRows }
+    : { flexGrow: 1, flexBasis: 0 as const, flexShrink: 1 };
+
   return (
     <Box
       ref={containerRef}
       flexDirection="column"
+      flexGrow={height ? 0 : 1}
+      flexShrink={height ? 0 : 1}
       borderStyle={isFocused ? 'round' : 'single'}
       borderColor={isFocused ? accent : 'gray'}
       paddingX={1}
     >
-      <Box height={visibleRows} overflow="hidden" flexShrink={0}>
+      <Box ref={windowRef} overflow="hidden" {...windowProps}>
         <Box ref={innerRef} flexDirection="column" marginTop={-offset}>
           {children}
         </Box>

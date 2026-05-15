@@ -10,7 +10,8 @@
  *
  * Installed-tab keys (active when no overlay is open):
  *   ↑ / ↓        move selection
- *   PgUp / PgDn  scroll the README pane (10 lines at a time)
+ *   Tab          focus the README pane → arrow / page keys scroll it;
+ *                Esc returns focus to the list
  *   /            filter the list — type to narrow, Enter / Esc exits
  *   e            enable focused plugin
  *   D            disable focused plugin (shift, so `d` keeps its
@@ -38,6 +39,7 @@ import {
   ListItem,
   Properties,
   Property,
+  ScrollArea,
   Search,
   SearchEmpty,
   SearchInput,
@@ -71,8 +73,6 @@ import { NotConnected } from '../components/NotConnected';
 import { useCli } from '../useCli';
 import { useHubResource } from '../useHubResource';
 
-const README_PAGE_LINES = 10;
-
 export function PluginsView(): React.ReactElement {
   const cli = useCli();
   if (cli.hub.state !== 'running') {
@@ -101,7 +101,6 @@ function InstalledTab(): React.ReactElement {
   const [readme, setReadme] = useState<{ uid: string; text: string } | null>(null);
   const [readmeError, setReadmeError] = useState<string | null>(null);
   const [readmeLoading, setReadmeLoading] = useState(false);
-  const [readmeScroll, setReadmeScroll] = useState(0);
   const [filterMode, setFilterMode] = useState(false);
   const [filter, setFilter] = useState('');
   const [pendingUninstall, setPendingUninstall] = useState<PluginListItem | null>(null);
@@ -110,11 +109,6 @@ function InstalledTab(): React.ReactElement {
   const allItems = list.data ?? [];
   const items = useMemo(() => filterPlugins(allItems, filter), [allItems, filter]);
   const focused = focusedUid ? (items.find((p) => p.uid === focusedUid) ?? null) : null;
-
-  // Reset README scroll when the focused plugin changes.
-  useEffect(() => {
-    setReadmeScroll(0);
-  }, []);
 
   // Load README whenever the focused plugin changes.
   useEffect(() => {
@@ -125,7 +119,6 @@ function InstalledTab(): React.ReactElement {
     if (readme?.uid === focused.uid) {
       return;
     }
-    setReadmeScroll(0);
     let cancelled = false;
     setReadmeLoading(true);
     setReadmeError(null);
@@ -162,13 +155,6 @@ function InstalledTab(): React.ReactElement {
       .catch((e: unknown) => setActionError(e instanceof Error ? e.message : String(e)));
   };
 
-  // PgUp/PgDn for full keyboards; Ctrl+U/Ctrl+D for Mac keyboards
-  // where the page keys need Fn. Either set scrolls the README pane.
-  // `<List>` owns the ↑↓ binds for row selection.
-  useKey('pageUp', () => setReadmeScroll((s) => Math.max(0, s - README_PAGE_LINES)));
-  useKey('pageDown', () => setReadmeScroll((s) => s + README_PAGE_LINES));
-  useKey('ctrl+u', () => setReadmeScroll((s) => Math.max(0, s - README_PAGE_LINES)));
-  useKey('ctrl+d', () => setReadmeScroll((s) => s + README_PAGE_LINES));
   useKey('/', () => setFilterMode(true));
 
   return (
@@ -244,7 +230,7 @@ function InstalledTab(): React.ReactElement {
             loading={readmeLoading}
             error={readmeError}
             text={readme?.text ?? null}
-            scroll={readmeScroll}
+            uid={focused?.uid ?? null}
           />
         </Box>
       </Box>
@@ -274,7 +260,7 @@ function InstalledTab(): React.ReactElement {
 
       <HintBar>
         <Hint k="↑↓">select</Hint>
-        <Hint k="^U/^D">scroll readme</Hint>
+        <Hint k="Tab">scroll readme</Hint>
         <Hint k="/" accent="info">
           filter
         </Hint>
@@ -446,7 +432,9 @@ interface ReadmePaneProps {
   readonly loading: boolean;
   readonly error: string | null;
   readonly text: string | null;
-  readonly scroll: number;
+  /** Plugin uid — used as the `<ScrollArea>` key so the scroll
+   *  position resets when the user picks a different plugin. */
+  readonly uid: string | null;
 }
 
 function ReadmePane({
@@ -454,7 +442,7 @@ function ReadmePane({
   loading,
   error,
   text,
-  scroll,
+  uid,
 }: Readonly<ReadmePaneProps>): React.ReactElement {
   if (!hasFocus) {
     return <Text dimColor>(select a plugin)</Text>;
@@ -468,19 +456,10 @@ function ReadmePane({
   if (!text) {
     return <Text dimColor>no readme</Text>;
   }
-  // Scroll by dropping the first `scroll` source lines. Cheap and
-  // works regardless of how much each rendered block expands to.
-  const lines = text.split('\n');
-  const sliced = scroll > 0 ? lines.slice(Math.min(scroll, Math.max(0, lines.length - 5))) : lines;
   return (
-    <Box flexDirection="column">
-      {scroll > 0 && (
-        <Box>
-          <Text dimColor>↑ {scroll} lines hidden — PgUp to scroll back</Text>
-        </Box>
-      )}
-      <Markdown source={sliced.join('\n')} />
-    </Box>
+    <ScrollArea key={uid ?? 'no-uid'} id={`readme-${uid ?? 'none'}`}>
+      <Markdown source={text} />
+    </ScrollArea>
   );
 }
 
@@ -726,10 +705,12 @@ function RegistryReadme({
   loading,
   error,
   source,
+  packageName,
 }: Readonly<{
   loading: boolean;
   error: string | null;
   source: string | null;
+  packageName: string | null;
 }>): React.ReactElement {
   if (loading) {
     return <Text dimColor>loading readme…</Text>;
@@ -738,7 +719,11 @@ function RegistryReadme({
     return <Text color="red">readme: {error}</Text>;
   }
   if (source && source.trim().length > 0) {
-    return <Markdown source={source} />;
+    return (
+      <ScrollArea key={packageName ?? 'no-pkg'} id={`registry-readme-${packageName ?? 'none'}`}>
+        <Markdown source={source} />
+      </ScrollArea>
+    );
   }
   return <Text dimColor>no readme bundled with this package</Text>;
 }
@@ -858,7 +843,12 @@ function RegistryDetail({
 
       {/* README — the headline content of the detail pane */}
       <Box marginTop={1} flexDirection="column">
-        <RegistryReadme loading={readmeLoading} error={readmeError} source={readme} />
+        <RegistryReadme
+          loading={readmeLoading}
+          error={readmeError}
+          source={readme}
+          packageName={item.name}
+        />
       </Box>
 
       {/* Sticky footer: install progress / error / hint */}
