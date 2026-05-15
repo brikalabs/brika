@@ -1,50 +1,67 @@
 /**
- * `<Input>` — single-line text input.
+ * `<Input>` — single-line text input. The canonical TUI text field;
+ * every typing surface in `@brika/tui` consumers ends up here.
  *
  *   const [q, setQ] = useState('');
- *   <Input value={q} onChange={setQ} placeholder="Search…"
- *          onSubmit={() => fetchResults(q)}
- *          onCancel={() => setQ('')} />
+ *   <Input
+ *     type="search"
+ *     value={q}
+ *     onChange={setQ}
+ *     placeholder="Search…"
+ *     onSubmit={() => fetchResults(q)}
+ *     onFocus={() => setHelpHint('typing — Esc clears')}
+ *   />
  *
- * Minimal API — like shadcn's `<Input>`, the component owns *only*
- * the typing field. Label / hint / error text live in sibling
- * elements at the call site:
+ * **Props** (shadcn / HTML shape):
+ *   - `value`        — controlled string value.
+ *   - `onChange`     — `(next: string) => void`.
+ *   - `placeholder`  — dim text shown when value is empty.
+ *   - `type`         — `'text'` (default, no prefix), `'password'`
+ *                      (masked with `•`), `'search'` (leading `> `).
+ *   - `onFocus`      — fires when the input gains keyboard focus.
+ *   - `onBlur`       — fires when the input loses focus.
+ *   - `onSubmit`     — fires on Enter with the current value.
+ *   - `onCancel`     — fires on Esc.
+ *   - `autoFocus`    — default `true`; grab focus on mount.
+ *   - `id`           — stable id for ink's focus manager + mouse hit
+ *                      targeting (multiple inputs need unique ids).
+ *   - `maxLength`    — cap on value length. Default 256.
+ *   - `border`       — draw a rounded border. Default `true`.
+ *   - `accentColor`  — focused border / cursor tint. Default `cyan`.
+ *
+ * Interactions:
+ *   - **Keyboard**: typing letters appends to `value`; Backspace
+ *     pops; Enter → `onSubmit`; Esc → `onCancel`. Tab / Shift+Tab
+ *     cycle focus across all mounted Inputs and Buttons (ink's
+ *     native focus manager).
+ *   - **Mouse**: left-click on the input focuses it.
+ *
+ * Layout convention (shadcn / HTML): label and hint live OUTSIDE
+ * the input as plain `<Text>` siblings so consumers compose freely.
  *
  *   <Text dimColor>Query</Text>
- *   <Input value={q} onChange={setQ} />
+ *   <Input type="search" value={q} onChange={setQ} />
  *   {err ? <Text color="red">{err}</Text> : null}
- *
- * **Focus-aware.** Plugged into ink's native `useFocus` so `Tab` /
- * `Shift+Tab` cycles between mounted Inputs and `<Button>`s
- * automatically. When focused the border lights up cyan and the
- * shell's `useCaptureInput` flag turns on so global hotkeys
- * suspend. When NOT focused (sibling element has focus instead)
- * the input is dim and keystrokes don't land here.
- *
- * `autoFocus` defaults to `true` for the common single-input-on-
- * screen case (search picker, filter draft, …). Set `false` if you
- * want the user to land on something else first.
- *
- * Variants pick the leading-glyph: `search` (`> `), `password`
- * (masked with `•`), `plain` (no prefix).
  */
 
 import { Box, type DOMElement, Text, useFocus, useFocusManager, useInput } from 'ink';
 import type React from 'react';
-import { useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { hitTest, useBounds } from '../mouse/useBounds';
 import { useMouse } from '../mouse/useMouse';
 import { useCaptureInput } from '../shell/useTuiShell';
 
-export type InputKind = 'search' | 'password' | 'plain';
+export type InputType = 'text' | 'password' | 'search';
 
 export interface InputProps {
   readonly value: string;
   readonly onChange: (next: string) => void;
+  readonly placeholder?: string;
+  readonly type?: InputType;
+  readonly onFocus?: () => void;
+  readonly onBlur?: () => void;
   readonly onSubmit?: (value: string) => void;
   readonly onCancel?: () => void;
-  readonly placeholder?: string;
-  readonly kind?: InputKind;
   /** Cap on the value length. Default 256. */
   readonly maxLength?: number;
   /** Frame the input in a rounded border. Default `true`. */
@@ -58,19 +75,21 @@ export interface InputProps {
   readonly id?: string;
 }
 
-const PREFIX_BY_KIND: Readonly<Record<InputKind, string>> = {
-  search: '> ',
+const PREFIX_BY_TYPE: Readonly<Record<InputType, string>> = {
+  text: '',
   password: '* ',
-  plain: '',
+  search: '> ',
 };
 
 export function Input({
   value,
   onChange,
+  placeholder,
+  type = 'text',
+  onFocus,
+  onBlur,
   onSubmit,
   onCancel,
-  placeholder,
-  kind = 'search',
   maxLength = 256,
   border = true,
   accentColor = 'cyan',
@@ -86,8 +105,24 @@ export function Input({
   // buttons) get a clean shell when Tab moves focus away.
   useCaptureInput(isFocused);
 
-  // Mouse: clicking the input focuses it (no separate `onPress` —
-  // typing follows once focused). Ignore clicks outside the box.
+  // Fire onFocus / onBlur as focus state flips. Refs hide rendering
+  // jitter (handlers don't need to be stable to avoid loops).
+  const focusedRef = useRef(false);
+  const onFocusRef = useRef(onFocus);
+  const onBlurRef = useRef(onBlur);
+  onFocusRef.current = onFocus;
+  onBlurRef.current = onBlur;
+  useEffect(() => {
+    if (isFocused && !focusedRef.current) {
+      focusedRef.current = true;
+      onFocusRef.current?.();
+    } else if (!isFocused && focusedRef.current) {
+      focusedRef.current = false;
+      onBlurRef.current?.();
+    }
+  }, [isFocused]);
+
+  // Mouse: clicking the input focuses it. Ignore clicks outside box.
   const handleMouse = useCallback(
     (e: { action: string; button: string; column: number; row: number }) => {
       if (!bounds || e.button !== 'left' || e.action !== 'down') {
@@ -125,14 +160,15 @@ export function Input({
     { isActive: isFocused }
   );
 
-  const display = kind === 'password' ? '•'.repeat(value.length) : value;
+  const display = type === 'password' ? '•'.repeat(value.length) : value;
   const showPlaceholder = value.length === 0 && Boolean(placeholder);
   const borderColor = isFocused ? accentColor : 'gray';
   const prefixColor = isFocused ? accentColor : undefined;
+  const prefix = PREFIX_BY_TYPE[type];
 
   const body = (
     <Box>
-      {PREFIX_BY_KIND[kind] ? <Text color={prefixColor}>{PREFIX_BY_KIND[kind]}</Text> : null}
+      {prefix ? <Text color={prefixColor}>{prefix}</Text> : null}
       {showPlaceholder ? <Text dimColor>{placeholder}</Text> : <Text>{display}</Text>}
       {isFocused ? <Text color={accentColor}>▏</Text> : null}
     </Box>

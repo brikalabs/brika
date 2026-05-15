@@ -16,7 +16,7 @@ export {
 } from './EmptyState';
 export { Heading, type HeadingLevel, type HeadingProps } from './Heading';
 export { Hint, type HintAccent, HintBar, type HintBarProps, type HintProps } from './HintBar';
-export { Input, type InputKind, type InputProps } from './Input';
+export { Input, type InputProps, type InputType } from './Input';
 export { List, ListItem, type ListItemProps, type ListProps } from './List';
 export { Kbd, type KbdProps } from './Kbd';
 export { LogPane } from './LogPane';

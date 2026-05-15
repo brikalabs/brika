@@ -239,7 +239,7 @@ export function SearchInput({
       }}
       onCancel={() => ctx.setQuery('')}
       placeholder={placeholder}
-      kind="search"
+      type="search"
       border={border}
       accentColor={accentColor}
     />

@@ -13,13 +13,11 @@
  *     </FormField>
  *   </Form>
  *
- * Forms automatically call `useCaptureInput()` so global hotkeys
- * (registered via `useKey`) suspend while the form has focus. Add
- * `enabled={!isInputCaptured}` to your global bindings.
- *
- * For ad-hoc usage outside a `<Form>` (e.g. a non-step text prompt),
- * import the raw input primitives — `TextInput`, `SelectInput`,
- * `ConfirmInput` — directly.
+ * For ad-hoc text inputs outside a `<Form>`, use the canonical
+ * `<Input>` primitive from `@brika/tui` directly. The form text
+ * primitives (`<FormInput>`, `<FormPassword>`) are thin wrappers
+ * that bridge the field handle to `<Input>` — they don't ship their
+ * own keystroke handling any more.
  */
 
 export { Form, type FormProps } from './Form';
@@ -28,16 +26,7 @@ export { FormField, type FormFieldProps } from './FormField';
 export { FormInput, type FormInputProps } from './FormInput';
 export { FormPassword } from './FormPassword';
 export { FormSelect, type FormSelectProps } from './FormSelect';
-export {
-  ConfirmInput,
-  type ConfirmInputProps,
-} from './inputs/ConfirmInput';
-export {
-  SelectInput,
-  type SelectInputProps,
-  type SelectOption,
-} from './inputs/SelectInput';
-export { TextInput, type TextInputProps } from './inputs/TextInput';
+export { type SelectOption } from './inputs/SelectInput';
 export {
   type FormContextValue,
   type FormFieldHandle,

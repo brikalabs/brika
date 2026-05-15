@@ -1,24 +1,14 @@
 /**
- * Masked text input. Same handle wiring as `<FormInput>`; the rendered
- * value is replaced with bullets. The Form's completed-step summary
- * also masks (`••••••`) unless the field declares a custom `summarize`.
+ * Masked text input for a `<FormField>` — `<FormInput type="password">`
+ * with a shorter name for the call site. Renders bullets via the
+ * canonical `<Input>` primitive; the Form's completed-step summary
+ * also masks (`••••••`) unless the field declares a custom
+ * `summarize`.
  */
 
 import type React from 'react';
-import { TextInput } from './inputs/TextInput';
-import { useFormControl } from './useFormContext';
+import { FormInput } from './FormInput';
 
 export function FormPassword(): React.ReactElement {
-  const field = useFormControl();
-  const value = typeof field.value === 'string' ? field.value : '';
-  return (
-    <TextInput
-      value={value}
-      onChange={(next) => field.setValue(next)}
-      onSubmit={() => field.submit()}
-      onCancel={() => field.cancel()}
-      mask
-      focused
-    />
-  );
+  return <FormInput type="password" />;
 }
