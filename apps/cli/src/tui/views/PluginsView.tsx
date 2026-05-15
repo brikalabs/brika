@@ -805,42 +805,15 @@ function RegistryReadme({
   return <Text dimColor>no readme bundled with this package</Text>;
 }
 
-/** Border colour for the detail card — error wins, then in-flight
- *  install, then "already installed", default cyan. */
-function pickDetailAccent({
-  error,
-  installing,
-  installed,
-}: Readonly<{ error: string | null; installing: boolean; installed: boolean }>): string {
-  if (error) {
-    return 'red';
-  }
-  if (installing) {
-    return 'yellow';
-  }
-  if (installed) {
-    return 'green';
-  }
-  return 'cyan';
-}
-
 /**
- * Detail panel for the focused registry hit — full preview surface,
- * not just a meta card. Renders:
+ * Detail panel for the focused registry hit — only ever one shown at a
+ * time, so it renders inline (no card chrome). Layout:
  *
- *   - header: display name + version + status badges (installed /
- *     incompatible / installing)
- *   - <Properties> strip with source / version / downloads / compat
- *   - description line from the package manifest
- *   - the package's README, fetched on demand from `/api/registry/
- *     plugins/:name/readme` and rendered through `<Markdown>` so
- *     tables, code blocks, links, lists all render natively
- *   - live install-progress strip when Ctrl+Enter has been fired
- *     against this row
- *
- * The pane is what the user lands in after Enter on a search hit;
- * Ctrl+Enter at any point fires the install (handled by the parent
- * Search wrapper, so this component is purely a viewer).
+ *   - header: display name + version + status badge
+ *   - <Properties> strip with package / source / downloads
+ *   - description line from the manifest
+ *   - the package's README via <Markdown>
+ *   - install progress / error / button when applicable
  */
 function RegistryDetail({
   item,
@@ -857,7 +830,6 @@ function RegistryDetail({
   error: string | null;
   onInstall: () => void;
 }>): React.ReactElement {
-  const accent = pickDetailAccent({ error, installing, installed });
   const [readme, setReadme] = useState<string | null>(null);
   const [readmeLoading, setReadmeLoading] = useState(false);
   const [readmeError, setReadmeError] = useState<string | null>(null);
@@ -892,7 +864,7 @@ function RegistryDetail({
   }, [item.name]);
 
   return (
-    <Box flexDirection="column" borderStyle="round" borderColor={accent} paddingX={1}>
+    <Box flexDirection="column">
       <Box>
         <Text bold>{item.displayName ?? item.name}</Text>
         <Text dimColor> v{item.version} </Text>
@@ -920,7 +892,6 @@ function RegistryDetail({
         </Box>
       ) : null}
 
-      {/* README — the headline content of the detail pane */}
       <Box marginTop={1} flexDirection="column">
         <RegistryReadme
           loading={readmeLoading}
@@ -930,7 +901,6 @@ function RegistryDetail({
         />
       </Box>
 
-      {/* Sticky footer: install progress / error / hint */}
       {installing && progress ? (
         <Box marginTop={1}>
           <Text>

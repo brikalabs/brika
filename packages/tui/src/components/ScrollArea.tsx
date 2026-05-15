@@ -213,8 +213,14 @@ function ScrollAreaInner({
     });
   }, []);
 
-  useKey('upArrow', () => move(-1), isFocused);
-  useKey('downArrow', () => move(1), isFocused);
+  // Arrow keys scroll whenever the area is mounted (when there's
+  // anything to scroll). Don't gate on focus — users expect arrows
+  // to work without an explicit Tab. Page / jump / vim shortcuts
+  // stay focus-gated so they don't collide with sibling list nav
+  // or other view-level keys.
+  const scrollable = maxOffset > 0;
+  useKey('upArrow', () => move(-1), scrollable);
+  useKey('downArrow', () => move(1), scrollable);
   useKey('k', () => move(-1), isFocused);
   useKey('j', () => move(1), isFocused);
   useKey('K', () => move(-fastScrollLines), isFocused);
