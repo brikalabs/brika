@@ -30,6 +30,8 @@ import {
   EmptyStateDescription,
   EmptyStateTitle,
   Input,
+  Properties,
+  Property,
   Search,
   SearchEmpty,
   SearchInput,
@@ -47,6 +49,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   fetchPluginReadme,
   fetchPlugins,
+  fetchRegistryReadme,
   type InstallProgress,
   installFromRegistry,
   type PluginListItem,
@@ -647,6 +650,44 @@ function SearchStatus({
   return null;
 }
 
+function RegistryStatusBadge({
+  installed,
+  installing,
+  compatible,
+}: Readonly<{ installed: boolean; installing: boolean; compatible: boolean }>): React.ReactElement {
+  if (installed) {
+    return <Badge variant="success">installed</Badge>;
+  }
+  if (installing) {
+    return <Badge variant="warning">installing</Badge>;
+  }
+  if (!compatible) {
+    return <Badge variant="warning">incompatible</Badge>;
+  }
+  return <Badge variant="info">available</Badge>;
+}
+
+function RegistryReadme({
+  loading,
+  error,
+  source,
+}: Readonly<{
+  loading: boolean;
+  error: string | null;
+  source: string | null;
+}>): React.ReactElement {
+  if (loading) {
+    return <Text dimColor>loading readme…</Text>;
+  }
+  if (error) {
+    return <Text color="red">readme: {error}</Text>;
+  }
+  if (source && source.trim().length > 0) {
+    return <Markdown source={source} />;
+  }
+  return <Text dimColor>no readme bundled with this package</Text>;
+}
+
 /** Border colour for the detail card — error wins, then in-flight
  *  install, then "already installed", default cyan. */
 function pickDetailAccent({
@@ -667,10 +708,22 @@ function pickDetailAccent({
 }
 
 /**
- * Detail card for the focused registry hit — shown below the search
- * list once the user presses Enter on a row. Renders the plugin's
- * basic metadata and a live install-progress strip when Ctrl+Enter
- * has been fired against this row.
+ * Detail panel for the focused registry hit — full preview surface,
+ * not just a meta card. Renders:
+ *
+ *   - header: display name + version + status badges (installed /
+ *     incompatible / installing)
+ *   - <Properties> strip with source / version / downloads / compat
+ *   - description line from the package manifest
+ *   - the package's README, fetched on demand from `/api/registry/
+ *     plugins/:name/readme` and rendered through `<Markdown>` so
+ *     tables, code blocks, links, lists all render natively
+ *   - live install-progress strip when Ctrl+Enter has been fired
+ *     against this row
+ *
+ * The pane is what the user lands in after Enter on a search hit;
+ * Ctrl+Enter at any point fires the install (handled by the parent
+ * Search wrapper, so this component is purely a viewer).
  */
 function RegistryDetail({
   item,
@@ -686,25 +739,74 @@ function RegistryDetail({
   error: string | null;
 }>): React.ReactElement {
   const accent = pickDetailAccent({ error, installing, installed });
+  const [readme, setReadme] = useState<string | null>(null);
+  const [readmeLoading, setReadmeLoading] = useState(false);
+  const [readmeError, setReadmeError] = useState<string | null>(null);
+
+  // Fetch the README whenever the focused item changes. We key on
+  // `name` (not the full result object) so re-renders that swap an
+  // equivalent object don't re-fetch.
+  useEffect(() => {
+    let cancelled = false;
+    setReadme(null);
+    setReadmeError(null);
+    setReadmeLoading(true);
+    void (async () => {
+      try {
+        const text = await fetchRegistryReadme(item.name);
+        if (!cancelled) {
+          setReadme(text);
+        }
+      } catch (e) {
+        if (!cancelled) {
+          setReadmeError(e instanceof Error ? e.message : String(e));
+        }
+      } finally {
+        if (!cancelled) {
+          setReadmeLoading(false);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [item.name]);
+
   return (
     <Box flexDirection="column" borderStyle="round" borderColor={accent} paddingX={1}>
       <Box>
         <Text bold>{item.displayName ?? item.name}</Text>
-        <Text dimColor> v{item.version}</Text>
+        <Text dimColor> v{item.version} </Text>
+        <RegistryStatusBadge
+          installed={installed}
+          installing={installing}
+          compatible={item.compatible}
+        />
       </Box>
+
       <Box marginTop={1}>
-        <Text dimColor>
-          {`source: ${item.source}`}
-          {` · ${installed ? 'installed' : 'not installed'}`}
-          {item.compatible ? '' : ' · incompatible'}
-          {` · ${item.downloadCount.toLocaleString()} downloads`}
-        </Text>
+        <Properties>
+          <Property name="package">{item.name}</Property>
+          <Property name="source">{item.source}</Property>
+          {item.compatibilityReason ? (
+            <Property name="note">{item.compatibilityReason}</Property>
+          ) : null}
+          <Property name="downloads">{item.downloadCount.toLocaleString()}</Property>
+        </Properties>
       </Box>
+
       {item.description ? (
         <Box marginTop={1}>
           <Text>{item.description}</Text>
         </Box>
       ) : null}
+
+      {/* README — the headline content of the detail pane */}
+      <Box marginTop={1} flexDirection="column">
+        <RegistryReadme loading={readmeLoading} error={readmeError} source={readme} />
+      </Box>
+
+      {/* Sticky footer: install progress / error / hint */}
       {installing && progress ? (
         <Box marginTop={1}>
           <Text>
@@ -719,7 +821,7 @@ function RegistryDetail({
           <Text color="red">{error}</Text>
         </Box>
       ) : null}
-      {!installed && !installing ? (
+      {!installed && !installing && !error ? (
         <Box marginTop={1}>
           <Text dimColor>Ctrl+Enter to install</Text>
         </Box>

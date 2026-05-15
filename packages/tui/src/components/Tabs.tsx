@@ -165,61 +165,20 @@ export function TabsList({
   useKey('leftArrow', () => move(-1), enabled);
 
   return (
-    <Box flexDirection="column">
-      <Box>
-        {children}
-        {ctx.tabs.map((t) =>
-          t.shortcut ? (
-            <ShortcutBind
-              key={`sc-${t.value}`}
-              shortcut={t.shortcut}
-              value={t.value}
-              enabled={enabled}
-            />
-          ) : null
-        )}
-      </Box>
-      <Box>
-        <TriggerUnderlines />
-      </Box>
+    <Box>
+      {children}
+      {ctx.tabs.map((t) =>
+        t.shortcut ? (
+          <ShortcutBind
+            key={`sc-${t.value}`}
+            shortcut={t.shortcut}
+            value={t.value}
+            enabled={enabled}
+          />
+        ) : null
+      )}
     </Box>
   );
-}
-
-/**
- * Render one `─` segment per trigger. Active tab's segment is cyan
- * (full); inactives are dim. Width = label length + 2 horizontal pad
- * + 1 for the trailing space between triggers — kept in sync with
- * `<TabsTrigger>`'s padding so the underline ends right under the
- * label. We pull lengths from the registered trigger list rather
- * than measuring DOM since Ink doesn't expose layout.
- */
-function TriggerUnderlines(): React.ReactElement {
-  const ctx = useTabsContext('TabsList');
-  return (
-    <>
-      {ctx.tabs.map((t) => {
-        const w = labelWidth(t);
-        const active = ctx.value === t.value;
-        return (
-          <Box key={`u-${t.value}`} marginRight={1}>
-            <Text color={active ? 'cyan' : undefined} dimColor={!active}>
-              {'─'.repeat(w)}
-            </Text>
-          </Box>
-        );
-      })}
-    </>
-  );
-}
-
-/** Mirror of the visible glyph count in `<TabsTrigger>` so underlines line up. */
-function labelWidth(t: TabRegistration): number {
-  // `[s] ` prefix only renders for inactive triggers, but the underline
-  // is the same width for active/inactive to keep the row stable when
-  // the user cycles tabs.
-  const prefix = t.shortcut ? `[${t.shortcut}] ` : '';
-  return prefix.length + (t.labelLength ?? t.value.length);
 }
 
 function ShortcutBind({
@@ -239,31 +198,50 @@ export interface TabsTriggerProps {
   readonly children?: ReactNode;
 }
 
+/**
+ * Each trigger renders its own column — `[shortcut] label` on top,
+ * an underline directly under it — so the indicator can never go
+ * out of sync with the label (no two-row registration race the old
+ * design had). Inactive triggers keep the same column width so the
+ * row geometry stays stable when the user cycles tabs.
+ *
+ * Inactive triggers stay at the terminal's default foreground colour
+ * (no `dimColor`) — some terminals render dim as nearly invisible,
+ * which made the old tabs look like they'd vanished. The contrast
+ * cue comes entirely from bold + the cyan/grey underline pair.
+ */
 export function TabsTrigger({
   value,
   shortcut,
   children,
 }: Readonly<TabsTriggerProps>): React.ReactElement {
   const ctx = useTabsContext('TabsTrigger');
-  // Register on mount, unregister on unmount — keeps the parent's
-  // ordered tab list in sync with the rendered tree.
   const labelLength = typeof children === 'string' ? children.length : value.length;
+
+  // Registration is still nice-to-have for shortcut binds + count,
+  // but the visual is no longer driven by it.
   useEffect(
     () => ctx.register({ value, shortcut, labelLength }),
     [ctx, value, shortcut, labelLength]
   );
 
   const active = ctx.value === value;
+  const prefix = shortcut ? `[${shortcut}] ` : '';
+  const fullWidth = prefix.length + labelLength;
+
   return (
-    <Box marginRight={1}>
-      {shortcut ? (
-        <Text dimColor={!active} color={active ? 'cyan' : undefined}>
-          [{shortcut}]{' '}
+    <Box flexDirection="column" marginRight={3}>
+      <Box>
+        {shortcut ? <Text color={active ? 'cyan' : undefined}>{prefix}</Text> : null}
+        <Text bold={active} color={active ? 'cyan' : undefined}>
+          {children}
         </Text>
-      ) : null}
-      <Text bold={active} color={active ? 'cyan' : undefined} dimColor={!active}>
-        {children}
-      </Text>
+      </Box>
+      <Box>
+        <Text color={active ? 'cyan' : 'gray'} bold={active}>
+          {(active ? '━' : '─').repeat(Math.max(1, fullWidth))}
+        </Text>
+      </Box>
     </Box>
   );
 }

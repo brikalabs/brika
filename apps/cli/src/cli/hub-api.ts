@@ -111,6 +111,17 @@ export interface RegistrySearchResult {
   readonly source: string;
 }
 
+/** Fetch a registry plugin's README markdown. Returns `''` when the
+ *  package shipped without one (the hub answers with `{readme: null}`). */
+export async function fetchRegistryReadme(name: string): Promise<string> {
+  const res = await hubFetch(`/api/registry/plugins/${encodeURIComponent(name)}/readme`);
+  if (!res.ok) {
+    throw new Error(`registry readme fetch failed: ${res.status}`);
+  }
+  const body = (await res.json()) as { readme?: string | null };
+  return body.readme ?? '';
+}
+
 /** Search the configured registries. Empty `q` returns popular packages. */
 export async function searchRegistry(q: string): Promise<RegistrySearchResult[]> {
   const params = new URLSearchParams();
