@@ -30,8 +30,11 @@ const ROLE_OPTIONS = [
 const required = (v: string | boolean): string | null =>
   typeof v === 'string' && v.trim().length === 0 ? 'this field is required' : null;
 
+// Non-backtracking shape (negated char classes, no overlapping quantifiers) —
+// the legacy `^.+@.+\..+` was ReDoS-prone because each `.+` could match `@`/`.`.
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const emailish = (v: string | boolean): string | null =>
-  typeof v === 'string' && /^.+@.+\..+/.test(v) ? null : 'looks like that email is malformed';
+  typeof v === 'string' && EMAIL_RE.test(v) ? null : 'looks like that email is malformed';
 
 const minLen =
   (n: number) =>

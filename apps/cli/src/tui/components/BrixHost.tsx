@@ -145,10 +145,7 @@ export function BrixHost(): React.ReactElement {
       return;
     }
     const step = state.stream[state.cursor];
-    const delay = Math.max(
-      MIN_TICK_MS,
-      step?.pauseMs ?? PACING.charMs ?? MIN_TICK_MS
-    );
+    const delay = Math.max(MIN_TICK_MS, step?.pauseMs ?? PACING.charMs ?? MIN_TICK_MS);
     const t = setTimeout(() => dispatch({ type: 'REVEAL' }), delay);
     return () => clearTimeout(t);
   }, [state.phase, state.cursor, state.stream]);

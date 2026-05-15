@@ -47,9 +47,15 @@ function parseBlocks(source: string): Block[] {
     } else if (/^```/.test(line)) {
       i = consumeCode(lines, i, out);
     } else if (/^#{1,3}\s+/.test(line)) {
-      const heading = /^(#{1,3})\s+(.*)$/.exec(line);
-      const level = (heading?.[1]?.length ?? 1) as 1 | 2 | 3;
-      out.push({ kind: 'heading', level, text: heading?.[2] ?? '' });
+      // Lines are already split on `\n` above, so character-class scans run
+      // in linear time. We avoid `.*$` here to keep sonar's ReDoS heuristic
+      // happy without changing behavior.
+      let hashCount = 0;
+      while (hashCount < 3 && line[hashCount] === '#') {
+        hashCount += 1;
+      }
+      const level = (hashCount || 1) as 1 | 2 | 3;
+      out.push({ kind: 'heading', level, text: line.slice(hashCount).trimStart() });
       i += 1;
     } else if (/^(---|\*\*\*|___)\s*$/.test(line)) {
       out.push({ kind: 'rule' });
@@ -217,7 +223,10 @@ type Inline =
   | { kind: 'code'; text: string }
   | { kind: 'link'; text: string; url: string };
 
-const INLINE_RE = /(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`|\[[^\]]+\]\([^)]+\))/g;
+// Each alternative scans bounded character classes that exclude their own
+// terminator AND newlines — so backtracking is linear in the line length
+// (input is one paragraph line, never multi-line).
+const INLINE_RE = /(\*\*[^*\r\n]+\*\*|\*[^*\r\n]+\*|`[^`\r\n]+`|\[[^\]\r\n]+\]\([^)\r\n]+\))/g;
 
 function parseInline(source: string): Inline[] {
   const out: Inline[] = [];
@@ -235,7 +244,7 @@ function parseInline(source: string): Inline[] {
     } else if (token.startsWith('`')) {
       out.push({ kind: 'code', text: token.slice(1, -1) });
     } else {
-      const link = /\[([^\]]+)\]\(([^)]+)\)/.exec(token);
+      const link = /\[([^\]\r\n]+)\]\(([^)\r\n]+)\)/.exec(token);
       if (link) {
         out.push({ kind: 'link', text: link[1] ?? '', url: link[2] ?? '' });
       }

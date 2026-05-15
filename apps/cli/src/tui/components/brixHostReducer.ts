@@ -26,12 +26,7 @@
  *   5. `HOLD_OVER`  — the post-typing hold timer expired; go back idle.
  */
 
-import {
-  type AnimationKind,
-  expandReveal,
-  parseMoodScript,
-  type RevealStep,
-} from '@brika/brix';
+import { type AnimationKind, expandReveal, parseMoodScript, type RevealStep } from '@brika/brix';
 
 export type HostPhase = 'idle' | 'speaking' | 'reacting';
 

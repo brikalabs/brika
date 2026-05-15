@@ -39,6 +39,13 @@ export function useLocale() {
     [hour12]
   );
 
+  // i18next 25.x TFunction has 3 deeply-generic overloads; calling `baseT(key, options)`
+  // from inside a generic wrapper cannot satisfy any of them without inference for
+  // `Key`/`TOpt`/`InterpolationMap`. We treat `baseT` as a plain `(key, opts) => string`
+  // here — the outer `useTranslation` already validated it, and TFunction inference is
+  // restored for callers via the outer cast.
+  const callBase = baseT as unknown as (key: string, options?: TOptions) => string;
+
   const t = useCallback(
     ((rawKey: string, options?: TOptions) => {
       if (locale === 'cimode') {
@@ -50,15 +57,15 @@ export function useLocale() {
 
       if (effectiveNs && !ns) {
         const key = rawKey.slice(rawKey.lastIndexOf(nsSeparator) + 1);
-        return baseT(key, {
+        return callBase(key, {
           ...options,
           ns: effectiveNs,
         });
       }
 
-      return baseT(rawKey, options);
+      return callBase(rawKey, options);
     }) as TFunction,
-    [baseT, locale, nsSeparator]
+    [callBase, locale, nsSeparator]
   );
 
   const formatters = useMemo(
