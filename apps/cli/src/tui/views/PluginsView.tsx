@@ -175,8 +175,12 @@ function InstalledTab(): React.ReactElement {
     () => setFocusIndex((i) => Math.min(items.length - 1, i + 1)),
     !overlayOpen && items.length > 0
   );
+  // PgUp/PgDn for full keyboards; Ctrl+U/Ctrl+D for Mac keyboards
+  // where the page keys need Fn. Either set scrolls the README pane.
   useKey('pageUp', () => setReadmeScroll((s) => Math.max(0, s - README_PAGE_LINES)), !overlayOpen);
   useKey('pageDown', () => setReadmeScroll((s) => s + README_PAGE_LINES), !overlayOpen);
+  useKey('ctrl+u', () => setReadmeScroll((s) => Math.max(0, s - README_PAGE_LINES)), !overlayOpen);
+  useKey('ctrl+d', () => setReadmeScroll((s) => s + README_PAGE_LINES), !overlayOpen);
   useKey('/', () => setFilterMode(true), !overlayOpen);
   useKey('e', runAction('enable'), interactive);
   useKey('D', runAction('disable'), interactive);

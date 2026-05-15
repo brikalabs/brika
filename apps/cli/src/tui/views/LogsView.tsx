@@ -158,8 +158,12 @@ export function LogsView(): React.ReactElement {
 
   useKey('upArrow', () => scroll.scrollUp(1));
   useKey('downArrow', () => scroll.scrollDown(1));
+  // PgUp/PgDn for the keyboards that have them; Ctrl+U/Ctrl+D as
+  // the Mac-friendly equivalents — those keys don't need Fn.
   useKey('pageUp', () => scroll.scrollUp(layout.pageSize));
   useKey('pageDown', () => scroll.scrollDown(layout.pageSize));
+  useKey('ctrl+u', () => scroll.scrollUp(layout.pageSize));
+  useKey('ctrl+d', () => scroll.scrollDown(layout.pageSize));
   useKey('G', () => scroll.goLive());
   useKey('/', () => search.enter(), search.mode !== 'searching');
   useKey('n', () => search.next(), Boolean(search.query));
@@ -191,7 +195,7 @@ export function LogsView(): React.ReactElement {
         }}
       />
       <Box marginTop={1}>
-        <Text dimColor>↑↓ scroll · G live · / search · n next · N prev</Text>
+        <Text dimColor>↑↓ scroll · ^U/^D page · G live · / search · n next · N prev</Text>
       </Box>
     </Box>
   );
