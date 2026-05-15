@@ -9,4 +9,4 @@ export { DebugProvider, type DebugProviderProps } from './DebugProvider';
 export { type EvaluateResult, evaluate } from './evaluate';
 export { formatArgs, formatValue } from './format';
 export type { DebugContextValue, DebugEntry, DebugLevel } from './types';
-export { DebugContext, tryUseDebug, useDebug } from './useDebug';
+export { DebugContext, useDebug, useOptionalDebug } from './useDebug';

@@ -71,10 +71,10 @@ function pushClaim(claim: Claim): void {
     const batch: Claim[] = [claim];
     claims = batch;
     queueMicrotask(() => {
-      if (batch.length > 0) {
-        const winner = batch.reduce((a, b) => (b.area < a.area ? b : a));
-        winner.fire();
-      }
+      // Seeded with the first claim so reduce() has an explicit initial
+      // value — `batch` is guaranteed non-empty (we pushed `claim` above).
+      const winner = batch.reduce<Claim>((a, b) => (b.area < a.area ? b : a), claim);
+      winner.fire();
       claims = null;
     });
   } else {

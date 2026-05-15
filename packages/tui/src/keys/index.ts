@@ -1,3 +1,3 @@
 export { KeyScope, type KeyScopeProps, useInKeyScope } from './KeyScope';
 export { keyToBytes } from './keyToBytes';
-export { matches, type Parsed, parseSpec, useKey } from './useKey';
+export { type KeyMap, matches, type Parsed, parseSpec, useKey, useKeyMap } from './useKey';

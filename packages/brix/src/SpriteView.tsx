@@ -56,13 +56,11 @@ export function SpriteView({ sprite }: Readonly<SpriteViewProps>): React.ReactEl
       {sprite.rows.map((row, ri) => {
         const runs = rowToRuns(row);
         return (
-          // biome-ignore lint/suspicious/noArrayIndexKey: positional grid — row at index N is always the same row
           <Box key={`row-${ri}`}>
             {runs.length === 0 ? (
               <Text> </Text>
             ) : (
               runs.map((run, i) => (
-                // biome-ignore lint/suspicious/noArrayIndexKey: positional run within row, recomputed each render
                 <Text key={`run-${i}`} color={run.color} dimColor={run.dim} bold={run.bold}>
                   {run.text}
                 </Text>

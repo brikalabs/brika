@@ -20,7 +20,7 @@
  */
 
 import { Box, Text, useInput } from 'ink';
-import { createContext, type ReactNode, useContext } from 'react';
+import { createContext, type ReactNode, useContext, useMemo } from 'react';
 import { KeyScope } from '../keys/KeyScope';
 import { useCaptureInput } from '../shell/useTuiShell';
 
@@ -66,10 +66,11 @@ export function Confirm({
 
   const accent = variant === 'destructive' ? 'red' : 'cyan';
   const verb = variant === 'destructive' ? 'delete' : 'confirm';
+  const ctxValue = useMemo(() => ({ accent }), [accent]);
 
   return (
     <KeyScope>
-      <ConfirmContext.Provider value={{ accent }}>
+      <ConfirmContext.Provider value={ctxValue}>
         <Box flexDirection="column" borderStyle="round" borderColor={accent} paddingX={1}>
           {children}
           <Box marginTop={1}>

@@ -162,7 +162,7 @@ export function EmoteProvider({
       // Fire the most-recently-registered handler — matches typical
       // "scoped subscription" semantics where a deeper child overrides
       // a parent's binding.
-      const name = arr[arr.length - 1];
+      const name = arr.at(-1);
       if (name) {
         play(name);
       }

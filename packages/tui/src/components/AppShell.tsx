@@ -28,7 +28,7 @@
 
 import { Box, Text } from 'ink';
 import type React from 'react';
-import { createContext, type ReactNode, useContext } from 'react';
+import { createContext, type ReactNode, useContext, useMemo } from 'react';
 import { useTerminalSize } from '../state/useTerminalSize';
 import { TerminalTooSmall } from './TerminalTooSmall';
 
@@ -133,8 +133,10 @@ export function AppShell({
     );
   }
 
+  const ctxValue = useMemo(() => ({ innerWidth, accentColor }), [innerWidth, accentColor]);
+
   return (
-    <AppShellContext.Provider value={{ innerWidth, accentColor }}>
+    <AppShellContext.Provider value={ctxValue}>
       <Box flexDirection="column" width={columns} height={frameHeight} overflow="hidden">
         {/* Top border row — manually drawn so the inline title can sit
          *  in the border. */}

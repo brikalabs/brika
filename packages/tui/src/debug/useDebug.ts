@@ -6,7 +6,7 @@
  *
  * Reads context populated by `<DebugProvider>`. Throws when called
  * outside one — the provider is opt-in at the engine level, so
- * consumers that may run without it should check via `tryUseDebug()`.
+ * consumers that may run without it should check via `useOptionalDebug()`.
  */
 
 import { createContext, useContext } from 'react';
@@ -25,6 +25,6 @@ export function useDebug(): DebugContextValue {
 /** Variant that returns `null` when no provider is mounted. Useful for
  *  primitives that want to surface their own diagnostic entries when
  *  debug is enabled, without forcing every app to mount the provider. */
-export function tryUseDebug(): DebugContextValue | null {
+export function useOptionalDebug(): DebugContextValue | null {
   return useContext(DebugContext);
 }

@@ -49,7 +49,7 @@ export function useTuiShell(): TuiShellState {
  *  mounted — useful for primitives that *should* integrate with the
  *  shell when available but don't strictly require it (e.g. the engine
  *  debug overlay, which may sit above the shell in the tree). */
-export function tryUseTuiShell(): TuiShellState | null {
+export function useOptionalTuiShell(): TuiShellState | null {
   return useContext(TuiShellContext);
 }
 
@@ -71,7 +71,7 @@ export function useCaptureInput(active: boolean = true): void {
   // Soft dependency: if no shell is mounted (e.g. an `<Input>` inside
   // the engine debug overlay sitting above `<TuiShellProvider>`), we
   // simply skip capture — there are no shell-level binds to suspend.
-  const shell = tryUseTuiShell();
+  const shell = useOptionalTuiShell();
   const captureInput = shell?.captureInput;
   useEffect(() => {
     if (!active || !captureInput) {

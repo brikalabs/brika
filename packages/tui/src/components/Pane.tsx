@@ -35,7 +35,7 @@
 
 import { Box, type DOMElement, Text } from 'ink';
 import type React from 'react';
-import { createContext, type ReactNode, useContext, useRef } from 'react';
+import { createContext, type ReactNode, useContext, useMemo, useRef } from 'react';
 import { useClickable } from '../mouse/useClickable';
 
 export type PaneAccent = 'default' | 'focused' | 'success' | 'warning' | 'destructive';
@@ -93,8 +93,9 @@ export function Pane({
 }: Readonly<PaneProps>): React.ReactElement {
   const ref = useRef<DOMElement>(null);
   useClickable(ref, onPress);
+  const ctxValue = useMemo(() => ({ accent }), [accent]);
   return (
-    <PaneContext.Provider value={{ accent }}>
+    <PaneContext.Provider value={ctxValue}>
       <Box
         ref={ref}
         flexDirection="column"

@@ -17,7 +17,8 @@
  * `R` to reload, etc.) and felt unsafe even with the capture model.
  */
 
-import { useKey, useRouter, useTuiShell } from '@brika/tui';
+import { type KeyMap, useKey, useKeyMap, useRouter, useTuiShell } from '@brika/tui';
+import { useMemo } from 'react';
 import type { Routes } from '../routes';
 import { NAV_SECTIONS } from '../sections';
 import { useCli } from '../useCli';
@@ -31,10 +32,18 @@ export function useShellKeys(): void {
   // Ctrl+C is handled by ink's `exitOnCtrlC` at the framework layer
   // (always live, never captured) — no useKey needed here.
 
-  // Direct jumps by number key.
-  NAV_SECTIONS.forEach((section) => {
-    useKey(section.hotkey, () => router.navigate(section.key));
-  });
+  // Direct jumps by number key — one capture-aware listener covers
+  // every section so the binding set can grow without changing the
+  // shape of this hook's React-tree call list.
+  const sectionMap = useMemo<KeyMap>(
+    () =>
+      NAV_SECTIONS.map((section) => ({
+        spec: section.hotkey,
+        handler: () => router.navigate(section.key),
+      })),
+    [router]
+  );
+  useKeyMap(sectionMap);
 
   // Cycle between sections.
   useKey('[', () => router.navigate(prevSectionKey(router.current.name)));

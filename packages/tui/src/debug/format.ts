@@ -15,6 +15,27 @@ export function formatValue(value: unknown, depth: number = 0, seen?: WeakSet<ob
   if (value === null) {
     return 'null';
   }
+  if (typeof value !== 'object') {
+    return formatNonObject(value);
+  }
+  if (value instanceof Error) {
+    return value.stack ?? `${value.name}: ${value.message}`;
+  }
+  if (depth >= MAX_DEPTH) {
+    return Array.isArray(value) ? '[Array]' : '[Object]';
+  }
+  const set = seen ?? new WeakSet<object>();
+  if (set.has(value)) {
+    return '[Circular]';
+  }
+  set.add(value);
+  return Array.isArray(value) ? formatArray(value, depth, set) : formatObject(value, depth, set);
+}
+
+/** Render anything that isn't `null` and isn't an object — i.e. every
+ *  primitive plus functions. Split out so `formatValue` stays under
+ *  Sonar's cognitive-complexity ceiling. */
+function formatNonObject(value: Exclude<unknown, object | null>): string {
   if (value === undefined) {
     return 'undefined';
   }
@@ -31,21 +52,7 @@ export function formatValue(value: unknown, depth: number = 0, seen?: WeakSet<ob
     const name = 'name' in value && typeof value.name === 'string' ? value.name : '';
     return name ? `[Function: ${name}]` : '[Function]';
   }
-  if (value instanceof Error) {
-    return value.stack ?? `${value.name}: ${value.message}`;
-  }
-  if (depth >= MAX_DEPTH) {
-    return Array.isArray(value) ? '[Array]' : '[Object]';
-  }
-  const set = seen ?? new WeakSet<object>();
-  if (set.has(value)) {
-    return '[Circular]';
-  }
-  set.add(value);
-  if (Array.isArray(value)) {
-    return formatArray(value, depth, set);
-  }
-  return formatObject(value, depth, set);
+  return String(value);
 }
 
 function formatArray(arr: ReadonlyArray<unknown>, depth: number, seen: WeakSet<object>): string {

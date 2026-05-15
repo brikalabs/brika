@@ -8,8 +8,7 @@
  */
 
 import type { StageGeom } from './brick';
-import type { Cell } from './sprite';
-import { parseSprite, type Sprite } from './sprite';
+import { type Cell, parseSprite, type Sprite } from './sprite';
 
 export const STAGE_WIDTH = 15;
 export const STAGE_HEIGHT = 7;

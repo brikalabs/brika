@@ -61,7 +61,7 @@ function frameDuration(c: Clip, i: number): number {
     return c.durations;
   }
   const arr = c.durations;
-  return arr[i] ?? arr[arr.length - 1] ?? 0;
+  return arr[i] ?? arr.at(-1) ?? 0;
 }
 
 /** Index of the frame visible at `localMs`, or -1 if the clip has no

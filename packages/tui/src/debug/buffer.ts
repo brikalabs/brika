@@ -27,7 +27,7 @@ interface ConsoleSnapshot {
 class DebugBuffer {
   private entries: DebugEntry[] = [];
   private nextId = 1;
-  private listeners = new Set<() => void>();
+  private readonly listeners = new Set<() => void>();
   private capacity = DEFAULT_CAPACITY;
   private installed = false;
   private original: ConsoleSnapshot | null = null;

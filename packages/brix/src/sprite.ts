@@ -71,7 +71,7 @@ function trimAndDedent(input: string): string[] {
   if (lines[0]?.trim() === '') {
     lines.shift();
   }
-  if (lines.length > 0 && lines[lines.length - 1]?.trim() === '') {
+  if (lines.length > 0 && lines.at(-1)?.trim() === '') {
     lines.pop();
   }
   let min = Number.POSITIVE_INFINITY;

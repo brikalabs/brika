@@ -20,6 +20,7 @@ import {
   type EmoteName,
   EmoteProvider,
   type Mood,
+  type PacingOptions,
   STAGE_HEIGHT,
   STAGE_WIDTH,
   useEmote,
@@ -29,14 +30,7 @@ import { Box, type DOMElement } from 'ink';
 import type React from 'react';
 import { useCallback, useEffect, useMemo, useReducer, useRef } from 'react';
 import { useCli } from '../useCli';
-import {
-  INITIAL_STATE,
-  isFinished,
-  type PacingOptions,
-  type Reaction,
-  reduce,
-  visibleText,
-} from './brixHostReducer';
+import { INITIAL_STATE, isFinished, type Reaction, reduce, visibleText } from './brixHostReducer';
 
 type HubState = 'running' | 'stale' | 'stopped' | 'unknown';
 
@@ -261,23 +255,21 @@ function colorForMood(m: Mood): string {
   }
 }
 
+const IDLE_LINES_BY_STATE: Readonly<Record<HubState, ReadonlyArray<string>>> = {
+  running: ['hub is humming along.', 'all systems quiet.'],
+  stopped: ['hub is sleeping — Ctrl+S to wake it.', 'nothing to watch — yet.'],
+  stale: ['that pid looks stale — try r.'],
+  unknown: [],
+};
+const COMMON_IDLE_LINES: ReadonlyArray<string> = [
+  "i'm just chilling.",
+  'press ? for help.',
+  'tiny blocks. big automation.',
+];
+
 function useIdleLines(cli: ReturnType<typeof useCli>): ReadonlyArray<string> {
-  return useMemo(() => {
-    const lines: string[] = [];
-    if (cli.hub.state === 'running') {
-      lines.push('hub is humming along.');
-      lines.push('all systems quiet.');
-    }
-    if (cli.hub.state === 'stopped') {
-      lines.push('hub is sleeping — Ctrl+S to wake it.');
-      lines.push('nothing to watch — yet.');
-    }
-    if (cli.hub.state === 'stale') {
-      lines.push('that pid looks stale — try r.');
-    }
-    lines.push("i'm just chilling.");
-    lines.push('press ? for help.');
-    lines.push('tiny blocks. big automation.');
-    return lines;
-  }, [cli.hub.state]);
+  return useMemo(
+    () => [...IDLE_LINES_BY_STATE[cli.hub.state], ...COMMON_IDLE_LINES],
+    [cli.hub.state]
+  );
 }

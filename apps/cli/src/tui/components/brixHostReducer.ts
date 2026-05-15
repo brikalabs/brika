@@ -26,11 +26,7 @@
  *   5. `HOLD_OVER`  — the post-typing hold timer expired; go back idle.
  */
 
-import { expandReveal, parseMoodScript, type RevealStep } from '@brika/brix';
-
-export type { PacingOptions } from '@brika/brix';
-
-import type { PacingOptions } from '@brika/brix';
+import { expandReveal, type PacingOptions, parseMoodScript, type RevealStep } from '@brika/brix';
 
 /** Body emote names the host reacts to on hub-state changes. */
 export type ReactionKind = 'wave' | 'oops' | 'sleep';

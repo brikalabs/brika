@@ -30,7 +30,7 @@
  */
 
 import { type Key, useInput } from 'ink';
-import { tryUseTuiShell } from '../shell/useTuiShell';
+import { useOptionalTuiShell } from '../shell/useTuiShell';
 import { useInKeyScope } from './KeyScope';
 
 const SPECIAL_KEYS = [
@@ -66,7 +66,7 @@ export function useKey(
   // Soft dependency on the shell: if no `<TuiShellProvider>` is in the
   // tree (e.g. the engine debug overlay, which sits above it), treat
   // capture as off — every bind just behaves like a plain `useInput`.
-  const shell = tryUseTuiShell();
+  const shell = useOptionalTuiShell();
   const isInputCaptured = shell?.isInputCaptured ?? false;
   const inScope = useInKeyScope();
   const isActive = enabled && (inScope || !isInputCaptured);
@@ -77,6 +77,32 @@ export function useKey(
         return;
       }
       handler(input, key);
+    },
+    { isActive }
+  );
+}
+
+export type KeyMap = ReadonlyArray<{ readonly spec: string; readonly handler: () => void }>;
+
+/**
+ * Register many key bindings in a single capture-aware hook call. Use
+ * when the binding set is data-driven (e.g. derived from a nav table)
+ * — calling `useKey` inside a loop trips the Rules-of-Hooks check
+ * since hook calls then depend on data, not call order.
+ */
+export function useKeyMap(map: KeyMap, enabled: boolean = true): void {
+  const shell = useOptionalTuiShell();
+  const isInputCaptured = shell?.isInputCaptured ?? false;
+  const inScope = useInKeyScope();
+  const isActive = enabled && (inScope || !isInputCaptured);
+  useInput(
+    (input, key) => {
+      for (const entry of map) {
+        if (matches(parseSpec(entry.spec), input, key)) {
+          entry.handler();
+          return;
+        }
+      }
     },
     { isActive }
   );
