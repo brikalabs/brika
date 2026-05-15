@@ -45,6 +45,7 @@ export {
 export { Properties, type PropertiesProps, Property, type PropertyProps } from './Properties';
 export { Radio, RadioGroup, type RadioGroupProps, type RadioProps } from './Radio';
 export { ScreenChrome, type ScreenChromeProps } from './ScreenChrome';
+export { ScrollArea, type ScrollAreaProps, type ScrollState } from './ScrollArea';
 export {
   Search,
   SearchEmpty,
