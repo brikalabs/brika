@@ -45,15 +45,11 @@ export function CompletionsView({ commands }: Readonly<CompletionsViewProps>): R
   }, [commands]);
 
   if (phase.kind === 'detecting') {
-    return <BrixTalking mood="thinking" mode="typewriter" text="detecting shell…" />;
+    return <BrixTalking mood="thinking" text="detecting shell…" />;
   }
   if (phase.kind === 'installing') {
     return (
-      <BrixTalking
-        mood="loading"
-        mode="typewriter"
-        text={`{:loading:}installing ${phase.shell} completions…`}
-      />
+      <BrixTalking mood="loading" text={`{:loading:}installing ${phase.shell} completions…`} />
     );
   }
   if (phase.kind === 'installed') {
@@ -61,7 +57,6 @@ export function CompletionsView({ commands }: Readonly<CompletionsViewProps>): R
     return (
       <BrixTalking
         mood="happy"
-        mode="typewriter"
         text={`{:happy:}${verb} — restart your shell to apply`}
         onDone={() => exit(300)}
       />
@@ -71,18 +66,10 @@ export function CompletionsView({ commands }: Readonly<CompletionsViewProps>): R
     return (
       <BrixTalking
         mood="suspicious"
-        mode="typewriter"
         text={`{:suspicious:}couldn't detect shell — pass one of ${shellList()}`}
         onDone={() => exit(400)}
       />
     );
   }
-  return (
-    <BrixTalking
-      mood="error"
-      mode="typewriter"
-      text={`{:error:}${phase.message}`}
-      onDone={() => exit(400)}
-    />
-  );
+  return <BrixTalking mood="error" text={`{:error:}${phase.message}`} onDone={() => exit(400)} />;
 }

@@ -7,7 +7,7 @@
  *
  * Tokens swap the mood for everything that follows, up to the next
  * token or end-of-string. The parser returns a flat token stream
- * tagged with the active mood. `<BrixTalking>` walks the stream and
+ * tagged with the active mood. The talking host walks the stream and
  * flips the face whenever a new mood-segment lands.
  *
  * Unknown mood names are passed through as literal text (so authors
@@ -41,10 +41,7 @@ export function parseMoodScript(input: string, defaultMood: Mood = 'default'): M
   let cursor = 0;
   let active: Mood = defaultMood;
 
-  // Reset regex state — `TOKEN_RE` is module-level, so it's stateful
-  // across calls.
   TOKEN_RE.lastIndex = 0;
-
   for (const match of input.matchAll(TOKEN_RE)) {
     const idx = match.index ?? 0;
     if (idx > cursor) {
@@ -54,8 +51,7 @@ export function parseMoodScript(input: string, defaultMood: Mood = 'default'): M
     if (candidate && KNOWN_MOODS.has(candidate)) {
       active = candidate as Mood;
     } else {
-      // Preserve the unknown token as literal text so the user sees
-      // their typo. Attribute it to the currently-active mood.
+      // Preserve unknown tokens as literal text so the typo is visible.
       out.push({ mood: active, text: match[0] });
     }
     cursor = idx + match[0].length;
@@ -63,111 +59,76 @@ export function parseMoodScript(input: string, defaultMood: Mood = 'default'): M
   if (cursor < input.length) {
     out.push({ mood: active, text: input.slice(cursor) });
   }
-  // Compact empty chunks defensively (shouldn't happen given the
-  // bounds above, but cheap insurance).
   return out.filter((seg) => seg.text.length > 0);
 }
 
 /**
- * Flatten a parsed script into the per-token reveal stream the
- * talking animation walks. Each entry is one word (or one char in
- * char-mode) plus the mood active when it landed.
- *
- * `pauseMs` is optional — when set, the talking component should use
- * it as the delay BEFORE revealing the next step (so a brief pause
- * naturally lands on word boundaries in typewriter mode).
+ * One step in the per-character reveal stream. The talking host walks
+ * the stream and reads `pauseMs` for the delay before showing the next
+ * step — so word-boundary, comma, and sentence-end breaths are encoded
+ * once, in the stream, instead of recomputed at render time.
  */
 export interface RevealStep {
   readonly mood: Mood;
+  /** Single character that lands on this step. */
   readonly token: string;
-  /** Whitespace that follows this token (empty in char/typewriter modes). */
-  readonly trailing: string;
-  /** Optional override for the per-step delay. */
-  readonly pauseMs?: number;
+  /** Always empty in the current shape — kept for stream consumers that
+   *  concatenate `token + trailing` to render the visible prefix. */
+  readonly trailing: '';
+  /** Delay (ms) before this step lands. */
+  readonly pauseMs: number;
 }
 
-export type RevealMode = 'word' | 'char' | 'typewriter';
-
-export interface ExpandOptions {
-  /** Per-char delay inside a word — typewriter mode only. Default 28ms. */
+export interface PacingOptions {
+  /** Per-char delay inside a word. Default 28ms. */
   readonly charMs?: number;
-  /** Extra delay between words — typewriter mode only. Default 180ms. */
+  /** Extra delay at each word boundary. Default 180ms. */
   readonly wordPauseMs?: number;
-  /**
-   * Delay before the next word after a sentence-end mark (`.`/`!`/`?`/`…`).
-   * Typewriter mode only. Default 420ms — long enough to read as a
-   * breath, short enough to keep momentum.
-   */
+  /** Delay after a sentence-end mark (`.`/`!`/`?`/`…`). Default 420ms —
+   *  long enough to read as a breath, short enough to keep momentum. */
   readonly sentencePauseMs?: number;
-  /**
-   * Delay before the next word after a clause break (`,`/`;`/`:`).
-   * Typewriter mode only. Default 240ms.
-   */
+  /** Delay after a clause break (`,`/`;`/`:`). Default 240ms. */
   readonly clausePauseMs?: number;
 }
 
-const DEFAULT_TW_CHAR_MS = 28;
-const DEFAULT_TW_WORD_PAUSE_MS = 180;
-const DEFAULT_TW_SENTENCE_PAUSE_MS = 420;
-const DEFAULT_TW_CLAUSE_PAUSE_MS = 240;
+const DEFAULT_CHAR_MS = 28;
+const DEFAULT_WORD_PAUSE_MS = 180;
+const DEFAULT_SENTENCE_PAUSE_MS = 420;
+const DEFAULT_CLAUSE_PAUSE_MS = 240;
+
+const SENTENCE_END: ReadonlySet<string> = new Set(['.', '!', '?', '…']);
+const CLAUSE_BREAK: ReadonlySet<string> = new Set([',', ';', ':']);
+const WHITESPACE: ReadonlySet<string> = new Set([' ', '\t', '\n', '\r']);
 
 /**
- * Sentence-end marks earn a long pause before the next word — Brix
- * gets to breathe and the reader gets to land.
+ * Compile a parsed mood-script into a per-character reveal stream.
+ * Each step carries its own `pauseMs`, so the host effect just walks
+ * the cursor and reads the delay — no pacing math at render time.
+ *
+ * Pause precedence on the first letter of a new word:
+ *   max(punctuation-breath, wordPauseMs). A `?!` chain doesn't compound,
+ *   but a `, …` is promoted to sentence strength.
  */
-const SENTENCE_END = new Set(['.', '!', '?', '…']);
-/** Clause breaks earn a moderate pause — comma-length. */
-const CLAUSE_BREAK = new Set([',', ';', ':']);
-
 export function expandReveal(
   segments: ReadonlyArray<MoodToken>,
-  mode: RevealMode,
-  opts: ExpandOptions = {}
+  opts: PacingOptions = {}
 ): RevealStep[] {
-  if (mode === 'char') {
-    return expandChar(segments);
-  }
-  if (mode === 'typewriter') {
-    return expandTypewriter(segments, opts);
-  }
-  return expandWord(segments);
-}
-
-function expandChar(segments: ReadonlyArray<MoodToken>): RevealStep[] {
-  const out: RevealStep[] = [];
-  for (const seg of segments) {
-    for (const ch of Array.from(seg.text)) {
-      out.push({ mood: seg.mood, token: ch, trailing: '' });
-    }
-  }
-  return out;
-}
-
-function expandTypewriter(segments: ReadonlyArray<MoodToken>, opts: ExpandOptions): RevealStep[] {
-  const charMs = opts.charMs ?? DEFAULT_TW_CHAR_MS;
-  const wordPauseMs = opts.wordPauseMs ?? DEFAULT_TW_WORD_PAUSE_MS;
-  const sentencePauseMs = opts.sentencePauseMs ?? DEFAULT_TW_SENTENCE_PAUSE_MS;
-  const clausePauseMs = opts.clausePauseMs ?? DEFAULT_TW_CLAUSE_PAUSE_MS;
+  const charMs = opts.charMs ?? DEFAULT_CHAR_MS;
+  const wordPauseMs = opts.wordPauseMs ?? DEFAULT_WORD_PAUSE_MS;
+  const sentencePauseMs = opts.sentencePauseMs ?? DEFAULT_SENTENCE_PAUSE_MS;
+  const clausePauseMs = opts.clausePauseMs ?? DEFAULT_CLAUSE_PAUSE_MS;
 
   const out: RevealStep[] = [];
   let prevWasSpace = true;
-  /**
-   * Pending pause earned by a punctuation mark we just emitted. Consumed
-   * the moment the next non-space char lands — replaces the regular
-   * word-boundary pause when stronger so we don't double-up.
-   */
   let pendingBreath = 0;
 
   for (const seg of segments) {
     for (const ch of Array.from(seg.text)) {
-      const isSpace = /\s/.test(ch);
+      const isSpace = WHITESPACE.has(ch);
       let pauseMs: number;
       if (isSpace) {
-        // The space itself reveals at the in-word rate; the long pause
-        // belongs on the first letter of the next word.
         pauseMs = charMs;
       } else if (prevWasSpace) {
-        // First letter of a new word — pick the longest applicable pause.
         pauseMs = Math.max(pendingBreath, wordPauseMs);
         pendingBreath = 0;
       } else {
@@ -175,33 +136,12 @@ function expandTypewriter(segments: ReadonlyArray<MoodToken>, opts: ExpandOption
       }
       out.push({ mood: seg.mood, token: ch, trailing: '', pauseMs });
 
-      // Queue a breath if this char is punctuation. We only set it
-      // when stronger than what's already pending — a `?!` chain
-      // doesn't compound, but a `, …` will be promoted to sentence.
       if (SENTENCE_END.has(ch)) {
         pendingBreath = Math.max(pendingBreath, sentencePauseMs);
       } else if (CLAUSE_BREAK.has(ch)) {
         pendingBreath = Math.max(pendingBreath, clausePauseMs);
       }
-
       prevWasSpace = isSpace;
-    }
-  }
-  return out;
-}
-
-function expandWord(segments: ReadonlyArray<MoodToken>): RevealStep[] {
-  // Split on whitespace but keep the actual whitespace run that
-  // followed each word so the recombined sentence preserves original
-  // spacing across segment boundaries.
-  const out: RevealStep[] = [];
-  for (const seg of segments) {
-    const wordRe = /(\S+)(\s*)/g;
-    for (const m of seg.text.matchAll(wordRe)) {
-      const [, token, trailing] = m;
-      if (token && token.length > 0) {
-        out.push({ mood: seg.mood, token, trailing: trailing ?? '' });
-      }
     }
   }
   return out;

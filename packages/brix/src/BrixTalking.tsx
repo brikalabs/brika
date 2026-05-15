@@ -1,7 +1,6 @@
 /**
- * `<BrixTalking text="…" mood="…" />` — Brix says something one word
- * at a time while his mouth animates. Stops moving once every word
- * has landed.
+ * `<BrixTalking text="…" mood="…" />` — Brix narrates a line one char
+ * at a time, with a mouth that flaps locked to the reveal cursor.
  *
  *   <BrixTalking mood="happy" text="workflow deployed!" />
  *
@@ -11,17 +10,16 @@
  *
  *   <BrixTalking text="{:thinking:}untangling blocks… {:happy:}done!" />
  *
- * The active mood follows whichever segment of text is on screen, so
- * the face changes the moment the new section starts revealing.
+ * Pacing comes from `expandReveal` — every line is pre-compiled into a
+ * `RevealStep[]` stream where each step carries its own `pauseMs`. Word
+ * boundaries, commas, and sentence-end breaths flow straight from the
+ * stream. The mouth flaps once per cursor advance, so the lip motion
+ * stays locked to actual character reveal and naturally holds during
+ * the long breath after a `.` or `?`.
  *
- * Reveal pacing is per-word (default 110ms), so longer copy reads at
- * the same cadence regardless of length. Mouth frames swap every
- * `mouthIntervalMs` (default 140ms) while text is still arriving;
- * once the message is complete, Brix snaps to the final mood face
- * and stops moving.
- *
- * Use `mode="char"` for a tighter typewriter feel (one cell at a time);
- * default `mode="word"` lands a whole token per tick.
+ * Override pacing with the optional props (`charMs`, `wordPauseMs`,
+ * `sentencePauseMs`, `clausePauseMs`). `onDone` fires when the last
+ * character lands.
  */
 
 import { Box, Text } from 'ink';
@@ -29,47 +27,15 @@ import type React from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import { ANIMATIONS } from './animations';
 import { type Bracket, faceOf, type Mood } from './moods';
-import { expandReveal, parseMoodScript } from './script';
+import { expandReveal, type PacingOptions, parseMoodScript } from './script';
 
-const DEFAULT_WORD_MS = 110;
-const DEFAULT_CHAR_MS = 35;
-const DEFAULT_MOUTH_MS = 140;
-const DEFAULT_TW_CHAR_MS = 28;
-const DEFAULT_TW_WORD_PAUSE_MS = 180;
+const MIN_TICK_MS = 12;
 
-/**
- * - `word` — one whole word per tick (default; reads like normal copy).
- * - `char` — strict typewriter, one cell per tick at uniform pace.
- * - `typewriter` — char-by-char but FAST inside a word, brief pause at
- *   every word boundary. Feels like someone actually typing.
- */
-export type TalkMode = 'word' | 'char' | 'typewriter';
-
-function defaultStepFor(mode: TalkMode, charMs: number): number {
-  if (mode === 'char') {
-    return DEFAULT_CHAR_MS;
-  }
-  if (mode === 'typewriter') {
-    return charMs;
-  }
-  return DEFAULT_WORD_MS;
-}
-
-export interface BrixTalkingProps {
+export interface BrixTalkingProps extends PacingOptions {
   readonly text: string;
   readonly mood?: Mood;
   readonly bracket?: Bracket;
-  /** Reveal mode — see {@link TalkMode}. Default `word`. */
-  readonly mode?: TalkMode;
-  /** Override the per-step reveal delay (word + char modes only). */
-  readonly revealMs?: number;
-  /** Typewriter mode: per-char delay inside a word. Default 28ms. */
-  readonly charMs?: number;
-  /** Typewriter mode: extra delay at each word boundary. Default 180ms. */
-  readonly wordPauseMs?: number;
-  /** Override the mouth-animation tick. */
-  readonly mouthIntervalMs?: number;
-  /** Fired once when the last word lands. */
+  /** Fired once when the last character lands. */
   readonly onDone?: () => void;
   /** Face accent color (text stays default). */
   readonly faceColor?: string;
@@ -79,57 +45,52 @@ export function BrixTalking({
   text,
   mood = 'default',
   bracket = 'round',
-  mode = 'word',
-  revealMs,
-  charMs = DEFAULT_TW_CHAR_MS,
-  wordPauseMs = DEFAULT_TW_WORD_PAUSE_MS,
-  mouthIntervalMs = DEFAULT_MOUTH_MS,
+  charMs,
+  wordPauseMs,
+  sentencePauseMs,
+  clausePauseMs,
   onDone,
   faceColor = 'cyan',
 }: Readonly<BrixTalkingProps>): React.ReactElement {
   const stream = useMemo(
-    () => expandReveal(parseMoodScript(text, mood), mode, { charMs, wordPauseMs }),
-    [text, mood, mode, charMs, wordPauseMs]
+    () =>
+      expandReveal(parseMoodScript(text, mood), {
+        charMs,
+        wordPauseMs,
+        sentencePauseMs,
+        clausePauseMs,
+      }),
+    [text, mood, charMs, wordPauseMs, sentencePauseMs, clausePauseMs]
   );
-  const fallbackStep = revealMs ?? defaultStepFor(mode, charMs);
 
-  const [shown, setShown] = useState(0);
-  const [mouthFrame, setMouthFrame] = useState(0);
+  const [cursor, setCursor] = useState(0);
 
   useEffect(() => {
-    if (shown >= stream.length) {
+    if (cursor >= stream.length) {
       onDone?.();
       return;
     }
-    const next = stream[shown];
-    const delay = next?.pauseMs ?? fallbackStep;
-    const t = setTimeout(() => setShown((n) => n + 1), delay);
+    const step = stream[cursor];
+    const delay = Math.max(MIN_TICK_MS, step?.pauseMs ?? MIN_TICK_MS);
+    const t = setTimeout(() => setCursor((n) => n + 1), delay);
     return () => clearTimeout(t);
-  }, [shown, stream, fallbackStep, onDone]);
-
-  const isSpeaking = shown < stream.length;
-  useEffect(() => {
-    if (!isSpeaking) {
-      return;
-    }
-    const t = setInterval(
-      () => setMouthFrame((f) => (f + 1) % ANIMATIONS.talking.frames.length),
-      mouthIntervalMs
-    );
-    return () => clearInterval(t);
-  }, [isSpeaking, mouthIntervalMs]);
+  }, [cursor, stream, onDone]);
 
   const visible = stream
-    .slice(0, shown)
-    .map((s) => s.token + s.trailing)
+    .slice(0, cursor)
+    .map((s) => s.token)
     .join('');
+  const isSpeaking = cursor < stream.length;
 
-  // Active mood: the mood of the most-recently-revealed token, or
-  // the prop default before any text has landed.
-  const activeMood: Mood = shown > 0 ? (stream[shown - 1]?.mood ?? mood) : mood;
+  // Active mood = mood of the most-recently-revealed token (or the prop
+  // default before any text has landed).
+  const activeMood: Mood = cursor > 0 ? (stream[cursor - 1]?.mood ?? mood) : mood;
 
+  // Mouth flaps once per cursor advance — naturally holds during long
+  // breaths because the cursor stops moving.
+  const mouthFrames = ANIMATIONS.talking.frames;
   const face = isSpeaking
-    ? (ANIMATIONS.talking.frames[mouthFrame] ?? faceOf(activeMood, bracket))
+    ? (mouthFrames[cursor % mouthFrames.length] ?? faceOf(activeMood, bracket))
     : faceOf(activeMood, bracket);
 
   return (

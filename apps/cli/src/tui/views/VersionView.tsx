@@ -13,7 +13,6 @@ export function VersionView(): React.ReactElement {
   return (
     <BrixTalking
       mood="default"
-      mode="typewriter"
       text={`{:default:}Brika Runtime {:happy:}v${CLI_VERSION}`}
       onDone={() => exit(250)}
     />

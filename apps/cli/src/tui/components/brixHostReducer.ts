@@ -28,6 +28,10 @@
 
 import { type AnimationKind, expandReveal, parseMoodScript, type RevealStep } from '@brika/brix';
 
+export type { PacingOptions } from '@brika/brix';
+
+import type { PacingOptions } from '@brika/brix';
+
 export type HostPhase = 'idle' | 'speaking' | 'reacting';
 
 export interface HostState {
@@ -56,13 +60,6 @@ export interface Reaction {
   readonly line: string;
 }
 
-export interface PacingOptions {
-  readonly charMs?: number;
-  readonly wordPauseMs?: number;
-  readonly sentencePauseMs?: number;
-  readonly clausePauseMs?: number;
-}
-
 export type HostEvent =
   | { readonly type: 'HUB'; readonly reaction: Reaction | null; readonly pacing?: PacingOptions }
   | {
@@ -81,7 +78,7 @@ export type HostEvent =
   | { readonly type: 'HOLD_OVER' };
 
 function streamFor(text: string, pacing: PacingOptions = {}): ReadonlyArray<RevealStep> {
-  return expandReveal(parseMoodScript(text), 'typewriter', pacing);
+  return expandReveal(parseMoodScript(text), pacing);
 }
 
 /** Pure reducer — no side effects, no timers. Tested in isolation. */

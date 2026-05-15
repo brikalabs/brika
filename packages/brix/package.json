@@ -1,7 +1,7 @@
 {
   "name": "@brika/brix",
   "version": "0.1.0",
-  "description": "Brix — the tiny mascot that lives inside the Brika CLI. Expression set, animations, speech bubbles, header, statusline, and the brix log narrator.",
+  "description": "Brix — the tiny mascot that lives inside the Brika CLI. Expression set, animations, speech bubbles, and the brix log narrator.",
   "type": "module",
   "private": true,
   "license": "MIT",
@@ -12,7 +12,6 @@
   },
   "exports": {
     ".": "./src/index.ts",
-    "./brand": "./src/brand.ts",
     "./log": "./src/brixLog.ts"
   },
   "scripts": {

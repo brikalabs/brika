@@ -38,28 +38,14 @@ describe('parseMoodScript', () => {
   });
 });
 
-describe('expandReveal — word mode', () => {
-  test('splits into whitespace-separated words preserving trailing spaces', () => {
-    const segs = parseMoodScript('hello {:happy:}world');
-    expect(expandReveal(segs, 'word')).toEqual([
-      { mood: 'default', token: 'hello', trailing: ' ' },
-      { mood: 'happy', token: 'world', trailing: '' },
-    ]);
-  });
-});
-
-describe('expandReveal — typewriter mode', () => {
-  test('every char is its own step', () => {
-    const segs = parseMoodScript('hi');
-    const out = expandReveal(segs, 'typewriter');
-    expect(out.map((s) => s.token)).toEqual(['h', 'i']);
+describe('expandReveal', () => {
+  test('emits one step per character', () => {
+    expect(expandReveal(parseMoodScript('hi')).map((s) => s.token)).toEqual(['h', 'i']);
   });
 
-  test('first char of a word carries the long word-pause delay', () => {
-    const segs = parseMoodScript('hi yo');
-    const out = expandReveal(segs, 'typewriter', { charMs: 10, wordPauseMs: 200 });
-    // 'h' is the first char — preceded by an implicit boundary (prevWasSpace = true initially).
-    expect(out[0]?.pauseMs).toBe(200);
+  test('first char of a word lands with the word-pause delay', () => {
+    const out = expandReveal(parseMoodScript('hi yo'), { charMs: 10, wordPauseMs: 200 });
+    expect(out[0]?.pauseMs).toBe(200); // 'h' — implicit boundary at start
     expect(out[1]?.pauseMs).toBe(10); // 'i' — in-word
     expect(out[2]?.pauseMs).toBe(10); // ' ' — space char
     expect(out[3]?.pauseMs).toBe(200); // 'y' — first char after space
@@ -67,50 +53,48 @@ describe('expandReveal — typewriter mode', () => {
   });
 
   test('sentence-end punctuation buys a longer breath before the next word', () => {
-    const segs = parseMoodScript('hi. yo');
-    const out = expandReveal(segs, 'typewriter', {
+    const out = expandReveal(parseMoodScript('hi. yo'), {
       charMs: 10,
       wordPauseMs: 200,
       sentencePauseMs: 500,
     });
-    // 'h'(200) 'i'(10) '.'(10) ' '(10) 'y'(500 — sentence breath) 'o'(10)
+    // 'h'(200) 'i'(10) '.'(10) ' '(10) 'y'(500 — breath) 'o'(10)
     expect(out.map((s) => s.pauseMs)).toEqual([200, 10, 10, 10, 500, 10]);
   });
 
   test('clause break injects a moderate pause before the next word', () => {
-    const segs = parseMoodScript('hi, yo');
-    const out = expandReveal(segs, 'typewriter', {
+    const out = expandReveal(parseMoodScript('hi, yo'), {
       charMs: 10,
       wordPauseMs: 200,
       clausePauseMs: 300,
     });
-    // 'y' lands with clause-pause (300), beating the regular wordPause (200).
     expect(out[4]?.token).toBe('y');
-    expect(out[4]?.pauseMs).toBe(300);
+    expect(out[4]?.pauseMs).toBe(300); // clause-pause beats wordPause
   });
 
   test('sentence breath beats clause break when both are queued', () => {
-    const segs = parseMoodScript('hi,. yo');
-    const out = expandReveal(segs, 'typewriter', {
+    const out = expandReveal(parseMoodScript('hi,. yo'), {
       charMs: 10,
       wordPauseMs: 50,
       clausePauseMs: 200,
       sentencePauseMs: 500,
     });
-    // The `.` after `,` promotes the breath to sentence-strength.
     expect(out[5]?.token).toBe('y');
-    expect(out[5]?.pauseMs).toBe(500);
+    expect(out[5]?.pauseMs).toBe(500); // `.` after `,` promotes to sentence
   });
 
   test('word-pause wins when stronger than the pending breath', () => {
-    const segs = parseMoodScript('hi: yo');
-    const out = expandReveal(segs, 'typewriter', {
+    const out = expandReveal(parseMoodScript('hi: yo'), {
       charMs: 10,
       wordPauseMs: 400,
       clausePauseMs: 100,
     });
-    // wordPause (400) > clause pending (100) → wordPause wins.
     expect(out[4]?.token).toBe('y');
     expect(out[4]?.pauseMs).toBe(400);
+  });
+
+  test('mood tokens propagate to every step in their segment', () => {
+    const out = expandReveal(parseMoodScript('{:happy:}hi'));
+    expect(out.every((s) => s.mood === 'happy')).toBe(true);
   });
 });
