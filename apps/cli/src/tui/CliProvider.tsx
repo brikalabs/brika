@@ -103,7 +103,7 @@ export function CliProvider({ version, children }: Readonly<CliProviderProps>): 
     }
     setTransient({ mood: 'loading', statusText: 'spawning hub…' });
     try {
-      const pid = spawnHubDetached();
+      const pid = await spawnHubDetached();
       setTransient({ mood: 'happy', statusText: `spawned hub (pid ${pid})` });
     } catch (e) {
       setTransient({
