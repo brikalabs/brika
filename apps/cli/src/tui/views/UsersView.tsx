@@ -30,11 +30,23 @@ const ROLE_OPTIONS = [
 const required = (v: string | boolean): string | null =>
   typeof v === 'string' && v.trim().length === 0 ? 'this field is required' : null;
 
-// Non-backtracking shape (negated char classes, no overlapping quantifiers) —
-// the legacy `^.+@.+\..+` was ReDoS-prone because each `.+` could match `@`/`.`.
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const emailish = (v: string | boolean): string | null =>
-  typeof v === 'string' && EMAIL_RE.test(v) ? null : 'looks like that email is malformed';
+const MALFORMED = 'looks like that email is malformed';
+
+// Plain string scan — no regex at all — so there's no ReDoS surface to flag.
+// Shape we accept: `<local>@<host>.<tld>`, all non-empty, no whitespace, exactly
+// one `@`, and at least one `.` in the host that isn't the first/last char.
+const emailish = (v: string | boolean): string | null => {
+  if (typeof v !== 'string' || v.length === 0 || v.includes(' ')) {
+    return MALFORMED;
+  }
+  const at = v.indexOf('@');
+  if (at <= 0 || at !== v.lastIndexOf('@')) {
+    return MALFORMED;
+  }
+  const domain = v.slice(at + 1);
+  const dot = domain.indexOf('.');
+  return dot > 0 && dot < domain.length - 1 ? null : MALFORMED;
+};
 
 const minLen =
   (n: number) =>
