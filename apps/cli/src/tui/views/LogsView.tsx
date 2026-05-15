@@ -180,7 +180,7 @@ export function LogsView(): React.ReactElement {
   }
 
   return (
-    <Box flexDirection="column">
+    <Box flexDirection="column" flexGrow={1}>
       <Heading
         subtitle={`${lines.length} lines`}
         meta={streamError ? <Text color="red">{streamError}</Text> : null}
