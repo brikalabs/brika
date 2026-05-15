@@ -9,12 +9,13 @@
  *
  * Focus model:
  *   - Tab into the area or click it to grab scroll keys.
- *   - `↑` / `↓`             — one line up / down
- *   - `PageUp` / `PageDown` — one page (height − 1 lines)
- *   - `Ctrl+U` / `Ctrl+D`   — one page (Mac-keyboard friendly)
- *   - `Ctrl+B`              — jump to top
- *   - `Ctrl+G`              — jump to bottom
- *   - `Esc`                 — release focus (hands it to the next focusable)
+ *   - `↑` / `↓` / `j` / `k`     — one line up / down
+ *   - `J` / `K`                  — fast scroll (5 lines at a time)
+ *   - `PageUp` / `PageDown`      — one page (height − 1 lines)
+ *   - `Ctrl+U` / `Ctrl+D`        — same (Mac-keyboard friendly)
+ *   - `Home` / `g` / `Ctrl+B`    — jump to top
+ *   - `End`  / `G` / `Ctrl+G`    — jump to bottom
+ *   - `Esc`                      — release focus
  *
  * **Event isolation.** While focused, the area calls
  * `useCaptureInput()` so every plain `useKey` outside any `<KeyScope>`
@@ -32,7 +33,7 @@
  * Esc to exit" while focused). Pass `statusLine={null}` to hide it.
  */
 
-import { Box, type DOMElement, Text, useFocus, useFocusManager } from 'ink';
+import { Box, type DOMElement, Text, useFocus, useFocusManager, useInput } from 'ink';
 import type React from 'react';
 import { type ReactNode, useCallback, useEffect, useId, useRef, useState } from 'react';
 import { KeyScope } from '../keys/KeyScope';
@@ -57,6 +58,8 @@ export interface ScrollAreaProps {
   readonly id?: string;
   /** Skip Ink's tab-cycle for this area. Default `true`. */
   readonly focusable?: boolean;
+  /** Lines per Shift+arrow / `J` / `K` press. Default `5`. */
+  readonly fastScrollLines?: number;
   /** Fires when the scroll offset changes. */
   readonly onScrollChange?: (offset: number) => void;
   /** Tweak the chrome label. Pass `null` to hide it. */
@@ -90,6 +93,12 @@ export function ScrollArea(props: Readonly<ScrollAreaProps>): React.ReactElement
 }
 
 const MIN_HEIGHT = 1;
+/** Floor for page-step size before the first measurement lands. Keeps
+ *  the very first PageDown from advancing only a single line. */
+const MIN_PAGE = 10;
+
+const HOME_SEQUENCES: ReadonlySet<string> = new Set(['[H', '[1~', 'OH']);
+const END_SEQUENCES: ReadonlySet<string> = new Set(['[F', '[4~', 'OF']);
 
 function ScrollAreaInner({
   height,
@@ -98,6 +107,7 @@ function ScrollAreaInner({
   autoFocus = false,
   id,
   focusable = true,
+  fastScrollLines = 5,
   onScrollChange,
   statusLine,
   accent = 'cyan',
@@ -107,9 +117,6 @@ function ScrollAreaInner({
   const { isFocused } = useFocus({ autoFocus, id: focusId, isActive: focusable });
   const { focus, focusNext } = useFocusManager();
 
-  // While focused, suspend every plain `useKey` (i.e. those outside a
-  // KeyScope) so section-jump hotkeys / quick filters / etc. don't
-  // double-fire alongside the scroll keys.
   useCaptureInput(isFocused);
 
   const [innerRef, innerSize] = useMeasure();
@@ -128,32 +135,71 @@ function ScrollAreaInner({
     setOffset((cur) => (cur > maxOffset ? maxOffset : cur));
   }, [maxOffset]);
 
+  // Stash live values in refs so the keybind closures don't capture
+  // stale offset / max / page — that's the source of the "double-press
+  // does nothing" pagination bug.
+  const maxOffsetRef = useRef(maxOffset);
+  maxOffsetRef.current = maxOffset;
+  const pageStepRef = useRef(MIN_PAGE);
+  pageStepRef.current = Math.max(MIN_PAGE, visibleRows - 1);
+
   const onChangeRef = useRef(onScrollChange);
   onChangeRef.current = onScrollChange;
 
-  const setClamped = useCallback(
-    (next: number) => {
-      setOffset((cur) => {
-        const clamped = clamp(next, 0, maxOffset);
-        if (clamped !== cur) {
-          onChangeRef.current?.(clamped);
-        }
-        return clamped;
-      });
-    },
-    [maxOffset]
-  );
+  /** Move by `delta` lines using the state-updater pattern so we read
+   *  the latest offset on every press — no stale-closure issues even
+   *  if React batches several presses into one render. */
+  const move = useCallback((delta: number) => {
+    setOffset((cur) => {
+      const next = clamp(cur + delta, 0, maxOffsetRef.current);
+      if (next !== cur) {
+        onChangeRef.current?.(next);
+      }
+      return next;
+    });
+  }, []);
 
-  const page = Math.max(1, visibleRows - 1);
-  useKey('upArrow', () => setClamped(offset - 1), isFocused);
-  useKey('downArrow', () => setClamped(offset + 1), isFocused);
-  useKey('pageUp', () => setClamped(offset - page), isFocused);
-  useKey('pageDown', () => setClamped(offset + page), isFocused);
-  useKey('ctrl+u', () => setClamped(offset - page), isFocused);
-  useKey('ctrl+d', () => setClamped(offset + page), isFocused);
-  useKey('ctrl+b', () => setClamped(0), isFocused);
-  useKey('ctrl+g', () => setClamped(maxOffset), isFocused);
+  const jumpTo = useCallback((target: 'top' | 'bottom') => {
+    setOffset((cur) => {
+      const next = target === 'top' ? 0 : maxOffsetRef.current;
+      if (next !== cur) {
+        onChangeRef.current?.(next);
+      }
+      return next;
+    });
+  }, []);
+
+  // Line / fast / page / jump keybinds. All read pageStepRef.current
+  // at handler-fire time so the first frame doesn't move 1 line on
+  // PgDn just because windowSize hasn't measured yet.
+  useKey('upArrow', () => move(-1), isFocused);
+  useKey('downArrow', () => move(1), isFocused);
+  useKey('k', () => move(-1), isFocused);
+  useKey('j', () => move(1), isFocused);
+  useKey('shift+k', () => move(-fastScrollLines), isFocused);
+  useKey('shift+j', () => move(fastScrollLines), isFocused);
+  useKey('pageUp', () => move(-pageStepRef.current), isFocused);
+  useKey('pageDown', () => move(pageStepRef.current), isFocused);
+  useKey('ctrl+u', () => move(-pageStepRef.current), isFocused);
+  useKey('ctrl+d', () => move(pageStepRef.current), isFocused);
+  useKey('g', () => jumpTo('top'), isFocused);
+  useKey('shift+g', () => jumpTo('bottom'), isFocused);
+  useKey('ctrl+b', () => jumpTo('top'), isFocused);
+  useKey('ctrl+g', () => jumpTo('bottom'), isFocused);
   useKey('escape', () => focusNext(), isFocused);
+
+  // Home / End — Ink doesn't expose these as `key.*` flags, so we match
+  // the raw escape sequences via `useInput`.
+  useInput(
+    (input) => {
+      if (HOME_SEQUENCES.has(input)) {
+        jumpTo('top');
+      } else if (END_SEQUENCES.has(input)) {
+        jumpTo('bottom');
+      }
+    },
+    { isActive: isFocused }
+  );
 
   const containerRef = useRef<DOMElement>(null);
   const onMouse = useCallback(
@@ -232,11 +278,16 @@ function DefaultStatus({
   const atTop = offset === 0;
   const atBot = end >= contentHeight;
   const position = contentHeight === 0 ? '0/0' : `${offset + 1}-${end}/${contentHeight}`;
+  const pct =
+    contentHeight <= height
+      ? '100%'
+      : `${Math.round((offset / Math.max(1, contentHeight - height)) * 100)}%`;
   const arrows = `${atTop ? '·' : '↑'} ${atBot ? '·' : '↓'}`;
   return (
     <Text dimColor>
       <Text color={focused ? accent : undefined}>{arrows}</Text>
       <Text>{`  ${position}`}</Text>
+      <Text>{`  ${pct}`}</Text>
       {focused ? <Text>{'  ·  Esc to exit'}</Text> : <Text>{'  ·  Tab to scroll'}</Text>}
     </Text>
   );
