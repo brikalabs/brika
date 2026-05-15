@@ -12,7 +12,12 @@ import type { Mood } from '@brika/brix';
 import { createContext, useContext } from 'react';
 
 export type HubStatus =
-  | { state: 'running'; pid: number; sinceMs?: number }
+  /**
+   * `pid` is `null` when the hub is up but we don't own its PID file
+   * (an externally-started `bun --watch` hub, a docker container, etc.).
+   * The TUI still shows it as "running" — the UI just omits the pid badge.
+   */
+  | { state: 'running'; pid: number | null; sinceMs?: number }
   | { state: 'stale'; pid: number }
   | { state: 'stopped' }
   | { state: 'unknown' };

@@ -104,7 +104,10 @@ export function CliProvider({ version, children }: Readonly<CliProviderProps>): 
     setTransient({ mood: 'loading', statusText: 'spawning hub…' });
     try {
       const pid = await spawnHubDetached();
-      setTransient({ mood: 'happy', statusText: `spawned hub (pid ${pid})` });
+      setTransient({
+        mood: 'happy',
+        statusText: pid === null ? 'hub is up' : `spawned hub (pid ${pid})`,
+      });
     } catch (e) {
       setTransient({
         mood: 'error',
@@ -124,6 +127,13 @@ export function CliProvider({ version, children }: Readonly<CliProviderProps>): 
       setTransient({ mood: 'suspicious', statusText: 'stale pid — cleared' });
       return;
     }
+    if (status.pid === null) {
+      setTransient({
+        mood: 'suspicious',
+        statusText: "can't stop — hub was started outside the TUI (no pid file)",
+      });
+      return;
+    }
     try {
       process.kill(status.pid, 'SIGTERM');
       setTransient({ mood: 'focused', statusText: `sent SIGTERM to pid ${status.pid}` });
@@ -139,6 +149,13 @@ export function CliProvider({ version, children }: Readonly<CliProviderProps>): 
     const status = await checkPid();
     if (status.state !== 'running') {
       setTransient({ mood: 'sleep', statusText: 'nothing to restart' });
+      return;
+    }
+    if (status.pid === null) {
+      setTransient({
+        mood: 'suspicious',
+        statusText: "can't restart — hub was started outside the TUI",
+      });
       return;
     }
     try {

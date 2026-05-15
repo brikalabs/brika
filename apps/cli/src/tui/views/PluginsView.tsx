@@ -13,24 +13,24 @@
  *   R        reload focused plugin
  */
 
-import { Form, FormField, FormInput, useKey } from '@brika/tui';
-import { Box, Text } from 'ink';
+import { useCaptureInput, useKey } from '@brika/tui';
+import { Box, Text, useInput } from 'ink';
 import type React from 'react';
 import { useEffect, useState } from 'react';
 import {
   fetchPluginReadme,
   fetchPlugins,
-  loadPlugin,
+  type InstallProgress,
+  installFromRegistry,
   type PluginListItem,
   pluginAction,
+  type RegistrySearchResult,
+  searchRegistry,
 } from '../../cli/hub-api';
 import { Markdown } from '../components/Markdown';
 import { NotConnected } from '../components/NotConnected';
 import { useCli } from '../useCli';
 import { useHubResource } from '../useHubResource';
-
-const requireSource = (v: string | boolean): string | null =>
-  typeof v === 'string' && v.trim().length > 0 ? null : 'source is required';
 
 export function PluginsView(): React.ReactElement {
   const cli = useCli();
@@ -112,20 +112,13 @@ export function PluginsView(): React.ReactElement {
 
       {installing && (
         <Box marginBottom={1}>
-          <Form
-            title="Install plugin"
-            subtitle="paste a registry name or URL"
-            onSubmit={async (values) => {
-              await loadPlugin(String(values.source));
+          <SearchInstall
+            onClose={() => setInstalling(false)}
+            onInstalled={() => {
               setInstalling(false);
               list.refresh();
             }}
-            onCancel={() => setInstalling(false)}
-          >
-            <FormField name="source" label="Source" validate={requireSource}>
-              <FormInput placeholder="@brika/plugin-timer or https://…" />
-            </FormField>
-          </Form>
+          />
         </Box>
       )}
 
@@ -190,4 +183,182 @@ function ReadmePane({
     return <Markdown source={text} />;
   }
   return <Text dimColor>no readme</Text>;
+}
+
+/**
+ * Two-stage install picker: type a query → hub searches its configured
+ * registries → arrow through the results, Enter installs the focused
+ * package and streams progress. Esc cancels at any stage.
+ *
+ * Captures global input so the shell's `s/x/r/o` shortcuts stay muted
+ * while the picker is open.
+ */
+interface SearchInstallProps {
+  readonly onClose: () => void;
+  readonly onInstalled: () => void;
+}
+
+function SearchInstall({ onClose, onInstalled }: Readonly<SearchInstallProps>): React.ReactElement {
+  // Mute global shell hotkeys (s/x/r/o/etc.) while the picker is open —
+  // the hook auto-releases when this component unmounts.
+  useCaptureInput();
+
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<RegistrySearchResult[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [focusIdx, setFocusIdx] = useState(0);
+  const [progress, setProgress] = useState<InstallProgress | null>(null);
+  const [installing, setInstalling] = useState(false);
+
+  // Debounced search — fires 300ms after the last keystroke.
+  useEffect(() => {
+    if (installing) {
+      return;
+    }
+    if (query.trim().length === 0) {
+      setResults([]);
+      setError(null);
+      return;
+    }
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      setSearching(true);
+      void (async () => {
+        try {
+          const found = await searchRegistry(query);
+          if (!cancelled) {
+            setResults(found);
+            setError(null);
+            setFocusIdx(0);
+          }
+        } catch (e) {
+          if (!cancelled) {
+            setError(e instanceof Error ? e.message : String(e));
+          }
+        } finally {
+          if (!cancelled) {
+            setSearching(false);
+          }
+        }
+      })();
+    }, 300);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [query, installing]);
+
+  // Ink's raw-input hook: edit the query, navigate results, trigger install.
+  useInput((input, key) => {
+    if (installing) {
+      return;
+    }
+    if (key.escape) {
+      onClose();
+      return;
+    }
+    if (key.upArrow) {
+      setFocusIdx((i) => Math.max(0, i - 1));
+      return;
+    }
+    if (key.downArrow) {
+      setFocusIdx((i) => Math.min(Math.max(0, results.length - 1), i + 1));
+      return;
+    }
+    if (key.return) {
+      const focused = results[focusIdx];
+      if (focused && !focused.installed) {
+        void runInstall(focused);
+      }
+      return;
+    }
+    if (key.backspace || key.delete) {
+      setQuery((q) => q.slice(0, -1));
+      return;
+    }
+    // Plain character typed.
+    if (input && !key.ctrl && !key.meta && input.length === 1) {
+      setQuery((q) => q + input);
+    }
+  });
+
+  async function runInstall(pkg: RegistrySearchResult): Promise<void> {
+    setInstalling(true);
+    setProgress({ phase: 'starting', message: pkg.name });
+    try {
+      for await (const event of installFromRegistry(pkg.name, pkg.version)) {
+        setProgress(event);
+        if (event.phase === 'complete') {
+          onInstalled();
+          return;
+        }
+        if (event.phase === 'error') {
+          setError(event.message ?? 'install failed');
+          setInstalling(false);
+          return;
+        }
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+      setInstalling(false);
+    }
+  }
+
+  if (installing) {
+    return (
+      <Box flexDirection="column" borderStyle="round" borderColor="cyan" paddingX={1}>
+        <Text bold>Installing</Text>
+        <Box marginTop={1}>
+          <Text>
+            <Text color="cyan">{progress?.phase ?? '…'}</Text>
+            {progress?.message ? <Text dimColor> · {progress.message}</Text> : null}
+          </Text>
+        </Box>
+        {error && (
+          <Box marginTop={1}>
+            <Text color="red">{error}</Text>
+          </Box>
+        )}
+      </Box>
+    );
+  }
+
+  return (
+    <Box flexDirection="column" borderStyle="round" borderColor="cyan" paddingX={1}>
+      <Box>
+        <Text bold>Install plugin</Text>
+        <Text dimColor> · search the registry, ↑↓ + Enter to install, Esc to cancel</Text>
+      </Box>
+      <Box marginTop={1}>
+        <Text color="cyan">{'> '}</Text>
+        <Text>{query}</Text>
+        <Text color="cyan">▏</Text>
+        {searching && <Text dimColor> · searching…</Text>}
+      </Box>
+      {error && (
+        <Box marginTop={1}>
+          <Text color="red">{error}</Text>
+        </Box>
+      )}
+      <Box marginTop={1} flexDirection="column">
+        {results.length === 0 && !searching && query.trim().length > 0 && !error && (
+          <Text dimColor>no matches</Text>
+        )}
+        {results.slice(0, 12).map((r, i) => {
+          const focused = i === focusIdx;
+          return (
+            <Box key={`${r.source}:${r.name}`}>
+              <Text color={focused ? 'cyan' : undefined}>{focused ? '▸ ' : '  '}</Text>
+              <Text bold={focused}>{r.displayName ?? r.name}</Text>
+              <Text dimColor> v{r.version}</Text>
+              {r.installed && <Text color="green"> · installed</Text>}
+              {!r.compatible && <Text color="yellow"> · incompatible</Text>}
+              {r.description && <Text dimColor>{` — ${r.description}`}</Text>}
+            </Box>
+          );
+        })}
+      </Box>
+    </Box>
+  );
 }

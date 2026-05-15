@@ -17,7 +17,6 @@ import { existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { CliError } from './errors';
-import { hubUrl } from './hub-client';
 import { checkPid } from './pid';
 
 /** How long to wait for the spawned child to claim the PID file. */
@@ -47,49 +46,18 @@ function sleep(ms: number): Promise<void> {
 }
 
 /**
- * Quick `connect()`-style probe: does anything answer on the hub's
- * configured port? We don't care about the response shape — `fetch`
- * resolving (or 4xx-ing) means the port is taken; a `connect`
- * failure (ECONNREFUSED) means it's free.
- *
- * Used to distinguish "fresh start, port free" from "port already
- * held by a foreign process that didn't write our PID file" so the
- * TUI can surface a specific, actionable error.
- */
-async function portInUse(): Promise<boolean> {
-  try {
-    const res = await fetch(new URL('/api/health', hubUrl()), {
-      signal: AbortSignal.timeout(500),
-    });
-    // Any HTTP response means *something* is listening.
-    return res.status >= 0;
-  } catch {
-    return false;
-  }
-}
-
-/**
  * Detached `brika hub`. Returns the PID of the running supervisor —
  * which may be a hub started by a concurrent TUI rather than the
  * child this call forked. The child runs independently either way.
  */
-export async function spawnHubDetached(): Promise<number> {
-  // Pre-check: cheap path when a hub is already running. Skips the
-  // fork + supervisor self-eviction round-trip entirely.
+export async function spawnHubDetached(): Promise<number | null> {
+  // Pre-check: cheap path when a hub is already running. `checkPid`
+  // now also probes `/api/health`, so externally-started hubs (those
+  // without a pid file) are detected here too — `pid` will be `null`
+  // in that case and the TUI shows "running" without a pid badge.
   const existing = await checkPid();
   if (existing.state === 'running') {
     return existing.pid;
-  }
-
-  // The port is held by something we don't manage (a `bun --watch
-  // src/main.ts` from a separate shell, a stale process, an unrelated
-  // service). Spawning would EADDRINUSE-loop silently — surface the
-  // collision now so the user can free the port.
-  if (await portInUse()) {
-    throw new CliError(
-      `port ${new URL(hubUrl()).port} is already in use by a process we don't manage. ` +
-        `Free it (e.g. \`lsof -nP -iTCP -sTCP:LISTEN\`) and try again.`
-    );
   }
 
   const entry = findOwnEntry();

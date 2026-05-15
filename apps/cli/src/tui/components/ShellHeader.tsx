@@ -28,8 +28,14 @@ export function ShellHeader(): React.ReactElement {
           <Text color="green" bold>
             ●
           </Text>
-          <Text dimColor> running pid </Text>
-          <Text>{hub.pid}</Text>
+          {hub.pid === null ? (
+            <Text dimColor> running (external)</Text>
+          ) : (
+            <>
+              <Text dimColor> running pid </Text>
+              <Text>{hub.pid}</Text>
+            </>
+          )}
         </Text>
       );
     }
