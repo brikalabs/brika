@@ -1,0 +1,181 @@
+/**
+ * Exercises the shell completion install / generate / uninstall
+ * pipeline. `os.homedir` is spied so writes are scoped to a tmpdir and
+ * the test never touches the user's real `~/.zshrc` / fish config.
+ */
+import { afterEach, beforeEach, describe, expect, spyOn, test } from 'bun:test';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import * as os from 'node:os';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { defineCommand } from '@brika/cli';
+import {
+  detectShell,
+  generateCompletions,
+  installCompletions,
+  isShell,
+  shellList,
+  uninstallCompletions,
+} from './completions';
+
+const cmds = [
+  defineCommand({
+    name: 'hub',
+    description: 'Hub commands',
+    options: {
+      verbose: { type: 'boolean', short: 'v', description: 'increase log verbosity' },
+      port: { type: 'string', short: 'p', description: 'listen port' },
+    },
+    handler: () => {},
+  }),
+  defineCommand({
+    name: 'plugins',
+    description: 'Plugin tooling',
+    handler: () => {},
+  }),
+];
+
+describe('isShell', () => {
+  test('accepts known shells', () => {
+    expect(isShell('bash')).toBe(true);
+    expect(isShell('zsh')).toBe(true);
+    expect(isShell('fish')).toBe(true);
+  });
+
+  test('rejects unknown shells', () => {
+    expect(isShell('pwsh')).toBe(false);
+    expect(isShell('')).toBe(false);
+  });
+});
+
+describe('shellList', () => {
+  test('returns comma-joined supported shells', () => {
+    expect(shellList()).toBe('bash, zsh, fish');
+  });
+});
+
+describe('detectShell', () => {
+  let originalShell: string | undefined;
+
+  beforeEach(() => {
+    originalShell = process.env.SHELL;
+  });
+
+  afterEach(() => {
+    if (originalShell === undefined) {
+      delete process.env.SHELL;
+    } else {
+      process.env.SHELL = originalShell;
+    }
+  });
+
+  test('returns the shell name from $SHELL when known', () => {
+    process.env.SHELL = '/usr/local/bin/zsh';
+    expect(detectShell()).toBe('zsh');
+  });
+
+  test('returns null for unsupported shells', () => {
+    process.env.SHELL = '/bin/pwsh';
+    expect(detectShell()).toBeNull();
+  });
+
+  test('returns null when $SHELL is unset', () => {
+    delete process.env.SHELL;
+    expect(detectShell()).toBeNull();
+  });
+});
+
+describe('generateCompletions', () => {
+  test('produces a non-empty bash script with the brika handler', () => {
+    const out = generateCompletions(cmds, 'bash');
+    expect(out.length).toBeGreaterThan(0);
+    expect(out).toContain('_brika()');
+    expect(out).toContain('complete -F _brika brika');
+  });
+
+  test('produces a non-empty zsh script with compdef', () => {
+    const out = generateCompletions(cmds, 'zsh');
+    expect(out.length).toBeGreaterThan(0);
+    expect(out).toContain('_brika()');
+    expect(out).toContain('compdef _brika brika');
+  });
+
+  test('produces a non-empty fish script with subcommand registration', () => {
+    const out = generateCompletions(cmds, 'fish');
+    expect(out.length).toBeGreaterThan(0);
+    expect(out).toContain('complete -c brika');
+    expect(out).toContain("__fish_use_subcommand' -a hub");
+  });
+});
+
+describe('install / uninstall completions', () => {
+  let fakeHome: string;
+  let homedirSpy: ReturnType<typeof spyOn>;
+
+  beforeEach(() => {
+    fakeHome = mkdtempSync(join(tmpdir(), 'brika-completions-'));
+    homedirSpy = spyOn(os, 'homedir').mockReturnValue(fakeHome);
+  });
+
+  afterEach(() => {
+    homedirSpy.mockRestore();
+    rmSync(fakeHome, { recursive: true, force: true });
+  });
+
+  test('installs the zsh script + appends a source line to .zshrc', async () => {
+    writeFileSync(join(fakeHome, '.zshrc'), '# existing\n', 'utf8');
+    const result = await installCompletions('zsh', cmds);
+    expect(result.alreadyInstalled).toBe(false);
+    expect(result.file).toBe(join(fakeHome, '.zshrc'));
+
+    const script = readFileSync(join(fakeHome, '.brika', 'completions', 'brika.zsh'), 'utf8');
+    expect(script).toContain('_brika()');
+
+    const rc = readFileSync(join(fakeHome, '.zshrc'), 'utf8');
+    expect(rc).toContain('# Brika completions');
+    expect(rc).toContain('.brika/completions/brika.zsh');
+  });
+
+  test('install is idempotent — second call reports alreadyInstalled', async () => {
+    writeFileSync(join(fakeHome, '.zshrc'), '# existing\n', 'utf8');
+    await installCompletions('zsh', cmds);
+    const second = await installCompletions('zsh', cmds);
+    expect(second.alreadyInstalled).toBe(true);
+    expect(second.file).toBe(join(fakeHome, '.brika', 'completions', 'brika.zsh'));
+  });
+
+  test('fish install drops the script under fish completions without rc edits', async () => {
+    const result = await installCompletions('fish', cmds);
+    expect(result.alreadyInstalled).toBe(false);
+    expect(result.file).toBe(join(fakeHome, '.config', 'fish', 'completions', 'brika.fish'));
+    expect(existsSync(result.file)).toBe(true);
+  });
+
+  test('bash falls back to .bashrc when no .bash_profile exists', async () => {
+    writeFileSync(join(fakeHome, '.bashrc'), '# bashrc\n', 'utf8');
+    const result = await installCompletions('bash', cmds);
+    expect(result.file).toBe(join(fakeHome, '.bashrc'));
+    expect(readFileSync(join(fakeHome, '.bashrc'), 'utf8')).toContain(
+      '.brika/completions/brika.bash'
+    );
+  });
+
+  test('uninstall removes the scripts and the source lines', async () => {
+    writeFileSync(join(fakeHome, '.zshrc'), '# existing\n', 'utf8');
+    await installCompletions('zsh', cmds);
+    expect(existsSync(join(fakeHome, '.brika', 'completions', 'brika.zsh'))).toBe(true);
+
+    const cleaned = await uninstallCompletions();
+    expect(existsSync(join(fakeHome, '.brika', 'completions', 'brika.zsh'))).toBe(false);
+    expect(cleaned).toContain(join(fakeHome, '.brika', 'completions', 'brika.zsh'));
+
+    const rc = readFileSync(join(fakeHome, '.zshrc'), 'utf8');
+    expect(rc).not.toContain('Brika completions');
+    expect(rc).not.toContain('.brika/completions/brika.zsh');
+  });
+
+  test('uninstall is a no-op when nothing is installed', async () => {
+    const cleaned = await uninstallCompletions();
+    expect(cleaned).toEqual([]);
+  });
+});
