@@ -18,7 +18,7 @@
  */
 
 import { type DOMElement, measureElement } from 'ink';
-import { type RefObject, useEffect, useRef, useState } from 'react';
+import { type RefObject, useLayoutEffect, useRef, useState } from 'react';
 
 export interface BoxSize {
   readonly width: number;
@@ -29,7 +29,13 @@ export function useMeasure(): readonly [RefObject<DOMElement | null>, BoxSize] {
   const ref = useRef<DOMElement | null>(null);
   const [size, setSize] = useState<BoxSize>({ width: 0, height: 0 });
 
-  useEffect(() => {
+  // `useLayoutEffect` runs synchronously after the commit, before the
+  // next paint — so when the terminal resizes (or any other re-render
+  // happens) and Yoga lays out the new geometry, we pick the size up
+  // BEFORE the user sees the new frame. With `useEffect` the first
+  // post-resize paint shows the stale `size`, then a second commit
+  // catches up: visible as a one-frame scroll-area "jump".
+  useLayoutEffect(() => {
     if (!ref.current) {
       return;
     }

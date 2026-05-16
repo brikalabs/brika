@@ -189,8 +189,21 @@ export function AppShellSection({
   grow = false,
   children,
 }: Readonly<AppShellSectionProps>): React.ReactElement {
+  // The `grow` section is the one that should absorb a terminal
+  // shrink — keeping the chrome (header/footer/divider) at their
+  // natural heights and forcing the main content to fit. We mark it
+  // `flexShrink: 1` so Yoga is allowed to squeeze it, and add
+  // `overflow="hidden"` so any inner content that can't shrink any
+  // further (a fixed-size button row, a min-height pane) is clipped
+  // INSIDE the section's bounds instead of bleeding past the
+  // footer. Non-grow sections stay rigid — they're the chrome.
   return (
-    <Box flexDirection="column" flexGrow={grow ? 1 : 0} flexShrink={0}>
+    <Box
+      flexDirection="column"
+      flexGrow={grow ? 1 : 0}
+      flexShrink={grow ? 1 : 0}
+      overflow={grow ? 'hidden' : undefined}
+    >
       {children}
     </Box>
   );

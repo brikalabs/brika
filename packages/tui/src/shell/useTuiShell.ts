@@ -1,18 +1,18 @@
 /**
  * Minimal generic context shared by every `@brika/tui` consumer.
  *
- * Holds three pieces of state that primitives in this package need
- * to talk to but that every TUI app has:
+ * Holds three pieces of state that the primitives in this package need
+ * to talk to but every TUI app has:
  *
  *   - a measured chrome height (so the log pane can size itself),
  *   - an `onQuit()` sink (so global keybinds know how to leave),
- *   - an input-capture counter (so forms can suspend global keybinds
- *     while they're typing — keystrokes don't leak into hub-control
- *     hotkeys, etc.).
+ *   - an input-capture counter (so `<Input>` / `<Confirm>` / `<Form>`
+ *     can suspend global keybinds while collecting keystrokes —
+ *     `useShortcut` reads it automatically).
  *
  * Apps wrap their tree with `<TuiShellProvider onQuit={…}>` and layer
- * their own app-specific contexts on top. Forms call
- * `useCaptureInput()` to mute global binds for their lifetime.
+ * their own app-specific contexts on top. Capturing primitives call
+ * `useCaptureInput()` for their mount lifetime.
  */
 
 import { createContext, useContext, useEffect } from 'react';
@@ -26,9 +26,8 @@ export interface TuiShellState {
   readonly onQuit: () => void;
   /**
    * Refcounted "something has focus and wants exclusive input". When
-   * non-zero, callers wiring global keybinds should pass `enabled=false`
-   * so a form's keystrokes don't double-fire as hub actions, route
-   * jumps, etc.
+   * non-zero, `useShortcut` calls outside a `<KeyScope>` auto-suspend
+   * so global hotkeys (q, [, ], 1-8, …) don't bleed into typing.
    */
   readonly isInputCaptured: boolean;
   /** Increment the capture counter. Returns a release function. */
@@ -46,31 +45,25 @@ export function useTuiShell(): TuiShellState {
 }
 
 /** Non-throwing variant. Returns `null` when no `<TuiShellProvider>` is
- *  mounted — useful for primitives that *should* integrate with the
- *  shell when available but don't strictly require it (e.g. the engine
- *  debug overlay, which may sit above the shell in the tree). */
+ *  mounted (e.g. the engine debug overlay sitting above the shell). */
 export function useOptionalTuiShell(): TuiShellState | null {
   return useContext(TuiShellContext);
 }
 
 /**
  * Mount-scoped input capture: while the calling component is mounted
- * (and `active` is true), global keybinds wired via `useKey` with
- * `enabled=!isInputCaptured` will suspend.
- *
- * Use from any form / overlay / modal that owns the keyboard:
+ * (and `active` is true), `useShortcut` calls outside a `<KeyScope>`
+ * auto-suspend.
  *
  *   function MyForm(): React.ReactElement {
  *     useCaptureInput();
  *     return …;
  *   }
  *
- * Pass `active={false}` to temporarily release without unmounting.
+ * Pass `active={false}` to temporarily release without unmounting
+ * (e.g. an Input that's blurred but still rendered).
  */
 export function useCaptureInput(active: boolean = true): void {
-  // Soft dependency: if no shell is mounted (e.g. an `<Input>` inside
-  // the engine debug overlay sitting above `<TuiShellProvider>`), we
-  // simply skip capture — there are no shell-level binds to suspend.
   const shell = useOptionalTuiShell();
   const captureInput = shell?.captureInput;
   useEffect(() => {

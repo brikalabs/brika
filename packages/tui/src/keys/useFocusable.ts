@@ -1,37 +1,34 @@
 /**
- * `useFocusable` — DOM-style focus + activation in one hook.
+ * `useFocusable` — focus + activation in one hook for components that
+ * paint their own chrome (Card, Pane, MenuBar item, List, Button).
  *
- *   function Card({ onPress, tabIndex }: Props) {
+ *   function Card({ onPress }: Props) {
  *     const ref = useRef<DOMElement>(null);
- *     const { isFocused } = useFocusable({ ref, onPress, tabIndex });
+ *     const { isFocused } = useFocusable({ ref, onPress });
  *     return <Box ref={ref} borderColor={isFocused ? 'cyan' : 'gray'}>…</Box>;
  *   }
  *
- * Folds four patterns the codebase keeps re-implementing:
- *   1. `useFocus` registration with a stable id.
- *   2. `Enter` / `Space` → `onPress` while focused.
- *   3. **Click → focus**: when `ref` is supplied, a left-click inside
- *      that element grabs focus *and* fires `onPress`. Consumers no
- *      longer have to wire a separate `useClickable` to make click
- *      focus the slot.
- *   4. A `tabIndex` prop that mirrors the HTML rule:
- *      - `0` (default for interactive elements) — focusable, included
- *        in the Tab cycle in mount order.
- *      - `-1` — not in the Tab cycle, but still focusable
- *        programmatically (via `useFocusManager().focus(id)` or
- *        mouse click on `ref`).
- *      - positive — same as `0` for now. Ink's focus manager cycles in
- *        registration order; honouring a positive priority would need
- *        a custom manager. Left as-is rather than half-implementing.
+ * Folds three patterns:
+ *   1. Focus slot via ink's `useFocus` — joins the Tab cycle.
+ *   2. `Enter` / `Space` while focused → `onPress`.
+ *   3. Left-click anywhere inside `ref` → focus + `onPress`.
  *
- * Pass `suppressActivation` to keep `useFocus` + the cycle behaviour
- * but bind `Enter` / `Space` yourself (e.g. `Input` wants Enter to
- * commit text, not fire `onPress`).
+ * `tabIndex` mirrors the HTML rule:
+ *   - `0` (default) — focusable, in the Tab cycle.
+ *   - `-1`          — not in the cycle, still clickable and
+ *                     programmatically focusable.
+ *
+ * Pass `suppressActivation` when the consumer binds Enter / Space
+ * itself (e.g. `<Input>` wants Enter to commit text, not call onPress).
+ *
+ * Inherits `<FocusActive>` from context — an inactive surrounding
+ * container (a hidden `<TabsContent>`) deactivates the slot.
  */
 
 import { type DOMElement, useFocus, useFocusManager, useInput } from 'ink';
 import { type RefObject, useCallback, useId, useRef } from 'react';
 import { useClickable } from '../mouse/useClickable';
+import { useFocusActive } from './FocusActive';
 
 export interface UseFocusableOptions {
   /** Stable id — defaults to a per-instance auto id. Supply one when
@@ -51,9 +48,8 @@ export interface UseFocusableOptions {
   /** Skip the default Enter/Space → onPress binding when the consumer
    *  wires its own input handler. Focus registration still happens. */
   readonly suppressActivation?: boolean;
-  /** Optional element ref. When provided, a left-click anywhere
-   *  inside the ref's bounds focuses this slot (so subsequent arrow
-   *  / Enter input lands here) and fires `onPress`. */
+  /** Optional element ref. When provided, a left-click inside the
+   *  ref's bounds focuses this slot AND fires `onPress`. */
   readonly ref?: RefObject<DOMElement | null>;
 }
 
@@ -67,39 +63,44 @@ export function useFocusable(opts: Readonly<UseFocusableOptions> = {}): Focusabl
   const focusId = opts.id ?? `focusable-${autoId}`;
   const enabled = opts.enabled ?? true;
   const tabIndex = opts.tabIndex ?? 0;
-  const inTabCycle = enabled && tabIndex !== -1;
+  // Gate on the surrounding `<FocusActive>` so primitives inside a
+  // hidden tab panel don't compete for the Tab cycle / autoFocus.
+  const containerActive = useFocusActive();
+  const inTabCycle = enabled && tabIndex !== -1 && containerActive;
+
   const { isFocused } = useFocus({
     id: focusId,
-    autoFocus: opts.autoFocus,
+    autoFocus: opts.autoFocus && containerActive,
     isActive: inTabCycle,
   });
   const { focus } = useFocusManager();
 
-  // Activation via Enter / Space.
+  // Latch the activation callback so the listeners don't need to
+  // re-subscribe on every render of the parent.
+  const onPressRef = useRef(opts.onPress);
+  onPressRef.current = opts.onPress;
+
+  // Enter / Space → onPress while focused.
   useInput(
     (input, key) => {
-      if (!opts.onPress) {
-        return;
-      }
       if (key.return || input === ' ') {
-        opts.onPress();
+        onPressRef.current?.();
       }
     },
-    { isActive: isFocused && enabled && !opts.suppressActivation }
+    { isActive: isFocused && enabled && !opts.suppressActivation && Boolean(opts.onPress) }
   );
 
-  // Click → focus + activation. The hook is unconditional (Rules of
-  // Hooks): when `ref` is omitted, the click handler hits a dummy ref
-  // whose `current` is always null, so `useClickable` never fires.
+  // Click → focus + onPress. Calling `focus(focusId)` first ensures
+  // subsequent keyboard input lands on this element.
   const dummyRef = useRef<DOMElement | null>(null);
-  const onClickFocus = useCallback(() => {
+  const onClick = useCallback(() => {
     if (!enabled) {
       return;
     }
     focus(focusId);
-    opts.onPress?.();
-  }, [enabled, focus, focusId, opts.onPress]);
-  useClickable(opts.ref ?? dummyRef, opts.ref ? onClickFocus : undefined, enabled);
+    onPressRef.current?.();
+  }, [enabled, focus, focusId]);
+  useClickable(opts.ref ?? dummyRef, opts.ref ? onClick : undefined, enabled);
 
   return { isFocused, focusId };
 }

@@ -1,7 +1,5 @@
 /**
  * `<Confirm>` — y/n alert-dialog, modelled on shadcn's `<AlertDialog>`.
- * Title and description live in sub-components so the body is free
- * to grow without piling props onto the parent:
  *
  *   <Confirm onConfirm={uninstall} onCancel={close} variant="destructive">
  *     <ConfirmTitle>Uninstall Spotify?</ConfirmTitle>
@@ -10,16 +8,12 @@
  *     </ConfirmDescription>
  *   </Confirm>
  *
- * The parent owns the keyboard wiring (`y` / Enter ⇒ confirm, `n` /
- * Esc ⇒ cancel), the border, and a fixed footer hint. Captures
- * global input so destructive `y` doesn't bleed into other handlers.
- *
- * Variants:
- *   - `default`     — cyan accent.
- *   - `destructive` — red accent, "delete" hint label.
+ * Captures global input while mounted so destructive `y` doesn't bleed
+ * into shell shortcuts. `y` / Enter ⇒ confirm; `n` / Esc ⇒ cancel.
  */
 
 import { Box, Text, useInput } from 'ink';
+import type React from 'react';
 import { createContext, type ReactNode, useContext, useMemo } from 'react';
 import { KeyScope } from '../keys/KeyScope';
 import { useCaptureInput } from '../shell/useTuiShell';

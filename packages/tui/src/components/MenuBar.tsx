@@ -33,7 +33,7 @@
 import { Box, type DOMElement, Text } from 'ink';
 import type React from 'react';
 import { useRef } from 'react';
-import { useFocusable } from '../keys/useFocusable';
+import { useClickable } from '../mouse/useClickable';
 import { useTerminalSize } from '../state/useTerminalSize';
 
 export interface MenuBarItem<K extends string = string> {
@@ -114,14 +114,15 @@ function MenuBarItemView({
   onPress,
 }: Readonly<MenuBarItemViewProps>): React.ReactElement {
   const ref = useRef<DOMElement>(null);
-  const { isFocused } = useFocusable({
-    id: `menubar-${item.key}`,
-    onPress,
-    enabled: Boolean(onPress),
-    ref,
-  });
+  // Click only — menu items intentionally stay OUT of ink's focus
+  // tree. They expose their hotkey via the number-key shortcuts wired
+  // at the shell level; making them tab-reachable would (a) add 8 Tab
+  // stops to every cycle, and (b) keep ink's `activeFocusId` pinned
+  // to a menu item after `[1-8]` navigation, which then blocks the
+  // new view's `autoFocus` from claiming.
+  useClickable(ref, onPress, Boolean(onPress));
   const labelWidth = (item.hotkey ? `[${item.hotkey}] ` : '').length + item.label.length;
-  const highlighted = active || isFocused;
+  const highlighted = active;
   const tint = highlighted ? accent : undefined;
   const underlineColor = highlighted ? accent : 'gray';
   const underlineChar = active ? '━' : '─';
@@ -188,13 +189,8 @@ function CompactChip({
   onPress,
 }: Readonly<MenuBarItemViewProps>): React.ReactElement {
   const ref = useRef<DOMElement>(null);
-  const { isFocused } = useFocusable({
-    id: `menubar-compact-${item.key}`,
-    onPress,
-    enabled: Boolean(onPress),
-    ref,
-  });
-  const highlighted = active || isFocused;
+  useClickable(ref, onPress, Boolean(onPress));
+  const highlighted = active;
   return (
     <Box ref={ref} flexShrink={0}>
       <Text

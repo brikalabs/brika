@@ -10,59 +10,39 @@
  *     placeholder="Search…"
  *     onSubmit={() => fetchResults(q)}
  *     onFocus={() => setHelpHint('typing — Esc clears')}
- *     flex               // take all remaining row width
+ *     flex
  *   />
  *
+ * While focused, the Input calls `useCaptureInput()` so any plain
+ * `useShortcut` in the surrounding tree auto-suspends (typing `q`
+ * never quits the app). Wrap a sibling region in `<KeyScope>` when
+ * its shortcuts should keep firing during typing (e.g. `<Search>`
+ * binds `↑` / `↓` over the results list).
+ *
  * **Props** (shadcn / HTML shape):
- *   - `value`        — controlled string value.
- *   - `onChange`     — `(next: string) => void`.
- *   - `placeholder`  — dim text shown when value is empty.
- *   - `type`         — `'text'` (default, no prefix), `'password'`
- *                      (masked with `•`), `'search'` (leading `> `).
- *   - `onFocus`      — fires when the input gains keyboard focus.
- *   - `onBlur`       — fires when the input loses focus.
- *   - `onSubmit`     — fires on Enter with the current value.
- *   - `onCancel`     — fires on Esc.
- *   - `autoFocus`    — default `true`; grab focus on mount.
- *   - `id`           — stable id for ink's focus manager + mouse hit
- *                      targeting (multiple inputs need unique ids).
- *   - `maxLength`    — cap on value length. Default 256.
- *   - `border`       — draw a rounded border. Default `true`.
- *   - `accentColor`  — focused border / cursor tint. Default `cyan`.
- *
- * **Sizing**:
- *   - `flex`         — `flexGrow: 1`. Use inside a horizontal `<Box>`
- *                      to stretch across remaining space.
- *   - `width`        — fixed cell count (`width={40}`) or a layout
- *                      string (`width="50%"`). Overrides natural
- *                      content sizing.
- *   - default        — content-sized (just wide enough for the
- *                      current value + cursor + prefix + border).
- *
- * Long values:
- *   When the live width can't fit the value, the visible window
- *   scrolls so the caret column stays inside the box. The full
- *   value still lives in `value`/`onChange` — it's only the
- *   displayed prefix/suffix that gets clipped.
- *
- * Interactions:
- *   - **Keyboard**: typing letters appends to `value`; Backspace
- *     pops; Enter → `onSubmit`; Esc → `onCancel`. Tab / Shift+Tab
- *     cycle focus across all mounted Inputs and Buttons (ink's
- *     native focus manager).
- *   - **Mouse**: left-click on the input focuses it.
- *
- * Layout convention (shadcn / HTML): label and hint live OUTSIDE
- * the input as plain `<Text>` siblings so consumers compose freely.
- *
- *   <Text dimColor>Query</Text>
- *   <Input type="search" value={q} onChange={setQ} flex />
- *   {err ? <Text color="red">{err}</Text> : null}
+ *   - `value` / `onChange`  — controlled string + setter.
+ *   - `placeholder`         — dim text shown when value is empty.
+ *   - `type`                — `'text'` (default, no prefix),
+ *                             `'password'` (masked with `•`),
+ *                             `'search'` (leading `> `).
+ *   - `onFocus` / `onBlur`  — focus state callbacks.
+ *   - `onSubmit`            — fires on Enter with the current value.
+ *   - `onCancel`            — fires on Esc.
+ *   - `autoFocus`           — default `true`; grab focus on mount.
+ *   - `id`                  — stable id for ink's focus manager.
+ *   - `maxLength`           — cap on value length. Default 256.
+ *   - `border`              — draw a rounded border. Default `true`.
+ *   - `accentColor`         — focused border / cursor tint.
+ *   - `flex` / `width`      — sizing.
+ *   - `disabled`            — refuse focus + typing.
+ *   - `prefix`              — custom prefix text override.
+ *   - `focused`             — controlled focus mode (Form fields).
  */
 
 import { Box, type DOMElement, Text, useFocus, useFocusManager, useInput } from 'ink';
 import type React from 'react';
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
+import { useFocusActive } from '../keys/FocusActive';
 import { hitTest, readBounds, useBounds } from '../mouse/useBounds';
 import { type MouseEvent, useMouse } from '../mouse/useMouse';
 import { useCaptureInput } from '../shell/useTuiShell';
@@ -78,47 +58,30 @@ export interface InputProps {
   readonly onBlur?: () => void;
   readonly onSubmit?: (value: string) => void;
   readonly onCancel?: () => void;
-  /** Cap on the value length. Default 256. */
   readonly maxLength?: number;
-  /** Frame the input in a rounded border. Default `true`. */
   readonly border?: boolean;
-  /** Tint for the cursor + border when focused. Default `cyan`. */
   readonly accentColor?: string;
-  /** Grab focus on mount. Default `true`. */
   readonly autoFocus?: boolean;
-  /** Stable id for ink's focus manager — only needed when multiple
-   *  inputs are mounted and you want to control the cycle order. */
   readonly id?: string;
-  /** `flexGrow: 1` shortcut — stretch to fill the parent row. */
   readonly flex?: boolean;
-  /** Explicit width: a fixed cell count, or a layout string ("50%"). */
   readonly width?: number | string;
-  /** When `true`, the input refuses focus, dims its chrome, and
-   *  ignores typing / mouse clicks. Default `false`. */
   readonly disabled?: boolean;
-  /** Custom prefix text rendered before the value — overrides the
-   *  `type`-default glyph. Use plain text or emoji (`'🔍 '`,
-   *  `'$ '`, `'»'`, …). Pass empty string to suppress the default. */
   readonly prefix?: string;
-  /** Controlled focus. When defined, the Input ignores Ink's focus
-   *  manager entirely — `useFocus` makes no claim and `useInput`
-   *  follows the prop. Use this when an outer container (e.g. the
-   *  Form engine) drives focus and the Input should defer. */
   readonly focused?: boolean;
 }
 
-/** Cursor blink period (ms). `0` keeps the cursor solid. */
 const CURSOR_BLINK_MS: number = 530;
 
 const PREFIX_BY_TYPE: Readonly<Record<InputType, string>> = {
   text: '',
   password: '* ',
-  search: '> ',
+  // `⌕` (U+2315 TELEPHONE RECORDER) reads as a magnifier glyph in
+  // every monospace font we've checked — same visual language as the
+  // web UI's `<Search>` icon, so users get a consistent "this is a
+  // search field" cue across the two surfaces.
+  search: '⌕ ',
 };
 
-/** Cursor visibility — toggles every `CURSOR_BLINK_MS` while focused,
- *  solid (always on) when blurred. Pulling this out keeps the Input
- *  function under Biome's cognitive-complexity ceiling. */
 function useCursorBlink(isFocused: boolean): boolean {
   const [cursorOn, setCursorOn] = useState(true);
   useEffect(() => {
@@ -142,9 +105,7 @@ interface KeystrokesOptions {
 }
 
 /** Single-line text editing keystrokes — Esc / Enter / Backspace /
- *  printable. Lives outside the Input function so the cognitive-
- *  complexity counter doesn't fold all these branches into Input's
- *  score. */
+ *  printable. One ink `useInput` covers them all. */
 function useKeystrokes({
   value,
   isActive,
@@ -185,10 +146,6 @@ interface Chrome {
   readonly placeholderColor?: string;
 }
 
-/** Map (focus, disabled) into the input's visible chrome — border /
- *  prefix / placeholder colours. Disabled wins; otherwise focused
- *  inputs pick up the accent. Pulled out so Input itself doesn't
- *  juggle three coupled ternaries inline. */
 function computeChrome(isFocused: boolean, disabled: boolean, accentColor: string): Chrome {
   const accent = !disabled && isFocused;
   let placeholderColor: string | undefined;
@@ -207,9 +164,6 @@ interface ScrollMetrics {
   readonly width: number;
 }
 
-/** Horizontal-scroll slice of the (masked) value. Returns the value
- *  unchanged when no width was pinned, or when it already fits — so
- *  content-sized inputs grow naturally with their value. */
 function computeDisplay(
   masked: string,
   bounds: ScrollMetrics | null,
@@ -227,8 +181,6 @@ function computeDisplay(
   return masked.slice(masked.length - innerWidth);
 }
 
-/** Fire `onFocus` / `onBlur` as the resolved focus state flips. The
- *  ref dance keeps the callbacks fresh without making them dep-stable. */
 function useFireFocusEvents(
   isFocused: boolean,
   onFocus: (() => void) | undefined,
@@ -271,41 +223,36 @@ export function Input({
   focused,
 }: Readonly<InputProps>): React.ReactElement {
   const isControlled = focused !== undefined;
-  // Auto-assign a stable focus id when the caller didn't provide one
-  // so click-to-focus always works. Without this an `<Input>` that's
-  // not given an `id` couldn't be activated by mouse — only the
-  // global Tab cycle would land on it.
   const autoId = useId();
   const focusId = id ?? autoId;
+  // Gate ink's focus on the surrounding `<FocusActive>` so a hidden
+  // tab-panel Input doesn't steal the autoFocus claim.
+  const containerActive = useFocusActive();
   const native = useFocus({
-    autoFocus: !isControlled && autoFocus && !disabled,
+    autoFocus: !isControlled && autoFocus && !disabled && containerActive,
     id: focusId,
-    isActive: !isControlled && !disabled,
+    isActive: !isControlled && !disabled && containerActive,
   });
   const isFocused = !disabled && (isControlled ? focused : native.isFocused);
   const { focus } = useFocusManager();
   const boxRef = useRef<DOMElement>(null);
-  // Reactive bounds — Input genuinely needs the live box dimensions
-  // for `computeDisplay` to slice the visible window of the string.
-  // Mouse clicks read bounds on-demand below (cheap + separate).
   const bounds = useBounds(boxRef);
 
-  // Blink the cursor while focused; capture input + fire focus
-  // events as the resolved focus state flips.
-  const cursorOn = useCursorBlink(isFocused);
+  // Suspend sibling `useShortcut`s while we own the keyboard. No-op
+  // when the Input isn't focused, or when running outside a shell.
   useCaptureInput(isFocused);
+
+  const cursorOn = useCursorBlink(isFocused);
   useFireFocusEvents(isFocused, onFocus, onBlur);
 
-  // Mouse: clicking the input focuses it. Skipped in controlled
-  // mode — the outer container (Form) owns hit-testing for its rows.
-  // Bounds are read on-demand so this hook adds no per-render work.
+  // Mouse: click anywhere on the input focuses it.
   const handleMouse = useCallback(
     (e: MouseEvent) => {
       if (isControlled || disabled || e.button !== 'left' || e.action !== 'down') {
         return;
       }
-      const bounds = readBounds(boxRef.current);
-      if (bounds && hitTest(bounds, e)) {
+      const b = readBounds(boxRef.current);
+      if (b && hitTest(b, e)) {
         focus(focusId);
       }
     },
@@ -339,10 +286,6 @@ export function Input({
   );
 
   const showCursor = isFocused && !disabled && cursorOn;
-
-  // Inverse-block cursor — a solid cell that contrasts against
-  // whatever's underneath. Hidden when blinking-off so the eye
-  // can track typing without the cursor masking the last char.
   const cursor = showCursor ? (
     <Text color={accentColor} inverse>
       {' '}
@@ -351,11 +294,6 @@ export function Input({
     <Text> </Text>
   );
 
-  // Cursor position rule:
-  //   - placeholder visible (empty value)  → cursor at column 0,
-  //     before the dim placeholder text.
-  //   - value present                      → cursor trails the
-  //     displayed value (typing position).
   const content = showPlaceholder ? (
     <>
       {cursor}

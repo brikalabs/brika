@@ -14,7 +14,7 @@
  * which fires after this one (ink stacks `useInput` registrations).
  */
 
-import { useKey, useRouter, useTuiShell } from '@brika/tui';
+import { useRouter, useShortcut, useTuiShell } from '@brika/tui';
 import type { Routes } from '../routes';
 import { useMortar } from '../useMortar';
 
@@ -26,8 +26,8 @@ export function useGlobalQuit(): void {
   const inSearchPrompt = search.mode === 'searching';
 
   // `q` only fires outside input/search modes — otherwise it's a typed character.
-  useKey('q', () => onQuit(), !inInputMode && !inSearchPrompt);
+  useShortcut('q', () => onQuit(), !inInputMode && !inSearchPrompt);
   // `Ctrl+C` fires outside input mode (in search prompt it's still a quit signal,
   // matching common shell behavior).
-  useKey('ctrl+c', () => onQuit(), !inInputMode);
+  useShortcut('ctrl+c', () => onQuit(), !inInputMode);
 }

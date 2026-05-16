@@ -24,6 +24,7 @@ export {
   type EmptyStateProps,
   EmptyStateTitle,
 } from './EmptyState';
+export { Focusable, type FocusableProps } from './Focusable';
 export { Heading, type HeadingLevel, type HeadingProps } from './Heading';
 export { Hint, type HintAccent, HintBar, type HintBarProps, type HintProps } from './HintBar';
 export { Input, type InputProps, type InputType } from './Input';
@@ -69,6 +70,7 @@ export {
 export { StatTile, type StatTileProps } from './StatTile';
 export {
   Tabs,
+  type TabsApi,
   TabsContent,
   type TabsContentProps,
   TabsList,
@@ -76,5 +78,6 @@ export {
   type TabsProps,
   TabsTrigger,
   type TabsTriggerProps,
+  useTabs,
 } from './Tabs';
 export { TerminalTooSmall, type TerminalTooSmallProps } from './TerminalTooSmall';

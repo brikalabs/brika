@@ -43,7 +43,7 @@ import {
   useState,
 } from 'react';
 import { KeyScope } from '../keys/KeyScope';
-import { useKey } from '../keys/useKey';
+import { useShortcut } from '../keys/useShortcut';
 import { useClickable } from '../mouse/useClickable';
 import { Input } from './Input';
 
@@ -86,10 +86,10 @@ export interface SearchProps<T> {
 }
 
 /**
- * Outer wrapper — just opens a `<KeyScope>` so the inner component's
- * `useKey` calls (and any user-rendered keybinds inside the picker)
- * keep firing even though `<SearchInput>` captures input. Consumers
- * never see KeyScope; it's a primitive engine detail.
+ * Wraps the inner component in a `<KeyScope>` so the picker's own
+ * keybinds (↑ / ↓ / Ctrl+Enter) keep firing while the surrounded
+ * `<SearchInput>` captures input. Consumers never see KeyScope; it's
+ * a primitive engine detail.
  */
 export function Search<T>(props: Readonly<SearchProps<T>>): React.ReactElement {
   return (
@@ -174,9 +174,9 @@ function SearchInner<T>({
     [items, focusIdx]
   );
 
-  useKey('upArrow', () => move(-1), items.length > 0);
-  useKey('downArrow', () => move(1), items.length > 0);
-  useKey(
+  useShortcut('upArrow', () => move(-1), items.length > 0);
+  useShortcut('downArrow', () => move(1), items.length > 0);
+  useShortcut(
     'ctrl+return',
     () => {
       const focused = items[focusIdx];

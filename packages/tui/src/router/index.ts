@@ -3,9 +3,11 @@
  *
  * Declarative route definitions; one router instance per app; a
  * `useRouter()` hook gives navigate / back / current; an `<Outlet />`
- * renders the active route's component.
+ * renders the active route's component. Routes can nest via the
+ * `children` field — each level is its own `<Outlet />`, and nested
+ * navigation is path-based.
  *
- * @example
+ * @example basic flat router
  *   const routes = {
  *     main: defineRoute({ component: MainView }),
  *     help: defineRoute({ component: HelpView }),
@@ -18,26 +20,47 @@
  *     <Outlet />
  *   </RouterProvider>
  *
- *   // inside a child:
- *   const router = useRouter<typeof routes>();
- *   router.navigate('input', { serviceId: 'hub' });
- *   if (router.current.name === 'input') {
- *     console.log(router.current.params.serviceId); // typed
+ * @example nested routes (parent component is the layout)
+ *   const routes = {
+ *     plugins: defineRoute({
+ *       component: PluginsLayout,
+ *       children: {
+ *         installed: defineRoute({ component: InstalledTab }),
+ *         search:    defineRoute({ component: SearchTab }),
+ *       },
+ *     }),
+ *   } as const satisfies RoutesShape;
+ *
+ *   function PluginsLayout(): React.ReactElement {
+ *     return (
+ *       <Tabs router defaultValue="installed">
+ *         <TabsList>
+ *           <TabsTrigger value="installed">Installed</TabsTrigger>
+ *           <TabsTrigger value="search">Search</TabsTrigger>
+ *         </TabsList>
+ *         <Outlet />
+ *       </Tabs>
+ *     );
  *   }
+ *
+ *   // deep-link from elsewhere:
+ *   router.navigatePath([{ name: 'plugins' }, { name: 'search' }]);
  */
 
 import type { RouteDef } from './types';
 
 export { type CreateRouterOptions, createRouter } from './createRouter';
-export { Outlet } from './Outlet';
+export { Outlet, useOutletDepth } from './Outlet';
 export { RouterContext, RouterProvider, type RouterProviderProps } from './Provider';
 export type {
   ActiveRoute,
   NavigateArgs,
   ParamsOf,
   RouteDef,
+  RoutePath,
   Router,
   RouterListener,
+  RouteSegment,
   RoutesShape,
 } from './types';
 export { useRouter } from './useRouter';
@@ -51,28 +74,15 @@ export { useRouterInstance } from './useRouterInstance';
  * @example
  *   const help = defineRoute({ component: HelpView });
  *   const input = defineRoute<{ serviceId: string }>({ component: InputView });
- *   const main = defineRoute({ component: MainContent, layout: AppShell });
+ *   // Parent route with sub-routes — its `component` is the layout.
+ *   const plugins = defineRoute({
+ *     component: PluginsLayout,
+ *     children: {
+ *       installed: defineRoute({ component: InstalledTab }),
+ *       search:    defineRoute({ component: SearchTab }),
+ *     },
+ *   });
  */
 export function defineRoute<TParams = void>(def: RouteDef<TParams>): RouteDef<TParams> {
   return def;
-}
-
-/**
- * Identity helper for layout components. Optional sugar so layouts
- * declare their shape symmetrically with routes. A layout is just a
- * React component that renders an `<Outlet />` somewhere inside its
- * tree — `defineLayout(Component)` does no runtime work.
- *
- * @example
- *   const AppShell = defineLayout(() => (
- *     <Box flexDirection="column">
- *       <Header />
- *       <Outlet />
- *       <Footer />
- *     </Box>
- *   ));
- */
-import type React from 'react';
-export function defineLayout(Component: React.ComponentType): React.ComponentType {
-  return Component;
 }

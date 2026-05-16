@@ -13,19 +13,14 @@
  *   - **Keyboard**  — Tab to focus, then `Space` or `Enter` toggles.
  *
  * Visual:
- *   - Focused row gets a `▸ ` caret and cyan accent so it's visible
- *     in keyboard navigation.
+ *   - Focused row gets a `▸ ` caret and cyan accent.
  *   - Disabled rows render dim with a `·` marker instead of `x`.
- *
- * Like `<Button>` this component owns its focus via ink's manager —
- * pass an explicit `id` if you need to drive focus from outside,
- * otherwise it auto-assigns one.
  */
 
-import { Box, type DOMElement, Text, useFocus, useInput } from 'ink';
+import { Box, type DOMElement, Text } from 'ink';
 import type React from 'react';
-import { type ReactNode, useCallback, useId, useRef } from 'react';
-import { useClickable } from '../mouse/useClickable';
+import { type ReactNode, useCallback, useRef } from 'react';
+import { useFocusable } from '../keys/useFocusable';
 
 export interface CheckboxProps {
   readonly checked: boolean;
@@ -46,27 +41,19 @@ export function Checkbox({
   autoFocus = false,
   children,
 }: Readonly<CheckboxProps>): React.ReactElement {
-  const autoId = useId();
-  const focusId = id ?? autoId;
-  const { isFocused } = useFocus({ autoFocus, id: focusId, isActive: !disabled });
-
+  const ref = useRef<DOMElement>(null);
   const toggle = useCallback(() => {
     if (!disabled) {
       onChange(!checked);
     }
   }, [checked, disabled, onChange]);
-
-  useInput(
-    (input, key) => {
-      if (key.return || input === ' ') {
-        toggle();
-      }
-    },
-    { isActive: isFocused && !disabled }
-  );
-
-  const ref = useRef<DOMElement>(null);
-  useClickable(ref, toggle, !disabled);
+  const { isFocused } = useFocusable({
+    id,
+    autoFocus,
+    enabled: !disabled,
+    onPress: toggle,
+    ref,
+  });
 
   const marker = checked ? 'x' : ' ';
   const accent = disabled ? undefined : 'cyan';

@@ -5,9 +5,10 @@
  *
  * Design follows TanStack Router's spirit (declarative, typed
  * params per route) but drops everything that doesn't make sense in
- * a single-process TUI: URLs, history APIs, route trees, loaders,
- * deferred state, search params. A route is just a name with an
- * optional params shape, and `current` is a tagged union.
+ * a single-process TUI: URLs, history APIs, loaders, deferred state,
+ * search params. A route is just a name with optional params and
+ * optional nested children, and `current` is the top-level tagged
+ * union (with `path` exposing the full nested chain).
  */
 
 import type React from 'react';
@@ -35,20 +36,23 @@ export interface RouteDef<TParams = void> {
    * parent does explicit dispatch on `router.current.name` rather
    * than relying on `<Outlet />`. The route still benefits from
    * type-safe `navigate(name, params)` and the history stack.
+   *
+   * When `children` is set, this `component` acts as the layout — it
+   * should render a nested `<Outlet />` somewhere, which the router
+   * then fills with the active child's component.
    */
   // biome-ignore lint/suspicious/noExplicitAny: variance — see comment above
   readonly component?: React.ComponentType<any>;
   /**
-   * Optional wrapping layout. When present, the {@link Outlet} at the
-   * top level renders this layout; the layout in turn renders a
-   * nested `<Outlet />` that picks up the route's `component`. Use it
-   * for shared chrome (header / sidebar / footer) across a set of
-   * routes; omit for full-screen views (shutdown / splash).
+   * Nested route table. When set, this route is a branch — navigate
+   * to one of its children via `navigatePath(['parent', 'child'])`
+   * (or by mounting a `<Tabs router>` inside the layout, which binds
+   * the active tab to the path segment automatically).
    *
-   * Single-level nesting only — keeps the mental model simple and
-   * matches what 90% of TUIs actually need.
+   * Single-level nesting is supported recursively, so you can build
+   * route trees as deep as you need.
    */
-  readonly layout?: React.ComponentType;
+  readonly children?: RoutesShape;
 }
 
 /**
@@ -67,9 +71,10 @@ export type ParamsOf<R extends RoutesShape, K extends keyof R> =
   R[K] extends RouteDef<infer P> ? P : never;
 
 /**
- * Active-route tagged union. For each route name, builds a variant
- * with that `name` and the route's params (or an absent params field
- * when the route takes none).
+ * Active-route tagged union — the TOP-LEVEL segment of the active
+ * path. For each route name, builds a variant with that `name` and
+ * the route's params (or an absent params field when the route takes
+ * none). To inspect nested children, read `router.path` instead.
  */
 export type ActiveRoute<R extends RoutesShape> = {
   [K in keyof R]: ParamsOf<R, K> extends void
@@ -85,6 +90,16 @@ export type ActiveRoute<R extends RoutesShape> = {
 export type NavigateArgs<R extends RoutesShape, K extends keyof R> =
   ParamsOf<R, K> extends void ? [] : [ParamsOf<R, K>];
 
+/** One node of an active route path. The leaf carries the params of
+ *  its leaf route (when any); intermediate nodes are bare names. */
+export interface RouteSegment {
+  readonly name: string;
+  readonly params?: unknown;
+}
+
+/** Active path from root → leaf. Always non-empty. */
+export type RoutePath = readonly [RouteSegment, ...RouteSegment[]];
+
 /** Listener fired after every successful navigation. */
 export type RouterListener = () => void;
 
@@ -92,13 +107,31 @@ export type RouterListener = () => void;
 export interface Router<R extends RoutesShape> {
   /** The route record this router was built with (kept for the Outlet). */
   readonly routes: R;
-  /** Currently active route + its params. */
-  readonly current: ActiveRoute<R>;
   /**
-   * Push a new route onto the history stack. Type-checked: routes
-   * with params demand the params arg; routes without forbid it.
+   * Currently active TOP-LEVEL route + its params. This is `path[0]`
+   * with the original tagged-union typing preserved so existing
+   * `router.current.name === '…'` checks stay narrowed. To inspect a
+   * nested branch, read `router.path` instead.
+   */
+  readonly current: ActiveRoute<R>;
+  /** Full active path, root → leaf. Always at least one segment. */
+  readonly path: RoutePath;
+  /**
+   * Push a new top-level route. Type-checked: routes with params
+   * demand the params arg; routes without forbid it. Activating a
+   * nested child uses {@link navigatePath} instead.
    */
   navigate<K extends keyof R>(name: K, ...args: NavigateArgs<R, K>): void;
+  /**
+   * Push a full nested path. Each segment names a child of the
+   * previous segment's route. Used by `<Tabs router>` and by views
+   * that want to deep-link into a sub-route directly.
+   *
+   * Pass `{ replace: true }` to overwrite the current history entry
+   * instead of pushing a new one — needed for "redirect to default
+   * child" flows so `back()` doesn't bounce back into the redirect.
+   */
+  navigatePath(path: RoutePath, options?: { readonly replace?: boolean }): void;
   /** Pop the top entry. No-op when the stack is at its root. */
   back(): void;
   /** Subscribe to route changes. Returns an unsubscribe function. */

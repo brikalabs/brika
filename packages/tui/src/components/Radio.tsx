@@ -12,18 +12,12 @@
  *
  * Activation:
  *   - **Mouse**     — click any row to select it.
- *   - **Keyboard**  — `↑` / `↓` move the selection, `Space` / `Enter`
- *     also commits the highlighted value.
- *
- * The group is keyboard-active when any of its `<Radio>` rows holds
- * focus (Tab cycle). Mouse clicks bypass focus entirely — they fire
- * `onChange` without the row needing to be focused first.
- *
- * `value` is controlled; pair with `onChange`. If you want a free-
- * floating uncontrolled variant, wrap with your own `useState`.
+ *   - **Keyboard**  — Tab onto a row, then `↑` / `↓` move the
+ *     selection (registered as scope shortcuts), `Space` / `Enter`
+ *     commits the current row.
  */
 
-import { Box, type DOMElement, Text, useFocus, useInput } from 'ink';
+import { Box, type DOMElement, Text } from 'ink';
 import type React from 'react';
 import {
   createContext,
@@ -31,12 +25,12 @@ import {
   useCallback,
   useContext,
   useEffect,
-  useId,
   useMemo,
   useRef,
   useState,
 } from 'react';
-import { useClickable } from '../mouse/useClickable';
+import { useFocusable } from '../keys/useFocusable';
+import { useShortcut } from '../keys/useShortcut';
 
 interface RadioEntry {
   readonly value: string;
@@ -117,13 +111,18 @@ export function Radio({
 }: Readonly<RadioProps>): React.ReactElement {
   const ctx = useRadioGroupContext('Radio');
   const { value: selected, select, register, items } = ctx;
-  const focusId = useId();
-  const { isFocused } = useFocus({ id: focusId, isActive: !disabled });
+  const ref = useRef<DOMElement>(null);
+  const onPress = useCallback(() => select(value), [select, value]);
+  const { isFocused } = useFocusable({
+    enabled: !disabled,
+    onPress,
+    ref,
+  });
 
   useEffect(() => register({ value }), [register, value]);
 
-  // Arrow nav: only the focused radio's `useInput` is active, so we
-  // only need to wire keys here — no group-level dispatcher.
+  // Arrow nav while this row is focused. Routed through the scope
+  // dispatcher so it cooperates with other shortcuts on the path.
   const move = useCallback(
     (delta: number) => {
       if (items.length === 0) {
@@ -137,26 +136,8 @@ export function Radio({
     },
     [items, value, select]
   );
-
-  useInput(
-    (input, key) => {
-      if (key.upArrow) {
-        move(-1);
-        return;
-      }
-      if (key.downArrow) {
-        move(1);
-        return;
-      }
-      if (key.return || input === ' ') {
-        select(value);
-      }
-    },
-    { isActive: isFocused && !disabled }
-  );
-
-  const ref = useRef<DOMElement>(null);
-  useClickable(ref, () => select(value), !disabled);
+  useShortcut('upArrow', () => move(-1), isFocused && !disabled);
+  useShortcut('downArrow', () => move(1), isFocused && !disabled);
 
   const checked = selected === value;
   const accent = disabled ? undefined : 'cyan';

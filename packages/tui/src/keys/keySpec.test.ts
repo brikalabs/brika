@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { Key } from 'ink';
-import { matches, parseSpec } from './useKey';
+import { matches, parseSpec } from './keySpec';
 
 /**
  * Build an ink `Key` with all flags off, then merge overrides. ink's
@@ -47,6 +47,29 @@ describe('parseSpec', () => {
       shift: false,
       meta: false,
     });
+  });
+
+  test('camelCase ink Key names parse case-insensitively (regression: was no-op)', () => {
+    // `upArrow` / `downArrow` / `pageDown` / `leftArrow` are the ink
+    // `Key` flag names; consumers naturally write them in camelCase.
+    // A previous parser lower-cased the token then tried to match the
+    // camelCase entries in `SPECIAL_KEYS` directly — so every
+    // `useShortcut('upArrow', …)` silently never fired.
+    const specs = ['upArrow', 'downArrow', 'leftArrow', 'rightArrow', 'pageUp', 'pageDown'] as const;
+    for (const spec of specs) {
+      const parsed = parseSpec(spec);
+      expect(parsed.special).toBe(spec);
+      expect(parsed.char).toBeNull();
+    }
+  });
+
+  test('special keys also accept the short alias forms', () => {
+    expect(parseSpec('up').special).toBe('upArrow');
+    expect(parseSpec('down').special).toBe('downArrow');
+    expect(parseSpec('left').special).toBe('leftArrow');
+    expect(parseSpec('right').special).toBe('rightArrow');
+    expect(parseSpec('pgup').special).toBe('pageUp');
+    expect(parseSpec('pgdn').special).toBe('pageDown');
   });
 
   test('single modifier + printable', () => {
@@ -152,6 +175,24 @@ describe('matches', () => {
     expect(matches(shifted, '', key({ tab: true }))).toBe(false);
     expect(matches(plain, '', key({ tab: true }))).toBe(true);
     expect(matches(plain, '', key({ tab: true, shift: true }))).toBe(false);
+  });
+
+  test('escape matches even though ink sets key.meta=true (regression: silent no-op)', () => {
+    // ink's parseKeypress sets `key.meta = true` whenever
+    // `keypress.name === 'escape'` — a back-compat quirk. Without
+    // special-casing, every `useShortcut('escape', …)` would never
+    // fire because parsed.meta=false ≠ key.meta=true.
+    const p = parseSpec('escape');
+    expect(matches(p, '', key({ escape: true, meta: true }))).toBe(true);
+    expect(matches(p, '', key({ escape: true }))).toBe(true);
+  });
+
+  test('arrow keys match even when ink sets key.meta=true via CSI option flag', () => {
+    // Same quirk: ink's option/CSI handling routes via the meta flag.
+    // Arrow keys must fire regardless.
+    const p = parseSpec('upArrow');
+    expect(matches(p, '', key({ upArrow: true, meta: true }))).toBe(true);
+    expect(matches(p, '', key({ upArrow: true }))).toBe(true);
   });
 
   test('printable matches do NOT require shift flag (char IS the discriminator)', () => {

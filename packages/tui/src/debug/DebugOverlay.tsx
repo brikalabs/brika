@@ -35,7 +35,7 @@ import type React from 'react';
 import { useCallback, useMemo, useState } from 'react';
 import { Input } from '../components/Input';
 import { KeyScope } from '../keys/KeyScope';
-import { useKey } from '../keys/useKey';
+import { useShortcut } from '../keys/useShortcut';
 import { useTerminalSize } from '../state/useTerminalSize';
 import type { DebugEntry, DebugLevel } from './types';
 import { useDebug } from './useDebug';
@@ -97,14 +97,14 @@ export function DebugOverlay(): React.ReactElement {
   // also has its own escape-listener (it auto-focuses the overlay).
   // Both handlers fire concurrently in Ink — we still bind it here as
   // a safety net for the rare case where the Input loses focus.
-  useKey('escape', close, isOpen);
-  useKey('upArrow', () => scrollUp(1), isOpen);
-  useKey('downArrow', () => scrollDown(1), isOpen);
-  useKey('pageUp', () => scrollUp(bodyHeight), isOpen);
-  useKey('pageDown', () => scrollDown(bodyHeight), isOpen);
-  useKey('ctrl+u', () => scrollUp(bodyHeight), isOpen);
-  useKey('ctrl+d', () => scrollDown(bodyHeight), isOpen);
-  useKey('ctrl+l', clear, isOpen);
+  useShortcut('escape', close, isOpen);
+  useShortcut('upArrow', () => scrollUp(1), isOpen);
+  useShortcut('downArrow', () => scrollDown(1), isOpen);
+  useShortcut('pageUp', () => scrollUp(bodyHeight), isOpen);
+  useShortcut('pageDown', () => scrollDown(bodyHeight), isOpen);
+  useShortcut('ctrl+u', () => scrollUp(bodyHeight), isOpen);
+  useShortcut('ctrl+d', () => scrollDown(bodyHeight), isOpen);
+  useShortcut('ctrl+l', clear, isOpen);
 
   const onSubmit = useCallback(
     async (code: string) => {
@@ -128,50 +128,54 @@ export function DebugOverlay(): React.ReactElement {
   const headerFill = Math.max(0, columns - title.length - hint.length - 2);
   const fill = '─'.repeat(headerFill);
 
+  // The overlay's REPL `<Input>` captures input while focused. Wrap
+  // the whole tree in `<KeyScope>` so the overlay's own controls
+  // (Esc / ↑↓ / Ctrl+L) keep firing even when the REPL has focus.
   return (
-    <Box flexDirection="column" width={columns} height={frameHeight}>
-      {/* Top border with inline title + hint, AppShell-style. */}
-      <Box flexShrink={0}>
-        <Text color="magenta">╭</Text>
-        <Text bold color="magenta">
-          {title}
-        </Text>
-        <Text color="magenta">{fill}</Text>
-        <Text dimColor>{hint}</Text>
-        <Text color="magenta">╮</Text>
-      </Box>
+    <KeyScope>
+      <Box flexDirection="column" width={columns} height={frameHeight}>
+        {/* Top border with inline title + hint, AppShell-style. */}
+        <Box flexShrink={0}>
+          <Text color="magenta">╭</Text>
+          <Text bold color="magenta">
+            {title}
+          </Text>
+          <Text color="magenta">{fill}</Text>
+          <Text dimColor>{hint}</Text>
+          <Text color="magenta">╮</Text>
+        </Box>
 
-      {/* Body. The Box has fixed height so long entries don't push the
-       *  REPL row off-screen. */}
-      <Box
-        flexDirection="column"
-        flexShrink={0}
-        height={bodyHeight}
-        borderStyle="round"
-        borderColor="magenta"
-        borderTop={false}
-        borderBottom={false}
-        paddingX={1}
-        overflowY="hidden"
-      >
-        {visibleEntries.length === 0 ? (
-          <Text dimColor>(no entries yet — start logging, throw, or type below)</Text>
-        ) : (
-          visibleEntries.map((e) => <EntryRow key={e.id} entry={e} />)
-        )}
-      </Box>
+        {/* Body. The Box has fixed height so long entries don't push the
+         *  REPL row off-screen. */}
+        <Box
+          flexDirection="column"
+          flexShrink={0}
+          height={bodyHeight}
+          borderStyle="round"
+          borderColor="magenta"
+          borderTop={false}
+          borderBottom={false}
+          paddingX={1}
+          overflowY="hidden"
+        >
+          {visibleEntries.length === 0 ? (
+            <Text dimColor>(no entries yet — start logging, throw, or type below)</Text>
+          ) : (
+            visibleEntries.map((e) => <EntryRow key={e.id} entry={e} />)
+          )}
+        </Box>
 
-      {/* REPL row — wrapped in a `<KeyScope>` so the Input's keystrokes
-       *  don't fire the overlay's PgUp/PgDn binds while typing. */}
-      <Box
-        flexShrink={0}
-        borderStyle="round"
-        borderColor="magenta"
-        borderTop={false}
-        borderBottom={false}
-        paddingX={1}
-      >
-        <KeyScope>
+        {/* REPL row. The Input's printable-char fallback claims plain
+         *  characters so PgUp/PgDn registered above only fire for special
+         *  keys (which the input lets bubble). */}
+        <Box
+          flexShrink={0}
+          borderStyle="round"
+          borderColor="magenta"
+          borderTop={false}
+          borderBottom={false}
+          paddingX={1}
+        >
           <Box flexGrow={1}>
             <Input
               value={input}
@@ -186,13 +190,13 @@ export function DebugOverlay(): React.ReactElement {
               autoFocus
             />
           </Box>
-        </KeyScope>
-      </Box>
+        </Box>
 
-      <Box flexShrink={0}>
-        <Text color="magenta">╰{'─'.repeat(Math.max(0, columns - 2))}╯</Text>
+        <Box flexShrink={0}>
+          <Text color="magenta">╰{'─'.repeat(Math.max(0, columns - 2))}╯</Text>
+        </Box>
       </Box>
-    </Box>
+    </KeyScope>
   );
 }
 

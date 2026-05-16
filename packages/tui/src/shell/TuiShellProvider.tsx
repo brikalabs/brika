@@ -1,6 +1,6 @@
 /**
  * Provider for the shared TUI shell context — chrome height, onQuit,
- * and the input-capture counter. See `useTuiShell` for the contract.
+ * and the input-capture refcount. See `useTuiShell` for the contract.
  *
  *   <RouterProvider router={router}>
  *     <TuiShellProvider onQuit={onQuit} initialChromeHeight={9}>
@@ -12,8 +12,6 @@
  *
  * The initial chrome height is a fallback for the first frame; the
  * real height arrives as soon as `<MeasuredChrome>` has rendered once.
- * Input capture is a refcount: forms / overlays bump it via
- * `useCaptureInput()` and global keybinds read `isInputCaptured`.
  */
 
 import type React from 'react';
@@ -55,7 +53,7 @@ export function TuiShellProvider({
       isInputCaptured: captureCount > 0,
       captureInput,
     }),
-    [chromeHeight, setChromeHeight, onQuit, captureCount, captureInput]
+    [chromeHeight, onQuit, captureCount, captureInput]
   );
 
   return <TuiShellContext.Provider value={value}>{children}</TuiShellContext.Provider>;

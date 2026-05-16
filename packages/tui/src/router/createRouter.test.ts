@@ -7,7 +7,7 @@
 import { describe, expect, test } from 'bun:test';
 import type React from 'react';
 import { createRouter, defineRoute } from './index';
-import type { RoutesShape } from './types';
+import type { RoutePath, RoutesShape } from './types';
 
 // Sentinel component — never rendered in these tests, just used as
 // the `component` for a RouteDef so the type-level shape matches.
@@ -17,6 +17,13 @@ const routes = {
   main: defineRoute({ component: Sentinel }),
   help: defineRoute({ component: Sentinel }),
   input: defineRoute<{ serviceId: string }>({ component: Sentinel }),
+  plugins: defineRoute({
+    component: Sentinel,
+    children: {
+      installed: defineRoute({ component: Sentinel }),
+      search: defineRoute({ component: Sentinel }),
+    },
+  }),
 } as const satisfies RoutesShape;
 
 describe('createRouter', () => {
@@ -80,5 +87,45 @@ describe('createRouter', () => {
     });
     r.back();
     expect(count).toBe(1);
+  });
+
+  test('path returns the active full path (single segment after navigate)', () => {
+    const r = createRouter({ routes, initial: { name: 'main' } });
+    expect(r.path).toEqual([{ name: 'main' }]);
+    r.navigate('help');
+    expect(r.path).toEqual([{ name: 'help' }]);
+  });
+
+  test('navigatePath sets a multi-segment nested path', () => {
+    const r = createRouter({ routes, initial: { name: 'main' } });
+    const path: RoutePath = [{ name: 'plugins' }, { name: 'search' }];
+    r.navigatePath(path);
+    expect(r.path).toEqual([{ name: 'plugins' }, { name: 'search' }]);
+    // `current` still reflects the top-level segment only.
+    expect(r.current.name).toBe('plugins');
+  });
+
+  test('navigatePath empty array is a no-op (does not touch history)', () => {
+    const r = createRouter({ routes, initial: { name: 'main' } });
+    r.navigatePath([] as unknown as RoutePath);
+    expect(r.path).toEqual([{ name: 'main' }]);
+  });
+
+  test('navigatePath with replace overwrites the current entry — back skips it', () => {
+    const r = createRouter({ routes, initial: { name: 'main' } });
+    r.navigate('help');
+    r.navigatePath([{ name: 'plugins' }, { name: 'installed' }], { replace: true });
+    expect(r.path).toEqual([{ name: 'plugins' }, { name: 'installed' }]);
+    r.back();
+    // Without replace, back() would land on 'help' twice in a row;
+    // with replace, the auto-default is invisible to history.
+    expect(r.current.name).toBe('main');
+  });
+
+  test('navigate after a nested navigatePath resets the path to a single segment', () => {
+    const r = createRouter({ routes, initial: { name: 'main' } });
+    r.navigatePath([{ name: 'plugins' }, { name: 'search' }]);
+    r.navigate('help');
+    expect(r.path).toEqual([{ name: 'help' }]);
   });
 });

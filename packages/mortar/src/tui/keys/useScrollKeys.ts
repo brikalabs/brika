@@ -8,19 +8,19 @@
  *   G              snap back to live-tail
  */
 
-import { useKey } from '@brika/tui';
+import { useShortcut } from '@brika/tui';
 import { TUI_FAST_SCROLL_LINES } from '../../constants';
 import { useMortar } from '../useMortar';
 
 export function useScrollKeys(enabled: boolean): void {
   const { scroll, layout } = useMortar();
 
-  useKey('upArrow', () => scroll.scrollUp(1), enabled);
-  useKey('shift+upArrow', () => scroll.scrollUp(TUI_FAST_SCROLL_LINES), enabled);
-  useKey('downArrow', () => scroll.scrollDown(1), enabled);
-  useKey('shift+downArrow', () => scroll.scrollDown(TUI_FAST_SCROLL_LINES), enabled);
-  useKey('pageUp', () => scroll.scrollUp(layout.pageSize), enabled);
-  useKey('pageDown', () => scroll.scrollDown(layout.pageSize), enabled);
-  useKey('g', () => scroll.goTop(), enabled);
-  useKey('G', () => scroll.goLive(), enabled);
+  useShortcut('upArrow', () => scroll.scrollUp(1), enabled);
+  useShortcut('shift+upArrow', () => scroll.scrollUp(TUI_FAST_SCROLL_LINES), enabled);
+  useShortcut('downArrow', () => scroll.scrollDown(1), enabled);
+  useShortcut('shift+downArrow', () => scroll.scrollDown(TUI_FAST_SCROLL_LINES), enabled);
+  useShortcut('pageUp', () => scroll.scrollUp(layout.pageSize), enabled);
+  useShortcut('pageDown', () => scroll.scrollDown(layout.pageSize), enabled);
+  useShortcut('g', () => scroll.goTop(), enabled);
+  useShortcut('G', () => scroll.goLive(), enabled);
 }

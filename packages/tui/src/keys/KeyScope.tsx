@@ -1,26 +1,23 @@
 /**
- * `<KeyScope>` — boundary that opts descendant `useKey` calls out of
- * the auto-suspend-on-capture behaviour.
+ * `<KeyScope>` — opts the descendant `useShortcut` / `useRawInput`
+ * calls back into firing while the shell's input-capture counter is
+ * non-zero.
  *
- * Mental model: shell-level shortcuts (`?`, `d`, `p`, `q`, …) should
- * NOT fire while an `<Input>` / `<Confirm>` / `<Form>` is collecting
- * keystrokes — so they auto-suspend when `useTuiShell().isInputCaptured`
- * is true. Component-internal binds (e.g. `<Search>`'s `↑↓` /
- * `Ctrl+Enter`) live in the *same* focus zone as their inner input
- * and DO need to keep firing, even though `isInputCaptured` is true.
- *
- * Mark that zone with `<KeyScope>`:
+ * Mental model: shell-level shortcuts (`?`, `d`, `p`, `q`, …) auto-
+ * suspend when an `<Input>` / `<Confirm>` / `<Form>` is mounted, so
+ * typing `q` doesn't quit the app. Some component-internal shortcuts
+ * still need to fire during that capture — e.g. `<Search>`'s `↑` / `↓`
+ * navigates the results list, `Ctrl+Enter` triggers the action. Mark
+ * that zone with `<KeyScope>` and those binds keep working:
  *
  *   <KeyScope>
- *     <SearchInput />    // captures input
- *     <Results />        // useKey here keeps firing (in-scope)
+ *     <SearchInput />       // captures input
+ *     <Results />            // useShortcut(↑/↓) keeps firing
  *   </KeyScope>
  *
- * `useKey` reads the surrounding scope flag — when it's `true`, the
- * auto-suspend is skipped. Shell keys (registered outside any
- * `<KeyScope>`) keep their normal suspend-on-capture behaviour, so
- * typing in a search field never triggers `q` to quit, `d` to
- * navigate, etc.
+ * Plain `useShortcut` outside any `<KeyScope>` keeps its normal
+ * suspend-on-capture behaviour. Consumers never have to think about
+ * the flag — the wrapper is the whole API.
  */
 
 import type React from 'react';

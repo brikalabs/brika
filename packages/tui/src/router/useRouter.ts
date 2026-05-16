@@ -28,13 +28,14 @@ export function useRouter<R extends RoutesShape>(): Router<R> {
   if (!router) {
     throw new Error('useRouter() called outside <RouterProvider>');
   }
-  // Triggers a re-render whenever the router's current route changes.
-  // We snapshot `router.current` itself (a tagged-union object) — its
-  // identity changes on every `navigate` / `back`, which is exactly
-  // the signal we want.
+  // Triggers a re-render whenever the router's path changes. We
+  // snapshot `router.path` — the full root→leaf segment array, whose
+  // identity changes on every `navigate` / `navigatePath` / `back`.
+  // (Snapshotting `current` would miss nested-only navigation, since
+  // `current` only reflects the top-level segment.)
   useSyncExternalStore(
     (callback) => router.subscribe(callback),
-    () => router.current
+    () => router.path
   );
   return router as Router<R>;
 }

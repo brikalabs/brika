@@ -10,23 +10,19 @@
  *     <TabsContent value="search"><Search /></TabsContent>
  *   </Tabs>
  *
- * API mirrors shadcn (`Tabs`, `TabsList`, `TabsTrigger`, `TabsContent`)
- * including controlled vs uncontrolled selection. Differences from the
- * web component, all forced by the terminal:
+ * Keyboard navigation:
+ *   - `Tab` cycles forward, `Shift+Tab` cycles back (ink focus cycle).
+ *   - `←` / `→` are scope-bound — fire only while a `TabsTrigger` has
+ *     focus, so they don't compete with sibling lists / panes.
+ *   - Optional `shortcut="x"` on a trigger jumps directly from anywhere
+ *     in the surrounding focus scope.
  *
- *   - **Keyboard navigation**: `Tab` cycles forward, `Shift+Tab`
- *     cycles back. `←` / `→` also work — same as shadcn's roving
- *     focus. Optional `shortcut="x"` on a trigger jumps directly.
- *   - **Visual style**: active trigger is bold cyan with a `▸ ` caret;
- *     inactive triggers are dim. A thin underline (`▔`) marks the
- *     active tab's column so the eye can find it without colour.
- *   - **Layout**: `TabsList` renders horizontally, content panel grows
- *     vertically. Both `Tabs` and `TabsContent` use `flexDirection`
- *     `column` so consumer trees stretch correctly inside flex layouts.
- *
- * Like shadcn, you can omit a `TabsList` if you want to drive the
- * selection externally (controlled mode) — `TabsContent` only depends
- * on the context's current value, not on `TabsList`'s presence.
+ * Router mode (`<Tabs router defaultValue="installed">`): binds the
+ * active tab to the surrounding `<Outlet />` depth's path segment.
+ * Switching tabs calls `router.navigatePath`; navigating from elsewhere
+ * (deep link, programmatic) switches the visible tab. Use `<Outlet />`
+ * inside the layout instead of `<TabsContent>` to render the child
+ * route's component.
  */
 
 import { Box, type DOMElement, Text } from 'ink';
@@ -40,15 +36,15 @@ import {
   useRef,
   useState,
 } from 'react';
+import { FocusActive } from '../keys/FocusActive';
 import { useFocusable } from '../keys/useFocusable';
-import { useKey } from '../keys/useKey';
+import { useShortcut } from '../keys/useShortcut';
+import { useOutletDepth } from '../router/Outlet';
+import type { RoutePath, RouteSegment } from '../router/types';
+import { useRouter } from '../router/useRouter';
 
 interface TabRegistration {
   readonly value: string;
-  readonly shortcut?: string;
-  /** Visible width of the trigger label — used by `TriggerUnderlines`
-   *  to draw the indicator at exactly the right length. Defaults to
-   *  `value.length` when the label isn't a plain string child. */
   readonly labelLength?: number;
 }
 
@@ -62,15 +58,27 @@ interface TabsContextValue {
 const TabsContext = createContext<TabsContextValue | null>(null);
 
 export interface TabsProps {
-  /** Controlled value. Pair with `onValueChange`. */
   readonly value?: string;
-  /** Default value when uncontrolled. Falls back to the first registered tab. */
   readonly defaultValue?: string;
   readonly onValueChange?: (value: string) => void;
+  /**
+   * Bind the active tab to the surrounding router's path segment at
+   * this `<Outlet />` depth. When enabled, switching tabs calls
+   * `router.navigatePath` (so back/forward Just Works) and the visible
+   * tab follows external navigation (deep links, `router.navigatePath`
+   * from other code). `value` / `onValueChange` are ignored in this
+   * mode — the router is the source of truth. Pair with `<Outlet />`
+   * inside the layout to render the active child route.
+   */
+  readonly router?: boolean;
   readonly children?: ReactNode;
 }
 
-export function Tabs({
+export function Tabs(props: Readonly<TabsProps>): React.ReactElement {
+  return props.router ? <RouterTabs {...props} /> : <LocalTabs {...props} />;
+}
+
+function LocalTabs({
   value,
   defaultValue,
   onValueChange,
@@ -91,8 +99,6 @@ export function Tabs({
     [value, onValueChange]
   );
 
-  // If nothing is selected yet (no defaultValue, no controlled value),
-  // snap to the first trigger as soon as it registers.
   useEffect(() => {
     if (value === undefined && internal === '' && tabs.length > 0) {
       const first = tabs[0];
@@ -102,17 +108,78 @@ export function Tabs({
     }
   }, [value, internal, tabs]);
 
-  const register = useCallback((entry: TabRegistration): (() => void) => {
-    setTabs((prev) => (prev.some((t) => t.value === entry.value) ? prev : [...prev, entry]));
-    const isOther = (t: TabRegistration): boolean => t.value !== entry.value;
-    return () => setTabs((prev) => prev.filter(isOther));
-  }, []);
+  const register = useRegisterTabs(setTabs);
 
   const ctx = useMemo<TabsContextValue>(
     () => ({ value: current, setValue, register, tabs }),
     [current, setValue, register, tabs]
   );
 
+  return <TabsShell ctx={ctx}>{children}</TabsShell>;
+}
+
+function RouterTabs({ defaultValue, children }: Readonly<TabsProps>): React.ReactElement {
+  const router = useRouter();
+  const depth = useOutletDepth();
+  const [tabs, setTabs] = useState<ReadonlyArray<TabRegistration>>([]);
+
+  const segment = router.path[depth];
+  const current = segment?.name ?? defaultValue ?? '';
+
+  // Seed the router with `defaultValue` once a tab is registered, so a
+  // deep-link to the parent route lands on the right child without the
+  // user (or layout) having to call navigatePath themselves.
+  useEffect(() => {
+    if (segment || tabs.length === 0) {
+      return;
+    }
+    const target =
+      defaultValue && tabs.some((t) => t.value === defaultValue) ? defaultValue : tabs[0]?.value;
+    if (target) {
+      // `replace: true` so `back()` returns to before the parent route
+      // rather than bouncing off the auto-redirect into an infinite
+      // loop (pop → re-render → re-default → push → pop …).
+      router.navigatePath(buildPath(router.path, depth, target), { replace: true });
+    }
+  }, [router, depth, segment, defaultValue, tabs]);
+
+  const setValue = useCallback(
+    (v: string) => {
+      if (v === segment?.name) {
+        return;
+      }
+      router.navigatePath(buildPath(router.path, depth, v));
+    },
+    [router, depth, segment]
+  );
+
+  const register = useRegisterTabs(setTabs);
+
+  const ctx = useMemo<TabsContextValue>(
+    () => ({ value: current, setValue, register, tabs }),
+    [current, setValue, register, tabs]
+  );
+
+  return <TabsShell ctx={ctx}>{children}</TabsShell>;
+}
+
+function useRegisterTabs(
+  setTabs: React.Dispatch<React.SetStateAction<ReadonlyArray<TabRegistration>>>
+): (entry: TabRegistration) => () => void {
+  return useCallback(
+    (entry: TabRegistration): (() => void) => {
+      setTabs((prev) => (prev.some((t) => t.value === entry.value) ? prev : [...prev, entry]));
+      const isOther = (t: TabRegistration): boolean => t.value !== entry.value;
+      return () => setTabs((prev) => prev.filter(isOther));
+    },
+    [setTabs]
+  );
+}
+
+function TabsShell({
+  ctx,
+  children,
+}: Readonly<{ ctx: TabsContextValue; children?: ReactNode }>): React.ReactElement {
   return (
     <TabsContext.Provider value={ctx}>
       <Box flexDirection="column" flexGrow={1}>
@@ -120,6 +187,14 @@ export function Tabs({
       </Box>
     </TabsContext.Provider>
   );
+}
+
+function buildPath(path: RoutePath, depth: number, name: string): RoutePath {
+  const head = path.slice(0, depth) as ReadonlyArray<RouteSegment>;
+  const next: RouteSegment = { name };
+  // Truncate everything past the segment we're replacing — switching a
+  // tab on the parent shouldn't keep stale grandchildren around.
+  return [...head, next] as unknown as RoutePath;
 }
 
 function useTabsContext(component: string): TabsContextValue {
@@ -130,65 +205,35 @@ function useTabsContext(component: string): TabsContextValue {
   return ctx;
 }
 
+export interface TabsApi {
+  /** Currently active tab value. */
+  readonly value: string;
+  /** Activate a tab by its `value`. */
+  readonly setValue: (value: string) => void;
+  /** Snapshot of every registered trigger. */
+  readonly tabs: ReadonlyArray<{ readonly value: string }>;
+}
+
+/**
+ * Read / drive the surrounding `<Tabs>` state from any descendant.
+ * Used by panels that need to switch tabs from within their own UI
+ * (e.g. an "→ search" action on the Installed tab that jumps to the
+ * Search tab without making the user reach for the keyboard).
+ */
+export function useTabs(): TabsApi {
+  const ctx = useTabsContext('useTabs');
+  return { value: ctx.value, setValue: ctx.setValue, tabs: ctx.tabs };
+}
+
 export interface TabsListProps {
-  /** Disable keyboard navigation. Useful when a child overlay (form,
-   *  filter input, modal) is consuming keys and you don't want the
-   *  tab triggers to compete. */
-  readonly disabled?: boolean;
   readonly children?: ReactNode;
 }
 
-export function TabsList({
-  disabled = false,
-  children,
-}: Readonly<TabsListProps>): React.ReactElement {
-  const ctx = useTabsContext('TabsList');
-  const enabled = !disabled && ctx.tabs.length > 0;
-
-  const move = useCallback(
-    (delta: number) => {
-      const idx = ctx.tabs.findIndex((t) => t.value === ctx.value);
-      const next = ((idx === -1 ? 0 : idx) + delta + ctx.tabs.length) % ctx.tabs.length;
-      const target = ctx.tabs[next];
-      if (target) {
-        ctx.setValue(target.value);
-      }
-    },
-    [ctx]
-  );
-
-  // Arrow keys switch tabs. Plain `Tab` / `Shift+Tab` are reserved
-  // for ink's focus cycle between focusable elements (Inputs,
-  // Buttons) — wrestling Tab away from focus management would
-  // mean the user couldn't escape a sub-panel input via Tab.
-  useKey('rightArrow', () => move(1), enabled);
-  useKey('leftArrow', () => move(-1), enabled);
-
-  return (
-    <Box>
-      {children}
-      {ctx.tabs.map((t) =>
-        t.shortcut ? (
-          <ShortcutBind
-            key={`sc-${t.value}`}
-            shortcut={t.shortcut}
-            value={t.value}
-            enabled={enabled}
-          />
-        ) : null
-      )}
-    </Box>
-  );
-}
-
-function ShortcutBind({
-  shortcut,
-  value,
-  enabled,
-}: Readonly<{ shortcut: string; value: string; enabled: boolean }>): React.ReactElement | null {
-  const ctx = useTabsContext('TabsList');
-  useKey(shortcut, () => ctx.setValue(value), enabled);
-  return null;
+export function TabsList({ children }: Readonly<TabsListProps>): React.ReactElement {
+  useTabsContext('TabsList');
+  // The triggers themselves carry the ← / → bindings (gated by their
+  // own focus state) so the list doesn't need a dedicated scope here.
+  return <Box>{children}</Box>;
 }
 
 export interface TabsTriggerProps {
@@ -198,48 +243,44 @@ export interface TabsTriggerProps {
   readonly children?: ReactNode;
 }
 
-/**
- * Each trigger renders its own column — `[shortcut] label` on top,
- * an underline directly under it — so the indicator can never go
- * out of sync with the label (no two-row registration race the old
- * design had). Inactive triggers keep the same column width so the
- * row geometry stays stable when the user cycles tabs.
- *
- * Inactive triggers stay at the terminal's default foreground colour
- * (no `dimColor`) — some terminals render dim as nearly invisible,
- * which made the old tabs look like they'd vanished. The contrast
- * cue comes entirely from bold + the cyan/grey underline pair.
- */
 export function TabsTrigger({
   value,
   shortcut,
   children,
 }: Readonly<TabsTriggerProps>): React.ReactElement {
   const ctx = useTabsContext('TabsTrigger');
-  const { register, setValue } = ctx;
+  const { register, setValue, value: current, tabs } = ctx;
   const labelLength = typeof children === 'string' ? children.length : value.length;
   const ref = useRef<DOMElement>(null);
 
-  // Registration is still nice-to-have for shortcut binds + count,
-  // but the visual is no longer driven by it.
-  //
-  // Important: depend on the STABLE `register` callback, not the
-  // whole `ctx` object. `ctx` is re-created every time `tabs`
-  // changes (which is what register triggers) — putting `ctx` in
-  // the deps causes an effect/cleanup oscillation, which React
-  // surfaces as "Maximum update depth exceeded".
-  useEffect(
-    () => register({ value, shortcut, labelLength }),
-    [register, value, shortcut, labelLength]
-  );
+  useEffect(() => register({ value, labelLength }), [register, value, labelLength]);
 
-  // Mouse: click anywhere on the trigger to activate it. Same hit-
-  // test pattern as `<MenuBar>` / `<Button>` so the affordance feels
-  // consistent across the app.
   const select = useCallback(() => setValue(value), [setValue, value]);
   const { isFocused } = useFocusable({ id: `tab-${value}`, onPress: select, ref });
 
-  const active = ctx.value === value;
+  // Optional direct-jump shortcut (e.g. `s` to jump to the Search tab).
+  // Registered with the surrounding scope so it fires even when the
+  // trigger itself isn't focused — same UX as a `<Button>` shortcut.
+  useShortcut(shortcut ?? '', select, Boolean(shortcut));
+
+  // ← / → cycle between triggers while THIS one is focused. Anchored to
+  // the focused trigger so multiple TabsLists on the same screen don't
+  // fight for the arrow keys.
+  const move = useCallback(
+    (delta: number) => {
+      const idx = tabs.findIndex((t) => t.value === value);
+      const next = ((idx === -1 ? 0 : idx) + delta + tabs.length) % tabs.length;
+      const target = tabs[next];
+      if (target) {
+        setValue(target.value);
+      }
+    },
+    [tabs, value, setValue]
+  );
+  useShortcut('rightArrow', () => move(1), isFocused && tabs.length > 1);
+  useShortcut('leftArrow', () => move(-1), isFocused && tabs.length > 1);
+
+  const active = current === value;
   const prefix = shortcut ? `[${shortcut}] ` : '';
   const fullWidth = prefix.length + labelLength;
   const accent = active || isFocused ? 'cyan' : undefined;
@@ -263,11 +304,6 @@ export function TabsTrigger({
 
 export interface TabsContentProps {
   readonly value: string;
-  /** Keep the inactive panel mounted (with `display: 'none'`) instead
-   *  of unmounting it. Default `true` — preserves form drafts, scroll
-   *  positions, ongoing fetches across tab switches. Set `false` for
-   *  panels that own expensive subscriptions you'd rather tear down
-   *  while the tab is hidden. */
   readonly keepMounted?: boolean;
   readonly children?: ReactNode;
 }
@@ -282,14 +318,20 @@ export function TabsContent({
   if (!active && !keepMounted) {
     return null;
   }
+  // Wrap in FocusActive so focusables inside the inactive panel drop
+  // out of ink's Tab cycle. Without this, a hidden tab's `<Input>`
+  // (with default autoFocus) would claim focus before the visible
+  // tab's primary focusable on mount.
   return (
-    <Box
-      display={active ? 'flex' : 'none'}
-      flexDirection="column"
-      flexGrow={active ? 1 : 0}
-      marginTop={active ? 1 : 0}
-    >
-      {children}
-    </Box>
+    <FocusActive active={active}>
+      <Box
+        display={active ? 'flex' : 'none'}
+        flexDirection="column"
+        flexGrow={active ? 1 : 0}
+        marginTop={active ? 1 : 0}
+      >
+        {children}
+      </Box>
+    </FocusActive>
   );
 }

@@ -1,7 +1,6 @@
 /**
  * `<List>` + `<ListItem>` — arrow-navigable, mouse-clickable
- * selection list. Same composition shape as `<Search>` minus the
- * input field:
+ * selection list.
  *
  *   <List
  *     value={focused}
@@ -17,25 +16,26 @@
  *     ))}
  *   </List>
  *
- * Focus model
- *   - `<List>` is a single focus slot (not one slot per item).
- *   - Arrow keys + Enter fire only while the list has focus, so two
- *     focusable regions on screen (list + readme scroller, list +
- *     details pane, etc.) don't double-fire on the same `↑`/`↓`.
- *   - Tab in / click to take focus. `▸` glyph reads brighter when the
- *     list is focused, dimmer when it isn't.
+ * Accessibility model
+ *   - `<List>` is a single focus slot (not one slot per item) and
+ *     joins the Tab cycle so keyboard-only users can reach it.
+ *   - **Arrow keys / Enter never block on focus.** They fire whenever
+ *     the list is mounted and has items, so navigating to a section
+ *     and immediately hitting `↑` / `↓` / `Enter` does what you'd
+ *     expect — no Tab dance required. The arrows auto-suspend during
+ *     input capture (when an `<Input>` / `<Confirm>` / `<Form>` is
+ *     active), so typing in a sibling search field still goes to the
+ *     field, not the list.
+ *   - Click a row to select it; the list claims focus as a side effect
+ *     so subsequent Tab traversal starts from there.
  *
- * Interactions:
- *   - `↑` / `↓`       move focus (while List has focus)
- *   - `Enter`         calls `onSelect(value)` against the focused item
- *   - **Mouse click** on a row focuses the list + selects it
- *
- * Controlled by `value` / `onValueChange` (or uncontrolled with
- * `defaultValue`). When no value is given and at least one item
- * registers, focus auto-snaps to the first item.
+ * Bindings:
+ *   - `↑` / `↓` / `k` / `j` — move the cursor.
+ *   - `Enter`                — fires `onSelect(value)` for the focused row.
+ *   - **Mouse click** on a row focuses the list + selects it.
  */
 
-import { Box, type DOMElement, Text, useFocus, useFocusManager } from 'ink';
+import { Box, type DOMElement, Text, useFocusManager } from 'ink';
 import type React from 'react';
 import {
   createContext,
@@ -43,14 +43,13 @@ import {
   useCallback,
   useContext,
   useEffect,
-  useId,
   useMemo,
   useRef,
   useState,
 } from 'react';
-import { useKey } from '../keys/useKey';
-import { hitTest, readBounds } from '../mouse/useBounds';
-import { type MouseEvent, useMouse } from '../mouse/useMouse';
+import { useFocusable } from '../keys/useFocusable';
+import { useShortcut } from '../keys/useShortcut';
+import { useClickable } from '../mouse/useClickable';
 
 interface ListItemEntry {
   readonly value: string;
@@ -62,12 +61,10 @@ interface ListContextValue {
   readonly registerItem: (entry: ListItemEntry) => () => void;
   readonly items: ReadonlyArray<ListItemEntry>;
   readonly select: (v: string) => void;
-  /** True when the parent `<List>` currently owns focus. ListItem uses
-   *  this to brighten its leading glyph so the user can tell which
-   *  selectable region is active. */
+  /** True when the parent `<List>` currently owns focus. */
   readonly listFocused: boolean;
-  /** Imperative focus claim — used by ListItem on mousedown so a
-   *  click both focuses the list and picks the row. */
+  /** Imperative focus claim — used by ListItem on click so a click
+   *  both selects the row and parks Tab traversal here. */
   readonly focusList: () => void;
 }
 
@@ -82,21 +79,13 @@ function useListContext(component: string): ListContextValue {
 }
 
 export interface ListProps {
-  /** Controlled focused value. */
   readonly value?: string;
-  /** Default focused value (uncontrolled). */
   readonly defaultValue?: string;
   readonly onValueChange?: (value: string) => void;
-  /** Fired on `Enter` against the focused item. */
   readonly onSelect?: (value: string) => void;
-  /** Claim keyboard focus on mount. Use this on the primary selectable
-   *  region of a view so arrows immediately navigate the list. */
   readonly autoFocus?: boolean;
-  /** Stable focus id for callers that need to `focus()` the list
-   *  imperatively. */
   readonly id?: string;
-  /** Opt out of the Tab cycle while staying clickable + arrow-active
-   *  via `value` / `onValueChange` from a parent. Default `true`. */
+  /** Opt out of the Tab cycle while staying clickable. Default `true`. */
   readonly focusable?: boolean;
   readonly children?: ReactNode;
 }
@@ -116,17 +105,13 @@ export function List({
 
   const current = value ?? internalValue;
 
-  const autoId = useId();
-  const focusId = id ?? `list-${autoId}`;
-  // List joins the focus cycle whenever `focusable` is true, even
-  // before items register — otherwise the slot is invisible to Tab
-  // for the first frame after mount (items register in a useEffect),
-  // and any view that mounts the list after data load races the
-  // useFocus registration vs. data arrival.
-  const { isFocused } = useFocus({
-    id: focusId,
+  const ref = useRef<DOMElement>(null);
+  const { isFocused, focusId } = useFocusable({
+    id,
     autoFocus,
-    isActive: focusable,
+    enabled: focusable,
+    suppressActivation: true,
+    ref,
   });
   const { focus } = useFocusManager();
   const focusList = useCallback(() => focus(focusId), [focus, focusId]);
@@ -182,21 +167,33 @@ export function List({
       const next = items[(cur + delta + items.length) % items.length];
       if (next) {
         setValue(next.value);
+        // Side-effect: bring focus here so the user's next Tab starts
+        // from this list rather than wherever it was previously parked.
+        focusList();
       }
     },
-    [items, focusIdx, setValue]
+    [items, focusIdx, setValue, focusList]
   );
 
   const select = useCallback((v: string) => {
     onSelectRef.current?.(v);
   }, []);
 
-  const navigable = isFocused && items.length > 0;
-  useKey('upArrow', () => move(-1), navigable);
-  useKey('downArrow', () => move(1), navigable);
-  useKey('k', () => move(-1), navigable);
-  useKey('j', () => move(1), navigable);
-  useKey(
+  // Arrow keys do NOT gate on `isFocused` — the list owns its key
+  // namespace whenever it's on screen. This makes the list usable the
+  // moment a view mounts without requiring the user to Tab into it.
+  // `useShortcut` still auto-suspends during input capture (Input /
+  // Form / Confirm), so typing in a sibling search field never leaks
+  // into list navigation.
+  const enabled = focusable && items.length > 0;
+  useShortcut('upArrow', () => move(-1), enabled);
+  useShortcut('downArrow', () => move(1), enabled);
+  useShortcut('k', () => move(-1), enabled);
+  useShortcut('j', () => move(1), enabled);
+  // Enter only fires when the list actually owns focus — without that
+  // guard, hitting Enter on a Button in the same view would also
+  // accidentally invoke `onSelect` on the focused list row.
+  useShortcut(
     'return',
     () => {
       const focused = items[focusIdx];
@@ -204,7 +201,7 @@ export function List({
         select(focused.value);
       }
     },
-    navigable && Boolean(onSelect)
+    isFocused && items.length > 0 && Boolean(onSelect)
   );
 
   const ctx = useMemo<ListContextValue>(
@@ -222,13 +219,14 @@ export function List({
 
   return (
     <ListContext.Provider value={ctx}>
-      <Box flexDirection="column">{children}</Box>
+      <Box ref={ref} flexDirection="column">
+        {children}
+      </Box>
     </ListContext.Provider>
   );
 }
 
 export interface ListItemProps {
-  /** Identifier for focus + selection callbacks. */
   readonly value: string;
   readonly children?: ReactNode;
 }
@@ -246,33 +244,15 @@ export function ListItem({ value, children }: Readonly<ListItemProps>): React.Re
 
   useEffect(() => registerItem({ value }), [registerItem, value]);
 
+  // Mouse: click focuses the list, picks the row, fires onSelect.
   const boxRef = useRef<DOMElement>(null);
-  const handleMouse = useCallback(
-    (e: MouseEvent) => {
-      if (e.button !== 'left') {
-        return;
-      }
-      const bounds = readBounds(boxRef.current);
-      if (!bounds || !hitTest(bounds, e)) {
-        return;
-      }
-      if (e.action === 'down') {
-        // Mousedown picks the row AND focuses the list so arrows
-        // immediately navigate from this point.
-        focusList();
-        setValue(value);
-      } else if (e.action === 'click') {
-        select(value);
-      }
-    },
-    [setValue, select, focusList, value]
-  );
-  useMouse(handleMouse);
+  const onClick = useCallback(() => {
+    focusList();
+    setValue(value);
+    select(value);
+  }, [focusList, setValue, select, value]);
+  useClickable(boxRef, onClick);
 
-  // Leading glyph: bright cyan when both the row is selected AND the
-  // list itself has focus; muted when only the row is selected (the
-  // list is dormant). Gives an at-a-glance signal of "where do arrows
-  // currently land?".
   const glyph = isFocused ? '▸ ' : '  ';
   let glyphColor: string | undefined;
   if (isFocused && listFocused) {

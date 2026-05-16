@@ -11,9 +11,7 @@
  * sections feel distinct without being heavy — the dim brackets and
  * accent color give it just enough weight to read as a card.
  *
- * Pass `onPress` to make the entire card a click target — wires the
- * shared `useClickable` hook so the affordance feels consistent with
- * `<Button>` / `<MenuBar>` / `<TabsTrigger>`.
+ * Pass `onPress` to make the entire card a click + Tab + Enter target.
  */
 
 import { Box, type DOMElement, Text } from 'ink';

@@ -49,10 +49,9 @@
  * …) stay quiet during typing.
  */
 
-import { Box, type DOMElement, Text, useFocus, useFocusManager, useInput } from 'ink';
+import { Box, type DOMElement, Text, useFocusManager, useInput } from 'ink';
 import React, { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { hitTest, useBounds } from '../mouse/useBounds';
-import { useMouse } from '../mouse/useMouse';
+import { useFocusable } from '../keys/useFocusable';
 import { useCaptureInput } from '../shell/useTuiShell';
 import { FormField, type FormFieldProps } from './FormField';
 import { FormSubmitError } from './FormSubmitError';
@@ -141,6 +140,8 @@ export function Form({
   submitLabel = 'Submit',
   children,
 }: Readonly<FormProps>): React.ReactElement {
+  // Suspend global shell shortcuts (q, [, ], 1-8 …) while the form is
+  // mounted — typing in a field shouldn't fire view navigation.
   useCaptureInput();
 
   const fields = useMemo(() => collectFields(children), [children]);
@@ -391,41 +392,13 @@ function SubmitButton({
   submitting,
   onPress,
 }: Readonly<SubmitButtonProps>): React.ReactElement {
-  const buttonId = 'formfield:__submit__';
-  const { isFocused } = useFocus({ id: buttonId, isActive: enabled });
   const boxRef = useRef<DOMElement>(null);
-  const bounds = useBounds(boxRef);
-  const { focus } = useFocusManager();
-
-  useInput(
-    (input, key) => {
-      if (!enabled) {
-        return;
-      }
-      if (key.return || input === ' ') {
-        onPress();
-      }
-    },
-    { isActive: isFocused && enabled }
-  );
-
-  const handleMouse = useCallback(
-    (e: { action: string; button: string; column: number; row: number }) => {
-      if (!enabled || !bounds || e.button !== 'left') {
-        return;
-      }
-      if (!hitTest(bounds, e)) {
-        return;
-      }
-      if (e.action === 'down') {
-        focus(buttonId);
-      } else if (e.action === 'click') {
-        onPress();
-      }
-    },
-    [enabled, bounds, focus, onPress]
-  );
-  useMouse(handleMouse);
+  const { isFocused } = useFocusable({
+    id: 'formfield:__submit__',
+    enabled,
+    onPress,
+    ref: boxRef,
+  });
 
   if (submitting) {
     return (
