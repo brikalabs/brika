@@ -6,7 +6,7 @@
 import { defineCommand } from '@brika/cli';
 import { runTui } from '@brika/cli/tui';
 import React from 'react';
-import { App } from '../tui/App';
+import { App } from '../App';
 import { CLI_VERSION } from '../version';
 
 export default defineCommand({

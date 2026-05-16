@@ -6,8 +6,8 @@
 
 import { defineCommand } from '@brika/cli';
 import React from 'react';
-import { runCommandTui } from '../tui/runCommandTui';
-import { VersionView } from '../tui/views/VersionView';
+import { runCommandTui } from '../runCommandTui';
+import { VersionView } from '../features/version';
 import { CLI_VERSION } from '../version';
 
 export default defineCommand({

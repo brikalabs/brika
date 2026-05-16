@@ -17,11 +17,11 @@
 
 import { defineCommand } from '@brika/cli';
 import pc from 'picocolors';
-import { removeCliToken, writeCliToken } from '../cli/auth-token';
-import { CliError } from '../cli/errors';
-import { spawnHub } from '../cli/hub-spawn';
-import { removePidFile } from '../cli/pid';
-import { claimPidFile } from '../cli/pid-claim';
+import { removeCliToken, writeCliToken } from '../shared/cli/auth-token';
+import { CliError } from '../shared/cli/errors';
+import { spawnHub } from '../shared/cli/hub-spawn';
+import { removePidFile } from '../shared/cli/pid';
+import { claimPidFile } from '../shared/cli/pid-claim';
 
 export default defineCommand({
   name: 'hub',

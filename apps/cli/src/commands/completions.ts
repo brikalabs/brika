@@ -10,10 +10,10 @@
 import { defineCommand } from '@brika/cli';
 import pc from 'picocolors';
 import React from 'react';
-import { generateCompletions, isShell, shellList, uninstallCompletions } from '../cli/completions';
-import { CliError } from '../cli/errors';
-import { runCommandTui } from '../tui/runCommandTui';
-import { CompletionsView } from '../tui/views/CompletionsView';
+import { generateCompletions, isShell, shellList, uninstallCompletions } from '../shared/cli/completions';
+import { CliError } from '../shared/cli/errors';
+import { runCommandTui } from '../runCommandTui';
+import { CompletionsView } from '../features/completions';
 
 export default defineCommand({
   name: 'completions',
