@@ -230,6 +230,11 @@ export class Supervisor {
    * user just watches the spinners disappear with services still labeled
    * "terminating…".
    */
+  /** Alias for {@link shutdown} so `await using sup = new Supervisor(...)` cleans up. */
+  [Symbol.asyncDispose](): Promise<void> {
+    return this.shutdown();
+  }
+
   async shutdown(): Promise<void> {
     if (this.shuttingDown) {
       return;
