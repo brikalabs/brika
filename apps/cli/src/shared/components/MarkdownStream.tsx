@@ -110,11 +110,13 @@ function renderLine(line: string, inFence: boolean, isFence: boolean): React.Rea
   const trimmed = line.trimStart();
   const indent = line.slice(0, line.length - trimmed.length);
 
-  // Headings.
-  const hashMatch = /^(#{1,6})\s+(.*)$/.exec(trimmed);
+  // Headings. Split the leading `#`s from the body so we don't pair
+  // two greedy quantifiers (`\s+` next to `.*`) in one regex — keeps
+  // the pattern linear and Sonar's S5852 analyser happy.
+  const hashMatch = /^(#{1,6})\s/.exec(trimmed);
   if (hashMatch) {
     const level = hashMatch[1]?.length ?? 1;
-    const text = hashMatch[2] ?? '';
+    const text = trimmed.slice(level).trimStart();
     return (
       <Text bold color={level <= 2 ? 'cyan' : undefined} wrap="wrap">
         {indent}
@@ -146,25 +148,25 @@ function renderLine(line: string, inFence: boolean, isFence: boolean): React.Rea
     );
   }
 
-  // Unordered list.
-  const unordered = /^([-*+])\s+(.*)$/.exec(trimmed);
-  if (unordered) {
+  // Unordered list. Same Sonar-friendly split as the heading regex.
+  if (/^[-*+]\s/.test(trimmed)) {
     return (
       <Text wrap="wrap">
         {indent}
         <Text color="cyan">• </Text>
-        {renderInline(unordered[2] ?? '')}
+        {renderInline(trimmed.slice(1).trimStart())}
       </Text>
     );
   }
 
-  // Ordered list.
-  const ordered = /^(\d{1,3})[.)]\s+(.*)$/.exec(trimmed);
+  // Ordered list. Capture only the digit prefix; trim the rest in JS.
+  const ordered = /^(\d{1,3})[.)]\s/.exec(trimmed);
   if (ordered) {
+    const num = ordered[1] ?? '';
     return (
       <Text wrap="wrap">
         {indent}
-        <Text color="cyan">{ordered[1]}.</Text> {renderInline(ordered[2] ?? '')}
+        <Text color="cyan">{num}.</Text> {renderInline(trimmed.slice(num.length + 1).trimStart())}
       </Text>
     );
   }

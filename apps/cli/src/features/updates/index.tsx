@@ -92,11 +92,7 @@ export function UpdatesView(): React.ReactElement {
         <Button shortcut="c" autoFocus enabled={!applying} onPress={check}>
           check
         </Button>
-        <Button
-          shortcut="n"
-          enabled={!applying && channel !== null}
-          onPress={cycleChannel}
-        >
+        <Button shortcut="n" enabled={!applying && channel !== null} onPress={cycleChannel}>
           channel
         </Button>
         <Button

@@ -11,9 +11,8 @@ import {
   required,
 } from '@brika/tui';
 import type React from 'react';
-import { postUser } from './postUser';
 
-export { postUser };
+export { postUser } from './postUser';
 
 const ROLE_OPTIONS = [
   { value: 'user', label: 'User', hint: 'regular access' },
@@ -25,9 +24,17 @@ interface AddUserFormProps {
   readonly onCancel: () => void;
 }
 
-export function AddUserForm({ onSubmit, onCancel }: Readonly<AddUserFormProps>): React.ReactElement {
+export function AddUserForm({
+  onSubmit,
+  onCancel,
+}: Readonly<AddUserFormProps>): React.ReactElement {
   return (
-    <Form title="Add user" subtitle="Esc to cancel any step" onSubmit={onSubmit} onCancel={onCancel}>
+    <Form
+      title="Add user"
+      subtitle="Esc to cancel any step"
+      onSubmit={onSubmit}
+      onCancel={onCancel}
+    >
       <FormField name="name" label="Full name" validate={required()}>
         <FormInput placeholder="Ada Lovelace" />
       </FormField>

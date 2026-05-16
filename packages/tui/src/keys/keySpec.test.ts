@@ -55,7 +55,14 @@ describe('parseSpec', () => {
     // A previous parser lower-cased the token then tried to match the
     // camelCase entries in `SPECIAL_KEYS` directly — so every
     // `useShortcut('upArrow', …)` silently never fired.
-    const specs = ['upArrow', 'downArrow', 'leftArrow', 'rightArrow', 'pageUp', 'pageDown'] as const;
+    const specs = [
+      'upArrow',
+      'downArrow',
+      'leftArrow',
+      'rightArrow',
+      'pageUp',
+      'pageDown',
+    ] as const;
     for (const spec of specs) {
       const parsed = parseSpec(spec);
       expect(parsed.special).toBe(spec);

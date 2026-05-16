@@ -1,9 +1,4 @@
-import {
-  Badge,
-  EmptyState,
-  EmptyStateDescription,
-  EmptyStateTitle,
-} from '@brika/tui';
+import { Badge, EmptyState, EmptyStateDescription, EmptyStateTitle } from '@brika/tui';
 import { Box, Text } from 'ink';
 import type React from 'react';
 import type { UserDto } from '../../../shared/cli/api';

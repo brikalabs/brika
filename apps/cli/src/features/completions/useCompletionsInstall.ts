@@ -1,11 +1,7 @@
 import type { Command } from '@brika/cli';
 import { useEffect, useState } from 'react';
-import {
-  detectShell,
-  installCompletions,
-  type Shell,
-} from '../../shared/cli/completions';
 import { useExit } from '../../runCommandTui';
+import { detectShell, installCompletions, type Shell } from '../../shared/cli/completions';
 
 export type Phase =
   | { kind: 'detecting' }

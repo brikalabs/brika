@@ -15,13 +15,13 @@
 
 import { Stack, useBreakpoint, useRouter } from '@brika/tui';
 import type React from 'react';
+import type { Routes } from '../../routes';
 import {
   fetchPlugins,
   fetchWorkflows,
   type PluginListItem,
   type WorkflowSummaryDto,
 } from '../../shared/cli/api';
-import type { Routes } from '../../routes';
 import { useHubResource } from '../../shared/hooks/useHubResource';
 import { HubTile } from './HubTile';
 import { PluginsTile } from './PluginsTile';

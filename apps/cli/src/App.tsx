@@ -22,10 +22,10 @@ import { useApp } from 'ink';
 import type React from 'react';
 import { useCallback, useState } from 'react';
 import { CliProvider } from './CliProvider';
+import { type Routes, routes } from './routes';
 import { BootScreen } from './shared/components/BootScreen';
 import { ShellLayout } from './shared/components/ShellLayout';
 import { useShellKeys } from './shared/hooks/useShellKeys';
-import { type Routes, routes } from './routes';
 
 interface Props {
   readonly version: string;

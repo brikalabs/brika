@@ -62,9 +62,7 @@ describe('<Button>', () => {
   test('enabled={false} blocks the shortcut', async () => {
     const onPress = mock();
     const { stdin, unmount } = render(
-      withShell(
-        React.createElement(Button, { shortcut: 'e', enabled: false, onPress }, 'enable')
-      )
+      withShell(React.createElement(Button, { shortcut: 'e', enabled: false, onPress }, 'enable'))
     );
     await flush();
     stdin.write('e');

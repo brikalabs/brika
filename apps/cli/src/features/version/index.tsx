@@ -18,18 +18,12 @@
  * visible in the user's scrollback.
  */
 
-import {
-  BrixStage,
-  EmoteProvider,
-  STAGE_WIDTH,
-  timelineDuration,
-  useEmote,
-} from '@brika/brix';
+import { BrixStage, EmoteProvider, STAGE_WIDTH, timelineDuration, useEmote } from '@brika/brix';
 import { Box, Text } from 'ink';
 import type React from 'react';
 import { useEffect, useMemo, useRef } from 'react';
-import { CLI_VERSION } from '../../version';
 import { useExit } from '../../runCommandTui';
+import { CLI_VERSION } from '../../version';
 import { type BuildInfo, readBuildInfo } from './buildInfo';
 import { InfoLine } from './InfoLine';
 import { buildVersionEmote } from './versionEmote';

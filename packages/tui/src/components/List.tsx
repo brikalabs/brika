@@ -158,21 +158,30 @@ export function List({
     return items.findIndex((it) => it.value === current);
   }, [items, current]);
 
+  // Mirror focusIdx into a ref + advance it imperatively whenever we
+  // move so back-to-back keystrokes don't both step from the same
+  // pre-render index. Without this, two arrows fired before React
+  // commits the first re-render would both see the original cursor.
+  const focusIdxRef = useRef(focusIdx);
+  focusIdxRef.current = focusIdx;
+
   const move = useCallback(
     (delta: number) => {
       if (items.length === 0) {
         return;
       }
-      const cur = focusIdx === -1 ? 0 : focusIdx;
-      const next = items[(cur + delta + items.length) % items.length];
+      const cur = focusIdxRef.current === -1 ? 0 : focusIdxRef.current;
+      const nextIdx = (cur + delta + items.length) % items.length;
+      const next = items[nextIdx];
       if (next) {
+        focusIdxRef.current = nextIdx;
         setValue(next.value);
         // Side-effect: bring focus here so the user's next Tab starts
         // from this list rather than wherever it was previously parked.
         focusList();
       }
     },
-    [items, focusIdx, setValue, focusList]
+    [items, setValue, focusList]
   );
 
   const select = useCallback((v: string) => {

@@ -81,10 +81,11 @@ export function RegistryDetail({
 }>): React.ReactElement {
   // Keyed on `name` (not the full result object) so re-renders that
   // swap an equivalent object don't re-fetch.
-  const { text: readme, loading: readmeLoading, error: readmeError } = useReadme(
-    fetchRegistryReadme,
-    item.name
-  );
+  const {
+    text: readme,
+    loading: readmeLoading,
+    error: readmeError,
+  } = useReadme(fetchRegistryReadme, item.name);
 
   return (
     <Box flexDirection="column" flexGrow={1} flexShrink={1} overflow="hidden">

@@ -336,10 +336,7 @@ function ScrollAreaInner({
   const chrome = renderStatus(statusLine, state, accent);
 
   const body = renderBody(sliceable, children, offset, visibleRows, innerRef);
-  const actions =
-    isFocused && !sliceable
-      ? renderActions(offset, maxOffset, jumpTo)
-      : null;
+  const actions = isFocused && !sliceable ? renderActions(offset, maxOffset, jumpTo) : null;
 
   const windowProps = height ? { height: visibleRows } : { flexGrow: 1, flexShrink: 1 };
 

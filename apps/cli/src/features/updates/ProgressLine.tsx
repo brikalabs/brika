@@ -15,9 +15,7 @@ export function ProgressLine({
   );
 }
 
-function ProgressGlyph({
-  progress,
-}: Readonly<{ progress: UpdateProgress }>): React.ReactElement {
+function ProgressGlyph({ progress }: Readonly<{ progress: UpdateProgress }>): React.ReactElement {
   if (progress.phase === 'error') {
     return <Text color="red">✗ </Text>;
   }

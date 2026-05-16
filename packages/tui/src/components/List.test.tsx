@@ -24,6 +24,20 @@ function flush(): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, 50));
 }
 
+// Poll-based wait so the `j`/`k` test isn't racing ink-testing-library's
+// stdin tick on slow CI runners. Local runs settle in <10ms; the timeout
+// is intentionally generous to absorb the worst observed CI latency.
+async function waitForCall<T>(mockFn: { mock: { calls: T[][] } }, expected: T): Promise<void> {
+  const start = Date.now();
+  while (Date.now() - start < 2000) {
+    const last = mockFn.mock.calls.at(-1)?.[0];
+    if (last === expected) {
+      return;
+    }
+    await new Promise((r) => setTimeout(r, 10));
+  }
+}
+
 function withShell(tree: React.ReactNode): React.ReactElement {
   return React.createElement(TuiShellProvider, { onQuit: () => undefined }, tree);
 }
@@ -84,10 +98,10 @@ describe('<List>', () => {
     );
     await flush();
     stdin.write('j');
-    await flush();
+    await waitForCall(onValueChange, 'beta');
     expect(onValueChange).toHaveBeenLastCalledWith('beta');
     stdin.write('k');
-    await flush();
+    await waitForCall(onValueChange, 'alpha');
     expect(onValueChange).toHaveBeenLastCalledWith('alpha');
     unmount();
   });
@@ -119,9 +133,7 @@ describe('<List>', () => {
   });
 
   test('empty list does not crash on a navigation keystroke', async () => {
-    const { stdin, unmount } = render(
-      withShell(React.createElement(List, { autoFocus: true }))
-    );
+    const { stdin, unmount } = render(withShell(React.createElement(List, { autoFocus: true })));
     await flush();
     // Should not throw.
     stdin.write('j');

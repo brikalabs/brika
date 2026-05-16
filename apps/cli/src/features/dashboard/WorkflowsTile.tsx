@@ -1,10 +1,4 @@
-import {
-  EmptyState,
-  EmptyStateDescription,
-  EmptyStateTitle,
-  Kbd,
-  StatTile,
-} from '@brika/tui';
+import { EmptyState, EmptyStateDescription, EmptyStateTitle, Kbd, StatTile } from '@brika/tui';
 import { Box, Text } from 'ink';
 import type React from 'react';
 import type { WorkflowSummaryDto } from '../../shared/cli/api';

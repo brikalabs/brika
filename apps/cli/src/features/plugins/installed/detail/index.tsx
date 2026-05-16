@@ -1,10 +1,4 @@
-import {
-  Badge,
-  Button,
-  Confirm,
-  ConfirmDescription,
-  ConfirmTitle,
-} from '@brika/tui';
+import { Badge, Button, Confirm, ConfirmDescription, ConfirmTitle } from '@brika/tui';
 import { Box, Text } from 'ink';
 import type React from 'react';
 import { useState } from 'react';
@@ -37,10 +31,11 @@ export function InstalledPluginDetail({
   onUninstalled: () => void;
 }>): React.ReactElement {
   const metrics = useLiveMetrics(plugin.uid, plugin.status === 'running');
-  const { text: readme, loading: readmeLoading, error: readmeError } = useReadme(
-    fetchPluginReadme,
-    plugin.uid
-  );
+  const {
+    text: readme,
+    loading: readmeLoading,
+    error: readmeError,
+  } = useReadme(fetchPluginReadme, plugin.uid);
   const [pendingUninstall, setPendingUninstall] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
