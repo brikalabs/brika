@@ -3,8 +3,8 @@ import 'reflect-metadata';
 
 import { auth } from '@brika/auth/server';
 import { inject } from '@brika/di';
-import { makeCliTokenResolver } from '@/cli/utils/cli-session';
-import { readCliToken, writeCliToken } from '@/cli/utils/cli-token';
+import { makeCliTokenResolver } from '@/auth/cli-session';
+import { readCliToken, writeCliToken } from '@/auth/cli-token';
 import {
   BoardsLoader,
   bootstrap,

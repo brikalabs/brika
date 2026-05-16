@@ -9,9 +9,6 @@
     "url": "https://github.com/brikalabs/brika.git",
     "directory": "apps/hub"
   },
-  "bin": {
-    "brika": "src/cli.ts"
-  },
   "scripts": {
     "dev": "bun --watch src/main.ts",
     "build": "bun run compiler/build.ts",

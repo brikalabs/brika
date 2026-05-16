@@ -10,7 +10,6 @@ import { readFile, rm, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { dirname, resolve } from 'node:path';
 import pc from 'picocolors';
-import { uninstallCompletions } from '@/cli/completions';
 import { HUB_REPO_URL, hub } from '@/hub';
 
 /** Shell rc files that may contain a PATH entry added by the installer */
@@ -63,8 +62,18 @@ export async function selfUninstall(options?: { purge?: boolean }): Promise<void
     force: true,
   });
 
-  // Remove completions (scripts + rc entries) — delegated to the completions module
-  await uninstallCompletions();
+  // Remove completions (scripts + rc entries) — delegated to the `brika` bin
+  // from apps/cli, which owns the completions install/uninstall side-effects.
+  // Failure is non-critical (older installs may not ship the subcommand).
+  try {
+    const proc = Bun.spawn(['brika', 'completions', '--uninstall'], {
+      stdout: 'ignore',
+      stderr: 'ignore',
+    });
+    await proc.exited;
+  } catch {
+    // Non-critical — leftover completion scripts are harmless
+  }
 
   // Clean up PATH entries the installer added to shell rc files
   for (const rcFile of SHELL_RC_FILES) {

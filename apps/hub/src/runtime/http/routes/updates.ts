@@ -7,7 +7,7 @@
 
 import { createSSEStream, group, route } from '@brika/router';
 import { z } from 'zod';
-import { RESTART_CODE } from '@/cli/utils/runtime';
+import { RESTART_CODE } from '@/runtime/restart-code';
 import { UpdateService } from '@/runtime/updates';
 import { applyUpdate, type UpdatePhase } from '@/updater';
 

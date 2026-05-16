@@ -198,58 +198,71 @@ export function CliProvider({ version, children }: Readonly<CliProviderProps>): 
     }
   }, []);
 
-  const stopHub = useCallback(async (): Promise<void> => {
-    const status = await checkPid();
-    if (status.state === 'stopped') {
-      setTransient({ mood: 'sleep', statusText: 'not running' });
-      return;
-    }
-    if (status.state === 'stale') {
-      await removePidFile();
-      setTransient({ mood: 'suspicious', statusText: 'stale pid — cleared' });
-      return;
-    }
-    if (status.pid === null) {
-      setTransient({
-        mood: 'suspicious',
-        statusText: "can't stop — hub was started outside the TUI (no pid file)",
-      });
-      return;
-    }
-    try {
-      process.kill(status.pid, 'SIGTERM');
-      setTransient({ mood: 'focused', statusText: `sent SIGTERM to pid ${status.pid}` });
-    } catch (e) {
-      setTransient({
-        mood: 'error',
-        statusText: `couldn't stop: ${e instanceof Error ? e.message : String(e)}`,
-      });
-    }
-  }, []);
+  /** Send `signal` to the running hub. The mood/statusText feedback
+   *  is shared between Stop (`SIGTERM`) and Restart (`SIGUSR1`); only
+   *  the success caption + the "no-op" branch differ, so they live in
+   *  the params instead of being duplicated across the two callbacks. */
+  const signalHub = useCallback(
+    async (
+      signal: NodeJS.Signals,
+      successCaption: (pid: number) => MoodLine,
+      idleCaption: MoodLine,
+      verb: string,
+      noPidCaption: MoodLine
+    ): Promise<void> => {
+      const status = await checkPid();
+      if (status.state !== 'running') {
+        if (signal === 'SIGTERM' && status.state === 'stale') {
+          await removePidFile();
+          setTransient({ mood: 'suspicious', statusText: 'stale pid — cleared' });
+          return;
+        }
+        setTransient(idleCaption);
+        return;
+      }
+      if (status.pid === null) {
+        setTransient(noPidCaption);
+        return;
+      }
+      try {
+        process.kill(status.pid, signal);
+        setTransient(successCaption(status.pid));
+      } catch (e) {
+        setTransient({
+          mood: 'error',
+          statusText: `couldn't ${verb}: ${e instanceof Error ? e.message : String(e)}`,
+        });
+      }
+    },
+    []
+  );
 
-  const restartHub = useCallback(async (): Promise<void> => {
-    const status = await checkPid();
-    if (status.state !== 'running') {
-      setTransient({ mood: 'sleep', statusText: 'nothing to restart' });
-      return;
-    }
-    if (status.pid === null) {
-      setTransient({
-        mood: 'suspicious',
-        statusText: "can't restart — hub was started outside the TUI",
-      });
-      return;
-    }
-    try {
-      process.kill(status.pid, 'SIGUSR1');
-      setTransient({ mood: 'thinking', statusText: `restart signal → pid ${status.pid}` });
-    } catch (e) {
-      setTransient({
-        mood: 'error',
-        statusText: `couldn't restart: ${e instanceof Error ? e.message : String(e)}`,
-      });
-    }
-  }, []);
+  const stopHub = useCallback(
+    () =>
+      signalHub(
+        'SIGTERM',
+        (pid) => ({ mood: 'focused', statusText: `sent SIGTERM to pid ${pid}` }),
+        { mood: 'sleep', statusText: 'not running' },
+        'stop',
+        {
+          mood: 'suspicious',
+          statusText: "can't stop — hub was started outside the TUI (no pid file)",
+        }
+      ),
+    [signalHub]
+  );
+
+  const restartHub = useCallback(
+    () =>
+      signalHub(
+        'SIGUSR1',
+        (pid) => ({ mood: 'thinking', statusText: `restart signal → pid ${pid}` }),
+        { mood: 'sleep', statusText: 'nothing to restart' },
+        'restart',
+        { mood: 'suspicious', statusText: "can't restart — hub was started outside the TUI" }
+      ),
+    [signalHub]
+  );
 
   const openUi = useCallback(async (): Promise<void> => {
     const status = await checkPid();
