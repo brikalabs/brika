@@ -169,6 +169,7 @@ describe('install / uninstall', () => {
     console.info('i');
     console.warn('w');
     console.error('e');
+    // biome-ignore lint/suspicious/noConsole: this test asserts the debug-level wrapper captures console.debug calls
     console.debug('d');
     const levels = debugBuffer.getEntries().map((e) => e.level);
     expect(levels).toEqual(['info', 'warn', 'error', 'debug']);

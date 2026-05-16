@@ -584,35 +584,31 @@ describe.concurrent('Supervisor (bad commands)', () => {
     CONCURRENT_TEST_TIMEOUT_MS
   );
 
-  test(
-    'health: auto detects the listening port via lsof',
-    async () => {
-      // Spawn a real Bun.serve child on a fixed port, gate startup on
-      // health: auto, and assert: the supervisor marks it healthy AND
-      // records the detected port in ServiceState.
-      const port = 7700 + Math.floor(Math.random() * 200);
-      await using sup = new Supervisor([
-        {
-          id: 'auto',
-          label: 'auto',
-          command: `bun -e "Bun.serve({ port: ${port}, fetch: () => new Response('ok') }); await Bun.sleep(60000)"`,
-          env: {},
-          dependsOn: [],
-          health: { kind: 'auto', timeoutMs: 15_000 },
-          url: null,
-          cwd: null,
-          port: null,
-        },
-      ]);
-      sup.start();
-      await waitFor(sup, (states) => states[0]?.status.kind === 'healthy', {
-        label: 'auto healthy',
-        timeoutMs: 20_000,
-      });
-      expect(sup.get('auto')?.detectedPort).toBe(port);
-    },
-    25_000
-  );
+  test('health: auto detects the listening port via lsof', async () => {
+    // Spawn a real Bun.serve child on a fixed port, gate startup on
+    // health: auto, and assert: the supervisor marks it healthy AND
+    // records the detected port in ServiceState.
+    const port = 7700 + Math.floor(Math.random() * 200);
+    await using sup = new Supervisor([
+      {
+        id: 'auto',
+        label: 'auto',
+        command: `bun -e "Bun.serve({ port: ${port}, fetch: () => new Response('ok') }); await Bun.sleep(60000)"`,
+        env: {},
+        dependsOn: [],
+        health: { kind: 'auto', timeoutMs: 15_000 },
+        url: null,
+        cwd: null,
+        port: null,
+      },
+    ]);
+    sup.start();
+    await waitFor(sup, (states) => states[0]?.status.kind === 'healthy', {
+      label: 'auto healthy',
+      timeoutMs: 20_000,
+    });
+    expect(sup.get('auto')?.detectedPort).toBe(port);
+  }, 25_000);
 
   test(
     'writeStdin delivers bytes to the focused service',

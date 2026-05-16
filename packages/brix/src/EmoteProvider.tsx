@@ -91,8 +91,14 @@ export function EmoteProvider({
 }: Readonly<EmoteProviderProps>): React.ReactElement {
   const [current, setCurrent] = useState<EmoteDef | null>(null);
   const [pending, setPending] = useState(0);
+  const currentRef = useRef<EmoteDef | null>(null);
   const queue = useRef<EmoteDef[]>([]);
   const handlers = useRef<Map<string, string[]>>(new Map());
+
+  const commitCurrent = useCallback((next: EmoteDef | null) => {
+    currentRef.current = next;
+    setCurrent(next);
+  }, []);
 
   const syncPending = useCallback(() => {
     setPending(queue.current.length);
@@ -105,37 +111,36 @@ export function EmoteProvider({
         return;
       }
       const candidate = withPriorityOverride(def, opts);
-      setCurrent((cur) => {
-        if (!cur) {
-          return candidate;
-        }
-        if (opts?.queue) {
-          queue.current.push(candidate);
-          syncPending();
-          return cur;
-        }
-        const curP = cur.priority ?? 0;
-        const newP = candidate.priority ?? 0;
-        if (newP >= curP) {
-          return candidate;
-        }
-        return cur;
-      });
+      const cur = currentRef.current;
+      if (!cur) {
+        commitCurrent(candidate);
+        return;
+      }
+      if (opts?.queue) {
+        queue.current.push(candidate);
+        syncPending();
+        return;
+      }
+      const curP = cur.priority ?? 0;
+      const newP = candidate.priority ?? 0;
+      if (newP >= curP) {
+        commitCurrent(candidate);
+      }
     },
-    [library, syncPending]
+    [library, commitCurrent, syncPending]
   );
 
   const cancel = useCallback(() => {
     queue.current = [];
     syncPending();
-    setCurrent(null);
-  }, [syncPending]);
+    commitCurrent(null);
+  }, [commitCurrent, syncPending]);
 
   const next = useCallback(() => {
     const head = queue.current.shift() ?? null;
     syncPending();
-    setCurrent(head);
-  }, [syncPending]);
+    commitCurrent(head);
+  }, [commitCurrent, syncPending]);
 
   const on = useCallback((event: string, name: string) => {
     const list = handlers.current.get(event) ?? [];
