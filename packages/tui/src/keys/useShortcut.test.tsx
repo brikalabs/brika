@@ -18,8 +18,11 @@ import { TuiShellProvider, useCaptureInput } from '../shell';
 import { KeyScope } from './KeyScope';
 import { useShortcut } from './useShortcut';
 
+// 250ms is well above the ~10ms ink-testing-library typically needs to
+// commit a render + cleanup, but generous enough to absorb the worst-case
+// CI slot under parallel test pressure (where 30ms was failing).
 function flush(): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, 30));
+  return new Promise((resolve) => setTimeout(resolve, 250));
 }
 
 function Bind({

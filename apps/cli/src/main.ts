@@ -22,13 +22,10 @@ function extractCwd(argv: string[]): string | undefined {
   }
 }
 
-async function main(): Promise<void> {
-  const cwd = extractCwd(process.argv);
-  if (cwd) {
-    process.env.BRIKA_HOME = cwd;
-  }
-  const { cli } = await import('./commands');
-  await cli.run();
+const cwd = extractCwd(process.argv);
+if (cwd) {
+  process.env.BRIKA_HOME = cwd;
 }
 
-void main();
+const { cli } = await import('./commands');
+await cli.run();

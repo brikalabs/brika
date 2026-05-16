@@ -81,6 +81,13 @@ export function useLogSearch(opts: Readonly<UseLogSearchOptions> = {}): LogSearc
   const limitRef = useRef(opts.limit ?? DEFAULT_LIMIT);
   limitRef.current = opts.limit ?? DEFAULT_LIMIT;
 
+  // Mirror `results` into a ref so `next` / `prev` can read the live
+  // length without abusing `setResults((cur) => cur)` as a "read state"
+  // hack (which trips Sonar S3516 — a setter that always returns the
+  // same value).
+  const resultsRef = useRef(results);
+  resultsRef.current = results;
+
   // Cancel any in-flight request when the component unmounts so a
   // stale response never resurrects unmounted state.
   useEffect(() => {
@@ -149,23 +156,19 @@ export function useLogSearch(opts: Readonly<UseLogSearchOptions> = {}): LogSearc
   );
 
   const next = useCallback(() => {
-    setResults((cur) => {
-      if (cur.length === 0) {
-        return cur;
-      }
-      setCurrentIdx((i) => (i + 1) % cur.length);
-      return cur;
-    });
+    const total = resultsRef.current.length;
+    if (total === 0) {
+      return;
+    }
+    setCurrentIdx((i) => (i + 1) % total);
   }, []);
 
   const prev = useCallback(() => {
-    setResults((cur) => {
-      if (cur.length === 0) {
-        return cur;
-      }
-      setCurrentIdx((i) => (i - 1 + cur.length) % cur.length);
-      return cur;
-    });
+    const total = resultsRef.current.length;
+    if (total === 0) {
+      return;
+    }
+    setCurrentIdx((i) => (i - 1 + total) % total);
   }, []);
 
   const clear = useCallback(() => {

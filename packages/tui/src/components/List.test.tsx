@@ -20,8 +20,11 @@ import { List, ListItem } from './List';
 // Pre-computed escape sequences (kept for future tests if ink-testing-
 // library ever gains reliable CSI replay).
 
+// 250ms is well above the ~10ms ink-testing-library typically needs to
+// commit a render + cleanup, but generous enough to absorb the worst-case
+// CI slot under parallel test pressure (where 50ms was failing).
 function flush(): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, 50));
+  return new Promise((resolve) => setTimeout(resolve, 250));
 }
 
 // Poll-based wait so the `j`/`k` test isn't racing ink-testing-library's
