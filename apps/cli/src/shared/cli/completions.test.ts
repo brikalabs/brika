@@ -179,3 +179,174 @@ describe('install / uninstall completions', () => {
     expect(cleaned).toEqual([]);
   });
 });
+
+// ── extra coverage ───────────────────────────────────────────────────────────
+
+const cmdsWithSubcommands = [
+  defineCommand({
+    name: 'hub',
+    description: 'Hub commands',
+    options: {
+      verbose: { type: 'boolean', short: 'v', description: 'increase log verbosity' },
+    },
+    handler: () => {},
+  }),
+  defineCommand({
+    name: 'plugins',
+    description: 'Plugin tooling',
+    handler: () => {},
+  }),
+  // A command with subcommands exercises the cwd / args branch of every
+  // generator. One subcommand has options, one doesn't.
+  {
+    name: 'completions',
+    description: 'Shell completions',
+    subcommands: [
+      defineCommand({
+        name: 'install',
+        description: 'Install shell completions',
+        options: {
+          shell: { type: 'string', short: 's', description: 'which shell' },
+        },
+        handler: () => {},
+      }),
+      defineCommand({
+        name: 'uninstall',
+        description: 'Remove shell completions',
+        handler: () => {},
+      }),
+    ],
+    handler: () => {},
+  },
+] satisfies Parameters<typeof generateCompletions>[0];
+
+describe('generateCompletions — bash flavour details', () => {
+  test('emits `complete -F _brika brika` and a per-command case clause', () => {
+    const out = generateCompletions(cmdsWithSubcommands, 'bash');
+    expect(out).toContain('complete -F _brika brika');
+    expect(out).toContain('hub)');
+    expect(out).toContain('--verbose');
+    expect(out).toContain('-v');
+  });
+
+  test('emits subcommand dispatch for commands that have one', () => {
+    const out = generateCompletions(cmdsWithSubcommands, 'bash');
+    expect(out).toContain('completions)');
+    expect(out).toContain('install');
+    expect(out).toContain('uninstall');
+    expect(out).toContain('--shell');
+  });
+
+  test('is deterministic — generating twice with the same input yields identical output', () => {
+    const a = generateCompletions(cmdsWithSubcommands, 'bash');
+    const b = generateCompletions(cmdsWithSubcommands, 'bash');
+    expect(a).toBe(b);
+  });
+});
+
+describe('generateCompletions — zsh flavour details', () => {
+  test('emits subcommand `_describe` entries and an arg case per leaf', () => {
+    const out = generateCompletions(cmdsWithSubcommands, 'zsh');
+    expect(out).toContain('compdef _brika brika');
+    expect(out).toContain('completions)');
+    expect(out).toContain("'install:Install shell completions'");
+    expect(out).toContain("'uninstall:Remove shell completions'");
+    expect(out).toContain('--shell');
+  });
+
+  test('is deterministic across repeated invocations', () => {
+    const a = generateCompletions(cmdsWithSubcommands, 'zsh');
+    const b = generateCompletions(cmdsWithSubcommands, 'zsh');
+    expect(a).toBe(b);
+  });
+});
+
+describe('generateCompletions — fish flavour details', () => {
+  test('emits per-subcommand registrations and option flags', () => {
+    const out = generateCompletions(cmdsWithSubcommands, 'fish');
+    expect(out).toContain('complete -c brika');
+    expect(out).toContain("__fish_use_subcommand' -a hub");
+    expect(out).toContain('-a install');
+    expect(out).toContain('-a uninstall');
+    expect(out).toContain('-l shell');
+    expect(out).toContain('-l verbose');
+  });
+
+  test('is deterministic across repeated invocations', () => {
+    const a = generateCompletions(cmdsWithSubcommands, 'fish');
+    const b = generateCompletions(cmdsWithSubcommands, 'fish');
+    expect(a).toBe(b);
+  });
+});
+
+describe('install / uninstall completions — extra coverage', () => {
+  let fakeHome: string;
+  let homedirSpy: ReturnType<typeof spyOn>;
+
+  beforeEach(() => {
+    fakeHome = mkdtempSync(join(tmpdir(), 'brika-completions-extra-'));
+    homedirSpy = spyOn(os, 'homedir').mockReturnValue(fakeHome);
+  });
+
+  afterEach(() => {
+    homedirSpy.mockRestore();
+    rmSync(fakeHome, { recursive: true, force: true });
+  });
+
+  test('fish install writes to ~/.config/fish/completions/brika.fish', async () => {
+    const result = await installCompletions('fish', cmds);
+    const expected = join(fakeHome, '.config', 'fish', 'completions', 'brika.fish');
+    expect(result.file).toBe(expected);
+    expect(existsSync(expected)).toBe(true);
+    expect(readFileSync(expected, 'utf8')).toContain('complete -c brika');
+  });
+
+  test('fish install is idempotent — the script can be reinstalled', async () => {
+    const first = await installCompletions('fish', cmds);
+    const second = await installCompletions('fish', cmds);
+    // Fish never claims `alreadyInstalled` because its rc-less install
+    // can always overwrite; both calls land at the same destination.
+    expect(second.file).toBe(first.file);
+    expect(second.alreadyInstalled).toBe(false);
+  });
+
+  test('bash is idempotent — second install reports alreadyInstalled', async () => {
+    writeFileSync(join(fakeHome, '.bashrc'), '# bashrc\n', 'utf8');
+    await installCompletions('bash', cmds);
+    const second = await installCompletions('bash', cmds);
+    expect(second.alreadyInstalled).toBe(true);
+  });
+
+  test('bash prefers .bash_profile when it exists', async () => {
+    writeFileSync(join(fakeHome, '.bash_profile'), '# profile\n', 'utf8');
+    writeFileSync(join(fakeHome, '.bashrc'), '# bashrc\n', 'utf8');
+    const result = await installCompletions('bash', cmds);
+    expect(result.file).toBe(join(fakeHome, '.bash_profile'));
+    const profile = readFileSync(join(fakeHome, '.bash_profile'), 'utf8');
+    expect(profile).toContain('# Brika completions');
+    // .bashrc must be left untouched.
+    expect(readFileSync(join(fakeHome, '.bashrc'), 'utf8')).toBe('# bashrc\n');
+  });
+
+  test('uninstall scrubs every shell that had a config', async () => {
+    writeFileSync(join(fakeHome, '.zshrc'), '# zsh\n', 'utf8');
+    writeFileSync(join(fakeHome, '.bashrc'), '# bash\n', 'utf8');
+    await installCompletions('zsh', cmds);
+    await installCompletions('bash', cmds);
+    await installCompletions('fish', cmds);
+
+    const cleaned = await uninstallCompletions();
+
+    // All three script files were removed.
+    expect(existsSync(join(fakeHome, '.brika', 'completions', 'brika.zsh'))).toBe(false);
+    expect(existsSync(join(fakeHome, '.brika', 'completions', 'brika.bash'))).toBe(false);
+    expect(existsSync(join(fakeHome, '.config', 'fish', 'completions', 'brika.fish'))).toBe(false);
+    expect(cleaned).toContain(join(fakeHome, '.brika', 'completions', 'brika.zsh'));
+    expect(cleaned).toContain(join(fakeHome, '.brika', 'completions', 'brika.bash'));
+    expect(cleaned).toContain(join(fakeHome, '.config', 'fish', 'completions', 'brika.fish'));
+
+    // Both rc files had their source lines scrubbed.
+    expect(readFileSync(join(fakeHome, '.zshrc'), 'utf8')).not.toContain('.brika/completions');
+    expect(readFileSync(join(fakeHome, '.bashrc'), 'utf8')).not.toContain('.brika/completions');
+  });
+});
