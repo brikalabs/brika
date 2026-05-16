@@ -13,8 +13,11 @@ import React from 'react';
 import { TuiShellProvider } from '../shell';
 import { Button } from './Button';
 
+// 250ms is well above the ~10ms ink-testing-library typically needs to
+// commit a render + cleanup, but generous enough to absorb the worst-case
+// CI slot under parallel test pressure.
 function flush(): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, 50));
+  return new Promise((resolve) => setTimeout(resolve, 250));
 }
 
 function withShell(tree: React.ReactNode): React.ReactElement {
