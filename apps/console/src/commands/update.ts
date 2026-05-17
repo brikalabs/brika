@@ -164,14 +164,7 @@ export default defineCommand({
 
     if (!values.yes) {
       const label = force ? `Reinstall v${info.currentVersion}?` : `Apply v${info.latestVersion}?`;
-      const confirmed = await p.confirm({
-        message: label,
-        initialValue: !force,
-      });
-      if (p.isCancel(confirmed) || !confirmed) {
-        process.stdout.write(`${pc.dim('Aborted.')}\n`);
-        return;
-      }
+      await p.confirmOrAbort({ message: label, initialValue: !force });
     }
 
     await streamApply(force);

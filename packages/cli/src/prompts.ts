@@ -1,5 +1,7 @@
 /**
- * Brika prompts — thin pass-through over @clack/prompts.
+ * Brika prompts — thin pass-through over @clack/prompts plus a handful
+ * of brika-specific helpers that capture patterns every CLI in the
+ * monorepo already repeats by hand.
  *
  * Centralised so every CLI surface (`brika`, `create-brika`, `mortar`,
  * `workspace-tools`, hub setup wizards) shares one prompt library
@@ -12,9 +14,13 @@
  *
  * Usage mirrors clack:
  *   import * as p from '@brika/cli/prompts';
- *   const ok = await p.confirm({ message: 'Continue?' });
- *   if (p.isCancel(ok) || !ok) return;
+ *   await p.confirmOrAbort({ message: 'Continue?' });
+ *   if (p.isCI) {
+ *     // skip the prompts, go straight to defaults
+ *   }
  */
+
+import { cancel, confirm, isCancel } from '@clack/prompts';
 
 export type {
   ConfirmOptions,
@@ -31,6 +37,8 @@ export {
   group,
   intro,
   isCancel,
+  isCI,
+  isTTY,
   log,
   multiselect,
   note,
@@ -39,3 +47,39 @@ export {
   spinner,
   text,
 } from '@clack/prompts';
+
+/** Options for {@link confirmOrAbort}. */
+export interface ConfirmOrAbortOptions {
+  /** Question shown to the user. */
+  message: string;
+  /** Default focus when the prompt opens. Defaults to `true`. */
+  initialValue?: boolean;
+  /** Banner printed when the user cancels or declines. Defaults to "Aborted." */
+  abortMessage?: string;
+  /** Exit code on abort. Defaults to `0` — cancellation isn't an error. */
+  exitCode?: number;
+}
+
+/**
+ * Ask a yes/no question, or terminate the process cleanly.
+ *
+ * Folds the "confirm + isCancel + decline → abort + exit" pattern that
+ * every interactive command repeats into one line:
+ *
+ *   await confirmOrAbort({ message: 'Continue?' });
+ *   // ... if we get here, the user said yes.
+ *
+ * On Ctrl-C or "no", the function prints a styled abort line via
+ * `cancel()` and calls `process.exit(exitCode)` — no boolean to thread
+ * through the handler.
+ */
+export async function confirmOrAbort(options: ConfirmOrAbortOptions): Promise<void> {
+  const ok = await confirm({
+    message: options.message,
+    initialValue: options.initialValue ?? true,
+  });
+  if (isCancel(ok) || !ok) {
+    cancel(options.abortMessage ?? 'Aborted.');
+    process.exit(options.exitCode ?? 0);
+  }
+}
