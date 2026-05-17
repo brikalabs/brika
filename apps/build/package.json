@@ -1,0 +1,25 @@
+{
+  "name": "@brika/build",
+  "version": "0.3.1",
+  "description": "Build orchestration for Brika binaries. Produces the `brika` (full) and `brika-hub` (headless) artifacts.",
+  "type": "module",
+  "private": true,
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/brikalabs/brika.git",
+    "directory": "apps/build"
+  },
+  "scripts": {
+    "build": "bun run src/index.ts",
+    "typecheck": "tsgo --noEmit"
+  },
+  "dependencies": {
+    "@brika/console": "workspace:*",
+    "@brika/hub": "workspace:*",
+    "picocolors": "^1.1.1"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.3.5"
+  }
+}
