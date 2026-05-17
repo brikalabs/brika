@@ -9,7 +9,7 @@ import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
 import { buildInfo } from '@/build-info';
 import { hub } from '@/hub';
 import type { UpdateInfo } from '@/updater';
-import { checkForUpdate, isNewer, noUpdateInfo } from '@/updater';
+import { checkForUpdate, isNewer, isPrerelease, noUpdateInfo } from '@/updater';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
@@ -251,6 +251,38 @@ describe('isNewer (pre-release)', () => {
   test('returns false on malformed input rather than throwing', () => {
     expect(isNewer('not-a-version', '0.4.0')).toBe(false);
     expect(isNewer('0.4.0', 'still-not-a-version')).toBe(false);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// isPrerelease
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('isPrerelease', () => {
+  test('detects a `-rc` tag', () => {
+    expect(isPrerelease('0.4.0-rc.1')).toBe(true);
+  });
+
+  test('detects a `-canary.<date>` tag', () => {
+    expect(isPrerelease('0.4.0-canary.20260517')).toBe(true);
+  });
+
+  test('strips a leading v and still detects the suffix', () => {
+    expect(isPrerelease('v1.0.0-beta')).toBe(true);
+  });
+
+  test('returns false for a plain semver release', () => {
+    expect(isPrerelease('1.0.0')).toBe(false);
+    expect(isPrerelease('v0.4.0')).toBe(false);
+  });
+
+  test('treats build metadata alone as a release (not a pre-release)', () => {
+    // semver-2.0 §10 — build metadata after `+` is not a pre-release identifier.
+    expect(isPrerelease('1.0.0+sha.abc123')).toBe(false);
+  });
+
+  test('detects a pre-release that also has build metadata', () => {
+    expect(isPrerelease('1.0.0-rc.1+sha.abc123')).toBe(true);
   });
 });
 

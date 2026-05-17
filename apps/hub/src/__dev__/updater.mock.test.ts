@@ -6,7 +6,7 @@
  *   - the banner is loud, but only once per scenario
  */
 
-import { describe, expect, mock, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
 import {
   _resetBannerForTests,
   buildFakeUpdateInfo,
@@ -14,6 +14,7 @@ import {
   logMockBannerIfActive,
   MOCK_ENV_VAR,
   MOCK_SCENARIOS,
+  MockUpdateProvider,
   runFakeApply,
 } from './updater.mock';
 
@@ -162,5 +163,99 @@ describe('logMockBannerIfActive', () => {
     logMockBannerIfActive(log, { [MOCK_ENV_VAR]: 'available' });
     logMockBannerIfActive(log, { [MOCK_ENV_VAR]: 'dev-build' });
     expect(log).toHaveBeenCalledTimes(2);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MockUpdateProvider — the DI-bound provider class
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('MockUpdateProvider', () => {
+  const provider = new MockUpdateProvider();
+  const originalEnv = process.env[MOCK_ENV_VAR];
+
+  beforeEach(() => {
+    // Default to a stable scenario; individual tests override.
+    process.env[MOCK_ENV_VAR] = 'available';
+  });
+
+  afterEach(() => {
+    if (originalEnv === undefined) {
+      delete process.env[MOCK_ENV_VAR];
+    } else {
+      process.env[MOCK_ENV_VAR] = originalEnv;
+    }
+  });
+
+  test('check() returns the fake update info for the active scenario', async () => {
+    process.env[MOCK_ENV_VAR] = 'available';
+    const info = await provider.check('stable');
+    expect(info.updateAvailable).toBe(true);
+    expect(info.channel).toBe('stable');
+  });
+
+  test('check() falls back to `up-to-date` when env is cleared mid-flight', async () => {
+    delete process.env[MOCK_ENV_VAR];
+    const info = await provider.check('stable');
+    expect(info.updateAvailable).toBe(false);
+    expect(info.currentVersion).toBe(info.latestVersion);
+  });
+
+  test('check() threads the channel through for canary', async () => {
+    process.env[MOCK_ENV_VAR] = 'available';
+    const info = await provider.check('canary');
+    expect(info.channel).toBe('canary');
+  });
+
+  test('apply() runs the synthetic stream and returns a result for `available`', async () => {
+    process.env[MOCK_ENV_VAR] = 'available';
+    process.env.BRIKA_DEV_FAKE_UPDATE_DELAY_MS = '0';
+    try {
+      const phases: string[] = [];
+      const result = await provider.apply({
+        channel: 'stable',
+        onProgress: (phase) => {
+          phases.push(phase);
+        },
+      });
+      expect(phases.length).toBeGreaterThan(0);
+      expect(phases.at(-1)).toBe('complete');
+      expect(result.previousVersion).toBeDefined();
+      expect(result.newVersion).toBeDefined();
+    } finally {
+      delete process.env.BRIKA_DEV_FAKE_UPDATE_DELAY_MS;
+    }
+  });
+
+  test('apply() throws for `apply-error` after emitting the synthetic error event', async () => {
+    process.env[MOCK_ENV_VAR] = 'apply-error';
+    process.env.BRIKA_DEV_FAKE_UPDATE_DELAY_MS = '0';
+    try {
+      const phases: string[] = [];
+      await expect(
+        provider.apply({
+          channel: 'stable',
+          onProgress: (phase) => {
+            phases.push(phase);
+          },
+        })
+      ).rejects.toThrow(/Synthetic apply failure/);
+      // The pipeline should have surfaced at least one error event before
+      // the rejection — the UI's job is to render it.
+      expect(phases).toContain('error');
+    } finally {
+      delete process.env.BRIKA_DEV_FAKE_UPDATE_DELAY_MS;
+    }
+  });
+
+  test('apply() uses DEFAULT_CHANNEL_ID when caller omits channel', async () => {
+    process.env[MOCK_ENV_VAR] = 'available';
+    process.env.BRIKA_DEV_FAKE_UPDATE_DELAY_MS = '0';
+    try {
+      const result = await provider.apply({});
+      expect(result.previousVersion).toBeDefined();
+    } finally {
+      delete process.env.BRIKA_DEV_FAKE_UPDATE_DELAY_MS;
+    }
   });
 });
