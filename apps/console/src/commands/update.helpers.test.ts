@@ -63,9 +63,7 @@ describe('formatStatus', () => {
   });
 
   test('renders "dev build" only when not on a published release', () => {
-    const out = plain(
-      formatStatus(makeInfo({ updateAvailable: false, devBuild: true }))
-    );
+    const out = plain(formatStatus(makeInfo({ updateAvailable: false, devBuild: true })));
     expect(out).toContain('dev build');
     expect(out).not.toContain('up to date');
   });

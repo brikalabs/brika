@@ -67,7 +67,7 @@ export async function compile({ target, platform }: CompileOptions): Promise<voi
   });
 
   if (!result.success) {
-    for (const l of result.logs) console.error(`  ${l.message}`);
+    for (const l of result.logs) { console.error(`  ${l.message}`); }
     process.exit(1);
   }
 

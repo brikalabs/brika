@@ -272,8 +272,7 @@ function compareRelease(
     releaseCommit !== '' &&
     currentCommit !== releaseCommit;
 
-  const channelMismatch =
-    channel === 'stable' && versionAhead && isPrerelease(currentVersion);
+  const channelMismatch = channel === 'stable' && versionAhead && isPrerelease(currentVersion);
 
   return {
     latestVersion,

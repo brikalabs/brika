@@ -37,10 +37,7 @@
 import { injectable } from '@brika/di';
 import { hub } from '@/hub';
 import { buildInfo } from '@/runtime/http/routes/status';
-import {
-  DEFAULT_CHANNEL_ID,
-  type UpdateChannelId,
-} from '@/runtime/updates/channels';
+import { DEFAULT_CHANNEL_ID, type UpdateChannelId } from '@/runtime/updates/channels';
 import {
   type ApplyResult,
   GitHubUpdateProvider,
@@ -274,11 +271,7 @@ const APPLY_ERROR_PHASE: UpdatePhase = 'extracting';
 
 interface RunFakeApplyOptions {
   scenario: MockScenario;
-  onProgress: (event: {
-    phase: UpdatePhase | 'error';
-    message?: string;
-    error?: string;
-  }) => void;
+  onProgress: (event: { phase: UpdatePhase | 'error'; message?: string; error?: string }) => void;
   /** Override per-phase delay (test seam). Defaults to env-derived value. */
   delayMs?: number;
   /** Sleep injection point so tests don't need real wall-clock waits. */

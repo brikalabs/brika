@@ -47,7 +47,7 @@ if (values.list) {
     log(pc.dim(`           entry: ${target.entrypoint}  →  ${target.binaryName}`));
   }
   console.log();
-  log(pc.dim('Platforms (--platform=<value>): ' + PLATFORMS.join(', ')));
+  log(pc.dim(`Platforms (--platform=<value>): ${PLATFORMS.join(', ')}`));
   console.log();
   process.exit(0);
 }

@@ -78,9 +78,7 @@ describe('applyMigrations', () => {
     const path = join(dir, 'out-of-order.db');
 
     const first = defineDatabase('out-of-order', SCHEMA, []).open(path);
-    first.sqlite.run(
-      "INSERT INTO __drizzle_migrations (hash, created_at) VALUES ('h-old', 9000)"
-    );
+    first.sqlite.run("INSERT INTO __drizzle_migrations (hash, created_at) VALUES ('h-old', 9000)");
     first.sqlite.close();
 
     const second = defineDatabase('out-of-order', SCHEMA, [

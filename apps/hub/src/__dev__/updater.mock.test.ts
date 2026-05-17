@@ -130,12 +130,7 @@ describe('runFakeApply', () => {
     });
     // Error fires when we *reach* `extracting`, so the UI gets to render
     // a few phases before failure (more realistic than failing on phase 0).
-    expect(events.map((e) => e.phase)).toEqual([
-      'checking',
-      'downloading',
-      'verifying',
-      'error',
-    ]);
+    expect(events.map((e) => e.phase)).toEqual(['checking', 'downloading', 'verifying', 'error']);
     expect(events.at(-1)?.error).toContain('apply-error');
   });
 });
