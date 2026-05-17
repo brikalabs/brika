@@ -63,7 +63,7 @@ export async function selfUninstall(options?: { purge?: boolean }): Promise<void
   });
 
   // Remove completions (scripts + rc entries) — delegated to the `brika` bin
-  // from apps/cli, which owns the completions install/uninstall side-effects.
+  // from apps/console, which owns the completions install/uninstall side-effects.
   // Failure is non-critical (older installs may not ship the subcommand).
   try {
     const proc = Bun.spawn(['brika', 'completions', '--uninstall'], {

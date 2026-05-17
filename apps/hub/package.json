@@ -9,9 +9,14 @@
     "url": "https://github.com/brikalabs/brika.git",
     "directory": "apps/hub"
   },
+  "exports": {
+    ".": {
+      "types": "./src/types.d.ts",
+      "default": "./src/main.ts"
+    }
+  },
   "scripts": {
     "dev": "bun --watch src/main.ts",
-    "build": "bun run compiler/build.ts",
     "typecheck": "tsgo --project tsconfig.check.json --noEmit",
     "lint": "bun x biome check .",
     "test": "bun test",

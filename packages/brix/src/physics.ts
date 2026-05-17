@@ -43,16 +43,38 @@ export function makeBrick(overrides: Partial<BrickState> = {}): BrickState {
   };
 }
 
+/** Below this absolute impact speed (cells/sec), a bounce settles to
+ *  the floor instead of bouncing again — otherwise restitution would
+ *  produce ever-smaller infinite hops. ~3 cells/sec is "barely felt".
+ */
+const BOUNCE_REST_VY = 3;
+
 /**
  * Integrate one step of explicit Euler with floor collision.
- * Anything below `y = 0` snaps to the floor and zeros vy.
+ *
+ * - `gravity` (cells/sec²) pulls vy down.
+ * - `restitution` (0..1) is the coefficient of restitution at the
+ *   floor: `0` snaps and rests (the original behaviour), `1` is a
+ *   perfectly elastic bounce, `0.4`–`0.6` reads as a "real" bounce
+ *   that decays over a few hops. Below `BOUNCE_REST_VY` impact speed,
+ *   the body settles regardless so we don't infinite-bounce on noise.
  */
-export function step(state: BrickState, dtMs: number, gravity = GRAVITY): BrickState {
+export function step(
+  state: BrickState,
+  dtMs: number,
+  gravity = GRAVITY,
+  restitution = 0
+): BrickState {
   const dt = dtMs / 1000;
   const vy = state.vy - gravity * dt;
   const y = state.y + vy * dt;
   const cx = state.cx + state.vx * dt;
   if (y <= 0 && vy <= 0) {
+    const impactSpeed = -vy;
+    if (restitution > 0 && impactSpeed > BOUNCE_REST_VY) {
+      // Reverse vy, scaled by restitution. Body leaves the floor again.
+      return { ...state, cx, y: 0, vy: impactSpeed * restitution, grounded: false };
+    }
     return { ...state, cx, y: 0, vy: 0, grounded: true };
   }
   return { ...state, cx, y, vy, grounded: false };

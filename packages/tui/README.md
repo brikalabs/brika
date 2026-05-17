@@ -1,6 +1,6 @@
 # @brika/tui
 
-Generic [Ink](https://github.com/vadimdemedes/ink)-powered TUI primitives, hooks, and a dev launcher with React Fast Refresh. No branding, no app-specific glue — see [`@brika/brix`](../brix) for Brika's mascot layer and `apps/cli` for the brika CLI.
+Generic [Ink](https://github.com/vadimdemedes/ink)-powered TUI primitives, hooks, and a dev launcher with React Fast Refresh. No branding, no app-specific glue — see [`@brika/brix`](../brix) for Brika's mascot layer and `apps/console` for the brika CLI.
 
 ```bash
 bun add @brika/tui ink react
@@ -282,7 +282,7 @@ What it does:
 - Hot-replaces React components in place (state is preserved where Fast Refresh allows).
 - Surfaces compile and runtime errors in a TUI overlay (`HmrErrorOverlay`) instead of crashing the process.
 
-Use it for component / view development inside `apps/cli` or any consumer app. Production runs do not need it.
+Use it for component / view development inside `apps/console` or any consumer app. Production runs do not need it.
 
 ---
 

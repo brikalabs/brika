@@ -11,33 +11,35 @@ COPY . .
 RUN bun install --frozen-lockfile
 RUN bun run --filter @brika/ui build
 
-# === Build Hub (architecture-specific, compiled binary) ===
-FROM oven/bun:${BUN_VERSION} AS build-hub
+# === Build console binary (architecture-specific, compiled binary) ===
+# The single `brika` binary embeds the hub server + Brix TUI + UI bundle
+# via Bun macros (see apps/hub/src/runtime/http/embedded-ui.ts). The UI
+# dist from the build-ui stage is copied in before `bun run build
+# --compile` so the macro can bake the bytes into the binary.
+FROM oven/bun:${BUN_VERSION} AS build-cli
 WORKDIR /app
 # git is required to embed commit/branch/date in the build
 RUN apt-get update \
     && apt-get install -y --no-install-recommends git \
     && rm -rf /var/lib/apt/lists/*
 COPY . .
+COPY --from=build-ui /app/apps/ui/dist ./apps/ui/dist
 RUN bun install --frozen-lockfile
-WORKDIR /app/apps/hub
+WORKDIR /app/apps/console
 RUN bun run build --compile
 
-# === Runtime (minimal — compiled binary includes Bun runtime) ===
+# === Runtime (minimal — compiled binary includes Bun runtime + UI + locales) ===
 FROM debian:bookworm-slim
 WORKDIR /app
 
 # Bun is needed for plugin execution (plugins are TypeScript child processes)
-COPY --from=build-hub /usr/local/bin/bun /usr/local/bin/bun
+COPY --from=build-cli /usr/local/bin/bun /usr/local/bin/bun
 
-COPY --from=build-hub /app/apps/hub/dist/brika ./brika
-COPY --from=build-hub /app/apps/hub/src/locales  ./locales
-COPY --from=build-ui  /app/apps/ui/dist         ./ui
+COPY --from=build-cli /app/apps/console/dist/brika ./brika
 
 ENV NODE_ENV=production \
     BRIKA_HOST=0.0.0.0 \
     BRIKA_PORT=3001 \
-    BRIKA_STATIC_DIR=/app/ui \
     BRIKA_BUN_PATH=/usr/local/bin/bun \
     # Headless containers have no Secret Service (libsecret + D-Bus). Default
     # to the AES-256-GCM file backend under /app/.brika. Mount BRIKA_SECRET_KEY
@@ -51,4 +53,4 @@ VOLUME ["/app/.brika"]
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD /app/brika version || exit 1
 
-CMD ["./brika", "start", "--foreground"]
+CMD ["./brika", "hub"]

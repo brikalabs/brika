@@ -9,7 +9,7 @@
  * read the user's `${BRIKA_HOME}` is already the user. The file is
  * cleaned up alongside the PID file on supervisor exit.
  *
- * Counterpart on the CLI side: `apps/cli/src/cli/auth-token.ts`.
+ * Counterpart on the CLI side: `apps/console/src/shared/cli/auth-token.ts`.
  */
 import { randomBytes } from 'node:crypto';
 import { chmodSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';

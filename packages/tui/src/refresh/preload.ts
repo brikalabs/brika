@@ -61,7 +61,7 @@ globalThis.__brikaHmrBoundary = HmrErrorBoundary;
 
 const runtimeImport = new URL('./runtime.ts', import.meta.url).href;
 const rootDir = process.cwd();
-// Watcher climbs to the workspace root so `dev:hot` from `apps/cli/`
+// Watcher climbs to the workspace root so `dev:hot` from `apps/console/`
 // also picks up edits in `packages/brix/`, `packages/tui/`, etc.
 const watchRoot = findWorkspaceRoot(rootDir);
 

@@ -7,6 +7,7 @@ export function generateHelp(commands: Command[], specific?: Command, prefix = '
 
 function generateGlobalHelp(commands: Command[], prefix: string): string {
   const commandsSection = commands
+    .filter((cmd) => !cmd.hidden)
     .map((cmd) => `  ${pc.green(cmd.name.padEnd(12))} ${cmd.description}`)
     .join('\n');
 

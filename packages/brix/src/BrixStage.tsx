@@ -27,6 +27,7 @@
 import { Box } from 'ink';
 import type React from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useBrixImpulse } from './BrixPhysicsProvider';
 import { Bubble } from './Bubble';
 import { useEmote } from './EmoteProvider';
 import { EMOTE_IDLE, type EmoteDef } from './emotes';
@@ -187,6 +188,13 @@ export function BrixStage({
   const particleSprite = useParticles(emitter, { width, height, fps });
 
   const tint = active.color ?? 'cyan';
+  // Vertical anchor — pre-baked emote frames are STAGE_HEIGHT tall.
+  // When the caller asks for a taller canvas (jump headroom), we want
+  // those extra rows to become "sky" above the body, not empty space
+  // beneath it. Shift every floor-relative layer down by the excess
+  // height so the floor still rests on the bottom row.
+  const skyRows = Math.max(0, height - STAGE_HEIGHT);
+
   // Floor layer — optional decoration the user can swap or remove
   // entirely. Composed at the bottom so the body and particles paint
   // over it.
@@ -195,19 +203,55 @@ export function BrixStage({
       return null;
     }
     const sprite = floor === true ? floorSprite(width) : floor;
-    return { sprite, x: 0, y: STAGE_FLOOR_LINE_Y };
-  }, [floor, width]);
+    return { sprite, x: 0, y: STAGE_FLOOR_LINE_Y + skyRows };
+  }, [floor, width, skyRows]);
+
+  // Live physics — `<BrixPhysicsProvider>` lets any consumer push
+  // impulses into the mascot. The provider's offset shifts the body
+  // (and its speaking-mouth overlay) within the stage canvas; the
+  // floor stays anchored. With no provider in scope `useBrixImpulse()`
+  // returns a no-op api whose offset is `{0, 0}`, so the stage renders
+  // identically to its pre-physics behaviour.
+  //
+  // `offset.y` is height *above* the floor; the stage's y axis grows
+  // downward, so we subtract it to lift the body upward.
+  const { offset } = useBrixImpulse();
   // Tint the body and speaking overlay; particles keep their per-
   // particle color.
   const composed = useMemo(() => {
+    const bodyLayer = {
+      sprite: bodySprite,
+      color: tint,
+      x: offset.x,
+      y: skyRows - offset.y,
+    };
+    const mouthLayer = speakingOverlay
+      ? {
+          ...speakingOverlay,
+          color: tint,
+          x: speakingOverlay.x + offset.x,
+          y: speakingOverlay.y + skyRows - offset.y,
+        }
+      : null;
     const layers = [
       ...(floorLayer ? [floorLayer] : []),
-      { sprite: bodySprite, color: tint },
-      ...(speakingOverlay ? [{ ...speakingOverlay, color: tint }] : []),
+      bodyLayer,
+      ...(mouthLayer ? [mouthLayer] : []),
       particleSprite,
     ];
     return compose(layers, { width, height });
-  }, [floorLayer, bodySprite, speakingOverlay, particleSprite, tint, width, height]);
+  }, [
+    floorLayer,
+    bodySprite,
+    speakingOverlay,
+    particleSprite,
+    tint,
+    width,
+    height,
+    skyRows,
+    offset.x,
+    offset.y,
+  ]);
 
   const line = isPlaying && active.line ? stripMoodScript(active.line) : '';
   const bw = bubbleWidth ?? width;

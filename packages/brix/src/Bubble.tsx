@@ -30,6 +30,17 @@ import type React from 'react';
 export type BubbleVariant = 'speech' | 'thought' | 'whisper';
 export type BubbleTail = 'left' | 'bottom' | 'none';
 
+/** Optional hook to override the bubble's text rendering. The bubble
+ *  computes the fitted (padded + truncated) string for layout, then
+ *  hands it to the callback to render however the caller likes —
+ *  formatted spans, color runs, animated glyphs, etc. The callback's
+ *  output is expected to occupy the same number of visible cells as
+ *  `fitted.length` so the bubble's chrome stays aligned. */
+export type BubbleContentRenderer = (
+  fitted: string,
+  props: { readonly textColor?: string; readonly dim?: boolean }
+) => React.ReactNode;
+
 export interface BubbleProps {
   /** Single-line message inside the bubble. */
   readonly text: string;
@@ -44,6 +55,9 @@ export interface BubbleProps {
   readonly textColor?: string;
   /** Render the text dimmed — useful while idle. */
   readonly dim?: boolean;
+  /** Override the default `<Text>` content render. Receives the fitted
+   *  string (already padded / truncated to the inner width). */
+  readonly renderContent?: BubbleContentRenderer;
 }
 
 interface BubbleGlyphs {
@@ -145,6 +159,7 @@ export function Bubble({
   borderColor = 'gray',
   textColor,
   dim,
+  renderContent,
 }: Readonly<BubbleProps>): React.ReactElement {
   const g = glyphsFor(variant);
   const showLeftTail = tail === 'left' && variant !== 'whisper';
@@ -183,9 +198,13 @@ export function Bubble({
       <Box>
         {showLeftTail && <Text color={borderColor}>{g.leftTail}</Text>}
         <Text color={borderColor}>{`${leftEdge}${pad}`}</Text>
-        <Text color={textColor} dimColor={dim}>
-          {content}
-        </Text>
+        {renderContent ? (
+          renderContent(content, { textColor, dim })
+        ) : (
+          <Text color={textColor} dimColor={dim}>
+            {content}
+          </Text>
+        )}
         <Text color={borderColor}>{`${pad}${g.vertical}`}</Text>
       </Box>
       <Box>

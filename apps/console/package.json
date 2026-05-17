@@ -1,0 +1,39 @@
+{
+  "name": "@brika/console",
+  "version": "0.1.0",
+  "description": "Brika operator console — the single `brika` binary. Bundles the CLI surface, the Brix TUI dashboard, the inline hub server, and the embedded web UI.",
+  "type": "module",
+  "private": true,
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/brikalabs/brika.git",
+    "directory": "apps/console"
+  },
+  "bin": {
+    "brika": "src/main.ts"
+  },
+  "scripts": {
+    "dev": "bun run src/main.ts",
+    "dev:hot": "tui src/main.ts",
+    "build": "bun run compiler/build.ts",
+    "test": "bun test",
+    "typecheck": "tsgo --noEmit"
+  },
+  "dependencies": {
+    "@brika/brix": "workspace:*",
+    "@brika/cli": "workspace:*",
+    "@brika/hub": "workspace:*",
+    "@brika/tui": "workspace:*",
+    "ink": "^6.0.1",
+    "picocolors": "^1.1.1",
+    "react": "^19.2.3",
+    "reflect-metadata": "^0.2.2"
+  },
+  "devDependencies": {
+    "@brika/testing": "workspace:*",
+    "@types/bun": "^1.3.5",
+    "@types/react": "^19.0.0",
+    "ink-testing-library": "^4.0.0"
+  }
+}

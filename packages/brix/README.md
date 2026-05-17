@@ -220,4 +220,4 @@ Tests are colocated as `*.test.ts`. The pure kernels (`sprite`, `timeline`, `par
 - Component props are wrapped in `Readonly<>`.
 - No `as` casts and no `any`. Use type guards, narrowing, or `unknown` + runtime checks.
 - Default to no comments. When a comment is justified, explain **why** the code looks the way it does, not what it does.
-- Anything that grows beyond the stage (mini-games, scenes) belongs alongside the kernels in this package, not in `apps/cli` — keep the CLI free of game logic.
+- Anything that grows beyond the stage (mini-games, scenes) belongs alongside the kernels in this package, not in `apps/console` — keep the CLI free of game logic.

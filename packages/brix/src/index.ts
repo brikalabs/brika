@@ -11,9 +11,15 @@
  * `<Bubble>` and pacing primitives from `script.ts`.
  */
 
+export {
+  BrixPhysicsProvider,
+  type BrixPhysicsProviderProps,
+  useBrixImpulse,
+} from './BrixPhysicsProvider';
 export { BrixStage, type BrixStageProps } from './BrixStage';
 export {
   Bubble,
+  type BubbleContentRenderer,
   type BubbleProps,
   type BubbleTail,
   type BubbleVariant,
@@ -132,5 +138,10 @@ export {
   track,
   tracksAt,
 } from './timeline';
+export {
+  type BrixPhysicsApi,
+  type UseBrixPhysicsOptions,
+  useBrixPhysics,
+} from './useBrixPhysics';
 export { type UseParticlesOpts, useParticles } from './useParticles';
 export { type TimelineState, type UseTimelineOptions, useTimeline } from './useTimeline';

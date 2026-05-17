@@ -13,13 +13,14 @@
   "exports": {
     ".": "./src/index.ts",
     "./components": "./src/components/index.ts",
+    "./debug": "./src/debug/index.ts",
+    "./format": "./src/format/index.ts",
+    "./forms": "./src/forms/index.ts",
     "./keys": "./src/keys/index.ts",
-    "./state": "./src/state/index.ts",
-    "./utils": "./src/utils/index.ts",
     "./router": "./src/router/index.ts",
     "./shell": "./src/shell/index.ts",
-    "./forms": "./src/forms/index.ts",
-    "./debug": "./src/debug/index.ts"
+    "./state": "./src/state/index.ts",
+    "./utils": "./src/utils/index.ts"
   },
   "bin": {
     "tui": "./src/refresh/cli.ts"
