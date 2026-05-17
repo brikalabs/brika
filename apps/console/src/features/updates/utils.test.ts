@@ -21,6 +21,7 @@ const baseInfo: UpdateInfoDto = {
   assetName: null,
   assetSize: null,
   channel: 'stable',
+  runtime: 'binary',
   lastCheckedAt: null,
 };
 

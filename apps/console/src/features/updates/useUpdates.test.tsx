@@ -47,6 +47,7 @@ function makeInfo(over: Partial<UpdateInfoDto> = {}): UpdateInfoDto {
     assetName: null,
     assetSize: null,
     channel: 'stable',
+    runtime: 'binary',
     lastCheckedAt: null,
     ...over,
   };

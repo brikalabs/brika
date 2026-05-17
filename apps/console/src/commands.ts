@@ -14,6 +14,7 @@
  *   brika open             open the UI in the default browser
  *   brika hub              foreground hub boot (TUI spawn target, CI/Docker)
  *   brika version          short non-TUI version line
+ *   brika update           check for a new release and apply it
  *   brika completions      shell tab-completion install
  *   brika help             auto-generated help
  */
@@ -28,6 +29,7 @@ import open from './commands/open';
 import start from './commands/start';
 import status from './commands/status';
 import stop from './commands/stop';
+import update from './commands/update';
 import version from './commands/version';
 
 /** Pool of hint lines hung off `brika help` — the framework strips hidden
@@ -66,6 +68,7 @@ export const cli = createCli({ name: 'brika', defaultCommand: 'dashboard', helpF
   .addCommand(open)
   .addCommand(hub)
   .addCommand(version)
+  .addCommand(update)
   .addCommand(completions)
   // Hidden easter eggs — registered last so the explicit `brika help` /
   // `brika --help` lists keep the same shape as before. Resolvable by

@@ -8,6 +8,7 @@
 import { createSSEStream, group, route } from '@brika/router';
 import { z } from 'zod';
 import { RESTART_CODE } from '@/runtime/restart-code';
+import { runtimeKind } from '@/runtime/runtime-env';
 import { UpdateService } from '@/runtime/updates';
 import { applyUpdate, type UpdatePhase } from '@/updater';
 
@@ -78,6 +79,14 @@ export const updateRoutes = group({
               'progress'
             );
           };
+
+          if (runtimeKind === 'docker') {
+            const message =
+              'In-place update is disabled in Docker. Pull a new image with `docker pull ghcr.io/brikalabs/brika:latest`, then recreate the container.';
+            sendProgress('error', message, message);
+            close();
+            return;
+          }
 
           (async () => {
             try {

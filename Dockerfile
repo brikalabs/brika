@@ -34,6 +34,9 @@ ENV NODE_ENV=production \
     BRIKA_HOST=0.0.0.0 \
     BRIKA_PORT=3001 \
     BRIKA_BUN_PATH=/usr/local/bin/bun \
+    # Tells the updater that an in-place binary swap won't survive a
+    # container restart; the UI/CLI surface a `docker pull` flow instead.
+    BRIKA_RUNTIME=docker \
     # Headless containers have no Secret Service (libsecret + D-Bus).
     # Default to the AES-256-GCM file backend under /app/.brika.
     # Mount BRIKA_SECRET_KEY (base64 of 32 random bytes) via Docker/K8s

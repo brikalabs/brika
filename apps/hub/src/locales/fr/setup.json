@@ -6,7 +6,8 @@
       "account": "Compte",
       "avatar": "Avatar",
       "timezone": "Fuseau",
-      "location": "Localisation"
+      "location": "Localisation",
+      "update": "Mise à jour"
     }
   },
   "welcome": {
@@ -82,6 +83,25 @@
     "country": "Pays",
     "latitude": "Latitude",
     "longitude": "Longitude"
+  },
+  "update": {
+    "eyebrow": "Mises à jour",
+    "title": "Vérifier les mises à jour",
+    "checking": "Recherche de la dernière version sur GitHub…",
+    "availableTitle": "Une nouvelle version de Brika est disponible",
+    "availableSubtitle": "Mettez à jour maintenant pour démarrer sur la dernière version. Vous pourrez aussi le faire plus tard depuis Paramètres → Système.",
+    "updateNow": "Mettre à jour",
+    "skip": "Plus tard",
+    "applying": "Mise à jour de Brika",
+    "restarting": "Redémarrage du hub",
+    "waitingForHub": "En attente du redémarrage du hub…",
+    "preparing": "Préparation de la mise à jour…",
+    "failed": "Échec de la mise à jour",
+    "restartTimeout": "Le hub n'est pas revenu à temps. Rechargez la page et réessayez depuis Paramètres → Système.",
+    "dockerTitle": "Une nouvelle image est disponible",
+    "dockerSubtitle": "Ce hub tourne dans Docker — v{{current}} est installée, v{{latest}} est la dernière. Les mises à jour en place sont désactivées dans les conteneurs.",
+    "dockerHelp": "Téléchargez la nouvelle image et recréez le conteneur. La commande ci-dessous fonctionne avec la configuration docker-compose par défaut.",
+    "continueAnyway": "Continuer avec la version actuelle"
   },
   "complete": {
     "eyebrow": "Terminé",

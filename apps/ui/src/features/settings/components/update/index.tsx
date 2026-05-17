@@ -31,6 +31,7 @@ export function UpdateSection() {
   };
 
   const updateAvailable = data?.updateAvailable;
+  const isDocker = data?.runtime === 'docker';
 
   return (
     <div className="space-y-4">
@@ -54,11 +55,11 @@ export function UpdateSection() {
         {data && updateAvailable && (
           <Button size="sm" onClick={() => openDialog(false)}>
             <ArrowDownToLine />
-            {t('common:updates.updateNow')}
+            {isDocker ? t('common:updates.howToUpdate') : t('common:updates.updateNow')}
           </Button>
         )}
 
-        {data && !updateAvailable && (
+        {data && !updateAvailable && !isDocker && (
           <Button variant="ghost" size="sm" onClick={() => openDialog(true)}>
             <ArrowDownToLine />
             {t('common:updates.reinstall')}

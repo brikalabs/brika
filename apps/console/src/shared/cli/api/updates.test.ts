@@ -45,6 +45,7 @@ const sampleInfo: UpdateInfoDto = {
   assetName: 'brika.tar.gz',
   assetSize: 12345,
   channel: 'stable',
+  runtime: 'binary',
   lastCheckedAt: '2025-01-02T00:00:00Z',
 };
 

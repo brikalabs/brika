@@ -22,6 +22,7 @@ import pc from 'picocolors';
 import { CliError } from '@/errors';
 import { HUB_GITHUB_RELEASES_API, HUB_GITHUB_RELEASES_LIST_API, hub } from '@/hub';
 import { buildInfo } from '@/runtime/http/routes/status';
+import { type RuntimeKind, runtimeKind } from '@/runtime/runtime-env';
 import {
   DEFAULT_CHANNEL_ID,
   resolveChannel,
@@ -70,6 +71,12 @@ export interface UpdateInfo {
   assetName: string | null;
   assetSize: number | null;
   channel: UpdateChannelId;
+  /**
+   * How the hub is hosted. `binary` supports in-place self-update;
+   * `docker` does not (the image layer would override on next restart),
+   * so the UI/CLI fall back to "pull a new image" guidance.
+   */
+  runtime: RuntimeKind;
 }
 
 export type UpdatePhase =
@@ -97,6 +104,7 @@ export function noUpdateInfo(channel: UpdateChannelId = DEFAULT_CHANNEL_ID): Upd
     assetName: null,
     assetSize: null,
     channel,
+    runtime: runtimeKind,
   };
 }
 
@@ -246,6 +254,7 @@ export async function checkForUpdate(
     assetName: cmp.asset?.name ?? null,
     assetSize: cmp.asset?.size ?? null,
     channel,
+    runtime: runtimeKind,
   };
 }
 
@@ -268,6 +277,12 @@ export async function applyUpdate(options?: ApplyUpdateOptions): Promise<{
   newCommit: string;
 }> {
   const { force, channel = DEFAULT_CHANNEL_ID, onProgress } = options ?? {};
+
+  if (runtimeKind === 'docker') {
+    throw new Error(
+      'In-place update is disabled in Docker. Pull a new image instead: `docker pull ghcr.io/brikalabs/brika:latest` and recreate the container.'
+    );
+  }
 
   onProgress?.('checking', 'Checking for updates...');
   const { release, meta } = await fetchLatestRelease(channel);

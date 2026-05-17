@@ -46,7 +46,7 @@ import {
 import { UserAvatar } from '@/components/user-avatar';
 import { LoginPage } from '@/features/auth';
 import { useHealth } from '@/features/dashboard/hooks';
-import { useUpdateCheck } from '@/features/updates';
+import { UpdateNotification, useUpdateCheck } from '@/features/updates';
 import { useAuthInterceptor } from '@/hooks/use-auth-interceptor';
 import { ThemeProvider } from '@/lib/theme-provider';
 import { useLocale } from '@/lib/use-locale';
@@ -375,6 +375,7 @@ export function RootLayout() {
             <Outlet />
           </main>
         </SidebarInset>
+        <UpdateNotification />
       </SidebarProvider>
     </ThemeProvider>
   );

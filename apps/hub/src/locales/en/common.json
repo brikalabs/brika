@@ -163,6 +163,9 @@
     "currentVersion": "Current version",
     "latestVersion": "Latest version",
     "neverChecked": "Never checked",
-    "devBuild": "Dev build"
+    "devBuild": "Dev build",
+    "howToUpdate": "How to update",
+    "dockerTitle": "This hub runs in Docker",
+    "dockerDescription": "In-place updates are disabled because the image layer would overwrite them on the next restart. Pull a new image and recreate the container instead."
   }
 }

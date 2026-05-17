@@ -8,6 +8,7 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
 import { buildInfo } from '@/build-info';
 import { hub } from '@/hub';
+import { runtimeKind } from '@/runtime/runtime-env';
 import type { UpdateInfo } from '@/updater';
 import { checkForUpdate, isNewer, noUpdateInfo } from '@/updater';
 
@@ -955,6 +956,7 @@ describe('checkForUpdate', () => {
       assetName,
       assetSize: 1024 * 1024 * 10,
       channel: 'stable',
+      runtime: runtimeKind,
     });
   });
 });

@@ -9,7 +9,16 @@ import {
 } from '@brika/clay/components/dialog';
 import { ProgressDisplay } from '@brika/clay/components/progress-display';
 import { Separator } from '@brika/clay/components/separator';
-import { ArrowDownToLine, ArrowRight, ExternalLink, Loader2, RefreshCw, Tag } from 'lucide-react';
+import {
+  ArrowDownToLine,
+  ArrowRight,
+  Copy,
+  ExternalLink,
+  Loader2,
+  RefreshCw,
+  Tag,
+  Terminal,
+} from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Markdown } from '@/features/plugins/components/Markdown';
 import { useWaitForHub } from '@/hooks/use-wait-for-hub';
@@ -136,13 +145,32 @@ function RestartingContent({ t }: Readonly<RestartingContentProps>) {
 interface UpdateFooterProps {
   state: DialogState;
   force: boolean | undefined;
+  runtime: HubUpdateInfo['runtime'];
   t: LocaleUtils['t'];
   onClose: () => void;
   onUpdate: () => void;
 }
 
-function UpdateFooter({ state, force, t, onClose, onUpdate }: Readonly<UpdateFooterProps>) {
+function UpdateFooter({
+  state,
+  force,
+  runtime,
+  t,
+  onClose,
+  onUpdate,
+}: Readonly<UpdateFooterProps>) {
   if (state === 'idle') {
+    // Docker hosts can't apply in-place — the dialog body shows the
+    // pull command and the footer is just a "got it" affordance.
+    if (runtime === 'docker') {
+      return (
+        <div className="flex w-full justify-end">
+          <Button variant="outline" onClick={onClose}>
+            {t('common:actions.close')}
+          </Button>
+        </div>
+      );
+    }
     return (
       <div className="flex w-full justify-end gap-2">
         <Button variant="outline" onClick={onClose}>
@@ -174,6 +202,53 @@ function UpdateFooter({ state, force, t, onClose, onUpdate }: Readonly<UpdateFoo
   }
 
   return null;
+}
+
+interface DockerGuidanceProps {
+  t: LocaleUtils['t'];
+}
+
+function DockerGuidance({ t }: Readonly<DockerGuidanceProps>) {
+  const [copied, setCopied] = useState(false);
+  const command = 'docker pull ghcr.io/brikalabs/brika:latest && docker compose up -d';
+
+  const handleCopy = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(command);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // Clipboard unavailable — ignore
+    }
+  }, [command]);
+
+  return (
+    <div className="space-y-3 rounded-lg border border-amber-500/30 bg-amber-500/5 p-4">
+      <div className="flex items-start gap-2">
+        <Terminal className="mt-0.5 size-4 shrink-0 text-amber-500" />
+        <div className="space-y-1">
+          <p className="font-medium text-sm">{t('common:updates.dockerTitle')}</p>
+          <p className="text-muted-foreground text-xs leading-relaxed">
+            {t('common:updates.dockerDescription')}
+          </p>
+        </div>
+      </div>
+      <div className="flex items-center gap-2 rounded-md border bg-background px-3 py-2 font-mono text-[12px]">
+        <span className="flex-1 truncate">{command}</span>
+        <button
+          type="button"
+          onClick={handleCopy}
+          className="flex size-6 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-foreground/[0.04] hover:text-foreground"
+          aria-label={t('common:actions.copy')}
+        >
+          <Copy className="size-3.5" />
+        </button>
+      </div>
+      {copied && (
+        <p className="text-[11px] text-emerald-500">{t('common:messages.copied', 'Copied')}</p>
+      )}
+    </div>
+  );
 }
 
 // ─── Main component ──────────────────────────────────────────────────────────
@@ -275,7 +350,12 @@ export function UpdateDialog({
           </DialogDescription>
         </DialogHeader>
 
-        {state === 'idle' && <IdleContent updateInfo={updateInfo} t={t} />}
+        {state === 'idle' && (
+          <>
+            <IdleContent updateInfo={updateInfo} t={t} />
+            {updateInfo.runtime === 'docker' && <DockerGuidance t={t} />}
+          </>
+        )}
 
         {(state === 'updating' || state === 'error') && (
           <ProgressDisplay
@@ -295,6 +375,7 @@ export function UpdateDialog({
           <UpdateFooter
             state={state}
             force={force}
+            runtime={updateInfo.runtime}
             t={t}
             onClose={handleClose}
             onUpdate={handleUpdate}

@@ -5,6 +5,9 @@ import { streamSseEvents } from '../sse';
 
 export type UpdateChannelId = 'stable' | 'canary';
 
+/** How the hub binary is hosted — affects which upgrade path is available. */
+export type UpdateRuntimeKind = 'binary' | 'docker';
+
 export interface UpdateInfoDto {
   readonly currentVersion: string;
   readonly latestVersion: string;
@@ -19,6 +22,7 @@ export interface UpdateInfoDto {
   readonly assetName: string | null;
   readonly assetSize: number | null;
   readonly channel: UpdateChannelId;
+  readonly runtime: UpdateRuntimeKind;
   /** ISO timestamp the hub last successfully checked. `null` when never. */
   readonly lastCheckedAt: string | null;
 }

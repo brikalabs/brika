@@ -8,6 +8,9 @@ import { fetchProgressStream, type ProgressStream } from '@/lib/sse-stream';
 // Mirrors apps/hub/src/runtime/updates/channels.ts — extend both when adding channels
 export type UpdateChannelId = 'stable' | 'canary';
 
+// Mirrors apps/hub/src/runtime/runtime-env.ts
+export type UpdateRuntimeKind = 'binary' | 'docker';
+
 export interface UpdateChannel {
   readonly id: UpdateChannelId;
   readonly label: string;
@@ -33,6 +36,7 @@ export interface HubUpdateInfo {
   assetSize: number | null;
   lastCheckedAt: number;
   channel: UpdateChannelId;
+  runtime: UpdateRuntimeKind;
 }
 
 export interface UpdateProgress {

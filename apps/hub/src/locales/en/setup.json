@@ -6,7 +6,8 @@
       "account": "Account",
       "avatar": "Avatar",
       "timezone": "Timezone",
-      "location": "Location"
+      "location": "Location",
+      "update": "Update"
     }
   },
   "welcome": {
@@ -82,6 +83,25 @@
     "country": "Country",
     "latitude": "Latitude",
     "longitude": "Longitude"
+  },
+  "update": {
+    "eyebrow": "Updates",
+    "title": "Check for updates",
+    "checking": "Checking GitHub for the latest release…",
+    "availableTitle": "A newer Brika is available",
+    "availableSubtitle": "Upgrade now to start on the latest version. You can also skip and update later from Settings → System.",
+    "updateNow": "Update now",
+    "skip": "Skip for now",
+    "applying": "Updating Brika",
+    "restarting": "Restarting the hub",
+    "waitingForHub": "Waiting for the hub to come back up…",
+    "preparing": "Preparing update…",
+    "failed": "Update failed",
+    "restartTimeout": "The hub didn't come back in time. Reload the page and try again from Settings → System.",
+    "dockerTitle": "A newer image is available",
+    "dockerSubtitle": "This hub runs in Docker — v{{current}} is installed, v{{latest}} is the latest. In-place updates are disabled inside containers.",
+    "dockerHelp": "Pull the new image and recreate the container. The command below works with the default docker-compose setup.",
+    "continueAnyway": "Continue with current version"
   },
   "complete": {
     "eyebrow": "All set",

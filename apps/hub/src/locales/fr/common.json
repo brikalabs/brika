@@ -163,6 +163,9 @@
     "currentVersion": "Version actuelle",
     "latestVersion": "Dernière version",
     "neverChecked": "Jamais vérifié",
-    "devBuild": "Build dev"
+    "devBuild": "Build dev",
+    "howToUpdate": "Comment mettre à jour",
+    "dockerTitle": "Ce hub fonctionne dans Docker",
+    "dockerDescription": "Les mises à jour en place sont désactivées car la couche d'image écraserait les changements au prochain redémarrage. Téléchargez une nouvelle image et recréez le conteneur."
   }
 }
