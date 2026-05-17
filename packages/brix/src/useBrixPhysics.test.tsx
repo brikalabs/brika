@@ -113,7 +113,7 @@ describe('useBrixPhysics', () => {
     ref.api?.impulse(8, 10);
     await sleep(60);
     ref.api?.reset();
-    await sleep(60);
+    await waitFor(() => ref.api?.state.vx === 0 && ref.api?.state.vy === 0);
     expect(ref.api?.offset).toEqual({ x: 0, y: 0 });
     expect(ref.api?.state.vx).toBe(0);
     expect(ref.api?.state.vy).toBe(0);
