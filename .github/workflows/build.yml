@@ -4,6 +4,13 @@ on:
   push:
     branches: [main]
     tags: ['v*']
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
+      - 'CHANGELOG.md'
+      - 'LICENSE'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '.github/PULL_REQUEST_TEMPLATE.md'
   workflow_dispatch:
     inputs:
       version:
@@ -11,16 +18,19 @@ on:
         required: false
         type: string
 
+# Cancel mid-flight canary runs when a fresh commit lands on main, but
+# never cancel a tagged release in progress.
 concurrency:
   group: build-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.ref_type == 'branch' }}
 
 env:
   REGISTRY: ghcr.io
+  IMAGE_NAME: ghcr.io/${{ github.repository }}
 
 jobs:
   # ───────────────────────────────────────────────────────────────────────
-  # Determine version, tags, and build mode (release vs canary)
+  # Resolve version, docker tags, and bun version once
   # ───────────────────────────────────────────────────────────────────────
   setup:
     runs-on: ubuntu-latest
@@ -35,9 +45,8 @@ jobs:
       - name: Determine build metadata
         id: meta
         run: |
-          PKG_VERSION=$(jq -r '.version // "0.0.0"' package.json)
           BUN_VERSION=$(jq -r '.engines.bun' package.json)
-          IMAGE="${REGISTRY}/${GITHUB_REPOSITORY,,}"
+          IMAGE="${IMAGE_NAME,,}"
 
           if [[ "${{ github.ref_type }}" == "tag" ]]; then
             VERSION="${GITHUB_REF_NAME#v}"
@@ -56,59 +65,24 @@ jobs:
             DOCKER_TAGS="${IMAGE}:canary"
           fi
 
-          echo "version=$VERSION"       >> $GITHUB_OUTPUT
-          echo "is_release=$IS_RELEASE" >> $GITHUB_OUTPUT
-          echo "docker_tags=$DOCKER_TAGS" >> $GITHUB_OUTPUT
-          echo "bun_version=$BUN_VERSION" >> $GITHUB_OUTPUT
+          {
+            echo "version=$VERSION"
+            echo "is_release=$IS_RELEASE"
+            echo "docker_tags=$DOCKER_TAGS"
+            echo "bun_version=$BUN_VERSION"
+          } >> "$GITHUB_OUTPUT"
 
-          echo "### Build Info" >> $GITHUB_STEP_SUMMARY
-          echo "| Key | Value |" >> $GITHUB_STEP_SUMMARY
-          echo "|-----|-------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Version | \`$VERSION\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Release | $IS_RELEASE |" >> $GITHUB_STEP_SUMMARY
-          echo "| Docker | \`$DOCKER_TAGS\` |" >> $GITHUB_STEP_SUMMARY
-
-  # ───────────────────────────────────────────────────────────────────────
-  # Build Docker image (self-contained — Dockerfile builds UI + Hub)
-  # ───────────────────────────────────────────────────────────────────────
-  docker:
-    needs: setup
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build and push
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: ${{ needs.setup.outputs.docker_tags }}
-          labels: |
-            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
-            org.opencontainers.image.revision=${{ github.sha }}
-            org.opencontainers.image.version=${{ needs.setup.outputs.version }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          {
+            echo "### Build Info"
+            echo "| Key | Value |"
+            echo "|-----|-------|"
+            echo "| Version | \`$VERSION\` |"
+            echo "| Release | $IS_RELEASE |"
+            echo "| Docker | \`$DOCKER_TAGS\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
 
   # ───────────────────────────────────────────────────────────────────────
-  # Build UI (shared artifact for binary compilation)
+  # Build UI bundle once (shared by every binary in the matrix)
   # ───────────────────────────────────────────────────────────────────────
   build-ui:
     needs: setup
@@ -120,11 +94,9 @@ jobs:
         with:
           bun-version: ${{ needs.setup.outputs.bun_version }}
 
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
+      - run: bun install --frozen-lockfile
 
-      - name: Build UI
-        run: bun run --filter @brika/ui build
+      - run: bun run --filter @brika/ui build
 
       - uses: actions/upload-artifact@v4
         with:
@@ -133,7 +105,9 @@ jobs:
           retention-days: 1
 
   # ───────────────────────────────────────────────────────────────────────
-  # Cross-compile standalone binaries
+  # Cross-compile standalone binaries (Bun handles cross-arch for linux/
+  # windows targets; macOS targets need a macos runner). Each artifact
+  # bundles `brika` + the UI dist for the docker step below.
   # ───────────────────────────────────────────────────────────────────────
   binaries:
     needs: [setup, build-ui]
@@ -141,31 +115,11 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - target: bun-linux-x64
-            artifact: brika-linux-x64
-            os: ubuntu-latest
-            ext: tar.gz
-
-          - target: bun-linux-arm64
-            artifact: brika-linux-arm64
-            os: ubuntu-latest
-            ext: tar.gz
-
-          - target: bun-darwin-x64
-            artifact: brika-darwin-x64
-            os: macos-latest
-            ext: tar.gz
-
-          - target: bun-darwin-arm64
-            artifact: brika-darwin-arm64
-            os: macos-latest
-            ext: tar.gz
-
-          - target: bun-windows-x64
-            artifact: brika-windows-x64
-            os: ubuntu-latest
-            ext: zip
-
+          - { target: bun-linux-x64,    artifact: brika-linux-x64,    os: ubuntu-latest,    ext: tar.gz }
+          - { target: bun-linux-arm64,  artifact: brika-linux-arm64,  os: ubuntu-24.04-arm, ext: tar.gz }
+          - { target: bun-darwin-x64,   artifact: brika-darwin-x64,   os: macos-latest,     ext: tar.gz }
+          - { target: bun-darwin-arm64, artifact: brika-darwin-arm64, os: macos-latest,     ext: tar.gz }
+          - { target: bun-windows-x64,  artifact: brika-windows-x64,  os: ubuntu-latest,    ext: zip    }
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -174,8 +128,7 @@ jobs:
         with:
           bun-version: ${{ needs.setup.outputs.bun_version }}
 
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
+      - run: bun install --frozen-lockfile
 
       - uses: actions/download-artifact@v4
         with:
@@ -207,15 +160,143 @@ jobs:
           retention-days: 1
 
   # ───────────────────────────────────────────────────────────────────────
-  # Create GitHub Release (versioned or rolling "canary")
+  # Container image per arch on native runners (no QEMU). The Dockerfile
+  # is just a few file COPYs over the prebuilt binary + UI bundle, so
+  # each arch lands in ~30s instead of the 8+ minutes the old "bun
+  # install + bun build --compile inside docker" pipeline took.
+  # ───────────────────────────────────────────────────────────────────────
+  docker-arch:
+    needs: [setup, binaries]
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { arch: amd64, src: brika-linux-x64,   os: ubuntu-latest    }
+          - { arch: arm64, src: brika-linux-arm64, os: ubuntu-24.04-arm }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: Dockerfile
+          sparse-checkout-cone-mode: false
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ matrix.src }}
+          path: /tmp/brika-bin
+
+      - name: Stage build context
+        run: |
+          ctx=/tmp/brika-ctx
+          mkdir -p "$ctx"
+          tar xzf "/tmp/brika-bin/${{ matrix.src }}.tar.gz" -C "$ctx"
+          cp Dockerfile "$ctx/"
+          ls -la "$ctx"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build & push (digest-only)
+        id: push
+        uses: docker/build-push-action@v6
+        with:
+          context: /tmp/brika-ctx
+          platforms: linux/${{ matrix.arch }}
+          outputs: type=image,name=${{ env.IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=true
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ needs.setup.outputs.version }}
+          cache-from: type=gha,scope=docker-${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=docker-${{ matrix.arch }}
+
+      - name: Export digest
+        run: |
+          mkdir -p /tmp/digests
+          digest="${{ steps.push.outputs.digest }}"
+          touch "/tmp/digests/${digest#sha256:}"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: docker-digests-${{ matrix.arch }}
+          path: /tmp/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  # ───────────────────────────────────────────────────────────────────────
+  # Stitch per-arch digests into a multi-arch manifest list and push it
+  # under every required tag (canary OR vX.Y.Z + latest).
+  # ───────────────────────────────────────────────────────────────────────
+  docker-manifest:
+    needs: [setup, docker-arch]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: /tmp/digests
+          pattern: docker-digests-*
+          merge-multiple: true
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create & push multi-arch manifest
+        working-directory: /tmp/digests
+        env:
+          TAGS: ${{ needs.setup.outputs.docker_tags }}
+          IMAGE: ${{ env.IMAGE_NAME }}
+        run: |
+          image="${IMAGE,,}"
+
+          tag_args=""
+          IFS=',' read -ra tag_list <<< "${TAGS,,}"
+          for t in "${tag_list[@]}"; do
+            tag_args+=" -t ${t}"
+          done
+
+          ref_args=""
+          for d in *; do
+            ref_args+=" ${image}@sha256:${d}"
+          done
+
+          # shellcheck disable=SC2086
+          docker buildx imagetools create ${tag_args} ${ref_args}
+
+      - name: Inspect pushed image
+        env:
+          IMAGE: ${{ env.IMAGE_NAME }}
+          VERSION: ${{ needs.setup.outputs.version }}
+        run: docker buildx imagetools inspect "${IMAGE,,}:${VERSION}"
+
+  # ───────────────────────────────────────────────────────────────────────
+  # Release: collect binaries + write release notes auto-generated from
+  # the PRs merged since the previous release.
   # ───────────────────────────────────────────────────────────────────────
   release:
-    needs: [setup, docker, binaries]
+    needs: [setup, docker-manifest, binaries]
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/download-artifact@v4
         with:
@@ -223,7 +304,7 @@ jobs:
           path: artifacts/
           merge-multiple: true
 
-      - name: Generate release metadata
+      - name: Generate release-meta.json
         env:
           VERSION: ${{ needs.setup.outputs.version }}
           BUN_VERSION: ${{ needs.setup.outputs.bun_version }}
@@ -244,15 +325,73 @@ jobs:
             > release-meta.json
           cat release-meta.json
 
+      - name: Compose release notes
+        id: notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          IS_RELEASE: ${{ needs.setup.outputs.is_release }}
+          VERSION: ${{ needs.setup.outputs.version }}
+          IMAGE: ${{ env.IMAGE_NAME }}
+        run: |
+          # Find the previous published release to diff against. For
+          # canary or a tagged release, this is the most recent v* tag
+          # other than the one we're about to publish.
+          PREV=$(gh release list --exclude-drafts --exclude-pre-releases --limit 10 \
+            --json tagName --jq '.[] | select(.tagName != "v'"$VERSION"'") | .tagName' \
+            | head -n1)
+          echo "previous tag: ${PREV:-<none>}"
+
+          # Use GitHub's release-notes API — same engine the
+          # `--generate-notes` flag uses, but callable for non-tag refs
+          # so canary gets the same grouped PR summary.
+          tag_name="canary"
+          [[ "$IS_RELEASE" == "true" ]] && tag_name="v${VERSION}"
+          api_args=(-f "tag_name=$tag_name" -f "target_commitish=$GITHUB_SHA")
+          [[ -n "$PREV" ]] && api_args+=(-f "previous_tag_name=$PREV")
+
+          AUTO_BODY=$(gh api -X POST \
+            "repos/${{ github.repository }}/releases/generate-notes" \
+            "${api_args[@]}" --jq .body)
+
+          SHORT_SHA="${GITHUB_SHA:0:7}"
+          DATE_ISO=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          image_lc="${IMAGE,,}"
+
+          if [[ "$IS_RELEASE" == "true" ]]; then
+            HEADER="**Released:** ${DATE_ISO}
+          **Commit:** \`${SHORT_SHA}\`
+          **Docker:** \`docker pull ${image_lc}:${VERSION}\` · \`docker pull ${image_lc}:latest\`
+
+          ---"
+          else
+            HEADER="Rolling development build from \`main\` — refreshed on every push.
+
+          **Built:** ${DATE_ISO}
+          **Commit:** [\`${SHORT_SHA}\`](${{ github.server_url }}/${{ github.repository }}/commit/${GITHUB_SHA})
+          **Docker:** \`docker pull ${image_lc}:canary\`
+          **Diff against:** ${PREV:-<initial>}
+
+          > ⚠ Unstable pre-release — use \`latest\` for production.
+
+          ---"
+          fi
+
+          {
+            echo "body<<RELEASE_NOTES_EOF"
+            printf '%s\n\n%s\n' "$HEADER" "$AUTO_BODY"
+            echo "RELEASE_NOTES_EOF"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Create versioned release
         if: needs.setup.outputs.is_release == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION: ${{ needs.setup.outputs.version }}
+          BODY: ${{ steps.notes.outputs.body }}
         run: |
           gh release create "v${VERSION}" \
             --title "Brika v${VERSION}" \
-            --generate-notes \
+            --notes "$BODY" \
             --latest \
             artifacts/*
 
@@ -260,24 +399,14 @@ jobs:
         if: needs.setup.outputs.is_release == 'false'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BODY: ${{ steps.notes.outputs.body }}
         run: |
           gh release delete canary --yes --cleanup-tag 2>/dev/null || true
 
-          SHORT_SHA="${{ github.sha }}"
-          SHORT_SHA="${SHORT_SHA:0:7}"
-
+          SHORT_SHA="${GITHUB_SHA:0:7}"
           gh release create canary \
             --title "Brika canary (${SHORT_SHA})" \
-            --notes "$(cat <<'NOTES'
-          Rolling development build from `main`.
-
-          **Commit:** ${{ github.sha }}
-          **Date:** $(date -u +%Y-%m-%dT%H:%M:%SZ)
-          **Docker:** `docker pull ghcr.io/${{ github.repository }}:canary`
-
-          > ⚠ Unstable pre-release — use `latest` for production.
-          NOTES
-          )" \
+            --notes "$BODY" \
             --prerelease \
-            --draft=false \
+            --target main \
             artifacts/*
