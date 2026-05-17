@@ -105,9 +105,15 @@ jobs:
           retention-days: 1
 
   # ───────────────────────────────────────────────────────────────────────
-  # Cross-compile standalone binaries (Bun handles cross-arch for linux/
-  # windows targets; macOS targets need a macos runner). Each artifact
-  # bundles `brika` + the UI dist for the docker step below.
+  # Cross-compile standalone binaries. Bun's `--compile --target=…`
+  # supports any host → any target, so every binary builds on Linux
+  # (ubuntu-latest for x64 targets, ubuntu-24.04-arm for arm64).
+  #
+  # macOS runners are intentionally avoided: `bun build --compile` on
+  # `macos-latest` regularly stalls in the bundle step for 8-11 minutes
+  # (vs ~5s on Linux) before the concurrency rule kills it, so darwin
+  # binaries used to silently never ship. Cross-compiling from Linux
+  # produces a byte-identical output and finishes in seconds.
   # ───────────────────────────────────────────────────────────────────────
   binaries:
     needs: [setup, build-ui]
@@ -117,8 +123,8 @@ jobs:
         include:
           - { target: bun-linux-x64,    artifact: brika-linux-x64,    os: ubuntu-latest,    ext: tar.gz }
           - { target: bun-linux-arm64,  artifact: brika-linux-arm64,  os: ubuntu-24.04-arm, ext: tar.gz }
-          - { target: bun-darwin-x64,   artifact: brika-darwin-x64,   os: macos-latest,     ext: tar.gz }
-          - { target: bun-darwin-arm64, artifact: brika-darwin-arm64, os: macos-latest,     ext: tar.gz }
+          - { target: bun-darwin-x64,   artifact: brika-darwin-x64,   os: ubuntu-latest,    ext: tar.gz }
+          - { target: bun-darwin-arm64, artifact: brika-darwin-arm64, os: ubuntu-24.04-arm, ext: tar.gz }
           - { target: bun-windows-x64,  artifact: brika-windows-x64,  os: ubuntu-latest,    ext: zip    }
     runs-on: ${{ matrix.os }}
     steps:
