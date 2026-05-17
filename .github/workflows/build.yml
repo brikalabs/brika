@@ -183,7 +183,7 @@ jobs:
           path: apps/ui/dist/
 
       - name: Compile binary
-        working-directory: apps/hub
+        working-directory: apps/console
         run: bun run build --compile --target=${{ matrix.target }}
 
       - name: Package archive
@@ -191,12 +191,12 @@ jobs:
           STAGING="/tmp/brika-staging"
           mkdir -p "$STAGING"
           if [ "${{ matrix.ext }}" = "zip" ]; then
-            cp apps/hub/dist/brika.exe "$STAGING/"
-            cp -r apps/ui/dist         "$STAGING/ui"
+            cp apps/console/dist/brika.exe "$STAGING/"
+            cp -r apps/ui/dist             "$STAGING/ui"
             cd "$STAGING" && zip -qr "/tmp/${{ matrix.artifact }}.zip" .
           else
-            cp apps/hub/dist/brika  "$STAGING/"
-            cp -r apps/ui/dist      "$STAGING/ui"
+            cp apps/console/dist/brika  "$STAGING/"
+            cp -r apps/ui/dist          "$STAGING/ui"
             cd "$STAGING" && tar czf "/tmp/${{ matrix.artifact }}.tar.gz" .
           fi
 

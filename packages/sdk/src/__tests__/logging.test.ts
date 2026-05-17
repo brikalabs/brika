@@ -12,6 +12,12 @@
 import { describe, expect, test } from 'bun:test';
 import { parseStackLine } from '../api/logging';
 
+// Catastrophic ReDoS backtracking takes seconds; a 500ms ceiling still
+// catches any regression by an order of magnitude while absorbing CI
+// timing noise (a busy GitHub-hosted runner can push a 5ms parse past
+// the prior 50ms cap).
+const REDOS_BUDGET_MS = 500;
+
 describe('parseStackLine', () => {
   describe('Unix paths with parens', () => {
     test('parses standard function call', () => {
@@ -106,7 +112,7 @@ describe('parseStackLine', () => {
 
       const elapsed = performance.now() - startTime;
       expect(result).toBeNull();
-      expect(elapsed).toBeLessThan(50);
+      expect(elapsed).toBeLessThan(REDOS_BUDGET_MS);
     });
 
     test('handles repeated colon-digit patterns efficiently', () => {
@@ -123,7 +129,7 @@ describe('parseStackLine', () => {
 
       const elapsed = performance.now() - startTime;
       expect(result).toBeNull();
-      expect(elapsed).toBeLessThan(50);
+      expect(elapsed).toBeLessThan(REDOS_BUDGET_MS);
     });
 
     test('handles malicious input without parens efficiently', () => {
@@ -134,7 +140,7 @@ describe('parseStackLine', () => {
 
       const elapsed = performance.now() - startTime;
       expect(result).toBeNull();
-      expect(elapsed).toBeLessThan(50);
+      expect(elapsed).toBeLessThan(REDOS_BUDGET_MS);
     });
 
     test('handles long valid path efficiently', () => {
@@ -148,7 +154,7 @@ describe('parseStackLine', () => {
       expect(result).not.toBeNull();
       expect(result?.sourceFile).toBe(`${longPath}/file.ts`);
       expect(result?.sourceLine).toBe(42);
-      expect(elapsed).toBeLessThan(50);
+      expect(elapsed).toBeLessThan(REDOS_BUDGET_MS);
     });
   });
 });
