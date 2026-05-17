@@ -13,6 +13,7 @@ export type SetupPath =
   | '/setup/avatar'
   | '/setup/timezone'
   | '/setup/location'
+  | '/setup/update'
   | '/setup/complete';
 
 // ─── Eyebrow ────────────────────────────────────────────────────────────────

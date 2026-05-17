@@ -62,6 +62,14 @@ export interface UpdateInfo {
   updateAvailable: boolean;
   /** True when current version is ahead of the latest release (dev/unreleased build). */
   devBuild: boolean;
+  /**
+   * True when the local hub is on a *pre-release* tag (e.g. `0.5.0-rc.1`)
+   * and the selected channel reports an *older* version (e.g. stable's
+   * `0.4.0`). Without this signal the UI would treat it as a generic dev
+   * build, even though the real story is "you switched canary → stable
+   * and there's nothing newer for you on this channel".
+   */
+  channelMismatch: boolean;
   releaseUrl: string;
   releaseNotes: string;
   publishedAt: string;
@@ -89,6 +97,7 @@ export function noUpdateInfo(channel: UpdateChannelId = DEFAULT_CHANNEL_ID): Upd
     latestVersion: hub.version,
     updateAvailable: false,
     devBuild: false,
+    channelMismatch: false,
     releaseUrl: '',
     releaseNotes: '',
     publishedAt: '',
@@ -112,27 +121,68 @@ function getAssetName(): string {
   return `brika-${os}-${arch}${ext}`;
 }
 
-/** Parse a version string like "v0.2.1" or "0.2.1" into comparable parts */
-function parseVersion(version: string): number[] {
-  return version.replace(/^v/, '').split('.').map(Number);
+/**
+ * Normalize a version string so `Bun.semver.order` returns sensible results.
+ *
+ * - Strips a leading `v`.
+ * - Pads missing major/minor/patch segments with `0` (so `"1.0"` and `"1"`
+ *   resolve to `"1.0.0"`). Bun.semver is *inconsistent* on short forms —
+ *   `order("1.0", "1.0.0")` returns `1`, which is surprising — padding
+ *   sidesteps that.
+ * - Truncates extra segments (`1.0.0.0` → `1.0.0`). 4-segment versions
+ *   aren't semver-2.0; nothing in production emits them.
+ * - Pre-release / build-metadata suffix (`-rc.1`, `+sha.abc`) is preserved
+ *   verbatim and re-attached after padding.
+ */
+function normalizeVersion(version: string): string {
+  const stripped = version.replace(/^v/, '');
+  const suffixStart = stripped.search(/[-+]/);
+  const base = suffixStart === -1 ? stripped : stripped.slice(0, suffixStart);
+  const suffix = suffixStart === -1 ? '' : stripped.slice(suffixStart);
+  const parts = base.split('.').slice(0, 3);
+  while (parts.length < 3) {
+    parts.push('0');
+  }
+  return `${parts.join('.')}${suffix}`;
 }
 
-/** Return true if `latest` is newer than `current` */
+/**
+ * Return true if `latest` is strictly newer than `current` per semver-2.0,
+ * including pre-release tag ordering (`0.4.0-rc.1` < `0.4.0`, `rc.2` < `rc.10`).
+ *
+ * Backed by `Bun.semver.order` so we get the full spec for free instead of
+ * the dot-split-numeric-compare we shipped originally, which mishandled
+ * every canary tag (`Number('0-rc')` → `NaN`, all comparisons false).
+ *
+ * Invalid versions resolve to `false` rather than throwing — a corrupted
+ * `package.json` or a malformed GitHub tag should NOT trigger an in-place
+ * binary swap.
+ */
 export function isNewer(current: string, latest: string): boolean {
-  const a = parseVersion(current);
-  const b = parseVersion(latest);
-
-  for (let i = 0; i < Math.max(a.length, b.length); i++) {
-    const av = a[i] ?? 0;
-    const bv = b[i] ?? 0;
-    if (bv > av) {
-      return true;
-    }
-    if (bv < av) {
-      return false;
-    }
+  try {
+    return Bun.semver.order(normalizeVersion(latest), normalizeVersion(current)) === 1;
+  } catch {
+    return false;
   }
-  return false;
+}
+
+/**
+ * Heuristic: is this semver string a pre-release build (e.g. `0.4.0-rc.1`,
+ * `0.4.0-canary.20260517`)? Pre-release identifier is everything after the
+ * first `-` and before the optional `+` build metadata, per semver-2.0 §9.
+ *
+ * Used to distinguish "actually a local dev build" from "user just switched
+ * canary → stable and the channel is now reporting an older tag" — the
+ * latter is the channelMismatch case.
+ */
+export function isPrerelease(version: string): boolean {
+  const stripped = version.replace(/^v/, '');
+  const dash = stripped.indexOf('-');
+  if (dash === -1) {
+    return false;
+  }
+  const plus = stripped.indexOf('+');
+  return plus === -1 || dash < plus;
 }
 
 /** Fetch release-meta.json asset from a GitHub release (commit SHA + checksums) */
@@ -189,13 +239,23 @@ interface ReleaseComparison {
   releaseCommit: string;
   versionBump: boolean;
   devBuild: boolean;
+  /**
+   * Local hub is on a pre-release tag and the *stable* channel reports a
+   * lower version. Distinguishes "user switched canary→stable" from a
+   * genuine local dev build.
+   */
+  channelMismatch: boolean;
   asset: GitHubRelease['assets'][number] | undefined;
   release: GitHubRelease;
   meta: ReleaseMeta | null;
 }
 
-/** Compare current build against a fetched release */
-function compareRelease(release: GitHubRelease, meta: ReleaseMeta | null): ReleaseComparison {
+/** Compare current build against a fetched release on the given channel. */
+function compareRelease(
+  release: GitHubRelease,
+  meta: ReleaseMeta | null,
+  channel: UpdateChannelId
+): ReleaseComparison {
   const currentVersion = hub.version;
   const currentCommit = buildInfo.commitFull;
   const latestVersion = release.tag_name.replace(/^v/, '');
@@ -212,11 +272,18 @@ function compareRelease(release: GitHubRelease, meta: ReleaseMeta | null): Relea
     releaseCommit !== '' &&
     currentCommit !== releaseCommit;
 
+  const channelMismatch =
+    channel === 'stable' && versionAhead && isPrerelease(currentVersion);
+
   return {
     latestVersion,
     releaseCommit,
     versionBump,
-    devBuild: versionAhead || sameVersionDifferentCommit,
+    // A channel mismatch is not a "dev build" — peel it out so the UI can
+    // explain the situation accurately instead of pointing at the local
+    // tree when the truth is "switch back to canary".
+    devBuild: !channelMismatch && (versionAhead || sameVersionDifferentCommit),
+    channelMismatch,
     asset: release.assets.find((a) => a.name === assetName),
     release,
     meta,
@@ -231,13 +298,14 @@ export async function checkForUpdate(
   channel: UpdateChannelId = DEFAULT_CHANNEL_ID
 ): Promise<UpdateInfo> {
   const { release, meta } = await fetchLatestRelease(channel);
-  const cmp = compareRelease(release, meta);
+  const cmp = compareRelease(release, meta, channel);
 
   return {
     currentVersion: hub.version,
     latestVersion: cmp.latestVersion,
     updateAvailable: cmp.versionBump,
     devBuild: cmp.devBuild,
+    channelMismatch: cmp.channelMismatch,
     releaseUrl: release.html_url,
     releaseNotes: release.body ?? '',
     publishedAt: release.published_at,
@@ -271,7 +339,7 @@ export async function applyUpdate(options?: ApplyUpdateOptions): Promise<{
 
   onProgress?.('checking', 'Checking for updates...');
   const { release, meta } = await fetchLatestRelease(channel);
-  const cmp = compareRelease(release, meta);
+  const cmp = compareRelease(release, meta, channel);
 
   if (!force && !cmp.versionBump && !cmp.devBuild) {
     throw new Error(`Already up to date (v${hub.version})`);

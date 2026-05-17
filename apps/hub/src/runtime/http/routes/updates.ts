@@ -8,8 +8,8 @@
 import { createSSEStream, group, route } from '@brika/router';
 import { z } from 'zod';
 import { RESTART_CODE } from '@/runtime/restart-code';
-import { UpdateService } from '@/runtime/updates';
-import { applyUpdate, type UpdatePhase } from '@/updater';
+import { UpdateProvider, UpdateService } from '@/runtime/updates';
+import type { UpdatePhase } from '@/updater';
 
 export const systemRoutes = group({
   prefix: '/api/system',
@@ -66,7 +66,8 @@ export const updateRoutes = group({
       query: z.object({
         force: z.coerce.boolean().optional(),
       }),
-      handler: ({ query }) => {
+      handler: ({ inject, query }) => {
+        const provider = inject(UpdateProvider);
         return createSSEStream((send, close) => {
           const sendProgress = (phase: UpdatePhase, message: string, error?: string) => {
             send(
@@ -81,7 +82,7 @@ export const updateRoutes = group({
 
           (async () => {
             try {
-              const result = await applyUpdate({
+              const result = await provider.apply({
                 force: query.force,
                 onProgress(phase, detail) {
                   sendProgress(phase, detail);

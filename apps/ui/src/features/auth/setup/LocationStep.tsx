@@ -42,7 +42,7 @@ export function LocationStep() {
     if (draft && isDirty) {
       await updateMutation.mutateAsync(draft);
     }
-    return '/setup/complete';
+    return '/setup/update';
   };
 
   return (

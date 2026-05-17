@@ -3,10 +3,12 @@
  */
 import 'reflect-metadata';
 import { describe, expect, mock, test } from 'bun:test';
+import { container } from '@brika/di';
 import { stub, useTestBed } from '@brika/di/testing';
 import { TestApp } from '@brika/router/testing';
 import { useBunMock } from '@brika/testing';
 import { updateRoutes } from '@/runtime/http/routes/updates';
+import { GitHubUpdateProvider, UpdateProvider } from '@/runtime/updates/update-provider';
 import { UpdateService } from '@/runtime/updates/update-service';
 
 const MOCK_INFO = {
@@ -14,6 +16,7 @@ const MOCK_INFO = {
   latestVersion: '1.1.0',
   updateAvailable: true,
   devBuild: false,
+  channelMismatch: false,
   releaseUrl: 'https://github.com/example/releases/v1.1.0',
   releaseNotes: 'Fixes',
   publishedAt: '2026-01-01T00:00:00Z',
@@ -38,6 +41,10 @@ describe('update routes', () => {
       check: mockCheck,
       lastCheckedAt: 1234567890,
     });
+    // The apply route injects UpdateProvider directly; bind the real
+    // GitHub implementation so the bun.fetch mock below drives behaviour
+    // (mirrors how the route runs in production).
+    container.register(UpdateProvider, { useClass: GitHubUpdateProvider });
     app = TestApp.create(updateRoutes);
   });
 

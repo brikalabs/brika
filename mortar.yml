@@ -41,4 +41,12 @@ services:
       BRIKA_COORDINATOR_URL: http://localhost:5174
       BRIKA_DEV_UI_PROXY: http://localhost:5173
       BRIKA_DEV_AUTOCLAIM: devhub
+      # Mock the update flow without hitting GitHub. Uncomment one
+      # scenario to demo /setup/update + the settings update dialog.
+      # See apps/hub/README.md → "Dev-only update mock". Scenarios:
+      #   available | dev-build | channel-mismatch | up-to-date | apply-error
+      # `force-real-install` is the only one that runs the REAL binary
+      # swap against GitHub — use sparingly.
+      BRIKA_DEV_FAKE_UPDATE: available
+      # BRIKA_DEV_FAKE_UPDATE_DELAY_MS: 250
     dependsOn: [signaling, ui]

@@ -38,6 +38,7 @@ export function UpdateSection() {
         <UpdateBadge
           updateAvailable={!!updateAvailable}
           devBuild={data.devBuild}
+          channelMismatch={data.channelMismatch}
           currentVersion={data.currentVersion}
           latestVersion={data.latestVersion}
         />
