@@ -8,7 +8,7 @@ import * as path from 'node:path';
 import { parseCondition, render, resolveFilename } from '../render';
 import { createTemplateData, type ScaffoldOptions, scaffold } from '../scaffold';
 
-// Mock @clack/prompts
+// Mock @brika/cli/prompts (thin pass-through over @clack/prompts)
 const mockSpinner = {
   start: mock(() => undefined),
   stop: mock(() => undefined),
@@ -20,7 +20,7 @@ const mockLog = {
   warn: mock(() => undefined),
 };
 
-mock.module('@clack/prompts', () => ({
+mock.module('@brika/cli/prompts', () => ({
   spinner: () => mockSpinner,
   cancel: mockCancel,
   note: mockNote,

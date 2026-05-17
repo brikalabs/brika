@@ -2,7 +2,7 @@
  * Interactive prompts for plugin configuration
  */
 
-import * as p from '@clack/prompts';
+import * as p from '@brika/cli/prompts';
 import pc from 'picocolors';
 import { getGitUser } from './utils';
 

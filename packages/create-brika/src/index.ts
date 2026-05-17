@@ -9,7 +9,7 @@
  */
 
 import { parseArgs } from 'node:util';
-import * as p from '@clack/prompts';
+import * as p from '@brika/cli/prompts';
 import pc from 'picocolors';
 import { promptForConfig } from './prompts';
 import { scaffold } from './scaffold';
