@@ -1,9 +1,9 @@
 /**
  * Interactive prompts for the workspace version bumper.
- * Follows the @clack/prompts patterns established in create-brika.
+ * Uses @brika/cli/prompts (thin pass-through over @clack/prompts).
  */
 
-import * as p from '@clack/prompts';
+import * as p from '@brika/cli/prompts';
 import pc from 'picocolors';
 import { applyBump, BUMP_TYPES, compareVersions, isExactVersion } from './semver';
 import type { WorkspacePackage } from './workspace';

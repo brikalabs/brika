@@ -12,7 +12,7 @@
 
 import { join } from 'node:path';
 import { parseArgs } from 'node:util';
-import * as p from '@clack/prompts';
+import * as p from '@brika/cli/prompts';
 import pc from 'picocolors';
 import { plurals } from './plurals';
 import {

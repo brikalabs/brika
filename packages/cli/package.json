@@ -11,12 +11,14 @@
   },
   "exports": {
     ".": "./src/index.ts",
-    "./tui": "./src/tui.ts"
+    "./tui": "./src/tui.ts",
+    "./prompts": "./src/prompts.ts"
   },
   "scripts": {
     "typecheck": "tsgo --noEmit"
   },
   "dependencies": {
+    "@clack/prompts": "^1.0.1",
     "picocolors": "^1.1.1"
   },
   "peerDependencies": {

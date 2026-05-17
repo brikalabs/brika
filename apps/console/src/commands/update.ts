@@ -20,7 +20,7 @@
  */
 
 import { defineCommand } from '@brika/cli';
-import * as p from '@clack/prompts';
+import * as p from '@brika/cli/prompts';
 import pc from 'picocolors';
 import {
   applyUpdate,
