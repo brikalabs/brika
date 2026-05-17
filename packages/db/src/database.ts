@@ -47,17 +47,27 @@ function openDatabase<TSchema extends Record<string, unknown>>(
 
 const MIGRATIONS_TABLE = '__drizzle_migrations';
 
+/**
+ * Applies pending migrations idempotently.
+ *
+ * Skip decisions are made by **hash**, not by `folderMillis`. The previous
+ * timestamp-watermark approach broke when a journal entry's `when` value
+ * shifted (e.g. a rebase before merge): a developer who had already run
+ * the migration with the old `when` saw the runner re-apply it because
+ * `newWhen > oldWhen` looked unapplied. Hashes are derived from the SQL
+ * itself, so they survive history rewrites unless the SQL actually changes.
+ */
 function applyMigrations(sqlite: Database, migrations: MigrationMeta[]): void {
   sqlite.run(
     `CREATE TABLE IF NOT EXISTS ${MIGRATIONS_TABLE} (id SERIAL PRIMARY KEY, hash text NOT NULL, created_at numeric)`
   );
 
-  const last = sqlite
-    .query<{ created_at: number | null }, []>(
-      `SELECT created_at FROM ${MIGRATIONS_TABLE} ORDER BY created_at DESC LIMIT 1`
-    )
-    .get();
-  const lastMillis = last?.created_at ?? -1;
+  const appliedHashes = new Set(
+    sqlite
+      .query<{ hash: string }, []>(`SELECT hash FROM ${MIGRATIONS_TABLE}`)
+      .all()
+      .map((row) => row.hash)
+  );
 
   const insert = sqlite.prepare<unknown, [string, number]>(
     `INSERT INTO ${MIGRATIONS_TABLE} (hash, created_at) VALUES (?, ?)`
@@ -65,7 +75,7 @@ function applyMigrations(sqlite: Database, migrations: MigrationMeta[]): void {
 
   sqlite.transaction(() => {
     for (const migration of migrations) {
-      if (Number(lastMillis) >= migration.folderMillis) {
+      if (appliedHashes.has(migration.hash)) {
         continue;
       }
       for (const stmt of migration.sql) {
