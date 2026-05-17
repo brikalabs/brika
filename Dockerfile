@@ -1,50 +1,44 @@
 # syntax=docker/dockerfile:1
+#
+# Production image — minimal runtime that bundles a prebuilt `brika`
+# binary + the UI dist. The compile happens *outside* docker (see the
+# `binaries` matrix in .github/workflows/build.yml) so the image build
+# is just a few file copies, fast on any architecture.
+#
+# Expected build context layout:
+#   ./brika   — compiled `brika` binary for the target arch
+#   ./ui/     — apps/ui/dist contents (embedded UI bundle)
+#
+# Local build:
+#   bun run compile
+#   ctx=$(mktemp -d)
+#   cp apps/console/dist/brika "$ctx/"
+#   cp -r apps/ui/dist "$ctx/ui"
+#   cp Dockerfile "$ctx/"
+#   docker build -t brika:dev "$ctx"
 
-# Bun version — keep in sync with engines.bun in package.json.
-# Override at build time: docker build --build-arg BUN_VERSION=$(jq -r '.engines.bun' package.json)
-ARG BUN_VERSION=1.3.9
+ARG BUN_VERSION=1.3.13
 
-# === Build UI (platform-agnostic, runs on host) ===
-FROM --platform=$BUILDPLATFORM oven/bun:${BUN_VERSION} AS build-ui
-WORKDIR /app
-COPY . .
-RUN bun install --frozen-lockfile
-RUN bun run --filter @brika/ui build
+# Multi-arch source for the bun runtime (used to spawn plugin child
+# processes). buildx picks the matching arch automatically.
+FROM oven/bun:${BUN_VERSION}-slim AS bun-source
 
-# === Build console binary (architecture-specific, compiled binary) ===
-# The single `brika` binary embeds the hub server + Brix TUI + UI bundle
-# via Bun macros (see apps/hub/src/runtime/http/embedded-ui.ts). The UI
-# dist from the build-ui stage is copied in before `bun run build
-# --compile` so the macro can bake the bytes into the binary.
-FROM oven/bun:${BUN_VERSION} AS build-cli
-WORKDIR /app
-# git is required to embed commit/branch/date in the build
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends git \
-    && rm -rf /var/lib/apt/lists/*
-COPY . .
-COPY --from=build-ui /app/apps/ui/dist ./apps/ui/dist
-RUN bun install --frozen-lockfile
-WORKDIR /app/apps/console
-RUN bun run build --compile
-
-# === Runtime (minimal — compiled binary includes Bun runtime + UI + locales) ===
 FROM debian:bookworm-slim
 WORKDIR /app
 
-# Bun is needed for plugin execution (plugins are TypeScript child processes)
-COPY --from=build-cli /usr/local/bin/bun /usr/local/bin/bun
-
-COPY --from=build-cli /app/apps/console/dist/brika ./brika
+COPY --from=bun-source /usr/local/bin/bun /usr/local/bin/bun
+COPY brika ./brika
+COPY ui    ./ui
 
 ENV NODE_ENV=production \
     BRIKA_HOST=0.0.0.0 \
     BRIKA_PORT=3001 \
     BRIKA_BUN_PATH=/usr/local/bin/bun \
-    # Headless containers have no Secret Service (libsecret + D-Bus). Default
-    # to the AES-256-GCM file backend under /app/.brika. Mount BRIKA_SECRET_KEY
-    # (base64 of 32 random bytes) via Docker/K8s secrets in production so the
-    # master key isn't co-located with the ciphertext.
+    # Headless containers have no Secret Service (libsecret + D-Bus).
+    # Default to the AES-256-GCM file backend under /app/.brika.
+    # Mount BRIKA_SECRET_KEY (base64 of 32 random bytes) via Docker/K8s
+    # secrets in production so the master key isn't co-located with
+    # the ciphertext.
     BRIKA_SECRETS_BACKEND=file
 
 EXPOSE 3001

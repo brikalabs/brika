@@ -25,6 +25,7 @@
     "typecheck": "bun --filter '*' typecheck",
     "build": "bun run --filter './packages/*' build",
     "compile": "bun run --filter @brika/ui build && bun run --filter @brika/console build --compile",
+    "docker:build": "bun scripts/docker-build.ts",
     "lint": "bunx biome check .",
     "lint:strict": "bunx biome check . --error-on-warnings",
     "lint:fix": "bunx biome check --write .",
