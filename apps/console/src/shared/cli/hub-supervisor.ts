@@ -30,12 +30,12 @@ export interface RunForegroundHubOptions {
   readonly host?: string;
 }
 
-export async function runForegroundHub(opts: Readonly<RunForegroundHubOptions> = {}): Promise<void> {
+export async function runForegroundHub(
+  opts: Readonly<RunForegroundHubOptions> = {}
+): Promise<void> {
   const existing = await claimPidFile();
   if (existing !== null) {
-    throw new CliError(
-      `${pc.red('Already running')} — pid ${existing}. Use \`brika stop\` first.`
-    );
+    throw new CliError(`${pc.red('Already running')} — pid ${existing}. Use \`brika stop\` first.`);
   }
   process.on('exit', () => {
     const home = brikaHome();

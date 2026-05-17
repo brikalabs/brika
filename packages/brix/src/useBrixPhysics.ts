@@ -163,7 +163,9 @@ export function useBrixPhysics(opts: Readonly<UseBrixPhysicsOptions> = {}): Brix
   );
 
   const reset = useCallback(() => {
-    setState(makeBrick({ cx: paramsRef.current.homeCx, y: paramsRef.current.homeY, grounded: true }));
+    setState(
+      makeBrick({ cx: paramsRef.current.homeCx, y: paramsRef.current.homeY, grounded: true })
+    );
   }, []);
 
   return {
@@ -232,7 +234,8 @@ function applyGroundForces(
   let newCx = cx;
   if (newVx === 0 && p.springStrength > 0) {
     const delta = p.homeCx - newCx;
-    newCx = Math.abs(delta) < HOME_SNAP_THRESHOLD ? p.homeCx : newCx + delta * p.springStrength * dt;
+    newCx =
+      Math.abs(delta) < HOME_SNAP_THRESHOLD ? p.homeCx : newCx + delta * p.springStrength * dt;
   }
   return { cx: newCx, vx: newVx };
 }
@@ -245,7 +248,13 @@ function integrate(prev: BrickState, p: IntegrateParams): BrickState {
   const xClamp = clampAxis(next.cx, next.vx, p.homeCx - p.maxOffsetX, p.homeCx + p.maxOffsetX);
   const yClamp = clampAxis(next.y, next.vy, 0, p.maxOffsetY);
   if (!next.grounded) {
-    return { ...next, cx: xClamp.position, vx: xClamp.velocity, y: yClamp.position, vy: yClamp.velocity };
+    return {
+      ...next,
+      cx: xClamp.position,
+      vx: xClamp.velocity,
+      y: yClamp.position,
+      vy: yClamp.velocity,
+    };
   }
   const ground = applyGroundForces(xClamp.position, xClamp.velocity, p);
   return { ...next, cx: ground.cx, vx: ground.vx, y: yClamp.position, vy: yClamp.velocity };

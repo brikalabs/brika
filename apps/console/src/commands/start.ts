@@ -65,13 +65,10 @@ export default defineCommand({
     }
     try {
       const pid = await spawnHubDetached();
-      const label =
-        pid === null ? pc.green('hub is up') : `${pc.green('hub is up')} (pid ${pid})`;
+      const label = pid === null ? pc.green('hub is up') : `${pc.green('hub is up')} (pid ${pid})`;
       process.stdout.write(`${label}\n`);
     } catch (e) {
-      throw new CliError(
-        `couldn't start hub: ${e instanceof Error ? e.message : String(e)}`
-      );
+      throw new CliError(`couldn't start hub: ${e instanceof Error ? e.message : String(e)}`);
     }
   },
 });

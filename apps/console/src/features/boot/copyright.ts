@@ -15,6 +15,8 @@ export const COPYRIGHT_START_YEAR = 2026;
 export function copyrightLine(now: Date = new Date()): string {
   const current = now.getFullYear();
   const range =
-    current > COPYRIGHT_START_YEAR ? `${COPYRIGHT_START_YEAR}-${current}` : `${COPYRIGHT_START_YEAR}`;
+    current > COPYRIGHT_START_YEAR
+      ? `${COPYRIGHT_START_YEAR}-${current}`
+      : `${COPYRIGHT_START_YEAR}`;
   return `© ${range} Brika Labs`;
 }

@@ -25,7 +25,7 @@
  */
 
 import { createContext, type PropsWithChildren, type ReactElement, useContext } from 'react';
-import { type BrixPhysicsApi, useBrixPhysics, type UseBrixPhysicsOptions } from './useBrixPhysics';
+import { type BrixPhysicsApi, type UseBrixPhysicsOptions, useBrixPhysics } from './useBrixPhysics';
 
 const NOOP_API: BrixPhysicsApi = {
   state: {

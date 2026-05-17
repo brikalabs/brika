@@ -137,17 +137,14 @@ export function useBubbleStream(
     }
   }, [state.phase, drainTick, frozen]);
 
-  const say = useCallback(
-    (text: string, tint: string, pacing: PacingOptions = PACING): boolean => {
-      if (queueRef.current.length >= SAY_QUEUE_MAX) {
-        return false;
-      }
-      queueRef.current.push({ text, tint, pacing });
-      setDrainTick((t) => (t + 1) % 1_000_000);
-      return true;
-    },
-    []
-  );
+  const say = useCallback((text: string, tint: string, pacing: PacingOptions = PACING): boolean => {
+    if (queueRef.current.length >= SAY_QUEUE_MAX) {
+      return false;
+    }
+    queueRef.current.push({ text, tint, pacing });
+    setDrainTick((t) => (t + 1) % 1_000_000);
+    return true;
+  }, []);
 
   const bubbleText = state.phase === 'idle' ? statusText : visibleText(state);
   const bubbleDim = state.phase === 'idle';

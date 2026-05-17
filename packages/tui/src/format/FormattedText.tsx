@@ -21,20 +21,12 @@ import type React from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import { type FormatSegment, parseFormatCodes } from './codes';
 
-const OBFUSCATE_POOL =
-  'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789#@%&*$?!';
+const OBFUSCATE_POOL = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789#@%&*$?!';
 const ANIMATION_TICK_MS = 60;
 
 /** ROYGBIV cycle for §R — stays in Ink's named palette so terminals
  *  without truecolor still render it. */
-const RAINBOW_COLORS: ReadonlyArray<string> = [
-  'red',
-  'yellow',
-  'green',
-  'cyan',
-  'blue',
-  'magenta',
-];
+const RAINBOW_COLORS: ReadonlyArray<string> = ['red', 'yellow', 'green', 'cyan', 'blue', 'magenta'];
 
 export interface FormattedTextProps {
   /** Raw `§`-coded string. Ignored when `segments` is provided. */

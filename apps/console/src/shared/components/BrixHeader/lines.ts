@@ -78,10 +78,7 @@ export const IDLE_LINES_BY_STATE: Readonly<Record<HubState, ReadonlyArray<string
     'stale crumbs everywhere.',
     '{:suspicious:}I don’t trust that number.',
   ],
-  unknown: [
-    '{:thinking:}checking the hub…',
-    'one moment, peeking inside.',
-  ],
+  unknown: ['{:thinking:}checking the hub…', 'one moment, peeking inside.'],
 };
 
 // ─── Common chatter (any state) ───────────────────────────────────────────

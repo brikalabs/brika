@@ -120,9 +120,7 @@ export function usePoke({ dispatch, life, setLife }: Readonly<PokeDeps>): PokeAp
     physics.impulse(vx, vy);
 
     const now = Date.now();
-    tapTimes.current = [...tapTimes.current, now].filter(
-      (t) => now - t < UNLOCK_TAP_WINDOW_MS
-    );
+    tapTimes.current = [...tapTimes.current, now].filter((t) => now - t < UNLOCK_TAP_WINDOW_MS);
     const streak = tapTimes.current.length;
     totalPokes.current += 1;
 

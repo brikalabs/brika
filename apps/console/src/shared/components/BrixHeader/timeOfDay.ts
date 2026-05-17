@@ -9,9 +9,17 @@ export type TimeOfDay = 'late' | 'morning' | 'afternoon' | 'evening' | 'night';
 
 export function timeOfDay(now: Date = new Date()): TimeOfDay {
   const h = now.getHours();
-  if (h < 6) { return 'late'; }
-  if (h < 12) { return 'morning'; }
-  if (h < 18) { return 'afternoon'; }
-  if (h < 22) { return 'evening'; }
+  if (h < 6) {
+    return 'late';
+  }
+  if (h < 12) {
+    return 'morning';
+  }
+  if (h < 18) {
+    return 'afternoon';
+  }
+  if (h < 22) {
+    return 'evening';
+  }
   return 'night';
 }

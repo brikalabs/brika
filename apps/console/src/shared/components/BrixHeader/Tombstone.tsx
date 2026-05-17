@@ -32,7 +32,7 @@ export function Tombstone({ width, height }: Readonly<TombstoneProps>): React.Re
       justifyContent="flex-end"
     >
       <Text color="gray">╭───╮</Text>
-      <Text color="gray">│   │</Text>
+      <Text color="gray">│ │</Text>
       <Box>
         <Text color="gray">│</Text>
         <Text color="red" bold>
@@ -40,7 +40,7 @@ export function Tombstone({ width, height }: Readonly<TombstoneProps>): React.Re
         </Text>
         <Text color="gray">│</Text>
       </Box>
-      <Text color="gray">│   │</Text>
+      <Text color="gray">│ │</Text>
       <Text color="gray">└───┘</Text>
       <Text color="green" dimColor>
         {grassFor(width)}

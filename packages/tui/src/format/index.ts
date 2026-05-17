@@ -11,9 +11,9 @@ export {
   type FormatColor,
   type FormatSegment,
   type FormatStyle,
-  padSegments,
   type ParsedFormat,
-  parseFormatCodes,
   PLAIN_STYLE,
+  padSegments,
+  parseFormatCodes,
 } from './codes';
 export { FormattedText, type FormattedTextProps } from './FormattedText';

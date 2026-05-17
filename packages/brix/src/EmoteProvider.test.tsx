@@ -24,6 +24,18 @@ function flush(ms = 250): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+async function waitFor<T>(read: () => T, ok: (v: T) => boolean, timeoutMs = 1000): Promise<T> {
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    const v = read();
+    if (ok(v)) {
+      return v;
+    }
+    await flush(10);
+  }
+  return read();
+}
+
 const mkEmote = (name: string, priority?: number): EmoteDef =>
   defineEmote(name, {
     initial: { face: 'happy' },
@@ -137,7 +149,10 @@ describe('<EmoteProvider> / useEmote', () => {
     latest.current?.play('a');
     await flush(20);
     latest.current?.play('b', { queue: true });
-    await flush(20);
+    await waitFor(
+      () => latest.current?.pending ?? 0,
+      (v) => v === 1
+    );
     expect(latest.current?.current?.name).toBe('a');
     expect(latest.current?.pending).toBe(1);
     unmount();

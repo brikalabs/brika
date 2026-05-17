@@ -51,11 +51,7 @@ const MAX_OFFSET = { x: 4, y: 2 } as const;
 export function BrixHeader(): React.ReactElement {
   return (
     <EmoteProvider library={EMOTE_LIBRARY_WITH_EXTRAS}>
-      <BrixPhysicsProvider
-        bounce={POKE_BOUNCE}
-        maxVelocity={MAX_VELOCITY}
-        maxOffset={MAX_OFFSET}
-      >
+      <BrixPhysicsProvider bounce={POKE_BOUNCE} maxVelocity={MAX_VELOCITY} maxOffset={MAX_OFFSET}>
         <BrixHeaderInner />
       </BrixPhysicsProvider>
     </EmoteProvider>

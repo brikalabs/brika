@@ -19,7 +19,7 @@ export function randomInt(max: number): number {
 export function randomFloat(): number {
   const buf = new Uint32Array(1);
   crypto.getRandomValues(buf);
-  return (buf[0] ?? 0) / 0x1_0000_0000;
+  return (buf[0] ?? 0) / 2 ** 32;
 }
 
 /** Pick a uniform random element from a non-empty array, with a fallback

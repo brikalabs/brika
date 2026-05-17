@@ -88,8 +88,12 @@ export function pickSteps(count: number): ReadonlyArray<BootStep> {
 type StepStatus = 'pending' | 'active' | 'done';
 
 function statusFor(index: number, currentIdx: number): StepStatus {
-  if (index < currentIdx) return 'done';
-  if (index === currentIdx) return 'active';
+  if (index < currentIdx) {
+    return 'done';
+  }
+  if (index === currentIdx) {
+    return 'active';
+  }
   return 'pending';
 }
 
