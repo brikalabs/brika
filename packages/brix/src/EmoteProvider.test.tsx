@@ -36,6 +36,16 @@ async function waitFor<T>(read: () => T, ok: (v: T) => boolean, timeoutMs = 1000
   return read();
 }
 
+async function waitCurrent(
+  latest: { current: EmoteApi | null },
+  expected: string | null
+): Promise<void> {
+  await waitFor(
+    () => latest.current?.current?.name ?? null,
+    (v) => v === expected
+  );
+}
+
 const mkEmote = (name: string, priority?: number): EmoteDef =>
   defineEmote(name, {
     initial: { face: 'happy' },
@@ -94,7 +104,7 @@ describe('<EmoteProvider> / useEmote', () => {
     });
     await flush(20);
     latest.current?.play('a');
-    await flush(20);
+    await waitCurrent(latest, 'a');
     expect(latest.current?.current?.name).toBe('a');
     unmount();
   });
@@ -106,7 +116,7 @@ describe('<EmoteProvider> / useEmote', () => {
     });
     await flush(20);
     latest.current?.play('does-not-exist');
-    await flush(20);
+    await flush(50);
     expect(latest.current?.current).toBeNull();
     unmount();
   });
@@ -118,10 +128,10 @@ describe('<EmoteProvider> / useEmote', () => {
     });
     await flush(20);
     latest.current?.play('low');
-    await flush(20);
+    await waitCurrent(latest, 'low');
     expect(latest.current?.current?.name).toBe('low');
     latest.current?.play('high');
-    await flush(20);
+    await waitCurrent(latest, 'high');
     expect(latest.current?.current?.name).toBe('high');
     unmount();
   });
@@ -133,9 +143,9 @@ describe('<EmoteProvider> / useEmote', () => {
     });
     await flush(20);
     latest.current?.play('high');
-    await flush(20);
+    await waitCurrent(latest, 'high');
     latest.current?.play('low');
-    await flush(20);
+    await flush(50);
     expect(latest.current?.current?.name).toBe('high');
     unmount();
   });
@@ -166,13 +176,13 @@ describe('<EmoteProvider> / useEmote', () => {
     await flush(20);
     latest.current?.play('a');
     latest.current?.play('b', { queue: true });
-    await flush(20);
+    await waitCurrent(latest, 'a');
     latest.current?.next();
-    await flush(20);
+    await waitCurrent(latest, 'b');
     expect(latest.current?.current?.name).toBe('b');
     expect(latest.current?.pending).toBe(0);
     latest.current?.next();
-    await flush(20);
+    await waitCurrent(latest, null);
     expect(latest.current?.current).toBeNull();
     unmount();
   });
@@ -185,9 +195,9 @@ describe('<EmoteProvider> / useEmote', () => {
     await flush(20);
     latest.current?.play('a');
     latest.current?.play('b', { queue: true });
-    await flush(20);
+    await waitCurrent(latest, 'a');
     latest.current?.cancel();
-    await flush(20);
+    await waitCurrent(latest, null);
     expect(latest.current?.current).toBeNull();
     expect(latest.current?.pending).toBe(0);
     unmount();
@@ -201,10 +211,10 @@ describe('<EmoteProvider> / useEmote', () => {
     await flush(20);
     // `low` has priority 1; bump it to 99 for this single play.
     latest.current?.play('low', { priority: 99 });
-    await flush(20);
+    await waitCurrent(latest, 'low');
     // Now playing `a` (priority 0) must NOT replace it.
     latest.current?.play('a');
-    await flush(20);
+    await flush(50);
     expect(latest.current?.current?.name).toBe('low');
     expect(latest.current?.current?.priority).toBe(99);
     unmount();
@@ -219,7 +229,7 @@ describe('<EmoteProvider> / useEmote', () => {
     latest.current?.on('hub.deploy', 'a');
     latest.current?.on('hub.deploy', 'b');
     latest.current?.fire('hub.deploy');
-    await flush(20);
+    await waitCurrent(latest, 'b');
     expect(latest.current?.current?.name).toBe('b');
     unmount();
   });
@@ -233,7 +243,7 @@ describe('<EmoteProvider> / useEmote', () => {
     const off = latest.current?.on('evt', 'a');
     off?.();
     latest.current?.fire('evt');
-    await flush(20);
+    await flush(50);
     expect(latest.current?.current).toBeNull();
     unmount();
   });
@@ -245,7 +255,7 @@ describe('<EmoteProvider> / useEmote', () => {
     });
     await flush(20);
     latest.current?.fire('nothing-here');
-    await flush(20);
+    await flush(50);
     expect(latest.current?.current).toBeNull();
     unmount();
   });
@@ -263,7 +273,7 @@ describe('<EmoteProvider> / useEmote', () => {
     );
     await flush(20);
     latest.current?.play('wave');
-    await flush(20);
+    await waitCurrent(latest, 'wave');
     expect(latest.current?.current?.name).toBe('wave');
     unmount();
   });
@@ -299,7 +309,7 @@ describe('useEmoteOn', () => {
     const utils = render(<TreeShown />);
     await flush(20);
     latest.current?.fire('ping');
-    await flush(20);
+    await waitCurrent(latest, 'a');
     expect(latest.current?.current?.name).toBe('a');
 
     // Re-render without the BindProbe — the EmoteProvider remounts so we
