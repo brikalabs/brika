@@ -27,6 +27,16 @@ function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
 }
 
+async function waitFor(ok: () => boolean, timeoutMs = 3000, stepMs = 30): Promise<void> {
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    if (ok()) {
+      return;
+    }
+    await sleep(stepMs);
+  }
+}
+
 describe('useBrixPhysics', () => {
   test('starts at rest at home (offset 0,0, grounded)', async () => {
     const ref: { api: ReturnType<typeof useBrixPhysics> | null } = { api: null };
@@ -59,7 +69,10 @@ describe('useBrixPhysics', () => {
       })
     );
     // Let the arc play out: launch → peak → land → settle.
+    // Initial window covers a healthy local run; waitFor lets CI slow-paths
+    // settle without a fixed timeout that races under load.
     await sleep(1200);
+    await waitFor(() => peakY > 0 && lastY === 0);
     expect(peakY).toBeGreaterThan(0);
     expect(lastY).toBe(0); // landed back
     unmount();
