@@ -6,7 +6,8 @@
       "account": "Compte",
       "avatar": "Avatar",
       "timezone": "Fuseau",
-      "location": "Localisation"
+      "location": "Localisation",
+      "update": "Mise à jour"
     }
   },
   "welcome": {
@@ -82,6 +83,50 @@
     "country": "Pays",
     "latitude": "Latitude",
     "longitude": "Longitude"
+  },
+  "update": {
+    "eyebrow": "Mises à jour",
+    "title": "Vérifier les mises à jour",
+    "checking": "Recherche de la dernière version sur GitHub…",
+    "checkingBadge": "Vérification…",
+    "upToDateTitle": "Vous êtes sur la dernière version",
+    "upToDateSubtitle": "v{{version}} est à jour. Continuez quand vous êtes prêt.",
+    "upToDateBadge": "Tout est à jour",
+    "devBuildTitle": "Vous êtes sur une version de développement",
+    "devBuildSubtitle": "v{{version}} est en avance sur toute version publiée. Les mises à jour automatiques sont désactivées — c'est vous qui pilotez.",
+    "devBuildBadge": "Build dev",
+    "channelMismatchTitle": "Vous êtes sur une pré-version",
+    "channelMismatchSubtitle": "v{{current}} est une version canary — rien de plus récent n'est disponible sur le canal {{channel}}.",
+    "channelMismatchBadge": "Canary",
+    "channelMismatchHelp": "Pour continuer à recevoir les mises à jour canary, repassez sur le canal canary depuis Paramètres → Système → Mises à jour.",
+    "continue": "Continuer",
+    "availableTitle": "Une nouvelle version de Brika est disponible",
+    "availableSubtitle": "Mettez à jour maintenant pour démarrer sur la dernière version. Vous pourrez aussi le faire plus tard depuis Paramètres → Système.",
+    "updateNow": "Mettre à jour",
+    "skip": "Plus tard",
+    "applying": "Mise à jour de Brika",
+    "applyingSubtitle": "Téléchargement et application de la nouvelle version. Ne fermez pas cet onglet.",
+    "restarting": "Redémarrage du hub",
+    "restartingSubtitle": "La nouvelle version est installée. On attend qu'elle revienne en ligne.",
+    "restartingElapsed": "{{seconds}}s",
+    "restartingReloadHint": "On rechargera automatiquement quand le hub sera prêt",
+    "restartingSlow": "Cela prend plus de temps que d'habitude. Si rien ne change dans la minute qui vient, rechargez la page manuellement.",
+    "waitingForHub": "En attente du redémarrage du hub…",
+    "preparing": "Préparation de la mise à jour…",
+    "failed": "Échec de la mise à jour",
+    "restartTimeout": "Le hub n'est pas revenu à temps. Rechargez la page et réessayez depuis Paramètres → Système.",
+    "viewReleaseNotes": "Voir les notes de version",
+    "releaseNotesTitle": "Notes de version — v{{version}}",
+    "releaseNotesDescription": "Nouveautés de cette version.",
+    "phase": {
+      "checking": "Vérification",
+      "downloading": "Téléchargement",
+      "verifying": "Validation",
+      "extracting": "Extraction",
+      "installing": "Installation",
+      "restarting": "Redémarrage",
+      "complete": "Terminé"
+    }
   },
   "complete": {
     "eyebrow": "Terminé",

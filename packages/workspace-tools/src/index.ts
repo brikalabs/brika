@@ -13,7 +13,7 @@
  */
 
 import { parseArgs } from 'node:util';
-import * as p from '@clack/prompts';
+import * as p from '@brika/cli/prompts';
 import pc from 'picocolors';
 import { getChangedPackages, getLastTag } from './git';
 import { plurals } from './plurals';

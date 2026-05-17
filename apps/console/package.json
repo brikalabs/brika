@@ -1,6 +1,6 @@
 {
   "name": "@brika/console",
-  "version": "0.1.0",
+  "version": "0.3.1",
   "description": "Brika operator console — the single `brika` binary. Bundles the CLI surface, the Brix TUI dashboard, the inline hub server, and the embedded web UI.",
   "type": "module",
   "private": true,
@@ -16,7 +16,6 @@
   "scripts": {
     "dev": "bun run src/main.ts",
     "dev:hot": "tui src/main.ts",
-    "build": "bun run compiler/build.ts",
     "test": "bun test",
     "typecheck": "tsgo --noEmit"
   },

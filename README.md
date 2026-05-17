@@ -330,8 +330,12 @@ bun install              # Install dependencies
 
 bun run dev              # Start hub + UI in dev mode (hot reload)
 bun test                 # Run all tests
-bun run build            # Build the standalone binary (output: apps/hub/dist/)
+bun run build            # Build all workspace packages
+bun run compile          # Compile the standalone `brika` binary (full target)
+bun run compile:headless # Compile the headless `brika-hub` binary (no CLI/TUI)
 ```
+
+Compiled binaries land in [`apps/build/dist/<target>/`](apps/build/README.md). Cross-compile with `bun --filter @brika/build build --compile --platform=bun-linux-arm64` (or any of `bun-linux-x64`, `bun-darwin-x64`, `bun-darwin-arm64`, `bun-windows-x64`). Run `bun --filter @brika/build build --list` to see all targets.
 
 Or target a specific app:
 
@@ -346,6 +350,8 @@ bun run dev --filter=@brika/ui    # UI only (http://localhost:5173)
 apps/
   hub/              Hub server (Bun, TypeScript)
   ui/               Web UI (React, Vite)
+  console/          `brika` CLI surface + Brix TUI dashboard
+  build/            Binary build orchestration (Bun.build + compile-time plugins)
 packages/
   sdk/              Plugin SDK (blocks, bricks, actions, stores)
   compiler/         Build-time tooling (brick ESM, action IDs, Tailwind)

@@ -6,7 +6,8 @@
       "account": "Account",
       "avatar": "Avatar",
       "timezone": "Timezone",
-      "location": "Location"
+      "location": "Location",
+      "update": "Update"
     }
   },
   "welcome": {
@@ -82,6 +83,50 @@
     "country": "Country",
     "latitude": "Latitude",
     "longitude": "Longitude"
+  },
+  "update": {
+    "eyebrow": "Updates",
+    "title": "Check for updates",
+    "checking": "Checking GitHub for the latest release…",
+    "checkingBadge": "Checking…",
+    "upToDateTitle": "You're on the latest version",
+    "upToDateSubtitle": "v{{version}} is current. Continue when you're ready.",
+    "upToDateBadge": "All caught up",
+    "devBuildTitle": "You're on a development build",
+    "devBuildSubtitle": "v{{version}} is ahead of any published release. Auto-updates are off — you're driving.",
+    "devBuildBadge": "Dev build",
+    "channelMismatchTitle": "You're on a pre-release tag",
+    "channelMismatchSubtitle": "v{{current}} is a canary build — there's nothing newer on the {{channel}} channel.",
+    "channelMismatchBadge": "Canary build",
+    "channelMismatchHelp": "If you want to keep receiving canary updates, switch the update channel back to canary from Settings → System → Updates.",
+    "continue": "Continue",
+    "availableTitle": "A newer Brika is available",
+    "availableSubtitle": "Upgrade now to start on the latest version. You can also skip and update later from Settings → System.",
+    "updateNow": "Update now",
+    "skip": "Skip for now",
+    "applying": "Updating Brika",
+    "applyingSubtitle": "Downloading and applying the new release. Don't close this tab.",
+    "restarting": "Restarting the hub",
+    "restartingSubtitle": "The new version is installed. We're waiting for it to come back online.",
+    "restartingElapsed": "{{seconds}}s",
+    "restartingReloadHint": "We'll reload automatically when the hub is ready",
+    "restartingSlow": "This is taking longer than usual. If nothing changes in another minute, reload the page manually.",
+    "waitingForHub": "Waiting for the hub to come back up…",
+    "preparing": "Preparing update…",
+    "failed": "Update failed",
+    "restartTimeout": "The hub didn't come back in time. Reload the page and try again from Settings → System.",
+    "viewReleaseNotes": "View release notes",
+    "releaseNotesTitle": "Release notes — v{{version}}",
+    "releaseNotesDescription": "What's new in this release.",
+    "phase": {
+      "checking": "Checking",
+      "downloading": "Downloading",
+      "verifying": "Verifying",
+      "extracting": "Extracting",
+      "installing": "Installing",
+      "restarting": "Restarting",
+      "complete": "Complete"
+    }
   },
   "complete": {
     "eyebrow": "All set",

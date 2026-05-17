@@ -44,7 +44,7 @@ await run(['bun', 'run', 'compile']);
 const ctx = mkdtempSync(join(tmpdir(), 'brika-docker-ctx-'));
 try {
   console.log(`▸ staging context at ${ctx}`);
-  await run(['cp', join(repo, 'apps/console/dist/brika'), join(ctx, 'brika')]);
+  await run(['cp', join(repo, 'apps/build/dist/full/brika'), join(ctx, 'brika')]);
   await run(['cp', '-R', join(repo, 'apps/ui/dist'), join(ctx, 'ui')]);
   await run(['cp', join(repo, 'Dockerfile'), join(ctx, 'Dockerfile')]);
 

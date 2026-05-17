@@ -11,6 +11,12 @@ export interface UpdateInfoDto {
   readonly updateAvailable: boolean;
   /** True when current version is ahead of the latest release (dev build). */
   readonly devBuild: boolean;
+  /**
+   * True when the local hub is on a pre-release tag and `channel` is
+   * `stable` (so the channel reports a lower version). Surfaces a clearer
+   * "switch back to canary" hint instead of treating it as a dev build.
+   */
+  readonly channelMismatch: boolean;
   readonly releaseUrl: string;
   readonly releaseNotes: string;
   readonly publishedAt: string;

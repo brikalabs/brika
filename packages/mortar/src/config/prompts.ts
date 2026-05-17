@@ -9,7 +9,7 @@
  * file so they know what to open.
  */
 
-import * as p from '@clack/prompts';
+import * as p from '@brika/cli/prompts';
 import pc from 'picocolors';
 import { saveDefaultConfig } from './load';
 

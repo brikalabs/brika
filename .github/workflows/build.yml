@@ -142,20 +142,20 @@ jobs:
           path: apps/ui/dist/
 
       - name: Compile binary
-        working-directory: apps/console
-        run: bun run build --compile --target=${{ matrix.target }}
+        working-directory: apps/build
+        run: bun run build --compile --platform=${{ matrix.target }}
 
       - name: Package archive
         run: |
           STAGING="/tmp/brika-staging"
           mkdir -p "$STAGING"
           if [ "${{ matrix.ext }}" = "zip" ]; then
-            cp apps/console/dist/brika.exe "$STAGING/"
-            cp -r apps/ui/dist             "$STAGING/ui"
+            cp apps/build/dist/full/brika.exe "$STAGING/"
+            cp -r apps/ui/dist                "$STAGING/ui"
             cd "$STAGING" && zip -qr "/tmp/${{ matrix.artifact }}.zip" .
           else
-            cp apps/console/dist/brika  "$STAGING/"
-            cp -r apps/ui/dist          "$STAGING/ui"
+            cp apps/build/dist/full/brika  "$STAGING/"
+            cp -r apps/ui/dist             "$STAGING/ui"
             cd "$STAGING" && tar czf "/tmp/${{ matrix.artifact }}.tar.gz" .
           fi
 

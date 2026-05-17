@@ -3,11 +3,13 @@
  */
 import 'reflect-metadata';
 import { describe, expect, test } from 'bun:test';
+import { container } from '@brika/di';
 import { get, stub, useTestBed } from '@brika/di/testing';
 import { useBunMock } from '@brika/testing';
 import { buildInfo } from '@/runtime/http/routes/status';
 import { Logger } from '@/runtime/logs/log-router';
 import { StateStore } from '@/runtime/state/state-store';
+import { GitHubUpdateProvider, UpdateProvider } from '@/runtime/updates/update-provider';
 import { UpdateService } from '@/runtime/updates/update-service';
 
 function mockGitHub(
@@ -51,6 +53,10 @@ describe('UpdateService', () => {
     () => {
       stub(Logger);
       stub(StateStore, { getUpdateChannel: () => 'stable' });
+      // UpdateService injects UpdateProvider; bind the real GitHub
+      // implementation so the existing fetch-based mocks still drive
+      // the behaviour under test.
+      container.register(UpdateProvider, { useClass: GitHubUpdateProvider });
       service = get(UpdateService);
     }
   );

@@ -12,7 +12,7 @@
 # Local build:
 #   bun run compile
 #   ctx=$(mktemp -d)
-#   cp apps/console/dist/brika "$ctx/"
+#   cp apps/build/dist/full/brika "$ctx/"
 #   cp -r apps/ui/dist "$ctx/ui"
 #   cp Dockerfile "$ctx/"
 #   docker build -t brika:dev "$ctx"

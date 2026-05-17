@@ -163,6 +163,7 @@
     "currentVersion": "Current version",
     "latestVersion": "Latest version",
     "neverChecked": "Never checked",
-    "devBuild": "Dev build"
+    "devBuild": "Dev build",
+    "canaryBuild": "Canary build"
   }
 }

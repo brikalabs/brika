@@ -9,7 +9,7 @@ import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
 import { buildInfo } from '@/build-info';
 import { hub } from '@/hub';
 import type { UpdateInfo } from '@/updater';
-import { checkForUpdate, isNewer, noUpdateInfo } from '@/updater';
+import { checkForUpdate, isNewer, isPrerelease, noUpdateInfo } from '@/updater';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
@@ -211,9 +211,78 @@ describe('parseVersion (indirect via isNewer)', () => {
     expect(isNewer('1.2', '1.2.1')).toBe(true);
   });
 
-  test('parses versions with more than 3 segments', () => {
-    expect(isNewer('1.0.0.0', '1.0.0.1')).toBe(true);
+  test('ignores extra segments past major.minor.patch', () => {
+    // 4-segment versions aren't semver-2.0; we truncate so they don't
+    // throw. The differences past patch are intentionally invisible.
+    expect(isNewer('1.0.0.0', '1.0.0.1')).toBe(false);
     expect(isNewer('1.0.0.1', '1.0.0.0')).toBe(false);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// isNewer — pre-release tags (canary)
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('isNewer (pre-release)', () => {
+  test('a pre-release is less than its release', () => {
+    expect(isNewer('0.4.0-rc.1', '0.4.0')).toBe(true);
+    expect(isNewer('0.4.0', '0.4.0-rc.1')).toBe(false);
+  });
+
+  test('compares numeric pre-release identifiers numerically (not lexically)', () => {
+    // The original comparator broke here: '0-rc' → NaN, all compares false.
+    expect(isNewer('0.4.0-rc.2', '0.4.0-rc.10')).toBe(true);
+    expect(isNewer('0.4.0-rc.10', '0.4.0-rc.2')).toBe(false);
+  });
+
+  test('canary → stable bump is detected', () => {
+    expect(isNewer('0.4.0-canary.20260517', '0.4.0')).toBe(true);
+  });
+
+  test('newer pre-release identifier is detected', () => {
+    expect(isNewer('0.4.0-canary.20260517', '0.4.0-canary.20260520')).toBe(true);
+  });
+
+  test('major bump across pre-releases', () => {
+    expect(isNewer('0.4.0-rc.1', '0.5.0-rc.1')).toBe(true);
+    expect(isNewer('0.5.0-rc.1', '0.4.0-rc.1')).toBe(false);
+  });
+
+  test('returns false on malformed input rather than throwing', () => {
+    expect(isNewer('not-a-version', '0.4.0')).toBe(false);
+    expect(isNewer('0.4.0', 'still-not-a-version')).toBe(false);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// isPrerelease
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('isPrerelease', () => {
+  test('detects a `-rc` tag', () => {
+    expect(isPrerelease('0.4.0-rc.1')).toBe(true);
+  });
+
+  test('detects a `-canary.<date>` tag', () => {
+    expect(isPrerelease('0.4.0-canary.20260517')).toBe(true);
+  });
+
+  test('strips a leading v and still detects the suffix', () => {
+    expect(isPrerelease('v1.0.0-beta')).toBe(true);
+  });
+
+  test('returns false for a plain semver release', () => {
+    expect(isPrerelease('1.0.0')).toBe(false);
+    expect(isPrerelease('v0.4.0')).toBe(false);
+  });
+
+  test('treats build metadata alone as a release (not a pre-release)', () => {
+    // semver-2.0 §10 — build metadata after `+` is not a pre-release identifier.
+    expect(isPrerelease('1.0.0+sha.abc123')).toBe(false);
+  });
+
+  test('detects a pre-release that also has build metadata', () => {
+    expect(isPrerelease('1.0.0-rc.1+sha.abc123')).toBe(true);
   });
 });
 
@@ -305,6 +374,7 @@ describe('noUpdateInfo', () => {
       latestVersion: hub.version,
       updateAvailable: false,
       devBuild: false,
+      channelMismatch: false,
       releaseUrl: '',
       releaseNotes: '',
       publishedAt: '',
@@ -947,6 +1017,7 @@ describe('checkForUpdate', () => {
       latestVersion: '99.0.0',
       updateAvailable: true,
       devBuild: false,
+      channelMismatch: false,
       releaseUrl: 'https://github.com/example/releases/v99.0.0',
       releaseNotes: 'Some notes',
       publishedAt: '2026-03-01T00:00:00Z',

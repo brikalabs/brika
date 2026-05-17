@@ -5,7 +5,7 @@ import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AmbientCanvas } from '../AmbientCanvas';
 
-const PROGRESS_STEPS = ['language', 'account', 'avatar', 'timezone', 'location'] as const;
+const PROGRESS_STEPS = ['language', 'account', 'avatar', 'timezone', 'location', 'update'] as const;
 type ProgressStep = (typeof PROGRESS_STEPS)[number];
 
 function isProgressStep(s: string): s is ProgressStep {

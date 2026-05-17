@@ -37,6 +37,7 @@ const sampleInfo: UpdateInfoDto = {
   latestVersion: '1.1.0',
   updateAvailable: true,
   devBuild: false,
+  channelMismatch: false,
   releaseUrl: 'https://example/release',
   releaseNotes: 'notes',
   publishedAt: '2025-01-01T00:00:00Z',

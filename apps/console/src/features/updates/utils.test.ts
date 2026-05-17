@@ -13,6 +13,7 @@ const baseInfo: UpdateInfoDto = {
   latestVersion: '1.0.0',
   updateAvailable: false,
   devBuild: false,
+  channelMismatch: false,
   releaseUrl: '',
   releaseNotes: '',
   publishedAt: '',

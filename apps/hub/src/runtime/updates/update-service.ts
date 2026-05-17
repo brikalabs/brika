@@ -10,7 +10,8 @@ import { UpdateActions } from '@/runtime/events/actions';
 import { EventSystem } from '@/runtime/events/event-system';
 import { Logger } from '@/runtime/logs/log-router';
 import { StateStore } from '@/runtime/state/state-store';
-import { checkForUpdate, noUpdateInfo, type UpdateInfo } from '@/updater';
+import { UpdateProvider } from '@/runtime/updates/update-provider';
+import { noUpdateInfo, type UpdateInfo } from '@/updater';
 
 /** Check every 6 hours */
 const CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000;
@@ -20,6 +21,7 @@ export class UpdateService {
   readonly #logs = inject(Logger).withSource('updates');
   readonly #events = inject(EventSystem);
   readonly #state = inject(StateStore);
+  readonly #provider = inject(UpdateProvider);
   #cachedInfo: UpdateInfo | null = null;
   #lastCheckedAt: number = 0;
   #checking = false;
@@ -60,7 +62,7 @@ export class UpdateService {
 
     this.#checking = true;
     try {
-      this.#cachedInfo = await checkForUpdate(this.#state.getUpdateChannel());
+      this.#cachedInfo = await this.#provider.check(this.#state.getUpdateChannel());
       this.#lastCheckedAt = Date.now();
 
       if (this.#cachedInfo.updateAvailable) {

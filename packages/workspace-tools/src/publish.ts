@@ -12,7 +12,7 @@
 
 import { join } from 'node:path';
 import { parseArgs } from 'node:util';
-import * as p from '@clack/prompts';
+import * as p from '@brika/cli/prompts';
 import pc from 'picocolors';
 import { plurals } from './plurals';
 import {
@@ -221,15 +221,10 @@ try {
   const count = selectedPackages.length;
   const dryTag = dryRun ? pc.yellow(' (dry run)') : '';
 
-  const confirmed = await p.confirm({
+  await p.confirmOrAbort({
     message: `Publish ${pc.bold(String(count))} ${plurals(packageForms, count)} to npm?${dryTag}`,
-    initialValue: true,
+    abortMessage: 'Publish cancelled.',
   });
-
-  if (p.isCancel(confirmed) || !confirmed) {
-    p.cancel('Publish cancelled.');
-    process.exit(0);
-  }
 
   // Verify plugins before publishing
   if (pluginPkgs.length > 0) {

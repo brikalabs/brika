@@ -37,6 +37,11 @@ export const setupRoutes = {
         load: () => import('@/features/auth/setup'),
         select: (m) => m.LocationStep,
       }),
+      update: page({
+        path: 'update',
+        load: () => import('@/features/auth/setup'),
+        select: (m) => m.UpdateStep,
+      }),
       complete: page({
         path: 'complete',
         load: () => import('@/features/auth/setup'),

@@ -24,6 +24,12 @@ export interface HubUpdateInfo {
   latestVersion: string;
   updateAvailable: boolean;
   devBuild: boolean;
+  /**
+   * Local hub is on a pre-release tag (e.g. `0.5.0-rc.1`) and the selected
+   * channel is `stable` (which reports an older version). Use this to show
+   * "switch back to canary" guidance instead of generic dev-build copy.
+   */
+  channelMismatch: boolean;
   releaseUrl: string;
   releaseNotes: string;
   publishedAt: string;

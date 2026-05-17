@@ -5,4 +5,5 @@ export { LanguageStep } from './LanguageStep';
 export { LocationStep } from './LocationStep';
 export { SetupLayout } from './SetupLayout';
 export { TimezoneStep } from './TimezoneStep';
+export { UpdateStep } from './UpdateStep';
 export { WelcomeStep } from './WelcomeStep';
