@@ -206,6 +206,68 @@ describe('verifyToken', () => {
 // getCookieValue (via cookie parsing behaviour of the middleware)
 // ---------------------------------------------------------------------------
 
+describe('verifyToken static token resolver', () => {
+  const cliSession: Session = {
+    id: 'cli-local-trust',
+    userId: 'cli-local-trust',
+    userEmail: 'cli@local',
+    userName: 'Brika CLI',
+    userRole: Role.ADMIN,
+    scopes: [Scope.ADMIN_ALL],
+  };
+
+  it('short-circuits to the resolver session and skips DB validation on a match', async () => {
+    initAuthConfig({
+      staticTokenResolver: (token) => (token === 'cli-token-value' ? cliSession : null),
+    });
+    const middleware = verifyToken();
+    const { ctx, next } = mockContext('http://localhost:3001/api/test', {
+      auth: 'Bearer cli-token-value',
+    });
+
+    await middleware(ctx as never, next);
+
+    expect(ctx.set).toHaveBeenCalledWith('session', cliSession);
+    expect(mockSessionService.validateSession).not.toHaveBeenCalled();
+    expect(next).toHaveBeenCalledTimes(1);
+  });
+
+  it('falls through to DB validation when the resolver returns null', async () => {
+    mockSessionService.validateSession.mockReturnValue(fakeSession);
+    initAuthConfig({
+      staticTokenResolver: () => null,
+    });
+    const middleware = verifyToken();
+    const { ctx, next } = mockContext('http://localhost:3001/api/test', {
+      auth: 'Bearer some-other-token',
+    });
+
+    await middleware(ctx as never, next);
+
+    expect(mockSessionService.validateSession).toHaveBeenCalledWith(
+      'some-other-token',
+      undefined,
+      undefined,
+      'http'
+    );
+    expect(ctx.set).toHaveBeenCalledWith('session', fakeSession);
+  });
+
+  it('skips the resolver entirely when no token is present', async () => {
+    const resolver = vi.fn();
+    initAuthConfig({
+      staticTokenResolver: resolver as never,
+    });
+    const middleware = verifyToken();
+    const { ctx, next } = mockContext('http://localhost:3001/api/test');
+
+    await middleware(ctx as never, next);
+
+    expect(resolver).not.toHaveBeenCalled();
+    expect(ctx.set).toHaveBeenCalledWith('session', null);
+  });
+});
+
 describe('verifyToken cookie parsing', () => {
   it('handles multiple cookies and extracts the correct one', async () => {
     mockSessionService.validateSession.mockReturnValue(fakeSession);

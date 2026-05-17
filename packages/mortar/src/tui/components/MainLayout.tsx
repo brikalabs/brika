@@ -12,14 +12,12 @@
  * of duplicated JSX between them.
  */
 
+import { effectiveScrollOffset, LogPane, MeasuredChrome } from '@brika/tui';
 import { Box } from 'ink';
 import type React from 'react';
 import { serviceUrl } from '../../config';
 import { useMortar } from '../useMortar';
-import { effectiveScrollOffset } from '../utils/scroll';
 import { Footer } from './Footer';
-import { LogPane } from './LogPane';
-import { MeasuredChrome } from './MeasuredChrome';
 import { ServiceList } from './ServiceList';
 
 export interface MainLayoutProps {
@@ -50,7 +48,10 @@ export function MainLayout({ inputModeFor }: Readonly<MainLayoutProps>): React.R
         )}
         {focused && (
           <LogPane
-            service={focused}
+            label={focused.spec.label}
+            lines={focused.logs}
+            revision={focused.revision}
+            status={focused.status}
             visible={layout.visible}
             scrollFromBottom={scrollOffset}
             maxScroll={layout.maxScroll}

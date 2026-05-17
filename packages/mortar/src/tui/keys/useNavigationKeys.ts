@@ -10,19 +10,18 @@
  * {@link useGlobalQuit} so it works from every screen.
  */
 
-import { useRouter } from '../../router';
+import { useRouter, useShortcut } from '@brika/tui';
 import type { Routes } from '../routes';
 import { useMortar } from '../useMortar';
-import { useKey } from './useKey';
 
 export function useNavigationKeys(enabled: boolean): void {
   const { services, focus, scroll, search, toast, fullscreen } = useMortar();
   const router = useRouter<Routes>();
   const focused = focus.focused;
 
-  useKey('f', () => fullscreen.toggle(), enabled);
+  useShortcut('f', () => fullscreen.toggle(), enabled);
 
-  useKey(
+  useShortcut(
     'escape',
     () => {
       search.clear();
@@ -31,7 +30,7 @@ export function useNavigationKeys(enabled: boolean): void {
     enabled && Boolean(search.query)
   );
 
-  useKey(
+  useShortcut(
     'tab',
     () => {
       focus.setFocusedIndex((i) => (i + 1) % services.length);
@@ -39,7 +38,7 @@ export function useNavigationKeys(enabled: boolean): void {
     },
     enabled && services.length > 0
   );
-  useKey(
+  useShortcut(
     'shift+tab',
     () => {
       focus.setFocusedIndex((i) => (i - 1 + services.length) % services.length);
@@ -48,13 +47,13 @@ export function useNavigationKeys(enabled: boolean): void {
     enabled && services.length > 0
   );
 
-  useKey('/', () => search.enter(), enabled);
-  useKey('n', () => search.next(), enabled);
-  useKey('N', () => search.prev(), enabled);
+  useShortcut('/', () => search.enter(), enabled);
+  useShortcut('n', () => search.next(), enabled);
+  useShortcut('N', () => search.prev(), enabled);
 
-  useKey('?', () => router.navigate('help'), enabled);
-  useKey('d', () => router.navigate('deps'), enabled);
-  useKey(
+  useShortcut('?', () => router.navigate('help'), enabled);
+  useShortcut('d', () => router.navigate('deps'), enabled);
+  useShortcut(
     'i',
     () => {
       if (!focused) {

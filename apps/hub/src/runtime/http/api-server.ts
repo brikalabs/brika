@@ -243,7 +243,7 @@ export class ApiServer {
         '/*',
         devUiProxyMiddleware(this.#config.devUiProxy, (msg, ctx) => this.#logs.warn(msg, ctx))
       );
-      this.#logs.info('Dev UI proxy enabled', { target: this.#config.devUiProxy });
+      this.#logs.info('UI served by dev proxy', { target: this.#config.devUiProxy });
       return;
     }
 
@@ -257,10 +257,16 @@ export class ApiServer {
     // doesn't load the archive until the first request, so dev startups
     // where the bundle wasn't built skip the cost entirely.
     this.#app?.use('/*', embeddedUi());
+    // Log immediately so the operator knows which UI source is active.
+    // The archive's presence is checked async (it lives inside the
+    // binary) — when the check resolves, follow up with whether the
+    // archive actually exists, since serving an outdated/missing
+    // archive in dev is the usual "why am I seeing an old UI?" trap.
+    this.#logs.info('UI served by embedded archive (compiled-binary fallback)', {
+      hint: 'set BRIKA_DEV_UI_PROXY=http://localhost:5173 to use a live Vite dev server',
+    });
     void embeddedUiAvailable().then((ok) => {
-      if (ok) {
-        this.#logs.info('Static file serving enabled', { source: 'embedded' });
-      }
+      this.#logs.info('Embedded UI archive availability', { available: ok });
     });
   }
 
@@ -274,8 +280,7 @@ export class ApiServer {
       }
       return spaFallback(c, next);
     });
-    this.#logs.info('Static file serving enabled', {
-      source: 'disk',
+    this.#logs.info('UI served from static directory', {
       directory: staticDir,
     });
   }

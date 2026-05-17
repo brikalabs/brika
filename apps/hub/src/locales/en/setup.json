@@ -43,7 +43,12 @@
     "newPassword": "New password",
     "newPasswordPlaceholder": "Enter a new password",
     "saveChanges": "Save changes",
-    "saved": "Saved"
+    "saved": "Saved",
+    "signInTitle": "Sign in to continue",
+    "signInSubtitle": "An admin account already exists for this hub. Sign in to finish setting it up.",
+    "signIn": "Sign in",
+    "signingIn": "Signing in…",
+    "signInFailed": "Sign in failed. Check your credentials and try again."
   },
   "avatar": {
     "eyebrow": "Avatar",

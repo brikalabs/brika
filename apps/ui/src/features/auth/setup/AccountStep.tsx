@@ -10,17 +10,20 @@ import {
   Separator,
 } from '@brika/clay';
 import { useNavigate } from '@tanstack/react-router';
-import { AlertCircle, Check, Loader2, Mail, ShieldCheck, User } from 'lucide-react';
+import { AlertCircle, ArrowRight, Check, Loader2, Mail, ShieldCheck, User } from 'lucide-react';
 import { type SyntheticEvent, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { PasswordStrength } from '../password/PasswordStrength';
 import { StepBody, StepHeader, StepNav } from './shared';
 
 export function AccountStep() {
-  const { user } = useAuth();
+  const { user, hasAdmin } = useAuth();
 
   if (user) {
     return <AccountEdit />;
+  }
+  if (hasAdmin) {
+    return <AccountSignIn />;
   }
   return <AccountForm />;
 }
@@ -174,6 +177,122 @@ function AccountEdit() {
         )}
 
         <StepNav back="/setup/language" next="/setup/avatar" />
+      </StepBody>
+    </>
+  );
+}
+
+// ─── Sign-in form (admin already exists, e.g. created via CLI) ──────────────
+
+function AccountSignIn() {
+  const { client, refreshSession } = useAuth();
+  const { t } = useTranslation('setup');
+  const navigate = useNavigate();
+
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const canSubmit = email.length > 0 && password.length > 0 && !loading;
+
+  const handleSubmit = async (e: SyntheticEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!canSubmit) {
+      return;
+    }
+
+    setError(null);
+    setLoading(true);
+
+    try {
+      await client.login(email, password);
+      await refreshSession();
+      navigate({ to: '/setup/avatar' });
+    } catch {
+      setError(t('account.signInFailed'));
+      setLoading(false);
+    }
+  };
+
+  return (
+    <>
+      <StepHeader
+        eyebrow={t('account.eyebrow')}
+        title={t('account.signInTitle')}
+        subtitle={t('account.signInSubtitle')}
+      />
+
+      <StepBody>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {error && (
+            <div className="flex items-center gap-2 rounded-md bg-destructive/10 px-3 py-2 text-destructive text-sm">
+              <AlertCircle className="size-4 shrink-0" />
+              {error}
+            </div>
+          )}
+
+          <div className="space-y-2">
+            <Label htmlFor="setup-signin-email">{t('account.email')}</Label>
+            <InputGroup>
+              <InputGroupAddon>
+                <Mail />
+              </InputGroupAddon>
+              <InputGroupInput
+                id="setup-signin-email"
+                type="email"
+                autoComplete="email"
+                placeholder={t('account.emailPlaceholder')}
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                autoFocus
+              />
+            </InputGroup>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="setup-signin-password">{t('account.password')}</Label>
+            <PasswordInput
+              id="setup-signin-password"
+              autoComplete="current-password"
+              placeholder={t('account.passwordPlaceholder')}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+          </div>
+
+          <div className="flex items-center gap-3 pt-2">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="-ml-2 gap-1.5 text-muted-foreground hover:text-foreground"
+              onClick={() => navigate({ to: '/setup/language' })}
+            >
+              {t('nav.back')}
+            </Button>
+            <Button
+              type="submit"
+              size="lg"
+              className="ml-auto min-w-[180px] gap-2"
+              disabled={!canSubmit}
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" />
+                  {t('account.signingIn')}
+                </>
+              ) : (
+                <>
+                  {t('account.signIn')}
+                  <ArrowRight className="size-4" />
+                </>
+              )}
+            </Button>
+          </div>
+        </form>
       </StepBody>
     </>
   );

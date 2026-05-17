@@ -1,8 +1,7 @@
+import { Kbd, type SearchControls } from '@brika/tui';
 import { Box, Text } from 'ink';
 import type React from 'react';
 import { BRAND_LINE } from '../../brand';
-import type { SearchControls } from '../state/useSearch';
-import { Kbd } from './Kbd';
 
 interface Props {
   readonly search: SearchControls;

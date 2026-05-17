@@ -8,18 +8,15 @@
  *   c   copy its log buffer to the system clipboard
  */
 
+import { copyLogsToClipboard, openInBrowser, saveLogsToFile, useShortcut } from '@brika/tui';
 import { serviceUrl } from '../../config';
 import { useMortar } from '../useMortar';
-import { openInBrowser } from '../utils/browser';
-import { copyLogsToClipboard } from '../utils/clipboard';
-import { saveLogsToFile } from '../utils/saveLog';
-import { useKey } from './useKey';
 
 export function useServiceActionKeys(enabled: boolean): void {
   const { supervisor, focus, toast } = useMortar();
   const focused = focus.focused;
 
-  useKey(
+  useShortcut(
     'r',
     () => {
       if (focused) {
@@ -29,7 +26,7 @@ export function useServiceActionKeys(enabled: boolean): void {
     enabled
   );
 
-  useKey(
+  useShortcut(
     'R',
     () => {
       toast.showToast('Restarting all services…');
@@ -38,7 +35,7 @@ export function useServiceActionKeys(enabled: boolean): void {
     enabled
   );
 
-  useKey(
+  useShortcut(
     'o',
     () => {
       const url = focused ? serviceUrl(focused.spec, focused.detectedPort) : null;
@@ -49,7 +46,7 @@ export function useServiceActionKeys(enabled: boolean): void {
     enabled
   );
 
-  useKey(
+  useShortcut(
     's',
     () => {
       if (!focused) {
@@ -65,7 +62,7 @@ export function useServiceActionKeys(enabled: boolean): void {
     enabled
   );
 
-  useKey(
+  useShortcut(
     'c',
     () => {
       if (!focused) {

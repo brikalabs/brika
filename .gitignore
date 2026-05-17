@@ -23,6 +23,17 @@ apps/signaling/public/sw.js
 .brika/
 **/.brika/
 
+# Runtime files `brika hub` writes when started from apps/console/ during
+# smoke tests with no BRIKA_HOME set — pid file, local-trust token,
+# instance id, and the data folders the hub bootstrap creates.
+apps/console/brika.pid
+apps/console/cli-token
+apps/console/instance.id
+apps/console/board-order.json
+apps/console/boards/
+apps/console/plugins/
+apps/console/workflows/
+
 # mortar exported logs (`s` keybind in the TUI dumps here)
 .mortar-logs/
 

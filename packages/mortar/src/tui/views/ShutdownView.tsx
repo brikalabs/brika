@@ -1,8 +1,7 @@
+import { Kbd, ScreenChrome, Spinner } from '@brika/tui';
 import { Box, Text, useApp, useInput } from 'ink';
 import React from 'react';
-import { Kbd } from '../components/Kbd';
-import { ScreenChrome } from '../components/ScreenChrome';
-import { Spinner } from '../components/Spinner';
+import { BRAND_LINE, MORTAR_WORDMARK } from '../../brand';
 import { useMortar } from '../useMortar';
 
 /**
@@ -27,7 +26,12 @@ export function ShutdownView(): React.ReactElement {
   const done = live === 0;
 
   return (
-    <ScreenChrome title="Shutting down" titleColor="yellow">
+    <ScreenChrome
+      wordmark={MORTAR_WORDMARK}
+      brand={BRAND_LINE}
+      title="Shutting down"
+      titleColor="yellow"
+    >
       <Box flexDirection="column">
         <Box marginBottom={1}>
           {done ? <Text color="green">✓</Text> : <Spinner color="yellow" />}

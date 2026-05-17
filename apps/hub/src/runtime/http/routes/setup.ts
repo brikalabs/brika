@@ -23,7 +23,11 @@ export const hubSetupPublicRoutes = group({
         const state = inject(StateStore);
         const hasAdmin = userService.hasAdmin();
         const setupCompleted = state.isSetupCompleted();
-        return { needsSetup: !hasAdmin || !setupCompleted };
+        return {
+          hasAdmin,
+          setupCompleted,
+          needsSetup: !hasAdmin || !setupCompleted,
+        };
       },
     }),
   ],

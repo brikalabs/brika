@@ -19,7 +19,7 @@ import { chmod, cp, mkdir, rename, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import pc from 'picocolors';
-import { CliError } from '@/cli/errors';
+import { CliError } from '@/errors';
 import { HUB_GITHUB_RELEASES_API, HUB_GITHUB_RELEASES_LIST_API, hub } from '@/hub';
 import { buildInfo } from '@/runtime/http/routes/status';
 import {

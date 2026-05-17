@@ -66,6 +66,14 @@ export interface Command {
   aliases?: string[];
   examples?: string[];
   subcommands?: Command[];
+  /**
+   * Omit this command from the auto-generated global help listing. The
+   * command is still resolvable by name and executes normally — useful
+   * for easter-egg / internal-only commands that you don't want to
+   * advertise to casual users. Per-command help (`brika <name> --help`)
+   * still works.
+   */
+  hidden?: boolean;
   handler: (args: HandlerArgs) => Promise<void> | void;
 }
 
@@ -82,6 +90,7 @@ export function defineCommand<const O extends Record<string, CommandOption>>(def
   options?: O;
   aliases?: string[];
   examples?: string[];
+  hidden?: boolean;
   handler: (args: HandlerArgs<O>) => Promise<void> | void;
 }): Command {
   return def as Command;

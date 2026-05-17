@@ -63,6 +63,18 @@ const signalingSchema = z.discriminatedUnion('kind', [
 
 // ─── RPC kinds ──────────────────────────────────────────────────────────────
 
+/** Both `*.chunk` variants carry the same dataText|dataB64 invariant. The
+ *  inline `.loose().refine(...)` duplicated 14 lines between the request and
+ *  response sides; this helper collapses them into one shared shape. */
+function chunkSchema<K extends string>(kind: K) {
+  return z
+    .object({ v: V, kind: z.literal(kind), id: z.int() })
+    .loose()
+    .refine((m) => typeof m.dataText === 'string' || typeof m.dataB64 === 'string', {
+      message: `${kind} requires dataText or dataB64`,
+    });
+}
+
 const rpcSchema = z.discriminatedUnion('kind', [
   z
     .object({
@@ -82,16 +94,7 @@ const rpcSchema = z.discriminatedUnion('kind', [
       headers: z.array(z.unknown()),
     })
     .loose(),
-  z
-    .object({
-      v: V,
-      kind: z.literal('request.chunk'),
-      id: z.int(),
-    })
-    .loose()
-    .refine((m) => typeof m.dataText === 'string' || typeof m.dataB64 === 'string', {
-      message: 'request.chunk requires dataText or dataB64',
-    }),
+  chunkSchema('request.chunk'),
   z.object({ v: V, kind: z.literal('request.end'), id: z.int() }).loose(),
   z.object({ v: V, kind: z.literal('abort'), id: z.int() }).loose(),
   z
@@ -103,16 +106,7 @@ const rpcSchema = z.discriminatedUnion('kind', [
       headers: z.array(z.unknown()),
     })
     .loose(),
-  z
-    .object({
-      v: V,
-      kind: z.literal('response.chunk'),
-      id: z.int(),
-    })
-    .loose()
-    .refine((m) => typeof m.dataText === 'string' || typeof m.dataB64 === 'string', {
-      message: 'response.chunk requires dataText or dataB64',
-    }),
+  chunkSchema('response.chunk'),
   z.object({ v: V, kind: z.literal('response.end'), id: z.int() }).loose(),
   z.object({ v: V, kind: z.literal('response.error'), id: z.int(), code: z.string() }).loose(),
 ]);

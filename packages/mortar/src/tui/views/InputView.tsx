@@ -9,11 +9,10 @@
  * (currently disabled while in input mode — the focus is locked).
  */
 
+import { keyToBytes, useRouter } from '@brika/tui';
 import { useInput } from 'ink';
 import type React from 'react';
-import { useRouter } from '../../router';
 import { MainLayout } from '../components/MainLayout';
-import { keyToBytes } from '../keys/keyToBytes';
 import type { Routes } from '../routes';
 import { useMortar } from '../useMortar';
 

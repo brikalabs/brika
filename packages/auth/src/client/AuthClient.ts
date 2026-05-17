@@ -255,11 +255,19 @@ export class AuthClient {
    * Check if initial setup is needed (no admin or setup not completed).
    * Uses the hub-level endpoint that combines auth + hub state checks.
    */
-  async checkSetupStatus(): Promise<{ needsSetup: boolean }> {
+  async checkSetupStatus(): Promise<{
+    hasAdmin: boolean;
+    setupCompleted: boolean;
+    needsSetup: boolean;
+  }> {
     try {
-      return await this.request<{ needsSetup: boolean }>('/api/setup/status');
+      return await this.request<{
+        hasAdmin: boolean;
+        setupCompleted: boolean;
+        needsSetup: boolean;
+      }>('/api/setup/status');
     } catch {
-      return { needsSetup: false };
+      return { hasAdmin: false, setupCompleted: true, needsSetup: false };
     }
   }
 

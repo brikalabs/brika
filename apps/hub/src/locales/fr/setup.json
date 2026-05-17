@@ -43,7 +43,12 @@
     "newPassword": "Nouveau mot de passe",
     "newPasswordPlaceholder": "Saisissez un nouveau mot de passe",
     "saveChanges": "Enregistrer les modifications",
-    "saved": "Enregistré"
+    "saved": "Enregistré",
+    "signInTitle": "Connectez-vous pour continuer",
+    "signInSubtitle": "Un compte administrateur existe déjà pour ce hub. Connectez-vous pour terminer la configuration.",
+    "signIn": "Se connecter",
+    "signingIn": "Connexion…",
+    "signInFailed": "Échec de la connexion. Vérifiez vos identifiants et réessayez."
   },
   "avatar": {
     "eyebrow": "Avatar",
