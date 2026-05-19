@@ -883,9 +883,13 @@ describe('OAuth coverage: PKCE full authorize + callback flow', () => {
       states.push(location.searchParams.get('state') ?? '');
     }
 
+    const firstState = states[0];
+    if (firstState === undefined) {
+      throw new Error('test setup: expected at least one authorize call');
+    }
     const callbackRoute = findRoute('GET', `/oauth/${id}/callback`);
     const firstStateResult = await callbackRoute?.handler(
-      makeReq({ query: { code: 'code', state: states[0] } })
+      makeReq({ query: { code: 'code', state: firstState } })
     );
     expect(firstStateResult.status).toBe(400);
     expect(firstStateResult.body).toContain('PKCE verifier not found');
