@@ -58,7 +58,7 @@ export async function ensurePluginTsconfig(rootDirectory: string): Promise<void>
           extends: '@brika/sdk/tsconfig.plugin.json',
           compilerOptions: {
             jsx: 'react-jsx',
-            jsxImportSource: '@brika/sdk',
+            jsxImportSource: 'react',
           },
         },
         null,
