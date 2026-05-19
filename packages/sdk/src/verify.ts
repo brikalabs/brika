@@ -13,12 +13,30 @@
 
 import { resolve } from 'node:path';
 import pc from 'picocolors';
+import type { Suggestion } from './verify-checks/registry';
 import { isRecord, readDependencyVersion, verifyPlugin } from './verify-plugin';
 
 const args = process.argv.slice(2);
 const jsonOutput = args.includes('--json');
 const pluginDirArg = args.find((arg) => arg !== '--json');
 const pluginDir = pluginDirArg ? resolve(pluginDirArg) : process.cwd();
+
+function findSuggestion(
+  suggestions: readonly Suggestion[],
+  message: string
+): Suggestion | undefined {
+  return suggestions.find((s) => s.for === message);
+}
+
+function printSuggestion(suggestion: Suggestion): void {
+  const lang = suggestion.language ?? 'json';
+  console.log(`     ${pc.dim('Fix:')} ${suggestion.description}`);
+  console.log(pc.dim(`     \`\`\`${lang}`));
+  for (const line of suggestion.snippet.split('\n')) {
+    console.log(`     ${pc.cyan(line)}`);
+  }
+  console.log(pc.dim(`     \`\`\``));
+}
 
 async function readVersion(pkgJsonPath: string | URL): Promise<string | null> {
   try {
@@ -86,6 +104,7 @@ if (jsonOutput) {
     sdkVersion,
     errors: result.errors,
     warnings: result.warnings,
+    suggestions: result.suggestions,
     passed: result.passed,
   };
   console.log(JSON.stringify(payload));
@@ -132,6 +151,10 @@ if (result.warnings.length > 0) {
   console.log();
   for (const w of result.warnings) {
     console.log(`  ${pc.yellow('⚠')}  ${w}`);
+    const suggestion = findSuggestion(result.suggestions, w);
+    if (suggestion) {
+      printSuggestion(suggestion);
+    }
   }
 }
 
@@ -140,6 +163,10 @@ if (result.errors.length > 0) {
   console.log();
   for (const e of result.errors) {
     console.log(`  ${pc.red('✗')}  ${e}`);
+    const suggestion = findSuggestion(result.suggestions, e);
+    if (suggestion) {
+      printSuggestion(suggestion);
+    }
   }
   const count = result.errors.length;
   console.log(pc.red(`\n  Verification failed — ${count} error${count === 1 ? '' : 's'}\n`));

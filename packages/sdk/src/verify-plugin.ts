@@ -9,7 +9,9 @@
 import { resolve } from 'node:path';
 import { PluginPackageSchema } from '@brika/schema/plugin';
 import './verify-checks';
-import { runChecks } from './verify-checks/registry';
+import { runChecks, type Suggestion } from './verify-checks/registry';
+
+export type { Suggestion } from './verify-checks/registry';
 
 /** Generic type guard — used by verify.ts for lock file / dependency parsing */
 export function isRecord(value: unknown): value is Record<string, unknown> {
@@ -45,6 +47,8 @@ export interface VerifyResult {
   schemaUrl: string | undefined;
   errors: string[];
   warnings: string[];
+  /** Copy-pastable fix hints linked to specific errors/warnings via the `for` field. */
+  suggestions: Suggestion[];
   passed: boolean;
 }
 
@@ -77,12 +81,13 @@ export async function verifyPlugin(pluginDir: string, sdkVersion: string): Promi
       schemaUrl: undefined,
       errors: schemaErrors,
       warnings: [],
+      suggestions: [],
       passed: false,
     };
   }
 
   const pkg = schemaResult.data;
-  const { errors, warnings } = await runChecks({
+  const { errors, warnings, suggestions } = await runChecks({
     pkg,
     pluginDir,
     sdkVersion,
@@ -95,6 +100,7 @@ export async function verifyPlugin(pluginDir: string, sdkVersion: string): Promi
     schemaUrl: pkg.$schema,
     errors,
     warnings,
+    suggestions,
     passed: errors.length === 0,
   };
 }

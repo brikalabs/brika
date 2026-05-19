@@ -369,6 +369,43 @@ describe('brika-verify-plugin', () => {
 
 // ─── Direct unit tests for verifyPlugin (gives SonarCloud coverage) ──────────
 
+async function setupTmpDir(
+  prefix: string,
+  pkg: Record<string, unknown>,
+  files: Record<string, string> = {},
+  createMainFile = true
+): Promise<string> {
+  const tmpDir = await mkdtemp(join(tmpdir(), prefix));
+  const packageJson = {
+    main: './src/index.ts',
+    ...pkg,
+  };
+  await writeFile(join(tmpDir, 'package.json'), JSON.stringify(packageJson));
+  const mainPath = typeof packageJson.main === 'string' ? packageJson.main : undefined;
+  if (createMainFile && mainPath) {
+    const mainFilePath = join(tmpDir, mainPath);
+    await mkdir(dirname(mainFilePath), {
+      recursive: true,
+    });
+    await writeFile(mainFilePath, 'export {};');
+  }
+  for (const [relativePath, content] of Object.entries(files)) {
+    const fullPath = join(tmpDir, relativePath);
+    await mkdir(dirname(fullPath), {
+      recursive: true,
+    });
+    await writeFile(fullPath, content);
+  }
+  return tmpDir;
+}
+
+async function removeTmpDir(dir: string): Promise<void> {
+  await rm(dir, {
+    recursive: true,
+    force: true,
+  });
+}
+
 describe('verifyPlugin', () => {
   let tmpDir: string;
 
@@ -377,35 +414,12 @@ describe('verifyPlugin', () => {
     files: Record<string, string> = {},
     createMainFile = true
   ): Promise<string> {
-    tmpDir = await mkdtemp(join(tmpdir(), 'brika-vp-'));
-    const packageJson = {
-      main: './src/index.ts',
-      ...pkg,
-    };
-    await writeFile(join(tmpDir, 'package.json'), JSON.stringify(packageJson));
-    const mainPath = typeof packageJson.main === 'string' ? packageJson.main : undefined;
-    if (createMainFile && mainPath) {
-      const mainFilePath = join(tmpDir, mainPath);
-      await mkdir(dirname(mainFilePath), {
-        recursive: true,
-      });
-      await writeFile(mainFilePath, 'export {};');
-    }
-    for (const [relativePath, content] of Object.entries(files)) {
-      const fullPath = join(tmpDir, relativePath);
-      await mkdir(dirname(fullPath), {
-        recursive: true,
-      });
-      await writeFile(fullPath, content);
-    }
+    tmpDir = await setupTmpDir('brika-vp-', pkg, files, createMainFile);
     return tmpDir;
   }
 
   async function cleanup() {
-    await rm(tmpDir, {
-      recursive: true,
-      force: true,
-    });
+    await removeTmpDir(tmpDir);
   }
 
   test('passes for a valid plugin', async () => {
@@ -638,6 +652,264 @@ describe('verifyPlugin', () => {
         threw = true;
       }
       expect(threw).toBe(true);
+    } finally {
+      await cleanup();
+    }
+  });
+});
+
+// ─── Suggestion field on VerifyResult ─────────────────────────────────────────
+
+describe('verifyPlugin suggestions', () => {
+  let tmpDir: string;
+
+  async function setup(
+    pkg: Record<string, unknown>,
+    files: Record<string, string> = {},
+    createMainFile = true
+  ): Promise<string> {
+    tmpDir = await setupTmpDir('brika-vps-', pkg, files, createMainFile);
+    return tmpDir;
+  }
+
+  async function cleanup() {
+    await removeTmpDir(tmpDir);
+  }
+
+  test('keywords check emits suggestion with corrected keywords array', async () => {
+    const dir = await setup({
+      name: 'p',
+      version: '1.0.0',
+      engines: {
+        brika: `^${SDK_VERSION}`,
+      },
+      $schema: 'https://schema.brika.dev/plugin.schema.json',
+      keywords: ['something-else'],
+    });
+    try {
+      const result = await verifyPlugin(dir, SDK_VERSION);
+      const suggestion = result.suggestions.find((s) =>
+        s.for.startsWith('keywords must include "brika"')
+      );
+      expect(suggestion).toBeDefined();
+      expect(suggestion?.snippet).toContain('"keywords"');
+      expect(suggestion?.snippet).toContain('brika');
+      expect(suggestion?.snippet).toContain('brika-plugin');
+      expect(suggestion?.snippet).toContain('something-else'); // preserves existing
+      expect(suggestion?.language).toBe('json');
+    } finally {
+      await cleanup();
+    }
+  });
+
+  test('engines check emits suggestion with current SDK version', async () => {
+    const dir = await setup({
+      name: 'p',
+      version: '1.0.0',
+      engines: {
+        brika: '^0.0.1',
+      },
+      $schema: 'https://schema.brika.dev/plugin.schema.json',
+      keywords: ['brika', 'brika-plugin'],
+    });
+    try {
+      const result = await verifyPlugin(dir, SDK_VERSION);
+      const suggestion = result.suggestions.find((s) => s.for.startsWith('engines.brika'));
+      expect(suggestion).toBeDefined();
+      expect(suggestion?.snippet).toBe(`"engines": { "brika": "^${SDK_VERSION}" }`);
+    } finally {
+      await cleanup();
+    }
+  });
+
+  test('$schema missing check emits suggestion with brika schema URL', async () => {
+    const dir = await setup({
+      name: 'p',
+      version: '1.0.0',
+      engines: {
+        brika: `^${SDK_VERSION}`,
+      },
+      keywords: ['brika', 'brika-plugin'],
+    });
+    try {
+      const result = await verifyPlugin(dir, SDK_VERSION);
+      const suggestion = result.suggestions.find((s) => s.for.startsWith('$schema field is missing'));
+      expect(suggestion).toBeDefined();
+      expect(suggestion?.snippet).toBe('"$schema": "https://schema.brika.dev/plugin.schema.json"');
+    } finally {
+      await cleanup();
+    }
+  });
+
+  test('$schema wrong-host check emits suggestion pointing at brika host', async () => {
+    const dir = await setup({
+      name: 'p',
+      version: '1.0.0',
+      engines: {
+        brika: `^${SDK_VERSION}`,
+      },
+      $schema: 'https://example.com/x.schema.json',
+      keywords: ['brika', 'brika-plugin'],
+    });
+    try {
+      const result = await verifyPlugin(dir, SDK_VERSION);
+      const suggestion = result.suggestions.find((s) =>
+        s.for.includes('does not point to schema.brika.dev')
+      );
+      expect(suggestion).toBeDefined();
+      expect(suggestion?.snippet).toContain('schema.brika.dev');
+    } finally {
+      await cleanup();
+    }
+  });
+
+  test('main check suggests a likely entry candidate when one exists', async () => {
+    const dir = await setup(
+      {
+        name: 'p',
+        version: '1.0.0',
+        main: './src/index.ts',
+        engines: {
+          brika: `^${SDK_VERSION}`,
+        },
+        $schema: 'https://schema.brika.dev/plugin.schema.json',
+        keywords: ['brika', 'brika-plugin'],
+      },
+      {
+        'src/index.tsx': 'export {};',
+      },
+      false
+    );
+    try {
+      const result = await verifyPlugin(dir, SDK_VERSION);
+      const suggestion = result.suggestions.find((s) => s.for.startsWith('main path "'));
+      expect(suggestion).toBeDefined();
+      expect(suggestion?.snippet).toBe('"main": "./src/index.tsx"');
+      expect(suggestion?.description).toContain('./src/index.tsx');
+    } finally {
+      await cleanup();
+    }
+  });
+
+  test('main check suggests creating the declared file when no candidate exists', async () => {
+    const dir = await setup(
+      {
+        name: 'p',
+        version: '1.0.0',
+        main: './src/missing.ts',
+        engines: {
+          brika: `^${SDK_VERSION}`,
+        },
+        $schema: 'https://schema.brika.dev/plugin.schema.json',
+        keywords: ['brika', 'brika-plugin'],
+      },
+      {},
+      false
+    );
+    try {
+      const result = await verifyPlugin(dir, SDK_VERSION);
+      const suggestion = result.suggestions.find((s) => s.for.startsWith('main path "'));
+      expect(suggestion).toBeDefined();
+      expect(suggestion?.snippet).toBe('"main": "./src/missing.ts"');
+      expect(suggestion?.description).toContain('Create the file');
+    } finally {
+      await cleanup();
+    }
+  });
+
+  test('publish files check suggests merged files array with missing entries', async () => {
+    const dir = await setup(
+      {
+        name: 'p',
+        version: '1.0.0',
+        engines: {
+          brika: `^${SDK_VERSION}`,
+        },
+        $schema: 'https://schema.brika.dev/plugin.schema.json',
+        keywords: ['brika', 'brika-plugin'],
+        icon: './icon.svg',
+        files: ['src'],
+      },
+      {
+        'src/index.ts': 'export {};',
+        'locales/en.json': '{}',
+        'icon.svg': '<svg></svg>',
+        'README.md': '# Plugin',
+      }
+    );
+    try {
+      const result = await verifyPlugin(dir, SDK_VERSION);
+      const suggestion = result.suggestions.find((s) =>
+        s.for.startsWith('files should include publish paths')
+      );
+      expect(suggestion).toBeDefined();
+      expect(suggestion?.snippet).toContain('"files"');
+      expect(suggestion?.snippet).toContain('src');
+      expect(suggestion?.snippet).toContain('locales');
+      expect(suggestion?.snippet).toContain('icon.svg');
+      expect(suggestion?.snippet).toContain('README.md');
+    } finally {
+      await cleanup();
+    }
+  });
+
+  test('icon-missing warning emits suggestion with default icon snippet', async () => {
+    const dir = await setup({
+      name: 'p',
+      version: '1.0.0',
+      engines: {
+        brika: `^${SDK_VERSION}`,
+      },
+      $schema: 'https://schema.brika.dev/plugin.schema.json',
+      keywords: ['brika', 'brika-plugin'],
+    });
+    try {
+      const result = await verifyPlugin(dir, SDK_VERSION);
+      const suggestion = result.suggestions.find((s) => s.for.startsWith('icon is missing'));
+      expect(suggestion).toBeDefined();
+      expect(suggestion?.snippet).toBe('"icon": "./icon.svg"');
+    } finally {
+      await cleanup();
+    }
+  });
+
+  test('passing plugin emits no suggestions', async () => {
+    const dir = await setup(
+      {
+        name: 'p',
+        version: '1.0.0',
+        engines: {
+          brika: `^${SDK_VERSION}`,
+        },
+        $schema: 'https://schema.brika.dev/plugin.schema.json',
+        keywords: ['brika', 'brika-plugin'],
+        icon: './icon.svg',
+        files: ['src', 'icon.svg'],
+      },
+      {
+        'icon.svg': '<svg></svg>',
+      }
+    );
+    try {
+      const result = await verifyPlugin(dir, SDK_VERSION);
+      expect(result.suggestions).toEqual([]);
+    } finally {
+      await cleanup();
+    }
+  });
+
+  test('schema validation failure returns empty suggestions array', async () => {
+    const dir = await setup({
+      // missing name → schema error
+      version: '1.0.0',
+      engines: {
+        brika: `^${SDK_VERSION}`,
+      },
+    });
+    try {
+      const result = await verifyPlugin(dir, SDK_VERSION);
+      expect(result.passed).toBe(false);
+      expect(result.suggestions).toEqual([]);
     } finally {
       await cleanup();
     }

@@ -1,6 +1,6 @@
 import { readdir, stat } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import { registerCheck } from './registry';
+import { registerCheck, type Suggestion } from './registry';
 
 const README_FILE = 'readme.md';
 
@@ -91,38 +91,73 @@ function filesIncludePath(files: string[], requiredPath: string): boolean {
   return files.some((file) => filesEntryCoversPath(file, requiredPath));
 }
 
-registerCheck(async ({ pkg, pluginDir }) => {
-  const expectedPublishPaths: string[] = [];
-  const warnings: string[] = [];
+const ICON_MISSING_WARNING = 'icon is missing — add e.g. "icon": "./icon.svg"';
 
+async function collectExpectedPaths(pluginDir: string, icon: string | undefined): Promise<string[]> {
+  const expected: string[] = [];
   if (await pathExists(resolve(pluginDir, 'src'))) {
-    expectedPublishPaths.push('src');
+    expected.push('src');
   }
   if (await pathExists(resolve(pluginDir, 'locales'))) {
-    expectedPublishPaths.push('locales');
+    expected.push('locales');
   }
-
   const readmeFileName = await findReadmeFileName(pluginDir);
   if (readmeFileName) {
-    expectedPublishPaths.push(readmeFileName);
+    expected.push(readmeFileName);
   }
-
-  const { icon, files = [] } = pkg;
   if (icon) {
-    expectedPublishPaths.push(icon);
-    if (!(await pathExists(resolve(pluginDir, icon)))) {
-      warnings.push(`icon path "${icon}" is declared but missing on disk`);
+    expected.push(icon);
+  }
+  return expected;
+}
+
+function mergeUnique(...lists: readonly (readonly string[])[]): string[] {
+  const merged: string[] = [];
+  const seen = new Set<string>();
+  for (const list of lists) {
+    for (const entry of list) {
+      if (!seen.has(entry)) {
+        merged.push(entry);
+        seen.add(entry);
+      }
     }
-  } else {
-    warnings.push('icon is missing — add e.g. "icon": "./icon.svg"');
+  }
+  return merged;
+}
+
+registerCheck(async ({ pkg, pluginDir }) => {
+  const warnings: string[] = [];
+  const suggestions: Suggestion[] = [];
+  const { icon, files = [] } = pkg;
+
+  const expectedPublishPaths = await collectExpectedPaths(pluginDir, icon);
+
+  if (!icon) {
+    warnings.push(ICON_MISSING_WARNING);
+    suggestions.push({
+      for: ICON_MISSING_WARNING,
+      description: 'Declare an icon path (PNG/SVG, relative to the plugin root)',
+      snippet: `"icon": "./icon.svg"`,
+      language: 'json',
+    });
+  } else if (!(await pathExists(resolve(pluginDir, icon)))) {
+    warnings.push(`icon path "${icon}" is declared but missing on disk`);
   }
 
   const missing = expectedPublishPaths.filter((p) => !filesIncludePath(files, p));
   if (missing.length > 0) {
-    warnings.push(`files should include publish paths: ${missing.join(', ')}`);
+    const message = `files should include publish paths: ${missing.join(', ')}`;
+    warnings.push(message);
+    suggestions.push({
+      for: message,
+      description: 'Add the missing publish paths to the files array',
+      snippet: `"files": ${JSON.stringify(mergeUnique(files, missing))}`,
+      language: 'json',
+    });
   }
 
   return {
     warnings,
+    suggestions,
   };
 });

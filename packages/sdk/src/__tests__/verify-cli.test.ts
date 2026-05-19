@@ -526,6 +526,170 @@ describe('readVersion edge cases via --json', () => {
   });
 });
 
+// ─── Suggestions in JSON output and human-readable rendering ──────────────────
+
+describe('verify CLI suggestion rendering', () => {
+  test('JSON output round-trips the suggestion field for engines.brika mismatch', async () => {
+    const { exitCode, stdout } = await runVerify(
+      validPlugin({
+        engines: {
+          brika: '^0.0.1',
+        },
+      }),
+      {
+        extraArgs: ['--json'],
+      }
+    );
+    expect(exitCode).toBe(1);
+    const payload = JSON.parse(stdout.trim());
+    expect(Array.isArray(payload.suggestions)).toBe(true);
+    const enginesSuggestion = payload.suggestions.find((s: { for: string }) =>
+      s.for.startsWith('engines.brika')
+    );
+    expect(enginesSuggestion).toBeDefined();
+    expect(enginesSuggestion.snippet).toContain('"engines"');
+    expect(enginesSuggestion.snippet).toContain('"brika"');
+    expect(enginesSuggestion.language).toBe('json');
+    expect(typeof enginesSuggestion.description).toBe('string');
+  });
+
+  test('JSON output includes suggestion for missing brika keyword', async () => {
+    const { stdout } = await runVerify(
+      validPlugin({
+        keywords: ['something-else'],
+      }),
+      {
+        extraArgs: ['--json'],
+      }
+    );
+    const payload = JSON.parse(stdout.trim());
+    const keywordSuggestion = payload.suggestions.find((s: { for: string }) =>
+      s.for.startsWith('keywords must include')
+    );
+    expect(keywordSuggestion).toBeDefined();
+    expect(keywordSuggestion.snippet).toContain('"keywords"');
+    expect(keywordSuggestion.snippet).toContain('brika');
+  });
+
+  test('JSON output suggestions array is empty when plugin is fully valid', async () => {
+    const { stdout } = await runVerify(
+      validPlugin({
+        icon: './icon.svg',
+        files: ['src', 'icon.svg'],
+      }),
+      {
+        files: {
+          'icon.svg': '<svg></svg>',
+        },
+        extraArgs: ['--json'],
+      }
+    );
+    const payload = JSON.parse(stdout.trim());
+    expect(payload.suggestions).toEqual([]);
+  });
+
+  test('human-readable output prints Fix: line and snippet under an error', async () => {
+    const { stdout } = await runVerify(
+      validPlugin({
+        engines: {
+          brika: '^0.0.1',
+        },
+      })
+    );
+    expect(stdout).toContain('Fix:');
+    expect(stdout).toContain('"engines"');
+    expect(stdout).toContain('"brika"');
+  });
+
+  test('human-readable output prints suggestion under a warning ($schema missing)', async () => {
+    const pkg = validPlugin();
+    delete pkg.$schema;
+    const { stdout } = await runVerify(pkg);
+    expect(stdout).toContain('$schema field is missing');
+    expect(stdout).toContain('Fix:');
+    expect(stdout).toContain('"$schema": "https://schema.brika.dev/plugin.schema.json"');
+  });
+
+  test('human-readable output prints suggestion for keyword error', async () => {
+    const { stdout } = await runVerify(
+      validPlugin({
+        keywords: ['something-else'],
+      })
+    );
+    expect(stdout).toContain('keywords must include "brika"');
+    expect(stdout).toContain('Fix:');
+    expect(stdout).toContain('"keywords"');
+  });
+
+  test('human-readable output suggests likely entry file for main path mismatch', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'brika-vcli-main-'));
+    try {
+      const pkg = validPlugin({
+        main: './src/index.ts',
+      });
+      await writeFile(join(dir, 'package.json'), JSON.stringify(pkg));
+      const tsxPath = join(dir, 'src', 'index.tsx');
+      await mkdir(dirname(tsxPath), {
+        recursive: true,
+      });
+      await writeFile(tsxPath, 'export {};');
+
+      const { exitCode, stdout } = await runCli(['bun', VERIFY_SCRIPT, dir]);
+      expect(exitCode).toBe(1);
+      expect(stdout).toContain('main path "./src/index.ts"');
+      expect(stdout).toContain('Fix:');
+      expect(stdout).toContain('"main": "./src/index.tsx"');
+    } finally {
+      await rm(dir, {
+        recursive: true,
+        force: true,
+      });
+    }
+  });
+
+  test('human-readable output suggests creating file when no candidate exists', async () => {
+    const { stdout } = await runVerify(
+      validPlugin({
+        main: './src/missing.ts',
+      }),
+      {
+        createMainFile: false,
+      }
+    );
+    expect(stdout).toContain('main path "./src/missing.ts"');
+    expect(stdout).toContain('Fix:');
+    expect(stdout).toContain('"main": "./src/missing.ts"');
+    expect(stdout).toContain('Create the file');
+  });
+
+  test('human-readable output prints suggestion for missing icon warning', async () => {
+    const { stdout } = await runVerify(validPlugin());
+    expect(stdout).toContain('icon is missing');
+    expect(stdout).toContain('Fix:');
+    expect(stdout).toContain('"icon": "./icon.svg"');
+  });
+
+  test('human-readable output prints suggestion for files coverage warning', async () => {
+    const { stdout } = await runVerify(
+      validPlugin({
+        icon: './icon.svg',
+        files: ['src'],
+      }),
+      {
+        files: {
+          'icon.svg': '<svg></svg>',
+          'README.md': '# Plugin',
+        },
+      }
+    );
+    expect(stdout).toContain('files should include publish paths');
+    expect(stdout).toContain('Fix:');
+    expect(stdout).toContain('"files"');
+    expect(stdout).toContain('icon.svg');
+    expect(stdout).toContain('README.md');
+  });
+});
+
 // ─── Combined: both JSON and human-readable for the same failure ──────────────
 
 describe('verify CLI JSON vs human-readable parity', () => {
