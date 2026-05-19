@@ -180,8 +180,31 @@ export function defineOAuth(config: OAuthProviderConfig): OAuthClient {
   const tokenPrefKey = `__secret_oauth_${config.id}_token`;
   const usePkce = config.pkce !== false;
 
-  // In-flight PKCE verifiers keyed by state parameter
-  const pendingVerifiers = new Map<string, string>();
+  // In-flight PKCE verifiers keyed by state parameter.
+  // Bounded so an unauthenticated attacker hitting /authorize in a loop
+  // cannot grow the map without bound; OAuth `code` lifetimes are short
+  // (~10 min for major providers), so TTL also lets abandoned flows reclaim.
+  const PKCE_TTL_MS = 10 * 60 * 1000;
+  const PKCE_MAX_ENTRIES = 64;
+  const pendingVerifiers = new Map<string, { verifier: string; expiresAt: number }>();
+
+  function evictPkceEntries(now: number): void {
+    // Map iteration order is insertion order; drop expired entries front-to-back
+    // until the first live one, then enforce the size cap by evicting oldest.
+    for (const [state, entry] of pendingVerifiers) {
+      if (entry.expiresAt > now) {
+        break;
+      }
+      pendingVerifiers.delete(state);
+    }
+    while (pendingVerifiers.size >= PKCE_MAX_ENTRIES) {
+      const oldest = pendingVerifiers.keys().next().value;
+      if (oldest === undefined) {
+        break;
+      }
+      pendingVerifiers.delete(oldest);
+    }
+  }
 
   const callbackPath = `/oauth/${config.id}/callback`;
   const authorizePath = `/oauth/${config.id}/authorize`;
@@ -258,7 +281,9 @@ export function defineOAuth(config: OAuthProviderConfig): OAuthClient {
     if (usePkce) {
       const verifier = generateCodeVerifier();
       const challenge = await generateCodeChallenge(verifier);
-      pendingVerifiers.set(state, verifier);
+      const now = Date.now();
+      evictPkceEntries(now);
+      pendingVerifiers.set(state, { verifier, expiresAt: now + PKCE_TTL_MS });
       params.set('code_challenge_method', 'S256');
       params.set('code_challenge', challenge);
     }
@@ -275,14 +300,15 @@ export function defineOAuth(config: OAuthProviderConfig): OAuthClient {
 
   /** Resolve the PKCE code verifier for the given state, cleaning up the pending map. */
   function resolvePkceVerifier(state: string | undefined): string | null {
-    const verifier = state ? pendingVerifiers.get(state) : undefined;
-    if (!verifier) {
+    if (!state) {
       return null;
     }
-    if (state) {
-      pendingVerifiers.delete(state);
+    const entry = pendingVerifiers.get(state);
+    pendingVerifiers.delete(state);
+    if (!entry || entry.expiresAt <= Date.now()) {
+      return null;
     }
-    return verifier;
+    return entry.verifier;
   }
 
   /** Exchange an authorization code for tokens, returning an HTML RouteResponse. */

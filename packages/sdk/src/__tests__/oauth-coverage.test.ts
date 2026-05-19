@@ -839,6 +839,57 @@ describe('OAuth coverage: PKCE full authorize + callback flow', () => {
     expect(result2.status).toBe(400);
     expect(result2.body).toContain('PKCE verifier not found');
   });
+
+  test('PKCE verifier expires after TTL (callback after 10min rejects)', async () => {
+    const id = uniqueId('pkce-ttl');
+    defineOAuth(createConfig({ id }));
+
+    const authorizeRoute = findRoute('GET', `/oauth/${id}/authorize`);
+    const originalNow = Date.now;
+    let now = originalNow();
+    Date.now = () => now;
+    try {
+      const authResult = await authorizeRoute?.handler(makeReq());
+      const location = new URL(authResult.headers.Location);
+      const state = location.searchParams.get('state') ?? '';
+
+      // Jump past the 10-minute TTL
+      now += 10 * 60 * 1000 + 1;
+
+      const callbackRoute = findRoute('GET', `/oauth/${id}/callback`);
+      const result = await callbackRoute?.handler(
+        makeReq({
+          query: { code: 'auth-code', state },
+        })
+      );
+      expect(result.status).toBe(400);
+      expect(result.body).toContain('PKCE verifier not found');
+    } finally {
+      Date.now = originalNow;
+    }
+  });
+
+  test('PKCE pending map is capped — oldest entries evicted at the limit', async () => {
+    const id = uniqueId('pkce-cap');
+    defineOAuth(createConfig({ id }));
+
+    const authorizeRoute = findRoute('GET', `/oauth/${id}/authorize`);
+
+    // Authorize 65 times (cap is 64) — the first state should be evicted.
+    const states: string[] = [];
+    for (let i = 0; i < 65; i++) {
+      const authResult = await authorizeRoute?.handler(makeReq());
+      const location = new URL(authResult.headers.Location);
+      states.push(location.searchParams.get('state') ?? '');
+    }
+
+    const callbackRoute = findRoute('GET', `/oauth/${id}/callback`);
+    const firstStateResult = await callbackRoute?.handler(
+      makeReq({ query: { code: 'code', state: states[0] } })
+    );
+    expect(firstStateResult.status).toBe(400);
+    expect(firstStateResult.body).toContain('PKCE verifier not found');
+  });
 });
 
 describe('OAuth coverage: parseTokenResponse edge cases (via callback)', () => {
