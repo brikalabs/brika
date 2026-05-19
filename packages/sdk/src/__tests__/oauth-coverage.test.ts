@@ -66,6 +66,17 @@ function isRecord(val: unknown): val is Record<string, unknown> {
   return typeof val === 'object' && val !== null && !Array.isArray(val);
 }
 
+/** Extract a URL string from a fetch input without object stringification footguns. */
+function urlOf(input: string | URL | Request): string {
+  if (typeof input === 'string') {
+    return input;
+  }
+  if (input instanceof URL) {
+    return input.href;
+  }
+  return input.url;
+}
+
 /** Read a stored OAuth token from the preferences map with proper type narrowing. */
 function getStoredToken(key: string): Record<string, unknown> {
   const val = preferences[key];
@@ -1501,6 +1512,57 @@ describe('OAuth coverage: authenticated fetch', () => {
 
     await client.fetch('https://api.example.com/data');
     expect(fetchCallCount).toBe(2);
+  });
+
+  test('concurrent fetches with expired token issue a single refresh POST', async () => {
+    const id = uniqueId('refresh-race');
+    const client = defineOAuth(createConfig({ id }));
+
+    preferences[`__secret_oauth_${id}_token`] = {
+      access_token: 'expired-token',
+      refresh_token: 'rotating-refresh',
+      expires_at: Date.now() - 600_000,
+      token_type: 'Bearer',
+    };
+
+    let refreshCount = 0;
+    let apiCount = 0;
+    let releaseRefresh: () => void = () => {};
+    const refreshGate = new Promise<void>((resolve) => {
+      releaseRefresh = resolve;
+    });
+
+    globalThis.fetch = mockFetch((input: string | URL | Request) => {
+      if (urlOf(input).includes('token')) {
+        refreshCount++;
+        return refreshGate.then(
+          () =>
+            new Response(
+              JSON.stringify({
+                access_token: 'fresh-token',
+                refresh_token: 'rotated-refresh',
+                expires_in: 3600,
+                token_type: 'Bearer',
+              }),
+              { status: 200, headers: { 'Content-Type': 'application/json' } }
+            )
+        );
+      }
+      apiCount++;
+      return Promise.resolve(new Response('ok'));
+    });
+
+    const a = client.fetch('https://api.example.com/a');
+    const b = client.fetch('https://api.example.com/b');
+    const c = client.fetch('https://api.example.com/c');
+
+    // Give the event loop a turn so all three reach the refresh check
+    await Promise.resolve();
+    releaseRefresh();
+    await Promise.all([a, b, c]);
+
+    expect(refreshCount).toBe(1);
+    expect(apiCount).toBe(3);
   });
 
   test('fetch throws when token is expired and no refresh_token', async () => {

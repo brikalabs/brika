@@ -36,6 +36,7 @@
 
 import { getContext } from '../context';
 import { htmlEscape } from '../internal/html-escape';
+import { singleFlight } from '../internal/single-flight';
 import type { RouteResponse } from '../types';
 import { defineRoute } from './routes';
 
@@ -364,9 +365,28 @@ export function defineOAuth(config: OAuthProviderConfig): OAuthClient {
 
   // ─── Token refresh ──────────────────────────────────────────────────────
 
-  async function refreshToken(token: OAuthToken): Promise<OAuthToken | null> {
-    if (!token.refresh_token) {
+  /**
+   * Single-flighted refresh: concurrent callers share one POST.
+   *
+   * Without this, two parallel `client.fetch` calls hitting an expired token
+   * both issue grant_type=refresh_token with the same refresh_token. Providers
+   * that rotate refresh tokens (Spotify, Google) accept the first and return
+   * invalid_grant for the second — which would clobber the freshly-stored
+   * token via updatePreference and force the user to re-authorize.
+   *
+   * The closure re-reads the current token on each invocation so that callers
+   * arriving after a successful refresh see the new token without issuing a
+   * fresh POST.
+   */
+  const refreshTokenOnce = singleFlight(async (): Promise<OAuthToken | null> => {
+    const current = client.getToken();
+    if (!current?.refresh_token) {
       return null;
+    }
+    // A previous in-flight refresh that completed before us already wrote a
+    // non-expired token — adopt it instead of issuing another POST.
+    if (current.expires_at > Date.now() + 60_000) {
+      return current;
     }
 
     try {
@@ -374,7 +394,7 @@ export function defineOAuth(config: OAuthProviderConfig): OAuthClient {
 
       const body = new URLSearchParams({
         grant_type: 'refresh_token',
-        refresh_token: token.refresh_token,
+        refresh_token: current.refresh_token,
         client_id: clientId,
       });
 
@@ -388,7 +408,7 @@ export function defineOAuth(config: OAuthProviderConfig): OAuthClient {
         return null;
       }
 
-      const newToken = parseTokenResponse(await response.json(), token.refresh_token);
+      const newToken = parseTokenResponse(await response.json(), current.refresh_token);
       if (!newToken) {
         return null;
       }
@@ -398,7 +418,7 @@ export function defineOAuth(config: OAuthProviderConfig): OAuthClient {
     } catch {
       return null;
     }
-  }
+  });
 
   // ─── Client ─────────────────────────────────────────────────────────────
 
@@ -423,9 +443,9 @@ export function defineOAuth(config: OAuthProviderConfig): OAuthClient {
         throw new Error(`Not authenticated. Visit ${client.getAuthUrl()} to authorize.`);
       }
 
-      // Refresh if expired (with 60s buffer)
+      // Refresh if expired (with 60s buffer). Concurrent callers share one POST.
       if (token.expires_at < Date.now() + 60_000) {
-        const refreshed = await refreshToken(token);
+        const refreshed = await refreshTokenOnce();
         if (!refreshed) {
           throw new Error('Token expired and refresh failed. Re-authorize required.');
         }
