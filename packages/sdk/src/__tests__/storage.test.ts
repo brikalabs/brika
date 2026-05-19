@@ -8,6 +8,7 @@
 
 import { afterAll, afterEach, beforeAll, describe, expect, test } from 'bun:test';
 import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { z } from 'zod';
 import {
   clearAllData,
   defineStore,
@@ -19,6 +20,7 @@ import {
   writeJSON,
 } from '../api/storage';
 import { PRELUDE_BRAND, type PreludeBridge } from '../bridge';
+import { InvalidInputError } from '../errors';
 
 // ─── Fixture Setup ───────────────────────────────────────────────────────────
 
@@ -135,6 +137,67 @@ describe('writeJSON + readJSON', () => {
 describe('readJSON', () => {
   test('returns null for non-existent key', async () => {
     const result = await readJSON('nonexistent');
+    expect(result).toBeNull();
+  });
+
+  test('without schema returns the raw value (backward compat)', async () => {
+    await writeJSON('compat', {
+      v: 1,
+    });
+    const result = await readJSON<{
+      v: number;
+    }>('compat');
+    expect(result).toEqual({
+      v: 1,
+    });
+  });
+
+  test('with matching schema returns the typed value', async () => {
+    const schema = z.object({
+      v: z.number(),
+      label: z.string(),
+    });
+    await writeJSON('typed', {
+      v: 42,
+      label: 'answer',
+    });
+    const result = await readJSON('typed', schema);
+    expect(result).toEqual({
+      v: 42,
+      label: 'answer',
+    });
+    // Compile-time check (no runtime effect): .v is a number, .label is a string.
+    if (result) {
+      expect(typeof result.v).toBe('number');
+      expect(typeof result.label).toBe('string');
+    }
+  });
+
+  test('with mismatched schema throws InvalidInputError with field + path', async () => {
+    const schema = z.object({
+      v: z.string(),
+    });
+    await writeJSON('bad-shape', {
+      v: 42,
+    });
+    let captured: unknown;
+    try {
+      await readJSON('bad-shape', schema);
+    } catch (err) {
+      captured = err;
+    }
+    expect(captured).toBeInstanceOf(InvalidInputError);
+    const err = captured as InvalidInputError;
+    expect(err.field).toBe('storage:bad-shape');
+    expect(err.message).toContain('storage:bad-shape');
+    expect(err.message).toContain('v');
+  });
+
+  test('with schema returns null when key does not exist (no validation on missing)', async () => {
+    const schema = z.object({
+      v: z.number(),
+    });
+    const result = await readJSON('definitely-missing', schema);
     expect(result).toBeNull();
   });
 });

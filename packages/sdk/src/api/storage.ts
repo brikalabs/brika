@@ -20,7 +20,9 @@
 
 import { existsSync, mkdirSync, rmSync, unlinkSync } from 'node:fs';
 import { join } from 'node:path';
+import type { z } from 'zod';
 import { getPluginRootDirectory } from '../context/manifest';
+import { InvalidInputError } from '../errors';
 
 // ─── Internal ────────────────────────────────────────────────────────────────
 
@@ -66,21 +68,52 @@ export function getDataDir(): string {
 /**
  * Read a JSON value from persistent storage.
  *
+ * Two forms:
+ * - `readJSON(key)` returns the raw parsed value typed as the caller's generic, or `null`.
+ * - `readJSON(key, schema)` validates the parsed value against a Zod schema; on mismatch
+ *   throws `InvalidInputError`. Returns `null` when the key doesn't exist (no validation
+ *   is performed on a missing value).
+ *
  * @param key Storage key (becomes `data/<key>.json`). Supports nested paths like `matter/fabric`.
+ * @param schema Optional Zod schema; when present, the parsed value is validated and typed.
  * @returns The parsed value, or `null` if the key doesn't exist or contains invalid JSON.
  * @throws {Error} if the key contains invalid characters or path traversal (`..`).
+ * @throws {InvalidInputError} when `schema` is provided and validation fails.
  */
-export async function readJSON<T = unknown>(key: string): Promise<T | null> {
+export function readJSON<T = unknown>(key: string): Promise<T | null>;
+export function readJSON<S extends z.ZodType>(key: string, schema: S): Promise<z.infer<S> | null>;
+export async function readJSON<S extends z.ZodType>(
+  key: string,
+  schema?: S
+): Promise<unknown> {
   const path = resolveJsonPath(key);
   const file = Bun.file(path);
   if (!(await file.exists())) {
     return null;
   }
+  let parsed: unknown;
   try {
-    return (await file.json()) as T;
+    parsed = await file.json();
   } catch {
     return null;
   }
+  if (schema === undefined) {
+    return parsed;
+  }
+  const result = schema.safeParse(parsed);
+  if (!result.success) {
+    throw new InvalidInputError(formatStorageZodIssue(result.error), `storage:${key}`);
+  }
+  return result.data;
+}
+
+function formatStorageZodIssue(error: z.ZodError): string {
+  const issue = error.issues[0];
+  if (!issue) {
+    return 'schema validation failed';
+  }
+  const path = issue.path.length > 0 ? issue.path.join('.') : '<root>';
+  return `at "${path}": ${issue.message}`;
 }
 
 /**

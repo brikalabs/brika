@@ -4,22 +4,58 @@
  * Access and react to plugin configuration changes.
  */
 
+import type { z } from 'zod';
 import { getContext } from '../context';
+import { InvalidInputError } from '../errors';
 
 export type PreferencesChangeHandler<T = Record<string, unknown>> = (preferences: T) => void;
 
 /**
  * Get plugin preferences (configuration) sent by the hub.
  *
- * @example
+ * Two forms:
+ * - `getPreferences()` returns the raw object as `Record<string, unknown>`.
+ * - `getPreferences(schema)` validates against a Zod schema and returns the typed value;
+ *   throws `InvalidInputError` if the preferences do not match.
+ *
+ * @example Untyped (raw access)
  * ```typescript
- * interface MyPrefs { apiKey: string; debug: boolean; }
- * const prefs = getPreferences<MyPrefs>();
+ * const prefs = getPreferences();
+ * log("info", `keys: ${Object.keys(prefs).join(', ')}`);
+ * ```
+ *
+ * @example With Zod schema (validated + typed)
+ * ```typescript
+ * import { z } from "@brika/sdk";
+ *
+ * const prefsSchema = z.object({ apiKey: z.string(), debug: z.boolean() });
+ * const prefs = getPreferences(prefsSchema);
  * log("info", `API Key: ${prefs.apiKey}`);
  * ```
+ *
+ * @throws {InvalidInputError} when `schema` is provided and validation fails.
  */
-export function getPreferences<T extends Record<string, unknown> = Record<string, unknown>>(): T {
-  return getContext().getPreferences<T>();
+export function getPreferences(): Record<string, unknown>;
+export function getPreferences<S extends z.ZodType>(schema: S): z.infer<S>;
+export function getPreferences<S extends z.ZodType>(schema?: S): Record<string, unknown> | z.infer<S> {
+  const raw = getContext().getPreferences();
+  if (schema === undefined) {
+    return raw;
+  }
+  const result = schema.safeParse(raw);
+  if (!result.success) {
+    throw new InvalidInputError(formatZodIssue(result.error), 'preferences');
+  }
+  return result.data;
+}
+
+function formatZodIssue(error: z.ZodError): string {
+  const issue = error.issues[0];
+  if (!issue) {
+    return 'schema validation failed';
+  }
+  const path = issue.path.length > 0 ? issue.path.join('.') : '<root>';
+  return `at "${path}": ${issue.message}`;
 }
 
 /**

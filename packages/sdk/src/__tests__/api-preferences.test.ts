@@ -2,7 +2,9 @@
  * Tests for SDK preferences, lifecycle, bricks, routes, and location APIs
  */
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
+import { z } from 'zod';
 import type { DeviceLocation } from '../api/location';
+import { InvalidInputError } from '../errors';
 
 const mockGetPreferences = mock(() => ({
   apiKey: 'test-key',
@@ -52,6 +54,40 @@ describe('preferences API', () => {
       apiKey: 'test-key',
     });
     expect(mockGetPreferences).toHaveBeenCalledTimes(1);
+  });
+
+  test('getPreferences without schema returns Record<string, unknown> (backward compat)', () => {
+    const prefs = getPreferences();
+    // Backward-compat: shape is the raw record from the context.
+    expect(prefs).toEqual({
+      apiKey: 'test-key',
+    });
+  });
+
+  test('getPreferences with a matching schema returns the typed value', () => {
+    const schema = z.object({
+      apiKey: z.string(),
+    });
+    const prefs = getPreferences(schema);
+    expect(prefs.apiKey).toBe('test-key');
+  });
+
+  test('getPreferences with a mismatched schema throws InvalidInputError with path + message', () => {
+    const schema = z.object({
+      apiKey: z.number(), // raw is a string -> should fail
+    });
+    let captured: unknown;
+    try {
+      getPreferences(schema);
+    } catch (err) {
+      captured = err;
+    }
+    expect(captured).toBeInstanceOf(InvalidInputError);
+    const err = captured as InvalidInputError;
+    expect(err.field).toBe('preferences');
+    // Message includes the failing path and the field-name prefix from InvalidInputError.
+    expect(err.message).toContain('preferences');
+    expect(err.message).toContain('apiKey');
   });
 
   test('onPreferencesChange delegates to context and returns unsubscribe', () => {
