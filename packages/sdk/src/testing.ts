@@ -8,6 +8,11 @@
 import type { I18nRef } from '@brika/ui-kit';
 import { i18nRef } from '@brika/ui-kit';
 
+// Side-effect import: installs a permissive no-op Context stub at module
+// load so plugins that call lifecycle hooks / log / define* at module-top
+// level can be imported safely in tests. See default-stub.ts for details.
+import './testing/default-stub';
+
 export type { CreateMockBlockContextOptions, MockBlockHarness } from './testing/blocks';
 export { createMockBlockContext } from './testing/blocks';
 

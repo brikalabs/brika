@@ -149,6 +149,57 @@ schedules: []
       expect(config.plugins[0].config?.apiKey).toBe('test-key');
       expect(config.plugins[0].config?.timeout).toBe(5000);
     });
+
+    test('the legacy array form `plugins: - path: ...` parses to zero plugins (D3)', async () => {
+      // The docs previously showed `plugins: - path: ./plugins/x` in several
+      // places. That form is silently dropped by #parsePlugins (returns []
+      // when plugins is an array). This test locks the doc fix in: anyone
+      // who copies the old syntax gets zero plugins, not a misleading entry.
+      await Bun.write(
+        join(BRIKA_DIR, 'brika.yml'),
+        `
+hub:
+  port: 3001
+plugins:
+  - path: ./plugins/timer
+  - package: "@brika/plugin-weather"
+    version: "1.0.0"
+rules: []
+schedules: []
+`
+      );
+
+      const config = await loader.load();
+      expect(config.plugins).toHaveLength(0);
+    });
+
+    test('workspace:* and workspace:./path version specifiers both parse (D3)', async () => {
+      await Bun.write(
+        join(BRIKA_DIR, 'brika.yml'),
+        `
+hub:
+  port: 3001
+plugins:
+  "@brika/plugin-timer":
+    version: "workspace:*"
+  "@brika/plugin-weather":
+    version: "workspace:./plugins/weather"
+rules: []
+schedules: []
+`
+      );
+
+      const config = await loader.load();
+      expect(config.plugins).toHaveLength(2);
+      expect(config.plugins[0]).toMatchObject({
+        name: '@brika/plugin-timer',
+        version: 'workspace:*',
+      });
+      expect(config.plugins[1]).toMatchObject({
+        name: '@brika/plugin-weather',
+        version: 'workspace:./plugins/weather',
+      });
+    });
   });
 
   describe('get', () => {

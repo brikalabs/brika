@@ -132,7 +132,7 @@ function buildContextStub(
   secrets: Map<string, string>,
   preferences: Record<string, unknown>
 ): ContextStub {
-  return {
+  const explicit: ContextStub = {
     getSecret(key) {
       return Promise.resolve(secrets.has(key) ? (secrets.get(key) ?? null) : null);
     },
@@ -158,6 +158,28 @@ function buildContextStub(
       preferences[key] = value;
     },
   };
+  // Wrap in a Proxy so methods we haven't modelled (log, registerSpark,
+  // onInit/onStop, register*…) fall through to a no-op instead of throwing
+  // when a block's handler calls them mid-test.
+  type Callable = (...args: unknown[]) => unknown;
+  const noop = (): undefined => undefined;
+  const fallback: ProxyHandler<Callable> = {
+    get(_t, p) {
+      return typeof p === 'symbol' ? undefined : new Proxy(noop, fallback);
+    },
+    apply() {
+      return undefined;
+    },
+  };
+  return new Proxy(explicit as unknown as Callable, {
+    get(target, prop, receiver) {
+      const own = Reflect.get(target, prop, receiver);
+      if (own !== undefined) {
+        return own;
+      }
+      return typeof prop === 'symbol' ? undefined : new Proxy(noop, fallback);
+    },
+  }) as unknown as ContextStub;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
