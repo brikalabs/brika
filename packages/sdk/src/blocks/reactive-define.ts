@@ -40,10 +40,34 @@ import type { BlockDefinition, BlockPort, BlockSchema } from './types';
 
 /**
  * A compiled reactive block with metadata and runtime functions.
+ *
+ * The generic parameters preserve the original spec types via a phantom
+ * brand so test harnesses (see `@brika/sdk/testing#createMockBlockContext`)
+ * get compile-time checks on port names and emitted values. Runtime
+ * behaviour is unchanged — the parameters default to the most permissive
+ * shapes, so existing consumers that reference `CompiledReactiveBlock`
+ * without arguments keep compiling.
  */
-export interface CompiledReactiveBlock extends BlockDefinition {
+type AnyInputs = Record<string, InputDef<z.ZodType | GenericRef<string>>>;
+type AnyOutputs = Record<string, OutputDef<OutputDefSchema>>;
+type AnyConfig = z.ZodObject<z.ZodRawShape>;
+
+/** Phantom brand carrying the spec types — never present at runtime. */
+declare const __reactiveBlockBrand: unique symbol;
+
+export interface CompiledReactiveBlock<
+  TInputs extends AnyInputs = AnyInputs,
+  TOutputs extends AnyOutputs = AnyOutputs,
+  TConfig extends AnyConfig = AnyConfig,
+> extends BlockDefinition {
   /** Start the block - creates reactive context and runs setup */
   start(ctx: BlockRuntimeContext): BlockInstance;
+  /** Phantom brand — exists only in the type system, not at runtime. */
+  readonly [__reactiveBlockBrand]?: {
+    inputs: TInputs;
+    outputs: TOutputs;
+    config: TConfig;
+  };
 }
 
 /** Runtime context provided by the workflow engine */
@@ -129,7 +153,7 @@ export function defineReactiveBlock<
 >(
   spec: ReactiveBlockSpec<TInputs, TOutputs, TConfig>,
   setup: BlockSetup<TInputs, TOutputs, TConfig>
-): CompiledReactiveBlock {
+): CompiledReactiveBlock<TInputs, TOutputs, TConfig> {
   const configJsonSchema = zodToBlockSchema(spec.config);
 
   // Get TypeScript-like type name from schema (not resolving passthrough/resolved)
@@ -251,7 +275,7 @@ export function defineReactiveBlock<
   });
 
   // Create the block definition
-  const blockDef: CompiledReactiveBlock = {
+  const blockDef: CompiledReactiveBlock<TInputs, TOutputs, TConfig> = {
     id: spec.id,
     inputs,
     outputs,

@@ -69,7 +69,24 @@ export class Context {
 
 let ctx: Context | null = null;
 
+/**
+ * Global symbol used by `@brika/sdk/testing#createMockBlockContext` to
+ * inject a stub Context without importing this module (which avoids issues
+ * when other tests mock the `context` module via `bun:test`'s
+ * `mock.module`, which is process-wide). When set, `getContext()` returns
+ * the stub instead of building a real Context.
+ */
+const TEST_CTX = Symbol.for('brika.testing.context');
+
+interface TestCtxGlobal {
+  [TEST_CTX]?: Context | null;
+}
+
 export function getContext(): Context {
+  const override = (globalThis as TestCtxGlobal)[TEST_CTX];
+  if (override) {
+    return override;
+  }
   if (!ctx) {
     if (typeof process.send !== 'function') {
       throw new TypeError('SDK only works in plugin processes spawned by BRIKA hub');

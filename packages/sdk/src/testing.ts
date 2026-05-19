@@ -8,6 +8,9 @@
 import type { I18nRef } from '@brika/ui-kit';
 import { i18nRef } from '@brika/ui-kit';
 
+export type { CreateMockBlockContextOptions, MockBlockHarness } from './testing/blocks';
+export { createMockBlockContext } from './testing/blocks';
+
 /**
  * Create a mock translation function that returns I18nRef markers
  * without requiring a real plugin context.
