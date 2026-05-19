@@ -40,6 +40,7 @@ const TEST_DIR = join(import.meta.dir, '.test-state-store');
 describe('StateStore', () => {
   let store: StateStore;
   let testPluginDir: string;
+  let permissionsPluginDir: string;
 
   beforeAll(async () => {
     await rm(TEST_DIR, { recursive: true, force: true });
@@ -57,6 +58,20 @@ describe('StateStore', () => {
       })
     );
     await Bun.write(join(testPluginDir, 'index.ts'), 'export default {}');
+
+    permissionsPluginDir = join(TEST_DIR, 'permissions-plugin');
+    await mkdir(permissionsPluginDir, { recursive: true });
+    await Bun.write(
+      join(permissionsPluginDir, 'package.json'),
+      JSON.stringify({
+        name: '@test/permissions-plugin',
+        version: '1.0.0',
+        main: './index.ts',
+        engines: { brika: '^0.2.0' },
+        permissions: ['secrets', 'location'],
+      })
+    );
+    await Bun.write(join(permissionsPluginDir, 'index.ts'), 'export default {}');
   });
 
   beforeEach(() => {
@@ -144,6 +159,45 @@ describe('StateStore', () => {
       });
 
       expect(store.get('@test/plugin')?.enabled).toBe(false);
+    });
+
+    test('does not auto-grant manifest-declared permissions on first registration', async () => {
+      store.init();
+      await store.registerPlugin({
+        name: '@test/permissions-plugin',
+        rootDirectory: permissionsPluginDir,
+        entryPoint: join(permissionsPluginDir, 'index.ts'),
+        uid: 'perm-uid',
+      });
+
+      // Even though package.json declares ["secrets", "location"], the user
+      // has not granted anything yet, so grantedPermissions must be empty.
+      expect(store.get('@test/permissions-plugin')?.grantedPermissions).toEqual([]);
+      expect(store.getGrantedPermissions('@test/permissions-plugin')).toEqual([]);
+    });
+
+    test('preserves explicitly granted permissions on re-registration', async () => {
+      store.init();
+      await store.registerPlugin({
+        name: '@test/permissions-plugin',
+        rootDirectory: permissionsPluginDir,
+        entryPoint: join(permissionsPluginDir, 'index.ts'),
+        uid: 'perm-uid',
+      });
+
+      // Simulate the user granting one of the requested permissions through the UI.
+      store.setGrantedPermissions('@test/permissions-plugin', ['secrets']);
+
+      // Plugin update / restart re-registers — existing grants must persist.
+      await store.registerPlugin({
+        name: '@test/permissions-plugin',
+        rootDirectory: permissionsPluginDir,
+        entryPoint: join(permissionsPluginDir, 'index.ts'),
+        uid: 'perm-uid-2',
+      });
+
+      expect(store.get('@test/permissions-plugin')?.grantedPermissions).toEqual(['secrets']);
+      expect(store.getGrantedPermissions('@test/permissions-plugin')).toEqual(['secrets']);
     });
   });
 

@@ -184,10 +184,11 @@ export class StateStore {
     enabled?: boolean;
   }): Promise<void> {
     const cur = this.get(info.name);
-    const metadata = await this.refreshMetadata(info.name, info.rootDirectory);
-    const grantedPermissions = JSON.stringify(
-      cur?.grantedPermissions ?? metadata.permissions ?? []
-    );
+    await this.refreshMetadata(info.name, info.rootDirectory);
+    // New plugins start with no granted permissions — the user must explicitly
+    // grant them via the UI. Re-registrations (e.g. plugin updates) preserve
+    // whatever was previously granted.
+    const grantedPermissions = JSON.stringify(cur?.grantedPermissions ?? []);
 
     const updateFields = {
       rootDirectory: info.rootDirectory,
