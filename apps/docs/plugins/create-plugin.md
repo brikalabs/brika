@@ -4,8 +4,14 @@ This guide walks you through creating your first BRIKA plugin.
 
 ## Prerequisites
 
-* [Bun](https://bun.sh/) 1.0 or later
+* [Bun](https://bun.sh/) 1.3 or later
 * Basic TypeScript knowledge
+* `@typescript/native-preview` (a.k.a. `tsgo`) for typechecking plugin code —
+  installed transitively by `bun install` at the repo root when working in the
+  monorepo. Standalone plugins should add it themselves:
+  ```bash
+  bun add -d @typescript/native-preview
+  ```
 
 ## Quick Start with CLI
 
@@ -177,12 +183,19 @@ bun install
 
 ### Step 6: Register the Plugin
 
-Add your plugin to `brika.yml`:
+Add your plugin to `brika.yml`. The plugins map is keyed by package name; the
+version specifier `workspace:*` resolves to a package of that name under
+`./plugins/`.
 
 ```yaml
 plugins:
-  - path: ./plugins/my-plugin
+  "@brika/plugin-my-plugin":
+    version: "workspace:*"
 ```
+
+To reference an explicit local path instead, use
+`version: "workspace:./plugins/my-plugin"`. For an npm-published plugin, use a
+semver range (e.g. `version: "^1.0.0"`) — install via `brika plugin install`.
 
 ## Test Your Plugin
 

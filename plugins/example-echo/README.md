@@ -98,7 +98,7 @@ log.info("Echo plugin loaded");
 Add to your `brika.yml`:
 
 ```yaml
-install:
-  - ref: "workspace:example-echo"
-    enabled: true
+plugins:
+  "@brika/plugin-example-echo":
+    version: "workspace:*"
 ```

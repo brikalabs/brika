@@ -16,6 +16,7 @@
 * [Reactive Blocks](plugins/reactive-blocks.md)
 * [Bricks](plugins/bricks.md)
 * [Lifecycle Hooks](plugins/lifecycle-hooks.md)
+* [JSX Runtime](plugins/jsx-runtime.md)
 
 ## API Reference
 
@@ -31,6 +32,7 @@
 
 * [System Overview](architecture/overview.md)
 * [Plugin Isolation](architecture/plugin-isolation.md)
+* [Sandbox Roadmap](architecture/sandbox-roadmap.md)
 * [Authentication](architecture/authentication.md)
 
 ## Contributing

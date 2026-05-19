@@ -12,50 +12,57 @@ hub:
   port: 3001
   host: "0.0.0.0"
 
+# Plugins are keyed by package name; each entry needs a version specifier.
 plugins:
-  # Local plugins (development)
-  - path: ./plugins/blocks-builtin
-  - path: ./plugins/timer
-
-  # External plugins (production)
-  # - package: "@brika/plugin-hue"
-  #   version: "1.0.0"
-
-workflows:
-  directory: ./workflows
+  # Workspace plugin resolved by package name in ./plugins/
+  "@brika/plugin-blocks-builtin":
+    version: "workspace:*"
+  # Workspace plugin at an explicit relative path
+  "@brika/plugin-timer":
+    version: "workspace:./plugins/timer"
+  # NPM-published plugin (installed via `brika plugin install`)
+  # "@brika/plugin-hue":
+  #   version: "^1.0.0"
 ```
 
 ## Plugin Configuration
 
-Plugins can have their own configuration:
+Each plugin entry may carry a `config` map of preference values:
 
 ```yaml
 # brika.yml
 plugins:
-  - path: ./plugins/my-plugin
+  "@brika/plugin-my-plugin":
+    version: "workspace:*"
     config:
       apiKey: "your-api-key"
       debug: true
 ```
 
-Access configuration in your plugin:
+Access configuration in your plugin. Pass a Zod schema to validate at the
+boundary (recommended — the unchecked generic overload is kept for
+backward compat but does not catch shape drift):
 
 ```typescript
-import { getPreferences, onPreferencesChange } from "@brika/sdk";
+import { getPreferences, onPreferencesChange, z } from "@brika/sdk";
 
-interface MyConfig {
-  apiKey: string;
-  debug: boolean;
-}
+const ConfigSchema = z.object({
+  apiKey: z.string(),
+  debug: z.boolean(),
+});
 
-const config = getPreferences<MyConfig>();
-console.log(config.apiKey);
+const config = getPreferences(ConfigSchema);
+console.log(config.apiKey); //              ^? string
 
-// React to changes
-onPreferencesChange<MyConfig>((newConfig) => {
+// React to changes (typed payload)
+onPreferencesChange<z.infer<typeof ConfigSchema>>((newConfig) => {
   console.log("Config updated:", newConfig);
 });
 ```
+
+> **Note:** the older `- path:` / `- package:` array form is **not** parsed —
+> the loader returns zero plugins for it. Always use the object form keyed by
+> package name.
 
 ## Workflow Files
 
