@@ -439,7 +439,22 @@ describe('proxyToPlugin', () => {
     expect(await res.json()).toEqual([1, 2, 3]);
   });
 
-  test('spreads extra result headers onto the response', async () => {
+  test('spreads allowlisted result headers onto the response', async () => {
+    const proc = createMockProcess({
+      status: 200,
+      headers: {
+        'Cache-Control': 'no-store',
+        'Content-Type': 'text/plain',
+      },
+    });
+
+    const res = await proxyToPlugin(proc, 'r', 'GET', '/', {}, {});
+
+    expect(res.headers.get('Cache-Control')).toBe('no-store');
+    expect(res.headers.get('Content-Type')).toBe('text/plain');
+  });
+
+  test('drops non-allowlisted plugin headers (e.g. X-Custom)', async () => {
     const proc = createMockProcess({
       status: 200,
       headers: {
@@ -450,8 +465,73 @@ describe('proxyToPlugin', () => {
 
     const res = await proxyToPlugin(proc, 'r', 'GET', '/', {}, {});
 
-    expect(res.headers.get('X-Custom')).toBe('value');
+    expect(res.headers.get('X-Custom')).toBeNull();
     expect(res.headers.get('Content-Type')).toBe('text/plain');
+  });
+
+  test('drops Set-Cookie supplied by plugin', async () => {
+    const proc = createMockProcess({
+      status: 200,
+      headers: {
+        'Set-Cookie': 'session=hijack; Path=/; HttpOnly',
+      },
+    });
+
+    const res = await proxyToPlugin(proc, 'r', 'GET', '/', {}, {});
+
+    expect(res.headers.get('Set-Cookie')).toBeNull();
+  });
+
+  test('drops Content-Security-Policy supplied by plugin', async () => {
+    const proc = createMockProcess({
+      status: 200,
+      headers: {
+        'Content-Security-Policy': "default-src 'none'",
+      },
+    });
+
+    const res = await proxyToPlugin(proc, 'r', 'GET', '/', {}, {});
+
+    expect(res.headers.get('Content-Security-Policy')).toBeNull();
+  });
+
+  test('drops Strict-Transport-Security supplied by plugin', async () => {
+    const proc = createMockProcess({
+      status: 200,
+      headers: {
+        'Strict-Transport-Security': 'max-age=31536000',
+      },
+    });
+
+    const res = await proxyToPlugin(proc, 'r', 'GET', '/', {}, {});
+
+    expect(res.headers.get('Strict-Transport-Security')).toBeNull();
+  });
+
+  test('allows Location header on a 302 redirect', async () => {
+    const proc = createMockProcess({
+      status: 302,
+      headers: {
+        Location: 'https://accounts.spotify.com/authorize?client_id=x',
+      },
+    });
+
+    const res = await proxyToPlugin(proc, 'r', 'GET', '/', {}, {});
+
+    expect(res.headers.get('Location')).toBe('https://accounts.spotify.com/authorize?client_id=x');
+  });
+
+  test('drops Location header on a 200 response', async () => {
+    const proc = createMockProcess({
+      status: 200,
+      headers: {
+        Location: 'https://evil.example.com',
+      },
+    });
+
+    const res = await proxyToPlugin(proc, 'r', 'GET', '/', {}, {});
+
+    expect(res.headers.get('Location')).toBeNull();
   });
 
   test('works without body argument', async () => {

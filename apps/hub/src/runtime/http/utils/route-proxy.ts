@@ -1,5 +1,6 @@
 import type { Json } from '@brika/ipc';
 import type { PluginProcess } from '@/runtime/plugins/plugin-process';
+import { filterPluginResponseHeaders } from './header-allowlist';
 
 const FORWARDED_HEADERS = [
   'content-type',
@@ -74,7 +75,7 @@ export async function proxyToPlugin(
     status: result.status,
     headers: {
       'Content-Type': contentType,
-      ...result.headers,
+      ...filterPluginResponseHeaders(result.headers, result.status),
     },
   });
 }
