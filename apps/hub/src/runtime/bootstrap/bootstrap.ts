@@ -3,6 +3,10 @@ import { configureDatabases } from '@brika/db';
 import { inject } from '@brika/di';
 import { hub } from '@/hub';
 import { BrikaInitializer, ConfigLoader } from '@/runtime/config';
+import {
+  PLUGIN_ENV_PASSTHROUGH_VAR,
+  parsePluginEnvPassthrough,
+} from '@/runtime/config/plugin-env';
 import { Logger } from '@/runtime/logs/log-router';
 import { LogStore } from '@/runtime/logs/log-store';
 import { setHubReady, setHubStopping } from '@/runtime/readiness';
@@ -58,6 +62,18 @@ export class Bootstrap {
     configureDatabases(`${this.configLoader.getRootDir()}/.brika`);
     this.logStore.init();
     this.logs.setStore(this.logStore);
+
+    const passthroughNames = parsePluginEnvPassthrough(process.env);
+    if (passthroughNames.length > 0) {
+      this.logs.warn(
+        'Plugin env passthrough is enabled — operator opted these host env vars into plugin processes',
+        {
+          variable: PLUGIN_ENV_PASSTHROUGH_VAR,
+          names: passthroughNames.join(','),
+        }
+      );
+    }
+
     for (const p of this.plugins) {
       p.setup?.(this);
     }
