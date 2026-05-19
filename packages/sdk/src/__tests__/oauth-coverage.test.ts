@@ -339,8 +339,8 @@ describe('OAuth coverage: callback route error cases', () => {
       })
     );
 
-    expect(result.status).toBe(200);
-    expect(result.headers['Content-Type']).toBe('text/html');
+    expect(result.status).toBe(400);
+    expect(result.headers['Content-Type']).toBe('text/html; charset=utf-8');
     expect(result.body).toContain('Authorization failed');
     expect(result.body).toContain('access_denied');
   });
@@ -437,7 +437,7 @@ describe('OAuth coverage: callback route error cases', () => {
       })
     );
 
-    expect(result.status).toBe(200);
+    expect(result.status).toBe(502);
     expect(result.body).toContain('Token exchange failed');
     expect(result.body).toContain('Bad Request');
   });
@@ -479,7 +479,7 @@ describe('OAuth coverage: callback route error cases', () => {
       })
     );
 
-    expect(result.status).toBe(200);
+    expect(result.status).toBe(502);
     expect(result.body).toContain('Invalid token response');
   });
 
@@ -507,6 +507,42 @@ describe('OAuth coverage: callback route error cases', () => {
 
     expect(result.status).toBe(500);
     expect(result.body).toContain('Network error');
+  });
+
+  test('callback escapes XSS payload in error query param', async () => {
+    const id = uniqueId('xss-err');
+    defineOAuth(createConfig({ id }));
+
+    const callbackRoute = findRoute('GET', `/oauth/${id}/callback`);
+    const result = await callbackRoute?.handler(
+      makeReq({
+        query: { error: '<script>alert(1)</script>' },
+      })
+    );
+
+    expect(result.body).not.toContain('<script>alert(1)</script>');
+    expect(result.body).toContain('&lt;script&gt;alert(1)&lt;/script&gt;');
+  });
+
+  test('callback escapes XSS payload in upstream token-exchange error body', async () => {
+    const id = uniqueId('xss-tok');
+    defineOAuth(
+      createConfig({ id, pkce: false, clientSecret: 'secret' })
+    );
+
+    globalThis.fetch = mockFetch(() =>
+      Promise.resolve(new Response('<img src=x onerror=alert(1)>', { status: 500 }))
+    );
+
+    const callbackRoute = findRoute('GET', `/oauth/${id}/callback`);
+    const result = await callbackRoute?.handler(
+      makeReq({
+        query: { code: 'auth-code', state: 'some-state' },
+      })
+    );
+
+    expect(result.body).not.toContain('<img src=x onerror=alert(1)>');
+    expect(result.body).toContain('&lt;img src=x onerror=alert(1)&gt;');
   });
 
   test('callback exchanges code for token successfully (non-PKCE)', async () => {

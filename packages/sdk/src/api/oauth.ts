@@ -35,8 +35,18 @@
  */
 
 import { getContext } from '../context';
+import { htmlEscape } from '../internal/html-escape';
 import type { RouteResponse } from '../types';
 import { defineRoute } from './routes';
+
+/** Render a small status page. `body` is treated as HTML — escape user input before passing. */
+function htmlPage(status: number, title: string, body = ''): RouteResponse {
+  return {
+    status,
+    headers: { 'Content-Type': 'text/html; charset=utf-8' },
+    body: `<!doctype html><html><body style="font-family:system-ui;text-align:center;padding:3rem"><h2>${title}</h2>${body}</body></html>`,
+  };
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -293,13 +303,11 @@ export function defineOAuth(config: OAuthProviderConfig): OAuthClient {
     if (usePkce) {
       const verifier = resolvePkceVerifier(state);
       if (!verifier) {
-        return {
-          status: 400,
-          headers: {
-            'Content-Type': 'text/html',
-          },
-          body: '<html><body><h2>Invalid state — PKCE verifier not found</h2><p>Try authorizing again.</p></body></html>',
-        };
+        return htmlPage(
+          400,
+          'Invalid state — PKCE verifier not found',
+          '<p>Try authorizing again.</p>'
+        );
       }
       body.set('code_verifier', verifier);
     }
@@ -312,35 +320,21 @@ export function defineOAuth(config: OAuthProviderConfig): OAuthClient {
 
     if (!response.ok) {
       const text = await response.text();
-      return {
-        status: 200,
-        headers: {
-          'Content-Type': 'text/html',
-        },
-        body: `<html><body><h2>Token exchange failed</h2><pre>${text}</pre></body></html>`,
-      };
+      return htmlPage(502, 'Token exchange failed', `<pre>${htmlEscape(text)}</pre>`);
     }
 
     const token = parseTokenResponse(await response.json());
     if (!token) {
-      return {
-        status: 200,
-        headers: {
-          'Content-Type': 'text/html',
-        },
-        body: '<html><body><h2>Invalid token response</h2></body></html>',
-      };
+      return htmlPage(502, 'Invalid token response');
     }
 
     ctx.updatePreference(tokenPrefKey, token);
 
-    return {
-      status: 200,
-      headers: {
-        'Content-Type': 'text/html',
-      },
-      body: '<html><body style="font-family:system-ui;text-align:center;padding:3rem"><h2>Connected!</h2><p>You can close this window.</p><script>setTimeout(()=>window.close(),2000)</script></body></html>',
-    };
+    return htmlPage(
+      200,
+      'Connected!',
+      '<p>You can close this window.</p><script>setTimeout(()=>window.close(),2000)</script>'
+    );
   }
 
   // ─── Callback route ─────────────────────────────────────────────────────
@@ -349,36 +343,22 @@ export function defineOAuth(config: OAuthProviderConfig): OAuthClient {
     const error = req.query.error;
 
     if (error) {
-      return {
-        status: 200,
-        headers: {
-          'Content-Type': 'text/html',
-        },
-        body: `<html><body><h2>Authorization failed</h2><p>${error}</p><script>setTimeout(()=>window.close(),3000)</script></body></html>`,
-      };
+      return htmlPage(
+        400,
+        'Authorization failed',
+        `<p>${htmlEscape(error)}</p><script>setTimeout(()=>window.close(),3000)</script>`
+      );
     }
 
     const code = req.query.code;
     if (!code) {
-      return {
-        status: 400,
-        headers: {
-          'Content-Type': 'text/html',
-        },
-        body: '<html><body><h2>Missing authorization code</h2></body></html>',
-      };
+      return htmlPage(400, 'Missing authorization code');
     }
 
     try {
       return await exchangeCodeForToken(code, req.query.state, req.headers);
     } catch (e) {
-      return {
-        status: 500,
-        headers: {
-          'Content-Type': 'text/html',
-        },
-        body: `<html><body><h2>Error</h2><p>${e}</p></body></html>`,
-      };
+      return htmlPage(500, 'Error', `<p>${htmlEscape(e)}</p>`);
     }
   });
 
