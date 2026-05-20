@@ -82,19 +82,26 @@ export interface BrikaErrorWire {
 export type RpcErrorWire = BrikaErrorWire;
 
 /**
+ * Zod schema for the wire envelope discriminator. Validates the load-bearing
+ * fields (`_rpcError === true`, `code`, `message`); the optional `data`,
+ * `cause`, `stack` are accepted via passthrough so unknown extensions
+ * round-trip without being dropped.
+ */
+const BrikaErrorWireSchema = z
+  .object({
+    _rpcError: z.literal(true),
+    code: z.string(),
+    message: z.string(),
+  })
+  .loose();
+
+/**
  * Type guard for wire-format errors. Returns true for the unified
  * `BrikaErrorWire` shape and for any legacy variant that still uses the
  * `_rpcError` discriminator.
  */
 export function isBrikaErrorWire(value: unknown): value is BrikaErrorWire {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    '_rpcError' in value &&
-    (value as Record<string, unknown>)._rpcError === true &&
-    typeof (value as Record<string, unknown>).code === 'string' &&
-    typeof (value as Record<string, unknown>).message === 'string'
-  );
+  return BrikaErrorWireSchema.safeParse(value).success;
 }
 
 /** Alias kept for back-compat with callers that imported `isRpcErrorWire`. */

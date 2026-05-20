@@ -34,6 +34,7 @@
  * ```
  */
 
+import { z } from 'zod';
 import { getContext } from '../context';
 import { htmlEscape } from '../internal/html-escape';
 import { singleFlight } from '../internal/single-flight';
@@ -130,33 +131,42 @@ function getStringPreference(key: string): string | undefined {
   return typeof val === 'string' ? val : undefined;
 }
 
+/** OAuth 2.0 token response shape per RFC 6749 §5.1 — unknown fields preserved. */
+const TokenResponseSchema = z
+  .object({
+    access_token: z.string(),
+    refresh_token: z.string().optional(),
+    expires_in: z.number().default(3600),
+    token_type: z.string().default('Bearer'),
+  })
+  .loose();
+
+/** Stored token shape — what we keep in the secret store between refreshes. */
+const OAuthTokenSchema = z
+  .object({
+    access_token: z.string(),
+    expires_at: z.number(),
+  })
+  .loose();
+
 /** Parse an OAuth token response into our OAuthToken shape. */
 function parseTokenResponse(json: unknown, existingRefreshToken?: string): OAuthToken | null {
-  if (!json || typeof json !== 'object') {
+  const result = TokenResponseSchema.safeParse(json);
+  if (!result.success) {
     return null;
   }
-  const data = json as Record<string, unknown>;
-  const accessToken = data.access_token;
-  if (typeof accessToken !== 'string') {
-    return null;
-  }
+  const data = result.data;
   return {
-    access_token: accessToken,
-    refresh_token:
-      (typeof data.refresh_token === 'string' ? data.refresh_token : undefined) ??
-      existingRefreshToken,
-    expires_at: Date.now() + (typeof data.expires_in === 'number' ? data.expires_in : 3600) * 1000,
-    token_type: typeof data.token_type === 'string' ? data.token_type : 'Bearer',
+    access_token: data.access_token,
+    refresh_token: data.refresh_token ?? existingRefreshToken,
+    expires_at: Date.now() + data.expires_in * 1000,
+    token_type: data.token_type,
   };
 }
 
 /** Type guard: check if a stored value looks like an OAuthToken. */
 function isOAuthToken(value: unknown): value is OAuthToken {
-  if (!value || typeof value !== 'object') {
-    return false;
-  }
-  const obj = value as Record<string, unknown>;
-  return typeof obj.access_token === 'string' && typeof obj.expires_at === 'number';
+  return OAuthTokenSchema.safeParse(value).success;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

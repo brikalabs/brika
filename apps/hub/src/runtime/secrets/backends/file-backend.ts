@@ -42,6 +42,7 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { dirname, join } from 'node:path';
+import { z } from 'zod';
 import { brikaContext } from '../../context/brika-context';
 import type { SecretBackend, SecretRef } from './types';
 
@@ -246,20 +247,11 @@ export class FileBackend implements SecretBackend {
   }
 }
 
+const FilePayloadSchema = z.object({
+  version: z.number(),
+  entries: z.record(z.string(), z.string()),
+});
+
 function isFilePayload(value: unknown): value is FilePayload {
-  if (typeof value !== 'object' || value === null) {
-    return false;
-  }
-  if (!('version' in value) || typeof value.version !== 'number') {
-    return false;
-  }
-  if (!('entries' in value) || typeof value.entries !== 'object' || value.entries === null) {
-    return false;
-  }
-  for (const v of Object.values(value.entries)) {
-    if (typeof v !== 'string') {
-      return false;
-    }
-  }
-  return true;
+  return FilePayloadSchema.safeParse(value).success;
 }
