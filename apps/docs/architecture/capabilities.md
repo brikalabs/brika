@@ -15,7 +15,8 @@ T1/T2/T3 staged isolation plan.
 // Hub-importable spec (lives in @brika/sdk/capabilities/<name>)
 export const netFetch = defineCapability(
   {
-    id: 'net.fetch',
+    id: 'dev.brika.net.fetch',            // reverse-DNS, globally unique
+    ctxPath: 'net.fetch',                  // optional — defaults to id minus first 2 segments
     args: z.object({ url: z.string().url(), method: z.string().optional() }),
     result: z.object({ status: z.number(), body: z.string() }),
     permission: {
@@ -34,6 +35,39 @@ export const netFetch = defineCapability(
 // Plugin code (after ctx is built from the granted vector)
 const res = await ctx.net.fetch({ url: 'https://api.spotify.com/v1/me' });
 ```
+
+### Reverse-DNS ids
+
+Every capability id follows reverse-DNS so third-party plugins can ship
+their own capabilities without clashing with built-ins:
+
+| Origin                | Id pattern                       | ctxPath default     |
+|-----------------------|----------------------------------|---------------------|
+| Brika built-in        | `dev.brika.<family>.<verb>`      | `<family>.<verb>`   |
+| Third-party plugin    | `com.acme.<family>.<verb>`       | `<family>.<verb>`   |
+
+The `ctxPath` default strips the first two reverse-DNS segments. If two
+third-party capabilities want different ctx subtrees, they override
+`ctxPath` explicitly (e.g. `ctxPath: 'acme.crypto.sign'`).
+
+### Plugin manifest format
+
+Plugins declare capabilities in `package.json` as a map keyed by
+capability id, with the requested scope as the value:
+
+```json
+{
+  "name": "@brika/plugin-weather",
+  "capabilities": {
+    "dev.brika.location.get": {},
+    "dev.brika.location.timezone": {},
+    "dev.brika.net.fetch": { "allow": ["api.open-meteo.com"] }
+  }
+}
+```
+
+The legacy `permissions: ["net", "secrets"]` array is no longer accepted —
+the schema rejects it at verify-plugin time.
 
 ## Architecture
 
@@ -146,19 +180,24 @@ Plugin code sees these as rejected promises with the original message.
 
 ## Currently-registered capabilities
 
-| Family | Capabilities | Scope shape |
-|---|---|---|
-| `net` | `net.fetch` | `{ allow: string[] }` — host patterns (literal or `*.suffix`) |
-| `secrets` | `secrets.get` / `set` / `delete` | `{}` (per-plugin isolation by `pluginName` closure) |
-| `fs` | `fs.read` / `write` / `exists` | `{ allow: string[] }` — absolute path prefixes |
-| `exec` | `exec.spawn` | `{ allowBinaries: string[] }` — bare names or absolute paths |
-| `location` | `location.get` / `location.timezone` | `{}` |
-| `sparks` | `sparks.register` / `emit` / `subscribe` / `unsubscribe` | `{}` |
-| `blocks` | `blocks.register` / `emit` / `log` | `{}` |
-| `bricks` | `bricks.registerType` / `pushData` | `{}` |
-| `routes` | `routes.register` | `{}` |
-| `actions` | `actions.register` | `{}` |
-| `prefs` | `prefs.set` | `{}` |
+| Family    | Capability ids                                                                                | ctxPath                                              | Scope shape |
+|-----------|-----------------------------------------------------------------------------------------------|------------------------------------------------------|---|
+| `net`     | `dev.brika.net.fetch`                                                                         | `net.fetch`                                          | `{ allow: string[] }` — host patterns (literal or `*.suffix`) |
+| `secrets` | `dev.brika.secrets.get` / `set` / `delete`                                                    | `secrets.get` / `set` / `delete`                     | `{}` (per-plugin isolation by `pluginName` closure) |
+| `fs`      | `dev.brika.fs.read` / `write` / `exists`                                                      | `fs.read` / `write` / `exists`                       | `{ allow: string[] }` — absolute path prefixes |
+| `exec`    | `dev.brika.exec.spawn`                                                                        | `exec.spawn`                                         | `{ allowBinaries: string[] }` — bare names or absolute paths |
+| `location`| `dev.brika.location.get` / `timezone`                                                         | `location.get` / `timezone`                          | `{}` |
+| `sparks`  | `dev.brika.sparks.register` / `emit` / `subscribe` / `unsubscribe`                            | `sparks.*`                                           | `{}` |
+| `blocks`  | `dev.brika.blocks.register` / `emit` / `log`                                                  | `blocks.*`                                           | `{}` |
+| `bricks`  | `dev.brika.bricks.registerType` / `pushData`                                                  | `bricks.*`                                           | `{}` |
+| `routes`  | `dev.brika.routes.register`                                                                   | `routes.register`                                    | `{}` |
+| `actions` | `dev.brika.actions.register`                                                                  | `actions.register`                                   | `{}` |
+| `prefs`   | `dev.brika.prefs.set`                                                                         | `prefs.set`                                          | `{}` |
+
+The empty-scope families are migration placeholders. Each will gain a scope
+schema as the corresponding manifest format evolves — for instance, secrets
+will scope by key namespace once the manifest carries
+`"dev.brika.secrets.get": { "namespaces": ["spotify"] }`.
 
 The empty-scope families are migration placeholders. Each will gain a scope
 schema as the corresponding manifest format evolves — for instance, secrets
@@ -183,7 +222,8 @@ import { z } from 'zod';
 
 export const ttsSpeak = defineCapability(
   {
-    id: 'tts.speak',
+    id: 'dev.brika.tts.speak',
+    ctxPath: 'tts.speak',
     args: z.object({ text: z.string(), voice: z.string().optional() }),
     result: z.object({ durationMs: z.number() }),
     permission: { name: 'tts', scope: z.object({}), defaultScope: {}, icon: 'volume-2' },
