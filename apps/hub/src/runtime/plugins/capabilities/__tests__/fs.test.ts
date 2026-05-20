@@ -1,0 +1,103 @@
+import { mkdir, mkdtemp, readFile, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import { CapabilityRegistry } from '@brika/capabilities';
+import { buildFsCapabilities, isPathAllowed } from '../fs';
+
+describe('isPathAllowed — containment check', () => {
+  test('exact root match', () => {
+    expect(isPathAllowed('/var/data', ['/var/data'])).toBe(true);
+  });
+
+  test('nested child is allowed', () => {
+    expect(isPathAllowed('/var/data/sub/file.json', ['/var/data'])).toBe(true);
+  });
+
+  test('sibling that shares prefix string is NOT allowed', () => {
+    // /var/data2 starts with the literal string '/var/data' but is not
+    // inside it — the sep check guards against that footgun.
+    expect(isPathAllowed('/var/data2', ['/var/data'])).toBe(false);
+  });
+
+  test('parent escape is rejected after canonicalization', () => {
+    expect(isPathAllowed('/var/data/../secret', ['/var/data'])).toBe(false);
+  });
+
+  test('relative paths are rejected', () => {
+    expect(isPathAllowed('data/file', ['/var/data'])).toBe(false);
+  });
+
+  test('empty allow list denies everything', () => {
+    expect(isPathAllowed('/var/data', [])).toBe(false);
+  });
+});
+
+describe('fs capability — round-trip in a tmp dir', () => {
+  let dir: string;
+  let reg: CapabilityRegistry;
+
+  beforeEach(async () => {
+    dir = await mkdtemp(join(tmpdir(), 'brika-fs-cap-'));
+    reg = new CapabilityRegistry();
+    for (const cap of buildFsCapabilities({})) {
+      reg.register(cap);
+    }
+  });
+
+  afterEach(async () => {
+    await rm(dir, { recursive: true, force: true });
+  });
+
+  function ctx(allow: string[] = [dir]) {
+    return {
+      pluginUid: 'p',
+      pluginRoot: dir,
+      grantedScope: { allow },
+      log: () => undefined,
+    };
+  }
+
+  test('write then read', async () => {
+    const file = join(dir, 'a.txt');
+    await reg.dispatch('fs.write', { path: file, content: 'hello' }, ctx());
+    const out = await reg.dispatch('fs.read', { path: file }, ctx());
+    expect(out).toMatchObject({ content: 'hello', encoding: 'utf-8' });
+  });
+
+  test('base64 round-trip', async () => {
+    const file = join(dir, 'b.bin');
+    await reg.dispatch(
+      'fs.write',
+      { path: file, content: Buffer.from('binary!').toString('base64'), encoding: 'base64' },
+      ctx()
+    );
+    const raw = await readFile(file);
+    expect(raw.toString('utf-8')).toBe('binary!');
+  });
+
+  test('exists returns true/false', async () => {
+    const file = join(dir, 'c.txt');
+    expect(await reg.dispatch('fs.exists', { path: file }, ctx())).toEqual({ exists: false });
+    await reg.dispatch('fs.write', { path: file, content: '' }, ctx());
+    expect(await reg.dispatch('fs.exists', { path: file }, ctx())).toEqual({ exists: true });
+  });
+
+  test('rejects path outside the allow list', async () => {
+    const other = await mkdtemp(join(tmpdir(), 'brika-fs-cap-other-'));
+    try {
+      await expect(
+        reg.dispatch('fs.read', { path: join(other, 'x') }, ctx([dir]))
+      ).rejects.toMatchObject({ code: 'HANDLER_THREW' });
+    } finally {
+      await rm(other, { recursive: true, force: true });
+    }
+  });
+
+  test('rejects parent-escape via ../', async () => {
+    await mkdir(join(dir, 'sub'), { recursive: true });
+    await expect(
+      reg.dispatch('fs.read', { path: join(dir, 'sub', '..', '..', 'etc-passwd') }, ctx([dir]))
+    ).rejects.toMatchObject({ code: 'HANDLER_THREW' });
+  });
+});

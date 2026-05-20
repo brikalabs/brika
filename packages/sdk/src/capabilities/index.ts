@@ -11,7 +11,10 @@
 export { actionsRegister } from './actions';
 export { blocksEmit, blocksLog, blocksRegister } from './blocks';
 export { bricksPushData, bricksRegisterType } from './bricks';
+export { execSpawn } from './exec';
+export { fsExists, fsRead, fsWrite } from './fs';
 export { locationGet, locationTimezone } from './location';
+export { netFetch } from './net';
 export { prefsSet } from './prefs';
 export { routesRegister } from './routes';
 export { secretsDelete, secretsGet, secretsSet } from './secrets';

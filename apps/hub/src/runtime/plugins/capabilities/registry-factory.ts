@@ -16,7 +16,10 @@ import type { SparkEvent as SparkEventType } from '@brika/ipc/contract';
 import { type ActionsCallbacks, buildActionsCapabilities } from './actions';
 import { type BlocksCallbacks, buildBlocksCapabilities } from './blocks';
 import { type BricksCallbacks, buildBricksCapabilities } from './bricks';
+import { buildExecCapabilities, type ExecCallbacks } from './exec';
+import { buildFsCapabilities, type FsCallbacks } from './fs';
 import { buildLocationCapabilities, type LocationCallbacks } from './location';
+import { buildNetCapabilities, type NetCallbacks } from './net';
 import { buildPrefsCapabilities, type PrefsCallbacks } from './prefs';
 import { buildRoutesCapabilities, type RoutesCallbacks } from './routes';
 import { buildSecretsCapabilities, type SecretsCallbacks } from './secrets';
@@ -35,7 +38,10 @@ export interface HubCapabilityCallbacks
     SecretsCallbacks,
     SparksCallbacks,
     BlocksCallbacks,
-    BricksCallbacks {}
+    BricksCallbacks,
+    NetCallbacks,
+    FsCallbacks,
+    ExecCallbacks {}
 
 /**
  * Create a fresh registry pre-populated with every hub-owned capability.
@@ -78,6 +84,15 @@ export function buildHubCapabilities(
     reg.register(cap);
   }
   for (const cap of buildBricksCapabilities(cb)) {
+    reg.register(cap);
+  }
+  for (const cap of buildNetCapabilities(cb)) {
+    reg.register(cap);
+  }
+  for (const cap of buildFsCapabilities(cb)) {
+    reg.register(cap);
+  }
+  for (const cap of buildExecCapabilities(cb)) {
     reg.register(cap);
   }
   return reg;

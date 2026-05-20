@@ -693,6 +693,40 @@ export class PluginProcess {
           onBrickDataPush: (brickTypeId, data) => {
             this.callbacks.onBrickDataPush(brickTypeId, data);
           },
+          // net.fetch — hub performs the request on the plugin's behalf.
+          // The grant scope's host allowlist is enforced inside the handler.
+          fetch: (input, init) => globalThis.fetch(input, init),
+          // exec.spawn — wraps Bun.spawn with the timeout the handler
+          // configured. The fs.* handlers consume `node:fs` directly and
+          // need no callback wiring.
+          spawn: async ({ command, args, cwd, timeoutMs }) => {
+            const proc = Bun.spawn([command, ...args], {
+              cwd,
+              stdout: 'pipe',
+              stderr: 'pipe',
+            });
+            let timedOut = false;
+            const timer = setTimeout(() => {
+              timedOut = true;
+              proc.kill();
+            }, timeoutMs);
+            try {
+              const [stdout, stderr] = await Promise.all([
+                new Response(proc.stdout).text(),
+                new Response(proc.stderr).text(),
+              ]);
+              const exitCode = await proc.exited;
+              return {
+                exitCode: timedOut ? null : exitCode,
+                signal: timedOut ? 'SIGTERM' : null,
+                stdout,
+                stderr,
+                timedOut,
+              };
+            } finally {
+              clearTimeout(timer);
+            }
+          },
         },
         this.name,
         (subscriptionId, event) => this.sendSparkEvent(subscriptionId, event)
