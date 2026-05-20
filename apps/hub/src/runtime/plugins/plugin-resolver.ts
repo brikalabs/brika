@@ -1,12 +1,23 @@
 import { dirname, extname, join, resolve } from 'node:path';
+import { BrikaError } from '@brika/ipc';
 import { PluginPackageSchema } from '@brika/schema';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object';
 }
 
+function pluginNameFromRaw(raw: unknown): string {
+  return isRecord(raw) && typeof raw.name === 'string' ? raw.name : '(unknown)';
+}
+
 /**
- * Load and parse package.json with Zod validation
+ * Load and parse package.json with Zod validation. Throws typed BrikaErrors:
+ *
+ *   - `MANIFEST_MISSING_MAIN` when the `main` field is absent (most common
+ *     manifest mistake — surfaced separately so the UI can show a one-line
+ *     fix hint)
+ *   - `MANIFEST_INVALID` for every other Zod failure; `data.issues` lists
+ *     each failing path and `.cause` is the underlying ZodError
  */
 export async function loadPluginPackageJson(packageJsonPath: string) {
   const raw = await import(packageJsonPath, {
@@ -19,15 +30,27 @@ export async function loadPluginPackageJson(packageJsonPath: string) {
     return parsed.data;
   }
 
+  const pluginName = pluginNameFromRaw(raw);
   const hasMissingMain = parsed.error.issues.some(
     (issue) => issue.path.length === 1 && issue.path[0] === 'main'
   );
   if (hasMissingMain) {
-    const name = isRecord(raw) && typeof raw.name === 'string' ? raw.name : '(unknown)';
-    throw new Error(`Plugin "${name}" must have a "main" field in package.json`);
+    throw new BrikaError(
+      'MANIFEST_MISSING_MAIN',
+      `Plugin "${pluginName}" must have a "main" field in package.json`,
+      { data: { pluginName }, cause: parsed.error }
+    );
   }
 
-  throw parsed.error;
+  const issues = parsed.error.issues.map((issue) => ({
+    path: issue.path.map(String),
+    message: issue.message,
+  }));
+  throw new BrikaError(
+    'MANIFEST_INVALID',
+    `Plugin "${pluginName}" has an invalid package.json (${issues.length} issue${issues.length === 1 ? '' : 's'})`,
+    { data: { pluginName, issues }, cause: parsed.error }
+  );
 }
 
 /**
@@ -49,33 +72,35 @@ export class PluginResolver {
     metadata: PluginPackageSchema;
   }> {
     if (!moduleId) {
-      throw new Error('Plugin moduleId is required');
+      throw new BrikaError('INVALID_INPUT', 'Plugin moduleId is required', {
+        data: { field: 'moduleId' },
+      });
     }
 
-    try {
-      // Use Bun's module resolution to find package.json
-      const { rootPath, packageJsonPath } = this.#resolvePackageJson(moduleId, parent);
+    // No catch-all wrapper — typed BrikaError throws from
+    // `loadPluginPackageJson` (`MANIFEST_INVALID`, `MANIFEST_MISSING_MAIN`)
+    // pass through unchanged, so the hub HTTP catch can surface them
+    // with the right status and structured body via brikaErrorToResponse.
+    const { rootPath, packageJsonPath } = this.#resolvePackageJson(moduleId, parent);
+    const metadata = await loadPluginPackageJson(packageJsonPath);
+    const entryPoint = this.#extractEntryPoint(metadata, rootPath);
 
-      // Read and validate package.json
-      const metadata = await loadPluginPackageJson(packageJsonPath);
-
-      // Extract entry point
-      const entryPoint = this.#extractEntryPoint(metadata, rootPath);
-
-      return {
-        rootDirectory: rootPath,
-        entryPoint,
-        metadata,
-      };
-    } catch (error) {
-      throw new Error(`Failed to resolve plugin "${moduleId}": ${error}`);
-    }
+    return {
+      rootDirectory: rootPath,
+      entryPoint,
+      metadata,
+    };
   }
 
   #extractEntryPoint(metadata: PluginPackageSchema, rootPath: string): string {
-    // main field is required
+    // Defense in depth: the Zod schema already requires `main`, but if a
+    // future schema change relaxes it, surface the same typed code.
     if (!metadata.main) {
-      throw new Error(`Plugin "${metadata.name}" must have a "main" field in package.json`);
+      throw new BrikaError(
+        'MANIFEST_MISSING_MAIN',
+        `Plugin "${metadata.name}" must have a "main" field in package.json`,
+        { data: { pluginName: metadata.name } }
+      );
     }
 
     return resolve(rootPath, metadata.main);

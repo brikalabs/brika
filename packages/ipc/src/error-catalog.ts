@@ -229,6 +229,35 @@ export const ErrorCatalog = {
       .loose(),
   },
 
+  // ─── Manifest resolution ──────────────────────────────────────────────────
+
+  MANIFEST_INVALID: {
+    description: 'A plugin\'s package.json failed schema validation.',
+    httpStatus: 400,
+    severity: 'error',
+    category: 'manifest',
+    developerHint:
+      'Inspect `.cause` for the underlying ZodError. The `data.issues` field lists each failing path; fix package.json against the PluginPackageSchema.',
+    i18nKey: 'errors.manifest.invalid',
+    data: z
+      .object({
+        pluginName: z.string().optional(),
+        issues: z.array(z.object({ path: z.array(z.string()), message: z.string() })).optional(),
+      })
+      .loose(),
+  },
+
+  MANIFEST_MISSING_MAIN: {
+    description: 'A plugin\'s package.json has no `main` field.',
+    httpStatus: 400,
+    severity: 'error',
+    category: 'manifest',
+    developerHint:
+      'Set `"main": "./dist/index.js"` (or wherever your built entry lives) in the plugin\'s package.json.',
+    i18nKey: 'errors.manifest.missing_main',
+    data: z.object({ pluginName: z.string() }).loose(),
+  },
+
   // ─── Workflow validation (diagnostic-only, not thrown) ────────────────────
   //
   // These codes annotate validation results returned from the workflow graph
