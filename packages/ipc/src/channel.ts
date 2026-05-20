@@ -5,7 +5,28 @@
  */
 
 import type { InputOf, MessageDef, OutputOf, PayloadOf, RpcDef } from './define';
-import { isRpcErrorWire, RpcError } from './errors';
+import { BrikaError, type BrikaErrorWire, isRpcErrorWire, RpcError } from './errors';
+
+/**
+ * Convert any thrown value into a wire-serializable BrikaError envelope.
+ *
+ *   - BrikaError instances (and subclasses) serialize directly with stack.
+ *   - Plain Error instances are wrapped as `INTERNAL` with the original
+ *     attached as `cause` so name + message + stack flow through.
+ *   - Non-Error throws (strings, objects, etc.) get an `INTERNAL`
+ *     envelope with the stringified value as the message.
+ */
+function errorToWire(err: unknown): BrikaErrorWire {
+  if (err instanceof BrikaError) {
+    return err.toWire(true);
+  }
+  const wrapped = new BrikaError(
+    'INTERNAL',
+    err instanceof Error ? err.message : String(err),
+    { cause: err }
+  );
+  return wrapped.toWire(true);
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -294,7 +315,7 @@ export class Channel {
         this.#send({
           t: `${type}Result`,
           _id: id,
-          result: new RpcError('INVALID_INPUT', parsed.error).toWire(),
+          result: new BrikaError('INVALID_INPUT', parsed.error).toWire(true),
         });
         return true;
       }
@@ -307,23 +328,16 @@ export class Channel {
           result,
         });
       } catch (e) {
-        // Preserve typed error codes across the wire
-        if (e instanceof RpcError) {
-          this.#send({
-            t: `${type}Result`,
-            _id: id,
-            result: e.toWire(),
-          });
-        } else {
-          this.#send({
-            t: `${type}Result`,
-            _id: id,
-            result: {
-              ok: false,
-              error: String(e),
-            },
-          });
-        }
+        // Every error becomes a BrikaError on the wire — the receiving
+        // side then reconstructs a typed instance via fromWire. Stack is
+        // included so the remote stack shows up in the plugin's stack
+        // trace under `--- remote stack ---`.
+        const wireErr = errorToWire(e);
+        this.#send({
+          t: `${type}Result`,
+          _id: id,
+          result: wireErr,
+        });
       }
       return true;
     }

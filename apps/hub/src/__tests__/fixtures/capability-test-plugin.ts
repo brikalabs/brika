@@ -52,6 +52,20 @@ type CtxShape = {
 
 let ctx: CtxShape | undefined;
 
+/** Flatten an error cause to a string for the scenario-result envelope. */
+function describeCause(cause: unknown): string | undefined {
+  if (cause === undefined) {
+    return undefined;
+  }
+  if (cause instanceof Error) {
+    return cause.message;
+  }
+  if (typeof cause === 'string') {
+    return cause;
+  }
+  return JSON.stringify(cause);
+}
+
 // Scenario dispatcher — listens for fire-and-forget `runScenario` messages
 // from the test, executes the chosen scenario against ctx, reports back via
 // fire-and-forget. Bypasses the channel's drain queue entirely.
@@ -66,6 +80,30 @@ process.on('message', async (raw) => {
     if (scenario === 'locationTimezone') {
       const res = await ctx.location.timezone();
       process.send?.({ t: 'scenarioResult', runId, ok: true, value: res });
+    } else if (scenario === 'inspectRemoteError') {
+      // Trigger a handler that throws on the hub side, then report what
+      // the plugin received: error class, code, message, cause, stack.
+      try {
+        await ctx.location.timezone();
+        process.send?.({ t: 'scenarioResult', runId, ok: false, error: 'expected throw' });
+      } catch (e) {
+        const err = e as Error & {
+          code?: string;
+          data?: Record<string, unknown>;
+          cause?: unknown;
+        };
+        const causeMessage = describeCause(err.cause);
+        process.send?.({
+          t: 'scenarioResult',
+          runId,
+          ok: true,
+          name: err.name,
+          code: err.code,
+          message: err.message,
+          causeMessage,
+          stackContainsRemote: err.stack?.includes('--- remote stack ---') ?? false,
+        });
+      }
     } else if (scenario === 'missingCapability') {
       try {
         await ctx.notgranted.thing();

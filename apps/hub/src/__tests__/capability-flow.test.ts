@@ -110,13 +110,19 @@ function spawnWithCapabilities(opts: {
       const result = responder(args);
       proc.send({ t: 'capability.requestResult', _id: id, result: { result } });
     } catch (e) {
+      // Mirror what the production hub's errorToWire emits: include the
+      // original throw as `cause` and the local stack so the plugin sees
+      // a fully-typed remote error (Phase 4 behavior).
+      const err = e instanceof Error ? e : new Error(String(e));
       proc.send({
         t: 'capability.requestResult',
         _id: id,
         result: {
           _rpcError: true,
           code: 'INTERNAL',
-          message: e instanceof Error ? e.message : String(e),
+          message: err.message,
+          cause: { message: err.message, name: err.name },
+          stack: err.stack,
         },
       });
     }
@@ -291,6 +297,32 @@ describe('Capability flow — end to end', () => {
     const res = await helper.runScenario('locationTimezone');
     expect(res.ok).toBe(false);
     expect(res.error as string).toContain('upstream is down');
+    await helper.stop();
+  });
+
+  test('remote handler throws are typed BrikaErrors with cause + remote stack (Phase 4)', async () => {
+    helper = spawnWithCapabilities({
+      vector: {
+        grants: [{ id: 'dev.brika.location.timezone', ctxPath: 'location.timezone' }],
+      },
+      capabilityResponders: {
+        'dev.brika.location.timezone': () => {
+          throw new TypeError('upstream returned 502');
+        },
+      },
+    });
+
+    await helper.ready;
+    const res = await helper.runScenario('inspectRemoteError');
+    expect(res.ok).toBe(true);
+    // Plugin received a typed error envelope reconstructed from the wire:
+    //  - code surfaces (HANDLER_THREW used to swallow it as a string)
+    //  - cause carries the original TypeError message
+    //  - stack contains the remote frames so debugging surfaces them
+    expect(res.code).toBe('INTERNAL');
+    expect(res.message as string).toContain('upstream returned 502');
+    expect(res.causeMessage as string).toContain('upstream returned 502');
+    expect(res.stackContainsRemote).toBe(true);
     await helper.stop();
   });
 });

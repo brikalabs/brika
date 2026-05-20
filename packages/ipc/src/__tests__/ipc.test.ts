@@ -208,7 +208,7 @@ describe('Channel', () => {
       });
     });
 
-    it('should handle errors in RPC handlers', async () => {
+    it('wraps plain Error throws as INTERNAL BrikaError on the wire', async () => {
       channel.implement(callTool, () => {
         throw new Error('Test error');
       });
@@ -224,15 +224,20 @@ describe('Channel', () => {
         },
       });
 
+      // After Phase 4 every error becomes a typed BrikaErrorWire — the
+      // receiving side gets a reconstructable typed error instead of an
+      // ad-hoc `{ ok: false, error }` shape.
       expect(sent).toHaveLength(1);
       expect(sent[0]?.t).toBe('callToolResult');
-      expect(
-        (
-          (sent[0] as Record<string, unknown>)?.result as {
-            ok: boolean;
-          }
-        )?.ok
-      ).toBe(false);
+      const result = (sent[0] as Record<string, unknown>)?.result as Record<string, unknown>;
+      expect(result._rpcError).toBe(true);
+      expect(result.code).toBe('INTERNAL');
+      expect(result.message).toBe('Test error');
+      // Original Error attached as cause so name + message survive
+      const cause = result.cause as { message: string; name?: string };
+      expect(cause.message).toBe('Test error');
+      // Stack included for the receiving side to surface under `--- remote stack ---`
+      expect(typeof result.stack).toBe('string');
     });
 
     it('should serialize RpcError with code on the wire', async () => {
