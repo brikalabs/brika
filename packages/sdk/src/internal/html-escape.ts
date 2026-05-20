@@ -13,7 +13,11 @@ const HTML_ESCAPES: Record<string, string> = {
  * value that will end up in an HTML response. The SDK ships HTML pages from
  * the OAuth helper served on the hub's origin — unescaped interpolation there
  * is same-origin XSS against the hub UI.
+ *
+ * Callers must narrow `unknown`/`Error` values to a string themselves (e.g.
+ * `e instanceof Error ? e.message : String(e)`) so the choice of how to
+ * stringify non-strings is local to the call site.
  */
-export function htmlEscape(value: unknown): string {
-  return String(value).replace(/[&<>"']/g, (c) => HTML_ESCAPES[c] as string);
+export function htmlEscape(value: string): string {
+  return value.replace(/[&<>"']/g, (c) => HTML_ESCAPES[c] ?? c);
 }

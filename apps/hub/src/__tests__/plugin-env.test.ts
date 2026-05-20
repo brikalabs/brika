@@ -7,8 +7,8 @@ import 'reflect-metadata';
 import { describe, expect, test } from 'bun:test';
 import {
   filterPluginEnv,
-  parsePluginEnvPassthrough,
   PLUGIN_ENV_PASSTHROUGH_VAR,
+  parsePluginEnvPassthrough,
 } from '@/runtime/config/plugin-env';
 
 describe('filterPluginEnv', () => {

@@ -733,7 +733,9 @@ describe('verifyPlugin suggestions', () => {
     });
     try {
       const result = await verifyPlugin(dir, SDK_VERSION);
-      const suggestion = result.suggestions.find((s) => s.for.startsWith('$schema field is missing'));
+      const suggestion = result.suggestions.find((s) =>
+        s.for.startsWith('$schema field is missing')
+      );
       expect(suggestion).toBeDefined();
       expect(suggestion?.snippet).toBe('"$schema": "https://schema.brika.dev/plugin.schema.json"');
     } finally {

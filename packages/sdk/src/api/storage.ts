@@ -82,10 +82,7 @@ export function getDataDir(): string {
  */
 export function readJSON<T = unknown>(key: string): Promise<T | null>;
 export function readJSON<S extends z.ZodType>(key: string, schema: S): Promise<z.infer<S> | null>;
-export async function readJSON<S extends z.ZodType>(
-  key: string,
-  schema?: S
-): Promise<unknown> {
+export async function readJSON<S extends z.ZodType>(key: string, schema?: S): Promise<unknown> {
   const path = resolveJsonPath(key);
   const file = Bun.file(path);
   if (!(await file.exists())) {

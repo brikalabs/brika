@@ -161,9 +161,8 @@ function buildContextStub(
   // Wrap in a Proxy so methods we haven't modelled (log, registerSpark,
   // onInit/onStop, register*…) fall through to a no-op instead of throwing
   // when a block's handler calls them mid-test.
-  type Callable = (...args: unknown[]) => unknown;
   const noop = (): undefined => undefined;
-  const fallback: ProxyHandler<Callable> = {
+  const fallback: ProxyHandler<typeof noop> = {
     get(_t, p) {
       return typeof p === 'symbol' ? undefined : new Proxy(noop, fallback);
     },
@@ -171,7 +170,7 @@ function buildContextStub(
       return undefined;
     },
   };
-  return new Proxy(explicit as unknown as Callable, {
+  return new Proxy(explicit, {
     get(target, prop, receiver) {
       const own = Reflect.get(target, prop, receiver);
       if (own !== undefined) {
@@ -179,7 +178,7 @@ function buildContextStub(
       }
       return typeof prop === 'symbol' ? undefined : new Proxy(noop, fallback);
     },
-  }) as unknown as ContextStub;
+  });
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -310,9 +309,7 @@ export function createMockBlockContext<
 
     push(name, value) {
       if (!instance) {
-        throw new Error(
-          `createMockBlockContext: cannot push("${String(name)}") before start()`
-        );
+        throw new Error(`createMockBlockContext: cannot push("${String(name)}") before start()`);
       }
       instance.pushInput(name, value as Serializable);
     },

@@ -385,7 +385,8 @@ export function defineOAuth(config: OAuthProviderConfig): OAuthClient {
     try {
       return await exchangeCodeForToken(code, req.query.state, req.headers);
     } catch (e) {
-      return htmlPage(500, 'Error', `<p>${htmlEscape(e)}</p>`);
+      const message = e instanceof Error ? e.message : String(e);
+      return htmlPage(500, 'Error', `<p>${htmlEscape(message)}</p>`);
     }
   });
 

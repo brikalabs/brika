@@ -37,7 +37,9 @@ export type PreferencesChangeHandler<T = Record<string, unknown>> = (preferences
  */
 export function getPreferences(): Record<string, unknown>;
 export function getPreferences<S extends z.ZodType>(schema: S): z.infer<S>;
-export function getPreferences<S extends z.ZodType>(schema?: S): Record<string, unknown> | z.infer<S> {
+export function getPreferences<S extends z.ZodType>(
+  schema?: S
+): Record<string, unknown> | z.infer<S> {
   const raw = getContext().getPreferences();
   if (schema === undefined) {
     return raw;

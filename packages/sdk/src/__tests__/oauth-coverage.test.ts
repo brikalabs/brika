@@ -15,9 +15,12 @@
  */
 
 import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
-import type { OAuthClient, OAuthProviderConfig } from '../api/oauth';
+import type { OAuthProviderConfig } from '../api/oauth';
 
 // ─── Mock Setup ─────────────────────────────────────────────────────────────────
+
+/** The Fetch API's first-arg union — factored once to satisfy S4323. */
+type FetchInput = string | URL | Request;
 
 const preferences: Record<string, unknown> = {};
 const registeredRoutes: Array<{
@@ -54,7 +57,7 @@ const { defineOAuth } = await import('../api/oauth');
 
 /** Create a fetch-compatible mock with the `preconnect` property that Bun's types require. */
 function mockFetch(
-  fn: (url: string | URL | Request, init?: RequestInit) => Promise<Response>
+  fn: (url: FetchInput, init?: RequestInit) => Promise<Response>
 ): typeof globalThis.fetch {
   return Object.assign(mock(fn), {
     preconnect: () => {},
@@ -67,7 +70,7 @@ function isRecord(val: unknown): val is Record<string, unknown> {
 }
 
 /** Extract a URL string from a fetch input without object stringification footguns. */
-function urlOf(input: string | URL | Request): string {
+function urlOf(input: FetchInput): string {
   if (typeof input === 'string') {
     return input;
   }
@@ -75,6 +78,31 @@ function urlOf(input: string | URL | Request): string {
     return input.href;
   }
   return input.url;
+}
+
+/** Extract a URLSearchParams from a RequestInit.body without "[object FormData]" footguns. */
+function bodyOf(init: RequestInit | undefined): URLSearchParams {
+  const body = init?.body;
+  if (body instanceof URLSearchParams) {
+    return body;
+  }
+  if (typeof body === 'string') {
+    return new URLSearchParams(body);
+  }
+  return new URLSearchParams();
+}
+
+/**
+ * Assert a registered route exists, narrowing the type for downstream `await`.
+ * Solves S4123 (await of a non-Promise) where `findRoute(...)?.handler(...)`
+ * would otherwise produce `Promise<...> | undefined`.
+ */
+function requireRoute(method: string, pathFragment: string) {
+  const route = findRoute(method, pathFragment);
+  if (!route) {
+    throw new Error(`test setup: expected a registered ${method} route matching "${pathFragment}"`);
+  }
+  return route;
 }
 
 /** Read a stored OAuth token from the preferences map with proper type narrowing. */
@@ -537,9 +565,7 @@ describe('OAuth coverage: callback route error cases', () => {
 
   test('callback escapes XSS payload in upstream token-exchange error body', async () => {
     const id = uniqueId('xss-tok');
-    defineOAuth(
-      createConfig({ id, pkce: false, clientSecret: 'secret' })
-    );
+    defineOAuth(createConfig({ id, pkce: false, clientSecret: 'secret' }));
 
     globalThis.fetch = mockFetch(() =>
       Promise.resolve(new Response('<img src=x onerror=alert(1)>', { status: 500 }))
@@ -736,7 +762,7 @@ describe('OAuth coverage: PKCE full authorize + callback flow', () => {
 
     let capturedBody: URLSearchParams | undefined;
     globalThis.fetch = mockFetch((url, init) => {
-      capturedBody = new URLSearchParams(String(init?.body));
+      capturedBody = bodyOf(init);
       return Promise.resolve(
         new Response(
           JSON.stringify({
@@ -1271,10 +1297,10 @@ describe('OAuth coverage: getStringPreference + getClientId/getClientSecret', ()
       })
     );
 
-    const authorizeRoute = findRoute('GET', `/oauth/${id}/authorize`);
+    const authorizeRoute = requireRoute('GET', `/oauth/${id}/authorize`);
     // getClientId throws, which is caught by the route try/catch in callback
     // but for the authorize route it's not in try/catch, so it throws directly
-    await expect(authorizeRoute?.handler(makeReq())).rejects.toThrow('Missing client ID');
+    await expect(authorizeRoute.handler(makeReq())).rejects.toThrow('Missing client ID');
   });
 
   test('throws when clientIdPreference key exists but value is not a string', async () => {
@@ -1288,8 +1314,8 @@ describe('OAuth coverage: getStringPreference + getClientId/getClientSecret', ()
       })
     );
 
-    const authorizeRoute = findRoute('GET', `/oauth/${id}/authorize`);
-    await expect(authorizeRoute?.handler(makeReq())).rejects.toThrow('Missing client ID');
+    const authorizeRoute = requireRoute('GET', `/oauth/${id}/authorize`);
+    await expect(authorizeRoute.handler(makeReq())).rejects.toThrow('Missing client ID');
   });
 
   test('clientSecretPreference reads secret from preferences (non-PKCE)', async () => {
@@ -1396,7 +1422,7 @@ describe('OAuth coverage: authenticated fetch', () => {
     };
 
     let capturedHeaders: Headers | undefined;
-    globalThis.fetch = mockFetch((url: string | URL | Request, init?: RequestInit) => {
+    globalThis.fetch = mockFetch((url: FetchInput, init?: RequestInit) => {
       capturedHeaders = new Headers(init?.headers);
       return Promise.resolve(new Response('ok'));
     });
@@ -1422,7 +1448,7 @@ describe('OAuth coverage: authenticated fetch', () => {
     };
 
     let capturedHeaders: Headers | undefined;
-    globalThis.fetch = mockFetch((url: string | URL | Request, init?: RequestInit) => {
+    globalThis.fetch = mockFetch((url: FetchInput, init?: RequestInit) => {
       capturedHeaders = new Headers(init?.headers);
       return Promise.resolve(new Response('ok'));
     });
@@ -1446,7 +1472,7 @@ describe('OAuth coverage: authenticated fetch', () => {
     };
 
     let capturedInit: RequestInit | undefined;
-    globalThis.fetch = mockFetch((url: string | URL | Request, init?: RequestInit) => {
+    globalThis.fetch = mockFetch((url: FetchInput, init?: RequestInit) => {
       capturedInit = init;
       return Promise.resolve(new Response('ok'));
     });
@@ -1491,11 +1517,11 @@ describe('OAuth coverage: authenticated fetch', () => {
     };
 
     let fetchCallCount = 0;
-    globalThis.fetch = mockFetch((url: string | URL | Request, init?: RequestInit) => {
+    globalThis.fetch = mockFetch((url: FetchInput, init?: RequestInit) => {
       fetchCallCount++;
       if (fetchCallCount === 1) {
         // First call is the refresh token request
-        expect(String(url)).toBe('https://auth.example.com/token');
+        expect(urlOf(url)).toBe('https://auth.example.com/token');
         return Promise.resolve(
           new Response(
             JSON.stringify({
@@ -1542,7 +1568,7 @@ describe('OAuth coverage: authenticated fetch', () => {
     };
 
     let fetchCallCount = 0;
-    globalThis.fetch = mockFetch((url: string | URL | Request, init?: RequestInit) => {
+    globalThis.fetch = mockFetch((url: FetchInput, init?: RequestInit) => {
       fetchCallCount++;
       if (fetchCallCount === 1) {
         return Promise.resolve(
@@ -1587,7 +1613,7 @@ describe('OAuth coverage: authenticated fetch', () => {
       releaseRefresh = resolve;
     });
 
-    globalThis.fetch = mockFetch((input: string | URL | Request) => {
+    globalThis.fetch = mockFetch((input: FetchInput) => {
       if (urlOf(input).includes('token')) {
         refreshCount++;
         return refreshGate.then(
@@ -1767,7 +1793,7 @@ describe('OAuth coverage: authenticated fetch', () => {
     };
 
     let fetchCallCount = 0;
-    globalThis.fetch = mockFetch((url: string | URL | Request) => {
+    globalThis.fetch = mockFetch((url: FetchInput) => {
       fetchCallCount++;
       if (fetchCallCount === 1) {
         // Refresh response with NO refresh_token
@@ -1814,7 +1840,7 @@ describe('OAuth coverage: authenticated fetch', () => {
     };
 
     let fetchCallCount = 0;
-    globalThis.fetch = mockFetch((url: string | URL | Request) => {
+    globalThis.fetch = mockFetch((url: FetchInput) => {
       fetchCallCount++;
       if (fetchCallCount === 1) {
         return Promise.resolve(
@@ -1876,10 +1902,10 @@ describe('OAuth coverage: refresh sends correct body params', () => {
 
     let capturedBody: URLSearchParams | undefined;
     let fetchCallCount = 0;
-    globalThis.fetch = mockFetch((url: string | URL | Request, init?: RequestInit) => {
+    globalThis.fetch = mockFetch((url: FetchInput, init?: RequestInit) => {
       fetchCallCount++;
       if (fetchCallCount === 1) {
-        capturedBody = new URLSearchParams(String(init?.body));
+        capturedBody = bodyOf(init);
         return Promise.resolve(
           new Response(
             JSON.stringify({
@@ -1926,7 +1952,7 @@ describe('OAuth coverage: refresh sends correct body params', () => {
 
     let capturedHeaders: Headers | undefined;
     let fetchCallCount = 0;
-    globalThis.fetch = mockFetch((url: string | URL | Request, init?: RequestInit) => {
+    globalThis.fetch = mockFetch((url: FetchInput, init?: RequestInit) => {
       fetchCallCount++;
       if (fetchCallCount === 1) {
         capturedHeaders = new Headers(init?.headers);

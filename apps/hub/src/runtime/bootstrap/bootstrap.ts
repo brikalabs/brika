@@ -3,10 +3,7 @@ import { configureDatabases } from '@brika/db';
 import { inject } from '@brika/di';
 import { hub } from '@/hub';
 import { BrikaInitializer, ConfigLoader } from '@/runtime/config';
-import {
-  PLUGIN_ENV_PASSTHROUGH_VAR,
-  parsePluginEnvPassthrough,
-} from '@/runtime/config/plugin-env';
+import { PLUGIN_ENV_PASSTHROUGH_VAR, parsePluginEnvPassthrough } from '@/runtime/config/plugin-env';
 import { Logger } from '@/runtime/logs/log-router';
 import { LogStore } from '@/runtime/logs/log-store';
 import { setHubReady, setHubStopping } from '@/runtime/readiness';

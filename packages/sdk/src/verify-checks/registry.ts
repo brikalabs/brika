@@ -44,6 +44,24 @@ export interface CheckDiagnostics {
 
 export type PluginCheck = (ctx: CheckContext) => Promise<CheckDiagnostics> | CheckDiagnostics;
 
+/** Stringify an unknown throwable without falling back to "[object Object]" footguns. */
+function formatThrown(reason: unknown): string {
+  if (reason instanceof Error) {
+    return reason.message;
+  }
+  if (typeof reason === 'string') {
+    return reason;
+  }
+  if (reason === null || reason === undefined) {
+    return String(reason);
+  }
+  try {
+    return JSON.stringify(reason);
+  } catch {
+    return Object.prototype.toString.call(reason);
+  }
+}
+
 const checks: PluginCheck[] = [];
 
 export function registerCheck(check: PluginCheck): void {
@@ -65,7 +83,7 @@ export async function runChecks(ctx: CheckContext): Promise<{
       warnings.push(...(result.value.warnings ?? []));
       suggestions.push(...(result.value.suggestions ?? []));
     } else {
-      errors.push(`Check failed unexpectedly: ${String(result.reason)}`);
+      errors.push(`Check failed unexpectedly: ${formatThrown(result.reason)}`);
     }
   }
   return {

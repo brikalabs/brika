@@ -38,10 +38,7 @@ describe('filterPluginResponseHeaders', () => {
 
   test('passes Content-Language and Content-Encoding through', () => {
     expect(
-      filterPluginResponseHeaders(
-        { 'Content-Language': 'en-US', 'Content-Encoding': 'gzip' },
-        200
-      )
+      filterPluginResponseHeaders({ 'Content-Language': 'en-US', 'Content-Encoding': 'gzip' }, 200)
     ).toEqual({ 'Content-Language': 'en-US', 'Content-Encoding': 'gzip' });
   });
 
@@ -122,10 +119,7 @@ describe('filterPluginResponseHeaders', () => {
 
   test('does not auto-allow arbitrary X- headers', () => {
     expect(
-      filterPluginResponseHeaders(
-        { 'X-Custom-Plugin-Header': 'value', 'X-Anything': 'else' },
-        200
-      )
+      filterPluginResponseHeaders({ 'X-Custom-Plugin-Header': 'value', 'X-Anything': 'else' }, 200)
     ).toEqual({});
   });
 

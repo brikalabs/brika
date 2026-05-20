@@ -93,7 +93,10 @@ function filesIncludePath(files: string[], requiredPath: string): boolean {
 
 const ICON_MISSING_WARNING = 'icon is missing — add e.g. "icon": "./icon.svg"';
 
-async function collectExpectedPaths(pluginDir: string, icon: string | undefined): Promise<string[]> {
+async function collectExpectedPaths(
+  pluginDir: string,
+  icon: string | undefined
+): Promise<string[]> {
   const expected: string[] = [];
   if (await pathExists(resolve(pluginDir, 'src'))) {
     expected.push('src');

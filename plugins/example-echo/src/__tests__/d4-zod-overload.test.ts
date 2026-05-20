@@ -2,8 +2,8 @@ import { describe, expect, test } from 'bun:test';
 import {
   defineReactiveBlock,
   getPreferences,
-  input,
   InvalidInputError,
+  input,
   output,
   z,
 } from '@brika/sdk';
