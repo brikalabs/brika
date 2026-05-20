@@ -3,6 +3,7 @@
  */
 
 import { describe, expect, test } from 'bun:test';
+import { BrikaError } from '@brika/ipc';
 import {
   InternalError,
   InvalidInputError,
@@ -10,6 +11,7 @@ import {
   PermissionDeniedError,
   rethrowRpcError,
   sdkErrors,
+  TimeoutError,
 } from '../errors';
 
 /** Create an error with a `code` and optional `data`, mimicking IPC's RpcError. */
@@ -30,10 +32,12 @@ describe('PermissionDeniedError', () => {
     expect(err.permission).toBe('location');
   });
 
-  test('includes permission in message', () => {
+  test('includes permission name + the manifest field in the message', () => {
     const err = new PermissionDeniedError('location');
     expect(err.message).toContain('location');
-    expect(err.message).toContain('permissions');
+    // After the manifest schema migration the field is now `capabilities`,
+    // not the legacy `permissions` array. The message points there.
+    expect(err.message).toContain('capabilities');
   });
 
   test('self-registers in sdkErrors registry', () => {
@@ -229,5 +233,87 @@ describe('sdkErrors registry', () => {
     if (idx !== -1) {
       sdkErrors.splice(idx, 1);
     }
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// BrikaError-as-base hierarchy (Phase 2)
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('SDK errors extend BrikaError', () => {
+  test('every SDK error class is `instanceof BrikaError`', () => {
+    expect(new PermissionDeniedError('x')).toBeInstanceOf(BrikaError);
+    expect(new NotFoundError('x')).toBeInstanceOf(BrikaError);
+    expect(new InvalidInputError('x')).toBeInstanceOf(BrikaError);
+    expect(new InternalError()).toBeInstanceOf(BrikaError);
+    expect(new TimeoutError('x', 5000)).toBeInstanceOf(BrikaError);
+  });
+
+  test('each SDK error carries its rpcCode as the BrikaError.code', () => {
+    expect(new PermissionDeniedError('x').code).toBe('PERMISSION_DENIED');
+    expect(new NotFoundError('x').code).toBe('NOT_FOUND');
+    expect(new InvalidInputError('x').code).toBe('INVALID_INPUT');
+    expect(new InternalError().code).toBe('INTERNAL');
+    expect(new TimeoutError('x', 5000).code).toBe('TIMEOUT');
+  });
+
+  test('structured data lands on the BrikaError.data dict', () => {
+    expect(new PermissionDeniedError('secrets').data?.permission).toBe('secrets');
+    expect(new NotFoundError('user').data?.resource).toBe('user');
+    expect(new InvalidInputError('expected number', 'age').data?.field).toBe('age');
+    expect(new TimeoutError('took too long', 5000).data?.timeoutMs).toBe(5000);
+  });
+
+  test('cause chain works on every subclass', () => {
+    const root = new Error('upstream is down');
+    const errs = [
+      new PermissionDeniedError('m', 'cap', root),
+      new NotFoundError('r', 'm', root),
+      new InvalidInputError('m', 'f', root),
+      new InternalError('m', root),
+      new TimeoutError('m', 5000, root),
+    ];
+    for (const e of errs) {
+      expect(e.cause).toBe(root);
+    }
+  });
+
+  test('toWire() round-trips a typed SDK error through BrikaError', () => {
+    const err = new InvalidInputError('expected number', 'age');
+    const wire = err.toWire();
+    expect(wire).toMatchObject({
+      _rpcError: true,
+      code: 'INVALID_INPUT',
+      data: { field: 'age' },
+    });
+  });
+
+  test('PermissionDeniedError capability-form sets data.permission to the cap id', () => {
+    const err = new PermissionDeniedError(
+      'Capability "dev.brika.net.fetch" is not in this plugin\'s grant vector.',
+      'dev.brika.net.fetch'
+    );
+    expect(err.permission).toBe('dev.brika.net.fetch');
+    expect(err.data?.permission).toBe('dev.brika.net.fetch');
+  });
+});
+
+describe('TimeoutError (new in Phase 2)', () => {
+  test('carries timeoutMs as both a field and data', () => {
+    const err = new TimeoutError('fetch took too long', 30_000);
+    expect(err.timeoutMs).toBe(30_000);
+    expect(err.data?.timeoutMs).toBe(30_000);
+    expect(err.code).toBe('TIMEOUT');
+  });
+
+  test('omits timeoutMs from data when not supplied', () => {
+    const err = new TimeoutError('generic timeout');
+    expect(err.timeoutMs).toBeUndefined();
+    expect(err.data).toBeUndefined();
+  });
+
+  test('is included in the sdkErrors registry', () => {
+    const entry = sdkErrors.find((e) => e.rpcCode === 'TIMEOUT');
+    expect(entry).toBeDefined();
   });
 });

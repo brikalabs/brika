@@ -1,25 +1,40 @@
 /**
  * SDK Error Types
  *
- * Typed error classes that map from RPC error codes.
- * Uses duck-typing on the error shape (code + data fields) so the SDK
- * does not depend on @brika/ipc's RpcError class.
+ * Typed errors plugin authors can `instanceof`-narrow on. Every class
+ * extends `BrikaError` (from `@brika/ipc`), so the platform has one error
+ * hierarchy end-to-end:
  *
- * @example Catching SDK errors in a plugin
- * ```typescript
+ *   Error
+ *     └─ BrikaError       (code, data, cause, wire round-trip)
+ *           ├─ RpcError                    (kept for back-compat)
+ *           ├─ PermissionDeniedError
+ *           ├─ NotFoundError
+ *           ├─ InvalidInputError
+ *           ├─ InternalError
+ *           └─ TimeoutError
+ *
+ * The SDK still re-exposes the `rpcCode` static + `fromCodedError` shim so
+ * the legacy `rethrowRpcError(err)` mapping path keeps working; new code
+ * should construct the typed class directly.
+ *
+ * @example Catching a typed denial in a plugin
+ * ```ts
  * import { PermissionDeniedError } from '@brika/sdk';
  *
  * try {
- *   const loc = await ctx.getLocation();
+ *   await ctx.location.get();
  * } catch (err) {
  *   if (err instanceof PermissionDeniedError) {
- *     console.log(`Missing permission: ${err.permission}`);
+ *     console.log('not granted:', err.permission);
  *   }
  * }
  * ```
  */
 
-// ─── RPC-like error shape ──────────────────────────────────────────────────
+import { BrikaError } from '@brika/ipc';
+
+// ─── Coded-error duck-typing (back-compat with the legacy rethrow shim) ─────
 
 /** Shape of an error with a machine-readable code (as thrown by IPC RpcError). */
 interface CodedError extends Error {
@@ -35,79 +50,137 @@ function isCodedError(err: unknown): err is CodedError {
   );
 }
 
-// ─── Error Classes ──────────────────────────────────────────────────────────
+// ─── Error Classes (all extend BrikaError) ──────────────────────────────────
 
-export class PermissionDeniedError extends Error {
+/**
+ * Caller lacks a required permission grant — either a legacy permission
+ * family (`location`, `secrets`, …) or a reverse-DNS capability id.
+ */
+export class PermissionDeniedError extends BrikaError {
   static readonly rpcCode = 'PERMISSION_DENIED';
-  static fromCodedError(err: CodedError) {
-    return new PermissionDeniedError((err.data?.permission as string) ?? 'unknown');
+  static fromCodedError(err: CodedError): PermissionDeniedError {
+    return new PermissionDeniedError(
+      (err.data?.permission as string | undefined) ?? 'unknown',
+      undefined,
+      err
+    );
   }
 
   readonly permission: string;
 
   /**
-   * Two call shapes:
-   *   - Legacy: `new PermissionDeniedError('secrets')` — emits a message
-   *     pointing the author at package.json `permissions`.
-   *   - Capability-aware: `new PermissionDeniedError(message, capabilityId)`
-   *     — uses the supplied message verbatim; `permission` is the id.
+   * Three call shapes, all producing a typed BrikaError under the hood:
+   *
+   *   new PermissionDeniedError('secrets')
+   *     -> "Permission ... package.json" hint message (legacy)
+   *
+   *   new PermissionDeniedError(message, capabilityId)
+   *     -> uses `message` verbatim, sets `permission = capabilityId`
+   *        (capability-aware: used by the ctx Proxy)
+   *
+   *   new PermissionDeniedError(message, capabilityId, cause)
+   *     -> same as above plus an ES2022 cause chain
    */
-  constructor(messageOrPermission: string, capabilityId?: string) {
+  constructor(messageOrPermission: string, capabilityId?: string, cause?: unknown) {
     const isCapabilityForm = capabilityId !== undefined;
+    const permission = isCapabilityForm ? capabilityId : messageOrPermission;
     const message = isCapabilityForm
       ? messageOrPermission
       : `Permission "${messageOrPermission}" is required but not granted. ` +
-        `Add "${messageOrPermission}" to "permissions" in your plugin's package.json.`;
-    super(message);
+        `Add "${messageOrPermission}" to "capabilities" in your plugin's package.json.`;
+    super('PERMISSION_DENIED', message, {
+      data: { permission },
+      cause,
+    });
     this.name = 'PermissionDeniedError';
-    this.permission = isCapabilityForm ? capabilityId : messageOrPermission;
+    this.permission = permission;
   }
 }
 
-export class NotFoundError extends Error {
+/** Requested resource does not exist on the hub. */
+export class NotFoundError extends BrikaError {
   static readonly rpcCode = 'NOT_FOUND';
-  static fromCodedError(err: CodedError) {
-    return new NotFoundError((err.data?.resource as string) ?? 'unknown', err.message);
+  static fromCodedError(err: CodedError): NotFoundError {
+    return new NotFoundError(
+      (err.data?.resource as string | undefined) ?? 'unknown',
+      err.message,
+      err
+    );
   }
 
   readonly resource: string;
 
-  constructor(resource: string, message?: string) {
-    super(message ?? `Resource "${resource}" not found.`);
+  constructor(resource: string, message?: string, cause?: unknown) {
+    super('NOT_FOUND', message ?? `Resource "${resource}" not found.`, {
+      data: { resource },
+      cause,
+    });
     this.name = 'NotFoundError';
     this.resource = resource;
   }
 }
 
-export class InvalidInputError extends Error {
+/** Input value failed validation. The `field` carries the failing path. */
+export class InvalidInputError extends BrikaError {
   static readonly rpcCode = 'INVALID_INPUT';
-  static fromCodedError(err: CodedError) {
-    return new InvalidInputError(err.message, (err.data?.field as string) ?? undefined);
+  static fromCodedError(err: CodedError): InvalidInputError {
+    return new InvalidInputError(
+      err.message,
+      (err.data?.field as string | undefined) ?? undefined,
+      err
+    );
   }
 
-  /** The specific field that failed validation, if available */
   readonly field?: string;
 
-  constructor(message: string, field?: string) {
-    super(field ? `Invalid input for "${field}": ${message}` : message);
+  constructor(message: string, field?: string, cause?: unknown) {
+    super(
+      'INVALID_INPUT',
+      field ? `Invalid input for "${field}": ${message}` : message,
+      { data: field === undefined ? undefined : { field }, cause }
+    );
     this.name = 'InvalidInputError';
     this.field = field;
   }
 }
 
-export class InternalError extends Error {
+/** Unexpected internal error. Use sparingly — prefer a specific code. */
+export class InternalError extends BrikaError {
   static readonly rpcCode = 'INTERNAL';
-  static fromCodedError(err: CodedError) {
-    return new InternalError(err.message);
+  static fromCodedError(err: CodedError): InternalError {
+    return new InternalError(err.message, err);
   }
 
-  constructor(message?: string) {
-    super(message ?? 'An internal error occurred.');
+  constructor(message?: string, cause?: unknown) {
+    super('INTERNAL', message ?? 'An internal error occurred.', { cause });
     this.name = 'InternalError';
   }
 }
 
-// ─── Error Mapping ─────────────────────────────────────────────────────────
+/** Operation exceeded its deadline. */
+export class TimeoutError extends BrikaError {
+  static readonly rpcCode = 'TIMEOUT';
+  static fromCodedError(err: CodedError): TimeoutError {
+    return new TimeoutError(
+      err.message,
+      (err.data?.timeoutMs as number | undefined) ?? undefined,
+      err
+    );
+  }
+
+  readonly timeoutMs?: number;
+
+  constructor(message: string, timeoutMs?: number, cause?: unknown) {
+    super('TIMEOUT', message, {
+      data: timeoutMs === undefined ? undefined : { timeoutMs },
+      cause,
+    });
+    this.name = 'TimeoutError';
+    this.timeoutMs = timeoutMs;
+  }
+}
+
+// ─── Error Mapping (legacy rethrow path) ─────────────────────────────────────
 
 interface MappedSdkError {
   readonly rpcCode: string;
@@ -120,15 +193,18 @@ export const sdkErrors: MappedSdkError[] = [
   NotFoundError,
   InvalidInputError,
   InternalError,
+  TimeoutError,
 ];
 
 /**
- * Map an error with a `code` field to the matching SDK error class, or rethrow as-is.
+ * Map an error with a `code` field to the matching SDK error class, or
+ * rethrow as-is. Use as a `.catch()` handler:
  *
- * Use as a `.catch()` handler:
- * ```ts
- * const result = await bridge.getLocation().catch(rethrowRpcError);
- * ```
+ *   const result = await bridge.getLocation().catch(rethrowRpcError);
+ *
+ * After Phase 1 the IPC channel reconstructs `RpcError` instances on the
+ * client side automatically, so most callers never need this — it's
+ * retained for ad-hoc catch-by-string-code paths.
  */
 export function rethrowRpcError(err: unknown): never {
   if (isCodedError(err)) {
@@ -139,3 +215,8 @@ export function rethrowRpcError(err: unknown): never {
   }
   throw err;
 }
+
+// Re-export BrikaError so plugin authors get the base class from the SDK
+// without a separate `@brika/ipc` import.
+export { BrikaError } from '@brika/ipc';
+export type { BrikaErrorCode, BrikaErrorWire } from '@brika/ipc';
