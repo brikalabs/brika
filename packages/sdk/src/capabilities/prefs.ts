@@ -19,7 +19,8 @@ import { z } from 'zod';
 /** Plugin updates one of its own preference values. */
 export const prefsSet = defineCapability(
   {
-    id: 'prefs.set',
+    id: 'dev.brika.prefs.set',
+    ctxPath: 'prefs.set',
     args: z.object({ key: z.string(), value: z.unknown() }),
     result: z.object({}),
     description: 'Persist a plugin preference value to the hub',

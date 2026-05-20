@@ -54,7 +54,7 @@ describe('buildSparksCapabilities — sparks.register', () => {
     const reg = makeRegistry(makeCallbacks({ onSpark }));
 
     const result = await reg.dispatch(
-      'sparks.register',
+      'dev.brika.sparks.register',
       { id: 'temperature.reading', schema: { kind: { type: 'string' } } },
       makeHandlerCtx()
     );
@@ -71,7 +71,7 @@ describe('buildSparksCapabilities — sparks.register', () => {
     const onSpark = mock<SparksCallbacks['onSpark']>(() => undefined);
     const reg = makeRegistry(makeCallbacks({ onSpark }));
 
-    await reg.dispatch('sparks.register', { id: 'no-schema' }, makeHandlerCtx());
+    await reg.dispatch('dev.brika.sparks.register', { id: 'no-schema' }, makeHandlerCtx());
 
     expect(onSpark).toHaveBeenCalledWith({ id: 'no-schema', schema: undefined });
   });
@@ -83,7 +83,7 @@ describe('buildSparksCapabilities — sparks.emit', () => {
     const reg = makeRegistry(makeCallbacks({ onSparkEmit }));
 
     const result = await reg.dispatch(
-      'sparks.emit',
+      'dev.brika.sparks.emit',
       { sparkId: 'temperature.reading', payload: { celsius: 21.5 } },
       makeHandlerCtx()
     );
@@ -98,7 +98,7 @@ describe('buildSparksCapabilities — sparks.emit', () => {
     const reg = makeRegistry(makeCallbacks({ onSparkEmit }));
 
     await reg.dispatch(
-      'sparks.emit',
+      'dev.brika.sparks.emit',
       { sparkId: 'pulse', payload: null },
       makeHandlerCtx()
     );
@@ -113,7 +113,7 @@ describe('buildSparksCapabilities — sparks.subscribe', () => {
     const reg = makeRegistry(makeCallbacks({ onSparkSubscribe }));
 
     const result = await reg.dispatch(
-      'sparks.subscribe',
+      'dev.brika.sparks.subscribe',
       { sparkType: '@brika/weather:rain', subscriptionId: 'sub-1' },
       makeHandlerCtx()
     );
@@ -129,18 +129,16 @@ describe('buildSparksCapabilities — sparks.subscribe', () => {
 
   test('sendEvent closure delegates to the outer sendEvent with the correct subscriptionId', async () => {
     let capturedSend: ((event: SparkEventType) => void) | undefined;
-    const onSparkSubscribe = mock<SparksCallbacks['onSparkSubscribe']>(
-      (_type, _id, sendEvent) => {
-        capturedSend = sendEvent;
-      }
-    );
+    const onSparkSubscribe = mock<SparksCallbacks['onSparkSubscribe']>((_type, _id, sendEvent) => {
+      capturedSend = sendEvent;
+    });
     const outerSend = mock<(subscriptionId: string, event: SparkEventType) => void>(
       () => undefined
     );
     const reg = makeRegistry(makeCallbacks({ onSparkSubscribe }), outerSend);
 
     await reg.dispatch(
-      'sparks.subscribe',
+      'dev.brika.sparks.subscribe',
       { sparkType: '@brika/weather:rain', subscriptionId: 'sub-7' },
       makeHandlerCtx()
     );
@@ -166,7 +164,7 @@ describe('buildSparksCapabilities — sparks.unsubscribe', () => {
     const reg = makeRegistry(makeCallbacks({ onSparkUnsubscribe }));
 
     const result = await reg.dispatch(
-      'sparks.unsubscribe',
+      'dev.brika.sparks.unsubscribe',
       { subscriptionId: 'sub-9' },
       makeHandlerCtx()
     );
@@ -183,7 +181,7 @@ describe('buildSparksCapabilities — invalid args', () => {
     const reg = makeRegistry(cb);
 
     await expect(
-      reg.dispatch('sparks.emit', { payload: { foo: 1 } }, makeHandlerCtx())
+      reg.dispatch('dev.brika.sparks.emit', { payload: { foo: 1 } }, makeHandlerCtx())
     ).rejects.toMatchObject({ code: 'INVALID_ARGS' });
     expect(cb.onSparkEmit).not.toHaveBeenCalled();
   });
@@ -194,10 +192,10 @@ describe('buildSparksCapabilities — registration shape', () => {
     const caps = buildSparksCapabilities(makeCallbacks(), () => undefined);
     const ids = caps.map((c) => c.spec.id).sort();
     expect(ids).toEqual([
-      'sparks.emit',
-      'sparks.register',
-      'sparks.subscribe',
-      'sparks.unsubscribe',
+      'dev.brika.sparks.emit',
+      'dev.brika.sparks.register',
+      'dev.brika.sparks.subscribe',
+      'dev.brika.sparks.unsubscribe',
     ]);
   });
 

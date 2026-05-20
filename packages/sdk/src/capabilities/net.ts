@@ -36,7 +36,8 @@ const NetFetchResult = z.object({
 
 export const netFetch = defineCapability(
   {
-    id: 'net.fetch',
+    id: 'dev.brika.net.fetch',
+    ctxPath: 'net.fetch',
     args: NetFetchArgs,
     result: NetFetchResult,
     description: 'Make HTTP requests to allow-listed hosts',

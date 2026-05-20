@@ -102,10 +102,11 @@ export class CapabilityRegistry {
 
     for (const cap of this.#caps.values()) {
       const { id, permission } = cap.spec;
+      const ctxPath = resolveCtxPath(cap.spec);
 
       if (permission === undefined) {
         // Always-on capability — vended unconditionally.
-        out.push({ id });
+        out.push({ id, ctxPath });
         continue;
       }
 
@@ -123,7 +124,7 @@ export class CapabilityRegistry {
         // than failing the entire plugin spawn. The hub should log this.
         continue;
       }
-      out.push({ id, scope: parsed.data });
+      out.push({ id, ctxPath, scope: parsed.data });
     }
 
     return Object.freeze({ grants: Object.freeze(out) });
@@ -186,4 +187,25 @@ function formatZodIssue(error: z.ZodError): string {
   }
   const path = issue.path.length > 0 ? issue.path.join('.') : '<root>';
   return `at "${path}": ${issue.message}`;
+}
+
+/**
+ * Derive the dotted ctx path from a capability id.
+ *
+ * Convention: strip the first two reverse-DNS segments
+ * (`dev.brika.net.fetch` → `net.fetch`, `com.acme.crypto.sign` →
+ * `crypto.sign`). If the spec explicitly sets `ctxPath` that wins.
+ *
+ * Ids with fewer than three segments (e.g. legacy `net.fetch` during a
+ * migration window) pass through unchanged.
+ */
+export function resolveCtxPath(spec: { id: string; ctxPath?: string }): string {
+  if (spec.ctxPath !== undefined) {
+    return spec.ctxPath;
+  }
+  const segments = spec.id.split('.');
+  if (segments.length <= 2) {
+    return spec.id;
+  }
+  return segments.slice(2).join('.');
 }

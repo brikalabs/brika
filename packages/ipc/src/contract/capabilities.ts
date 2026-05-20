@@ -12,8 +12,8 @@
  */
 
 import { z } from 'zod';
-import { Json } from '../types';
 import { rpc } from '../define';
+import { Json } from '../types';
 
 /** Capability invocation: plugin -> hub. */
 export const capabilityRequest = rpc(
@@ -49,6 +49,7 @@ export const getCapabilityVector = rpc(
     grants: z.array(
       z.object({
         id: z.string(),
+        ctxPath: z.string(),
         scope: Json.optional(),
       })
     ),

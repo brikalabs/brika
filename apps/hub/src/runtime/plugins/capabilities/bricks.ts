@@ -15,11 +15,11 @@
  */
 
 import { defineCapability } from '@brika/capabilities';
+import type { BrickTypeDefinitionType } from '@brika/ipc/contract';
 import {
   bricksPushData as pushDataSpec,
   bricksRegisterType as registerTypeSpec,
 } from '@brika/sdk/capabilities';
-import type { BrickTypeDefinitionType } from '@brika/ipc/contract';
 
 export interface BricksCallbacks {
   onBrickType(def: BrickTypeDefinitionType): void;

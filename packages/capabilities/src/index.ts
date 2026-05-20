@@ -14,6 +14,7 @@ export {
   CapabilityRegistry,
   type ManifestCapabilities,
   type ManifestCapabilityRequest,
+  resolveCtxPath,
   type UserGrants,
 } from './registry';
 export type {

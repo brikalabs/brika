@@ -38,13 +38,14 @@ const RouteMethodSchema = z.enum(['GET', 'POST', 'PUT', 'DELETE']);
  */
 export const routesRegister = defineCapability(
   {
-    id: 'routes.register',
+    id: 'dev.brika.routes.register',
+    ctxPath: 'routes.register',
     args: z.object({
       method: RouteMethodSchema,
       path: z.string(),
     }),
     result: z.object({}),
-    description: 'Register an HTTP route the hub serves on the plugin\'s behalf',
+    description: "Register an HTTP route the hub serves on the plugin's behalf",
     permission: {
       name: 'routes',
       scope: z.object({}),

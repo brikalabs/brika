@@ -26,13 +26,16 @@ describe('buildCtx — proxy traversal', () => {
       return { value: 42 };
     });
 
-    const ctx = buildCtx({ grants: [{ id: 'foo.bar' }] }, channel) as unknown as {
+    const ctx = buildCtx(
+      { grants: [{ id: 'dev.brika.foo.bar', ctxPath: 'foo.bar' }] },
+      channel
+    ) as unknown as {
       foo: { bar: (args: unknown) => Promise<unknown> };
     };
 
     const result = await ctx.foo.bar({ x: 1 });
 
-    expect(seenId).toBe('foo.bar');
+    expect(seenId).toBe('dev.brika.foo.bar');
     expect(seenArgs).toEqual({ x: 1 });
     expect(result).toEqual({ value: 42 });
   });
@@ -46,9 +49,7 @@ describe('buildCtx — proxy traversal', () => {
       net: { fetch: (args: unknown) => Promise<unknown> };
     };
 
-    await expect(ctx.net.fetch({ url: 'https://x' })).rejects.toBeInstanceOf(
-      PermissionDeniedError
-    );
+    await expect(ctx.net.fetch({ url: 'https://x' })).rejects.toBeInstanceOf(PermissionDeniedError);
     expect((channel.call as ReturnType<typeof mock>).mock.calls.length).toBe(0);
   });
 
@@ -92,7 +93,10 @@ describe('buildCtx — proxy traversal', () => {
       seenArgs = args;
       return null;
     });
-    const ctx = buildCtx({ grants: [{ id: 'log.ping' }] }, channel) as unknown as {
+    const ctx = buildCtx(
+      { grants: [{ id: 'dev.brika.log.ping', ctxPath: 'log.ping' }] },
+      channel
+    ) as unknown as {
       log: { ping: () => Promise<unknown> };
     };
     await ctx.log.ping();

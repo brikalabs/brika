@@ -51,7 +51,7 @@ describe('buildBlocksCapabilities — blocks.register', () => {
     const reg = makeRegistry(makeCallbacks({ onBlock }));
 
     const result = await reg.dispatch(
-      'blocks.register',
+      'dev.brika.blocks.register',
       { block: SAMPLE_BLOCK },
       makeHandlerCtx()
     );
@@ -67,7 +67,7 @@ describe('buildBlocksCapabilities — blocks.register', () => {
 
     await expect(
       reg.dispatch(
-        'blocks.register',
+        'dev.brika.blocks.register',
         { block: { name: 'no-id', category: 'utility', inputs: [], outputs: [] } },
         makeHandlerCtx()
       )
@@ -84,7 +84,7 @@ describe('buildBlocksCapabilities — blocks.emit', () => {
     const reg = makeRegistry(makeCallbacks({ onBlockEmit }));
 
     const result = await reg.dispatch(
-      'blocks.emit',
+      'dev.brika.blocks.emit',
       { instanceId: 'inst-1', port: 'out', data: { value: 42 } },
       makeHandlerCtx()
     );
@@ -104,9 +104,21 @@ describe('buildBlocksCapabilities — blocks.emit', () => {
       })
     );
 
-    await reg.dispatch('blocks.emit', { instanceId: 'i', port: 'p', data: null }, makeHandlerCtx());
-    await reg.dispatch('blocks.emit', { instanceId: 'i', port: 'p', data: 'hi' }, makeHandlerCtx());
-    await reg.dispatch('blocks.emit', { instanceId: 'i', port: 'p', data: [1, 2] }, makeHandlerCtx());
+    await reg.dispatch(
+      'dev.brika.blocks.emit',
+      { instanceId: 'i', port: 'p', data: null },
+      makeHandlerCtx()
+    );
+    await reg.dispatch(
+      'dev.brika.blocks.emit',
+      { instanceId: 'i', port: 'p', data: 'hi' },
+      makeHandlerCtx()
+    );
+    await reg.dispatch(
+      'dev.brika.blocks.emit',
+      { instanceId: 'i', port: 'p', data: [1, 2] },
+      makeHandlerCtx()
+    );
 
     expect(seen).toEqual([null, 'hi', [1, 2]]);
   });
@@ -114,19 +126,18 @@ describe('buildBlocksCapabilities — blocks.emit', () => {
 
 describe('buildBlocksCapabilities — blocks.log', () => {
   test('forwards (instanceId, workflowId, level, message) to onBlockLog', async () => {
-    const onBlockLog =
-      mock<
-        (
-          instanceId: string,
-          workflowId: string,
-          level: 'debug' | 'info' | 'warn' | 'error',
-          message: string
-        ) => void
-      >(() => undefined);
+    const onBlockLog = mock<
+      (
+        instanceId: string,
+        workflowId: string,
+        level: 'debug' | 'info' | 'warn' | 'error',
+        message: string
+      ) => void
+    >(() => undefined);
     const reg = makeRegistry(makeCallbacks({ onBlockLog }));
 
     const result = await reg.dispatch(
-      'blocks.log',
+      'dev.brika.blocks.log',
       { instanceId: 'inst-1', workflowId: 'wf-1', level: 'info', message: 'hello' },
       makeHandlerCtx()
     );
@@ -137,20 +148,19 @@ describe('buildBlocksCapabilities — blocks.log', () => {
   });
 
   test('rejects INVALID_ARGS for an unknown log level', async () => {
-    const onBlockLog =
-      mock<
-        (
-          instanceId: string,
-          workflowId: string,
-          level: 'debug' | 'info' | 'warn' | 'error',
-          message: string
-        ) => void
-      >(() => undefined);
+    const onBlockLog = mock<
+      (
+        instanceId: string,
+        workflowId: string,
+        level: 'debug' | 'info' | 'warn' | 'error',
+        message: string
+      ) => void
+    >(() => undefined);
     const reg = makeRegistry(makeCallbacks({ onBlockLog }));
 
     await expect(
       reg.dispatch(
-        'blocks.log',
+        'dev.brika.blocks.log',
         { instanceId: 'i', workflowId: 'w', level: 'trace', message: 'x' },
         makeHandlerCtx()
       )
@@ -163,7 +173,11 @@ describe('buildBlocksCapabilities — registration shape', () => {
   test('registers exactly blocks.register, blocks.emit, and blocks.log', () => {
     const caps = buildBlocksCapabilities(makeCallbacks());
     const ids = caps.map((c) => c.spec.id).sort();
-    expect(ids).toEqual(['blocks.emit', 'blocks.log', 'blocks.register']);
+    expect(ids).toEqual([
+      'dev.brika.blocks.emit',
+      'dev.brika.blocks.log',
+      'dev.brika.blocks.register',
+    ]);
   });
 
   test('every spec gates on the "blocks" permission', () => {

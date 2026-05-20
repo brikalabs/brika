@@ -23,7 +23,7 @@ describe('prefs capability', () => {
     const reg = makeReg({ setPreference });
 
     const result = await reg.dispatch(
-      'prefs.set',
+      'dev.brika.prefs.set',
       { key: 'debug', value: true },
       handlerCtx
     );
@@ -41,10 +41,10 @@ describe('prefs capability', () => {
       },
     });
 
-    await reg.dispatch('prefs.set', { key: 'n', value: 42 }, handlerCtx);
-    await reg.dispatch('prefs.set', { key: 's', value: 'hi' }, handlerCtx);
-    await reg.dispatch('prefs.set', { key: 'o', value: { nested: true } }, handlerCtx);
-    await reg.dispatch('prefs.set', { key: 'a', value: [1, 2, 3] }, handlerCtx);
+    await reg.dispatch('dev.brika.prefs.set', { key: 'n', value: 42 }, handlerCtx);
+    await reg.dispatch('dev.brika.prefs.set', { key: 's', value: 'hi' }, handlerCtx);
+    await reg.dispatch('dev.brika.prefs.set', { key: 'o', value: { nested: true } }, handlerCtx);
+    await reg.dispatch('dev.brika.prefs.set', { key: 'a', value: [1, 2, 3] }, handlerCtx);
 
     expect(seen).toEqual([
       ['n', 42],
@@ -56,7 +56,9 @@ describe('prefs capability', () => {
 
   test('rejects INVALID_ARGS when key is missing', async () => {
     const reg = makeReg({ setPreference: () => undefined });
-    await expect(reg.dispatch('prefs.set', { value: 1 }, handlerCtx)).rejects.toMatchObject({
+    await expect(
+      reg.dispatch('dev.brika.prefs.set', { value: 1 }, handlerCtx)
+    ).rejects.toMatchObject({
       code: 'INVALID_ARGS',
     });
   });

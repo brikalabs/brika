@@ -44,7 +44,7 @@ describe('exec.spawn capability', () => {
     }));
     const reg = makeReg(spawn);
     const out = await reg.dispatch(
-      'exec.spawn',
+      'dev.brika.exec.spawn',
       { command: 'git', args: ['status'], cwd: '/repo', timeoutMs: 5000 },
       handlerCtx(['git'])
     );
@@ -62,7 +62,7 @@ describe('exec.spawn capability', () => {
       throw new Error('should not run');
     });
     await expect(
-      reg.dispatch('exec.spawn', { command: 'curl', args: [] }, handlerCtx(['git']))
+      reg.dispatch('dev.brika.exec.spawn', { command: 'curl', args: [] }, handlerCtx(['git']))
     ).rejects.toMatchObject({ code: 'HANDLER_THREW' });
   });
 
@@ -76,7 +76,7 @@ describe('exec.spawn capability', () => {
       timedOut: false,
     }));
     const out = (await reg.dispatch(
-      'exec.spawn',
+      'dev.brika.exec.spawn',
       { command: 'git', args: [] },
       handlerCtx(['git'])
     )) as { stdout: string };
@@ -93,7 +93,7 @@ describe('exec.spawn capability', () => {
       timedOut: true,
     }));
     const out = await reg.dispatch(
-      'exec.spawn',
+      'dev.brika.exec.spawn',
       { command: 'git', args: [] },
       handlerCtx(['git'])
     );
@@ -110,7 +110,7 @@ describe('exec.spawn capability', () => {
     }));
     await expect(
       reg.dispatch(
-        'exec.spawn',
+        'dev.brika.exec.spawn',
         { command: 'git', args: [], timeoutMs: 600_000 },
         handlerCtx(['git'])
       )

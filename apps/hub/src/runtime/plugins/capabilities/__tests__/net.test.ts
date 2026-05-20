@@ -2,7 +2,9 @@ import { describe, expect, mock, test } from 'bun:test';
 import { CapabilityRegistry } from '@brika/capabilities';
 import { buildNetCapabilities, isHostAllowed, matchesHostPattern } from '../net';
 
-function makeReg(fetchImpl: (input: string | URL | Request, init?: RequestInit) => Promise<Response>) {
+function makeReg(
+  fetchImpl: (input: string | URL | Request, init?: RequestInit) => Promise<Response>
+) {
   const reg = new CapabilityRegistry();
   for (const cap of buildNetCapabilities({ fetch: fetchImpl })) {
     reg.register(cap);
@@ -49,15 +51,16 @@ describe('isHostAllowed', () => {
 
 describe('net.fetch capability', () => {
   test('happy path returns serialized response', async () => {
-    const reg = makeReg(async () =>
-      new Response('hello', {
-        status: 200,
-        statusText: 'OK',
-        headers: { 'content-type': 'text/plain' },
-      })
+    const reg = makeReg(
+      async () =>
+        new Response('hello', {
+          status: 200,
+          statusText: 'OK',
+          headers: { 'content-type': 'text/plain' },
+        })
     );
     const out = await reg.dispatch(
-      'net.fetch',
+      'dev.brika.net.fetch',
       { url: 'https://api.example.com/path' },
       makeCtx(['api.example.com'])
     );
@@ -73,7 +76,11 @@ describe('net.fetch capability', () => {
       throw new Error('fetch should not be called');
     });
     await expect(
-      reg.dispatch('net.fetch', { url: 'https://attacker.com/' }, makeCtx(['api.example.com']))
+      reg.dispatch(
+        'dev.brika.net.fetch',
+        { url: 'https://attacker.com/' },
+        makeCtx(['api.example.com'])
+      )
     ).rejects.toMatchObject({
       code: 'HANDLER_THREW',
       message: expect.stringContaining('attacker.com'),
@@ -87,7 +94,7 @@ describe('net.fetch capability', () => {
       return new Response('', { status: 204 });
     });
     await reg.dispatch(
-      'net.fetch',
+      'dev.brika.net.fetch',
       {
         url: 'https://api.example.com/',
         method: 'POST',
@@ -115,7 +122,7 @@ describe('net.fetch capability', () => {
     );
     await expect(
       reg.dispatch(
-        'net.fetch',
+        'dev.brika.net.fetch',
         { url: 'https://api.example.com/', timeoutMs: 10 },
         makeCtx(['api.example.com'])
       )
@@ -129,7 +136,7 @@ describe('net.fetch capability', () => {
     const reg = makeReg(async () => new Response('', { status: 200 }));
     await expect(
       reg.dispatch(
-        'net.fetch',
+        'dev.brika.net.fetch',
         { url: 'https://api.example.com/', timeoutMs: 600_000 },
         makeCtx(['api.example.com'])
       )
@@ -139,7 +146,7 @@ describe('net.fetch capability', () => {
   test('rejects a non-URL argument at the spec layer', async () => {
     const reg = makeReg(async () => new Response('', { status: 200 }));
     await expect(
-      reg.dispatch('net.fetch', { url: 'not-a-url' }, makeCtx(['api.example.com']))
+      reg.dispatch('dev.brika.net.fetch', { url: 'not-a-url' }, makeCtx(['api.example.com']))
     ).rejects.toMatchObject({ code: 'INVALID_ARGS' });
   });
 });

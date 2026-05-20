@@ -76,9 +76,7 @@ export function buildSparksCapabilities(
       return {};
     }),
     defineCapability(subscribeSpec.spec, (_ctx, { sparkType, subscriptionId }) => {
-      cb.onSparkSubscribe(sparkType, subscriptionId, (event) =>
-        sendEvent(subscriptionId, event)
-      );
+      cb.onSparkSubscribe(sparkType, subscriptionId, (event) => sendEvent(subscriptionId, event));
       return {};
     }),
     defineCapability(unsubscribeSpec.spec, (_ctx, { subscriptionId }) => {

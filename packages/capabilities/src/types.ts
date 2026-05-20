@@ -14,8 +14,16 @@
 
 import type { z } from 'zod';
 
-/** Capability identifier — dotted-path naming reflects nesting on `ctx`. */
-export type CapabilityId = `${string}.${string}` | string;
+/**
+ * Capability identifier — reverse-DNS unique name.
+ *
+ * Brika built-ins follow `dev.brika.<family>.<verb>` (e.g.
+ * `dev.brika.net.fetch`); third-party capabilities use their own DNS
+ * (e.g. `com.acme.weather.scrape`). The string type is intentionally wide —
+ * a template literal would block valid namespaces that don't fit the
+ * `a.b.c.d` shape (the registry checks the format at registration time).
+ */
+export type CapabilityId = string;
 
 /**
  * Scope schema attached to a permission. The user grants a capability with a
@@ -50,7 +58,22 @@ export interface CapabilitySpec<
   O extends z.ZodType = z.ZodType,
   S extends z.ZodType = z.ZodType,
 > {
+  /**
+   * Reverse-DNS unique identifier — namespaced across the whole ecosystem.
+   *
+   * Brika built-ins use `dev.brika.<family>.<verb>` (e.g. `dev.brika.net.fetch`).
+   * Third-party plugins use their own DNS (e.g. `com.acme.weather.scrape`).
+   * This is what travels over the wire and what is stored in granted state.
+   */
   readonly id: CapabilityId;
+  /**
+   * The dotted property path under `ctx` plugin code uses to invoke this
+   * capability. Defaults to the id with the first two segments stripped
+   * (so `dev.brika.net.fetch` → `net.fetch`). Override when the default
+   * would collide with another granted capability, or to expose under a
+   * vendor-specific subtree.
+   */
+  readonly ctxPath?: string;
   readonly args: I;
   readonly result: O;
   /**
@@ -104,10 +127,12 @@ export interface Capability<
 
 /**
  * Single entry in a plugin's capability vector — what the plugin has been
- * granted at spawn time. `scope` is the parsed-and-validated grant value.
+ * granted at spawn time. `scope` is the parsed-and-validated grant value;
+ * `ctxPath` is the dotted name plugin code uses under `ctx`.
  */
 export interface CapabilityGrant {
   readonly id: CapabilityId;
+  readonly ctxPath: string;
   readonly scope?: unknown;
 }
 

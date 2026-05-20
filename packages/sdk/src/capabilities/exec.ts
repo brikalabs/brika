@@ -41,7 +41,8 @@ const ExecSpawnResult = z.object({
 
 export const execSpawn = defineCapability(
   {
-    id: 'exec.spawn',
+    id: 'dev.brika.exec.spawn',
+    ctxPath: 'exec.spawn',
     args: ExecSpawnArgs,
     result: ExecSpawnResult,
     description: 'Run an allow-listed binary and capture its output',

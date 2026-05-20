@@ -36,7 +36,8 @@ const BLOCKS_PERMISSION = {
 /** Plugin announces a block definition to the hub. */
 export const blocksRegister = defineCapability(
   {
-    id: 'blocks.register',
+    id: 'dev.brika.blocks.register',
+    ctxPath: 'blocks.register',
     args: z.object({ block: BlockDefinition }),
     result: z.object({}),
     description: 'Register a reactive block definition with the hub',
@@ -55,7 +56,8 @@ export const blocksRegister = defineCapability(
 /** Plugin emits a value from a running instance's output port. */
 export const blocksEmit = defineCapability(
   {
-    id: 'blocks.emit',
+    id: 'dev.brika.blocks.emit',
+    ctxPath: 'blocks.emit',
     args: z.object({
       instanceId: z.string(),
       port: z.string(),
@@ -75,7 +77,8 @@ export const blocksEmit = defineCapability(
 /** Plugin streams a structured log line scoped to a running instance. */
 export const blocksLog = defineCapability(
   {
-    id: 'blocks.log',
+    id: 'dev.brika.blocks.log',
+    ctxPath: 'blocks.log',
     args: z.object({
       instanceId: z.string(),
       workflowId: z.string(),

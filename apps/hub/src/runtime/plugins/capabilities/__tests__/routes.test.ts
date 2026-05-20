@@ -9,8 +9,8 @@
  */
 
 import { describe, expect, mock, test } from 'bun:test';
-import { CapabilityRegistry } from '@brika/capabilities';
 import type { CapabilityHandlerContext } from '@brika/capabilities';
+import { CapabilityRegistry } from '@brika/capabilities';
 import { buildRoutesCapabilities } from '../routes';
 
 function makeHandlerCtx(): CapabilityHandlerContext {
@@ -31,7 +31,7 @@ describe('routes.register capability', () => {
     }
 
     const result = await reg.dispatch(
-      'routes.register',
+      'dev.brika.routes.register',
       { method: 'GET', path: '/status' },
       makeHandlerCtx()
     );
@@ -49,7 +49,11 @@ describe('routes.register capability', () => {
     }
 
     await expect(
-      reg.dispatch('routes.register', { method: 'PATCH', path: '/status' }, makeHandlerCtx())
+      reg.dispatch(
+        'dev.brika.routes.register',
+        { method: 'PATCH', path: '/status' },
+        makeHandlerCtx()
+      )
     ).rejects.toMatchObject({ code: 'INVALID_ARGS' });
     expect(onRoute).not.toHaveBeenCalled();
   });
@@ -62,7 +66,7 @@ describe('routes.register capability', () => {
     }
 
     await expect(
-      reg.dispatch('routes.register', { method: 'GET' }, makeHandlerCtx())
+      reg.dispatch('dev.brika.routes.register', { method: 'GET' }, makeHandlerCtx())
     ).rejects.toMatchObject({ code: 'INVALID_ARGS' });
     expect(onRoute).not.toHaveBeenCalled();
   });

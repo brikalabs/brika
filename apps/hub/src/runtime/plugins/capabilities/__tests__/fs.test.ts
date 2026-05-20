@@ -1,7 +1,7 @@
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdir, mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { CapabilityRegistry } from '@brika/capabilities';
 import { buildFsCapabilities, isPathAllowed } from '../fs';
 
@@ -60,15 +60,15 @@ describe('fs capability — round-trip in a tmp dir', () => {
 
   test('write then read', async () => {
     const file = join(dir, 'a.txt');
-    await reg.dispatch('fs.write', { path: file, content: 'hello' }, ctx());
-    const out = await reg.dispatch('fs.read', { path: file }, ctx());
+    await reg.dispatch('dev.brika.fs.write', { path: file, content: 'hello' }, ctx());
+    const out = await reg.dispatch('dev.brika.fs.read', { path: file }, ctx());
     expect(out).toMatchObject({ content: 'hello', encoding: 'utf-8' });
   });
 
   test('base64 round-trip', async () => {
     const file = join(dir, 'b.bin');
     await reg.dispatch(
-      'fs.write',
+      'dev.brika.fs.write',
       { path: file, content: Buffer.from('binary!').toString('base64'), encoding: 'base64' },
       ctx()
     );
@@ -78,16 +78,20 @@ describe('fs capability — round-trip in a tmp dir', () => {
 
   test('exists returns true/false', async () => {
     const file = join(dir, 'c.txt');
-    expect(await reg.dispatch('fs.exists', { path: file }, ctx())).toEqual({ exists: false });
-    await reg.dispatch('fs.write', { path: file, content: '' }, ctx());
-    expect(await reg.dispatch('fs.exists', { path: file }, ctx())).toEqual({ exists: true });
+    expect(await reg.dispatch('dev.brika.fs.exists', { path: file }, ctx())).toEqual({
+      exists: false,
+    });
+    await reg.dispatch('dev.brika.fs.write', { path: file, content: '' }, ctx());
+    expect(await reg.dispatch('dev.brika.fs.exists', { path: file }, ctx())).toEqual({
+      exists: true,
+    });
   });
 
   test('rejects path outside the allow list', async () => {
     const other = await mkdtemp(join(tmpdir(), 'brika-fs-cap-other-'));
     try {
       await expect(
-        reg.dispatch('fs.read', { path: join(other, 'x') }, ctx([dir]))
+        reg.dispatch('dev.brika.fs.read', { path: join(other, 'x') }, ctx([dir]))
       ).rejects.toMatchObject({ code: 'HANDLER_THREW' });
     } finally {
       await rm(other, { recursive: true, force: true });
@@ -97,7 +101,11 @@ describe('fs capability — round-trip in a tmp dir', () => {
   test('rejects parent-escape via ../', async () => {
     await mkdir(join(dir, 'sub'), { recursive: true });
     await expect(
-      reg.dispatch('fs.read', { path: join(dir, 'sub', '..', '..', 'etc-passwd') }, ctx([dir]))
+      reg.dispatch(
+        'dev.brika.fs.read',
+        { path: join(dir, 'sub', '..', '..', 'etc-passwd') },
+        ctx([dir])
+      )
     ).rejects.toMatchObject({ code: 'HANDLER_THREW' });
   });
 });

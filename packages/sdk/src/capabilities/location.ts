@@ -29,7 +29,8 @@ const LocationShape = z.object({
 /** Hub's stored location — what the user configured under Settings. */
 export const locationGet = defineCapability(
   {
-    id: 'location.get',
+    id: 'dev.brika.location.get',
+    ctxPath: 'location.get',
     args: z.object({}),
     result: z.object({ location: LocationShape.nullable() }),
     description: "Read the hub's configured location",
@@ -53,7 +54,8 @@ export const locationGet = defineCapability(
 /** Hub's configured timezone (IANA identifier). */
 export const locationTimezone = defineCapability(
   {
-    id: 'location.timezone',
+    id: 'dev.brika.location.timezone',
+    ctxPath: 'location.timezone',
     args: z.object({}),
     result: z.object({ timezone: z.string().nullable() }),
     description: "Read the hub's configured timezone (IANA, e.g. Europe/Zurich)",
@@ -76,7 +78,9 @@ declare module '../ctx' {
        * Requires the `location` permission. Throws `PermissionDeniedError`
        * at the SDK boundary if the user has not granted it.
        */
-      get(args?: Record<string, never>): Promise<{ location: z.infer<typeof LocationShape> | null }>;
+      get(
+        args?: Record<string, never>
+      ): Promise<{ location: z.infer<typeof LocationShape> | null }>;
 
       /** Read the hub's configured timezone (IANA, e.g. Europe/Zurich). */
       timezone(args?: Record<string, never>): Promise<{ timezone: string | null }>;

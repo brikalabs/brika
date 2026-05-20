@@ -11,7 +11,7 @@
 import { describe, expect, mock, test } from 'bun:test';
 import { type CapabilityHandlerContext, CapabilityRegistry } from '@brika/capabilities';
 import type { BrickTypeDefinitionType } from '@brika/ipc/contract';
-import { buildBricksCapabilities, type BricksCallbacks } from '../bricks';
+import { type BricksCallbacks, buildBricksCapabilities } from '../bricks';
 
 function makeHandlerCtx(): CapabilityHandlerContext {
   return {
@@ -51,7 +51,7 @@ describe('buildBricksCapabilities — bricks.registerType', () => {
     };
 
     const result = await reg.dispatch(
-      'bricks.registerType',
+      'dev.brika.bricks.registerType',
       { brickType },
       makeHandlerCtx()
     );
@@ -71,7 +71,7 @@ describe('buildBricksCapabilities — bricks.registerType', () => {
     };
 
     const result = await reg.dispatch(
-      'bricks.registerType',
+      'dev.brika.bricks.registerType',
       { brickType },
       makeHandlerCtx()
     );
@@ -87,7 +87,7 @@ describe('buildBricksCapabilities — bricks.pushData', () => {
     const reg = makeRegistry(makeCallbacks({ onBrickDataPush }));
 
     const result = await reg.dispatch(
-      'bricks.pushData',
+      'dev.brika.bricks.pushData',
       { brickTypeId: 'weather', data: { temp: 21, conditions: 'sunny' } },
       makeHandlerCtx()
     );
@@ -107,10 +107,18 @@ describe('buildBricksCapabilities — bricks.pushData', () => {
       })
     );
 
-    await reg.dispatch('bricks.pushData', { brickTypeId: 'a', data: null }, makeHandlerCtx());
-    await reg.dispatch('bricks.pushData', { brickTypeId: 'b', data: 42 }, makeHandlerCtx());
     await reg.dispatch(
-      'bricks.pushData',
+      'dev.brika.bricks.pushData',
+      { brickTypeId: 'a', data: null },
+      makeHandlerCtx()
+    );
+    await reg.dispatch(
+      'dev.brika.bricks.pushData',
+      { brickTypeId: 'b', data: 42 },
+      makeHandlerCtx()
+    );
+    await reg.dispatch(
+      'dev.brika.bricks.pushData',
       { brickTypeId: 'c', data: [1, 2, 3] },
       makeHandlerCtx()
     );
@@ -130,7 +138,7 @@ describe('buildBricksCapabilities — INVALID_ARGS', () => {
 
     await expect(
       reg.dispatch(
-        'bricks.registerType',
+        'dev.brika.bricks.registerType',
         { brickType: { families: ['sm'] } },
         makeHandlerCtx()
       )
@@ -143,7 +151,7 @@ describe('buildBricksCapabilities — registration shape', () => {
   test('registers exactly bricks.registerType and bricks.pushData', () => {
     const caps = buildBricksCapabilities(makeCallbacks());
     const ids = caps.map((c) => c.spec.id).sort();
-    expect(ids).toEqual(['bricks.pushData', 'bricks.registerType']);
+    expect(ids).toEqual(['dev.brika.bricks.pushData', 'dev.brika.bricks.registerType']);
   });
 
   test('every spec gates on the "bricks" permission', () => {

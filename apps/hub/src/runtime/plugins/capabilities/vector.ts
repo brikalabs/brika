@@ -48,8 +48,5 @@ export function vectorForLegacyGrants(
     }
   }
 
-  return registry.buildVector(
-    manifest as ManifestCapabilities,
-    userGrants as UserGrants
-  );
+  return registry.buildVector(manifest as ManifestCapabilities, userGrants as UserGrants);
 }

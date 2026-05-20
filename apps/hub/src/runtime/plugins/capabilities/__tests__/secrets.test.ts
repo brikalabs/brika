@@ -42,7 +42,11 @@ describe('buildSecretsCapabilities — secrets.get', () => {
     const getSecret = mock(() => 'super-secret');
     const reg = makeRegistry(makeCallbacks({ getSecret }));
 
-    const result = await reg.dispatch('secrets.get', { key: 'api_token' }, makeHandlerCtx());
+    const result = await reg.dispatch(
+      'dev.brika.secrets.get',
+      { key: 'api_token' },
+      makeHandlerCtx()
+    );
 
     expect(result).toEqual({ value: 'super-secret' });
     expect(getSecret).toHaveBeenCalledTimes(1);
@@ -52,7 +56,11 @@ describe('buildSecretsCapabilities — secrets.get', () => {
   test('propagates a null value when the key is unset', async () => {
     const reg = makeRegistry(makeCallbacks({ getSecret: mock(() => null) }));
 
-    const result = await reg.dispatch('secrets.get', { key: 'missing' }, makeHandlerCtx());
+    const result = await reg.dispatch(
+      'dev.brika.secrets.get',
+      { key: 'missing' },
+      makeHandlerCtx()
+    );
 
     expect(result).toEqual({ value: null });
   });
@@ -61,7 +69,7 @@ describe('buildSecretsCapabilities — secrets.get', () => {
     const getSecret = mock(() => Promise.resolve('async-secret'));
     const reg = makeRegistry(makeCallbacks({ getSecret }));
 
-    const result = await reg.dispatch('secrets.get', { key: 'k' }, makeHandlerCtx());
+    const result = await reg.dispatch('dev.brika.secrets.get', { key: 'k' }, makeHandlerCtx());
 
     expect(result).toEqual({ value: 'async-secret' });
   });
@@ -73,7 +81,7 @@ describe('buildSecretsCapabilities — secrets.set', () => {
     const reg = makeRegistry(makeCallbacks({ setSecret }));
 
     const result = await reg.dispatch(
-      'secrets.set',
+      'dev.brika.secrets.set',
       { key: 'api_token', value: 'value-1' },
       makeHandlerCtx()
     );
@@ -94,7 +102,7 @@ describe('buildSecretsCapabilities — secrets.set', () => {
     );
     const reg = makeRegistry(makeCallbacks({ setSecret }));
 
-    await reg.dispatch('secrets.set', { key: 'k', value: 'v' }, makeHandlerCtx());
+    await reg.dispatch('dev.brika.secrets.set', { key: 'k', value: 'v' }, makeHandlerCtx());
 
     expect(calls).toBe(1);
   });
@@ -105,7 +113,11 @@ describe('buildSecretsCapabilities — secrets.delete', () => {
     const deleteSecret = mock(() => true);
     const reg = makeRegistry(makeCallbacks({ deleteSecret }));
 
-    const result = await reg.dispatch('secrets.delete', { key: 'api_token' }, makeHandlerCtx());
+    const result = await reg.dispatch(
+      'dev.brika.secrets.delete',
+      { key: 'api_token' },
+      makeHandlerCtx()
+    );
 
     expect(result).toEqual({ deleted: true });
     expect(deleteSecret).toHaveBeenCalledTimes(1);
@@ -115,7 +127,11 @@ describe('buildSecretsCapabilities — secrets.delete', () => {
   test('returns { deleted: false } when the key was already unset', async () => {
     const reg = makeRegistry(makeCallbacks({ deleteSecret: mock(() => false) }));
 
-    const result = await reg.dispatch('secrets.delete', { key: 'missing' }, makeHandlerCtx());
+    const result = await reg.dispatch(
+      'dev.brika.secrets.delete',
+      { key: 'missing' },
+      makeHandlerCtx()
+    );
 
     expect(result).toEqual({ deleted: false });
   });
@@ -124,7 +140,7 @@ describe('buildSecretsCapabilities — secrets.delete', () => {
     const deleteSecret = mock(() => Promise.resolve(true));
     const reg = makeRegistry(makeCallbacks({ deleteSecret }));
 
-    const result = await reg.dispatch('secrets.delete', { key: 'k' }, makeHandlerCtx());
+    const result = await reg.dispatch('dev.brika.secrets.delete', { key: 'k' }, makeHandlerCtx());
 
     expect(result).toEqual({ deleted: true });
   });
@@ -134,7 +150,11 @@ describe('buildSecretsCapabilities — registration shape', () => {
   test('registers exactly secrets.get, secrets.set, and secrets.delete', () => {
     const caps = buildSecretsCapabilities(makeCallbacks(), PLUGIN_NAME);
     const ids = caps.map((c) => c.spec.id).sort();
-    expect(ids).toEqual(['secrets.delete', 'secrets.get', 'secrets.set']);
+    expect(ids).toEqual([
+      'dev.brika.secrets.delete',
+      'dev.brika.secrets.get',
+      'dev.brika.secrets.set',
+    ]);
   });
 
   test('every spec gates on the "secrets" permission', () => {

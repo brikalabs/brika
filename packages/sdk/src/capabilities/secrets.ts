@@ -18,10 +18,11 @@ import { z } from 'zod';
 /** Read a stored secret by key. Returns `null` if the key is unset. */
 export const secretsGet = defineCapability(
   {
-    id: 'secrets.get',
+    id: 'dev.brika.secrets.get',
+    ctxPath: 'secrets.get',
     args: z.object({ key: z.string() }),
     result: z.object({ value: z.string().nullable() }),
-    description: "Read a plugin-scoped secret by key",
+    description: 'Read a plugin-scoped secret by key',
     permission: {
       name: 'secrets',
       scope: z.object({}),
@@ -42,10 +43,11 @@ export const secretsGet = defineCapability(
 /** Write a secret value under the given key. */
 export const secretsSet = defineCapability(
   {
-    id: 'secrets.set',
+    id: 'dev.brika.secrets.set',
+    ctxPath: 'secrets.set',
     args: z.object({ key: z.string(), value: z.string() }),
     result: z.object({}),
-    description: "Write a plugin-scoped secret by key",
+    description: 'Write a plugin-scoped secret by key',
     permission: {
       name: 'secrets',
       scope: z.object({}),
@@ -63,10 +65,11 @@ export const secretsSet = defineCapability(
 /** Delete a stored secret. Returns whether a value was actually removed. */
 export const secretsDelete = defineCapability(
   {
-    id: 'secrets.delete',
+    id: 'dev.brika.secrets.delete',
+    ctxPath: 'secrets.delete',
     args: z.object({ key: z.string() }),
     result: z.object({ deleted: z.boolean() }),
-    description: "Delete a plugin-scoped secret by key",
+    description: 'Delete a plugin-scoped secret by key',
     permission: {
       name: 'secrets',
       scope: z.object({}),

@@ -7,8 +7,8 @@
  */
 
 import { defineCapability } from '@brika/capabilities';
-import { locationGet as spec, locationTimezone as tzSpec } from '@brika/sdk/capabilities';
 import type { HubLocation } from '@brika/ipc/contract';
+import { locationGet as spec, locationTimezone as tzSpec } from '@brika/sdk/capabilities';
 
 export interface LocationCallbacks {
   getLocation(): HubLocation | null;

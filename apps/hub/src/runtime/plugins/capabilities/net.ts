@@ -63,7 +63,10 @@ export function buildNetCapabilities(cb: NetCallbacks) {
 
       const controller = new AbortController();
       const timeoutMs = args.timeoutMs ?? DEFAULT_TIMEOUT_MS;
-      const timer = setTimeout(() => controller.abort(new Error(`net.fetch: timed out after ${timeoutMs}ms`)), timeoutMs);
+      const timer = setTimeout(
+        () => controller.abort(new Error(`net.fetch: timed out after ${timeoutMs}ms`)),
+        timeoutMs
+      );
 
       try {
         const res = await cb.fetch(args.url, {

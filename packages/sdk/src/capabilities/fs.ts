@@ -55,7 +55,8 @@ const FsPermission = {
 
 export const fsRead = defineCapability(
   {
-    id: 'fs.read',
+    id: 'dev.brika.fs.read',
+    ctxPath: 'fs.read',
     args: FsReadArgs,
     result: FsReadResult,
     description: 'Read a file from an allow-listed directory',
@@ -68,7 +69,8 @@ export const fsRead = defineCapability(
 
 export const fsWrite = defineCapability(
   {
-    id: 'fs.write',
+    id: 'dev.brika.fs.write',
+    ctxPath: 'fs.write',
     args: FsWriteArgs,
     result: z.object({}),
     description: 'Write a file under an allow-listed directory',
@@ -81,7 +83,8 @@ export const fsWrite = defineCapability(
 
 export const fsExists = defineCapability(
   {
-    id: 'fs.exists',
+    id: 'dev.brika.fs.exists',
+    ctxPath: 'fs.exists',
     args: FsExistsArgs,
     result: FsExistsResult,
     description: 'Check whether a path exists',

@@ -605,7 +605,11 @@ export class PluginProcess {
       const reg = this.#getCapabilityRegistry();
       const vector = vectorForLegacyGrants(reg, this.callbacks.onGetGrantedPermissions(this.name));
       return {
-        grants: vector.grants.map((g) => ({ id: g.id, scope: g.scope as Json | undefined })),
+        grants: vector.grants.map((g) => ({
+          id: g.id,
+          ctxPath: g.ctxPath,
+          scope: g.scope as Json | undefined,
+        })),
       };
     });
 

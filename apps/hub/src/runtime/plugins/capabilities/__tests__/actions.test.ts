@@ -9,8 +9,8 @@
  */
 
 import { describe, expect, mock, test } from 'bun:test';
-import { CapabilityRegistry } from '@brika/capabilities';
 import type { CapabilityHandlerContext } from '@brika/capabilities';
+import { CapabilityRegistry } from '@brika/capabilities';
 import { buildActionsCapabilities } from '@/runtime/plugins/capabilities/actions';
 
 function makeHandlerCtx(): CapabilityHandlerContext {
@@ -31,7 +31,7 @@ describe('actions.register capability', () => {
     }
 
     const result = await reg.dispatch(
-      'actions.register',
+      'dev.brika.actions.register',
       { id: 'plugin.scan' },
       makeHandlerCtx()
     );
@@ -49,7 +49,7 @@ describe('actions.register capability', () => {
     }
 
     await expect(
-      reg.dispatch('actions.register', {}, makeHandlerCtx())
+      reg.dispatch('dev.brika.actions.register', {}, makeHandlerCtx())
     ).rejects.toMatchObject({ code: 'INVALID_ARGS' });
     expect(onAction).not.toHaveBeenCalled();
   });
@@ -62,7 +62,7 @@ describe('actions.register capability', () => {
     }
 
     await expect(
-      reg.dispatch('actions.register', { id: 123 }, makeHandlerCtx())
+      reg.dispatch('dev.brika.actions.register', { id: 123 }, makeHandlerCtx())
     ).rejects.toMatchObject({ code: 'INVALID_ARGS' });
     expect(onAction).not.toHaveBeenCalled();
   });

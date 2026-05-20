@@ -52,13 +52,20 @@ export interface Ctx extends CtxBase {}
  * vector lookup and IPC call.
  */
 export function buildCtx(vector: CapabilityVector, channel: Channel): Ctx {
-  const grantedIds = new Set(vector.grants.map((g) => g.id));
-  return createCtxProxy([], grantedIds, channel);
+  // Path -> id lookup. Plugin code writes `ctx.net.fetch(args)` which the
+  // Proxy joins to the path "net.fetch"; the vector tells us that path
+  // corresponds to the reverse-DNS id `dev.brika.net.fetch` that travels
+  // over the wire.
+  const pathToId = new Map<string, CapabilityId>();
+  for (const grant of vector.grants) {
+    pathToId.set(grant.ctxPath, grant.id);
+  }
+  return createCtxProxy([], pathToId, channel);
 }
 
 function createCtxProxy(
   pathSegments: ReadonlyArray<string>,
-  grantedIds: ReadonlySet<CapabilityId>,
+  pathToId: ReadonlyMap<string, CapabilityId>,
   channel: Channel
 ): Ctx {
   // The Proxy target is a function so the handler can intercept both `get`
@@ -74,23 +81,24 @@ function createCtxProxy(
         // safe because nothing legitimately reads symbols off `ctx`.
         return undefined;
       }
-      return createCtxProxy([...pathSegments, prop], grantedIds, channel);
+      return createCtxProxy([...pathSegments, prop], pathToId, channel);
     },
     apply(_target, _thisArg, args: unknown[]) {
-      const id = pathSegments.join('.');
-      if (id === '') {
+      const path = pathSegments.join('.');
+      if (path === '') {
         // Synchronous error: ctx itself is not callable. This is a typing
         // bug, not a runtime denial — let it propagate.
         throw new TypeError('ctx is not callable — use ctx.<capability>(args)');
       }
-      if (!grantedIds.has(id)) {
+      const id = pathToId.get(path);
+      if (id === undefined) {
         // Capability denial is async-shaped: the caller used `await`, so a
         // rejected promise is what they expect (matches what a channel.call
         // rejection would have looked like).
         return Promise.reject(
           new PermissionDeniedError(
-            `Capability "${id}" is not in this plugin's grant vector. Declare it in the manifest and ensure the user has granted it.`,
-            id
+            `Capability at "ctx.${path}" is not in this plugin's grant vector. Declare it in the manifest's "capabilities" map and ensure the user has granted it.`,
+            path
           )
         );
       }

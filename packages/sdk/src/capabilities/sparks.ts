@@ -31,7 +31,8 @@ import { z } from 'zod';
 /** Declare that the plugin owns a spark id. The hub records the registration. */
 export const sparksRegister = defineCapability(
   {
-    id: 'sparks.register',
+    id: 'dev.brika.sparks.register',
+    ctxPath: 'sparks.register',
     args: z.object({
       /** Local spark id (without the plugin prefix). */
       id: z.string(),
@@ -60,7 +61,8 @@ export const sparksRegister = defineCapability(
 /** Emit a spark payload to every subscriber of the given local spark id. */
 export const sparksEmit = defineCapability(
   {
-    id: 'sparks.emit',
+    id: 'dev.brika.sparks.emit',
+    ctxPath: 'sparks.emit',
     args: z.object({
       /** Local spark id (without the plugin prefix). */
       sparkId: z.string(),
@@ -90,7 +92,8 @@ export const sparksEmit = defineCapability(
  */
 export const sparksSubscribe = defineCapability(
   {
-    id: 'sparks.subscribe',
+    id: 'dev.brika.sparks.subscribe',
+    ctxPath: 'sparks.subscribe',
     args: z.object({
       /** Fully-qualified spark type (`pluginId:sparkId`). */
       sparkType: z.string(),
@@ -116,7 +119,8 @@ export const sparksSubscribe = defineCapability(
 /** Cancel a previous subscription so the plugin stops receiving its events. */
 export const sparksUnsubscribe = defineCapability(
   {
-    id: 'sparks.unsubscribe',
+    id: 'dev.brika.sparks.unsubscribe',
+    ctxPath: 'sparks.unsubscribe',
     args: z.object({
       /** Subscription id previously returned to `sparks.subscribe`. */
       subscriptionId: z.string(),
@@ -149,10 +153,7 @@ declare module '../ctx' {
        * Requires the `sparks` permission. Throws `PermissionDeniedError`
        * at the SDK boundary if the user has not granted it.
        */
-      register(args: {
-        id: string;
-        schema?: Record<string, Json>;
-      }): Promise<Record<string, never>>;
+      register(args: { id: string; schema?: Record<string, Json> }): Promise<Record<string, never>>;
 
       /**
        * Emit a spark payload to every subscriber of the local `sparkId`.
@@ -183,4 +184,3 @@ declare module '../ctx' {
     };
   }
 }
-

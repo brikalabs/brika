@@ -31,7 +31,8 @@ import { z } from 'zod';
 /** Plugin announces a brick type to the hub. */
 export const bricksRegisterType = defineCapability(
   {
-    id: 'bricks.registerType',
+    id: 'dev.brika.bricks.registerType',
+    ctxPath: 'bricks.registerType',
     args: z.object({ brickType: BrickTypeDefinition }),
     result: z.object({}),
     description: 'Register a brick type with the hub',
@@ -55,7 +56,8 @@ export const bricksRegisterType = defineCapability(
 /** Plugin pushes arbitrary data for a brick type (client-rendered bricks). */
 export const bricksPushData = defineCapability(
   {
-    id: 'bricks.pushData',
+    id: 'dev.brika.bricks.pushData',
+    ctxPath: 'bricks.pushData',
     args: z.object({ brickTypeId: z.string(), data: z.unknown() }),
     result: z.object({}),
     description: 'Push data for a brick type so every mounted instance re-renders',

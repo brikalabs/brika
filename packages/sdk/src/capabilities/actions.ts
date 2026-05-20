@@ -21,7 +21,8 @@ import { z } from 'zod';
 /** Plugin announces an action handler to the hub. */
 export const actionsRegister = defineCapability(
   {
-    id: 'actions.register',
+    id: 'dev.brika.actions.register',
+    ctxPath: 'actions.register',
     args: z.object({ id: z.string() }),
     result: z.object({}),
     description: 'Register a server-side action handler with the hub',

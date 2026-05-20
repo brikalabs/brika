@@ -88,12 +88,9 @@ describe('CapabilityRegistry — dispatch', () => {
   test('wraps handler exceptions with HANDLER_THREW code', async () => {
     const reg = new CapabilityRegistry();
     reg.register(
-      defineCapability(
-        { id: 'boom', args: z.object({}), result: z.object({}) },
-        () => {
-          throw new Error('kaboom');
-        }
-      )
+      defineCapability({ id: 'boom', args: z.object({}), result: z.object({}) }, () => {
+        throw new Error('kaboom');
+      })
     );
 
     await expect(reg.dispatch('boom', {}, makeCtx())).rejects.toMatchObject({
@@ -131,10 +128,7 @@ describe('CapabilityRegistry — buildVector', () => {
   test('always vends always-on capabilities, regardless of manifest/grants', () => {
     const reg = new CapabilityRegistry();
     reg.register(
-      defineCapability(
-        { id: 'log.write', args: z.object({}), result: z.object({}) },
-        () => ({})
-      )
+      defineCapability({ id: 'log.write', args: z.object({}), result: z.object({}) }, () => ({}))
     );
 
     const vec = reg.buildVector({}, {});
@@ -195,7 +189,9 @@ describe('CapabilityRegistry — buildVector', () => {
       { 'net.fetch': { scope: { allow: ['api.example.com'] } } },
       { 'net.fetch': { allow: ['api.example.com'] } }
     );
-    expect(vec.grants).toEqual([{ id: 'net.fetch', scope: { allow: ['api.example.com'] } }]);
+    expect(vec.grants).toEqual([
+      { id: 'net.fetch', ctxPath: 'net.fetch', scope: { allow: ['api.example.com'] } },
+    ]);
   });
 
   test('skips a grant whose scope fails schema validation', () => {
@@ -212,20 +208,52 @@ describe('CapabilityRegistry — buildVector', () => {
       )
     );
 
-    const vec = reg.buildVector(
-      { 'net.fetch': {} },
-      { 'net.fetch': { allow: 'not-an-array' } }
-    );
+    const vec = reg.buildVector({ 'net.fetch': {} }, { 'net.fetch': { allow: 'not-an-array' } });
     expect(vec.grants).toEqual([]);
+  });
+
+  test('ctxPath defaults to id with the first two reverse-DNS segments stripped', () => {
+    const reg = new CapabilityRegistry();
+    reg.register(
+      defineCapability(
+        { id: 'dev.brika.net.fetch', args: z.object({}), result: z.object({}) },
+        () => ({})
+      )
+    );
+    const vec = reg.buildVector({}, {});
+    expect(vec.grants[0]?.ctxPath).toBe('net.fetch');
+  });
+
+  test('ctxPath is left unchanged on short ids (<3 segments)', () => {
+    const reg = new CapabilityRegistry();
+    reg.register(
+      defineCapability({ id: 'legacy.flat', args: z.object({}), result: z.object({}) }, () => ({}))
+    );
+    const vec = reg.buildVector({}, {});
+    expect(vec.grants[0]?.ctxPath).toBe('legacy.flat');
+  });
+
+  test('explicit ctxPath overrides the default derivation', () => {
+    const reg = new CapabilityRegistry();
+    reg.register(
+      defineCapability(
+        {
+          id: 'dev.brika.net.fetch',
+          ctxPath: 'http.request',
+          args: z.object({}),
+          result: z.object({}),
+        },
+        () => ({})
+      )
+    );
+    const vec = reg.buildVector({}, {});
+    expect(vec.grants[0]?.ctxPath).toBe('http.request');
   });
 
   test('vector and its grants array are frozen', () => {
     const reg = new CapabilityRegistry();
     reg.register(
-      defineCapability(
-        { id: 'log.write', args: z.object({}), result: z.object({}) },
-        () => ({})
-      )
+      defineCapability({ id: 'log.write', args: z.object({}), result: z.object({}) }, () => ({}))
     );
     const vec = reg.buildVector({}, {});
     expect(Object.isFrozen(vec)).toBe(true);

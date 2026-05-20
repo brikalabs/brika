@@ -9,7 +9,11 @@
 import { existsSync, promises as fs } from 'node:fs';
 import { isAbsolute, resolve, sep } from 'node:path';
 import { defineCapability } from '@brika/capabilities';
-import { fsExists as existsSpec, fsRead as readSpec, fsWrite as writeSpec } from '@brika/sdk/capabilities';
+import {
+  fsExists as existsSpec,
+  fsRead as readSpec,
+  fsWrite as writeSpec,
+} from '@brika/sdk/capabilities';
 
 interface FsScope {
   allow: ReadonlyArray<string>;
