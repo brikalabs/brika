@@ -50,7 +50,7 @@ describe('actions.register capability', () => {
 
     await expect(
       reg.dispatch('dev.brika.actions.register', {}, makeHandlerCtx())
-    ).rejects.toMatchObject({ code: 'INVALID_ARGS' });
+    ).rejects.toMatchObject({ code: 'INVALID_INPUT' });
     expect(onAction).not.toHaveBeenCalled();
   });
 
@@ -63,7 +63,7 @@ describe('actions.register capability', () => {
 
     await expect(
       reg.dispatch('dev.brika.actions.register', { id: 123 }, makeHandlerCtx())
-    ).rejects.toMatchObject({ code: 'INVALID_ARGS' });
+    ).rejects.toMatchObject({ code: 'INVALID_INPUT' });
     expect(onAction).not.toHaveBeenCalled();
   });
 });

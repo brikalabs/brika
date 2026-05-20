@@ -1,3 +1,4 @@
+import { BrikaError } from '@brika/ipc';
 import { z } from 'zod';
 import type {
   Capability,
@@ -8,23 +9,40 @@ import type {
 } from './types';
 
 /**
- * Errors thrown from the registry have stable codes so callers can map them
- * to user-facing messages without string-matching.
+ * Capability-registry-specific codes, all aliased onto the platform-wide
+ * BrikaErrorCode vocabulary so a downstream catcher can match on either
+ * `'NOT_REGISTERED'` (capability-specific) or `'INVALID_INPUT'` (platform).
  */
-export class CapabilityError extends Error {
+export type CapabilityErrorCode =
+  | 'NOT_REGISTERED'
+  | 'NOT_GRANTED'
+  | 'INVALID_INPUT' // formerly 'INVALID_ARGS' — unified with BrikaErrorCode
+  | 'INVALID_OUTPUT' // formerly 'INVALID_RESULT' — unified
+  | 'INVALID_SCOPE'
+  | 'INTERNAL'; // formerly 'HANDLER_THREW' — unified (real cause is in .cause)
+
+/**
+ * Errors thrown by the registry. Extends `BrikaError` so callers can
+ * `instanceof BrikaError`-narrow uniformly and read `.code`, `.data`,
+ * `.cause`. The `capabilityId` field is exposed both as a direct property
+ * (back-compat with existing callers) and inside `data.capabilityId`
+ * (cross-IPC accessible).
+ */
+export class CapabilityError extends BrikaError {
+  readonly capabilityId?: CapabilityId;
+
   constructor(
-    readonly code:
-      | 'NOT_REGISTERED'
-      | 'NOT_GRANTED'
-      | 'INVALID_ARGS'
-      | 'INVALID_RESULT'
-      | 'INVALID_SCOPE'
-      | 'HANDLER_THREW',
+    code: CapabilityErrorCode,
     message: string,
-    readonly capabilityId?: CapabilityId
+    capabilityId?: CapabilityId,
+    cause?: unknown
   ) {
-    super(message);
+    super(code, message, {
+      data: capabilityId === undefined ? undefined : { capabilityId },
+      cause,
+    });
     this.name = 'CapabilityError';
+    this.capabilityId = capabilityId;
   }
 }
 
@@ -154,9 +172,10 @@ export class CapabilityRegistry {
     const parsedArgs = cap.spec.args.safeParse(args);
     if (!parsedArgs.success) {
       throw new CapabilityError(
-        'INVALID_ARGS',
+        'INVALID_INPUT',
         `Invalid args for ${id}: ${formatZodIssue(parsedArgs.error)}`,
-        id
+        id,
+        parsedArgs.error
       );
     }
 
@@ -165,15 +184,18 @@ export class CapabilityRegistry {
       result = await cap.handler(handlerCtx, parsedArgs.data);
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);
-      throw new CapabilityError('HANDLER_THREW', `Handler for ${id} threw: ${message}`, id);
+      // Pass the original throw as `cause` so the stack and any nested
+      // BrikaError context survives across IPC via toWire/fromWire.
+      throw new CapabilityError('INTERNAL', `Handler for ${id} threw: ${message}`, id, e);
     }
 
     const parsedResult = cap.spec.result.safeParse(result);
     if (!parsedResult.success) {
       throw new CapabilityError(
-        'INVALID_RESULT',
+        'INVALID_OUTPUT',
         `Handler for ${id} returned invalid result: ${formatZodIssue(parsedResult.error)}`,
-        id
+        id,
+        parsedResult.error
       );
     }
     return parsedResult.data;

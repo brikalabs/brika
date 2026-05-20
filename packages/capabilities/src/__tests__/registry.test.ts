@@ -55,7 +55,7 @@ describe('CapabilityRegistry — dispatch', () => {
     );
 
     await expect(reg.dispatch('math.add', { a: 'oops', b: 2 }, makeCtx())).rejects.toMatchObject({
-      code: 'INVALID_ARGS',
+      code: 'INVALID_INPUT',
     });
   });
 
@@ -74,7 +74,7 @@ describe('CapabilityRegistry — dispatch', () => {
     );
 
     await expect(reg.dispatch('math.bad', {}, makeCtx())).rejects.toMatchObject({
-      code: 'INVALID_RESULT',
+      code: 'INVALID_OUTPUT',
     });
   });
 
@@ -85,18 +85,28 @@ describe('CapabilityRegistry — dispatch', () => {
     });
   });
 
-  test('wraps handler exceptions with HANDLER_THREW code', async () => {
+  test('wraps handler exceptions with INTERNAL code + cause chain', async () => {
     const reg = new CapabilityRegistry();
+    const root = new Error('kaboom');
     reg.register(
       defineCapability({ id: 'boom', args: z.object({}), result: z.object({}) }, () => {
-        throw new Error('kaboom');
+        throw root;
       })
     );
 
-    await expect(reg.dispatch('boom', {}, makeCtx())).rejects.toMatchObject({
-      code: 'HANDLER_THREW',
+    let caught: unknown;
+    try {
+      await reg.dispatch('boom', {}, makeCtx());
+    } catch (e) {
+      caught = e;
+    }
+    expect(caught).toMatchObject({
+      code: 'INTERNAL',
       message: expect.stringContaining('kaboom'),
     });
+    // Cause chain preserves the original throw — closes the audit gap
+    // where HANDLER_THREW stringified the original error and dropped it.
+    expect((caught as { cause: unknown }).cause).toBe(root);
   });
 
   test('passes the validated scope into the handler', async () => {

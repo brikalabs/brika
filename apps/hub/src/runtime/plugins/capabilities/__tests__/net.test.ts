@@ -87,7 +87,7 @@ describe('net.fetch capability', () => {
         makeCtx(['api.example.com'])
       )
     ).rejects.toMatchObject({
-      code: 'HANDLER_THREW',
+      code: 'INTERNAL',
       message: expect.stringContaining('attacker.com'),
     });
   });
@@ -132,7 +132,7 @@ describe('net.fetch capability', () => {
         makeCtx(['api.example.com'])
       )
     ).rejects.toMatchObject({
-      code: 'HANDLER_THREW',
+      code: 'INTERNAL',
       message: expect.stringContaining('aborted'),
     });
   });
@@ -145,14 +145,14 @@ describe('net.fetch capability', () => {
         { url: 'https://api.example.com/', timeoutMs: 600_000 },
         makeCtx(['api.example.com'])
       )
-    ).rejects.toMatchObject({ code: 'INVALID_ARGS' });
+    ).rejects.toMatchObject({ code: 'INVALID_INPUT' });
   });
 
   test('rejects a non-URL argument at the spec layer', async () => {
     const reg = makeReg(async () => new Response('', { status: 200 }));
     await expect(
       reg.dispatch('dev.brika.net.fetch', { url: 'not-a-url' }, makeCtx(['api.example.com']))
-    ).rejects.toMatchObject({ code: 'INVALID_ARGS' });
+    ).rejects.toMatchObject({ code: 'INVALID_INPUT' });
   });
 });
 

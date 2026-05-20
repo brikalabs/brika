@@ -142,7 +142,7 @@ describe('buildBricksCapabilities — INVALID_ARGS', () => {
         { brickType: { families: ['sm'] } },
         makeHandlerCtx()
       )
-    ).rejects.toMatchObject({ code: 'INVALID_ARGS' });
+    ).rejects.toMatchObject({ code: 'INVALID_INPUT' });
     expect(onBrickType).not.toHaveBeenCalled();
   });
 });

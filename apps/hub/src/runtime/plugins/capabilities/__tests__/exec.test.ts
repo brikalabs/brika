@@ -64,7 +64,7 @@ describe('exec.spawn capability', () => {
     });
     await expect(
       reg.dispatch('dev.brika.exec.spawn', { command: 'curl', args: [] }, handlerCtx(['git']))
-    ).rejects.toMatchObject({ code: 'HANDLER_THREW' });
+    ).rejects.toMatchObject({ code: 'INTERNAL' });
   });
 
   test('caps very large output to 1MB with a truncation marker', async () => {
@@ -115,7 +115,7 @@ describe('exec.spawn capability', () => {
         { command: 'git', args: [], timeoutMs: 600_000 },
         handlerCtx(['git'])
       )
-    ).rejects.toMatchObject({ code: 'INVALID_ARGS' });
+    ).rejects.toMatchObject({ code: 'INVALID_INPUT' });
   });
 });
 
@@ -174,7 +174,7 @@ describe('exec.spawn capability — cwd guard end-to-end', () => {
         handlerCtx(['git'])
       )
     ).rejects.toMatchObject({
-      code: 'HANDLER_THREW',
+      code: 'INTERNAL',
       message: expect.stringContaining('outside the plugin root'),
     });
   });

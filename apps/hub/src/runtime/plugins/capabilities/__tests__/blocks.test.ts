@@ -71,7 +71,7 @@ describe('buildBlocksCapabilities — blocks.register', () => {
         { block: { name: 'no-id', category: 'utility', inputs: [], outputs: [] } },
         makeHandlerCtx()
       )
-    ).rejects.toMatchObject({ code: 'INVALID_ARGS' });
+    ).rejects.toMatchObject({ code: 'INVALID_INPUT' });
     expect(onBlock).not.toHaveBeenCalled();
   });
 });
@@ -164,7 +164,7 @@ describe('buildBlocksCapabilities — blocks.log', () => {
         { instanceId: 'i', workflowId: 'w', level: 'trace', message: 'x' },
         makeHandlerCtx()
       )
-    ).rejects.toMatchObject({ code: 'INVALID_ARGS' });
+    ).rejects.toMatchObject({ code: 'INVALID_INPUT' });
     expect(onBlockLog).not.toHaveBeenCalled();
   });
 });

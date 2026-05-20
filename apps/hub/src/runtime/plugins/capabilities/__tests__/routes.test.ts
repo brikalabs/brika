@@ -54,7 +54,7 @@ describe('routes.register capability', () => {
         { method: 'PATCH', path: '/status' },
         makeHandlerCtx()
       )
-    ).rejects.toMatchObject({ code: 'INVALID_ARGS' });
+    ).rejects.toMatchObject({ code: 'INVALID_INPUT' });
     expect(onRoute).not.toHaveBeenCalled();
   });
 
@@ -67,7 +67,7 @@ describe('routes.register capability', () => {
 
     await expect(
       reg.dispatch('dev.brika.routes.register', { method: 'GET' }, makeHandlerCtx())
-    ).rejects.toMatchObject({ code: 'INVALID_ARGS' });
+    ).rejects.toMatchObject({ code: 'INVALID_INPUT' });
     expect(onRoute).not.toHaveBeenCalled();
   });
 });

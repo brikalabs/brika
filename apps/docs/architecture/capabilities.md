@@ -151,7 +151,7 @@ the schema rejects it at verify-plugin time.
 
 4. **A permission entry** (if gated) in `packages/permissions/src/index.ts` — one line, just the icon. The grant scope schema lives with the capability spec, not here.
 
-5. **A test file** in `apps/hub/src/runtime/plugins/capabilities/__tests__/<name>.test.ts` — dispatch happy path + at least one `INVALID_ARGS`.
+5. **A test file** in `apps/hub/src/runtime/plugins/capabilities/__tests__/<name>.test.ts` — dispatch happy path + at least one `INVALID_INPUT`.
 
 Nothing else changes. No `@brika/sdk/bridge.ts` interface edit. No `prelude/<name>.ts` setup module. No `@brika/sdk/api/<name>.ts` rewrap.
 
@@ -202,18 +202,23 @@ adds a `capability.vector.update` event listener.
 
 ## Error model
 
-Every failure mode flows through one of these:
+Every error in the platform extends `BrikaError` — one base class with
+`code`, `data`, and an ES2022 `cause` chain that round-trips across IPC.
 
-| Where | Code | Meaning |
+| Where | Class & code | Meaning |
 |---|---|---|
-| SDK (Proxy.apply) | `PermissionDeniedError` | Capability id not in vector — no IPC. |
-| Hub (capabilityRequest) | `RpcError('PERMISSION_DENIED', ...)` | Vector lookup failed at the hub — should never happen if SDK is honest, but defense in depth. |
-| Registry.dispatch | `CapabilityError('INVALID_ARGS')` | Args failed `spec.args.safeParse`. |
-| Registry.dispatch | `CapabilityError('HANDLER_THREW')` | The handler raised; wrapped with the original message. |
-| Registry.dispatch | `CapabilityError('INVALID_RESULT')` | Handler returned a value that fails `spec.result.safeParse` — programmer error in the hub. |
+| SDK (Proxy.apply) | `PermissionDeniedError` (`'PERMISSION_DENIED'`) | Capability id not in vector — no IPC. |
+| Hub (capabilityRequest) | `RpcError('PERMISSION_DENIED', ...)` | Vector lookup failed at the hub — defense in depth. |
+| Registry.dispatch | `CapabilityError('INVALID_INPUT')` | Args failed `spec.args.safeParse`. `cause` is the underlying `ZodError`. |
+| Registry.dispatch | `CapabilityError('INTERNAL')` | The handler raised. `cause` is the original throw (Error, string, or any value). |
+| Registry.dispatch | `CapabilityError('INVALID_OUTPUT')` | Handler returned a value that fails `spec.result.safeParse` — programmer error in the hub. `cause` is the underlying `ZodError`. |
 | Registry.dispatch | `CapabilityError('INVALID_SCOPE')` | Granted scope value failed the spec's scope schema — reserved for future use, currently filtered at `buildVector`. |
+| Registry.dispatch | `CapabilityError('NOT_REGISTERED')` | Dispatched against an id the hub hasn't registered — usually means a typo or an out-of-date plugin. |
 
-Plugin code sees these as rejected promises with the original message.
+Plugin code sees these as rejected promises. `instanceof BrikaError`
+matches all of them; specific subclasses (`PermissionDeniedError`,
+`NotFoundError`, `InvalidInputError`, `InternalError`, `TimeoutError`)
+narrow further on the SDK side.
 
 ## Currently-registered capabilities
 

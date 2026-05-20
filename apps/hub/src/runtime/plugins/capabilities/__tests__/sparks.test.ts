@@ -182,7 +182,7 @@ describe('buildSparksCapabilities — invalid args', () => {
 
     await expect(
       reg.dispatch('dev.brika.sparks.emit', { payload: { foo: 1 } }, makeHandlerCtx())
-    ).rejects.toMatchObject({ code: 'INVALID_ARGS' });
+    ).rejects.toMatchObject({ code: 'INVALID_INPUT' });
     expect(cb.onSparkEmit).not.toHaveBeenCalled();
   });
 });

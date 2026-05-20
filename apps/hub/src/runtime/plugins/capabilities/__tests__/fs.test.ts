@@ -92,7 +92,7 @@ describe('fs capability — round-trip in a tmp dir', () => {
     try {
       await expect(
         reg.dispatch('dev.brika.fs.read', { path: join(other, 'x') }, ctx([dir]))
-      ).rejects.toMatchObject({ code: 'HANDLER_THREW' });
+      ).rejects.toMatchObject({ code: 'INTERNAL' });
     } finally {
       await rm(other, { recursive: true, force: true });
     }
@@ -106,7 +106,7 @@ describe('fs capability — round-trip in a tmp dir', () => {
         { path: join(dir, 'sub', '..', '..', 'etc-passwd') },
         ctx([dir])
       )
-    ).rejects.toMatchObject({ code: 'HANDLER_THREW' });
+    ).rejects.toMatchObject({ code: 'INTERNAL' });
   });
 
   test('rejects fs.read on a file larger than the 10MB cap', async () => {
@@ -115,7 +115,7 @@ describe('fs capability — round-trip in a tmp dir', () => {
     await expect(
       reg.dispatch('dev.brika.fs.read', { path: big }, ctx())
     ).rejects.toMatchObject({
-      code: 'HANDLER_THREW',
+      code: 'INTERNAL',
       message: expect.stringContaining('cap is'),
     });
   });

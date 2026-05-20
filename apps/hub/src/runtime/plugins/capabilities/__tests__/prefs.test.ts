@@ -59,7 +59,7 @@ describe('prefs capability', () => {
     await expect(
       reg.dispatch('dev.brika.prefs.set', { value: 1 }, handlerCtx)
     ).rejects.toMatchObject({
-      code: 'INVALID_ARGS',
+      code: 'INVALID_INPUT',
     });
   });
 });

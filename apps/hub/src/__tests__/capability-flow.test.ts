@@ -115,7 +115,7 @@ function spawnWithCapabilities(opts: {
         _id: id,
         result: {
           _rpcError: true,
-          code: 'HANDLER_THREW',
+          code: 'INTERNAL',
           message: e instanceof Error ? e.message : String(e),
         },
       });
