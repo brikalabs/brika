@@ -13,7 +13,7 @@
  */
 
 import type { Channel } from '@brika/ipc';
-import { rpc } from '@brika/ipc';
+import { BrikaError, rpc } from '@brika/ipc';
 import { buildCtx, readInjectedVector } from '@brika/sdk/ctx';
 import { z } from 'zod';
 
@@ -66,70 +66,96 @@ function describeCause(cause: unknown): string | undefined {
   return JSON.stringify(cause);
 }
 
+type ScenarioResult = Record<string, unknown>;
+type Scenario = (ctx: CtxShape) => Promise<ScenarioResult>;
+
+async function runLocationTimezone(c: CtxShape): Promise<ScenarioResult> {
+  const value = await c.location.timezone();
+  return { ok: true, value };
+}
+
+async function runInspectRemoteError(c: CtxShape): Promise<ScenarioResult> {
+  try {
+    await c.location.timezone();
+    return { ok: false, error: 'expected throw' };
+  } catch (e) {
+    const err = e as Error & { code?: string; cause?: unknown };
+    return {
+      ok: true,
+      name: err.name,
+      code: err.code,
+      message: err.message,
+      causeMessage: describeCause(err.cause),
+      stackContainsRemote: err.stack?.includes('--- remote stack ---') ?? false,
+    };
+  }
+}
+
+async function runInspectTypedError(c: CtxShape): Promise<ScenarioResult> {
+  try {
+    await c.location.timezone();
+    return { ok: false, error: 'expected throw' };
+  } catch (e) {
+    if (BrikaError.is(e, 'NET_HOST_NOT_ALLOWED')) {
+      return {
+        ok: true,
+        narrowed: true,
+        code: e.code,
+        host: e.data?.host,
+        allow: e.data?.allow,
+      };
+    }
+    return {
+      ok: true,
+      narrowed: false,
+      message: e instanceof Error ? e.message : String(e),
+    };
+  }
+}
+
+async function runMissingCapability(c: CtxShape): Promise<ScenarioResult> {
+  try {
+    await c.notgranted.thing();
+    return { ok: true, deniedAtBoundary: false };
+  } catch (e) {
+    return {
+      ok: true,
+      deniedAtBoundary: true,
+      message: e instanceof Error ? e.message : String(e),
+    };
+  }
+}
+
+const SCENARIOS: Record<string, Scenario> = {
+  locationTimezone: runLocationTimezone,
+  inspectRemoteError: runInspectRemoteError,
+  inspectTypedError: runInspectTypedError,
+  missingCapability: runMissingCapability,
+};
+
 // Scenario dispatcher — listens for fire-and-forget `runScenario` messages
 // from the test, executes the chosen scenario against ctx, reports back via
 // fire-and-forget. Bypasses the channel's drain queue entirely.
 process.on('message', async (raw) => {
-  const msg = raw as { t: string; runId?: number };
+  const msg = raw as { t: string; runId?: number; scenario?: string };
   if (msg.t !== 'runScenario' || !ctx) {
     return;
   }
   const runId = msg.runId ?? 0;
-  const scenario = (msg as { scenario?: string }).scenario;
+  const scenario = msg.scenario;
+  const handler = scenario === undefined ? undefined : SCENARIOS[scenario];
+  if (!handler) {
+    process.send?.({
+      t: 'scenarioResult',
+      runId,
+      ok: false,
+      error: `unknown scenario "${scenario}"`,
+    });
+    return;
+  }
   try {
-    if (scenario === 'locationTimezone') {
-      const res = await ctx.location.timezone();
-      process.send?.({ t: 'scenarioResult', runId, ok: true, value: res });
-    } else if (scenario === 'inspectRemoteError') {
-      // Trigger a handler that throws on the hub side, then report what
-      // the plugin received: error class, code, message, cause, stack.
-      try {
-        await ctx.location.timezone();
-        process.send?.({ t: 'scenarioResult', runId, ok: false, error: 'expected throw' });
-      } catch (e) {
-        const err = e as Error & {
-          code?: string;
-          data?: Record<string, unknown>;
-          cause?: unknown;
-        };
-        const causeMessage = describeCause(err.cause);
-        process.send?.({
-          t: 'scenarioResult',
-          runId,
-          ok: true,
-          name: err.name,
-          code: err.code,
-          message: err.message,
-          causeMessage,
-          stackContainsRemote: err.stack?.includes('--- remote stack ---') ?? false,
-        });
-      }
-    } else if (scenario === 'missingCapability') {
-      try {
-        await ctx.notgranted.thing();
-        process.send?.({
-          t: 'scenarioResult',
-          runId,
-          ok: true,
-          deniedAtBoundary: false,
-        });
-      } catch (e) {
-        process.send?.({
-          t: 'scenarioResult',
-          runId,
-          ok: true,
-          deniedAtBoundary: true,
-          message: e instanceof Error ? e.message : String(e),
-        });
-      }
-    } else {
-      process.send?.({
-        t: 'scenarioResult',
-        runId,
-        ok: false,
-        error: `unknown scenario "${scenario}"`,
-      });
-    }
+    const result = await handler(ctx);
+    process.send?.({ t: 'scenarioResult', runId, ...result });
   } catch (e) {
     process.send?.({
       t: 'scenarioResult',

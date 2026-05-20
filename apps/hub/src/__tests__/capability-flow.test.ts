@@ -24,6 +24,7 @@ import { afterEach, describe, expect, setDefaultTimeout, test } from 'bun:test';
 setDefaultTimeout(30_000);
 
 import { join } from 'node:path';
+import { BrikaError } from '@brika/ipc';
 
 const BUN = process.execPath;
 const PRELUDE = join(import.meta.dir, '../runtime/plugins/prelude/index.ts');
@@ -110,21 +111,26 @@ function spawnWithCapabilities(opts: {
       const result = responder(args);
       proc.send({ t: 'capability.requestResult', _id: id, result: { result } });
     } catch (e) {
-      // Mirror what the production hub's errorToWire emits: include the
-      // original throw as `cause` and the local stack so the plugin sees
-      // a fully-typed remote error (Phase 4 behavior).
-      const err = e instanceof Error ? e : new Error(String(e));
-      proc.send({
-        t: 'capability.requestResult',
-        _id: id,
-        result: {
-          _rpcError: true,
-          code: 'INTERNAL',
-          message: err.message,
-          cause: { message: err.message, name: err.name },
-          stack: err.stack,
-        },
-      });
+      // Mirror production's `errorToWire`: a thrown `BrikaError` passes
+      // through with code + data + cause + stack preserved (the Phase 6
+      // registry pass-through behavior); anything else gets wrapped as
+      // INTERNAL with the cause attached (Phase 4 behavior).
+      if (e instanceof BrikaError) {
+        proc.send({ t: 'capability.requestResult', _id: id, result: e.toWire(true) });
+      } else {
+        const err = e instanceof Error ? e : new Error(String(e));
+        proc.send({
+          t: 'capability.requestResult',
+          _id: id,
+          result: {
+            _rpcError: true,
+            code: 'INTERNAL',
+            message: err.message,
+            cause: { message: err.message, name: err.name },
+            stack: err.stack,
+          },
+        });
+      }
     }
   }
 
@@ -323,6 +329,36 @@ describe('Capability flow — end to end', () => {
     expect(res.message as string).toContain('upstream returned 502');
     expect(res.causeMessage as string).toContain('upstream returned 502');
     expect(res.stackContainsRemote).toBe(true);
+    await helper.stop();
+  });
+
+  test('typed BrikaError with structured data round-trips end-to-end (Phase 6+7)', async () => {
+    helper = spawnWithCapabilities({
+      vector: {
+        grants: [{ id: 'dev.brika.location.timezone', ctxPath: 'location.timezone' }],
+      },
+      capabilityResponders: {
+        'dev.brika.location.timezone': () => {
+          // A handler that throws a typed BrikaError — the harness mirrors
+          // production's registry pass-through and serializes via toWire(true).
+          throw new BrikaError(
+            'NET_HOST_NOT_ALLOWED',
+            'host "attacker.com" not in allow list',
+            { data: { host: 'attacker.com', allow: ['api.example.com'] } }
+          );
+        },
+      },
+    });
+
+    await helper.ready;
+    const res = await helper.runScenario('inspectTypedError');
+    expect(res.ok).toBe(true);
+    // Plugin's BrikaError.is(e, 'NET_HOST_NOT_ALLOWED') narrowed code +
+    // data; the reported values prove the structured data survived IPC.
+    expect(res.narrowed).toBe(true);
+    expect(res.code).toBe('NET_HOST_NOT_ALLOWED');
+    expect(res.host).toBe('attacker.com');
+    expect(res.allow).toEqual(['api.example.com']);
     await helper.stop();
   });
 });
