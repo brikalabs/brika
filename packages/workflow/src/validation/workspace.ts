@@ -5,6 +5,7 @@
  */
 
 import type { CatalogedErrorCode } from '@brika/ipc';
+import { lookupCatalogEntry } from '@brika/ipc';
 import type { BlockTypeDefinition, Workflow } from '../types';
 import { parsePortRef } from '../types/ports';
 import { isValidConnection } from './connections';
@@ -22,7 +23,9 @@ import { isValidConnection } from './connections';
 export type WorkflowValidationCode = Extract<CatalogedErrorCode, `WORKFLOW_${string}`>;
 
 /**
- * A single validation error.
+ * A single validation diagnostic. `errors` vs `warnings` is derived from
+ * the code's catalog severity — call sites push a single shape and the
+ * report classifier figures out where it belongs.
  */
 export interface ValidationError {
   /** Error code for programmatic handling — must be a catalogued WORKFLOW_* code. */
@@ -35,14 +38,21 @@ export interface ValidationError {
 
 /**
  * Result of workspace validation.
+ *
+ * `errors` and `warnings` are derived from the catalog's severity field
+ * for each diagnostic's code — adding a new validation code only requires
+ * setting `severity` on its catalog entry; this report classifier picks
+ * it up automatically.
  */
 export interface ValidationResult {
-  /** Whether the workspace is valid */
+  /** Whether the workspace is valid (no error-severity diagnostics). */
   valid: boolean;
-  /** List of validation errors (empty if valid) */
+  /** Diagnostics with catalog severity `error` or `fatal`. */
   errors: ValidationError[];
-  /** List of warnings (non-fatal issues) */
+  /** Diagnostics with catalog severity `warning` or `info`. */
   warnings: ValidationError[];
+  /** All diagnostics in insertion order; preferred shape for consumers that don't care about the error/warning split. */
+  diagnostics: ValidationError[];
 }
 
 /**
@@ -54,13 +64,26 @@ export interface BlockTypeRegistry {
 
 /**
  * Validation context passed through validation functions.
- * Consolidates commonly-used parameters to simplify function signatures.
+ *
+ * Call sites push to a single `diagnostics` list; the catalog's severity
+ * field decides whether each entry counts as an error or a warning when
+ * the final report is assembled.
  */
 interface ValidationContext {
   blockMap: Map<string, Workflow['blocks'][0]>;
   registry: BlockTypeRegistry;
-  errors: ValidationError[];
-  warnings: ValidationError[];
+  diagnostics: ValidationError[];
+}
+
+/**
+ * Classify a diagnostic as an error or a warning via its catalog severity.
+ * `error` and `fatal` count as errors (block validity); `warning` and
+ * `info` are non-fatal. Uncatalogued codes default to error — a typo or
+ * unmigrated code surfaces loudly instead of silently being downgraded.
+ */
+function isErrorSeverity(code: WorkflowValidationCode): boolean {
+  const severity = lookupCatalogEntry(code)?.severity;
+  return severity === undefined || severity === 'error' || severity === 'fatal';
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -77,7 +100,7 @@ function validateBlockTypeExists(
 ): BlockTypeDefinition | null {
   const blockType = ctx.registry.get(block.type);
   if (!blockType) {
-    ctx.errors.push({
+    ctx.diagnostics.push({
       code: 'WORKFLOW_UNKNOWN_BLOCK_TYPE',
       message: `Unknown block type: "${block.type}"`,
       path: `${blockPath}.type`,
@@ -106,7 +129,7 @@ function validateOutputConnection(
     targetBlockId = parsed.blockId;
     targetPortId = parsed.portId;
   } catch {
-    ctx.errors.push({
+    ctx.diagnostics.push({
       code: 'WORKFLOW_INVALID_PORT_REF',
       message: `Invalid port reference: "${ref}"`,
       path: refPath,
@@ -117,7 +140,7 @@ function validateOutputConnection(
   // Check target block exists
   const targetBlock = ctx.blockMap.get(targetBlockId);
   if (!targetBlock) {
-    ctx.errors.push({
+    ctx.diagnostics.push({
       code: 'WORKFLOW_TARGET_BLOCK_NOT_FOUND',
       message: `Target block "${targetBlockId}" not found`,
       path: refPath,
@@ -128,7 +151,7 @@ function validateOutputConnection(
   // Check target block type exists
   const targetBlockType = ctx.registry.get(targetBlock.type);
   if (!targetBlockType) {
-    ctx.errors.push({
+    ctx.diagnostics.push({
       code: 'WORKFLOW_UNKNOWN_TARGET_BLOCK_TYPE',
       message: `Target block "${targetBlockId}" has unknown type "${targetBlock.type}"`,
       path: refPath,
@@ -139,7 +162,7 @@ function validateOutputConnection(
   // Check target port exists
   const targetPort = targetBlockType.inputs.find((p) => p.id === targetPortId);
   if (!targetPort) {
-    ctx.errors.push({
+    ctx.diagnostics.push({
       code: 'WORKFLOW_TARGET_PORT_NOT_FOUND',
       message: `Target port "${targetPortId}" not found on block "${targetBlockId}"`,
       path: refPath,
@@ -154,7 +177,7 @@ function validateOutputConnection(
   });
 
   if (!connectionResult.valid) {
-    ctx.errors.push({
+    ctx.diagnostics.push({
       code: 'WORKFLOW_INVALID_CONNECTION',
       message: connectionResult.reason,
       path: refPath,
@@ -169,7 +192,7 @@ function validateOutputConnection(
     targetPortId,
     targetBlockId,
     refPath,
-    ctx.warnings
+    ctx.diagnostics
   );
 }
 
@@ -183,12 +206,12 @@ function checkBidirectionalRef(
   targetPortId: string,
   targetBlockId: string,
   refPath: string,
-  warnings: ValidationError[]
+  diagnostics: ValidationError[]
 ): void {
   const targetInputRef = targetBlock.inputs[targetPortId];
   const expectedRef = `${block.id}:${outputPortId}`;
   if (targetInputRef !== expectedRef) {
-    warnings.push({
+    diagnostics.push({
       code: 'WORKFLOW_MISSING_BIDIRECTIONAL_REF',
       message: `Target block "${targetBlockId}" input "${targetPortId}" does not reference back to "${expectedRef}"`,
       path: refPath,
@@ -208,7 +231,7 @@ function validateAllOutputsForBlock(
   for (const [outputPortId, ref] of Object.entries(block.outputs)) {
     const outputPort = blockType.outputs.find((p) => p.id === outputPortId);
     if (!outputPort) {
-      ctx.errors.push({
+      ctx.diagnostics.push({
         code: 'WORKFLOW_UNKNOWN_OUTPUT_PORT',
         message: `Unknown output port "${outputPortId}" on block type "${block.type}"`,
         path: `${blockPath}.outputs.${outputPortId}`,
@@ -234,7 +257,7 @@ function validateInputConnection(ref: string, refPath: string, ctx: ValidationCo
     const parsed = parsePortRef(ref as `${string}:${string}`);
     sourceBlockId = parsed.blockId;
   } catch {
-    ctx.errors.push({
+    ctx.diagnostics.push({
       code: 'WORKFLOW_INVALID_PORT_REF',
       message: `Invalid port reference: "${ref}"`,
       path: refPath,
@@ -245,7 +268,7 @@ function validateInputConnection(ref: string, refPath: string, ctx: ValidationCo
   // Check source block exists
   const sourceBlock = ctx.blockMap.get(sourceBlockId);
   if (!sourceBlock) {
-    ctx.errors.push({
+    ctx.diagnostics.push({
       code: 'WORKFLOW_SOURCE_BLOCK_NOT_FOUND',
       message: `Source block "${sourceBlockId}" not found`,
       path: refPath,
@@ -265,7 +288,7 @@ function validateAllInputsForBlock(
   for (const [inputPortId, ref] of Object.entries(block.inputs)) {
     const inputPort = blockType.inputs.find((p) => p.id === inputPortId);
     if (!inputPort) {
-      ctx.errors.push({
+      ctx.diagnostics.push({
         code: 'WORKFLOW_UNKNOWN_INPUT_PORT',
         message: `Unknown input port "${inputPortId}" on block type "${block.type}"`,
         path: `${blockPath}.inputs.${inputPortId}`,
@@ -287,7 +310,7 @@ function validateAllInputsForBlock(
 function checkOrphanBlocks(
   workflow: Workflow,
   registry: BlockTypeRegistry,
-  warnings: ValidationError[]
+  diagnostics: ValidationError[]
 ): void {
   for (const block of workflow.blocks) {
     const blockType = registry.get(block.type);
@@ -299,8 +322,10 @@ function checkOrphanBlocks(
     const hasInputConnections = Object.values(block.inputs).some((ref) => ref !== undefined);
 
     if (hasInputPorts && !hasInputConnections) {
-      // Block has input ports but no connections - might be orphaned
-      warnings.push({
+      // Block has input ports but no connections - might be orphaned.
+      // The catalog declares this code as `warning` severity, so it
+      // surfaces in the result's `warnings` list, not `errors`.
+      diagnostics.push({
         code: 'WORKFLOW_ORPHAN_BLOCK',
         message: `Block "${block.id}" has input ports but no incoming connections`,
         path: `blocks.${block.id}`,
@@ -326,18 +351,14 @@ export function validateWorkspace(
   workflow: Workflow,
   registry: BlockTypeRegistry
 ): ValidationResult {
-  const errors: ValidationError[] = [];
-  const warnings: ValidationError[] = [];
+  const diagnostics: ValidationError[] = [];
 
-  // Build validation context
   const ctx: ValidationContext = {
     blockMap: new Map(workflow.blocks.map((b) => [b.id, b])),
     registry,
-    errors,
-    warnings,
+    diagnostics,
   };
 
-  // Validate each block
   for (let i = 0; i < workflow.blocks.length; i++) {
     const block = workflow.blocks[i];
     if (!block) {
@@ -345,26 +366,29 @@ export function validateWorkspace(
     }
 
     const blockPath = `blocks[${i}]`;
-
-    // Check block type exists
     const blockType = validateBlockTypeExists(block, blockPath, ctx);
     if (!blockType) {
-      continue; // Can't validate ports without block type
+      continue;
     }
 
-    // Validate output connections
     validateAllOutputsForBlock(block, blockPath, blockType, ctx);
-
-    // Validate input connections
     validateAllInputsForBlock(block, blockPath, blockType, ctx);
   }
 
-  // Check for orphan blocks
-  checkOrphanBlocks(workflow, registry, warnings);
+  checkOrphanBlocks(workflow, registry, diagnostics);
+
+  // Classify by catalog severity. `error` and `fatal` -> errors;
+  // `warning` and `info` -> warnings. Uncatalogued codes default to error.
+  const errors: ValidationError[] = [];
+  const warnings: ValidationError[] = [];
+  for (const d of diagnostics) {
+    (isErrorSeverity(d.code) ? errors : warnings).push(d);
+  }
 
   return {
     valid: errors.length === 0,
     errors,
     warnings,
+    diagnostics,
   };
 }

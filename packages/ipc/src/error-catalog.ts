@@ -303,7 +303,9 @@ export const ErrorCatalog = {
   WORKFLOW_MISSING_BIDIRECTIONAL_REF: {
     description: 'A connection is declared on one block but not mirrored on the other.',
     httpStatus: 422,
-    severity: 'error',
+    // Soft consistency issue — the connection still resolves, but the
+    // unidirectional reference suggests the workflow file was hand-edited.
+    severity: 'warning',
     category: 'workflow',
   },
 

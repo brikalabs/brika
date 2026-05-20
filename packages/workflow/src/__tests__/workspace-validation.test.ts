@@ -944,3 +944,85 @@ describe('Workspace Validation - Edge Cases', () => {
     expect(result.errors.every((e) => e.code === 'WORKFLOW_UNKNOWN_BLOCK_TYPE')).toBeTrue();
   });
 });
+
+describe('Workspace Validation - Diagnostics shape (catalog-driven severity)', () => {
+  test('result.diagnostics carries every entry in insertion order', () => {
+    // Workflow with both an error and a warning: orphan block (warning)
+    // plus a reference to a non-existent block type (error).
+    const timerType = createBlockType('timer', [], [{ id: 'tick', schema: numberSchema }]);
+    const loggerType = createBlockType(
+      'logger',
+      [{ id: 'value', schema: numberSchema }],
+      []
+    );
+    const registry = createMockRegistry([timerType, loggerType]);
+    const workflow: Workflow = {
+      ...createSimpleWorkflow(),
+      blocks: [
+        {
+          id: 'timer-1',
+          type: 'plugin:timer',
+          position: { x: 0, y: 0 },
+          config: {},
+          inputs: {},
+          outputs: {},
+        },
+        {
+          id: 'logger-1',
+          type: 'plugin:logger',
+          position: { x: 0, y: 0 },
+          config: {},
+          inputs: {},
+          outputs: {},
+        },
+        {
+          id: 'unknown-1',
+          type: 'plugin:does-not-exist',
+          position: { x: 0, y: 0 },
+          config: {},
+          inputs: {},
+          outputs: {},
+        },
+      ],
+    };
+
+    const result = validateWorkspace(workflow, registry);
+
+    // One error (unknown block type) + one warning (orphan logger).
+    expect(result.diagnostics).toHaveLength(2);
+    expect(result.errors).toHaveLength(1);
+    expect(result.warnings).toHaveLength(1);
+    expect(result.errors[0]?.code).toBe('WORKFLOW_UNKNOWN_BLOCK_TYPE');
+    expect(result.warnings[0]?.code).toBe('WORKFLOW_ORPHAN_BLOCK');
+    expect(result.valid).toBeFalse();
+  });
+
+  test('orphan-block goes to warnings — catalog says severity: warning', () => {
+    const loggerType = createBlockType(
+      'logger',
+      [{ id: 'value', schema: numberSchema }],
+      []
+    );
+    const registry = createMockRegistry([loggerType]);
+    const workflow: Workflow = {
+      ...createSimpleWorkflow(),
+      blocks: [
+        {
+          id: 'logger-1',
+          type: 'plugin:logger',
+          position: { x: 0, y: 0 },
+          config: {},
+          inputs: {},
+          outputs: {},
+        },
+      ],
+    };
+
+    const result = validateWorkspace(workflow, registry);
+    expect(result.errors).toHaveLength(0);
+    expect(result.warnings).toHaveLength(1);
+    expect(result.warnings[0]?.code).toBe('WORKFLOW_ORPHAN_BLOCK');
+    // Warnings don't block validity.
+    expect(result.valid).toBeTrue();
+  });
+});
