@@ -29,7 +29,10 @@
   },
   "capabilities": {
     "dev.brika.location.get": {},
-    "dev.brika.location.timezone": {}
+    "dev.brika.location.timezone": {},
+    "dev.brika.net.fetch": {
+      "allow": ["geocoding-api.open-meteo.com", "api.open-meteo.com"]
+    }
   },
   "scripts": {
     "link": "bun link",

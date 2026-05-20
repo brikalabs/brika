@@ -223,3 +223,13 @@ export {
 
 // Json, JsonRecord, LogLevel, PluginInfo, SparkEvent, ToolCallContext, ToolResult
 // are all exported via `export * from './types'` above.
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Capability ctx — the new plugin -> hub call surface
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Side-effect import: every capability spec registers its Ctx augmentation
+// so plugins see typed ctx.<family>.<verb>() methods.
+import './capabilities';
+
+export { type Ctx, ctx } from './ctx';

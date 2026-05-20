@@ -169,3 +169,49 @@ export function installVector(vector: CapabilityVector): void {
 }
 
 export { CAPS_BRAND };
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Plugin-facing singleton
+// ─────────────────────────────────────────────────────────────────────────────
+
+import { PRELUDE_BRAND } from './bridge';
+
+interface PreludeWithChannel {
+  channel: Channel;
+}
+
+/** Lazily-built singleton `ctx` the plugin imports as `import { ctx } from '@brika/sdk'`. */
+let cachedCtx: Ctx | undefined;
+
+function buildCtxFromInjection(): Ctx {
+  const bridge = globalThis.__brika_ipc;
+  if (!bridge || !(PRELUDE_BRAND in bridge)) {
+    throw new Error(
+      'ctx is unavailable: the Brika prelude has not been loaded. Plugin code must run inside a process spawned by the BRIKA hub.'
+    );
+  }
+  const channel = (bridge as unknown as PreludeWithChannel).channel;
+  const vector = readInjectedVector();
+  return buildCtx(vector, channel);
+}
+
+/**
+ * The plugin-facing capability surface.
+ *
+ * Lazily constructs on first property access. The vector must already be
+ * installed (the prelude does this at startup before any plugin code runs),
+ * so `ctx.foo.bar(...)` is safe from `onInit`, event handlers, route
+ * handlers — anywhere that runs after the plugin process is ready.
+ *
+ * Module-load-time access (top-level `await ctx.foo.bar()`) is NOT
+ * supported because the vector hasn't been fetched yet; call from `onInit`
+ * or later instead.
+ */
+const ctxRoot: Ctx = {} as Ctx;
+
+export const ctx: Ctx = new Proxy(ctxRoot, {
+  get(_target, prop) {
+    cachedCtx ??= buildCtxFromInjection();
+    return Reflect.get(cachedCtx, prop);
+  },
+});
