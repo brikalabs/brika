@@ -205,20 +205,59 @@ adds a `capability.vector.update` event listener.
 Every error in the platform extends `BrikaError` — one base class with
 `code`, `data`, and an ES2022 `cause` chain that round-trips across IPC.
 
+### The catalog is the source of truth
+
+Every machine-readable code the platform emits lives in one table:
+[`packages/ipc/src/error-catalog.ts`](../../../packages/ipc/src/error-catalog.ts).
+Each entry carries:
+
+- `description` — short human-readable explanation
+- `httpStatus` — canonical HTTP status when surfaced through a route
+- `severity` — `info | warning | error | fatal` (for log/UI styling)
+- `category` — `core | network | fs | exec | secrets | workflow | manifest`
+- `developerHint` — what the developer should do about it (optional)
+- `i18nKey` — translation key for end-user display (optional)
+- `data` — Zod schema for the `BrikaError.data` shape when this code is
+  thrown (optional)
+
+The `BrikaErrorCode` type is derived from `keyof typeof ErrorCatalog`, so
+adding a code is a one-line edit in the catalog and the union widens
+automatically. A coverage test in `@brika/ipc` scans every first-party
+`new BrikaError('LITERAL', …)` / `RpcError` / `CapabilityError` site and
+fails if a literal is missing from the catalog.
+
+Third-party plugin code can still mint its own codes — the
+`BrikaErrorCode` type is intentionally open via
+`(string & Record<never, never>)`, and `instanceof BrikaError` still
+narrows. Catalog metadata is only attached when a code is registered.
+
+### Where errors come from
+
 | Where | Class & code | Meaning |
 |---|---|---|
 | SDK (Proxy.apply) | `PermissionDeniedError` (`'PERMISSION_DENIED'`) | Capability id not in vector — no IPC. |
-| Hub (capabilityRequest) | `RpcError('PERMISSION_DENIED', ...)` | Vector lookup failed at the hub — defense in depth. |
+| Hub (capabilityRequest) | `RpcError('PERMISSION_DENIED', …)` | Vector lookup failed at the hub — defense in depth. |
 | Registry.dispatch | `CapabilityError('INVALID_INPUT')` | Args failed `spec.args.safeParse`. `cause` is the underlying `ZodError`. |
 | Registry.dispatch | `CapabilityError('INTERNAL')` | The handler raised. `cause` is the original throw (Error, string, or any value). |
 | Registry.dispatch | `CapabilityError('INVALID_OUTPUT')` | Handler returned a value that fails `spec.result.safeParse` — programmer error in the hub. `cause` is the underlying `ZodError`. |
 | Registry.dispatch | `CapabilityError('INVALID_SCOPE')` | Granted scope value failed the spec's scope schema — reserved for future use, currently filtered at `buildVector`. |
 | Registry.dispatch | `CapabilityError('NOT_REGISTERED')` | Dispatched against an id the hub hasn't registered — usually means a typo or an out-of-date plugin. |
+| Workflow validation | `ValidationError` (`'WORKFLOW_*'`) | Diagnostic-only — emitted as a record on the validation report, never thrown. The `WORKFLOW_*` slice of `CatalogedErrorCode` covers unknown block types, invalid port refs, type-incompatible connections, orphan blocks, etc. |
 
 Plugin code sees these as rejected promises. `instanceof BrikaError`
 matches all of them; specific subclasses (`PermissionDeniedError`,
 `NotFoundError`, `InvalidInputError`, `InternalError`, `TimeoutError`)
-narrow further on the SDK side.
+narrow further on the SDK side. The wire format preserves the cause
+chain — `err.cause` on the plugin side points at a reconstructed
+`BrikaError` (or a plain `Error` if the original cause was a primitive),
+with the remote stack appended.
+
+### Helpers
+
+- `lookupCatalogEntry(code)` → `CatalogEntry | undefined`
+- `httpStatusForCode(code)` → `number` (defaults to 500 for uncatalogued)
+- `isBrikaErrorWire(value)` → type guard for the JSON envelope
+- `BrikaError.fromWire(wire)` → rebuild a typed error from an envelope
 
 ## Currently-registered capabilities
 
