@@ -612,9 +612,12 @@ describe('PluginProcess', () => {
       }
     });
 
-    test('includes permissions and grantedPermissions', () => {
-      const metaWithPerms = createMockMetadata();
-      metaWithPerms.permissions = ['location'];
+    test('exposes capabilities from the manifest', () => {
+      const metaWithCaps = createMockMetadata();
+      metaWithCaps.capabilities = {
+        'dev.brika.location.get': {},
+        'dev.brika.location.timezone': {},
+      };
 
       const grantedCb = mock().mockReturnValue(['location']);
       const cbsWithGrants = {
@@ -630,7 +633,7 @@ describe('PluginProcess', () => {
           entryPoint: '/path/index.js',
           uid: 'uid-perms',
           version: '1.0.0',
-          metadata: metaWithPerms,
+          metadata: metaWithCaps,
           locales: [],
         },
         config,
@@ -638,7 +641,10 @@ describe('PluginProcess', () => {
       );
 
       const plugin = pp.toPlugin('running');
-      expect(plugin.permissions).toEqual(['location']);
+      expect(plugin.capabilities).toEqual({
+        'dev.brika.location.get': {},
+        'dev.brika.location.timezone': {},
+      });
       expect(plugin.grantedPermissions).toEqual(['location']);
       expect(grantedCb).toHaveBeenCalledWith('@test/plugin-perms');
 

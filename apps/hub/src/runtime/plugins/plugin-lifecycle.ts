@@ -12,6 +12,7 @@ import { MetricsStore } from '@/runtime/metrics';
 import { ModuleCompiler } from '@/runtime/modules';
 import { SecretStore } from '@/runtime/secrets/secret-store';
 import { type PluginStateWithMetadata, StateStore } from '@/runtime/state/state-store';
+import { permissionFamiliesFromIds } from './capabilities/vector';
 import { compileServerEntry, PluginProcess, spawnPlugin } from './lifecycle-deps';
 import { PluginConfigService } from './plugin-config';
 import { PluginErrors } from './plugin-errors';
@@ -152,7 +153,9 @@ export class PluginLifecycle {
       sparks: m.sparks ?? [],
       bricks: m.bricks ?? [],
       pages: m.pages ?? [],
-      permissions: m.permissions ?? [],
+      capabilities: m.capabilities ?? {},
+      grantedCapabilities: {},
+      permissions: permissionFamiliesFromIds(Object.keys(m.capabilities ?? {})),
       grantedPermissions: stored.grantedPermissions ?? [],
       locales: [],
     };

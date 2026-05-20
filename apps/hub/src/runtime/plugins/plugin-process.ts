@@ -43,7 +43,11 @@ import type { PluginPackageSchema } from '@brika/schema';
 import { getProcessMetrics } from '@/runtime/metrics';
 import type { HubLocation } from '@/runtime/state/state-store';
 import { buildHubCapabilities } from './capabilities/registry-factory';
-import { vectorForLegacyGrants } from './capabilities/vector';
+import {
+  permissionFamiliesFromManifestCapabilities,
+  vectorForLegacyGrants,
+  vectorFromManifestCapabilities,
+} from './capabilities/vector';
 import { now } from './utils';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -475,7 +479,12 @@ export class PluginProcess {
       sparks: m.sparks ?? [],
       bricks: m.bricks ?? [],
       pages: m.pages ?? [],
-      permissions: m.permissions ?? [],
+      capabilities: m.capabilities ?? {},
+      grantedCapabilities: {},
+      permissions: permissionFamiliesFromManifestCapabilities(
+        this.#getCapabilityRegistry(),
+        m.capabilities ?? {}
+      ),
       grantedPermissions: this.callbacks.onGetGrantedPermissions(this.name),
       locales: this.locales,
     };
@@ -602,8 +611,7 @@ export class PluginProcess {
     });
 
     this.#channel.implement(getCapabilityVector, () => {
-      const reg = this.#getCapabilityRegistry();
-      const vector = vectorForLegacyGrants(reg, this.callbacks.onGetGrantedPermissions(this.name));
+      const vector = this.#buildCurrentVector();
       return {
         grants: vector.grants.map((g) => ({
           id: g.id,
@@ -615,7 +623,7 @@ export class PluginProcess {
 
     this.#channel.implement(capabilityRequest, async ({ id, args }) => {
       const reg = this.#getCapabilityRegistry();
-      const vector = vectorForLegacyGrants(reg, this.callbacks.onGetGrantedPermissions(this.name));
+      const vector = this.#buildCurrentVector();
       const grant = vector.grants.find((g) => g.id === id);
       if (!grant) {
         throw new RpcError(
@@ -632,6 +640,27 @@ export class PluginProcess {
       });
       return { result: result as Json };
     });
+  }
+
+  /**
+   * Compute this plugin's capability vector right now from the manifest
+   * `capabilities` map (preferred) or the legacy `grantedPermissions` array
+   * (fallback during the StateStore migration window).
+   *
+   * Recomputed each call so a permission grant change is picked up before
+   * the next capability dispatch; cheap because the registry is built once.
+   */
+  #buildCurrentVector() {
+    const reg = this.#getCapabilityRegistry();
+    const manifestCaps = (this.metadata as { capabilities?: Record<string, unknown> })
+      .capabilities;
+    if (manifestCaps && Object.keys(manifestCaps).length > 0) {
+      // New path — manifest declares capabilities by reverse-DNS id. For
+      // now the "grant" is whatever the manifest requested; per-capability
+      // user grants land when the StateStore schema migrates.
+      return vectorFromManifestCapabilities(reg, manifestCaps, manifestCaps);
+    }
+    return vectorForLegacyGrants(reg, this.callbacks.onGetGrantedPermissions(this.name));
   }
 
   #getCapabilityRegistry(): CapabilityRegistry {

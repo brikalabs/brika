@@ -50,3 +50,84 @@ export function vectorForLegacyGrants(
 
   return registry.buildVector(manifest as ManifestCapabilities, userGrants as UserGrants);
 }
+
+/**
+ * Build the vector from the new `capabilities` manifest map plus a user
+ * grant map keyed by the same capability ids. This is the target path —
+ * the legacy function above shims older state into this shape.
+ *
+ *   manifest:    Record<capabilityId, { scope?: unknown }>
+ *   userGrants:  Record<capabilityId, scope>
+ *
+ * A capability appears in the vector iff it's registered AND requested by
+ * the manifest AND granted by the user. Scope validation happens inside
+ * `registry.buildVector`.
+ */
+/**
+ * Derive the legacy permission family list (`['net', 'secrets', ...]`) from
+ * a manifest `capabilities` map. Used by `toPlugin` so the UI can keep
+ * iterating `plugin.permissions` until the per-capability grant UI lands.
+ *
+ * A capability whose id is not registered, or which has no permission gate,
+ * contributes nothing.
+ */
+export function permissionFamiliesFromManifestCapabilities(
+  registry: CapabilityRegistry,
+  manifestCapabilities: Readonly<Record<string, unknown>>
+): string[] {
+  const families = new Set<string>();
+  for (const id of Object.keys(manifestCapabilities)) {
+    const cap = registry.get(id);
+    if (cap?.spec.permission) {
+      families.add(cap.spec.permission.name);
+    }
+  }
+  return [...families];
+}
+
+/**
+ * Heuristic family extraction from a capability id alone — no registry
+ * needed. Used in code paths (`PluginLifecycle.fromStored`) that don't have
+ * a PluginProcess registry handy. The convention:
+ *
+ *   `dev.brika.<family>.<verb>` → family
+ *   `com.acme.<family>.<verb>`  → family (best-effort)
+ *
+ * Ids with fewer than three segments contribute nothing.
+ */
+export function permissionFamiliesFromIds(ids: ReadonlyArray<string>): string[] {
+  const out = new Set<string>();
+  for (const id of ids) {
+    const segments = id.split('.');
+    if (segments.length >= 3) {
+      const family = segments[2];
+      if (family !== undefined && family !== '') {
+        out.add(family);
+      }
+    }
+  }
+  return [...out];
+}
+
+export function vectorFromManifestCapabilities(
+  registry: CapabilityRegistry,
+  manifestCapabilities: Readonly<Record<string, unknown>>,
+  userGrants: Readonly<Record<string, unknown>>
+): CapabilityVector {
+  const manifest: Record<string, { scope?: unknown }> = {};
+  for (const [id, raw] of Object.entries(manifestCapabilities)) {
+    // Manifest entries can be either `{ scope: ... }` shaped or the bare
+    // scope value (e.g. `"dev.brika.net.fetch": { allow: [...] }`). Try the
+    // structured shape first; if it doesn't look like one, treat the whole
+    // value as the scope.
+    if (raw && typeof raw === 'object' && 'scope' in raw) {
+      manifest[id] = { scope: (raw as { scope?: unknown }).scope };
+    } else {
+      manifest[id] = { scope: raw };
+    }
+  }
+  return registry.buildVector(
+    manifest as ManifestCapabilities,
+    userGrants as UserGrants
+  );
+}

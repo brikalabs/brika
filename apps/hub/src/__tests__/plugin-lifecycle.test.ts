@@ -640,7 +640,7 @@ describe('PluginLifecycle', () => {
           engines: { brika: '^0.1.0' },
           pages: [{ id: 'settings' }],
           bricks: [{ id: 'widget' }],
-          permissions: ['network'],
+          capabilities: { 'dev.brika.net.fetch': { allow: ['api.example.com'] } },
         },
       };
 
@@ -649,7 +649,9 @@ describe('PluginLifecycle', () => {
       expect(result.pages).toEqual([{ id: 'settings' }]);
       expect(result.bricks).toEqual([{ id: 'widget' }]);
       expect(result.grantedPermissions).toEqual(['network', 'storage']);
-      expect(result.permissions).toEqual(['network']);
+      expect(result.capabilities).toEqual({
+        'dev.brika.net.fetch': { allow: ['api.example.com'] },
+      });
     });
   });
 });

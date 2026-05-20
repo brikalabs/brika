@@ -115,10 +115,25 @@ export interface Plugin {
   /** Custom pages provided by this plugin */
   pages: PageManifest[];
 
-  // ─── Permissions ──────────────────────────────────────────────────────────
-  /** Permissions declared by this plugin (from package.json) */
+  // ─── Capabilities (new model) ───────────────────────────────────────────
+  /**
+   * Capabilities the plugin declared in its manifest, keyed by reverse-DNS
+   * id (e.g. `dev.brika.net.fetch`). Each value is the scope the plugin
+   * requests for that capability (host allowlist, namespace list, …).
+   */
+  capabilities: Record<string, unknown>;
+  /**
+   * Per-capability grants the user has approved. Empty during the StateStore
+   * migration window — until then the runtime intersects `capabilities`
+   * with the legacy `grantedPermissions` array (mapping permission family
+   * → every capability with that family).
+   */
+  grantedCapabilities: Record<string, unknown>;
+
+  // ─── Permissions (legacy bridging — to be removed after StateStore migration) ─
+  /** Permission family names derived from `capabilities` for UI compat. */
   permissions: string[];
-  /** Permissions currently granted by the user */
+  /** Permission family names the user has granted (legacy StateStore shape). */
   grantedPermissions: string[];
 
   // ─── i18n ───────────────────────────────────────────────────────────────────

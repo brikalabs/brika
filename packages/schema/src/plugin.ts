@@ -310,8 +310,24 @@ export const PluginPackageSchema = BasePackageJson.extend({
   preferences: z.optional(
     z.array(PreferenceSchema).describe('Plugin preferences/configuration schema')
   ),
-  permissions: z.optional(
-    z.array(z.string()).describe('Permissions required by this plugin (e.g., "location")')
+  /**
+   * Capability declarations. Each key is a reverse-DNS capability id (e.g.
+   * `dev.brika.net.fetch`) and the value is the requested scope shape for
+   * that capability — host allowlists for net, path prefixes for fs, etc.
+   *
+   * The user reviews this map at install time and grants per-capability;
+   * the runtime intersects manifest + user grants to build the plugin's
+   * capability vector at spawn.
+   *
+   * Replaces the legacy `permissions: string[]` array — that field is no
+   * longer accepted.
+   */
+  capabilities: z.optional(
+    z
+      .record(z.string(), z.unknown())
+      .describe(
+        'Capability declarations keyed by reverse-DNS id (e.g. "dev.brika.net.fetch")'
+      )
   ),
 });
 
