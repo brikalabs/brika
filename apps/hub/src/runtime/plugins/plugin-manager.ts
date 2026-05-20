@@ -110,10 +110,7 @@ export class PluginManager {
    * triggers the load, and throws on `configInvalid`. Returns the loaded
    * payload so the caller can dispatch follow-up events.
    */
-  async #loadAndAwaitReady(
-    uid: string,
-    name: string
-  ): Promise<{ uid: string; name: string }> {
+  async #loadAndAwaitReady(uid: string, name: string): Promise<{ uid: string; name: string }> {
     const stored = this.#state.get(name);
     if (!stored) {
       // Internal invariant: we just resolved `name` from a uid that has a
