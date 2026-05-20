@@ -12,11 +12,15 @@
  */
 
 import { CapabilityRegistry } from '@brika/capabilities';
+import type { SparkEvent as SparkEventType } from '@brika/ipc/contract';
 import { type ActionsCallbacks, buildActionsCapabilities } from './actions';
+import { type BlocksCallbacks, buildBlocksCapabilities } from './blocks';
+import { type BricksCallbacks, buildBricksCapabilities } from './bricks';
 import { buildLocationCapabilities, type LocationCallbacks } from './location';
 import { buildPrefsCapabilities, type PrefsCallbacks } from './prefs';
 import { buildRoutesCapabilities, type RoutesCallbacks } from './routes';
 import { buildSecretsCapabilities, type SecretsCallbacks } from './secrets';
+import { buildSparksCapabilities, type SparksCallbacks } from './sparks';
 
 /**
  * Union of every per-domain callback interface. PluginProcess builds one
@@ -28,7 +32,10 @@ export interface HubCapabilityCallbacks
     ActionsCallbacks,
     RoutesCallbacks,
     PrefsCallbacks,
-    SecretsCallbacks {}
+    SecretsCallbacks,
+    SparksCallbacks,
+    BlocksCallbacks,
+    BricksCallbacks {}
 
 /**
  * Create a fresh registry pre-populated with every hub-owned capability.
@@ -45,7 +52,8 @@ export interface HubCapabilityCallbacks
  */
 export function buildHubCapabilities(
   cb: HubCapabilityCallbacks,
-  pluginName: string
+  pluginName: string,
+  sendSparkEvent: (subscriptionId: string, event: SparkEventType) => void
 ): CapabilityRegistry {
   const reg = new CapabilityRegistry();
   for (const cap of buildLocationCapabilities(cb)) {
@@ -61,6 +69,15 @@ export function buildHubCapabilities(
     reg.register(cap);
   }
   for (const cap of buildSecretsCapabilities(cb, pluginName)) {
+    reg.register(cap);
+  }
+  for (const cap of buildSparksCapabilities(cb, sendSparkEvent)) {
+    reg.register(cap);
+  }
+  for (const cap of buildBlocksCapabilities(cb)) {
+    reg.register(cap);
+  }
+  for (const cap of buildBricksCapabilities(cb)) {
     reg.register(cap);
   }
   return reg;

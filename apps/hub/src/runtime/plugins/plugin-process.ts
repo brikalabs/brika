@@ -7,8 +7,8 @@ import {
   callAction,
   capabilityRequest,
   deletePluginSecret,
-  getCapabilityVector,
   emitSpark,
+  getCapabilityVector,
   getHubLocation,
   getHubTimezone,
   getPluginSecret,
@@ -603,10 +603,7 @@ export class PluginProcess {
 
     this.#channel.implement(getCapabilityVector, () => {
       const reg = this.#getCapabilityRegistry();
-      const vector = vectorForLegacyGrants(
-        reg,
-        this.callbacks.onGetGrantedPermissions(this.name)
-      );
+      const vector = vectorForLegacyGrants(reg, this.callbacks.onGetGrantedPermissions(this.name));
       return {
         grants: vector.grants.map((g) => ({ id: g.id, scope: g.scope as Json | undefined })),
       };
@@ -614,10 +611,7 @@ export class PluginProcess {
 
     this.#channel.implement(capabilityRequest, async ({ id, args }) => {
       const reg = this.#getCapabilityRegistry();
-      const vector = vectorForLegacyGrants(
-        reg,
-        this.callbacks.onGetGrantedPermissions(this.name)
-      );
+      const vector = vectorForLegacyGrants(reg, this.callbacks.onGetGrantedPermissions(this.name));
       const grant = vector.grants.find((g) => g.id === id);
       if (!grant) {
         throw new RpcError(
@@ -643,8 +637,8 @@ export class PluginProcess {
           // location.*
           getLocation: () => this.callbacks.onGetHubLocation(),
           getTimezone: () => this.callbacks.onGetHubTimezone(),
-          // actions.register — mirrors the legacy `registerAction` handler
-          // at line 561 (internal tracking only; no outward callback).
+          // actions.register — internal tracking only; legacy registerAction
+          // handler does the same at line 561.
           onAction: (id) => {
             this.#actions.add(id);
           },
@@ -656,8 +650,52 @@ export class PluginProcess {
           getSecret: (name, key) => this.callbacks.onGetPluginSecret(name, key),
           setSecret: (name, key, value) => this.callbacks.onSetPluginSecret(name, key, value),
           deleteSecret: (name, key) => this.callbacks.onDeletePluginSecret(name, key),
+          // sparks.{register,emit,subscribe,unsubscribe}
+          onSpark: (spark) => {
+            this.#sparks.add(spark.id);
+            this.callbacks.onSpark(spark);
+          },
+          onSparkEmit: (sparkId, payload) => {
+            this.callbacks.onSparkEmit(sparkId, payload);
+          },
+          onSparkSubscribe: (sparkType, subscriptionId, _sendEvent) => {
+            // Re-use the existing per-subscription bookkeeping. The legacy
+            // onSparkSubscribe callback closes over the PluginProcess so it
+            // can call this.sendSparkEvent later; the capability path
+            // pre-binds that via sendSparkEvent (3rd arg to factory).
+            const unsubscribe = this.callbacks.onSparkSubscribe(sparkType, subscriptionId, this);
+            this.#sparkSubscriptions.set(subscriptionId, unsubscribe);
+          },
+          onSparkUnsubscribe: (subscriptionId) => {
+            const unsubscribe = this.#sparkSubscriptions.get(subscriptionId);
+            if (unsubscribe) {
+              unsubscribe();
+              this.#sparkSubscriptions.delete(subscriptionId);
+            }
+            this.callbacks.onSparkUnsubscribe(subscriptionId);
+          },
+          // blocks.{register,emit,log}
+          onBlock: (block) => {
+            this.#blocks.add(block.id);
+            this.callbacks.onBlock(block);
+          },
+          onBlockEmit: (instanceId, port, data) => {
+            this.callbacks.onBlockEmit(instanceId, port, data);
+          },
+          onBlockLog: (instanceId, workflowId, level, message) => {
+            this.callbacks.onBlockLog(instanceId, workflowId, level, message);
+          },
+          // bricks.{registerType,pushData}
+          onBrickType: (brickType) => {
+            this.#brickTypes.add(brickType.id);
+            this.callbacks.onBrickType(brickType);
+          },
+          onBrickDataPush: (brickTypeId, data) => {
+            this.callbacks.onBrickDataPush(brickTypeId, data);
+          },
         },
-        this.name
+        this.name,
+        (subscriptionId, event) => this.sendSparkEvent(subscriptionId, event)
       );
     }
     return this.#capabilities;
