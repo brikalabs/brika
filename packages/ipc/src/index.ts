@@ -78,6 +78,7 @@ export type {
 export {
   BrikaError,
   brikaErrorToResponse,
+  ErrorResponseSchema,
   isBrikaErrorWire,
   isRpcErrorWire,
   RpcError,

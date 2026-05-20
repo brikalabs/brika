@@ -38,6 +38,7 @@
 // Well-Known Error Codes
 // ─────────────────────────────────────────────────────────────────────────────
 
+import { z } from 'zod';
 import type { CatalogedErrorCode, DataForCode } from './error-catalog';
 import { httpStatusForCode, lookupCatalogEntry } from './error-catalog';
 
@@ -264,14 +265,24 @@ function materializeCause(wire: BrikaErrorWire['cause']): unknown {
 // HTTP boundary mapping
 // ─────────────────────────────────────────────────────────────────────────────
 
+/**
+ * Zod schema for the outer envelope `brikaErrorToResponse` emits.
+ * Exported so callers (UI fetchers, route-proxy translators, remote-access
+ * client) can `safeParse` an arbitrary JSON body without `as` casts or
+ * hand-rolled typeof checks.
+ */
+export const ErrorResponseSchema = z.object({
+  error: z.object({
+    code: z.string(),
+    message: z.string(),
+    data: z.record(z.string(), z.unknown()).optional(),
+    i18nKey: z.string().optional(),
+    developerHint: z.string().optional(),
+  }),
+});
+
 /** Shape returned in the `error` body of a `brikaErrorToResponse` result. */
-export interface ErrorResponseBody {
-  readonly code: string;
-  readonly message: string;
-  readonly data?: Record<string, unknown>;
-  readonly i18nKey?: string;
-  readonly developerHint?: string;
-}
+export type ErrorResponseBody = z.infer<typeof ErrorResponseSchema>['error'];
 
 /**
  * Convert any throw into a typed HTTP `Response`. A `BrikaError` produces

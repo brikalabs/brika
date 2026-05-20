@@ -132,7 +132,28 @@
       "description": "Quelque chose n'a pas fonctionné comme prévu. Veuillez réessayer plus tard."
     },
     "goHome": "Aller au tableau de bord",
-    "tryAgain": "Réessayer"
+    "tryAgain": "Réessayer",
+    "internal": "Une erreur interne s'est produite.",
+    "invalid_input": "Certaines données sont invalides.",
+    "not_found": "La ressource demandée est introuvable.",
+    "permission_denied": "Permission requise.",
+    "timeout": "L'opération a pris trop de temps.",
+    "unavailable": "Le service est temporairement indisponible.",
+    "net": {
+      "host_not_allowed": "Accès réseau bloqué : ce plugin ne peut pas joindre « {{host}} ». Autorisez-le dans les paramètres du plugin."
+    },
+    "fs": {
+      "path_not_allowed": "Accès fichier bloqué : ce plugin ne peut pas lire « {{path}} ». Autorisez-le dans les paramètres du plugin.",
+      "file_too_large": "Fichier trop grand : « {{path}} » dépasse la limite de taille."
+    },
+    "exec": {
+      "binary_not_allowed": "Processus bloqué : ce plugin ne peut pas exécuter « {{command}} ». Autorisez-le dans les paramètres du plugin.",
+      "cwd_escape": "Processus bloqué : le répertoire « {{cwd}} » est en dehors de la racine du plugin."
+    },
+    "manifest": {
+      "invalid": "Le manifeste du plugin est invalide.",
+      "missing_main": "Le plugin n'a pas de point d'entrée « main » dans son package.json."
+    }
   },
   "code": {
     "lines_one": "{{count}} ligne",

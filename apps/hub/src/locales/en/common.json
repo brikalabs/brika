@@ -132,7 +132,28 @@
       "description": "Something didn't work as expected. Please try again later."
     },
     "goHome": "Go to dashboard",
-    "tryAgain": "Try again"
+    "tryAgain": "Try again",
+    "internal": "An internal error occurred.",
+    "invalid_input": "Some input was invalid.",
+    "not_found": "The requested resource was not found.",
+    "permission_denied": "Permission required.",
+    "timeout": "The operation took too long to complete.",
+    "unavailable": "The service is temporarily unavailable.",
+    "net": {
+      "host_not_allowed": "Network access blocked: this plugin can't reach \"{{host}}\". Allow it in the plugin's settings."
+    },
+    "fs": {
+      "path_not_allowed": "File access blocked: this plugin can't read \"{{path}}\". Allow it in the plugin's settings.",
+      "file_too_large": "File too large: \"{{path}}\" exceeds the size limit."
+    },
+    "exec": {
+      "binary_not_allowed": "Process blocked: this plugin can't run \"{{command}}\". Allow it in the plugin's settings.",
+      "cwd_escape": "Process blocked: working directory \"{{cwd}}\" is outside the plugin's root."
+    },
+    "manifest": {
+      "invalid": "The plugin manifest is invalid.",
+      "missing_main": "The plugin is missing its \"main\" entry point in package.json."
+    }
   },
   "code": {
     "lines_one": "{{count}} line",
