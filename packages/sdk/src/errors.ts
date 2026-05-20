@@ -45,13 +45,22 @@ export class PermissionDeniedError extends Error {
 
   readonly permission: string;
 
-  constructor(permission: string) {
-    super(
-      `Permission "${permission}" is required but not granted. ` +
-        `Add "${permission}" to "permissions" in your plugin's package.json.`
-    );
+  /**
+   * Two call shapes:
+   *   - Legacy: `new PermissionDeniedError('secrets')` — emits a message
+   *     pointing the author at package.json `permissions`.
+   *   - Capability-aware: `new PermissionDeniedError(message, capabilityId)`
+   *     — uses the supplied message verbatim; `permission` is the id.
+   */
+  constructor(messageOrPermission: string, capabilityId?: string) {
+    const isCapabilityForm = capabilityId !== undefined;
+    const message = isCapabilityForm
+      ? messageOrPermission
+      : `Permission "${messageOrPermission}" is required but not granted. ` +
+        `Add "${messageOrPermission}" to "permissions" in your plugin's package.json.`;
+    super(message);
     this.name = 'PermissionDeniedError';
-    this.permission = permission;
+    this.permission = isCapabilityForm ? capabilityId : messageOrPermission;
   }
 }
 
