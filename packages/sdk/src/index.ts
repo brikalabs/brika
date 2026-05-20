@@ -75,8 +75,17 @@ export type { ZodInfer, ZodObject, ZodRawShape, ZodType } from './blocks/schema'
 // Does NOT include: z.unknown(), z.any() - use z.generic() instead
 export { z } from './blocks/schema';
 
-// Type markers and utilities (for internal use)
-export type { ResolvedRef, TypeMarkerValue } from './blocks/schema-types';
+// Type markers and utilities (for internal use). `GenericRef`/`PassthroughRef`
+// are re-exported here so downstream consumers (blocks-builtin, plugins using
+// `z.generic()` / `z.passthrough()`) can satisfy TS2883 without reaching into
+// `@brika/sdk/dist/blocks` — the inferred return type of `defineReactiveBlock`
+// names these and TS needs a portable import path.
+export type {
+  GenericRef,
+  PassthroughRef,
+  ResolvedRef,
+  TypeMarkerValue,
+} from './blocks/schema-types';
 export { getTypeMarker, parseResolvedMarker, TypeMarker } from './blocks/schema-types';
 
 // ─────────────────────────────────────────────────────────────────────────────

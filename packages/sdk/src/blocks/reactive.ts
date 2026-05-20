@@ -83,13 +83,20 @@ export function output<T extends OutputSchema>(schema: T, meta: PortMeta): Outpu
 import type { Cleanup, CleanupRegistry, Emitter, Factory, Flow, Source } from '@brika/flow';
 import { FlowImpl, isSource } from '@brika/flow';
 
-/** Extract inferred type from Zod schema, GenericRef, PassthroughRef, or ResolvedRef */
+/**
+ * Extract inferred type from Zod schema, GenericRef, PassthroughRef, or ResolvedRef.
+ *
+ * `T extends GenericRef` (no type arg) silently fails for `GenericRef<'T'>`
+ * because `__generic` is invariant and TS defaults the missing param to
+ * `string`. Inferring the type param via `GenericRef<infer _>` makes the
+ * check accept any specialization. Same trick for PassthroughRef.
+ */
 type SchemaInfer<T> =
   T extends z.ZodType<infer U>
     ? U
-    : T extends GenericRef
+    : T extends GenericRef<infer _G>
       ? unknown
-      : T extends PassthroughRef
+      : T extends PassthroughRef<infer _P>
         ? unknown
         : T extends ResolvedRef
           ? unknown

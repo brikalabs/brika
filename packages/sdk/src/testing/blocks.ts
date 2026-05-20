@@ -36,12 +36,17 @@ interface TestCtxGlobal {
 
 type OutputSchema = z.ZodType | PassthroughRef<string> | GenericRef<string> | ResolvedRef;
 
+// `T extends GenericRef` (no type arg) doesn't match `GenericRef<'T'>` cleanly
+// because `__generic` is invariant — TS defaults the missing param to `string`
+// and `GenericRef<'T'>` doesn't widen back. Inferring the type param via
+// `GenericRef<infer _>` makes the check accept any specialization. Same trick
+// for PassthroughRef.
 type SchemaInfer<T> =
   T extends z.ZodType<infer U>
     ? U
-    : T extends GenericRef
+    : T extends GenericRef<infer _G>
       ? unknown
-      : T extends PassthroughRef
+      : T extends PassthroughRef<infer _P>
         ? unknown
         : T extends ResolvedRef
           ? unknown
