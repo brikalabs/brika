@@ -25,6 +25,7 @@ import {
   unsubscribeSpark,
   updatePreference,
 } from '@brika/ipc/contract';
+import { BrikaError } from '@brika/ipc';
 import type { PluginHealth } from '@brika/plugin';
 import type { PluginPackageSchema } from '@brika/schema';
 import {
@@ -427,6 +428,48 @@ describe('PluginProcess', () => {
           'error',
           expect.stringContaining('Route handler failed [GET /api/test]')
         );
+      });
+
+      test('maps a thrown BrikaError to its catalog httpStatus + structured body', async () => {
+        mockChannel.call.mockRejectedValueOnce(
+          new BrikaError('NOT_FOUND', 'thing missing', {
+            data: { resource: '/things/42' },
+          })
+        );
+
+        const result = await process.sendRouteRequest('route-1', 'GET', '/api/test', {}, {});
+
+        expect(result.status).toBe(404);
+        expect(result.body).toEqual({
+          error: {
+            code: 'NOT_FOUND',
+            message: 'thing missing',
+            data: { resource: '/things/42' },
+            i18nKey: 'errors.not_found',
+          },
+        });
+        expect(callbacks.onLog).toHaveBeenCalledWith(
+          'error',
+          expect.stringContaining('Route handler threw [GET /api/test]: NOT_FOUND')
+        );
+      });
+
+      test('maps a domain-specific BrikaError code (NET_HOST_NOT_ALLOWED) to 403', async () => {
+        mockChannel.call.mockRejectedValueOnce(
+          new BrikaError('NET_HOST_NOT_ALLOWED', 'host blocked', {
+            data: { host: 'attacker.com', allow: ['api.example.com'] },
+          })
+        );
+
+        const result = await process.sendRouteRequest('route-1', 'POST', '/api/proxy', {}, {});
+
+        expect(result.status).toBe(403);
+        expect(result.body).toMatchObject({
+          error: {
+            code: 'NET_HOST_NOT_ALLOWED',
+            data: { host: 'attacker.com', allow: ['api.example.com'] },
+          },
+        });
       });
     });
 

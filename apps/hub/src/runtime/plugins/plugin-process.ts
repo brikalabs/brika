@@ -1,5 +1,12 @@
 import type { CapabilityRegistry } from '@brika/capabilities';
-import { type Json, type PluginChannel, RpcError } from '@brika/ipc';
+import {
+  BrikaError,
+  httpStatusForCode,
+  type Json,
+  lookupCatalogEntry,
+  type PluginChannel,
+  RpcError,
+} from '@brika/ipc';
 import {
   blockEmit,
   blockLog,
@@ -345,6 +352,36 @@ export class PluginProcess {
         body,
       });
     } catch (e) {
+      // A plugin route handler that threw a typed BrikaError surfaces
+      // with the catalog's httpStatus + structured body so the caller
+      // (browser, remote-access client) can branch on the code instead
+      // of seeing a 502 with an opaque message.
+      if (e instanceof BrikaError) {
+        const entry = lookupCatalogEntry(e.code);
+        this.callbacks.onLog(
+          'error',
+          `Route handler threw [${method} ${path}]: ${e.code} ${e.message}`
+        );
+        // Catalog data is contractually JSON-safe (it round-tripped the wire),
+        // but BrikaError.data is `Record<string, unknown>` so a JSON parse/
+        // stringify pass produces a structurally-Json shape without an `as`.
+        const dataJson: Json | undefined =
+          e.data === undefined ? undefined : JSON.parse(JSON.stringify(e.data));
+        return {
+          status: httpStatusForCode(e.code),
+          body: {
+            error: {
+              code: e.code,
+              message: e.message,
+              ...(dataJson === undefined ? {} : { data: dataJson }),
+              ...(entry?.i18nKey === undefined ? {} : { i18nKey: entry.i18nKey }),
+            },
+          },
+        };
+      }
+      // Non-BrikaError = IPC transport failure or a JS throw the plugin
+      // never converted to a typed error. 502 keeps the legacy semantic
+      // ("bad gateway"); the original message is logged but not exposed.
       this.callbacks.onLog('error', `Route handler failed [${method} ${path}]: ${e}`);
       return {
         status: 502,
