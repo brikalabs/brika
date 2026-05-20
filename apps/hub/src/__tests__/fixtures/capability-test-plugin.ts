@@ -13,7 +13,23 @@
  */
 
 import type { Channel } from '@brika/ipc';
+import { rpc } from '@brika/ipc';
 import { buildCtx, readInjectedVector } from '@brika/sdk/ctx';
+import { z } from 'zod';
+
+// Test-only RPC: the harness calls this on the plugin, the handler awaits
+// a nested ctx capability call, and the result rides back in the response.
+// Used to verify the prelude's drain queue can deliver an RPC response
+// while another handler is awaiting a different one (the deadlock fix).
+const nestedTimezoneRpc = rpc(
+  'nestedTimezone',
+  z.object({}),
+  z.object({
+    ok: z.boolean(),
+    timezone: z.string().nullable().optional(),
+    errorMessage: z.string().optional(),
+  })
+);
 
 interface Prelude {
   channel: Channel;
@@ -92,6 +108,23 @@ try {
   await prelude.start();
   const vector = readInjectedVector();
   ctx = buildCtx(vector, channel) as unknown as CtxShape;
+
+  // Now register the nested-RPC handler. Before the drain-queue fix this
+  // path deadlocked: the inbound `nestedTimezone` RPC would block the drain
+  // while it awaited the nested `ctx.location.timezone()` response, and
+  // the response could never be drained.
+  channel.implement(nestedTimezoneRpc, async () => {
+    if (!ctx) {
+      return { ok: false, errorMessage: 'ctx not built' };
+    }
+    try {
+      const res = await ctx.location.timezone();
+      return { ok: true, timezone: res.timezone ?? null };
+    } catch (e) {
+      return { ok: false, errorMessage: e instanceof Error ? e.message : String(e) };
+    }
+  });
+
   process.send?.({ t: 'ctxReady' });
 } catch (e) {
   process.send?.({ t: 'ctxReady', error: String(e) });

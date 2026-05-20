@@ -45,6 +45,13 @@ interface SpawnResult {
   proc: Bun.Subprocess;
   ready: Promise<void>;
   runScenario(scenario: string): Promise<ScenarioResult>;
+  /**
+   * Issue an RPC the plugin has implemented via `channel.implement`. Used by
+   * the nested-RPC drain-queue regression test — that test deliberately
+   * goes through the channel's request path so the handler runs INSIDE the
+   * drain. The fire-and-forget runScenario path bypasses the drain.
+   */
+  call(type: string, payload?: Record<string, unknown>): Promise<WireMessage>;
   stop(): Promise<void>;
 }
 
@@ -65,6 +72,10 @@ function spawnWithCapabilities(opts: {
 
   const scenarioWaiters = new Map<number, (r: ScenarioResult) => void>();
   let nextRunId = 1;
+
+  // Channel-style response waiters for harness-initiated RPCs.
+  const callWaiters = new Map<number, (msg: WireMessage) => void>();
+  let nextCallId = 1;
 
   function handleFireAndForget(wire: WireMessage): void {
     if (wire.t === 'ctxReady') {
@@ -121,7 +132,13 @@ function spawnWithCapabilities(opts: {
         return;
       }
       if (typeof wire.t === 'string' && wire.t.endsWith('Result')) {
-        return; // No test-initiated calls; nothing to dispatch.
+        // Response to a harness-initiated call (e.g. `nestedTimezone`).
+        const waiter = callWaiters.get(wire._id);
+        if (waiter) {
+          callWaiters.delete(wire._id);
+          waiter(wire);
+        }
+        return;
       }
       if (wire.t === 'capability.vector.get') {
         proc.send({
@@ -156,6 +173,20 @@ function spawnWithCapabilities(opts: {
           resolve(r);
         });
         proc.send({ t: 'runScenario', scenario, runId });
+      });
+    },
+    call(type, payload = {}) {
+      const id = nextCallId++;
+      return new Promise<WireMessage>((resolve, reject) => {
+        const timer = setTimeout(() => {
+          callWaiters.delete(id);
+          reject(new Error(`call "${type}" timed out (id=${id})`));
+        }, 15_000);
+        callWaiters.set(id, (msg) => {
+          clearTimeout(timer);
+          resolve(msg);
+        });
+        proc.send({ t: type, _id: id, ...payload });
       });
     },
     async stop() {
@@ -220,6 +251,27 @@ describe('Capability flow — end to end', () => {
     expect(res.deniedAtBoundary).toBe(true);
     expect(res.message as string).toContain('grant vector');
     expect(capabilityRequestSeen).toBe(false);
+    await helper.stop();
+  });
+
+  test('a channel.implement handler can await a nested ctx.* call (drain-queue regression)', async () => {
+    // Before the prelude drain-queue fix this deadlocked: the inbound
+    // `nestedTimezone` RPC held the drain while awaiting the response to
+    // a nested `ctx.location.timezone()`, but the response sat in the
+    // queue behind it. RPC responses now dispatch synchronously, leaving
+    // the drain free for the handler's continuation.
+    helper = spawnWithCapabilities({
+      vector: {
+        grants: [{ id: 'dev.brika.location.timezone', ctxPath: 'location.timezone' }],
+      },
+      capabilityResponders: {
+        'dev.brika.location.timezone': () => ({ timezone: 'Europe/Zurich' }),
+      },
+    });
+
+    await helper.ready;
+    const res = await helper.call('nestedTimezone');
+    expect(res.result).toEqual({ ok: true, timezone: 'Europe/Zurich' });
     await helper.stop();
   });
 

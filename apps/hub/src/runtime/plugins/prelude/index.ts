@@ -63,13 +63,25 @@ const channel = new Channel({
   },
 });
 
-// ---- Sequential message queue ----
-// Channel.handle() is async, so dispatching multiple buffered messages in
-// the same tick can interleave their execution. The drain queue ensures
-// strict FIFO ordering: each message fully completes before the next starts.
+// ---- Message routing ----
+// Two paths:
+//
+//   - Inbound RPC RESPONSES (`<type>Result` with `_id`) dispatch synchronously
+//     via channel.handle. They land in a pending-promise map and resolve any
+//     outbound channel.call that's currently awaiting — they MUST NOT queue,
+//     otherwise an RPC handler that awaits a nested call deadlocks (the
+//     handler holds the drain; its response is queued; drain can't progress).
+//
+//   - Everything else (requests + fire-and-forget messages) goes through a
+//     sequential drain to preserve FIFO ordering. `setTimezone` must take
+//     effect before the next RPC reads `process.env.TZ`, etc.
 
 const messageQueue: WireMessage[] = [];
 let draining = false;
+
+function isRpcResponse(msg: WireMessage): boolean {
+  return typeof msg.t === 'string' && msg.t.endsWith('Result') && msg._id !== undefined;
+}
 
 async function drain(): Promise<void> {
   if (draining) {
@@ -88,6 +100,12 @@ async function drain(): Promise<void> {
 }
 
 process.on('message', (msg: WireMessage) => {
+  if (isRpcResponse(msg)) {
+    // Synchronous fast-path: resolves any pending channel.call without
+    // touching the drain queue. handleRpcResponse is itself sync.
+    channel.handle(msg).catch((e) => console.error('[prelude] response dispatch error:', e));
+    return;
+  }
   messageQueue.push(msg);
   drain().catch((e) => console.error('[prelude] drain error:', e));
 });
