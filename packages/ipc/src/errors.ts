@@ -38,29 +38,20 @@
 // Well-Known Error Codes
 // ─────────────────────────────────────────────────────────────────────────────
 
+import type { CatalogedErrorCode } from './error-catalog';
+
 /**
- * Standard error codes shared across the platform. Custom codes are allowed —
- * the union is open-ended for extensibility.
+ * Standard error codes — derived from the catalog in `./error-catalog.ts`.
  *
- * | Code                | Meaning                                                |
- * |---------------------|--------------------------------------------------------|
- * | `PERMISSION_DENIED` | Caller lacks a required permission grant               |
- * | `NOT_FOUND`         | Requested resource does not exist                      |
- * | `INVALID_INPUT`     | Input failed validation or was malformed               |
- * | `INVALID_OUTPUT`    | Returned value failed validation (handler bug)         |
- * | `TIMEOUT`           | Operation exceeded its deadline                        |
- * | `UNAVAILABLE`       | Dependency (network, file, registry) is unavailable    |
- * | `INTERNAL`          | Unexpected internal error                              |
+ * The full table (description, HTTP status, severity, recovery hint, `data`
+ * shape, i18n key, category) lives in `ErrorCatalog`. Adding a new code is
+ * a one-line edit there and this union widens automatically.
+ *
+ * The trailing `(string & Record<never, never>)` keeps the union open so
+ * third-party plugins can mint their own codes — `instanceof BrikaError`
+ * still narrows them, but they don't get catalog metadata until added.
  */
-export type BrikaErrorCode =
-  | 'PERMISSION_DENIED'
-  | 'NOT_FOUND'
-  | 'INVALID_INPUT'
-  | 'INVALID_OUTPUT'
-  | 'TIMEOUT'
-  | 'UNAVAILABLE'
-  | 'INTERNAL'
-  | (string & Record<never, never>);
+export type BrikaErrorCode = CatalogedErrorCode | (string & Record<never, never>);
 
 /** Alias kept for back-compat with callers that imported `RpcErrorCode`. */
 export type RpcErrorCode = BrikaErrorCode;

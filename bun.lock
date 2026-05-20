@@ -254,6 +254,7 @@
       "name": "@brika/capabilities",
       "version": "0.3.1",
       "dependencies": {
+        "@brika/ipc": "workspace:*",
         "zod": "^4.3.4",
       },
       "devDependencies": {

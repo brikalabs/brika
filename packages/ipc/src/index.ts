@@ -60,6 +60,14 @@ export type {
   RpcDef,
 } from './define';
 export { isMessage, isRpc, message, rpc } from './define';
+// ─── Error catalog ───
+export type {
+  CatalogedErrorCode,
+  CatalogEntry,
+  ErrorCategory,
+  ErrorSeverity,
+} from './error-catalog';
+export { ErrorCatalog, httpStatusForCode, lookupCatalogEntry } from './error-catalog';
 // ─── Errors ───
 export type { BrikaErrorCode, BrikaErrorWire, RpcErrorCode, RpcErrorWire } from './errors';
 export { BrikaError, isBrikaErrorWire, isRpcErrorWire, RpcError } from './errors';
