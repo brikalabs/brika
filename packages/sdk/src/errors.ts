@@ -220,6 +220,7 @@ export function rethrowRpcError(err: unknown): never {
 // they need from `@brika/sdk` without reaching into `@brika/ipc`.
 export {
   BrikaError,
+  brikaErrorToResponse,
   ErrorCatalog,
   httpStatusForCode,
   lookupCatalogEntry,
@@ -230,5 +231,6 @@ export type {
   CatalogedErrorCode,
   CatalogEntry,
   ErrorCategory,
+  ErrorResponseBody,
   ErrorSeverity,
 } from '@brika/ipc';

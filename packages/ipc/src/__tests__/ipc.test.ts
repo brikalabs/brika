@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { Channel, type WireMessage } from '../channel';
 import { callTool, hello, PluginInfo, ping, ready, ToolResult } from '../contract';
 import { isMessage, isRpc, message, rpc } from '../define';
-import { BrikaError, isRpcErrorWire, RpcError } from '../errors';
+import { BrikaError, brikaErrorToResponse, isRpcErrorWire, RpcError } from '../errors';
 
 describe('Define helpers', () => {
   it('should create a message definition', () => {
@@ -730,5 +730,58 @@ describe('BrikaError', () => {
   it('BrikaError.is matches subclasses (RpcError, CapabilityError)', () => {
     const rpc = new RpcError('NOT_FOUND', 'page');
     expect(BrikaError.is(rpc, 'NOT_FOUND')).toBe(true);
+  });
+
+  // ─── brikaErrorToResponse — HTTP boundary mapping ─────────────────────
+
+  it('brikaErrorToResponse maps a typed BrikaError to its catalog status', async () => {
+    const err = new BrikaError('NOT_FOUND', 'thing missing', {
+      data: { resource: '/things/42' },
+    });
+    const res = brikaErrorToResponse(err);
+    expect(res.status).toBe(404);
+    const body = (await res.json()) as { error: Record<string, unknown> };
+    expect(body.error).toEqual({
+      code: 'NOT_FOUND',
+      message: 'thing missing',
+      data: { resource: '/things/42' },
+      i18nKey: 'errors.not_found',
+    });
+  });
+
+  it('brikaErrorToResponse attaches developerHint when the catalog has one', async () => {
+    const err = new BrikaError('NET_HOST_NOT_ALLOWED', 'blocked', {
+      data: { host: 'attacker.com', allow: [] },
+    });
+    const res = brikaErrorToResponse(err);
+    expect(res.status).toBe(403);
+    const body = (await res.json()) as { error: Record<string, unknown> };
+    expect(body.error.developerHint).toContain('manifest');
+    expect(body.error.i18nKey).toBe('errors.net.host_not_allowed');
+  });
+
+  it('brikaErrorToResponse defaults uncatalogued codes to 500', async () => {
+    const err = new BrikaError('CUSTOM_PLUGIN_CODE', 'something specific');
+    const res = brikaErrorToResponse(err);
+    expect(res.status).toBe(500);
+    const body = (await res.json()) as { error: Record<string, unknown> };
+    expect(body.error.code).toBe('CUSTOM_PLUGIN_CODE');
+    expect(body.error.message).toBe('something specific');
+    // No catalog entry → no i18nKey, no developerHint
+    expect(body.error.i18nKey).toBeUndefined();
+    expect(body.error.developerHint).toBeUndefined();
+  });
+
+  it('brikaErrorToResponse hides non-BrikaError throws behind a generic 500', async () => {
+    const res = brikaErrorToResponse(new TypeError('cannot read property foo of undefined'));
+    expect(res.status).toBe(500);
+    const body = (await res.json()) as { error: Record<string, unknown> };
+    expect(body.error).toEqual({ code: 'INTERNAL', message: 'Internal server error' });
+  });
+
+  it('brikaErrorToResponse handles string/null throws without crashing', async () => {
+    expect(brikaErrorToResponse('boom').status).toBe(500);
+    expect(brikaErrorToResponse(null).status).toBe(500);
+    expect(brikaErrorToResponse(undefined).status).toBe(500);
   });
 });

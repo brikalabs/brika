@@ -39,6 +39,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import type { CatalogedErrorCode, DataForCode } from './error-catalog';
+import { httpStatusForCode, lookupCatalogEntry } from './error-catalog';
 
 /**
  * Standard error codes — derived from the catalog in `./error-catalog.ts`.
@@ -260,6 +261,57 @@ function materializeCause(wire: BrikaErrorWire['cause']): unknown {
     e.name = wire.name;
   }
   return e;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// HTTP boundary mapping
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Shape returned in the `error` body of a `brikaErrorToResponse` result. */
+export interface ErrorResponseBody {
+  readonly code: string;
+  readonly message: string;
+  readonly data?: Record<string, unknown>;
+  readonly i18nKey?: string;
+  readonly developerHint?: string;
+}
+
+/**
+ * Convert any throw into a typed HTTP `Response`. A `BrikaError` produces
+ * a structured envelope with the catalog's `httpStatus`, `i18nKey`, and
+ * `developerHint` attached — useful at hub route boundaries so clients
+ * (the UI, remote-access RPC, plugin route handlers) can branch on the
+ * code instead of grepping a stringified message.
+ *
+ * Non-`BrikaError` throws collapse to `{ code: 'INTERNAL', message:
+ * 'Internal server error' }` with status 500 — the original throw's
+ * `.message` is never leaked through the HTTP boundary.
+ *
+ * @example
+ * ```ts
+ * try {
+ *   return await handler(req);
+ * } catch (err) {
+ *   return brikaErrorToResponse(err);
+ * }
+ * ```
+ */
+export function brikaErrorToResponse(err: unknown): Response {
+  if (err instanceof BrikaError) {
+    const entry = lookupCatalogEntry(err.code);
+    const body: ErrorResponseBody = {
+      code: err.code,
+      message: err.message,
+      ...(err.data === undefined ? {} : { data: err.data }),
+      ...(entry?.i18nKey === undefined ? {} : { i18nKey: entry.i18nKey }),
+      ...(entry?.developerHint === undefined
+        ? {}
+        : { developerHint: entry.developerHint }),
+    };
+    return Response.json({ error: body }, { status: httpStatusForCode(err.code) });
+  }
+  const body: ErrorResponseBody = { code: 'INTERNAL', message: 'Internal server error' };
+  return Response.json({ error: body }, { status: 500 });
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

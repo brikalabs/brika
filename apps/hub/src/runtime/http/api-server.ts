@@ -1,4 +1,5 @@
 import { inject, singleton } from '@brika/di';
+import { brikaErrorToResponse } from '@brika/ipc';
 import {
   type CorsOriginMatcher,
   createApp,
@@ -190,20 +191,18 @@ export class ApiServer {
       return res;
     } catch (error) {
       const duration = formatDuration(performance.now() - start);
-      this.#logs.error(`${req.method} ${path} → 500 (${duration})`, {
+      // Typed BrikaError throws keep their catalog httpStatus + i18nKey
+      // when surfaced to the client; everything else collapses to a
+      // generic 500 without leaking the underlying message.
+      const response = brikaErrorToResponse(error);
+      this.#logs.error(`${req.method} ${path} → ${response.status} (${duration})`, {
         method: req.method,
         path,
         duration,
+        status: response.status,
         error: error instanceof Error ? error.message : String(error),
       });
-      return Response.json(
-        {
-          error: 'Internal server error',
-        },
-        {
-          status: 500,
-        }
-      );
+      return response;
     }
   }
 

@@ -210,6 +210,7 @@ export { PRELUDE_BRAND } from './bridge';
 
 export {
   BrikaError,
+  brikaErrorToResponse,
   ErrorCatalog,
   httpStatusForCode,
   InternalError,
@@ -226,6 +227,7 @@ export type {
   CatalogedErrorCode,
   CatalogEntry,
   ErrorCategory,
+  ErrorResponseBody,
   ErrorSeverity,
 } from './errors';
 

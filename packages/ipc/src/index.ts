@@ -69,8 +69,20 @@ export type {
 } from './error-catalog';
 export { ErrorCatalog, httpStatusForCode, lookupCatalogEntry } from './error-catalog';
 // ─── Errors ───
-export type { BrikaErrorCode, BrikaErrorWire, RpcErrorCode, RpcErrorWire } from './errors';
-export { BrikaError, isBrikaErrorWire, isRpcErrorWire, RpcError } from './errors';
+export type {
+  BrikaErrorCode,
+  BrikaErrorWire,
+  ErrorResponseBody,
+  RpcErrorCode,
+  RpcErrorWire,
+} from './errors';
+export {
+  BrikaError,
+  brikaErrorToResponse,
+  isBrikaErrorWire,
+  isRpcErrorWire,
+  RpcError,
+} from './errors';
 // ─── Global ───
 export type { IpcGlobal } from './global';
 // ─── Host ───
