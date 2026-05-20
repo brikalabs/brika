@@ -6,7 +6,7 @@
  * process inherits the same filtered env every plugin gets.
  */
 
-import { basename } from 'node:path';
+import { basename, isAbsolute, resolve, sep } from 'node:path';
 import { defineCapability } from '@brika/capabilities';
 import { execSpawn as spec } from '@brika/sdk/capabilities';
 
@@ -43,6 +43,33 @@ function capOutput(s: string): string {
   return `${s.slice(0, MAX_OUTPUT_BYTES)}\n[...output truncated at 1MB]`;
 }
 
+/**
+ * Resolve a caller-supplied `cwd` against the plugin root, then ensure the
+ * result stays inside that root. An undefined cwd defaults to the plugin
+ * root. Absolute paths must be inside it; relative paths are joined.
+ */
+export function resolveCwd(
+  pluginRoot: string,
+  callerCwd: string | undefined
+): string {
+  if (callerCwd === undefined) {
+    return pluginRoot;
+  }
+  const canonicalRoot = resolve(pluginRoot);
+  const canonicalCwd = isAbsolute(callerCwd)
+    ? resolve(callerCwd)
+    : resolve(canonicalRoot, callerCwd);
+  if (
+    canonicalCwd !== canonicalRoot &&
+    !canonicalCwd.startsWith(canonicalRoot + sep)
+  ) {
+    throw new Error(
+      `exec.spawn: cwd "${callerCwd}" resolves outside the plugin root "${pluginRoot}".`
+    );
+  }
+  return canonicalCwd;
+}
+
 export interface ExecCallbacks {
   /**
    * Spawn a child process. Wired to Bun.spawn in production; tests inject
@@ -71,10 +98,15 @@ export function buildExecCapabilities(cb: ExecCallbacks) {
           `exec.spawn: binary "${args.command}" is not in this plugin's allow list (${scope.allowBinaries.join(', ') || '(empty)'})`
         );
       }
+      // Default cwd to the plugin root and reject any explicit cwd that
+      // resolves outside it. Without this guard a granted plugin could
+      // run its allow-listed binary against any directory on the host —
+      // `git -C /etc init` etc.
+      const cwd = resolveCwd(ctx.pluginRoot, args.cwd);
       const out = await cb.spawn({
         command: args.command,
         args: args.args,
-        cwd: args.cwd,
+        cwd,
         timeoutMs: args.timeoutMs ?? DEFAULT_TIMEOUT_MS,
       });
       return {
