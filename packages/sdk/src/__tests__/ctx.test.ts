@@ -26,7 +26,7 @@ describe('buildCtx — proxy traversal', () => {
       return { value: 42 };
     });
 
-    const ctx = buildCtx({ grants: [{ id: 'foo.bar' }] }, channel) as {
+    const ctx = buildCtx({ grants: [{ id: 'foo.bar' }] }, channel) as unknown as {
       foo: { bar: (args: unknown) => Promise<unknown> };
     };
 
@@ -42,7 +42,7 @@ describe('buildCtx — proxy traversal', () => {
       throw new Error('should not be called');
     });
 
-    const ctx = buildCtx({ grants: [] }, channel) as {
+    const ctx = buildCtx({ grants: [] }, channel) as unknown as {
       net: { fetch: (args: unknown) => Promise<unknown> };
     };
 
@@ -54,7 +54,7 @@ describe('buildCtx — proxy traversal', () => {
 
   test('the error carries the capability id and an actionable message', async () => {
     const channel = mockChannel(() => undefined);
-    const ctx = buildCtx({ grants: [] }, channel) as {
+    const ctx = buildCtx({ grants: [] }, channel) as unknown as {
       net: { fetch: (args: unknown) => Promise<unknown> };
     };
 
@@ -72,7 +72,7 @@ describe('buildCtx — proxy traversal', () => {
 
   test('symbol property reads return undefined (no Promise/iterator probe traps)', () => {
     const channel = mockChannel(() => undefined);
-    const ctx = buildCtx({ grants: [] }, channel) as {
+    const ctx = buildCtx({ grants: [] }, channel) as unknown as {
       [Symbol.iterator]?: unknown;
       then?: unknown;
     };
@@ -92,7 +92,7 @@ describe('buildCtx — proxy traversal', () => {
       seenArgs = args;
       return null;
     });
-    const ctx = buildCtx({ grants: [{ id: 'log.ping' }] }, channel) as {
+    const ctx = buildCtx({ grants: [{ id: 'log.ping' }] }, channel) as unknown as {
       log: { ping: () => Promise<unknown> };
     };
     await ctx.log.ping();

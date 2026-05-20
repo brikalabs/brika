@@ -29,3 +29,28 @@ export const capabilityRequest = rpc(
     result: Json,
   })
 );
+
+/**
+ * Plugin -> hub: fetch the capability vector at startup.
+ *
+ * The vector is the immutable snapshot of what the plugin has been granted
+ * for its lifetime. The prelude calls this once at startup before plugin
+ * code runs, installs the result via `installVector()`, and uses it to
+ * build the typed `ctx` object.
+ *
+ * A future T2 sandbox iteration will let the hub push vector updates over
+ * an event so users can hot-revoke a permission without restarting the
+ * plugin; for now the vector is static across the plugin's lifetime.
+ */
+export const getCapabilityVector = rpc(
+  'capability.vector.get',
+  z.object({}),
+  z.object({
+    grants: z.array(
+      z.object({
+        id: z.string(),
+        scope: Json.optional(),
+      })
+    ),
+  })
+);

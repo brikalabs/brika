@@ -56,6 +56,14 @@
       "types": "./dist/bridge.d.ts",
       "default": "./dist/bridge.js"
     },
+    "./capabilities": {
+      "types": "./dist/capabilities/index.d.ts",
+      "default": "./dist/capabilities/index.js"
+    },
+    "./ctx": {
+      "types": "./dist/ctx.d.ts",
+      "default": "./dist/ctx.js"
+    },
     "./actions": {
       "types": "./dist/actions.d.ts",
       "default": "./dist/actions.js"

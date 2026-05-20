@@ -58,6 +58,7 @@
       "dependencies": {
         "@brika/auth": "workspace:*",
         "@brika/banner": "workspace:*",
+        "@brika/capabilities": "workspace:*",
         "@brika/cli": "workspace:*",
         "@brika/compiler": "workspace:*",
         "@brika/db": "workspace:*",

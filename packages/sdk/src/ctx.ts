@@ -62,9 +62,12 @@ function createCtxProxy(
   channel: Channel
 ): Ctx {
   // The Proxy target is a function so the handler can intercept both `get`
-  // (path traversal) and `apply` (capability invocation).
-  const noop = (): void => {};
-  return new Proxy(noop, {
+  // (path traversal) and `apply` (capability invocation). Ctx is an open
+  // interface augmented by capability files with method signatures the
+  // Proxy responds to via path traversal — tsc requires the unknown
+  // bridge to widen the callable Proxy to the augmented Ctx shape.
+  const noop = (..._args: unknown[]): unknown => undefined;
+  const proxy = new Proxy(noop, {
     get(_target, prop) {
       if (typeof prop === 'symbol' || prop === 'then') {
         // Avoid the Promise/iterator probe — returning undefined here is
@@ -99,6 +102,7 @@ function createCtxProxy(
         .then((res) => res.result);
     },
   });
+  return proxy as unknown as Ctx;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

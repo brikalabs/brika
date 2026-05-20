@@ -1,10 +1,13 @@
+import type { CapabilityRegistry } from '@brika/capabilities';
 import { type Json, type PluginChannel, RpcError } from '@brika/ipc';
 import {
   blockEmit,
   blockLog,
   brickInstanceAction,
   callAction,
+  capabilityRequest,
   deletePluginSecret,
+  getCapabilityVector,
   emitSpark,
   getHubLocation,
   getHubTimezone,
@@ -39,6 +42,8 @@ import type { BrickFamily, Plugin, PluginHealth } from '@brika/plugin';
 import type { PluginPackageSchema } from '@brika/schema';
 import { getProcessMetrics } from '@/runtime/metrics';
 import type { HubLocation } from '@/runtime/state/state-store';
+import { buildHubCapabilities } from './capabilities/registry-factory';
+import { vectorForLegacyGrants } from './capabilities/vector';
 import { now } from './utils';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -126,6 +131,9 @@ export class PluginProcess {
   readonly #actions = new Set<string>();
   readonly #sparkSubscriptions = new Map<string, () => void>(); // subscriptionId -> unsubscribe
   #stopped = false;
+
+  /** Per-process capability registry — built lazily on first use. */
+  #capabilities: CapabilityRegistry | undefined;
 
   constructor(
     channel: PluginChannel,
@@ -592,6 +600,50 @@ export class PluginProcess {
       const deleted = await this.callbacks.onDeletePluginSecret(this.name, key);
       return { deleted };
     });
+
+    this.#channel.implement(getCapabilityVector, () => {
+      const reg = this.#getCapabilityRegistry();
+      const vector = vectorForLegacyGrants(
+        reg,
+        this.callbacks.onGetGrantedPermissions(this.name)
+      );
+      return {
+        grants: vector.grants.map((g) => ({ id: g.id, scope: g.scope as Json | undefined })),
+      };
+    });
+
+    this.#channel.implement(capabilityRequest, async ({ id, args }) => {
+      const reg = this.#getCapabilityRegistry();
+      const vector = vectorForLegacyGrants(
+        reg,
+        this.callbacks.onGetGrantedPermissions(this.name)
+      );
+      const grant = vector.grants.find((g) => g.id === id);
+      if (!grant) {
+        throw new RpcError(
+          'PERMISSION_DENIED',
+          `Capability "${id}" is not in this plugin's grant vector`,
+          { capabilityId: id }
+        );
+      }
+      const result = await reg.dispatch(id, args, {
+        pluginUid: this.uid,
+        pluginRoot: this.rootDirectory,
+        grantedScope: grant.scope,
+        log: (level, message) => this.callbacks.onLog(level, message),
+      });
+      return { result: result as Json };
+    });
+  }
+
+  #getCapabilityRegistry(): CapabilityRegistry {
+    if (this.#capabilities === undefined) {
+      this.#capabilities = buildHubCapabilities({
+        getLocation: () => this.callbacks.onGetHubLocation(),
+        getTimezone: () => this.callbacks.onGetHubTimezone(),
+      });
+    }
+    return this.#capabilities;
   }
 
   #requirePermission(permission: Permission): void {

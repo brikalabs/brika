@@ -57,7 +57,7 @@ export interface PreludeBridge {
   readonly [PRELUDE_BRAND]: true;
 
   // -- System --
-  start(): void;
+  start(): void | Promise<void>;
   log(level: LogLevel, message: string, meta?: Record<string, Json>): void;
 
   // -- Manifest --

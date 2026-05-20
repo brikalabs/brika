@@ -33,7 +33,7 @@ export {
   updateBrickConfig,
 } from './bricks';
 // ─── Capabilities (new generic RPC carrying all future capability calls) ───
-export { capabilityRequest } from './capabilities';
+export { capabilityRequest, getCapabilityVector } from './capabilities';
 export type { LogLevel as LogLevelType } from './events';
 // ─── Events ───
 export { LogLevel, log, ping } from './events';

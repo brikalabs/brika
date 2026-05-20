@@ -26,6 +26,7 @@
     "@brika/auth": "workspace:*",
     "@brika/cli": "workspace:*",
     "@brika/banner": "workspace:*",
+    "@brika/capabilities": "workspace:*",
     "@brika/compiler": "workspace:*",
     "@brika/db": "workspace:*",
     "@brika/di": "workspace:*",
