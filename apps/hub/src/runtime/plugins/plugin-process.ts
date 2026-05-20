@@ -362,11 +362,10 @@ export class PluginProcess {
           'error',
           `Route handler threw [${method} ${path}]: ${e.code} ${e.message}`
         );
-        // Catalog data is contractually JSON-safe (it round-tripped the wire),
-        // but BrikaError.data is `Record<string, unknown>` so a JSON parse/
-        // stringify pass produces a structurally-Json shape without an `as`.
-        const dataJson: Json | undefined =
-          e.data === undefined ? undefined : JSON.parse(JSON.stringify(e.data));
+        // Catalog data is contractually JSON-safe (it round-tripped the
+        // wire); structuredClone produces an independent copy so the
+        // body owner can't mutate the original frozen BrikaError.data.
+        const dataJson = e.data === undefined ? undefined : structuredClone(e.data);
         return {
           status: httpStatusForCode(e.code),
           body: {

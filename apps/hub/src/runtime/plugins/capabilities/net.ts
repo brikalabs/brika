@@ -220,8 +220,7 @@ export function buildNetCapabilities(cb: NetCallbacks) {
   const inFlight = new Map<string, Promise<FetchResult>>();
 
   return [
-    defineCapability(spec.spec, (ctx, raw) => {
-      const args = raw as FetchArgs;
+    defineCapability(spec.spec, (ctx, args) => {
       const scope = ctx.grantedScope as NetScope;
       const host = new URL(args.url).host;
       if (!isHostAllowed(host, scope.allow)) {

@@ -224,7 +224,7 @@ export function createMockBlockContext<
   const workflowId = options.workflowId ?? 'mock-workflow';
   const config = (options.config ?? {}) as Record<string, unknown>;
   const secrets = new Map<string, string>(Object.entries(options.secrets ?? {}));
-  const preferences: Record<string, unknown> = { ...(options.preferences ?? {}) };
+  const preferences: Record<string, unknown> = { ...options.preferences };
 
   // Buffers per output port; only ports declared on the block get an entry.
   // emit() into an unknown port is silently dropped (mirroring the prelude).

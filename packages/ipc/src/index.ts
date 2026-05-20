@@ -73,7 +73,6 @@ export type {
   BrikaErrorCode,
   BrikaErrorWire,
   ErrorResponseBody,
-  RpcErrorCode,
   RpcErrorWire,
 } from './errors';
 export {

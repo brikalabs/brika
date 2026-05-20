@@ -34,7 +34,7 @@ const RetryPolicy = z.object({
 });
 
 const NetFetchArgs = z.object({
-  url: z.string().url(),
+  url: z.url(),
   method: NetMethod.default('GET'),
   headers: z.record(z.string(), z.string()).optional(),
   body: z.string().optional(),

@@ -54,9 +54,6 @@ import { httpStatusForCode, lookupCatalogEntry } from './error-catalog';
  */
 export type BrikaErrorCode = CatalogedErrorCode | (string & Record<never, never>);
 
-/** Alias kept for back-compat with callers that imported `RpcErrorCode`. */
-export type RpcErrorCode = BrikaErrorCode;
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Wire Format
 // ─────────────────────────────────────────────────────────────────────────────

@@ -13,12 +13,7 @@
  * shape over the wire does not.
  */
 
-import type {
-  CapabilityRegistry,
-  CapabilityVector,
-  ManifestCapabilities,
-  UserGrants,
-} from '@brika/capabilities';
+import type { CapabilityRegistry, CapabilityVector } from '@brika/capabilities';
 
 /**
  * Build a manifest+grants pair from the legacy `grantedPermissions: string[]`
@@ -48,7 +43,7 @@ export function vectorForLegacyGrants(
     }
   }
 
-  return registry.buildVector(manifest as ManifestCapabilities, userGrants as UserGrants);
+  return registry.buildVector(manifest, userGrants);
 }
 
 /**
@@ -172,13 +167,10 @@ export function vectorFromManifestCapabilities(
     // structured shape first; if it doesn't look like one, treat the whole
     // value as the scope.
     if (raw && typeof raw === 'object' && 'scope' in raw) {
-      manifest[id] = { scope: (raw as { scope?: unknown }).scope };
+      manifest[id] = { scope: raw.scope };
     } else {
       manifest[id] = { scope: raw };
     }
   }
-  return registry.buildVector(
-    manifest as ManifestCapabilities,
-    userGrants as UserGrants
-  );
+  return registry.buildVector(manifest, userGrants);
 }
