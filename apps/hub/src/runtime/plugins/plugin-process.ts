@@ -363,9 +363,13 @@ export class PluginProcess {
           `Route handler threw [${method} ${path}]: ${e.code} ${e.message}`
         );
         // Catalog data is contractually JSON-safe (it round-tripped the
-        // wire); structuredClone produces an independent copy so the
-        // body owner can't mutate the original frozen BrikaError.data.
-        const dataJson = e.data === undefined ? undefined : structuredClone(e.data);
+        // wire). The JSON parse/stringify pass is intentional type
+        // laundering: it widens `Readonly<Record<string, unknown>>` to
+        // `any`, which assigns freely to the recursive `Json` type that
+        // the route response body requires. `structuredClone` preserves
+        // the input type and would force an `as` cast at the receiver.
+        const dataJson: Json | undefined =
+          e.data === undefined ? undefined : JSON.parse(JSON.stringify(e.data));
         return {
           status: httpStatusForCode(e.code),
           body: {

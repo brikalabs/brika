@@ -4,6 +4,7 @@
 
 import 'reflect-metadata';
 import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
+import { BrikaError } from '@brika/ipc';
 import {
   blockEmit,
   blockLog,
@@ -25,7 +26,6 @@ import {
   unsubscribeSpark,
   updatePreference,
 } from '@brika/ipc/contract';
-import { BrikaError } from '@brika/ipc';
 import type { PluginHealth } from '@brika/plugin';
 import type { PluginPackageSchema } from '@brika/schema';
 import {

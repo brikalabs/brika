@@ -1,11 +1,6 @@
 import { describe, expect, mock, test } from 'bun:test';
 import { CapabilityRegistry } from '@brika/capabilities';
-import {
-  buildNetCapabilities,
-  isHostAllowed,
-  matchesHostPattern,
-  parseRetryAfter,
-} from '../net';
+import { buildNetCapabilities, isHostAllowed, matchesHostPattern, parseRetryAfter } from '../net';
 
 function makeReg(
   fetchImpl: (input: string | URL | Request, init?: RequestInit) => Promise<Response>

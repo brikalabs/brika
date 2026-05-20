@@ -188,21 +188,13 @@ describe('buildVectorWithUserConsent — user consent enforcement', () => {
         () => ({})
       )
     );
-    const vec = buildVectorWithUserConsent(
-      reg,
-      { 'dev.brika.net.fetch': { allow: [] } },
-      ['net']
-    );
+    const vec = buildVectorWithUserConsent(reg, { 'dev.brika.net.fetch': { allow: [] } }, ['net']);
     expect(vec.grants.map((g) => g.id)).toEqual(['dev.brika.net.fetch']);
   });
 
   test('unknown capability ids in the manifest are silently dropped', () => {
     const reg = makeRegistry();
-    const vec = buildVectorWithUserConsent(
-      reg,
-      { 'com.evil.unknown.cap': {} },
-      ['net', 'secrets']
-    );
+    const vec = buildVectorWithUserConsent(reg, { 'com.evil.unknown.cap': {} }, ['net', 'secrets']);
     expect(vec.grants).toEqual([]);
   });
 

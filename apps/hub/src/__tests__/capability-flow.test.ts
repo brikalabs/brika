@@ -341,11 +341,9 @@ describe('Capability flow — end to end', () => {
         'dev.brika.location.timezone': () => {
           // A handler that throws a typed BrikaError — the harness mirrors
           // production's registry pass-through and serializes via toWire(true).
-          throw new BrikaError(
-            'NET_HOST_NOT_ALLOWED',
-            'host "attacker.com" not in allow list',
-            { data: { host: 'attacker.com', allow: ['api.example.com'] } }
-          );
+          throw new BrikaError('NET_HOST_NOT_ALLOWED', 'host "attacker.com" not in allow list', {
+            data: { host: 'attacker.com', allow: ['api.example.com'] },
+          });
         },
       },
     });

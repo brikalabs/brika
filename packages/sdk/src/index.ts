@@ -208,6 +208,15 @@ export { PRELUDE_BRAND } from './bridge';
 // Errors
 // ─────────────────────────────────────────────────────────────────────────────
 
+export type {
+  BrikaErrorCode,
+  BrikaErrorWire,
+  CatalogEntry,
+  CatalogedErrorCode,
+  ErrorCategory,
+  ErrorResponseBody,
+  ErrorSeverity,
+} from './errors';
 export {
   BrikaError,
   brikaErrorToResponse,
@@ -220,15 +229,6 @@ export {
   PermissionDeniedError,
   rethrowRpcError,
   sdkErrors,
-} from './errors';
-export type {
-  BrikaErrorCode,
-  BrikaErrorWire,
-  CatalogedErrorCode,
-  CatalogEntry,
-  ErrorCategory,
-  ErrorResponseBody,
-  ErrorSeverity,
 } from './errors';
 
 // ─────────────────────────────────────────────────────────────────────────────

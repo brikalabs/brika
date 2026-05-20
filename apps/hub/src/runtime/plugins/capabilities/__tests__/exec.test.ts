@@ -158,11 +158,7 @@ describe('exec.spawn capability — cwd guard end-to-end', () => {
       seenCwd = cwd;
       return { exitCode: 0, signal: null, stdout: '', stderr: '', timedOut: false };
     });
-    await reg.dispatch(
-      'dev.brika.exec.spawn',
-      { command: 'git', args: [] },
-      handlerCtx(['git'])
-    );
+    await reg.dispatch('dev.brika.exec.spawn', { command: 'git', args: [] }, handlerCtx(['git']));
     expect(seenCwd).toBe('/tmp/p');
   });
 

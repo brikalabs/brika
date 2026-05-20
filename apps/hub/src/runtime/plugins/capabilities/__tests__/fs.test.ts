@@ -112,9 +112,7 @@ describe('fs capability — round-trip in a tmp dir', () => {
   test('rejects fs.read on a file larger than the 10MB cap', async () => {
     const big = join(dir, 'big.bin');
     await Bun.write(big, Buffer.alloc(12 * 1024 * 1024, 'x'));
-    await expect(
-      reg.dispatch('dev.brika.fs.read', { path: big }, ctx())
-    ).rejects.toMatchObject({
+    await expect(reg.dispatch('dev.brika.fs.read', { path: big }, ctx())).rejects.toMatchObject({
       code: 'FS_FILE_TOO_LARGE',
       message: expect.stringContaining('cap is'),
       data: { size: 12 * 1024 * 1024, maxBytes: 10 * 1024 * 1024 },

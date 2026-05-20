@@ -136,9 +136,7 @@ function handleError(
           message: error.message,
           ...(error.data === undefined ? {} : { data: error.data }),
           ...(entry?.i18nKey === undefined ? {} : { i18nKey: entry.i18nKey }),
-          ...(entry?.developerHint === undefined
-            ? {}
-            : { developerHint: entry.developerHint }),
+          ...(entry?.developerHint === undefined ? {} : { developerHint: entry.developerHint }),
         },
       },
       httpStatusForCode(error.code)

@@ -301,9 +301,7 @@ export function brikaErrorToResponse(err: unknown): Response {
       message: err.message,
       ...(err.data === undefined ? {} : { data: err.data }),
       ...(entry?.i18nKey === undefined ? {} : { i18nKey: entry.i18nKey }),
-      ...(entry?.developerHint === undefined
-        ? {}
-        : { developerHint: entry.developerHint }),
+      ...(entry?.developerHint === undefined ? {} : { developerHint: entry.developerHint }),
     };
     return Response.json({ error: body }, { status: httpStatusForCode(err.code) });
   }

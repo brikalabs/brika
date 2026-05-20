@@ -134,11 +134,10 @@ export class InvalidInputError extends BrikaError {
   readonly field?: string;
 
   constructor(message: string, field?: string, cause?: unknown) {
-    super(
-      'INVALID_INPUT',
-      field ? `Invalid input for "${field}": ${message}` : message,
-      { data: field === undefined ? undefined : { field }, cause }
-    );
+    super('INVALID_INPUT', field ? `Invalid input for "${field}": ${message}` : message, {
+      data: field === undefined ? undefined : { field },
+      cause,
+    });
     this.name = 'InvalidInputError';
     this.field = field;
   }
@@ -216,6 +215,15 @@ export function rethrowRpcError(err: unknown): never {
   throw err;
 }
 
+export type {
+  BrikaErrorCode,
+  BrikaErrorWire,
+  CatalogEntry,
+  CatalogedErrorCode,
+  ErrorCategory,
+  ErrorResponseBody,
+  ErrorSeverity,
+} from '@brika/ipc';
 // Re-export the platform error toolkit so plugin authors get everything
 // they need from `@brika/sdk` without reaching into `@brika/ipc`.
 export {
@@ -224,13 +232,4 @@ export {
   ErrorCatalog,
   httpStatusForCode,
   lookupCatalogEntry,
-} from '@brika/ipc';
-export type {
-  BrikaErrorCode,
-  BrikaErrorWire,
-  CatalogedErrorCode,
-  CatalogEntry,
-  ErrorCategory,
-  ErrorResponseBody,
-  ErrorSeverity,
 } from '@brika/ipc';

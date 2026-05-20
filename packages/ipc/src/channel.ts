@@ -20,11 +20,9 @@ function errorToWire(err: unknown): BrikaErrorWire {
   if (err instanceof BrikaError) {
     return err.toWire(true);
   }
-  const wrapped = new BrikaError(
-    'INTERNAL',
-    err instanceof Error ? err.message : String(err),
-    { cause: err }
-  );
+  const wrapped = new BrikaError('INTERNAL', err instanceof Error ? err.message : String(err), {
+    cause: err,
+  });
   return wrapped.toWire(true);
 }
 

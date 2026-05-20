@@ -557,7 +557,9 @@ describe('Workspace Validation - Connection Errors', () => {
 
     expect(result.valid).toBeFalse();
     expect(result.errors.length).toBeGreaterThan(0);
-    const unknownTargetError = result.errors.find((e) => e.code === 'WORKFLOW_UNKNOWN_TARGET_BLOCK_TYPE');
+    const unknownTargetError = result.errors.find(
+      (e) => e.code === 'WORKFLOW_UNKNOWN_TARGET_BLOCK_TYPE'
+    );
     expect(unknownTargetError).toBeDefined();
     expect(unknownTargetError?.message).toContain('unknown-logger');
   });
@@ -758,7 +760,9 @@ describe('Workspace Validation - Warnings', () => {
 
     expect(result.valid).toBeTrue(); // Still valid, just warnings
     expect(result.warnings).toHaveLength(2); // Bidirectional ref + orphan block
-    const bidirWarning = result.warnings.find((w) => w.code === 'WORKFLOW_MISSING_BIDIRECTIONAL_REF');
+    const bidirWarning = result.warnings.find(
+      (w) => w.code === 'WORKFLOW_MISSING_BIDIRECTIONAL_REF'
+    );
     expect(bidirWarning).toBeDefined();
     expect(bidirWarning).toMatchObject({
       code: 'WORKFLOW_MISSING_BIDIRECTIONAL_REF',
@@ -950,11 +954,7 @@ describe('Workspace Validation - Diagnostics shape (catalog-driven severity)', (
     // Workflow with both an error and a warning: orphan block (warning)
     // plus a reference to a non-existent block type (error).
     const timerType = createBlockType('timer', [], [{ id: 'tick', schema: numberSchema }]);
-    const loggerType = createBlockType(
-      'logger',
-      [{ id: 'value', schema: numberSchema }],
-      []
-    );
+    const loggerType = createBlockType('logger', [{ id: 'value', schema: numberSchema }], []);
     const registry = createMockRegistry([timerType, loggerType]);
     const workflow: Workflow = {
       ...createSimpleWorkflow(),
@@ -998,11 +998,7 @@ describe('Workspace Validation - Diagnostics shape (catalog-driven severity)', (
   });
 
   test('orphan-block goes to warnings — catalog says severity: warning', () => {
-    const loggerType = createBlockType(
-      'logger',
-      [{ id: 'value', schema: numberSchema }],
-      []
-    );
+    const loggerType = createBlockType('logger', [{ id: 'value', schema: numberSchema }], []);
     const registry = createMockRegistry([loggerType]);
     const workflow: Workflow = {
       ...createSimpleWorkflow(),

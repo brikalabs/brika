@@ -49,10 +49,7 @@ function capOutput(s: string): string {
  * result stays inside that root. An undefined cwd defaults to the plugin
  * root. Absolute paths must be inside it; relative paths are joined.
  */
-export function resolveCwd(
-  pluginRoot: string,
-  callerCwd: string | undefined
-): string {
+export function resolveCwd(pluginRoot: string, callerCwd: string | undefined): string {
   if (callerCwd === undefined) {
     return pluginRoot;
   }
@@ -60,10 +57,7 @@ export function resolveCwd(
   const canonicalCwd = isAbsolute(callerCwd)
     ? resolve(callerCwd)
     : resolve(canonicalRoot, callerCwd);
-  if (
-    canonicalCwd !== canonicalRoot &&
-    !canonicalCwd.startsWith(canonicalRoot + sep)
-  ) {
+  if (canonicalCwd !== canonicalRoot && !canonicalCwd.startsWith(canonicalRoot + sep)) {
     throw new BrikaError(
       'EXEC_CWD_ESCAPE',
       `exec.spawn: cwd "${callerCwd}" resolves outside the plugin root "${pluginRoot}".`,

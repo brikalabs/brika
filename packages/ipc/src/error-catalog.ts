@@ -67,7 +67,7 @@ export const ErrorCatalog = {
     severity: 'error',
     category: 'core',
     developerHint:
-      'Compare the offending value against the spec\'s `args` schema. The `data.field` carries the failing path.',
+      "Compare the offending value against the spec's `args` schema. The `data.field` carries the failing path.",
     i18nKey: 'errors.invalid_input',
     data: z.object({ field: z.string().optional() }).loose(),
   },
@@ -78,7 +78,7 @@ export const ErrorCatalog = {
     severity: 'error',
     category: 'core',
     developerHint:
-      'Handler bug. The return value must match the capability spec\'s `result` schema.',
+      "Handler bug. The return value must match the capability spec's `result` schema.",
     i18nKey: 'errors.invalid_output',
   },
 
@@ -114,8 +114,7 @@ export const ErrorCatalog = {
   },
 
   UNAVAILABLE: {
-    description:
-      'A dependency (network, filesystem, registry, downstream service) is unavailable.',
+    description: 'A dependency (network, filesystem, registry, downstream service) is unavailable.',
     httpStatus: 503,
     severity: 'error',
     category: 'core',
@@ -137,7 +136,7 @@ export const ErrorCatalog = {
   },
 
   NOT_GRANTED: {
-    description: 'Capability is registered but not in this plugin\'s vector.',
+    description: "Capability is registered but not in this plugin's vector.",
     httpStatus: 403,
     severity: 'error',
     category: 'core',
@@ -147,7 +146,7 @@ export const ErrorCatalog = {
   },
 
   INVALID_SCOPE: {
-    description: 'Granted scope value failed the spec\'s scope schema.',
+    description: "Granted scope value failed the spec's scope schema.",
     httpStatus: 500,
     severity: 'error',
     category: 'core',
@@ -165,9 +164,7 @@ export const ErrorCatalog = {
     developerHint:
       'Add the host (or a `*.suffix` pattern) to the plugin manifest under `capabilities."dev.brika.net.fetch".allow`.',
     i18nKey: 'errors.net.host_not_allowed',
-    data: z
-      .object({ host: z.string(), allow: z.array(z.string()) })
-      .loose(),
+    data: z.object({ host: z.string(), allow: z.array(z.string()) }).loose(),
   },
 
   // ─── Filesystem capability ────────────────────────────────────────────────
@@ -180,59 +177,48 @@ export const ErrorCatalog = {
     developerHint:
       'Add an absolute path prefix to `capabilities."dev.brika.fs.read"` (or `write`/`exists`) in the manifest. Paths are canonicalized before the prefix check, so `..` escapes are rejected.',
     i18nKey: 'errors.fs.path_not_allowed',
-    data: z
-      .object({ path: z.string(), op: z.string(), allow: z.array(z.string()) })
-      .loose(),
+    data: z.object({ path: z.string(), op: z.string(), allow: z.array(z.string()) }).loose(),
   },
 
   FS_FILE_TOO_LARGE: {
-    description:
-      'A `ctx.fs.read` target exceeds the hub-imposed size cap.',
+    description: 'A `ctx.fs.read` target exceeds the hub-imposed size cap.',
     httpStatus: 413,
     severity: 'error',
     category: 'fs',
     developerHint:
-      'Read in chunks, stream from `ctx.net.fetch` instead, or shrink the file. The cap is enforced by the hub to keep big files from OOM\'ing it.',
+      "Read in chunks, stream from `ctx.net.fetch` instead, or shrink the file. The cap is enforced by the hub to keep big files from OOM'ing it.",
     i18nKey: 'errors.fs.file_too_large',
-    data: z
-      .object({ path: z.string(), size: z.number(), maxBytes: z.number() })
-      .loose(),
+    data: z.object({ path: z.string(), size: z.number(), maxBytes: z.number() }).loose(),
   },
 
   // ─── Exec capability ──────────────────────────────────────────────────────
 
   EXEC_BINARY_NOT_ALLOWED: {
-    description:
-      'A `ctx.exec.spawn` binary is not in the granted allow list.',
+    description: 'A `ctx.exec.spawn` binary is not in the granted allow list.',
     httpStatus: 403,
     severity: 'error',
     category: 'exec',
     developerHint:
       'Add the binary (bare name or absolute path) to `capabilities."dev.brika.exec.spawn".allowBinaries` in the manifest.',
     i18nKey: 'errors.exec.binary_not_allowed',
-    data: z
-      .object({ command: z.string(), allowBinaries: z.array(z.string()) })
-      .loose(),
+    data: z.object({ command: z.string(), allowBinaries: z.array(z.string()) }).loose(),
   },
 
   EXEC_CWD_ESCAPE: {
-    description:
-      'A `ctx.exec.spawn` cwd resolves outside the plugin root.',
+    description: 'A `ctx.exec.spawn` cwd resolves outside the plugin root.',
     httpStatus: 403,
     severity: 'error',
     category: 'exec',
     developerHint:
       'Pass a relative `cwd` (resolved against the plugin root) or an absolute path inside it. Without this guard, an allow-listed binary could run against arbitrary directories on the host.',
     i18nKey: 'errors.exec.cwd_escape',
-    data: z
-      .object({ cwd: z.string(), pluginRoot: z.string() })
-      .loose(),
+    data: z.object({ cwd: z.string(), pluginRoot: z.string() }).loose(),
   },
 
   // ─── Manifest resolution ──────────────────────────────────────────────────
 
   MANIFEST_INVALID: {
-    description: 'A plugin\'s package.json failed schema validation.',
+    description: "A plugin's package.json failed schema validation.",
     httpStatus: 400,
     severity: 'error',
     category: 'manifest',
@@ -248,7 +234,7 @@ export const ErrorCatalog = {
   },
 
   MANIFEST_MISSING_MAIN: {
-    description: 'A plugin\'s package.json has no `main` field.',
+    description: "A plugin's package.json has no `main` field.",
     httpStatus: 400,
     severity: 'error',
     category: 'manifest',
@@ -270,7 +256,7 @@ export const ErrorCatalog = {
     severity: 'error',
     category: 'workflow',
     developerHint:
-      'Either the plugin that provides the block type isn\'t loaded, or the workflow file is out of date.',
+      "Either the plugin that provides the block type isn't loaded, or the workflow file is out of date.",
   },
 
   WORKFLOW_UNKNOWN_TARGET_BLOCK_TYPE: {
@@ -364,12 +350,13 @@ export type CatalogedErrorCode = keyof typeof ErrorCatalog;
  * // { host: string; allow: string[] } & { [key: string]: unknown }
  * ```
  */
-export type DataForCode<C extends CatalogedErrorCode> =
-  (typeof ErrorCatalog)[C] extends { readonly data: infer S }
-    ? S extends z.ZodType
-      ? z.infer<S>
-      : undefined
-    : undefined;
+export type DataForCode<C extends CatalogedErrorCode> = (typeof ErrorCatalog)[C] extends {
+  readonly data: infer S;
+}
+  ? S extends z.ZodType
+    ? z.infer<S>
+    : undefined
+  : undefined;
 
 /**
  * Look up a catalog entry. Returns undefined for codes not in the catalog

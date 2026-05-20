@@ -62,8 +62,8 @@ export type {
 export { isMessage, isRpc, message, rpc } from './define';
 // ─── Error catalog ───
 export type {
-  CatalogedErrorCode,
   CatalogEntry,
+  CatalogedErrorCode,
   ErrorCategory,
   ErrorSeverity,
 } from './error-catalog';

@@ -325,9 +325,7 @@ export const PluginPackageSchema = BasePackageJson.extend({
   capabilities: z.optional(
     z
       .record(z.string(), z.unknown())
-      .describe(
-        'Capability declarations keyed by reverse-DNS id (e.g. "dev.brika.net.fetch")'
-      )
+      .describe('Capability declarations keyed by reverse-DNS id (e.g. "dev.brika.net.fetch")')
   ),
 });
 
