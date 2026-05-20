@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { Channel, type WireMessage } from '../channel';
 import { callTool, hello, PluginInfo, ping, ready, ToolResult } from '../contract';
 import { isMessage, isRpc, message, rpc } from '../define';
-import { isRpcErrorWire, RpcError } from '../errors';
+import { BrikaError, isRpcErrorWire, RpcError } from '../errors';
 
 describe('Define helpers', () => {
   it('should create a message definition', () => {
@@ -619,5 +619,77 @@ describe('Schema validation', () => {
       version: '0.1.0',
     });
     expect(minimal.success).toBe(true);
+  });
+});
+
+describe('BrikaError', () => {
+  it('exposes ES2022 cause via the options bag', () => {
+    const root = new Error('db is down');
+    const err = new BrikaError('UNAVAILABLE', 'sync failed', { cause: root });
+    expect(err.cause).toBe(root);
+  });
+
+  it('RpcError instances satisfy `instanceof BrikaError` (back-compat)', () => {
+    const err = new RpcError('NOT_FOUND', 'gone');
+    expect(err instanceof BrikaError).toBe(true);
+    expect(err.code).toBe('NOT_FOUND');
+  });
+
+  it('serializes cause to the wire envelope', () => {
+    const root = new TypeError('bad arg');
+    const err = new BrikaError('INVALID_INPUT', 'parsing failed', { cause: root });
+    const wire = err.toWire();
+    expect(wire.cause).toEqual({ message: 'bad arg', name: 'TypeError' });
+  });
+
+  it('serializes a BrikaError cause as a full envelope (recursive)', () => {
+    const inner = new BrikaError('NOT_FOUND', 'page missing', { data: { url: '/x' } });
+    const outer = new BrikaError('INTERNAL', 'lookup failed', { cause: inner });
+    const wire = outer.toWire();
+    expect(wire.cause).toMatchObject({
+      _rpcError: true,
+      code: 'NOT_FOUND',
+      message: 'page missing',
+      data: { url: '/x' },
+    });
+  });
+
+  it('serializes a plain string cause as { message }', () => {
+    const err = new BrikaError('INTERNAL', 'something', { cause: 'a literal string' });
+    expect(err.toWire().cause).toEqual({ message: 'a literal string' });
+  });
+
+  it('serializes an object cause via JSON.stringify (no [object Object])', () => {
+    const err = new BrikaError('INTERNAL', 'x', { cause: { reason: 'broken', code: 42 } });
+    expect(err.toWire().cause).toEqual({ message: '{"reason":"broken","code":42}' });
+  });
+
+  it('fromWire materializes a BrikaError cause as a BrikaError instance', () => {
+    const inner = new BrikaError('NOT_FOUND', 'page missing');
+    const outer = new BrikaError('INTERNAL', 'lookup failed', { cause: inner });
+    const wire = outer.toWire();
+    const restored = BrikaError.fromWire(wire);
+    expect(restored.cause).toBeInstanceOf(BrikaError);
+    expect((restored.cause as BrikaError).code).toBe('NOT_FOUND');
+  });
+
+  it('appends the remote stack when toWire(true) is opted into', () => {
+    const err = new BrikaError('INTERNAL', 'remote oops');
+    const wire = err.toWire(true);
+    expect(wire.stack).toBeDefined();
+    const restored = BrikaError.fromWire(wire);
+    expect(restored.stack).toContain('--- remote stack ---');
+  });
+
+  it('toWire() omits stack by default to preserve the legacy wire shape', () => {
+    const err = new BrikaError('INTERNAL', 'oops');
+    const wire = err.toWire();
+    expect(wire.stack).toBeUndefined();
+  });
+
+  it('frozen data — mutation attempts throw in strict mode', () => {
+    const err = new BrikaError('INVALID_INPUT', 'x', { data: { field: 'name' } });
+    expect(err.data).toEqual({ field: 'name' });
+    expect(Object.isFrozen(err.data)).toBe(true);
   });
 });
