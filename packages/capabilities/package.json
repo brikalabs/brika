@@ -1,0 +1,26 @@
+{
+  "name": "@brika/capabilities",
+  "version": "0.3.1",
+  "description": "Capability registry and vector primitives for the Brika plugin runtime",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/brikalabs/brika.git",
+    "directory": "packages/capabilities"
+  },
+  "keywords": ["brika", "capabilities", "permissions", "plugins", "sandbox"],
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsgo --noEmit",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "zod": "^4.3.4"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.3.9"
+  }
+}
