@@ -256,6 +256,35 @@ describe('net.fetch — single-flight on GETs', () => {
     expect(calls).toBe(2);
   });
 
+  test('treats case-different headers as the same request (RFC 7230)', async () => {
+    let calls = 0;
+    let releaseFetch: (() => void) | undefined;
+    const fetchGate = new Promise<void>((resolve) => {
+      releaseFetch = resolve;
+    });
+    const reg = makeReg(async () => {
+      calls++;
+      await fetchGate;
+      return new Response('hi', { status: 200 });
+    });
+
+    const a = reg.dispatch(
+      'dev.brika.net.fetch',
+      { url: 'https://api.example.com/case', headers: { 'Accept-Language': 'en' } },
+      makeCtx(['api.example.com'])
+    );
+    const b = reg.dispatch(
+      'dev.brika.net.fetch',
+      { url: 'https://api.example.com/case', headers: { 'accept-language': 'en' } },
+      makeCtx(['api.example.com'])
+    );
+
+    expect(calls).toBe(1);
+    releaseFetch?.();
+    await Promise.all([a, b]);
+    expect(calls).toBe(1);
+  });
+
   test('clears the cache after settlement so subsequent calls re-fetch', async () => {
     let calls = 0;
     const reg = makeReg(async () => {

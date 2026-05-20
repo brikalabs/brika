@@ -44,9 +44,8 @@ import { getProcessMetrics } from '@/runtime/metrics';
 import type { HubLocation } from '@/runtime/state/state-store';
 import { buildHubCapabilities } from './capabilities/registry-factory';
 import {
+  buildVectorWithUserConsent,
   permissionFamiliesFromManifestCapabilities,
-  vectorForLegacyGrants,
-  vectorFromManifestCapabilities,
 } from './capabilities/vector';
 import { now } from './utils';
 
@@ -647,20 +646,23 @@ export class PluginProcess {
    * `capabilities` map (preferred) or the legacy `grantedPermissions` array
    * (fallback during the StateStore migration window).
    *
+   * IMPORTANT: the manifest never auto-grants itself. The plugin declares
+   * which capabilities it WANTS; the user-grants list (legacy
+   * `grantedPermissions: string[]`, keyed by permission family) decides
+   * which ones actually fire. A manifest capability whose permission
+   * family is not in `grantedPermissions` is dropped — same consent
+   * model as the legacy world. Per-capability scoped grants land when
+   * the StateStore schema migrates.
+   *
    * Recomputed each call so a permission grant change is picked up before
    * the next capability dispatch; cheap because the registry is built once.
    */
   #buildCurrentVector() {
-    const reg = this.#getCapabilityRegistry();
-    const manifestCaps = (this.metadata as { capabilities?: Record<string, unknown> })
-      .capabilities;
-    if (manifestCaps && Object.keys(manifestCaps).length > 0) {
-      // New path — manifest declares capabilities by reverse-DNS id. For
-      // now the "grant" is whatever the manifest requested; per-capability
-      // user grants land when the StateStore schema migrates.
-      return vectorFromManifestCapabilities(reg, manifestCaps, manifestCaps);
-    }
-    return vectorForLegacyGrants(reg, this.callbacks.onGetGrantedPermissions(this.name));
+    return buildVectorWithUserConsent(
+      this.#getCapabilityRegistry(),
+      (this.metadata as { capabilities?: Record<string, unknown> }).capabilities,
+      this.callbacks.onGetGrantedPermissions(this.name)
+    );
   }
 
   #getCapabilityRegistry(): CapabilityRegistry {

@@ -102,11 +102,18 @@ interface FetchResult {
   attempts: number;
 }
 
-/** Stable key for single-flight coalescing of GET/HEAD requests. */
+/**
+ * Stable key for single-flight coalescing of GET/HEAD requests.
+ *
+ * HTTP header names are case-insensitive (RFC 7230 §3.2): two GETs with
+ * `Accept-Language: en` and `accept-language: en` are semantically the
+ * same request and must hit the same in-flight entry. We normalize keys
+ * to lowercase before sorting so the key is canonical.
+ */
 function singleFlightKey(args: FetchArgs): string {
-  const headerEntries = Object.entries(args.headers ?? {}).sort(([a], [b]) =>
-    a.localeCompare(b)
-  );
+  const headerEntries = Object.entries(args.headers ?? {})
+    .map(([k, v]) => [k.toLowerCase(), v] as [string, string])
+    .sort(([a], [b]) => a.localeCompare(b));
   return `${args.method}:${args.url}:${JSON.stringify(headerEntries)}`;
 }
 

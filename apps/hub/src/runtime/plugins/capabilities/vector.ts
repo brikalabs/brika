@@ -109,6 +109,57 @@ export function permissionFamiliesFromIds(ids: ReadonlyArray<string>): string[] 
   return [...out];
 }
 
+/**
+ * Compute a plugin's capability vector with user-consent enforcement.
+ *
+ * The user's legacy `grantedPermissions: string[]` (permission FAMILY names
+ * like `net`, `secrets`) is treated as the source of truth. For each
+ * manifest-declared capability, the vector includes it only if the spec's
+ * `permission.name` family is in the granted set. Always-on capabilities
+ * (no permission gate) flow through unconditionally.
+ *
+ * Drops:
+ *   - capabilities not registered with the hub (unknown id)
+ *   - capabilities whose family is not in the granted set
+ *
+ * IMPORTANT: the manifest never auto-grants itself. The plugin declares
+ * which capabilities it WANTS; the user decides which families are
+ * permitted. This is the same consent model the legacy
+ * `vectorForLegacyGrants` enforces — extended to cover the new
+ * `capabilities` manifest map.
+ *
+ * When per-capability scoped grants land in the StateStore, this function
+ * will accept a richer `userGrants: Record<id, scope>` instead of the
+ * coarse family list.
+ */
+export function buildVectorWithUserConsent(
+  registry: CapabilityRegistry,
+  manifestCaps: Readonly<Record<string, unknown>> | undefined,
+  grantedPermissionFamilies: ReadonlyArray<string>
+): CapabilityVector {
+  const granted = new Set(grantedPermissionFamilies);
+
+  // A defined `capabilities` field (even empty `{}`) is the "I've migrated"
+  // signal — we use the new path exclusively. Falling back to legacy grants
+  // only when the manifest predates the schema (capabilities === undefined).
+  if (manifestCaps !== undefined) {
+    const userGrants: Record<string, unknown> = {};
+    for (const [id, requested] of Object.entries(manifestCaps)) {
+      const cap = registry.get(id);
+      if (!cap) {
+        continue; // Unknown capability — silently drop.
+      }
+      const perm = cap.spec.permission;
+      if (perm === undefined || granted.has(perm.name)) {
+        userGrants[id] = requested;
+      }
+    }
+    return vectorFromManifestCapabilities(registry, manifestCaps, userGrants);
+  }
+
+  return vectorForLegacyGrants(registry, [...granted]);
+}
+
 export function vectorFromManifestCapabilities(
   registry: CapabilityRegistry,
   manifestCapabilities: Readonly<Record<string, unknown>>,

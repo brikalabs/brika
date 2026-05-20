@@ -108,4 +108,24 @@ describe('fs capability — round-trip in a tmp dir', () => {
       )
     ).rejects.toMatchObject({ code: 'HANDLER_THREW' });
   });
+
+  test('rejects fs.read on a file larger than the 10MB cap', async () => {
+    const big = join(dir, 'big.bin');
+    await Bun.write(big, Buffer.alloc(12 * 1024 * 1024, 'x'));
+    await expect(
+      reg.dispatch('dev.brika.fs.read', { path: big }, ctx())
+    ).rejects.toMatchObject({
+      code: 'HANDLER_THREW',
+      message: expect.stringContaining('cap is'),
+    });
+  });
+
+  test('allows fs.read on a small file (cap doesn’t over-reject)', async () => {
+    const small = join(dir, 'small.bin');
+    await Bun.write(small, Buffer.alloc(1024, 'x'));
+    const out = (await reg.dispatch('dev.brika.fs.read', { path: small }, ctx())) as {
+      content: string;
+    };
+    expect(out.content.length).toBe(1024);
+  });
 });

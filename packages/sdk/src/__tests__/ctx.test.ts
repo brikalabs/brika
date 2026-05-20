@@ -103,3 +103,32 @@ describe('buildCtx — proxy traversal', () => {
     expect(seenArgs).toEqual({});
   });
 });
+
+describe('installVector — defensive shape check', () => {
+  test('refuses null', () => {
+    const installVector = require('../ctx').installVector as (v: unknown) => void;
+    expect(() => installVector(null)).toThrow(TypeError);
+  });
+
+  test('refuses a vector without grants array', () => {
+    const installVector = require('../ctx').installVector as (v: unknown) => void;
+    expect(() => installVector({})).toThrow(TypeError);
+    expect(() => installVector({ grants: 'not-an-array' })).toThrow(TypeError);
+    expect(() => installVector({ grants: null })).toThrow(TypeError);
+  });
+});
+
+describe('readInjectedVector — error wording', () => {
+  test('error mentions onInit so plugin authors know where to move the call', () => {
+    const readInjectedVector = require('../ctx').readInjectedVector as () => unknown;
+    try {
+      readInjectedVector();
+      throw new Error('should have thrown');
+    } catch (e) {
+      expect(e).toBeInstanceOf(Error);
+      const msg = (e as Error).message;
+      expect(msg).toContain('onInit');
+      expect(msg).toContain('vector');
+    }
+  });
+});

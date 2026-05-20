@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { CapabilityRegistry, defineCapability } from '@brika/capabilities';
 import { z } from 'zod';
 import {
+  buildVectorWithUserConsent,
   permissionFamiliesFromIds,
   permissionFamiliesFromManifestCapabilities,
   vectorForLegacyGrants,
@@ -128,5 +129,102 @@ describe('vectorForLegacyGrants — still works', () => {
       'dev.brika.net.fetch',
       'dev.brika.secrets.get',
     ]);
+  });
+});
+
+describe('buildVectorWithUserConsent — user consent enforcement', () => {
+  test('manifest does NOT auto-grant — no families granted = empty vector', () => {
+    // The bug regression: previously, a plugin declaring
+    // `capabilities: { 'dev.brika.net.fetch': { allow: [...] } }`
+    // would receive net.fetch automatically without the user granting
+    // 'net'. After the fix the vector is empty when grants is [].
+    const reg = makeRegistry();
+    const vec = buildVectorWithUserConsent(
+      reg,
+      { 'dev.brika.net.fetch': { allow: ['api.example.com'] } },
+      []
+    );
+    expect(vec.grants).toEqual([]);
+  });
+
+  test('manifest capability is included when the matching family is granted', () => {
+    const reg = makeRegistry();
+    const vec = buildVectorWithUserConsent(
+      reg,
+      { 'dev.brika.net.fetch': { allow: ['api.example.com'] } },
+      ['net']
+    );
+    expect(vec.grants).toHaveLength(1);
+    expect(vec.grants[0]).toMatchObject({
+      id: 'dev.brika.net.fetch',
+      scope: { allow: ['api.example.com'] },
+    });
+  });
+
+  test('a granted family without a manifest entry yields no grant', () => {
+    // Symmetry: granting `net` without declaring net.fetch in the manifest
+    // doesn't fabricate the capability.
+    const reg = makeRegistry();
+    const vec = buildVectorWithUserConsent(reg, {}, ['net']);
+    expect(vec.grants).toEqual([]);
+  });
+
+  test('per-capability granularity within a family: user grants `net`, manifest only wants net.fetch — gets net.fetch only', () => {
+    const reg = makeRegistry();
+    // Register a hypothetical net.disconnect to verify only the manifest-
+    // declared one comes through.
+    reg.register(
+      defineCapability(
+        {
+          id: 'dev.brika.net.disconnect',
+          args: z.object({}),
+          result: z.object({}),
+          permission: {
+            name: 'net',
+            scope: z.object({}),
+            defaultScope: {},
+          },
+        },
+        () => ({})
+      )
+    );
+    const vec = buildVectorWithUserConsent(
+      reg,
+      { 'dev.brika.net.fetch': { allow: [] } },
+      ['net']
+    );
+    expect(vec.grants.map((g) => g.id)).toEqual(['dev.brika.net.fetch']);
+  });
+
+  test('unknown capability ids in the manifest are silently dropped', () => {
+    const reg = makeRegistry();
+    const vec = buildVectorWithUserConsent(
+      reg,
+      { 'com.evil.unknown.cap': {} },
+      ['net', 'secrets']
+    );
+    expect(vec.grants).toEqual([]);
+  });
+
+  test('falls back to vectorForLegacyGrants when the manifest has no `capabilities`', () => {
+    const reg = makeRegistry();
+    const vec = buildVectorWithUserConsent(reg, undefined, ['net', 'secrets']);
+    expect(vec.grants.map((g) => g.id).sort()).toEqual([
+      'dev.brika.net.fetch',
+      'dev.brika.secrets.get',
+    ]);
+  });
+
+  test('always-on capabilities (no permission gate) flow through unconditionally', () => {
+    const reg = new CapabilityRegistry();
+    reg.register(
+      defineCapability(
+        { id: 'dev.brika.log.ping', args: z.object({}), result: z.object({}) },
+        () => ({})
+      )
+    );
+    // No manifest, no grants — still vended.
+    const vec = buildVectorWithUserConsent(reg, undefined, []);
+    expect(vec.grants.map((g) => g.id)).toEqual(['dev.brika.log.ping']);
   });
 });

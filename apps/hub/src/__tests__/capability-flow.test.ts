@@ -123,7 +123,7 @@ function spawnWithCapabilities(opts: {
   }
 
   const proc = Bun.spawn([BUN, `--preload=${PRELUDE}`, FIXTURE], {
-    stdio: ['pipe', 'pipe', 'inherit'],
+    stdio: ['pipe', 'pipe', 'pipe'],
     serialization: 'advanced',
     ipc: (raw) => {
       const wire = raw as WireMessage;

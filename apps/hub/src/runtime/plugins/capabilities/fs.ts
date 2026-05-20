@@ -15,6 +15,14 @@ import {
   fsWrite as writeSpec,
 } from '@brika/sdk/capabilities';
 
+/**
+ * Maximum size returned by a single `fs.read` call. A plugin reading a
+ * giant file should not be able to OOM the hub — the handler stats the
+ * file first and rejects when it exceeds this cap. Tune via the capability
+ * scope later if a legitimate use case appears; for now, hard-coded.
+ */
+const MAX_READ_BYTES = 10 * 1024 * 1024; // 10 MB
+
 interface FsScope {
   allow: ReadonlyArray<string>;
 }
@@ -57,6 +65,14 @@ export function buildFsCapabilities(_cb: FsCallbacks) {
     defineCapability(readSpec.spec, async (ctx, args) => {
       const scope = ctx.grantedScope as FsScope;
       enforce(scope, args.path, 'read');
+      // Stat first so a giant file can't OOM the hub — the call rejects
+      // before any bytes hit memory.
+      const stat = await fs.stat(args.path);
+      if (stat.size > MAX_READ_BYTES) {
+        throw new Error(
+          `fs.read: file "${args.path}" is ${stat.size} bytes; cap is ${MAX_READ_BYTES}. Read in chunks or use a smaller file.`
+        );
+      }
       const buf = await fs.readFile(args.path);
       return {
         content: args.encoding === 'base64' ? buf.toString('base64') : buf.toString('utf-8'),

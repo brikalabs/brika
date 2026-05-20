@@ -137,7 +137,7 @@ export function readInjectedVector(): CapabilityVector {
   const vector = g.__brika_caps;
   if (vector?.[CAPS_BRAND] !== true) {
     throw new Error(
-      'globalThis.__brika_caps is missing or not branded. The Brika prelude must inject the vector before plugin code runs.'
+      'Brika capability vector is not installed yet. This typically means a ctx.* call ran at module-load time (before the hub finishes startup). Move the call into onInit() or a later handler — the vector is guaranteed to be available there.'
     );
   }
   return vector;
@@ -151,6 +151,14 @@ export function readInjectedVector(): CapabilityVector {
  * the global to a more permissive vector once installed.
  */
 export function installVector(vector: CapabilityVector): void {
+  // Defensive: hub-side bugs (or a malformed wire message getting past
+  // Zod somehow) could pass garbage here. Refuse rather than freeze
+  // something that would crash on first read.
+  if (!vector || typeof vector !== 'object' || !Array.isArray(vector.grants)) {
+    throw new TypeError(
+      `installVector: expected { grants: CapabilityGrant[] }, got ${typeof vector === 'object' ? JSON.stringify(vector) : typeof vector}`
+    );
+  }
   const g = globalThis as CapsGlobal;
   if (g.__brika_caps !== undefined) {
     throw new Error('Capability vector already installed — refusing to overwrite.');
