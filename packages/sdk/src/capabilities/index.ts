@@ -8,4 +8,8 @@
  * Hub code imports the spec exports here to register handlers.
  */
 
+export { actionsRegister } from './actions';
 export { locationGet, locationTimezone } from './location';
+export { prefsSet } from './prefs';
+export { routesRegister } from './routes';
+export { secretsDelete, secretsGet, secretsSet } from './secrets';

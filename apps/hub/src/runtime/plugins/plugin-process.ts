@@ -638,10 +638,27 @@ export class PluginProcess {
 
   #getCapabilityRegistry(): CapabilityRegistry {
     if (this.#capabilities === undefined) {
-      this.#capabilities = buildHubCapabilities({
-        getLocation: () => this.callbacks.onGetHubLocation(),
-        getTimezone: () => this.callbacks.onGetHubTimezone(),
-      });
+      this.#capabilities = buildHubCapabilities(
+        {
+          // location.*
+          getLocation: () => this.callbacks.onGetHubLocation(),
+          getTimezone: () => this.callbacks.onGetHubTimezone(),
+          // actions.register — mirrors the legacy `registerAction` handler
+          // at line 561 (internal tracking only; no outward callback).
+          onAction: (id) => {
+            this.#actions.add(id);
+          },
+          // routes.register
+          onRoute: (method, path) => this.callbacks.onRoute(method, path),
+          // prefs.set
+          setPreference: (key, value) => this.callbacks.onUpdatePreference(key, value),
+          // secrets.{get,set,delete}
+          getSecret: (name, key) => this.callbacks.onGetPluginSecret(name, key),
+          setSecret: (name, key, value) => this.callbacks.onSetPluginSecret(name, key, value),
+          deleteSecret: (name, key) => this.callbacks.onDeletePluginSecret(name, key),
+        },
+        this.name
+      );
     }
     return this.#capabilities;
   }
