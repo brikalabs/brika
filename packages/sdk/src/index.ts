@@ -209,12 +209,24 @@ export { PRELUDE_BRAND } from './bridge';
 // ─────────────────────────────────────────────────────────────────────────────
 
 export {
+  BrikaError,
+  ErrorCatalog,
+  httpStatusForCode,
   InternalError,
   InvalidInputError,
+  lookupCatalogEntry,
   NotFoundError,
   PermissionDeniedError,
   rethrowRpcError,
   sdkErrors,
+} from './errors';
+export type {
+  BrikaErrorCode,
+  BrikaErrorWire,
+  CatalogedErrorCode,
+  CatalogEntry,
+  ErrorCategory,
+  ErrorSeverity,
 } from './errors';
 
 // ─────────────────────────────────────────────────────────────────────────────

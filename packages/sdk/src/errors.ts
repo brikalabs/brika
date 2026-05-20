@@ -216,7 +216,19 @@ export function rethrowRpcError(err: unknown): never {
   throw err;
 }
 
-// Re-export BrikaError so plugin authors get the base class from the SDK
-// without a separate `@brika/ipc` import.
-export { BrikaError } from '@brika/ipc';
-export type { BrikaErrorCode, BrikaErrorWire } from '@brika/ipc';
+// Re-export the platform error toolkit so plugin authors get everything
+// they need from `@brika/sdk` without reaching into `@brika/ipc`.
+export {
+  BrikaError,
+  ErrorCatalog,
+  httpStatusForCode,
+  lookupCatalogEntry,
+} from '@brika/ipc';
+export type {
+  BrikaErrorCode,
+  BrikaErrorWire,
+  CatalogedErrorCode,
+  CatalogEntry,
+  ErrorCategory,
+  ErrorSeverity,
+} from '@brika/ipc';

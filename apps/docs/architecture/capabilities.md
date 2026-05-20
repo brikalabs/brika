@@ -238,10 +238,15 @@ narrows. Catalog metadata is only attached when a code is registered.
 | SDK (Proxy.apply) | `PermissionDeniedError` (`'PERMISSION_DENIED'`) | Capability id not in vector — no IPC. |
 | Hub (capabilityRequest) | `RpcError('PERMISSION_DENIED', …)` | Vector lookup failed at the hub — defense in depth. |
 | Registry.dispatch | `CapabilityError('INVALID_INPUT')` | Args failed `spec.args.safeParse`. `cause` is the underlying `ZodError`. |
-| Registry.dispatch | `CapabilityError('INTERNAL')` | The handler raised. `cause` is the original throw (Error, string, or any value). |
 | Registry.dispatch | `CapabilityError('INVALID_OUTPUT')` | Handler returned a value that fails `spec.result.safeParse` — programmer error in the hub. `cause` is the underlying `ZodError`. |
 | Registry.dispatch | `CapabilityError('INVALID_SCOPE')` | Granted scope value failed the spec's scope schema — reserved for future use, currently filtered at `buildVector`. |
 | Registry.dispatch | `CapabilityError('NOT_REGISTERED')` | Dispatched against an id the hub hasn't registered — usually means a typo or an out-of-date plugin. |
+| Registry.dispatch | `CapabilityError('INTERNAL')` | A handler threw a non-`BrikaError` value. `cause` is the original throw (Error, string, primitive, etc.). Typed `BrikaError` throws from handlers pass through unchanged — see the next row. |
+| `ctx.net.fetch` handler | `BrikaError('NET_HOST_NOT_ALLOWED')` | Target host outside the granted allow list. `data: { host, allow }`. |
+| `ctx.fs.*` handler | `BrikaError('FS_PATH_NOT_ALLOWED')` | Path outside the granted allow list (after canonicalization). `data: { path, op, allow }`. |
+| `ctx.fs.read` handler | `BrikaError('FS_FILE_TOO_LARGE')` | File exceeds the 10 MB read cap. `data: { path, size, maxBytes }`. |
+| `ctx.exec.spawn` handler | `BrikaError('EXEC_BINARY_NOT_ALLOWED')` | Binary outside the granted allow list. `data: { command, allowBinaries }`. |
+| `ctx.exec.spawn` handler | `BrikaError('EXEC_CWD_ESCAPE')` | `cwd` resolves outside the plugin root. `data: { cwd, pluginRoot }`. |
 | Workflow validation | `ValidationError` (`'WORKFLOW_*'`) | Diagnostic-only — emitted as a record on the validation report, never thrown. The `WORKFLOW_*` slice of `CatalogedErrorCode` covers unknown block types, invalid port refs, type-incompatible connections, orphan blocks, etc. |
 
 Plugin code sees these as rejected promises. `instanceof BrikaError`
@@ -251,6 +256,28 @@ narrow further on the SDK side. The wire format preserves the cause
 chain — `err.cause` on the plugin side points at a reconstructed
 `BrikaError` (or a plain `Error` if the original cause was a primitive),
 with the remote stack appended.
+
+```ts
+import { BrikaError, lookupCatalogEntry } from '@brika/sdk';
+
+try {
+  await ctx.net.fetch({ url: 'https://attacker.example/' });
+} catch (e) {
+  if (e instanceof BrikaError && e.code === 'NET_HOST_NOT_ALLOWED') {
+    // Catalog entry has the Zod schema for `data` — use it to get a
+    // typed view without `as` casts. The schema's i18n key and developer
+    // hint are also available here for surfacing UI messages.
+    const entry = lookupCatalogEntry('NET_HOST_NOT_ALLOWED');
+    const data = entry?.data?.parse(e.data);  // { host: string; allow: string[] }
+    log(`Network denied: ${e.message}`);
+    if (data) {
+      log(`Add "${data.host}" to your manifest's net.fetch allow list (currently: ${data.allow.join(', ')})`);
+    }
+  } else {
+    throw e;
+  }
+}
+```
 
 ### Helpers
 
