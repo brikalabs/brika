@@ -7,6 +7,28 @@ interface RegisteredRoute {
 }
 
 /**
+ * Well-known path prefixes that are addressed without the plugin uid in the
+ * URL (e.g. `/api/oauth/:providerId/callback`). For these, two different
+ * plugins registering the same `(method, path)` would be a hijack risk —
+ * whichever registered first would receive the other's traffic. We reject
+ * cross-plugin duplicates on these prefixes; everything else is fine
+ * because plugin-scoped routes already live under `/api/plugins/:uid/...`.
+ *
+ * Adding a new well-known prefix here is the right way to opt new shared
+ * routes into the same protection.
+ */
+const WELL_KNOWN_PREFIXES = ['/oauth/'] as const;
+
+function isWellKnownPath(path: string): boolean {
+  for (const prefix of WELL_KNOWN_PREFIXES) {
+    if (path.startsWith(prefix)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
  * Tracks HTTP routes registered by plugins.
  * Routes are namespaced: plugin registers "/foo" → served at /api/plugins/:uid/routes/foo
  */
@@ -18,7 +40,30 @@ export class PluginRouteRegistry {
     return `${pluginName}:${method}:${path}`;
   }
 
+  /**
+   * Register a plugin route. Idempotent for the same `(pluginName, method,
+   * path)` triple.
+   *
+   * @throws {Error} if `path` is a well-known shared route (`/oauth/...`)
+   *   and another plugin already owns the same `(method, path)`. This
+   *   prevents the OAuth callback hijack where a malicious plugin
+   *   pre-registers `/oauth/spotify/callback` and intercepts the
+   *   legitimate plugin's authorization code.
+   */
   register(pluginName: string, method: string, path: string): void {
+    if (isWellKnownPath(path)) {
+      for (const existing of this.#routes.values()) {
+        if (
+          existing.method === method &&
+          existing.path === path &&
+          existing.pluginName !== pluginName
+        ) {
+          throw new Error(
+            `Cannot register well-known route ${method} ${path} for plugin "${pluginName}": already owned by "${existing.pluginName}". Choose a different OAuth provider id.`
+          );
+        }
+      }
+    }
     const key = this.#key(pluginName, method, path);
     this.#routes.set(key, {
       pluginName,

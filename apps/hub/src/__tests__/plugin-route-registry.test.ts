@@ -210,4 +210,47 @@ describe('PluginRouteRegistry', () => {
       expect(registry.listByPlugin('anything')).toEqual([]);
     });
   });
+
+  describe('well-known route hijack protection (S4)', () => {
+    test('first plugin can register an /oauth/* callback', () => {
+      expect(() => {
+        registry.register('plugin-spotify', 'GET', '/oauth/spotify/callback');
+      }).not.toThrow();
+    });
+
+    test('a second plugin trying to claim the same /oauth/* path is rejected', () => {
+      registry.register('plugin-spotify', 'GET', '/oauth/spotify/callback');
+      expect(() => {
+        registry.register('plugin-evil', 'GET', '/oauth/spotify/callback');
+      }).toThrow(/already owned by "plugin-spotify"/);
+      // The original owner is unchanged.
+      expect(registry.resolveByPath('GET', '/oauth/spotify/callback')?.pluginName).toBe(
+        'plugin-spotify'
+      );
+    });
+
+    test('same plugin re-registering its own /oauth/* route stays idempotent', () => {
+      registry.register('plugin-spotify', 'GET', '/oauth/spotify/callback');
+      expect(() => {
+        registry.register('plugin-spotify', 'GET', '/oauth/spotify/callback');
+      }).not.toThrow();
+      expect(registry.listByPlugin('plugin-spotify')).toHaveLength(1);
+    });
+
+    test('protection only applies to well-known prefixes — generic routes coexist', () => {
+      registry.register('plugin-a', 'GET', '/foo');
+      // Plugin-scoped routes live under /api/plugins/:uid/routes/* so the
+      // same path key in different plugins is fine.
+      expect(() => {
+        registry.register('plugin-b', 'GET', '/foo');
+      }).not.toThrow();
+    });
+
+    test('different OAuth provider ids on the same path prefix coexist', () => {
+      registry.register('plugin-spotify', 'GET', '/oauth/spotify/callback');
+      expect(() => {
+        registry.register('plugin-google', 'GET', '/oauth/google/callback');
+      }).not.toThrow();
+    });
+  });
 });
