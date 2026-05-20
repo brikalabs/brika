@@ -9,6 +9,43 @@ hub-side handler.
 See [Sandbox Roadmap](./sandbox-roadmap.md) for how this primitive fits the
 T1/T2/T3 staged isolation plan.
 
+## Plugin author quickstart
+
+```ts
+import { ctx, onInit } from '@brika/sdk';
+
+onInit(async () => {
+  // All hub-mediated I/O flows through `ctx`. Capabilities the plugin
+  // didn't declare in its manifest reject at the SDK boundary — zero
+  // IPC round-trip on the denied path.
+  const res = await ctx.net.fetch({
+    url: 'https://api.example.com/data',
+    retry: { maxAttempts: 3, respectRetryAfter: true, backoffMs: 500 },
+  });
+  await ctx.secrets.set({ key: 'last-sync', value: new Date().toISOString() });
+  const loc = await ctx.location.get();
+  // ...
+});
+```
+
+In `package.json`, declare which capabilities you need:
+
+```json
+{
+  "capabilities": {
+    "dev.brika.net.fetch":   { "allow": ["api.example.com"] },
+    "dev.brika.secrets.get": {},
+    "dev.brika.secrets.set": {},
+    "dev.brika.location.get": {}
+  }
+}
+```
+
+`ctx` is a Proxy that lazy-builds on first property access. Safe to call
+from `onInit`, event handlers, route handlers, anywhere that runs after
+the plugin process is ready. Module-load-time access throws because the
+capability vector hasn't been fetched yet — use `onInit` instead.
+
 ## The shape
 
 ```ts
