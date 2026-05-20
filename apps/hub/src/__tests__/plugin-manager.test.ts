@@ -326,14 +326,17 @@ describe('PluginManager', () => {
         expect(mockLifecycle.load).toHaveBeenCalledWith('/path');
       });
 
-      test('throws when plugin not found', async () => {
+      test('throws typed NOT_FOUND when plugin missing', async () => {
         mockLifecycle.getProcessByUid.mockReturnValue(null);
         mockState.getByUid.mockReturnValue(null);
 
-        await expect(manager.enable('unknown-uid')).rejects.toThrow('Plugin not found');
+        await expect(manager.enable('unknown-uid')).rejects.toMatchObject({
+          code: 'NOT_FOUND',
+          data: { resource: 'unknown-uid' },
+        });
       });
 
-      test('throws on config invalid event', async () => {
+      test('throws typed INVALID_INPUT with config errors on plugin.configInvalid event', async () => {
         const storedData = {
           name: '@test/plugin',
           rootDirectory: '/path',
@@ -349,7 +352,14 @@ describe('PluginManager', () => {
           },
         });
 
-        await expect(manager.enable('uid-123')).rejects.toThrow('invalid configuration');
+        await expect(manager.enable('uid-123')).rejects.toMatchObject({
+          code: 'INVALID_INPUT',
+          data: {
+            field: 'config',
+            errors: ['Invalid config'],
+            pluginUid: 'uid-123',
+          },
+        });
       });
     });
 

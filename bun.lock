@@ -482,6 +482,7 @@
       "version": "0.3.1",
       "dependencies": {
         "@brika/di": "workspace:*",
+        "@brika/ipc": "workspace:*",
         "hono": "^4.12.2",
         "zod": "^4.3.4",
       },

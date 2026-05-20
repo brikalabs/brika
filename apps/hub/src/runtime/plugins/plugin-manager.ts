@@ -1,6 +1,6 @@
 import { inject, singleton } from '@brika/di';
 import { withPredicate } from '@brika/events';
-import type { Json } from '@brika/ipc';
+import { BrikaError, type Json } from '@brika/ipc';
 import type { Plugin } from '@brika/plugin';
 import { BlockRegistry } from '@/runtime/blocks';
 import { PluginActions } from '@/runtime/events/actions';
@@ -95,13 +95,20 @@ export class PluginManager {
   async enable(uid: string): Promise<void> {
     const name = this.#getName(uid);
     if (!name) {
-      throw new Error(`Plugin not found: ${uid}`);
+      throw new BrikaError('NOT_FOUND', `Plugin not found: ${uid}`, {
+        data: { resource: uid },
+      });
     }
 
     await this.#state.setEnabled(name, true);
     const stored = this.#state.get(name);
     if (!stored) {
-      throw new Error(`Plugin state not found: ${name}`);
+      // Internal invariant: we just resolved `name` from a uid that has a
+      // process. The state store falling out of sync is a hub-side bug,
+      // not a missing-resource condition — surface as INTERNAL.
+      throw new BrikaError('INTERNAL', `Plugin state not found: ${name}`, {
+        data: { resource: name },
+      });
     }
 
     const racePromise = this.#events.race(
@@ -118,8 +125,10 @@ export class PluginManager {
 
     const result = await racePromise;
     if (result.type === 'plugin.configInvalid') {
-      throw new Error(
-        `Plugin ${uid} has invalid configuration: ${result.payload.errors.join(', ')}`
+      throw new BrikaError(
+        'INVALID_INPUT',
+        `Plugin ${uid} has invalid configuration: ${result.payload.errors.join(', ')}`,
+        { data: { field: 'config', errors: result.payload.errors, pluginUid: uid } }
       );
     }
   }
@@ -127,7 +136,9 @@ export class PluginManager {
   async disable(uid: string): Promise<void> {
     const name = this.#getName(uid);
     if (!name) {
-      throw new Error(`Plugin not found: ${uid}`);
+      throw new BrikaError('NOT_FOUND', `Plugin not found: ${uid}`, {
+        data: { resource: uid },
+      });
     }
 
     await this.#state.setEnabled(name, false);
@@ -137,21 +148,30 @@ export class PluginManager {
   async reload(uid: string): Promise<void> {
     const name = this.#getName(uid);
     if (!name) {
-      throw new Error(`Plugin not found: ${uid}`);
+      throw new BrikaError('NOT_FOUND', `Plugin not found: ${uid}`, {
+        data: { resource: uid },
+      });
     }
 
     // Unload the plugin first
     await this.#lifecycle.unload(name);
 
-    // Verify process is actually gone
+    // Verify process is actually gone — hub-side invariant violation.
     if (this.#lifecycle.hasProcess(name)) {
-      throw new Error(`Plugin ${uid} is still running after unload`);
+      throw new BrikaError('INTERNAL', `Plugin ${uid} is still running after unload`, {
+        data: { pluginUid: uid, pluginName: name },
+      });
     }
 
     // Get stored state to know the root directory
     const stored = this.#state.get(name);
     if (!stored) {
-      throw new Error(`Plugin state not found: ${name}`);
+      // Internal invariant: we just resolved `name` from a uid that has a
+      // process. The state store falling out of sync is a hub-side bug,
+      // not a missing-resource condition — surface as INTERNAL.
+      throw new BrikaError('INTERNAL', `Plugin state not found: ${name}`, {
+        data: { resource: name },
+      });
     }
 
     // Set up race AFTER unloading to catch events from new load
@@ -165,24 +185,25 @@ export class PluginManager {
       }
     );
 
-    // Load the plugin (no need for force since we already unloaded)
-    try {
-      await this.#lifecycle.load(stored.rootDirectory);
-    } catch (error) {
-      throw new Error(
-        `Failed to load plugin ${uid}: ${error instanceof Error ? error.message : String(error)}`
-      );
-    }
+    // Load the plugin (no need for force since we already unloaded).
+    // No catch-all wrapper: a typed BrikaError from the resolver
+    // (`MANIFEST_INVALID` / `MANIFEST_MISSING_MAIN`) passes through so
+    // the router catch surfaces it with the right httpStatus.
+    await this.#lifecycle.load(stored.rootDirectory);
 
-    // Verify process was actually created
+    // Verify process was actually created — hub-side invariant violation.
     if (!this.#lifecycle.hasProcess(name)) {
-      throw new Error(`Plugin ${uid} failed to start after load`);
+      throw new BrikaError('INTERNAL', `Plugin ${uid} failed to start after load`, {
+        data: { pluginUid: uid, pluginName: name },
+      });
     }
 
     const result = await racePromise;
     if (result.type === 'plugin.configInvalid') {
-      throw new Error(
-        `Plugin ${uid} has invalid configuration: ${result.payload.errors.join(', ')}`
+      throw new BrikaError(
+        'INVALID_INPUT',
+        `Plugin ${uid} has invalid configuration: ${result.payload.errors.join(', ')}`,
+        { data: { field: 'config', errors: result.payload.errors, pluginUid: uid } }
       );
     }
 
@@ -200,7 +221,9 @@ export class PluginManager {
   async kill(uid: string): Promise<void> {
     const name = this.#getName(uid);
     if (!name) {
-      throw new Error(`Plugin not found: ${uid}`);
+      throw new BrikaError('NOT_FOUND', `Plugin not found: ${uid}`, {
+        data: { resource: uid },
+      });
     }
 
     const process = this.#lifecycle.getProcess(name);

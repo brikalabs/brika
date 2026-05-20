@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'bun:test';
+import { BrikaError } from '@brika/ipc';
 import { z } from 'zod';
 import type { Middleware } from '../index';
 import { BadRequest, combineRoutes, createApp, group, NotFound, route } from '../index';
@@ -616,6 +617,70 @@ describe('@brika/router', () => {
       expect(res.status).toBe(400);
       expect(await res.json()).toEqual({
         error: 'Invalid data',
+      });
+    });
+
+    it('should map a thrown BrikaError to its catalog httpStatus + structured body', async () => {
+      const app = createApp([
+        route.get({
+          path: '/api/things/:id',
+          handler: () => {
+            throw new BrikaError('NOT_FOUND', 'thing missing', {
+              data: { resource: '/things/42' },
+            });
+          },
+        }),
+      ]);
+
+      const res = await app.fetch(new Request('http://localhost/api/things/42'));
+      expect(res.status).toBe(404);
+      const body = (await res.json()) as { error: Record<string, unknown> };
+      expect(body.error).toEqual({
+        code: 'NOT_FOUND',
+        message: 'thing missing',
+        data: { resource: '/things/42' },
+        i18nKey: 'errors.not_found',
+      });
+    });
+
+    it('should map a domain-specific BrikaError code (NET_HOST_NOT_ALLOWED) to 403', async () => {
+      const app = createApp([
+        route.get({
+          path: '/api/proxy',
+          handler: () => {
+            throw new BrikaError('NET_HOST_NOT_ALLOWED', 'host blocked', {
+              data: { host: 'attacker.com', allow: ['api.example.com'] },
+            });
+          },
+        }),
+      ]);
+
+      const res = await app.fetch(new Request('http://localhost/api/proxy'));
+      expect(res.status).toBe(403);
+      const body = (await res.json()) as { error: Record<string, unknown> };
+      expect(body.error).toMatchObject({
+        code: 'NET_HOST_NOT_ALLOWED',
+        data: { host: 'attacker.com', allow: ['api.example.com'] },
+      });
+      expect(body.error.developerHint).toContain('manifest');
+    });
+
+    it('should fall back to a generic 500 for an uncatalogued BrikaError code', async () => {
+      const app = createApp([
+        route.get({
+          path: '/api/oops',
+          handler: () => {
+            throw new BrikaError('CUSTOM_PLUGIN_CODE', 'plugin-specific failure');
+          },
+        }),
+      ]);
+
+      const res = await app.fetch(new Request('http://localhost/api/oops'));
+      expect(res.status).toBe(500);
+      const body = (await res.json()) as { error: Record<string, unknown> };
+      expect(body.error).toEqual({
+        code: 'CUSTOM_PLUGIN_CODE',
+        message: 'plugin-specific failure',
       });
     });
 

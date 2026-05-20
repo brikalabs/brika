@@ -1,4 +1,5 @@
 import { inject } from '@brika/di';
+import { BrikaError, httpStatusForCode, lookupCatalogEntry } from '@brika/ipc';
 import { type Context, Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { ZodError, z } from 'zod';
@@ -111,6 +112,7 @@ function handleError(
     json: (data: unknown, status: number) => Response;
   }
 ) {
+  // Router-native exceptions keep the flat shape callers built UIs against.
   if (error instanceof HttpException) {
     return c.json(
       {
@@ -118,6 +120,28 @@ function handleError(
         ...error.data,
       },
       error.status
+    );
+  }
+
+  // Platform-typed errors get the catalog's httpStatus + structured envelope
+  // with i18nKey/developerHint when the code is registered. A route handler
+  // that throws `BrikaError('NOT_FOUND', ...)` now becomes a real 404 with
+  // the resource path attached, not a generic 500.
+  if (error instanceof BrikaError) {
+    const entry = lookupCatalogEntry(error.code);
+    return c.json(
+      {
+        error: {
+          code: error.code,
+          message: error.message,
+          ...(error.data === undefined ? {} : { data: error.data }),
+          ...(entry?.i18nKey === undefined ? {} : { i18nKey: entry.i18nKey }),
+          ...(entry?.developerHint === undefined
+            ? {}
+            : { developerHint: entry.developerHint }),
+        },
+      },
+      httpStatusForCode(error.code)
     );
   }
 
