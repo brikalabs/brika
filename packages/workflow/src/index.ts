@@ -59,6 +59,7 @@ export type {
   ConnectionResult,
   ValidationError,
   ValidationResult,
+  WorkflowValidationCode,
 } from './validation';
 export {
   getSchemaTypeName,

@@ -273,7 +273,7 @@ describe('Workspace Validation - Block Type Errors', () => {
     expect(result.valid).toBeFalse();
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toMatchObject({
-      code: 'UNKNOWN_BLOCK_TYPE',
+      code: 'WORKFLOW_UNKNOWN_BLOCK_TYPE',
       message: 'Unknown block type: "plugin:unknown"',
       path: 'blocks[0].type',
     });
@@ -305,8 +305,8 @@ describe('Workspace Validation - Block Type Errors', () => {
 
     expect(result.valid).toBeFalse();
     expect(result.errors).toHaveLength(2);
-    expect(result.errors[0]?.code).toBe('UNKNOWN_BLOCK_TYPE');
-    expect(result.errors[1]?.code).toBe('UNKNOWN_BLOCK_TYPE');
+    expect(result.errors[0]?.code).toBe('WORKFLOW_UNKNOWN_BLOCK_TYPE');
+    expect(result.errors[1]?.code).toBe('WORKFLOW_UNKNOWN_BLOCK_TYPE');
   });
 });
 
@@ -348,7 +348,7 @@ describe('Workspace Validation - Port Errors', () => {
     expect(result.valid).toBeFalse();
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toMatchObject({
-      code: 'UNKNOWN_OUTPUT_PORT',
+      code: 'WORKFLOW_UNKNOWN_OUTPUT_PORT',
       message: 'Unknown output port "invalidPort" on block type "plugin:timer"',
       path: 'blocks[0].outputs.invalidPort',
     });
@@ -387,7 +387,7 @@ describe('Workspace Validation - Port Errors', () => {
     expect(result.valid).toBeFalse();
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toMatchObject({
-      code: 'UNKNOWN_INPUT_PORT',
+      code: 'WORKFLOW_UNKNOWN_INPUT_PORT',
       message: 'Unknown input port "invalidPort" on block type "plugin:logger"',
       path: 'blocks[0].inputs.invalidPort',
     });
@@ -432,7 +432,7 @@ describe('Workspace Validation - Connection Errors', () => {
     expect(result.valid).toBeFalse();
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toMatchObject({
-      code: 'INVALID_PORT_REF',
+      code: 'WORKFLOW_INVALID_PORT_REF',
       message: 'Invalid port reference: "invalid-ref-format"',
       path: 'blocks[0].outputs.tick',
     });
@@ -471,7 +471,7 @@ describe('Workspace Validation - Connection Errors', () => {
     expect(result.valid).toBeFalse();
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toMatchObject({
-      code: 'TARGET_BLOCK_NOT_FOUND',
+      code: 'WORKFLOW_TARGET_BLOCK_NOT_FOUND',
       message: 'Target block "non-existent" not found',
       path: 'blocks[0].outputs.tick',
     });
@@ -510,7 +510,7 @@ describe('Workspace Validation - Connection Errors', () => {
     expect(result.valid).toBeFalse();
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toMatchObject({
-      code: 'SOURCE_BLOCK_NOT_FOUND',
+      code: 'WORKFLOW_SOURCE_BLOCK_NOT_FOUND',
       message: 'Source block "non-existent" not found',
       path: 'blocks[0].inputs.input',
     });
@@ -557,7 +557,7 @@ describe('Workspace Validation - Connection Errors', () => {
 
     expect(result.valid).toBeFalse();
     expect(result.errors.length).toBeGreaterThan(0);
-    const unknownTargetError = result.errors.find((e) => e.code === 'UNKNOWN_TARGET_BLOCK_TYPE');
+    const unknownTargetError = result.errors.find((e) => e.code === 'WORKFLOW_UNKNOWN_TARGET_BLOCK_TYPE');
     expect(unknownTargetError).toBeDefined();
     expect(unknownTargetError?.message).toContain('unknown-logger');
   });
@@ -612,7 +612,7 @@ describe('Workspace Validation - Connection Errors', () => {
     expect(result.valid).toBeFalse();
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toMatchObject({
-      code: 'TARGET_PORT_NOT_FOUND',
+      code: 'WORKFLOW_TARGET_PORT_NOT_FOUND',
       message: 'Target port "wrongPort" not found on block "logger-1"',
       path: 'blocks[0].outputs.tick',
     });
@@ -696,7 +696,7 @@ describe('Workspace Validation - Connection Errors', () => {
     expect(
       result.errors.some(
         (e) =>
-          e.code === 'INVALID_CONNECTION' ||
+          e.code === 'WORKFLOW_INVALID_CONNECTION' ||
           e.message.toLowerCase().includes('direction') ||
           e.message.toLowerCase().includes('input')
       )
@@ -758,10 +758,10 @@ describe('Workspace Validation - Warnings', () => {
 
     expect(result.valid).toBeTrue(); // Still valid, just warnings
     expect(result.warnings).toHaveLength(2); // Bidirectional ref + orphan block
-    const bidirWarning = result.warnings.find((w) => w.code === 'MISSING_BIDIRECTIONAL_REF');
+    const bidirWarning = result.warnings.find((w) => w.code === 'WORKFLOW_MISSING_BIDIRECTIONAL_REF');
     expect(bidirWarning).toBeDefined();
     expect(bidirWarning).toMatchObject({
-      code: 'MISSING_BIDIRECTIONAL_REF',
+      code: 'WORKFLOW_MISSING_BIDIRECTIONAL_REF',
       message: 'Target block "logger-1" input "input" does not reference back to "timer-1:tick"',
       path: 'blocks[0].outputs.tick',
     });
@@ -798,7 +798,7 @@ describe('Workspace Validation - Warnings', () => {
     expect(result.valid).toBeTrue(); // Still valid, just a warning
     expect(result.warnings).toHaveLength(1);
     expect(result.warnings[0]).toMatchObject({
-      code: 'ORPHAN_BLOCK',
+      code: 'WORKFLOW_ORPHAN_BLOCK',
       message: 'Block "logger-1" has input ports but no incoming connections',
       path: 'blocks.logger-1',
     });
@@ -941,6 +941,6 @@ describe('Workspace Validation - Edge Cases', () => {
 
     expect(result.valid).toBeFalse();
     expect(result.errors).toHaveLength(3);
-    expect(result.errors.every((e) => e.code === 'UNKNOWN_BLOCK_TYPE')).toBeTrue();
+    expect(result.errors.every((e) => e.code === 'WORKFLOW_UNKNOWN_BLOCK_TYPE')).toBeTrue();
   });
 });

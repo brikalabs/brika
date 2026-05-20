@@ -4,6 +4,7 @@
  * Validate entire workflow workspace including all connections.
  */
 
+import type { CatalogedErrorCode } from '@brika/ipc';
 import type { BlockTypeDefinition, Workflow } from '../types';
 import { parsePortRef } from '../types/ports';
 import { isValidConnection } from './connections';
@@ -13,11 +14,19 @@ import { isValidConnection } from './connections';
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
+ * Validation codes are the `WORKFLOW_*` slice of the platform error catalog.
+ * Defining the union as `Extract<CatalogedErrorCode, 'WORKFLOW_…'>` means a
+ * typo or an uncatalogued code is a compile error — the catalog stays the
+ * single source of truth for documentation, severity, and i18n keys.
+ */
+export type WorkflowValidationCode = Extract<CatalogedErrorCode, `WORKFLOW_${string}`>;
+
+/**
  * A single validation error.
  */
 export interface ValidationError {
-  /** Error code for programmatic handling */
-  code: string;
+  /** Error code for programmatic handling — must be a catalogued WORKFLOW_* code. */
+  code: WorkflowValidationCode;
   /** Human-readable error message */
   message: string;
   /** Path to the error (e.g., "blocks[0].outputs.then") */
@@ -69,7 +78,7 @@ function validateBlockTypeExists(
   const blockType = ctx.registry.get(block.type);
   if (!blockType) {
     ctx.errors.push({
-      code: 'UNKNOWN_BLOCK_TYPE',
+      code: 'WORKFLOW_UNKNOWN_BLOCK_TYPE',
       message: `Unknown block type: "${block.type}"`,
       path: `${blockPath}.type`,
     });
@@ -98,7 +107,7 @@ function validateOutputConnection(
     targetPortId = parsed.portId;
   } catch {
     ctx.errors.push({
-      code: 'INVALID_PORT_REF',
+      code: 'WORKFLOW_INVALID_PORT_REF',
       message: `Invalid port reference: "${ref}"`,
       path: refPath,
     });
@@ -109,7 +118,7 @@ function validateOutputConnection(
   const targetBlock = ctx.blockMap.get(targetBlockId);
   if (!targetBlock) {
     ctx.errors.push({
-      code: 'TARGET_BLOCK_NOT_FOUND',
+      code: 'WORKFLOW_TARGET_BLOCK_NOT_FOUND',
       message: `Target block "${targetBlockId}" not found`,
       path: refPath,
     });
@@ -120,7 +129,7 @@ function validateOutputConnection(
   const targetBlockType = ctx.registry.get(targetBlock.type);
   if (!targetBlockType) {
     ctx.errors.push({
-      code: 'UNKNOWN_TARGET_BLOCK_TYPE',
+      code: 'WORKFLOW_UNKNOWN_TARGET_BLOCK_TYPE',
       message: `Target block "${targetBlockId}" has unknown type "${targetBlock.type}"`,
       path: refPath,
     });
@@ -131,7 +140,7 @@ function validateOutputConnection(
   const targetPort = targetBlockType.inputs.find((p) => p.id === targetPortId);
   if (!targetPort) {
     ctx.errors.push({
-      code: 'TARGET_PORT_NOT_FOUND',
+      code: 'WORKFLOW_TARGET_PORT_NOT_FOUND',
       message: `Target port "${targetPortId}" not found on block "${targetBlockId}"`,
       path: refPath,
     });
@@ -146,7 +155,7 @@ function validateOutputConnection(
 
   if (!connectionResult.valid) {
     ctx.errors.push({
-      code: 'INVALID_CONNECTION',
+      code: 'WORKFLOW_INVALID_CONNECTION',
       message: connectionResult.reason,
       path: refPath,
     });
@@ -180,7 +189,7 @@ function checkBidirectionalRef(
   const expectedRef = `${block.id}:${outputPortId}`;
   if (targetInputRef !== expectedRef) {
     warnings.push({
-      code: 'MISSING_BIDIRECTIONAL_REF',
+      code: 'WORKFLOW_MISSING_BIDIRECTIONAL_REF',
       message: `Target block "${targetBlockId}" input "${targetPortId}" does not reference back to "${expectedRef}"`,
       path: refPath,
     });
@@ -200,7 +209,7 @@ function validateAllOutputsForBlock(
     const outputPort = blockType.outputs.find((p) => p.id === outputPortId);
     if (!outputPort) {
       ctx.errors.push({
-        code: 'UNKNOWN_OUTPUT_PORT',
+        code: 'WORKFLOW_UNKNOWN_OUTPUT_PORT',
         message: `Unknown output port "${outputPortId}" on block type "${block.type}"`,
         path: `${blockPath}.outputs.${outputPortId}`,
       });
@@ -226,7 +235,7 @@ function validateInputConnection(ref: string, refPath: string, ctx: ValidationCo
     sourceBlockId = parsed.blockId;
   } catch {
     ctx.errors.push({
-      code: 'INVALID_PORT_REF',
+      code: 'WORKFLOW_INVALID_PORT_REF',
       message: `Invalid port reference: "${ref}"`,
       path: refPath,
     });
@@ -237,7 +246,7 @@ function validateInputConnection(ref: string, refPath: string, ctx: ValidationCo
   const sourceBlock = ctx.blockMap.get(sourceBlockId);
   if (!sourceBlock) {
     ctx.errors.push({
-      code: 'SOURCE_BLOCK_NOT_FOUND',
+      code: 'WORKFLOW_SOURCE_BLOCK_NOT_FOUND',
       message: `Source block "${sourceBlockId}" not found`,
       path: refPath,
     });
@@ -257,7 +266,7 @@ function validateAllInputsForBlock(
     const inputPort = blockType.inputs.find((p) => p.id === inputPortId);
     if (!inputPort) {
       ctx.errors.push({
-        code: 'UNKNOWN_INPUT_PORT',
+        code: 'WORKFLOW_UNKNOWN_INPUT_PORT',
         message: `Unknown input port "${inputPortId}" on block type "${block.type}"`,
         path: `${blockPath}.inputs.${inputPortId}`,
       });
@@ -292,7 +301,7 @@ function checkOrphanBlocks(
     if (hasInputPorts && !hasInputConnections) {
       // Block has input ports but no connections - might be orphaned
       warnings.push({
-        code: 'ORPHAN_BLOCK',
+        code: 'WORKFLOW_ORPHAN_BLOCK',
         message: `Block "${block.id}" has input ports but no incoming connections`,
         path: `blocks.${block.id}`,
       });

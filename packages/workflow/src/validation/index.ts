@@ -19,4 +19,5 @@ export {
   type ValidationError,
   type ValidationResult,
   validateWorkspace,
+  type WorkflowValidationCode,
 } from './workspace';
