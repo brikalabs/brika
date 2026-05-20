@@ -101,6 +101,19 @@ export class PluginManager {
     }
 
     await this.#state.setEnabled(name, true);
+    await this.#loadAndAwaitReady(uid, name);
+  }
+
+  /**
+   * Shared "load + wait for ready" sequence used by `enable` and `reload`.
+   * Resolves the plugin's stored state, races `loaded` vs `configInvalid`,
+   * triggers the load, and throws on `configInvalid`. Returns the loaded
+   * payload so the caller can dispatch follow-up events.
+   */
+  async #loadAndAwaitReady(
+    uid: string,
+    name: string
+  ): Promise<{ uid: string; name: string }> {
     const stored = this.#state.get(name);
     if (!stored) {
       // Internal invariant: we just resolved `name` from a uid that has a
@@ -116,11 +129,12 @@ export class PluginManager {
         withPredicate(PluginActions.loaded, (a) => a.payload.uid === uid),
         withPredicate(PluginActions.configInvalid, (a) => a.payload.uid === uid),
       ],
-      {
-        timeout: 30000,
-      }
+      { timeout: 30000 }
     );
 
+    // Typed BrikaError throws from the resolver (`MANIFEST_INVALID` /
+    // `MANIFEST_MISSING_MAIN`) pass through unchanged so the router catch
+    // can surface them with the right httpStatus.
     await this.#lifecycle.load(stored.rootDirectory);
 
     const result = await racePromise;
@@ -131,6 +145,7 @@ export class PluginManager {
         { data: { field: 'config', errors: result.payload.errors, pluginUid: uid } }
       );
     }
+    return { uid: result.payload.uid, name: result.payload.name };
   }
 
   async disable(uid: string): Promise<void> {
@@ -163,33 +178,7 @@ export class PluginManager {
       });
     }
 
-    // Get stored state to know the root directory
-    const stored = this.#state.get(name);
-    if (!stored) {
-      // Internal invariant: we just resolved `name` from a uid that has a
-      // process. The state store falling out of sync is a hub-side bug,
-      // not a missing-resource condition — surface as INTERNAL.
-      throw new BrikaError('INTERNAL', `Plugin state not found: ${name}`, {
-        data: { resource: name },
-      });
-    }
-
-    // Set up race AFTER unloading to catch events from new load
-    const racePromise = this.#events.race(
-      [
-        withPredicate(PluginActions.loaded, (a) => a.payload.uid === uid),
-        withPredicate(PluginActions.configInvalid, (a) => a.payload.uid === uid),
-      ],
-      {
-        timeout: 30000,
-      }
-    );
-
-    // Load the plugin (no need for force since we already unloaded).
-    // No catch-all wrapper: a typed BrikaError from the resolver
-    // (`MANIFEST_INVALID` / `MANIFEST_MISSING_MAIN`) passes through so
-    // the router catch surfaces it with the right httpStatus.
-    await this.#lifecycle.load(stored.rootDirectory);
+    const loaded = await this.#loadAndAwaitReady(uid, name);
 
     // Verify process was actually created — hub-side invariant violation.
     if (!this.#lifecycle.hasProcess(name)) {
@@ -198,24 +187,7 @@ export class PluginManager {
       });
     }
 
-    const result = await racePromise;
-    if (result.type === 'plugin.configInvalid') {
-      throw new BrikaError(
-        'INVALID_INPUT',
-        `Plugin ${uid} has invalid configuration: ${result.payload.errors.join(', ')}`,
-        { data: { field: 'config', errors: result.payload.errors, pluginUid: uid } }
-      );
-    }
-
-    await this.#events.dispatch(
-      PluginActions.reloaded.create(
-        {
-          uid: result.payload.uid,
-          name: result.payload.name,
-        },
-        'hub'
-      )
-    );
+    await this.#events.dispatch(PluginActions.reloaded.create(loaded, 'hub'));
   }
 
   async kill(uid: string): Promise<void> {
