@@ -182,22 +182,18 @@ export class BrikaError extends Error {
    * the IPC layer to attach the local stack for richer remote debugging.
    */
   toWire(includeStack = false): BrikaErrorWire {
-    const wire: BrikaErrorWire = {
+    const cause = serializeCause(this.cause);
+    const data =
+      this.data !== undefined && Object.keys(this.data).length > 0 ? this.data : undefined;
+    const stack = includeStack && this.stack !== undefined ? this.stack : undefined;
+    return {
       _rpcError: true,
       code: this.code,
       message: this.message,
+      ...(data === undefined ? {} : { data }),
+      ...(cause === undefined ? {} : { cause }),
+      ...(stack === undefined ? {} : { stack }),
     };
-    if (this.data !== undefined && Object.keys(this.data).length > 0) {
-      (wire as { data?: Record<string, unknown> }).data = this.data as Record<string, unknown>;
-    }
-    const cause = serializeCause(this.cause);
-    if (cause !== undefined) {
-      (wire as { cause?: BrikaErrorWire['cause'] }).cause = cause;
-    }
-    if (includeStack && this.stack !== undefined) {
-      (wire as { stack?: string }).stack = this.stack;
-    }
-    return wire;
   }
 
   /**
