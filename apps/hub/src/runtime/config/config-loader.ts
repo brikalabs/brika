@@ -6,12 +6,28 @@
 
 import { inject, singleton } from '@brika/di';
 import YAML from 'yaml';
+import { z } from 'zod';
 import { Logger } from '../logs/log-router';
 import { BrikaInitializer } from './brika-initializer';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
 // ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Shape of the `plugins:` block in `brika.yml`. Validates that each entry
+ * has at minimum a `version` string; unknown additional fields per entry
+ * are preserved via `.loose()` so future schema extensions don't drop data.
+ */
+const ConfigPluginsSchema = z.record(
+  z.string(),
+  z
+    .object({
+      version: z.string(),
+      config: z.record(z.string(), z.unknown()).optional(),
+    })
+    .loose()
+);
 
 /**
  * Plugin entry with version and optional config.
@@ -344,13 +360,14 @@ export class ConfigLoader {
   // ─────────────────────────────────────────────────────────────────────────────
 
   #parsePlugins(plugins: unknown): PluginEntry[] {
-    if (!plugins || typeof plugins !== 'object' || Array.isArray(plugins)) {
+    // The `plugins:` block in brika.yml is `Record<name, { version, config? }>`.
+    // Parse via Zod so a malformed entry (missing `version`, wrong type)
+    // surfaces as an empty list instead of being silently cast to garbage.
+    const result = ConfigPluginsSchema.safeParse(plugins);
+    if (!result.success) {
       return [];
     }
-
-    return Object.entries(
-      plugins as Record<string, { version: string; config?: Record<string, unknown> }>
-    ).map(([name, entry]) => ({
+    return Object.entries(result.data).map(([name, entry]) => ({
       name,
       version: entry.version,
       config: entry.config,
