@@ -8,6 +8,7 @@
 
 import { basename, isAbsolute, resolve, sep } from 'node:path';
 import { defineCapability } from '@brika/capabilities';
+import { BrikaError } from '@brika/ipc';
 import { execSpawn as spec } from '@brika/sdk/capabilities';
 
 const DEFAULT_TIMEOUT_MS = 30_000;
@@ -63,8 +64,10 @@ export function resolveCwd(
     canonicalCwd !== canonicalRoot &&
     !canonicalCwd.startsWith(canonicalRoot + sep)
   ) {
-    throw new Error(
-      `exec.spawn: cwd "${callerCwd}" resolves outside the plugin root "${pluginRoot}".`
+    throw new BrikaError(
+      'EXEC_CWD_ESCAPE',
+      `exec.spawn: cwd "${callerCwd}" resolves outside the plugin root "${pluginRoot}".`,
+      { data: { cwd: callerCwd, pluginRoot } }
     );
   }
   return canonicalCwd;
@@ -94,8 +97,10 @@ export function buildExecCapabilities(cb: ExecCallbacks) {
     defineCapability(spec.spec, async (ctx, args) => {
       const scope = ctx.grantedScope as ExecScope;
       if (!isBinaryAllowed(args.command, scope.allowBinaries)) {
-        throw new Error(
-          `exec.spawn: binary "${args.command}" is not in this plugin's allow list (${scope.allowBinaries.join(', ') || '(empty)'})`
+        throw new BrikaError(
+          'EXEC_BINARY_NOT_ALLOWED',
+          `exec.spawn: binary "${args.command}" is not in this plugin's allow list (${scope.allowBinaries.join(', ') || '(empty)'})`,
+          { data: { command: args.command, allowBinaries: scope.allowBinaries } }
         );
       }
       // Default cwd to the plugin root and reject any explicit cwd that

@@ -69,7 +69,7 @@ export const ErrorCatalog = {
     developerHint:
       'Compare the offending value against the spec\'s `args` schema. The `data.field` carries the failing path.',
     i18nKey: 'errors.invalid_input',
-    data: z.object({ field: z.string().optional() }).passthrough(),
+    data: z.object({ field: z.string().optional() }).loose(),
   },
 
   INVALID_OUTPUT: {
@@ -88,7 +88,7 @@ export const ErrorCatalog = {
     severity: 'warning',
     category: 'core',
     i18nKey: 'errors.not_found',
-    data: z.object({ resource: z.string() }).passthrough(),
+    data: z.object({ resource: z.string() }).loose(),
   },
 
   PERMISSION_DENIED: {
@@ -99,7 +99,7 @@ export const ErrorCatalog = {
     developerHint:
       'Declare the capability in the plugin manifest and ensure the user has granted it via the UI.',
     i18nKey: 'errors.permission_denied',
-    data: z.object({ permission: z.string() }).passthrough(),
+    data: z.object({ permission: z.string() }).loose(),
   },
 
   TIMEOUT: {
@@ -110,7 +110,7 @@ export const ErrorCatalog = {
     developerHint:
       'Raise `timeoutMs` on the call site, or check whether the upstream service is healthy.',
     i18nKey: 'errors.timeout',
-    data: z.object({ timeoutMs: z.number() }).passthrough(),
+    data: z.object({ timeoutMs: z.number() }).loose(),
   },
 
   UNAVAILABLE: {
@@ -133,7 +133,7 @@ export const ErrorCatalog = {
     category: 'core',
     developerHint:
       'Either a typo in the manifest, a plugin built against an older SDK, or the hub is missing a capability handler.',
-    data: z.object({ capabilityId: z.string() }).passthrough(),
+    data: z.object({ capabilityId: z.string() }).loose(),
   },
 
   NOT_GRANTED: {
@@ -143,7 +143,7 @@ export const ErrorCatalog = {
     category: 'core',
     developerHint:
       'Same as `PERMISSION_DENIED` but specific to the registry path. Add the capability to the manifest + grant via UI.',
-    data: z.object({ capabilityId: z.string() }).passthrough(),
+    data: z.object({ capabilityId: z.string() }).loose(),
   },
 
   INVALID_SCOPE: {
@@ -153,6 +153,80 @@ export const ErrorCatalog = {
     category: 'core',
     developerHint:
       'Operator error — a row in the StateStore carries a malformed scope. Re-grant the capability via the UI.',
+  },
+
+  // ─── Network capability ───────────────────────────────────────────────────
+
+  NET_HOST_NOT_ALLOWED: {
+    description: 'A `ctx.net.fetch` target host is not in the granted allow list.',
+    httpStatus: 403,
+    severity: 'error',
+    category: 'network',
+    developerHint:
+      'Add the host (or a `*.suffix` pattern) to the plugin manifest under `capabilities."dev.brika.net.fetch".allow`.',
+    i18nKey: 'errors.net.host_not_allowed',
+    data: z
+      .object({ host: z.string(), allow: z.array(z.string()) })
+      .loose(),
+  },
+
+  // ─── Filesystem capability ────────────────────────────────────────────────
+
+  FS_PATH_NOT_ALLOWED: {
+    description: 'A `ctx.fs.*` path is not inside any granted allow-list prefix.',
+    httpStatus: 403,
+    severity: 'error',
+    category: 'fs',
+    developerHint:
+      'Add an absolute path prefix to `capabilities."dev.brika.fs.read"` (or `write`/`exists`) in the manifest. Paths are canonicalized before the prefix check, so `..` escapes are rejected.',
+    i18nKey: 'errors.fs.path_not_allowed',
+    data: z
+      .object({ path: z.string(), op: z.string(), allow: z.array(z.string()) })
+      .loose(),
+  },
+
+  FS_FILE_TOO_LARGE: {
+    description:
+      'A `ctx.fs.read` target exceeds the hub-imposed size cap.',
+    httpStatus: 413,
+    severity: 'error',
+    category: 'fs',
+    developerHint:
+      'Read in chunks, stream from `ctx.net.fetch` instead, or shrink the file. The cap is enforced by the hub to keep big files from OOM\'ing it.',
+    i18nKey: 'errors.fs.file_too_large',
+    data: z
+      .object({ path: z.string(), size: z.number(), maxBytes: z.number() })
+      .loose(),
+  },
+
+  // ─── Exec capability ──────────────────────────────────────────────────────
+
+  EXEC_BINARY_NOT_ALLOWED: {
+    description:
+      'A `ctx.exec.spawn` binary is not in the granted allow list.',
+    httpStatus: 403,
+    severity: 'error',
+    category: 'exec',
+    developerHint:
+      'Add the binary (bare name or absolute path) to `capabilities."dev.brika.exec.spawn".allowBinaries` in the manifest.',
+    i18nKey: 'errors.exec.binary_not_allowed',
+    data: z
+      .object({ command: z.string(), allowBinaries: z.array(z.string()) })
+      .loose(),
+  },
+
+  EXEC_CWD_ESCAPE: {
+    description:
+      'A `ctx.exec.spawn` cwd resolves outside the plugin root.',
+    httpStatus: 403,
+    severity: 'error',
+    category: 'exec',
+    developerHint:
+      'Pass a relative `cwd` (resolved against the plugin root) or an absolute path inside it. Without this guard, an allow-listed binary could run against arbitrary directories on the host.',
+    i18nKey: 'errors.exec.cwd_escape',
+    data: z
+      .object({ cwd: z.string(), pluginRoot: z.string() })
+      .loose(),
   },
 
   // ─── Workflow validation (diagnostic-only, not thrown) ────────────────────

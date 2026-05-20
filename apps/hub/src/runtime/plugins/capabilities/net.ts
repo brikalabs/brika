@@ -12,6 +12,7 @@
  */
 
 import { defineCapability } from '@brika/capabilities';
+import { BrikaError } from '@brika/ipc';
 import { netFetch as spec } from '@brika/sdk/capabilities';
 
 const DEFAULT_TIMEOUT_MS = 30_000;
@@ -224,8 +225,10 @@ export function buildNetCapabilities(cb: NetCallbacks) {
       const scope = ctx.grantedScope as NetScope;
       const host = new URL(args.url).host;
       if (!isHostAllowed(host, scope.allow)) {
-        throw new Error(
-          `net.fetch: host "${host}" is not in this plugin's allow list (${scope.allow.join(', ') || '(empty)'})`
+        throw new BrikaError(
+          'NET_HOST_NOT_ALLOWED',
+          `net.fetch: host "${host}" is not in this plugin's allow list (${scope.allow.join(', ') || '(empty)'})`,
+          { data: { host, allow: scope.allow } }
         );
       }
 

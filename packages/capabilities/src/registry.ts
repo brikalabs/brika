@@ -183,9 +183,16 @@ export class CapabilityRegistry {
     try {
       result = await cap.handler(handlerCtx, parsedArgs.data);
     } catch (e) {
+      // A handler that already threw a typed BrikaError (e.g.
+      // `NET_HOST_NOT_ALLOWED` from net.ts) carries its own code, data,
+      // and developer hint — passing it through preserves that signal
+      // for plugin code and the UI. Only unknown throws get rewrapped
+      // as INTERNAL with the original attached as `cause` so the stack
+      // and message still survive across IPC.
+      if (e instanceof BrikaError) {
+        throw e;
+      }
       const message = e instanceof Error ? e.message : String(e);
-      // Pass the original throw as `cause` so the stack and any nested
-      // BrikaError context survives across IPC via toWire/fromWire.
       throw new CapabilityError('INTERNAL', `Handler for ${id} threw: ${message}`, id, e);
     }
 

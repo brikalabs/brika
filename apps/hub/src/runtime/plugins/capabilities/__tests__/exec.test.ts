@@ -64,7 +64,10 @@ describe('exec.spawn capability', () => {
     });
     await expect(
       reg.dispatch('dev.brika.exec.spawn', { command: 'curl', args: [] }, handlerCtx(['git']))
-    ).rejects.toMatchObject({ code: 'INTERNAL' });
+    ).rejects.toMatchObject({
+      code: 'EXEC_BINARY_NOT_ALLOWED',
+      data: { command: 'curl', allowBinaries: ['git'] },
+    });
   });
 
   test('caps very large output to 1MB with a truncation marker', async () => {
@@ -174,8 +177,9 @@ describe('exec.spawn capability — cwd guard end-to-end', () => {
         handlerCtx(['git'])
       )
     ).rejects.toMatchObject({
-      code: 'INTERNAL',
+      code: 'EXEC_CWD_ESCAPE',
       message: expect.stringContaining('outside the plugin root'),
+      data: { cwd: '/etc' },
     });
   });
 });

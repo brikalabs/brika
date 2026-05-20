@@ -9,6 +9,7 @@
 import { existsSync, promises as fs } from 'node:fs';
 import { isAbsolute, resolve, sep } from 'node:path';
 import { defineCapability } from '@brika/capabilities';
+import { BrikaError } from '@brika/ipc';
 import {
   fsExists as existsSpec,
   fsRead as readSpec,
@@ -50,8 +51,10 @@ export function isPathAllowed(target: string, allow: ReadonlyArray<string>): boo
 
 function enforce(scope: FsScope, path: string, op: string): void {
   if (!isPathAllowed(path, scope.allow)) {
-    throw new Error(
-      `fs.${op}: path "${path}" is not inside this plugin's allow list (${scope.allow.join(', ') || '(empty)'})`
+    throw new BrikaError(
+      'FS_PATH_NOT_ALLOWED',
+      `fs.${op}: path "${path}" is not inside this plugin's allow list (${scope.allow.join(', ') || '(empty)'})`,
+      { data: { path, op, allow: scope.allow } }
     );
   }
 }
@@ -69,8 +72,10 @@ export function buildFsCapabilities(_cb: FsCallbacks) {
       // before any bytes hit memory.
       const stat = await fs.stat(args.path);
       if (stat.size > MAX_READ_BYTES) {
-        throw new Error(
-          `fs.read: file "${args.path}" is ${stat.size} bytes; cap is ${MAX_READ_BYTES}. Read in chunks or use a smaller file.`
+        throw new BrikaError(
+          'FS_FILE_TOO_LARGE',
+          `fs.read: file "${args.path}" is ${stat.size} bytes; cap is ${MAX_READ_BYTES}. Read in chunks or use a smaller file.`,
+          { data: { path: args.path, size: stat.size, maxBytes: MAX_READ_BYTES } }
         );
       }
       const buf = await fs.readFile(args.path);

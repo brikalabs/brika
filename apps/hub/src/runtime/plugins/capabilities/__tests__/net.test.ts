@@ -87,8 +87,9 @@ describe('net.fetch capability', () => {
         makeCtx(['api.example.com'])
       )
     ).rejects.toMatchObject({
-      code: 'INTERNAL',
+      code: 'NET_HOST_NOT_ALLOWED',
       message: expect.stringContaining('attacker.com'),
+      data: { host: 'attacker.com', allow: ['api.example.com'] },
     });
   });
 
