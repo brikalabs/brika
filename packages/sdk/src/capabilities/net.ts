@@ -18,6 +18,21 @@ import { z } from 'zod';
 
 const NetMethod = z.enum(['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']);
 
+const RetryPolicy = z.object({
+  /** Maximum attempts including the first try. 1 = no retry, max 10. */
+  maxAttempts: z.number().int().min(1).max(10).default(3),
+  /**
+   * Honor the upstream's `Retry-After` header on 429/503 responses. The
+   * value is capped at the call's overall deadline. Defaults to true.
+   */
+  respectRetryAfter: z.boolean().default(true),
+  /**
+   * Base backoff between attempts in milliseconds. Doubles each retry,
+   * capped at 30s. Jittered by ±25% to avoid thundering herds.
+   */
+  backoffMs: z.number().int().positive().default(500),
+});
+
 const NetFetchArgs = z.object({
   url: z.string().url(),
   method: NetMethod.default('GET'),
@@ -25,6 +40,21 @@ const NetFetchArgs = z.object({
   body: z.string().optional(),
   /** Per-call deadline in milliseconds. Capped at 300000 (5 min) by the hub. */
   timeoutMs: z.number().int().positive().max(300_000).optional(),
+  /**
+   * Coalesce concurrent identical GET/HEAD requests (same url + headers)
+   * into one in-flight call. Defaults to true for GET/HEAD, ignored for
+   * other methods (POST/PUT/PATCH/DELETE are never coalesced).
+   */
+  singleFlight: z.boolean().optional(),
+  /**
+   * Idempotency key. Required by the retry policy for non-idempotent
+   * methods (POST/PATCH); without it, retries on those methods are
+   * refused at the handler to avoid duplicate side-effects. Forwarded
+   * upstream as the `Idempotency-Key` header.
+   */
+  idempotencyKey: z.string().optional(),
+  /** Optional retry policy. Omit for no retries (the default). */
+  retry: RetryPolicy.optional(),
 });
 
 const NetFetchResult = z.object({
@@ -32,6 +62,8 @@ const NetFetchResult = z.object({
   statusText: z.string(),
   headers: z.record(z.string(), z.string()),
   body: z.string(),
+  /** Number of attempts the hub made before returning this response. */
+  attempts: z.number().int().min(1).default(1),
 });
 
 export const netFetch = defineCapability(
