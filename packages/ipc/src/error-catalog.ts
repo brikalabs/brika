@@ -322,6 +322,25 @@ export const ErrorCatalog = {
 export type CatalogedErrorCode = keyof typeof ErrorCatalog;
 
 /**
+ * The TypeScript shape of `BrikaError.data` for a given catalogued code,
+ * derived from the entry's optional Zod schema. Codes without a `data`
+ * schema map to `undefined`; the value is always optional at the call
+ * site because callers may construct a `BrikaError` without data.
+ *
+ * @example
+ * ```ts
+ * type NetData = DataForCode<'NET_HOST_NOT_ALLOWED'>;
+ * // { host: string; allow: string[] } & { [key: string]: unknown }
+ * ```
+ */
+export type DataForCode<C extends CatalogedErrorCode> =
+  (typeof ErrorCatalog)[C] extends { readonly data: infer S }
+    ? S extends z.ZodType
+      ? z.infer<S>
+      : undefined
+    : undefined;
+
+/**
  * Look up a catalog entry. Returns undefined for codes not in the catalog
  * (third-party codes, codes added in a newer hub version, etc.).
  */

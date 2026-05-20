@@ -38,7 +38,7 @@
 // Well-Known Error Codes
 // ─────────────────────────────────────────────────────────────────────────────
 
-import type { CatalogedErrorCode } from './error-catalog';
+import type { CatalogedErrorCode, DataForCode } from './error-catalog';
 
 /**
  * Standard error codes — derived from the catalog in `./error-catalog.ts`.
@@ -198,6 +198,38 @@ export class BrikaError extends Error {
       (wire as { stack?: string }).stack = this.stack;
     }
     return wire;
+  }
+
+  /**
+   * Type guard that narrows an unknown error to a `BrikaError` with the
+   * given catalogued code, *and* narrows `.data` to the schema declared
+   * for that code in the catalog. Use as the natural catch idiom:
+   *
+   * @example
+   * ```ts
+   * try {
+   *   await ctx.net.fetch({ url });
+   * } catch (e) {
+   *   if (BrikaError.is(e, 'NET_HOST_NOT_ALLOWED')) {
+   *     // e.code is the literal 'NET_HOST_NOT_ALLOWED'
+   *     // e.data is { host: string; allow: string[] } | undefined
+   *     log(`Blocked host: ${e.data?.host}`);
+   *   } else {
+   *     throw e;
+   *   }
+   * }
+   * ```
+   *
+   * Trust comes from the catalog: a handler that throws this code is
+   * contractually required to populate `data` per the catalog's Zod
+   * schema. No runtime parse happens here — that would be a defensive
+   * check, and the schema is the contract.
+   */
+  static is<C extends CatalogedErrorCode>(
+    err: unknown,
+    code: C
+  ): err is BrikaError & { readonly code: C; readonly data?: Readonly<DataForCode<C>> } {
+    return err instanceof BrikaError && err.code === code;
   }
 
   /**

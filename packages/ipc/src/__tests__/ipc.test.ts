@@ -697,4 +697,38 @@ describe('BrikaError', () => {
     expect(err.data).toEqual({ field: 'name' });
     expect(Object.isFrozen(err.data)).toBe(true);
   });
+
+  // ─── BrikaError.is(err, code) — narrowing helper ──────────────────────
+
+  it('BrikaError.is narrows code + data without an as-cast', () => {
+    const err: unknown = new BrikaError('NET_HOST_NOT_ALLOWED', 'host blocked', {
+      data: { host: 'attacker.com', allow: ['api.example.com'] },
+    });
+    if (BrikaError.is(err, 'NET_HOST_NOT_ALLOWED')) {
+      // Compile-time proof of narrowing: these accesses must typecheck
+      // without `as`. Runtime values mirror what the producer put in.
+      expect(err.code).toBe('NET_HOST_NOT_ALLOWED');
+      expect(err.data?.host).toBe('attacker.com');
+      expect(err.data?.allow).toEqual(['api.example.com']);
+    } else {
+      throw new Error('narrowing failed');
+    }
+  });
+
+  it('BrikaError.is returns false for a different code', () => {
+    const err = new BrikaError('FS_PATH_NOT_ALLOWED', 'blocked');
+    expect(BrikaError.is(err, 'NET_HOST_NOT_ALLOWED')).toBe(false);
+  });
+
+  it('BrikaError.is returns false for non-BrikaError throws', () => {
+    expect(BrikaError.is(new Error('x'), 'INTERNAL')).toBe(false);
+    expect(BrikaError.is('a string', 'INTERNAL')).toBe(false);
+    expect(BrikaError.is(undefined, 'INTERNAL')).toBe(false);
+    expect(BrikaError.is({ code: 'INTERNAL' }, 'INTERNAL')).toBe(false);
+  });
+
+  it('BrikaError.is matches subclasses (RpcError, CapabilityError)', () => {
+    const rpc = new RpcError('NOT_FOUND', 'page');
+    expect(BrikaError.is(rpc, 'NOT_FOUND')).toBe(true);
+  });
 });

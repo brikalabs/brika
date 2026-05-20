@@ -258,21 +258,16 @@ chain — `err.cause` on the plugin side points at a reconstructed
 with the remote stack appended.
 
 ```ts
-import { BrikaError, lookupCatalogEntry } from '@brika/sdk';
+import { BrikaError } from '@brika/sdk';
 
 try {
   await ctx.net.fetch({ url: 'https://attacker.example/' });
 } catch (e) {
-  if (e instanceof BrikaError && e.code === 'NET_HOST_NOT_ALLOWED') {
-    // Catalog entry has the Zod schema for `data` — use it to get a
-    // typed view without `as` casts. The schema's i18n key and developer
-    // hint are also available here for surfacing UI messages.
-    const entry = lookupCatalogEntry('NET_HOST_NOT_ALLOWED');
-    const data = entry?.data?.parse(e.data);  // { host: string; allow: string[] }
+  // `BrikaError.is` narrows both the code (literal) and `data` (typed
+  // from the catalog's Zod schema) — no `as` cast, no defensive parse.
+  if (BrikaError.is(e, 'NET_HOST_NOT_ALLOWED')) {
     log(`Network denied: ${e.message}`);
-    if (data) {
-      log(`Add "${data.host}" to your manifest's net.fetch allow list (currently: ${data.allow.join(', ')})`);
-    }
+    log(`Add "${e.data?.host}" to your manifest's net.fetch allow list (currently: ${e.data?.allow.join(', ')})`);
   } else {
     throw e;
   }
