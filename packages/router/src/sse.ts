@@ -14,26 +14,45 @@ const SSE_HEADERS = {
 
 const encoder = new TextEncoder();
 const HEARTBEAT_INTERVAL = 30_000;
-const heartbeatFrame = encoder.encode(': heartbeat\n\n');
+const HEARTBEAT_TEXT = ': heartbeat\n\n';
 /**
  * Tell EventSource to reconnect quickly after a hub restart. The browser
  * default is ~3s; 500ms keeps the UI responsive without thrashing.
+ *
+ * Merged into the first emitted chunk (rather than enqueued standalone) so
+ * a single-`read()` consumer — both EventSource's parser and our SSE tests —
+ * sees the `retry:` directive together with the first event in one frame.
  */
-const retryFrame = encoder.encode('retry: 500\n\n');
+const RETRY_TEXT = 'retry: 500\n\n';
 
-function createSSESender(controller: ReadableStreamDefaultController<Uint8Array>) {
-  return (data: unknown, event?: string) => {
+interface PrefixedSink {
+  send: (data: unknown, event?: string) => void;
+  enqueueRaw: (text: string) => void;
+}
+
+function createPrefixedSink(
+  controller: ReadableStreamDefaultController<Uint8Array>,
+  prefix: string
+): PrefixedSink {
+  let pendingPrefix: string | null = prefix;
+  const enqueueRaw = (text: string) => {
     try {
-      let message = '';
-      if (event) {
-        message += `event: ${event}\n`;
-      }
-      message += `data: ${JSON.stringify(data)}\n\n`;
-      controller.enqueue(encoder.encode(message));
+      const payload = pendingPrefix === null ? text : pendingPrefix + text;
+      pendingPrefix = null;
+      controller.enqueue(encoder.encode(payload));
     } catch {
       // Stream might be closed
     }
   };
+  const send = (data: unknown, event?: string) => {
+    let message = '';
+    if (event) {
+      message += `event: ${event}\n`;
+    }
+    message += `data: ${JSON.stringify(data)}\n\n`;
+    enqueueRaw(message);
+  };
+  return { send, enqueueRaw };
 }
 
 /**
@@ -62,8 +81,7 @@ export function createSSEStream(
 
   const stream = new ReadableStream({
     start(controller) {
-      controller.enqueue(retryFrame);
-      const send = createSSESender(controller);
+      const { send, enqueueRaw } = createPrefixedSink(controller, RETRY_TEXT);
 
       const close = () => {
         clearInterval(heartbeat);
@@ -77,12 +95,7 @@ export function createSSEStream(
       cleanup = setup(send, close);
 
       heartbeat = setInterval(() => {
-        try {
-          controller.enqueue(heartbeatFrame);
-        } catch {
-          clearInterval(heartbeat);
-          cleanup?.();
-        }
+        enqueueRaw(HEARTBEAT_TEXT);
       }, HEARTBEAT_INTERVAL);
     },
     cancel() {
@@ -115,8 +128,7 @@ export function createAsyncSSEStream(
 ): Response {
   const stream = new ReadableStream({
     async start(controller) {
-      controller.enqueue(retryFrame);
-      const send = createSSESender(controller);
+      const { send } = createPrefixedSink(controller, RETRY_TEXT);
 
       try {
         await handler(send);
