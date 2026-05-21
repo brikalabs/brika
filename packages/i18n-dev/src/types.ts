@@ -7,8 +7,7 @@
  * supplies the per-tree namespace, including any prefix conventions like
  * `plugin:<pkg>` or `package:<id>`.
  *
- * Optional `localesDir` and `writeRoot` route per-source writes for plugins
- * or workspace packages whose JSON lives outside the main `localesDir`.
+ * Optional `localesDir` lets per-source JSON live outside the main `localesDir`.
  */
 export interface SourceConfig {
   /** Absolute path to the source directory to scan for `t()` calls. */
@@ -24,12 +23,6 @@ export interface SourceConfig {
    * the directory is scanned by the validator and watched for changes.
    */
   readonly localesDir?: string;
-  /**
-   * Optional override for write routing. When the overlay edits a key whose
-   * qualified namespace matches `namespace`, the write lands at
-   * `${writeRoot}/${locale}/${file}.json`. Defaults to `localesDir`.
-   */
-  readonly writeRoot?: string;
 }
 
 /** Options for the i18n dev Vite plugin. */

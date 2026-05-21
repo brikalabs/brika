@@ -13,7 +13,8 @@
 
 import { join, resolve } from 'node:path';
 import type { TranslationData } from '@brika/i18n';
-import { discoverPackageLocales, findWorkspaceRoot, loadLocaleFolder } from '@brika/i18n/node';
+import { discoverPackageLocales, findWorkspaceRoot } from '@brika/i18n/node';
+import { scanLocaleDirectory } from './locale-scan';
 import type { CoverageEntry, ValidationIssue } from './types';
 import { validateLocales } from './validate';
 
@@ -86,34 +87,6 @@ function reportIssues(label: string, issues: ValidationIssue[], unionKeyCount: n
     const more = missingVars.length > 5 ? ` … +${missingVars.length - 5} more` : '';
     warn(`${label}: ${missingVars.length} variable mismatch(es) — ${sample}${more}`);
   }
-}
-
-async function scanLocaleDirectory(
-  dir: string
-): Promise<Map<string, Map<string, TranslationData>>> {
-  const result = new Map<string, Map<string, TranslationData>>();
-  const glob = new Bun.Glob('*/');
-  let localeDirs: string[];
-  try {
-    localeDirs = await Array.fromAsync(glob.scan({ cwd: dir, onlyFiles: false }));
-  } catch {
-    return result;
-  }
-  for (const slash of localeDirs) {
-    const locale = slash.replace('/', '');
-    if (!locale) {
-      continue;
-    }
-    const folder = await loadLocaleFolder(`${dir}/${locale}`);
-    const nsMap = new Map<string, TranslationData>();
-    for (const [ns, data] of Object.entries(folder)) {
-      nsMap.set(ns, data);
-    }
-    if (nsMap.size > 0) {
-      result.set(locale, nsMap);
-    }
-  }
-  return result;
 }
 
 function groupByNamespace<T extends { namespace: string }>(items: T[]): Map<string, T[]> {

@@ -1,12 +1,13 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { TranslationData } from '@brika/i18n';
-import { loadLocaleFolder, loadMergedLocaleFolder } from '@brika/i18n/node';
+import { loadMergedLocaleFolder } from '@brika/i18n/node';
 import {
   generateNamespaceList,
   generateRegistryAugmentation,
   generateResourceTypes,
 } from '../generate';
+import { scanLocaleDirectory } from '../locale-scan';
 import { fetchRemoteTranslations } from '../remote';
 import type { KeyUsageMap } from '../scan-usage';
 import type { ValidationResult } from '../types';
@@ -29,8 +30,7 @@ export interface ScanResult {
   coreTranslations: Map<string, Map<string, TranslationData>>;
 }
 
-/** Flatten the core scan into a `{ locale: { ns: data } }` shape for the client. */
-export function flattenTranslations(
+function flattenTranslations(
   translations: Map<string, Map<string, TranslationData>>
 ): Record<string, Record<string, TranslationData>> {
   const out: Record<string, Record<string, TranslationData>> = {};
@@ -43,47 +43,8 @@ export function flattenTranslations(
   return out;
 }
 
-/**
- * Read every `<locale>/<namespace>.json` under `dir` into a nested map.
- * Replaces the old `scanLocaleDirectory` with the loader from `@brika/i18n/node`.
- */
-async function scanLocaleDirectory(
-  dir: string
-): Promise<Map<string, Map<string, TranslationData>>> {
-  const result = new Map<string, Map<string, TranslationData>>();
-  let localeDirs: string[];
-  try {
-    const glob = new Bun.Glob('*/');
-    localeDirs = await Array.fromAsync(glob.scan({ cwd: dir, onlyFiles: false }));
-  } catch {
-    return result;
-  }
-  for (const slash of localeDirs) {
-    const locale = slash.replace('/', '');
-    if (!locale) {
-      continue;
-    }
-    const folder = await loadLocaleFolder(`${dir}/${locale}`);
-    const nsMap = new Map<string, TranslationData>();
-    for (const [ns, data] of Object.entries(folder)) {
-      nsMap.set(ns, data);
-    }
-    if (nsMap.size > 0) {
-      result.set(locale, nsMap);
-    }
-  }
-  return result;
-}
-
-/**
- * Read every `<locale>/<*>.json` under `<source>/locales` and merge them into
- * a single namespace named `source.namespace`. Used when the host declares a
- * per-source `localesDir` (or the convention is a folder rooted at the source).
- */
-export interface PackageScanEntry {
-  /** Namespace identifier supplied by the host. */
+interface PackageScanEntry {
   readonly namespace: string;
-  /** locale → namespace → flat-merged data (single-entry map). */
   readonly locales: Map<string, Map<string, TranslationData>>;
 }
 
@@ -155,11 +116,8 @@ export interface OrchestratorOptions {
  * Fold remote-hub translations into the core map. Local data wins on overlap
  * (the same key/locale won't be overwritten), but remote-only namespaces fill
  * in so the overlay can validate what the deployed hub actually serves.
- *
- * Mutates `coreTranslations` in place so downstream `validateLocales` /
- * `flattenTranslations` see the merged map.
  */
-export async function mergeRemoteTranslations(
+async function mergeRemoteTranslations(
   coreTranslations: Map<string, Map<string, TranslationData>>,
   remoteApiUrl: string
 ): Promise<void> {

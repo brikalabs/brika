@@ -156,7 +156,7 @@ See [`examples/`](./examples) for:
 
 | Entry point | Description |
 |-------------|-------------|
-| `@brika/i18n-devtools` | Core utilities: `scanLocaleDirectory`, `scanPluginLocales`, `findWorkspaceRoot`, `discoverPluginRoots`, `extractKeys`, `extractVariables`, `validateLocales` |
+| `@brika/i18n-devtools` | Validator surface: `extractKeys`, `extractVariables`, `validateLocales`, plus the `CoverageEntry`, `FixEntry`, `I18nDevPluginOptions`, `SourceConfig`, `ValidationIssue`, `ValidationResult` types. Filesystem helpers (`loadLocaleFolder`, `findWorkspaceRoot`, `discoverPackageLocales`) live in `@brika/i18n/node`. |
 | `@brika/i18n-devtools/vite` | Vite plugin: `i18nDevtools()` |
 | `@brika/i18n-devtools/overlay` | React overlay component (auto-injected by the plugin) |
 

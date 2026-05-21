@@ -18,12 +18,10 @@ import { startHubSseClient } from './server/sse-client';
 import { logStartupSummary } from './server/startup-log';
 import type { I18nDevPluginOptions, ValidationResult } from './types';
 
-// Re-export the public option shapes here so consumers writing a
-// `vite.config.ts` can grab everything they need from `@brika/i18n-devtools/vite`
-// — no need to also import the root entry just for the types.
+// Re-exported so a `vite.config.ts` author can grab option types from the
+// same entry as the plugin itself.
 export type { I18nDevPluginOptions, SourceConfig } from './types';
 
-/** Absolute path to the overlay entry file (resolved at import time). */
 const ENTRY_PATH = fileURLToPath(new URL('./entry.ts', import.meta.url));
 
 function createDebouncedFn(fn: () => void, ms: number): () => void {
@@ -217,9 +215,15 @@ export function i18nDevtools(options: I18nDevPluginOptions = {}): Plugin {
         server.hot.send(HMR_TRANSLATIONS, lastTranslations);
         rebuildIssues();
 
-        generateTypes(orchestratorOptions, scan.coreTranslations, scan.translations).catch(() => {
-          // Type generation runs in background; failures are non-fatal here.
-        });
+        generateTypes(orchestratorOptions, scan.coreTranslations, scan.translations).catch(
+          (err: unknown) => {
+            // Non-fatal — surface so the user can investigate cache-dir perms etc.
+            const detail = err instanceof Error ? err.message : String(err);
+            server.config.logger.warn(`[i18n-dev] type generation failed: ${detail}`, {
+              timestamp: true,
+            });
+          }
+        );
       }, 300);
 
       const scheduleUsageScan = createDebouncedFn(async () => {
