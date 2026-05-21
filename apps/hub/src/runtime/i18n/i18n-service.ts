@@ -105,6 +105,13 @@ export class I18nService {
 
   // ─── Public API ──────────────────────────────────────────────────────────
 
+  /**
+   * Resolve `<locale, namespace>` against the registry, following the fallback
+   * chain. Returns `null` if no source contributed to that pair. Used by hub
+   * code that needs read access to a single namespace (validators, tests,
+   * out-of-band rendering paths). The HTTP wire format goes through
+   * {@link getBundleJson} — this is for in-process consumers.
+   */
   getNamespaceTranslations(locale: string, namespace: string): TranslationData | null {
     return this.#registry.getNamespaceTranslations(locale, namespace);
   }
@@ -117,6 +124,11 @@ export class I18nService {
     return [...this.#registry.listLocales(), 'cimode'];
   }
 
+  /**
+   * Bulk-resolve every registered namespace for `locale`. In-process companion
+   * to {@link getBundleJson}; returns the underlying typed map rather than a
+   * pre-stringified body. Used by validators and tests.
+   */
   getAllTranslations(locale: string): Record<string, TranslationData> {
     return this.#registry.getAllTranslations(locale);
   }

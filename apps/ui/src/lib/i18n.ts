@@ -11,5 +11,4 @@ const i18n = createI18n({
   debug: import.meta.env.DEV,
 });
 
-export { reloadTranslations } from '@brika/i18n/react';
 export default i18n;

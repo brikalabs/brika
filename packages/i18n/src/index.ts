@@ -2,7 +2,15 @@
 // Node/Bun-only loaders, watchers, and workspace discovery live in `@brika/i18n/node`.
 
 export { buildFallbackChain } from './fallback';
-export { flatten, getNestedValue, setNestedValue, UnsafeKeyPathError } from './key-path';
+export {
+  flatten,
+  getNestedValue,
+  isUnsafeKeySegment,
+  sanitizeTranslationTree,
+  setNestedValue,
+  UNSAFE_SEGMENTS,
+  UnsafeKeyPathError,
+} from './key-path';
 export { countLeafKeys } from './merge';
 export { type KnownKey, type Namespaces } from './registry';
 export { translate } from './translate';

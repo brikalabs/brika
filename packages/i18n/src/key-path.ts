@@ -81,15 +81,62 @@ export function flatten(data: TranslationData): Map<string, unknown> {
  * Path segments that, if allowed, would let a caller mutate the JavaScript
  * object prototype chain. We reject these everywhere `setNestedValue` is used
  * so untrusted dot-paths (HTTP body, overlay edit, etc.) can never poison
- * `Object.prototype` or similar.
+ * `Object.prototype` or similar. Also exported so other untrusted-input
+ * sites (HTTP bundle parser, HMR payload bridge, language-code guards)
+ * can apply the same rule against a single source of truth.
  */
-const UNSAFE_SEGMENTS = new Set(['__proto__', 'constructor', 'prototype']);
+export const UNSAFE_SEGMENTS: ReadonlySet<string> = new Set([
+  '__proto__',
+  'constructor',
+  'prototype',
+]);
+
+/** True if `segment` would target the prototype chain if used as a property name. */
+export function isUnsafeKeySegment(segment: string): boolean {
+  return UNSAFE_SEGMENTS.has(segment);
+}
 
 export class UnsafeKeyPathError extends Error {
   constructor(public readonly segment: string) {
     super(`Unsafe key segment: "${segment}"`);
     this.name = 'UnsafeKeyPathError';
   }
+}
+
+/**
+ * Walk a parsed translation tree and return a copy with every prototype-pollution
+ * key (`__proto__`, `constructor`, `prototype`) dropped at every depth. The
+ * input is `unknown` because callers feed this fresh `JSON.parse` output —
+ * V8 emits `__proto__` as an own enumerable data property in that case, so
+ * `Object.entries` will hand it back to anyone who iterates blindly.
+ *
+ * Returns `null` if the input isn't a plain record. Non-record leaf values
+ * (strings, numbers, arrays — all valid i18next leaves) pass through
+ * unchanged.
+ *
+ * Use at every untrusted-bundle boundary: HTTP response from the bundle
+ * endpoint, HMR payload pushed by a dev tool, anything else that hands
+ * the runtime a translation tree.
+ */
+export function sanitizeTranslationTree(input: unknown): TranslationData | null {
+  if (!isTranslationData(input)) {
+    return null;
+  }
+  const out: TranslationData = {};
+  for (const [key, value] of Object.entries(input)) {
+    if (UNSAFE_SEGMENTS.has(key)) {
+      continue;
+    }
+    if (isTranslationData(value)) {
+      const sanitizedChild = sanitizeTranslationTree(value);
+      if (sanitizedChild !== null) {
+        out[key] = sanitizedChild;
+      }
+    } else {
+      out[key] = value;
+    }
+  }
+  return out;
 }
 
 /**

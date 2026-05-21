@@ -3,66 +3,80 @@
  *
  * `createI18n()` keeps a module-level singleton (both the `I18nClient` and the
  * global `i18next` instance). These tests build a single shared context once,
- * then exercise switchLanguage / reloadTranslations / SSE-driven reactions
- * against it. All HTTP and EventSource transports are stubbed so the suite
- * never touches the network.
+ * then exercise switchLanguage / hydrateTranslations / lazy-load against it.
+ * The HTTP transport is stubbed so the suite never touches the network.
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import i18n from 'i18next';
-import { createI18n, reloadTranslations, switchLanguage } from '../client';
+import { createI18n, hydrateTranslations, switchLanguage } from '../client';
 
-type Listener = (event: MessageEvent | Event) => void;
-
-class FakeEventSource {
-  static instances: FakeEventSource[] = [];
-
-  readonly url: string;
-  onmessage: Listener | null = null;
-  onerror: Listener | null = null;
-  onopen: Listener | null = null;
-
-  constructor(url: string) {
-    this.url = url;
-    FakeEventSource.instances.push(this);
-  }
-
-  emit(payload: unknown): void {
-    this.onmessage?.(new MessageEvent('message', { data: JSON.stringify(payload) }));
-  }
-
-  close(): void {
-    // Test fake — no resource to release.
-  }
+interface BundleResponse {
+  body: Record<string, Record<string, unknown>>;
+  etag: string;
 }
 
 interface FetchHarness {
   calls: string[];
-  /** Per-`<lang>/<ns>` payloads keyed as `"en/common"`. */
+  ifNoneMatch: Array<string | null>;
+  /** Per-`<lang>/<ns>` payloads keyed as `"en/common"` for the per-namespace fallback. */
   fixtures: Map<string, unknown>;
-  /** Per-key status overrides; defaults to 200. */
+  /** Per-key status overrides for the per-namespace endpoint; defaults to 200. */
   statuses: Map<string, number>;
+  /** Per-locale bundle responses for `/api/i18n/bundle/:locale`. */
+  bundles: Map<string, BundleResponse>;
 }
 
 const harness: FetchHarness = {
   calls: [],
+  ifNoneMatch: [],
   fixtures: new Map(),
   statuses: new Map(),
+  bundles: new Map(),
 };
 
 let savedFetch: typeof fetch;
-let savedEventSource: unknown;
-let hadEventSource: boolean;
 let savedWindow: unknown;
 let hadWindow: boolean;
+
+const toUrl = (input: RequestInfo | URL): string => {
+  if (typeof input === 'string') {
+    return input;
+  }
+  if (input instanceof URL) {
+    return input.href;
+  }
+  return input.url;
+};
 
 beforeAll(async () => {
   const g = globalThis as Record<string, unknown>;
 
   savedFetch = globalThis.fetch;
-  const fakeFetch = ((input: RequestInfo | URL): Promise<Response> => {
-    const url = typeof input === 'string' ? input : input.toString();
+  const fakeFetch = ((input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+    const url = toUrl(input);
     harness.calls.push(url);
+    const ifNoneMatch = init?.headers ? new Headers(init.headers).get('if-none-match') : null;
+    harness.ifNoneMatch.push(ifNoneMatch);
+
+    const bundleMatch = /\/api\/i18n\/bundle\/([^/]+)$/.exec(url);
+    if (bundleMatch) {
+      const locale = decodeURIComponent(bundleMatch[1] ?? '');
+      const bundle = harness.bundles.get(locale);
+      if (!bundle) {
+        return Promise.resolve(new Response('', { status: 404 }));
+      }
+      if (ifNoneMatch === bundle.etag) {
+        return Promise.resolve(new Response(null, { status: 304 }));
+      }
+      return Promise.resolve(
+        new Response(JSON.stringify(bundle.body), {
+          status: 200,
+          headers: { ETag: bundle.etag },
+        })
+      );
+    }
+
     const match = /\/api\/i18n\/([^/]+)\/([^/]+)$/.exec(url);
     if (!match) {
       return Promise.resolve(new Response('not found', { status: 404 }));
@@ -83,19 +97,26 @@ beforeAll(async () => {
   fakeFetch.preconnect = savedFetch.preconnect;
   globalThis.fetch = fakeFetch;
 
-  hadEventSource = 'EventSource' in g;
-  savedEventSource = g.EventSource;
-  g.EventSource = FakeEventSource;
-
   hadWindow = 'window' in g;
   savedWindow = g.window;
   g.window = g.window ?? {};
 
-  // Seed a couple of bundles so the first switch has data to merge.
-  harness.fixtures.set('en/common', { hello: 'Hello', shared: 'EN-shared' });
-  harness.fixtures.set('fr/common', { hello: 'Bonjour', shared: 'FR-shared' });
-  harness.fixtures.set('en/layout', { title: 'Title' });
-  harness.fixtures.set('fr/layout', { title: 'Titre' });
+  // Seed bundle responses (primary path) plus per-namespace fixtures for the
+  // fallback path's tests.
+  harness.bundles.set('en', {
+    etag: '"en-v1"',
+    body: {
+      common: { hello: 'Hello', shared: 'EN-shared' },
+      layout: { title: 'Title' },
+    },
+  });
+  harness.bundles.set('fr', {
+    etag: '"fr-v1"',
+    body: {
+      common: { hello: 'Bonjour', shared: 'FR-shared' },
+      layout: { title: 'Titre' },
+    },
+  });
 
   createI18n({
     apiPrefix: '/api/i18n',
@@ -105,7 +126,7 @@ beforeAll(async () => {
   });
 
   // i18next.init resolves asynchronously after backend reads — wait for the
-  // language detector + initial bundle fetches to settle before assertions.
+  // language detector + initial bundle fetch to settle before assertions.
   await new Promise<void>((resolve) => {
     if (i18n.isInitialized) {
       resolve();
@@ -119,11 +140,6 @@ beforeAll(async () => {
 afterAll(() => {
   const g = globalThis as Record<string, unknown>;
   globalThis.fetch = savedFetch;
-  if (hadEventSource) {
-    g.EventSource = savedEventSource;
-  } else {
-    delete g.EventSource;
-  }
   if (hadWindow) {
     g.window = savedWindow;
   } else {
@@ -138,9 +154,16 @@ describe('createI18n', () => {
     expect(i18n.options.fallbackLng).toEqual(['en']);
   });
 
-  test('starts the SSE event stream against the configured apiPrefix', () => {
-    const urls = FakeEventSource.instances.map((s) => s.url);
-    expect(urls).toContain('/api/i18n/events');
+  test('boot fetches the bundle once and never hits the per-namespace endpoint for eager namespaces', () => {
+    const bundleCalls = harness.calls.filter((u) => u.startsWith('/api/i18n/bundle/'));
+    const nsCalls = harness.calls.filter(
+      (u) => /^\/api\/i18n\/[^/]+\/[^/]+$/.test(u) && !u.includes('/bundle/')
+    );
+    expect(bundleCalls.length).toBeGreaterThanOrEqual(1);
+    // Eager namespaces (`common`, `layout`) must come from the bundle, not
+    // per-namespace round-trips.
+    expect(nsCalls.some((u) => u.endsWith('/api/i18n/en/common'))).toBe(false);
+    expect(nsCalls.some((u) => u.endsWith('/api/i18n/en/layout'))).toBe(false);
   });
 
   test('is idempotent — second call returns the same i18next instance', () => {
@@ -158,16 +181,20 @@ describe('switchLanguage', () => {
     expect(harness.calls.length).toBe(before);
   });
 
-  test('preloads namespaces before flipping i18n.language', async () => {
+  test('preloads via the bundle endpoint before flipping i18n.language', async () => {
     await switchLanguage('en');
     const callsBefore = harness.calls.length;
 
     await switchLanguage('fr');
 
-    // The preload must have hit the FR endpoints for the namespaces we knew
-    // about. Once swapped, the active language has changed.
-    const newCalls = harness.calls.slice(callsBefore);
-    expect(newCalls.some((u) => u.startsWith('/api/i18n/fr/common'))).toBe(true);
+    const newCalls = new Set(harness.calls.slice(callsBefore));
+    // The eager namespaces (`common`, `layout`) are served by the bundle —
+    // no per-namespace round-trip for either. Other lazily-registered
+    // namespaces from prior tests may still go through the per-ns fallback;
+    // that's the documented behavior and out of scope here.
+    expect(newCalls.has('/api/i18n/bundle/fr')).toBe(true);
+    expect(newCalls.has('/api/i18n/fr/common')).toBe(false);
+    expect(newCalls.has('/api/i18n/fr/layout')).toBe(false);
     expect(i18n.language).toBe('fr');
     expect(i18n.t('hello')).toBe('Bonjour');
   });
@@ -182,88 +209,64 @@ describe('switchLanguage', () => {
   });
 
   test('swallows backend errors during preload so the switch still completes', async () => {
-    harness.statuses.set('fr/common', 500);
+    harness.bundles.delete('de');
     await switchLanguage('en');
 
-    await switchLanguage('fr');
+    await switchLanguage('de');
 
-    expect(i18n.language).toBe('fr');
-    harness.statuses.delete('fr/common');
+    expect(i18n.language).toBe('de');
   });
 });
 
-describe('reloadTranslations', () => {
-  test('clears loader state and re-fetches namespaces for the active language', async () => {
+describe('hydrateTranslations', () => {
+  test('pushes a multi-language tree into the i18next store without any HTTP', async () => {
     await switchLanguage('en');
     const callsBefore = harness.calls.length;
-    await reloadTranslations();
-    const newCalls = harness.calls.slice(callsBefore);
-    expect(newCalls.some((u) => u.includes('/api/i18n/en/common'))).toBe(true);
+
+    hydrateTranslations({
+      en: { common: { hello: 'Hi from HMR' } },
+    });
+
+    expect(harness.calls.length).toBe(callsBefore);
+    expect(i18n.getResource('en', 'common', 'hello')).toBe('Hi from HMR');
+  });
+
+  test('drops unsafe language codes silently', () => {
+    // JSON.parse materialises `__proto__` as an own enumerable key — the
+    // same shape a hostile out-of-band push could send.
+    const malicious: Record<string, Record<string, Record<string, unknown>>> = JSON.parse(
+      '{"__proto__":{"common":{"polluted":"yes"}}}'
+    );
+    hydrateTranslations(malicious);
+
+    expect(({} as Record<string, unknown>).polluted).toBeUndefined();
   });
 });
 
-describe('SSE registry change handling', () => {
-  test('`clear` triggers a full reloadResources for the active language', async () => {
+describe('lazy-loading namespaces not in the bundle', () => {
+  test('a namespace missing from the cached bundle triggers a bundle revalidation that returns it', async () => {
     await switchLanguage('en');
+    // Namespace name unique to this test — the global i18next singleton is
+    // shared with other test files, and a namespace already in the store
+    // would short-circuit `loadNamespaces` before our backend is consulted.
+    const ns = 'plugin:client-lazy';
+    harness.bundles.set('en', {
+      etag: '"en-with-lazy"',
+      body: {
+        common: { hello: 'Hello', shared: 'EN-shared' },
+        layout: { title: 'Title' },
+        [ns]: { greet: 'Yo' },
+      },
+    });
     const callsBefore = harness.calls.length;
-    FakeEventSource.instances[0]?.emit({ kind: 'clear', namespace: null });
-    await new Promise((r) => setTimeout(r, 20));
-    expect(harness.calls.length).toBeGreaterThan(callsBefore);
-  });
 
-  test('`remove` with a known namespace re-fetches it', async () => {
-    await switchLanguage('en');
-    await i18n.loadNamespaces('common');
-    const callsBefore = harness.calls.length;
-    FakeEventSource.instances[0]?.emit({ kind: 'remove', namespace: 'common' });
-    await new Promise((r) => setTimeout(r, 20));
-    const newCalls = harness.calls.slice(callsBefore);
-    expect(newCalls.some((u) => u.includes('/api/i18n/en/common'))).toBe(true);
-  });
+    await i18n.loadNamespaces(ns);
 
-  test('`remove` for an unknown namespace is ignored', async () => {
-    const callsBefore = harness.calls.length;
-    FakeEventSource.instances[0]?.emit({ kind: 'remove', namespace: 'never-loaded-ns' });
-    await new Promise((r) => setTimeout(r, 20));
-    expect(harness.calls.length).toBe(callsBefore);
-  });
-
-  test('`set` with a namespace already in the store triggers a refetch', async () => {
-    await switchLanguage('en');
-    await i18n.loadNamespaces('common');
-    const callsBefore = harness.calls.length;
-    FakeEventSource.instances[0]?.emit({ kind: 'set', namespace: 'common', locale: 'en' });
-    await new Promise((r) => setTimeout(r, 20));
-    const newCalls = harness.calls.slice(callsBefore);
-    expect(newCalls.some((u) => u.includes('/api/i18n/en/common'))).toBe(true);
-  });
-
-  test('`set` for a different locale than the active one is ignored', async () => {
-    await switchLanguage('en');
-    const callsBefore = harness.calls.length;
-    FakeEventSource.instances[0]?.emit({ kind: 'set', namespace: 'common', locale: 'de' });
-    await new Promise((r) => setTimeout(r, 20));
-    expect(harness.calls.length).toBe(callsBefore);
-  });
-
-  test('`set` without a namespace is ignored', async () => {
-    const callsBefore = harness.calls.length;
-    FakeEventSource.instances[0]?.emit({ kind: 'set', namespace: null });
-    await new Promise((r) => setTimeout(r, 20));
-    expect(harness.calls.length).toBe(callsBefore);
-  });
-
-  test('`set` for a previously-missing namespace re-fetches and registers it', async () => {
-    await switchLanguage('en');
-    harness.statuses.set('en/lazy', 404);
-    await i18n.loadNamespaces('lazy');
-    // Now the namespace is known-missing. Flip it to "present" and notify.
-    harness.statuses.delete('en/lazy');
-    harness.fixtures.set('en/lazy', { greet: 'Hi' });
-    const callsBefore = harness.calls.length;
-    FakeEventSource.instances[0]?.emit({ kind: 'set', namespace: 'lazy', locale: 'en' });
-    await new Promise((r) => setTimeout(r, 20));
-    const newCalls = harness.calls.slice(callsBefore);
-    expect(newCalls.some((u) => u.includes('/api/i18n/en/lazy'))).toBe(true);
+    const newCalls = new Set(harness.calls.slice(callsBefore));
+    expect(newCalls.has('/api/i18n/bundle/en')).toBe(true);
+    // Per-namespace endpoint no longer exists — assert the loader didn't
+    // try `/api/i18n/en/<ns>`.
+    expect(newCalls.has(`/api/i18n/en/${encodeURIComponent(ns)}`)).toBe(false);
+    expect(i18n.getResource('en', ns, 'greet')).toBe('Yo');
   });
 });

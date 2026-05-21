@@ -3,7 +3,7 @@
   "compilerOptions": {
     "outDir": "./dist",
     "rootDir": "./src",
-    "types": ["vite/client", "bun-types"]
+    "types": ["vite/client"]
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "src/check.ts", "src/generate-types.ts", "src/**/*.test.ts"]

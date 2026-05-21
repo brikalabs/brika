@@ -1,11 +1,38 @@
 /**
  * Auto-injected by the i18n-dev Vite plugin.
- * Mounts the I18nDevOverlay into a Shadow DOM root for full CSS isolation.
+ *
+ * Two jobs:
+ *   1. Mount the I18nDevOverlay into a Shadow DOM root for full CSS isolation.
+ *   2. Bridge HMR translation updates into the @brika/i18n runtime — the
+ *      runtime stays HMR-agnostic; the dev tool owns this connection.
  *
  * Uses dynamic imports so that any resolution failure
  * (React, overlay, i18next) is caught and shown visually.
  */
+import { hydrateTranslations, type TranslationsBundle } from '@brika/i18n/react';
+import { HMR_TRANSLATIONS } from './hmr-events';
 import cssText from './overlay-styles.css?inline';
+
+if (import.meta.hot) {
+  // Vite re-sends the full lang→ns→data tree on every change; replace what's
+  // in the runtime store wholesale. `hydrateTranslations` is a no-op until
+  // the app has called `createI18n()`, so race-on-load is safe.
+  //
+  // Why `payload?` is optional even though the typed `CustomEventMap` entry
+  // in `./vite-env.d.ts` says otherwise: this package's CLI/server modules
+  // pull `bun-types` via `/// <reference types="bun-types" />`, which is
+  // global to the TS program and augments `ImportMeta.hot.on` with a
+  // zero-arg callback overload. Until the package is split into separate
+  // node/browser tsconfigs, both overloads coexist in this file and the
+  // narrower one wins — so we declare the callback compatible with both.
+  // `payload === undefined` only happens for the bun-style no-arg call,
+  // which the Vite producer never makes.
+  import.meta.hot.on(HMR_TRANSLATIONS, (payload?: TranslationsBundle) => {
+    if (payload !== undefined) {
+      hydrateTranslations(payload);
+    }
+  });
+}
 
 function syncDarkMode(mount: HTMLElement) {
   function isDark(): boolean {

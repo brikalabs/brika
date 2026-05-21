@@ -99,17 +99,33 @@ describe('UpdateService', () => {
     expect(result.assetSize).toBeNull();
   });
 
-  test('check() returns stale cache on subsequent network error', async () => {
+  test('refresh() returns stale cache on subsequent network error', async () => {
     // First check succeeds and populates cache
     mockGitHub(bun, 'v99.0.0');
     await service.check();
 
-    // Second check fails — should return stale cache
+    // Force a refresh that fails — should return stale cache
     bun.fetch(() => Promise.reject(new Error('Offline')));
-    const result = await service.check();
+    const result = await service.refresh();
 
     expect(result.updateAvailable).toBe(true);
     expect(result.latestVersion).toBe('99.0.0');
+  });
+
+  test('check() returns cached result within TTL without hitting upstream', async () => {
+    mockGitHub(bun, 'v99.0.0');
+    const first = await service.check();
+
+    // Swap to a failing fetch — if check() honors the TTL gate it never runs.
+    let called = false;
+    bun.fetch(() => {
+      called = true;
+      return Promise.reject(new Error('should not be called'));
+    });
+    const second = await service.check();
+
+    expect(called).toBe(false);
+    expect(second).toBe(first);
   });
 
   test('stop() can be called without start() without throwing', () => {
