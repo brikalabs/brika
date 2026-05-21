@@ -97,25 +97,35 @@ export async function pickPrimaryLocaleFile(
 export async function detectFileIndent(path: string): Promise<string | number> {
   try {
     const raw = await Bun.file(path).text();
-    const newline = raw.indexOf('\n');
-    if (newline === -1 || newline + 1 >= raw.length) {
-      return 2;
-    }
-    const next = raw[newline + 1];
-    if (next === '\t') {
-      return '\t';
-    }
-    if (next !== ' ') {
-      return 2;
-    }
-    let end = newline + 2;
-    while (end < raw.length && raw[end] === ' ') {
-      end++;
-    }
-    return end - newline - 1;
+    return detectIndentFromContent(raw);
   } catch {
     return 2;
   }
+}
+
+/**
+ * Variant of `detectFileIndent` that operates on already-loaded content.
+ * Same fallback policy (2 spaces). Use this when the caller has read the file
+ * via a different code path (e.g. `node:fs/promises.readFile`) and doesn't
+ * want to round-trip through `Bun.file` just for indent detection.
+ */
+export function detectIndentFromContent(content: string): string | number {
+  const newline = content.indexOf('\n');
+  if (newline === -1 || newline + 1 >= content.length) {
+    return 2;
+  }
+  const next = content[newline + 1];
+  if (next === '\t') {
+    return '\t';
+  }
+  if (next !== ' ') {
+    return 2;
+  }
+  let end = newline + 2;
+  while (end < content.length && content[end] === ' ') {
+    end++;
+  }
+  return end - newline - 1;
 }
 
 // ─── Internals ──────────────────────────────────────────────────────────────
@@ -129,10 +139,7 @@ interface JsonFileEntry {
   readonly content: TranslationData;
 }
 
-async function readJsonFiles(
-  folderPath: string,
-  warn?: LoaderWarn
-): Promise<JsonFileEntry[]> {
+async function readJsonFiles(folderPath: string, warn?: LoaderWarn): Promise<JsonFileEntry[]> {
   const out: JsonFileEntry[] = [];
   let files: string[];
   try {

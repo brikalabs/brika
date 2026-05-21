@@ -71,15 +71,15 @@ Press **Shift + Alt + D** or click the floating badge in the bottom-right corner
 
 | Feature | Description |
 |---------|-------------|
-| **Issue detection** | Missing keys, extra keys, missing `{{variables}}` |
-| **Coverage stats** | Per-locale, per-namespace translation completeness |
+| **Union-based validation** | The total key set per namespace is the union of leaf keys across **every** locale — no locale is privileged as ground truth. A key in `fr/` that `en/` forgets is flagged as missing in EN, not as “extra” in FR. |
+| **Coverage stats** | Per-locale, per-namespace completeness measured against the union total — symmetric across all locales. |
 | **Runtime missing keys** | Catches keys missing at runtime via i18next `saveMissing` |
 | **Missing key markers** | Toggle red markers directly on the page showing where missing keys render |
 | **Key browser** | Search, filter, and inline-edit translations across all locales |
 | **Key usage** | See all source files where a translation key is used, click to open in IDE |
 | **Inspect mode** | Hover over text in the app to see its i18n key, click to navigate |
 | **CI mode** | Toggle raw translation keys in the UI (i18next `cimode`) |
-| **Auto-fix** | Copy missing keys from the reference locale or remove extra keys |
+| **Auto-fix** | Copy missing keys from any locale that has them (reference locale preferred for display order) |
 | **Click to editor** | Click a runtime marker badge to open the source file in your IDE |
 | **Dark mode** | Automatically syncs with your app's theme (`.dark` class, `data-mode`, or system preference) |
 | **Plugin support** | Auto-discovers and validates plugin-scoped translations from workspace packages |
@@ -90,29 +90,45 @@ Press **Shift + Alt + D** or click the floating badge in the bottom-right corner
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `localesDir` | `string` | *required* | Path to the core locale directory |
-| `referenceLocale` | `string` | `'en'` | Locale used as ground truth for validation |
-| `srcDirs` | `string[]` | `['./src']` | Directories to scan for `t()` call usages (shown in key browser) |
+| `referenceLocale` | `string` | `'en'` | Display-language hint for the overlay (preferred locale for "Copy" auto-fix and diff column ordering). Has no effect on which issues are emitted — validation is symmetric across all locales. |
+| `defaultNamespace` | `string` | `'translation'` | i18next default namespace; placed first in the generated `i18n-namespaces.ts`. |
+| `sources` | `SourceConfig[]` | `[{ dir: './src' }]` | Source trees scanned for `t()` call usages. Each entry can pin a namespace so bare-key calls in that subtree resolve correctly. |
 
 ## CLI Scripts
 
 Validate translations from the command line:
 
 ```bash
-# Validate locale parity (exits non-zero on errors — use in CI)
-bun packages/i18n-dev/src/check.ts --locales ./apps/hub/src/locales
+# Validate locale parity using union semantics
+# (exits non-zero on errors — use in CI; pass --ci to also fail on warnings)
+bun packages/i18n-devtools/check --locales ./src/locales
 
-# Generate TypeScript type declarations
-bun packages/i18n-dev/src/generate-types.ts --locales ./apps/hub/src/locales/en --out ./node_modules/.cache/@brika/i18n-devtools
+# Generate TypeScript type declarations from the reference locale
+bun packages/i18n-devtools/generate-types \
+  --locales ./src/locales/en \
+  --reference-locale en \
+  --out ./node_modules/.cache/@brika/i18n-devtools
 ```
+
+The validator reports:
+
+- **`missing-key`** (error) — any locale lacks a key that exists in another locale (this includes the reference locale itself, so EN-forgot-FR-has cases are surfaced).
+- **`missing-namespace`** (error) — a locale doesn't ship a namespace that another locale defines.
+- **`missing-variable`** (warning) — a locale's translation omits an interpolation `{{var}}` that other locales declare for the same key.
 
 ### CI example (GitHub Actions)
 
 ```yaml
 - name: Check i18n translations
-  run: bun packages/i18n-dev/src/check.ts
+  run: bunx @brika/i18n-devtools check --ci
 ```
 
-The check script exits with code 1 if there are errors (missing keys, missing namespaces), making it suitable for CI gates. Plugin locales are auto-discovered from the workspace configuration.
+The check script exits with code 1 if there are errors (missing keys, missing namespaces). With `--ci`, warnings (missing variables) are also fatal. Workspace package locales are auto-discovered from the monorepo `package.json` `workspaces` field.
+
+See [`examples/`](./examples) for:
+
+- [`vite-plug-and-play.ts`](./examples/vite-plug-and-play.ts) — minimal `vite.config.ts` you can copy into a fresh project.
+- [`ci-check.sh`](./examples/ci-check.sh) — drop-in CI step for validating locale parity.
 
 ## Exports
 

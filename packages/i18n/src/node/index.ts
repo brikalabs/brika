@@ -6,6 +6,7 @@
 
 export {
   detectFileIndent,
+  detectIndentFromContent,
   type LoaderWarn,
   loadLocaleFolder,
   loadMergedLocaleFolder,

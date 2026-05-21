@@ -25,11 +25,8 @@ export function issueLabel(issue: ValidationIssue): string {
 export function fixLabel(issue: ValidationIssue): string | null {
   switch (issue.type) {
     case 'missing-key':
-      return 'Copy ref';
-    case 'extra-key':
-      return 'Remove';
     case 'missing-variable':
-      return 'Copy ref';
+      return 'Copy';
     default:
       return null;
   }

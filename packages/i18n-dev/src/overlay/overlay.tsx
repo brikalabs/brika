@@ -15,7 +15,7 @@ import { IssuesContent } from './issues-tab';
 import { KbdGroup } from './primitives';
 import { RuntimeMarkersOverlay, useRuntimeMarkers } from './runtime-markers';
 import { RuntimeContent } from './runtime-tab';
-import { installTranslationTracker, REFERENCE_LOCALE } from './store';
+import { getReferenceLocale, installTranslationTracker } from './store';
 import { TranslationsContent } from './translations-tab';
 
 type Tab = 'issues' | 'runtime' | 'coverage' | 'translations';
@@ -322,7 +322,7 @@ export function I18nDevOverlay() {
 
   const toggleCiMode = useCallback(() => {
     if (isCiMode) {
-      switchLanguage(preCiLang ?? REFERENCE_LOCALE).catch(() => undefined);
+      switchLanguage(preCiLang ?? getReferenceLocale()).catch(() => undefined);
     } else {
       setPreCiLang(currentLang);
       switchLanguage('cimode').catch(() => undefined);

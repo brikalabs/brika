@@ -10,8 +10,8 @@
  */
 
 import { useMemo } from 'react';
-import { useIntl, type UseIntlResult } from './use-intl';
-import { useTranslate, type UseTranslateResult } from './use-translate';
+import { type UseIntlResult, useIntl } from './use-intl';
+import { type UseTranslateResult, useTranslate } from './use-translate';
 
 export type LocaleUtils = UseTranslateResult & UseIntlResult;
 
@@ -21,12 +21,12 @@ export function useLocale(): LocaleUtils {
   return useMemo(() => ({ ...intl, ...translate }), [translate, intl]);
 }
 
-export { useIntl } from './use-intl';
-export { useTranslate } from './use-translate';
 export type {
   DurationFormatOptions,
   DurationInput,
   TimeFormat,
   UseIntlResult,
 } from './use-intl';
+export { useIntl } from './use-intl';
 export type { I18nT, I18nTp, UseTranslateResult } from './use-translate';
+export { useTranslate } from './use-translate';

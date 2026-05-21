@@ -1,9 +1,37 @@
 import type { FixEntry, ValidationIssue } from '../types';
 import {
+  getLocales,
   getNestedStoreValue,
   removeFromI18nextStore,
   updateI18nextStore,
 } from './i18next-store';
+
+/**
+ * Find a translation value for `(namespace, key)` to seed a missing entry.
+ * Reference locale is tried first (display-language convenience), but under
+ * union semantics the key may only exist in some other locale — fall back to
+ * any locale that has it before giving up.
+ */
+function findSeedValue(
+  namespace: string,
+  key: string,
+  referenceLocale: string
+): string | undefined {
+  const refValue = getNestedStoreValue(referenceLocale, namespace, key);
+  if (typeof refValue === 'string') {
+    return refValue;
+  }
+  for (const locale of getLocales()) {
+    if (locale === referenceLocale) {
+      continue;
+    }
+    const candidate = getNestedStoreValue(locale, namespace, key);
+    if (typeof candidate === 'string') {
+      return candidate;
+    }
+  }
+  return undefined;
+}
 
 export function buildFix(issue: ValidationIssue): FixEntry | null {
   if (!issue.key) {
@@ -12,8 +40,8 @@ export function buildFix(issue: ValidationIssue): FixEntry | null {
   switch (issue.type) {
     case 'missing-key':
     case 'missing-variable': {
-      const refValue = getNestedStoreValue(issue.referenceLocale, issue.namespace, issue.key);
-      if (refValue === undefined) {
+      const seed = findSeedValue(issue.namespace, issue.key, issue.referenceLocale);
+      if (seed === undefined) {
         return null;
       }
       return {
@@ -21,16 +49,9 @@ export function buildFix(issue: ValidationIssue): FixEntry | null {
         locale: issue.locale,
         namespace: issue.namespace,
         key: issue.key,
-        value: refValue,
+        value: seed,
       };
     }
-    case 'extra-key':
-      return {
-        type: 'delete',
-        locale: issue.locale,
-        namespace: issue.namespace,
-        key: issue.key,
-      };
     default:
       return null;
   }
@@ -68,7 +89,9 @@ async function postFix(fix: FixEntry): Promise<void> {
     }
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    console.error(`[i18n-dev] fix failed (${fix.namespace}:${fix.key} [${fix.locale}]): ${message}`);
+    console.error(
+      `[i18n-dev] fix failed (${fix.namespace}:${fix.key} [${fix.locale}]): ${message}`
+    );
   }
 }
 

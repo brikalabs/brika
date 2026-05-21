@@ -28,10 +28,10 @@ export {
   type DurationInput,
   type LocaleUtils,
   type TimeFormat,
-  useIntl,
   type UseIntlResult,
+  type UseTranslateResult,
+  useIntl,
   useLocale,
   useTranslate,
-  type UseTranslateResult,
 } from './use-locale';
 export type { I18nT, I18nTp } from './use-translate';

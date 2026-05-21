@@ -124,52 +124,23 @@ export interface OrchestratorOptions {
   readonly referenceLocale: string;
   readonly sources: ReadonlyArray<ResolvedSource>;
   readonly cacheDir: string;
-}
-
-export function collectSourceEntry(
-  entry: PackageScanEntry,
-  issues: ValidationResult['issues'],
-  coverage: ValidationResult['coverage'],
-  translations: Record<string, Record<string, TranslationData>>,
-  referenceLocale: string
-): void {
-  const result = validateLocales(entry.locales, referenceLocale);
-  for (const issue of result.issues) {
-    issues.push(issue);
-  }
-  for (const coverageEntry of result.coverage) {
-    coverage.push(coverageEntry);
-  }
-  for (const [locale, nsMap] of entry.locales) {
-    translations[locale] ??= {};
-    for (const [ns, data] of nsMap) {
-      translations[locale][ns] = data;
-    }
-  }
-}
-
-async function scanSources(
-  sources: ReadonlyArray<ResolvedSource>,
-  issues: ValidationResult['issues'],
-  coverage: ValidationResult['coverage'],
-  translations: Record<string, Record<string, TranslationData>>,
-  referenceLocale: string
-): Promise<void> {
-  for (const source of sources) {
-    const entry = await scanSourceLocales(source);
-    if (entry) {
-      collectSourceEntry(entry, issues, coverage, translations, referenceLocale);
-    }
-  }
+  /**
+   * i18next default namespace. Used by `generateNamespaceList` to place the
+   * caller's chosen default first in the generated `i18n-namespaces.ts`.
+   * Defaults to `'translation'` to match i18next's own default.
+   */
+  readonly defaultNamespace?: string;
 }
 
 /**
- * Fetch translations from a remote hub and merge them into the scan output.
- * Local-file data wins on overlap; remote-only namespaces appear as extras
- * so the overlay can surface what the deployed hub actually serves.
+ * Fold remote-hub translations into the core map. Local data wins on overlap
+ * (the same key/locale won't be overwritten), but remote-only namespaces fill
+ * in so the overlay can validate what the deployed hub actually serves.
+ *
+ * Mutates `coreTranslations` in place so downstream `validateLocales` /
+ * `flattenTranslations` see the merged map.
  */
 export async function mergeRemoteTranslations(
-  out: Record<string, Record<string, TranslationData>>,
   coreTranslations: Map<string, Map<string, TranslationData>>,
   remoteApiUrl: string
 ): Promise<void> {
@@ -180,18 +151,38 @@ export async function mergeRemoteTranslations(
     return;
   }
   for (const [locale, nsMap] of remote.translations) {
-    out[locale] ??= {};
     let localeRow = coreTranslations.get(locale);
+    if (!localeRow) {
+      localeRow = new Map();
+      coreTranslations.set(locale, localeRow);
+    }
     for (const [ns, data] of nsMap) {
-      if (out[locale][ns] === undefined) {
-        out[locale][ns] = data;
-        if (!localeRow) {
-          localeRow = new Map();
-          coreTranslations.set(locale, localeRow);
-        }
-        if (!localeRow.has(ns)) {
-          localeRow.set(ns, data);
-        }
+      if (!localeRow.has(ns)) {
+        localeRow.set(ns, data);
+      }
+    }
+  }
+}
+
+async function scanSourcesInto(
+  sources: ReadonlyArray<ResolvedSource>,
+  coreTranslations: Map<string, Map<string, TranslationData>>
+): Promise<void> {
+  for (const source of sources) {
+    const entry = await scanSourceLocales(source);
+    if (!entry) {
+      continue;
+    }
+    for (const [locale, nsMap] of entry.locales) {
+      let localeRow = coreTranslations.get(locale);
+      if (!localeRow) {
+        localeRow = new Map();
+        coreTranslations.set(locale, localeRow);
+      }
+      for (const [ns, data] of nsMap) {
+        // Local source files take precedence over anything that was already
+        // there (hub-served data is the fallback when both are present).
+        localeRow.set(ns, data);
       }
     }
   }
@@ -199,25 +190,29 @@ export async function mergeRemoteTranslations(
 
 export async function runScan(options: OrchestratorOptions): Promise<ScanResult> {
   const { localesDir, apiUrl, referenceLocale, sources } = options;
-  const allIssues: ValidationResult['issues'] = [];
-  const allCoverage: ValidationResult['coverage'] = [];
 
   const coreTranslations = localesDir
     ? await scanLocaleDirectory(localesDir)
     : new Map<string, Map<string, TranslationData>>();
-  const core = validateLocales(coreTranslations, referenceLocale);
-  allIssues.push(...core.issues);
-  allCoverage.push(...core.coverage);
 
-  const allTranslations = flattenTranslations(coreTranslations);
-  await scanSources(sources, allIssues, allCoverage, allTranslations, referenceLocale);
+  await scanSourcesInto(sources, coreTranslations);
 
   if (apiUrl) {
-    await mergeRemoteTranslations(allTranslations, coreTranslations, apiUrl);
+    await mergeRemoteTranslations(coreTranslations, apiUrl);
   }
 
+  // Validate ONCE against the fully-merged map so coverage reflects every
+  // source (local files + workspace packages + hub) under union semantics.
+  const { issues, coverage } = validateLocales(coreTranslations, referenceLocale);
+  const allTranslations = flattenTranslations(coreTranslations);
+
   return {
-    validation: { issues: allIssues, coverage: allCoverage, timestamp: Date.now() },
+    validation: {
+      issues,
+      coverage,
+      timestamp: Date.now(),
+      referenceLocale,
+    },
     translations: allTranslations,
     coreTranslations,
   };
@@ -229,7 +224,7 @@ export async function generateTypes(
   coreTranslations: Map<string, Map<string, TranslationData>>,
   allTranslations: Record<string, Record<string, TranslationData>>
 ): Promise<void> {
-  const { cacheDir, referenceLocale } = options;
+  const { cacheDir, referenceLocale, defaultNamespace = 'translation' } = options;
   if (!cacheDir) {
     return;
   }
@@ -252,7 +247,10 @@ export async function generateTypes(
     writeFile(join(cacheDir, 'i18n-resources.d.ts'), generateResourceTypes(coreNamespaces)),
     writeFile(
       join(cacheDir, 'i18n-namespaces.ts'),
-      generateNamespaceList(coreNamespaces.map((n) => n.name))
+      generateNamespaceList(
+        coreNamespaces.map((n) => n.name),
+        defaultNamespace
+      )
     ),
     writeFile(join(cacheDir, 'i18n-registry.d.ts'), generateRegistryAugmentation(allNamespaces)),
   ]);

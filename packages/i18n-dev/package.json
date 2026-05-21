@@ -3,13 +3,28 @@
   "version": "0.1.1",
   "type": "module",
   "license": "MIT",
-  "description": "i18n developer tools — Vite plugin + React overlay for translation validation",
+  "description": "i18n developer tools: Vite plugin + browser overlay for translation key validation, coverage tracking, and in-app editing. Works with any React + i18next project.",
+  "homepage": "https://github.com/brikalabs/brika/tree/main/packages/i18n-dev#readme",
+  "bugs": {
+    "url": "https://github.com/brikalabs/brika/issues"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/brikalabs/brika.git",
     "directory": "packages/i18n-dev"
   },
-  "keywords": ["brika", "i18n", "vite-plugin", "devtools", "translations"],
+  "keywords": [
+    "i18n",
+    "internationalization",
+    "translations",
+    "react",
+    "i18next",
+    "vite-plugin",
+    "devtools",
+    "overlay",
+    "typescript",
+    "bun"
+  ],
   "exports": {
     ".": "./src/index.ts",
     "./vite": "./src/vite.ts",
@@ -18,6 +33,8 @@
   "bin": {
     "brika-i18n": "./src/cli.ts"
   },
+  "files": ["src", "README.md", "CHANGELOG.md", "LICENSE"],
+  "sideEffects": ["./src/overlay/index.tsx", "./src/entry.ts", "./src/hmr-events.ts"],
   "scripts": {
     "test": "bun test",
     "typecheck": "tsgo --noEmit",
@@ -25,7 +42,7 @@
     "generate-types": "bun src/generate-types.ts"
   },
   "peerDependencies": {
-    "@brika/i18n": "workspace:*",
+    "@brika/i18n": ">=0.3.0",
     "i18next": ">=23.0.0",
     "lucide-react": ">=0.400.0",
     "react": ">=18.0.0",
@@ -34,17 +51,9 @@
     "vite": ">=5.0.0",
     "zod": ">=4.0.0"
   },
-  "peerDependenciesMeta": {
-    "i18next": { "optional": true },
-    "lucide-react": { "optional": true },
-    "react": { "optional": true },
-    "react-dom": { "optional": true },
-    "tailwindcss": { "optional": true },
-    "vite": { "optional": true },
-    "zod": { "optional": true }
-  },
   "devDependencies": {
     "@brika/i18n": "workspace:*",
+    "@brika/testing": "workspace:*",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "i18next": "^25.8.13",

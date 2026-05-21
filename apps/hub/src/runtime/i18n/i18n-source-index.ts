@@ -26,6 +26,7 @@ import {
   type TranslationData,
   type TranslationRegistry,
 } from '@brika/i18n';
+import { detectFileIndent } from '@brika/i18n/node';
 import { assertNoUnsafeKeys, assertSafeSegment } from './i18n-key-safety';
 import type { SourceFileEntry } from './i18n-types';
 
@@ -185,10 +186,7 @@ async function readTranslationJson(path: string): Promise<TranslationData> {
  * monorepo bind-mounts (e.g. Docker volumes pointing into a workspace) work
  * legitimately, while still blocking the `~/.ssh/authorized_keys` attack.
  */
-async function ensureSafePath(
-  targetPath: string,
-  allowedRoots: readonly string[]
-): Promise<void> {
+async function ensureSafePath(targetPath: string, allowedRoots: readonly string[]): Promise<void> {
   // Reject if the leaf itself is a symlink — the most direct attack vector.
   const leafStat = await lstat(targetPath).catch(() => null);
   if (leafStat?.isSymbolicLink()) {
@@ -204,36 +202,5 @@ async function ensureSafePath(
   );
   if (!ok) {
     throw new Error(`refusing to write outside allowed roots: ${real}`);
-  }
-}
-
-/**
- * Detect JSON indentation in an existing file. Falls back to 2 spaces.
- *
- * NOTE: Stream B is moving this helper into `@brika/i18n/node`. Switch the
- * import once that lands and delete this copy — see integrator note in the
- * Stream E delivery.
- */
-async function detectFileIndent(path: string): Promise<string | number> {
-  try {
-    const raw = await Bun.file(path).text();
-    const newline = raw.indexOf('\n');
-    if (newline === -1 || newline + 1 >= raw.length) {
-      return 2;
-    }
-    const next = raw[newline + 1];
-    if (next === '\t') {
-      return '\t';
-    }
-    if (next !== ' ') {
-      return 2;
-    }
-    let end = newline + 2;
-    while (end < raw.length && raw[end] === ' ') {
-      end++;
-    }
-    return end - newline - 1;
-  } catch {
-    return 2;
   }
 }

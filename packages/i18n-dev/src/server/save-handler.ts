@@ -3,6 +3,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { join, resolve } from 'node:path';
 import { setNestedValue, UnsafeKeyPathError } from '@brika/i18n';
+import { detectIndentFromContent } from '@brika/i18n/node';
 import type { Connect } from 'vite';
 import { z } from 'zod';
 import { parseJsonObject } from '../object';
@@ -32,11 +33,14 @@ export interface SaveHandlerOptions {
  */
 const IDENT_RE = /^[A-Za-z0-9_.@:+-]+$/;
 
+// Mirrors the hub-side schema in `apps/hub/src/runtime/http/routes/i18n.ts`.
+// The 10 KB ceiling on `value` is the documented limit for translation
+// leaves — anything larger almost certainly indicates a runaway client.
 const writePayloadSchema = z.object({
   locale: z.string().regex(IDENT_RE, 'invalid locale'),
   namespace: z.string().regex(IDENT_RE, 'invalid namespace'),
-  key: z.string().min(1),
-  value: z.string(),
+  key: z.string().trim().min(1).max(256),
+  value: z.string().max(10_000),
 });
 
 export type WritePayload = z.infer<typeof writePayloadSchema>;
@@ -53,6 +57,12 @@ function isSameOrigin(req: IncomingMessage): boolean {
   }
   const origin = req.headers.origin;
   const referer = req.headers.referer;
+  // State-changing endpoint: require at least one of Origin / Referer. Reject
+  // when both are absent — that's the shape of a cross-origin drive-by where
+  // neither header is sent (e.g. via Referrer-Policy: no-referrer).
+  if (typeof origin !== 'string' && typeof referer !== 'string') {
+    return false;
+  }
   for (const raw of [origin, referer]) {
     if (typeof raw !== 'string' || raw.length === 0) {
       continue;
@@ -70,7 +80,7 @@ function isSameOrigin(req: IncomingMessage): boolean {
   return true;
 }
 
-async function readBody(req: IncomingMessage, max = 1_000_000): Promise<string> {
+function readBody(req: IncomingMessage, max = 1_000_000): Promise<string> {
   return new Promise((res, rej) => {
     let len = 0;
     const chunks: Buffer[] = [];
@@ -92,30 +102,6 @@ function send(res: ServerResponse, status: number, body: unknown) {
   res.statusCode = status;
   res.setHeader('content-type', 'application/json; charset=utf-8');
   res.end(JSON.stringify(body));
-}
-
-/**
- * Detect indentation from the first non-empty line of a JSON file. Falls
- * back to tab so newly-created subtrees remain consistent with the project's
- * default formatting tool when none is detectable.
- */
-export function detectFileIndent(content: string): string | number {
-  const newline = content.indexOf('\n');
-  if (newline === -1 || newline + 1 >= content.length) {
-    return '\t';
-  }
-  const char = content[newline + 1];
-  if (char === '\t') {
-    return '\t';
-  }
-  if (char !== ' ') {
-    return '\t';
-  }
-  let end = newline + 2;
-  while (end < content.length && content[end] === ' ') {
-    end++;
-  }
-  return end - newline - 1;
 }
 
 /**
@@ -161,7 +147,7 @@ async function writeLocal(
     }
     throw err;
   }
-  const indent = detectFileIndent(raw);
+  const indent = detectIndentFromContent(raw);
   await writeFile(real, `${JSON.stringify(json, null, indent)}\n`, 'utf-8');
   return { ok: true };
 }

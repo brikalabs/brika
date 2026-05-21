@@ -12,7 +12,6 @@ import {
   getNestedStoreValue,
   getStoreData,
   getTranslations,
-  REFERENCE_LOCALE,
   sendFixes,
   subscribeKeyUsage,
   subscribeStore,
@@ -36,14 +35,6 @@ beforeAll(async () => {
         common: { hello: 'Bonjour' },
       },
     },
-  });
-});
-
-// ─── REFERENCE_LOCALE ──────────────────────────────────────────────────────
-
-describe('REFERENCE_LOCALE', () => {
-  test('is "en"', () => {
-    expect(REFERENCE_LOCALE).toBe('en');
   });
 });
 
@@ -271,20 +262,25 @@ describe('buildFix', () => {
     });
   });
 
-  test('builds delete fix for extra-key', () => {
+  test('falls back to any locale when reference lacks the missing key', () => {
+    applyTranslationBundle({
+      en: { common: {} },
+      fr: { common: { frenchOnly: 'Coucou' } },
+    });
     const fix = buildFix({
-      type: 'extra-key',
-      severity: 'warning',
+      type: 'missing-key',
+      severity: 'error',
       namespace: 'common',
-      locale: 'fr',
-      key: 'extra',
+      locale: 'en',
+      key: 'frenchOnly',
       referenceLocale: 'en',
     });
     expect(fix).toEqual({
-      type: 'delete',
-      locale: 'fr',
+      type: 'set',
+      locale: 'en',
       namespace: 'common',
-      key: 'extra',
+      key: 'frenchOnly',
+      value: 'Coucou',
     });
   });
 
@@ -346,8 +342,8 @@ describe('fixIssue', () => {
   test('does not throw', () => {
     expect(() =>
       fixIssue({
-        type: 'extra-key',
-        severity: 'warning',
+        type: 'missing-key',
+        severity: 'error',
         namespace: 'common',
         locale: 'fr',
         key: 'extra',
@@ -361,8 +357,8 @@ describe('fixAllIssues', () => {
   test('does not throw with mixed issues', () => {
     const issues: ValidationIssue[] = [
       {
-        type: 'extra-key',
-        severity: 'warning',
+        type: 'missing-key',
+        severity: 'error',
         namespace: 'common',
         locale: 'fr',
         key: 'x',

@@ -210,7 +210,13 @@ export function observeBodyMutations(callback: () => void): MutationObserver {
 // ─── Shared utilities ──────────────────────────────────────────────────────
 
 export function openInEditor(source: string) {
-  fetch(`/__open-in-editor?file=${encodeURIComponent(source)}`).catch(() => {
+  // POST (not GET): spawning an editor is a state-changing action; using POST
+  // matches the server-side method check and prevents cross-origin drive-by
+  // requests (`<img src>` / prefetch) from reaching the endpoint.
+  fetch(`/__open-in-editor?file=${encodeURIComponent(source)}`, {
+    method: 'POST',
+    credentials: 'same-origin',
+  }).catch(() => {
     // silently ignore — editor integration may not be available
   });
 }

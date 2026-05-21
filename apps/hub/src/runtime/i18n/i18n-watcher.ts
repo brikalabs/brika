@@ -13,6 +13,7 @@
 
 import { isTranslationData, type TranslationRegistry } from '@brika/i18n';
 import { type LoaderWarn, loadMergedLocaleFolder, watchLocaleSource } from '@brika/i18n/node';
+import { sanitizeTranslationData } from './i18n-key-safety';
 import type { PackageWatch } from './i18n-types';
 
 export interface WatcherOptions {
@@ -114,22 +115,24 @@ export class LocaleWatcher {
     try {
       const parsed: unknown = await file.json();
       if (isTranslationData(parsed)) {
-        this.#registry.setNamespaceLocale(namespace, locale, parsed, {
+        const safe = sanitizeTranslationData(parsed, filePath, this.#warn);
+        this.#registry.setNamespaceLocale(namespace, locale, safe, {
           merge: false,
           source: 'hub',
         });
       } else {
+        // File no longer parses as a translation tree — surface the warning AND
+        // remove the stale entry so the registry reflects on-disk reality.
+        // Previously we left the old value, which silently masked editor bugs.
         this.#warn('Hub locale JSON root is not an object', { path: filePath });
+        this.#registry.removeNamespaceLocale(namespace, locale);
       }
     } catch (error) {
       this.#warn('Failed to reload hub locale', { path: filePath }, error);
     }
   }
 
-  async #reloadPackageFiles(
-    pkg: PackageWatch,
-    changedFiles: readonly string[]
-  ): Promise<void> {
+  async #reloadPackageFiles(pkg: PackageWatch, changedFiles: readonly string[]): Promise<void> {
     if (changedFiles.length === 0) {
       return;
     }
@@ -158,7 +161,12 @@ export class LocaleWatcher {
         if (Object.keys(data).length === 0) {
           this.#registry.removeNamespaceLocale(pkg.namespace, locale);
         } else {
-          this.#registry.setNamespaceLocale(pkg.namespace, locale, data, {
+          const safe = sanitizeTranslationData(
+            data,
+            `${pkg.rootDir}/locales/${locale}`,
+            this.#warn
+          );
+          this.#registry.setNamespaceLocale(pkg.namespace, locale, safe, {
             merge: false,
             source: 'package',
           });

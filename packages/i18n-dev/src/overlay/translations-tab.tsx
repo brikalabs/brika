@@ -13,8 +13,8 @@ import {
 } from './primitives';
 import {
   getNestedStoreValue,
+  getReferenceLocale,
   getTranslations,
-  REFERENCE_LOCALE,
   removeFromI18nextStore,
   updateI18nextStore,
 } from './store';
@@ -30,36 +30,53 @@ interface MultiLocaleKey {
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
+/**
+ * Walk every locale's translations and build one row per (namespace, key) that
+ * appears in *any* locale. The total set of keys is the union — no locale is
+ * privileged — so a key present in French but missing in English shows up as
+ * a row where the `en` slot is empty (missingCount: 1).
+ *
+ * Rows are sorted by `namespace:key` ascending for a stable display order.
+ */
 export function buildMultiLocaleKeys(locales: string[]): MultiLocaleKey[] {
-  const refEntries = getTranslations(REFERENCE_LOCALE);
-  const localeMaps = new Map<string, Map<string, string>>();
-  for (const locale of locales) {
-    if (locale === REFERENCE_LOCALE) {
-      continue;
-    }
-    const map = new Map<string, string>();
+  const referenceLocale = getReferenceLocale();
+  const orderedLocales = orderLocales(locales, referenceLocale);
+
+  const rows = new Map<string, MultiLocaleKey>();
+  for (const locale of orderedLocales) {
     for (const entry of getTranslations(locale)) {
-      map.set(`${entry.ns}:${entry.key}`, entry.value);
+      const eid = `${entry.ns}:${entry.key}`;
+      let row = rows.get(eid);
+      if (!row) {
+        row = { ns: entry.ns, key: entry.key, values: {}, missingCount: 0 };
+        rows.set(eid, row);
+      }
+      row.values[locale] = entry.value;
     }
-    localeMaps.set(locale, map);
   }
 
-  return refEntries.map((entry) => {
-    const values: Record<string, string | undefined> = {};
-    let missingCount = 0;
-    for (const locale of locales) {
-      if (locale === REFERENCE_LOCALE) {
-        values[locale] = entry.value;
-      } else {
-        const val = localeMaps.get(locale)?.get(`${entry.ns}:${entry.key}`);
-        values[locale] = val;
-        if (val === undefined) {
-          missingCount++;
-        }
+  for (const row of rows.values()) {
+    let missing = 0;
+    for (const locale of orderedLocales) {
+      if (row.values[locale] === undefined) {
+        missing++;
       }
     }
-    return { ns: entry.ns, key: entry.key, values, missingCount };
-  });
+    row.missingCount = missing;
+  }
+
+  return [...rows.values()].sort((a, b) => `${a.ns}:${a.key}`.localeCompare(`${b.ns}:${b.key}`));
+}
+
+/**
+ * Stable locale ordering for the overlay: reference locale first (display
+ * convenience), then the rest in whatever order they were passed in.
+ */
+function orderLocales(locales: string[], referenceLocale: string): string[] {
+  if (!locales.includes(referenceLocale)) {
+    return locales;
+  }
+  return [referenceLocale, ...locales.filter((l) => l !== referenceLocale)];
 }
 
 // ─── Components ─────────────────────────────────────────────────────────────
@@ -212,12 +229,13 @@ export function TranslationKeyExpanded({
   onStartEdit: (target: { id: string; locale: string }) => void;
   onEditValChange: (val: string) => void;
 }>) {
+  const referenceLocale = getReferenceLocale();
   return (
     <div className="space-y-0.5 bg-dt-bg-subtle px-4 py-1.5 pl-8">
       {locales.map((locale) => {
         const val = entry.values[locale];
         const isEditing = editTarget?.id === eId && editTarget.locale === locale;
-        const isRef = locale === REFERENCE_LOCALE;
+        const isRef = locale === referenceLocale;
         return (
           <div key={locale} className="group flex items-center gap-2 text-[11px]">
             <span

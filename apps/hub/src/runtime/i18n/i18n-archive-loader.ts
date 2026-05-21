@@ -11,9 +11,9 @@
  *   - Workspace archive: `{namespace}/{locale}/{file}.json`
  */
 
-import { isTranslationData, type TranslationData, type TranslationRegistry } from '@brika/i18n';
+import { isTranslationData, type TranslationRegistry } from '@brika/i18n';
 import type { LoaderWarn } from '@brika/i18n/node';
-import { assertNoUnsafeKeys, isUnsafeKeyPathError } from './i18n-key-safety';
+import { sanitizeTranslationData } from './i18n-key-safety';
 import type { ArchiveEntry, ArchivePathParser, NamespaceSource } from './i18n-types';
 
 export interface LoadArchiveOptions {
@@ -87,44 +87,6 @@ async function absorbArchiveEntry(options: AbsorbEntryOptions): Promise<void> {
     merge: true,
     source,
   });
-}
-
-/**
- * Strip unsafe keys (`__proto__`, `constructor`, `prototype`) from embedded
- * translation data. Embedded archives are produced by our own build, so the
- * presence of unsafe keys would indicate either a build-time tamper or an
- * upstream regression — either way, warn and drop the key rather than crash
- * boot.
- */
-function sanitizeTranslationData(
-  data: TranslationData,
-  path: string,
-  warn: LoaderWarn
-): TranslationData {
-  try {
-    assertNoUnsafeKeys(data);
-    return data;
-  } catch (error) {
-    if (isUnsafeKeyPathError(error)) {
-      warn('Dropping unsafe key from embedded locale', { path }, { segment: error.segment });
-      return dropUnsafeKeys(data);
-    }
-    throw error;
-  }
-}
-
-function dropUnsafeKeys(data: TranslationData): TranslationData {
-  // Use Object.create(null) at the root + descend, so prototype-chain keys
-  // are dropped at every depth. We rebuild rather than delete in-place so the
-  // returned object is detached from any tampered prototype.
-  const out: TranslationData = {};
-  for (const [key, value] of Object.entries(data)) {
-    if (key === '__proto__' || key === 'constructor' || key === 'prototype') {
-      continue;
-    }
-    out[key] = isTranslationData(value) ? dropUnsafeKeys(value) : value;
-  }
-  return out;
 }
 
 /** Hub archive layout: "{locale}/{namespace}.json". */

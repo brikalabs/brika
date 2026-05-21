@@ -1,21 +1,37 @@
 {
   "name": "@brika/i18n",
   "version": "0.3.1",
-  "description": "Generic i18n runtime: translation registry, React hooks, Node loaders, and SSE-driven live reload.",
+  "description": "Generic i18n runtime: translation registry, React hooks, Node loaders, and SSE-driven live reload. Works with any React + Vite + Bun project.",
   "type": "module",
   "license": "MIT",
+  "homepage": "https://github.com/brikalabs/brika/tree/main/packages/i18n#readme",
+  "bugs": {
+    "url": "https://github.com/brikalabs/brika/issues"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/brikalabs/brika.git",
     "directory": "packages/i18n"
   },
-  "keywords": ["brika", "i18n", "translations"],
+  "keywords": [
+    "i18n",
+    "internationalization",
+    "translations",
+    "react",
+    "i18next",
+    "vite",
+    "bun",
+    "suspense",
+    "typescript"
+  ],
   "exports": {
     ".": "./src/index.ts",
     "./node": "./src/node/index.ts",
     "./react": "./src/react/index.ts",
     "./registry": "./src/registry.ts"
   },
+  "files": ["src", "README.md", "CHANGELOG.md", "LICENSE"],
+  "sideEffects": ["./src/react/client.ts"],
   "scripts": {
     "typecheck": "tsgo --noEmit",
     "test": "bun test"
@@ -28,10 +44,7 @@
     "zod": ">=4"
   },
   "peerDependenciesMeta": {
-    "i18next": { "optional": true },
-    "i18next-browser-languagedetector": { "optional": true },
-    "react": { "optional": true },
-    "react-i18next": { "optional": true }
+    "i18next-browser-languagedetector": { "optional": true }
   },
   "devDependencies": {
     "@brika/testing": "workspace:*",

@@ -23,11 +23,7 @@ import {
   type TranslationData,
   TranslationRegistry,
 } from '@brika/i18n';
-import {
-  type LoaderWarn,
-  loadMergedLocaleFolder,
-  pickPrimaryLocaleFile,
-} from '@brika/i18n/node';
+import { type LoaderWarn, loadMergedLocaleFolder, pickPrimaryLocaleFile } from '@brika/i18n/node';
 import { ConfigLoader } from '@/runtime/config/config-loader';
 import { Logger } from '@/runtime/logs/log-router';
 import {
@@ -35,8 +31,9 @@ import {
   loadPackageTranslations,
   WorkspaceRootResolver,
 } from './i18n-disk-loader';
+import { sanitizeTranslationData } from './i18n-key-safety';
 import { SourceIndex } from './i18n-source-index';
-import { PLUGIN_NS_PREFIX, type PackageWatch, type SourceFileEntry } from './i18n-types';
+import { type PackageWatch, PLUGIN_NS_PREFIX, type SourceFileEntry } from './i18n-types';
 import { LocaleWatcher } from './i18n-watcher';
 
 @singleton()
@@ -184,7 +181,8 @@ export class I18nService {
         const folderPath = `${pluginDir}/locales/${locale}`;
         const { data } = await loadMergedLocaleFolder(folderPath, this.#warn);
         if (Object.keys(data).length > 0) {
-          this.#registry.setNamespaceLocale(namespace, locale, data, {
+          const safe = sanitizeTranslationData(data, folderPath, this.#warn);
+          this.#registry.setNamespaceLocale(namespace, locale, safe, {
             merge: false,
             source: 'plugin',
           });

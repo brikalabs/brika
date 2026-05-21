@@ -18,6 +18,7 @@ import {
   pickPrimaryLocaleFile,
 } from '@brika/i18n/node';
 import { loadArchive, parseHubArchivePath, parsePackageArchivePath } from './i18n-archive-loader';
+import { sanitizeTranslationData } from './i18n-key-safety';
 import type { SourceIndex } from './i18n-source-index';
 import type { PackageWatch } from './i18n-types';
 
@@ -47,7 +48,12 @@ export async function loadHubTranslations(options: LoadHubOptions): Promise<void
 
       const localeData = await loadLocaleFolder(`${localesDir}/${locale}`, warn);
       for (const [namespace, data] of Object.entries(localeData)) {
-        registry.setNamespaceLocale(namespace, locale, data, { merge: true, source: 'hub' });
+        const safe = sanitizeTranslationData(
+          data,
+          `${localesDir}/${locale}/${namespace}.json`,
+          warn
+        );
+        registry.setNamespaceLocale(namespace, locale, safe, { merge: true, source: 'hub' });
         sources.record({
           namespace,
           locale,
@@ -92,7 +98,8 @@ export async function loadPackageTranslations(options: LoadPackageOptions): Prom
       for (const entry of entries) {
         onPackageDiscovered({ namespace: entry.namespace, rootDir: entry.rootDir });
         for (const [locale, data] of entry.locales) {
-          registry.setNamespaceLocale(entry.namespace, locale, data, {
+          const safe = sanitizeTranslationData(data, `${entry.rootDir}/locales/${locale}`, warn);
+          registry.setNamespaceLocale(entry.namespace, locale, safe, {
             merge: true,
             source: 'package',
           });

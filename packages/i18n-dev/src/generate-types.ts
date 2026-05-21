@@ -1,12 +1,13 @@
 /// <reference types="bun-types" />
 
 /**
- * CLI: Generate typed i18next resource declarations from English translation files.
+ * CLI: Generate typed i18next resource declarations from a reference-locale folder.
  *
- * Usage: bun packages/i18n-dev/src/generate-types.ts [--locales <dir>] [--out <dir>]
+ * Usage: bun packages/i18n-dev/src/generate-types.ts \
+ *          [--locales <dir>] [--reference-locale <locale>] [--out <dir>] \
+ *          [--module <module-id>] [--default-namespace <ns>]
  */
 
-import { findWorkspaceRoot } from '@brika/i18n/node';
 import { join } from 'node:path';
 import {
   generateNamespaceList,
@@ -21,19 +22,34 @@ function cliFlag(name: string, fallback: string): string {
 }
 
 const CWD = process.cwd();
-// Run with `bun --filter <pkg>` sets cwd to the filtered package; auto-discover
-// the workspace root so default paths resolve to repo locations either way.
-const ROOT = (await findWorkspaceRoot(CWD)) ?? CWD;
-const LOCALES_DIR = cliFlag('--locales', join(ROOT, 'apps/hub/src/locales/en'));
-const OUT_DIR = cliFlag('--out', join(ROOT, 'node_modules/.cache/@brika/i18n-devtools'));
+const REFERENCE_LOCALE = cliFlag('--reference-locale', 'en');
+const LOCALES_DIR = cliFlag('--locales', join(CWD, 'src/locales', REFERENCE_LOCALE));
+const OUT_DIR = cliFlag('--out', join(CWD, 'node_modules/.cache/@brika/i18n-devtools'));
 const REGISTRY_MODULE = cliFlag('--module', '@brika/i18n/registry');
+const DEFAULT_NAMESPACE = cliFlag('--default-namespace', 'translation');
 
 // ─── Read namespaces ─────────────────────────────────────────────────────────
 
 const glob = new Bun.Glob('*.json');
 const namespaces: Array<{ name: string; content: Record<string, unknown> }> = [];
 
-for await (const file of glob.scan({ cwd: LOCALES_DIR })) {
+let scanIterator: AsyncIterableIterator<string>;
+try {
+  scanIterator = glob.scan({ cwd: LOCALES_DIR })[Symbol.asyncIterator]();
+} catch {
+  console.log(`No locales found at ${LOCALES_DIR} — nothing to generate.`);
+  process.exit(0);
+}
+
+for (;;) {
+  const next = await scanIterator.next().catch(() => ({ done: true, value: undefined }) as const);
+  if (next.done) {
+    break;
+  }
+  const file = next.value;
+  if (typeof file !== 'string') {
+    continue;
+  }
   const name = file.replace('.json', '');
   const content: unknown = await Bun.file(join(LOCALES_DIR, file)).json();
   if (!isPlainObject(content)) {
@@ -41,6 +57,11 @@ for await (const file of glob.scan({ cwd: LOCALES_DIR })) {
     continue;
   }
   namespaces.push({ name, content });
+}
+
+if (namespaces.length === 0) {
+  console.log(`No JSON files found at ${LOCALES_DIR} — nothing to generate.`);
+  process.exit(0);
 }
 
 namespaces.sort((a, b) => a.name.localeCompare(b.name));
@@ -52,7 +73,13 @@ const nsPath = join(OUT_DIR, 'i18n-namespaces.ts');
 const registryPath = join(OUT_DIR, 'i18n-registry.d.ts');
 
 await Bun.write(typesPath, generateResourceTypes(namespaces));
-await Bun.write(nsPath, generateNamespaceList(namespaces.map((n) => n.name)));
+await Bun.write(
+  nsPath,
+  generateNamespaceList(
+    namespaces.map((n) => n.name),
+    DEFAULT_NAMESPACE
+  )
+);
 await Bun.write(
   registryPath,
   generateRegistryAugmentation(namespaces, { module: REGISTRY_MODULE })
@@ -60,7 +87,7 @@ await Bun.write(
 
 // ─── Summary ─────────────────────────────────────────────────────────────────
 
-const rel = (p: string) => p.replace(`${ROOT}/`, '');
+const rel = (p: string) => (p.startsWith(`${CWD}/`) ? p.slice(CWD.length + 1) : p);
 console.log(`✓ Generated ${rel(typesPath)} (${namespaces.length} namespaces)`);
 console.log(`✓ Generated ${rel(nsPath)}`);
 console.log(`✓ Generated ${rel(registryPath)}`);

@@ -42,16 +42,20 @@ function printHelp(): void {
 Usage: bunx @brika/i18n-devtools <command> [flags]
 
 Commands:
-  types          Generate type declarations
-                   --locales <dir>    Locales directory to scan (default: <workspace>/apps/hub/src/locales/en)
-                   --out <dir>        Output directory (default: <cwd>/node_modules/.cache/@brika/i18n-devtools)
-                   --module <name>    Augment a custom module (default: @brika/i18n/registry)
-  check          Validate locale parity (exits 1 on errors)
-                   --locales <dir>    Core locales directory (default: <workspace>/apps/hub/src/locales)
-                   --ci               Treat warnings as errors
+  types          Generate TypeScript declarations from a reference-locale folder
+                   --locales <dir>             Reference-locale folder (default: <cwd>/src/locales/<reference-locale>)
+                   --reference-locale <code>   Locale used to derive types (default: en)
+                   --out <dir>                 Output directory (default: <cwd>/node_modules/.cache/@brika/i18n-devtools)
+                   --module <name>             Augment a custom module (default: @brika/i18n/registry)
+                   --default-namespace <ns>    i18next default namespace (default: translation)
+
+  check          Validate locale parity using union semantics
+                   --locales <dir>             Core locales directory (default: <cwd>/src/locales)
+                   --reference-locale <code>   Display-language hint for error messages (default: en)
+                   --ci                        Treat warnings as errors
 
 Examples:
-  bunx @brika/i18n-devtools types
+  bunx @brika/i18n-devtools check
   bunx @brika/i18n-devtools check --ci
   bunx @brika/i18n-devtools types --locales ./locales/en --out ./dist/types
 `);

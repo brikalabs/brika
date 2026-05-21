@@ -10,6 +10,7 @@ import {
   applyTranslationBundle,
   getLocales,
   getMergedKeyUsage,
+  setReferenceLocale,
   subscribeKeyUsage,
   subscribeRuntimeUsages,
   subscribeStore,
@@ -18,7 +19,7 @@ import {
 // ─── Schemas for HMR boundary payloads ──────────────────────────────────────
 
 const ValidationIssueSchema = z.object({
-  type: z.enum(['missing-key', 'extra-key', 'missing-namespace', 'missing-variable']),
+  type: z.enum(['missing-key', 'missing-namespace', 'missing-variable']),
   severity: z.enum(['error', 'warning']),
   namespace: z.string(),
   locale: z.string(),
@@ -39,6 +40,7 @@ const ValidationResultSchema = z.object({
   issues: z.array(ValidationIssueSchema),
   coverage: z.array(CoverageEntrySchema),
   timestamp: z.number(),
+  referenceLocale: z.string(),
 });
 
 const TranslationsBundleSchema = z.record(
@@ -111,6 +113,10 @@ export function useHmrValidation() {
     const onUpdate = (data: unknown) => {
       const parsed = ValidationResultSchema.safeParse(data);
       if (parsed.success) {
+        // Keep the overlay's reference-locale state in sync with whatever the
+        // host configured. Lets the diff view + CI-mode toggle work for hosts
+        // that use a non-English reference (`'fr'`, `'de'`, etc.).
+        setReferenceLocale(parsed.data.referenceLocale);
         setValidation(parsed.data);
       }
     };
@@ -133,11 +139,15 @@ export function useHmrValidation() {
     // through a zero-arity function that reads its arg via the legacy
     // `arguments` object — types satisfied, runtime contract honoured, no
     // cast or `@ts-expect-error` needed.
+    // `bridge` reads the payload through `arguments[0]` because bun-types
+    // declares `hot.on(event, cb: () => void)` — an arity-0 signature — but
+    // the Vite runtime forwards the server's payload as the first arg. No
+    // rest-params/typed-signature workaround keeps both `tsc` and Biome happy
+    // without `@ts-expect-error` or an `as` cast at the call site.
     function bridge(handler: (data: unknown) => void): () => void {
       return function bridged(this: unknown): void {
-        // biome-ignore lint/style/noArguments: see bridge() comment above
-        const payload: unknown = arguments[0];
-        handler(payload);
+        // biome-ignore lint/complexity/noArguments: see bridge() comment above
+        handler(arguments[0]);
       };
     }
     const onUpdateBridged = bridge(onUpdate);

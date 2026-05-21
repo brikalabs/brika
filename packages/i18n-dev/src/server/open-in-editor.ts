@@ -1,7 +1,7 @@
 import { execFile } from 'node:child_process';
 import { existsSync, realpathSync } from 'node:fs';
-import { isAbsolute, resolve } from 'node:path';
 import type { IncomingMessage, ServerResponse } from 'node:http';
+import { isAbsolute, resolve } from 'node:path';
 import type { Connect } from 'vite';
 
 /** Match a `:line` or `:line:col` suffix at the end of a path string. */
@@ -39,6 +39,13 @@ function isSameOrigin(req: IncomingMessage): boolean {
   }
   const origin = req.headers.origin;
   const referer = req.headers.referer;
+  // A state-changing endpoint must see at least one of Origin/Referer — both
+  // missing is the exact shape of a `<img src>` / `<script src>` drive-by from
+  // a cross-origin page (no preflight, no Origin, Referrer-Policy may strip
+  // referer). Reject outright.
+  if (typeof origin !== 'string' && typeof referer !== 'string') {
+    return false;
+  }
   for (const raw of [origin, referer]) {
     if (typeof raw !== 'string' || raw.length === 0) {
       continue;
@@ -53,8 +60,6 @@ function isSameOrigin(req: IncomingMessage): boolean {
       return false;
     }
   }
-  // Allow requests that include neither Origin nor Referer — same-origin
-  // GET requests from a script tag in the same page often omit both.
   return true;
 }
 
@@ -127,6 +132,16 @@ export function createOpenInEditorMiddleware(
       next();
       return;
     }
+    // Spawning an editor is state-changing — require POST so a cross-origin
+    // `<img src>` / preload / link prefetch can't reach this code path
+    // without a preflight (which would also have to pass the same-origin
+    // check below).
+    if (req.method !== 'POST') {
+      res.statusCode = 405;
+      res.setHeader('Allow', 'POST');
+      res.end('Method Not Allowed');
+      return;
+    }
     if (!isSameOrigin(req)) {
       res.statusCode = 403;
       res.end('Forbidden');
@@ -145,8 +160,7 @@ export function createOpenInEditorMiddleware(
       res.end('Path outside allowed roots');
       return;
     }
-    const editor =
-      process.env.LAUNCH_EDITOR ?? process.env.VISUAL ?? process.env.EDITOR ?? 'code';
+    const editor = process.env.LAUNCH_EDITOR ?? process.env.VISUAL ?? process.env.EDITOR ?? 'code';
     const args = editor === 'code' || editor.endsWith('/code') ? ['--goto', filePath] : [filePath];
     execFile(editor, args, (err) => {
       if (err) {

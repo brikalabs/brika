@@ -24,7 +24,7 @@ describe('emptyIssuesTitle', () => {
 });
 
 describe('issueLabel', () => {
-  test('returns type with hyphens replaced by spaces', () => {
+  test('returns type with hyphens replaced by spaces for missing-key', () => {
     const issue: ValidationIssue = {
       type: 'missing-key',
       severity: 'error',
@@ -35,15 +35,15 @@ describe('issueLabel', () => {
     expect(issueLabel(issue)).toBe('missing key');
   });
 
-  test('returns extra key label', () => {
+  test('returns hyphen-stripped label for missing-namespace', () => {
     const issue: ValidationIssue = {
-      type: 'extra-key',
-      severity: 'warning',
+      type: 'missing-namespace',
+      severity: 'error',
       namespace: 'ns',
       locale: 'fr',
       referenceLocale: 'en',
     };
-    expect(issueLabel(issue)).toBe('extra key');
+    expect(issueLabel(issue)).toBe('missing namespace');
   });
 
   test('returns missing variable template with single variable', () => {
@@ -83,7 +83,7 @@ describe('issueLabel', () => {
 });
 
 describe('fixLabel', () => {
-  test('returns "Copy ref" for missing-key', () => {
+  test('returns "Copy" for missing-key', () => {
     const issue: ValidationIssue = {
       type: 'missing-key',
       severity: 'error',
@@ -91,21 +91,10 @@ describe('fixLabel', () => {
       locale: 'fr',
       referenceLocale: 'en',
     };
-    expect(fixLabel(issue)).toBe('Copy ref');
+    expect(fixLabel(issue)).toBe('Copy');
   });
 
-  test('returns "Remove" for extra-key', () => {
-    const issue: ValidationIssue = {
-      type: 'extra-key',
-      severity: 'warning',
-      namespace: 'ns',
-      locale: 'fr',
-      referenceLocale: 'en',
-    };
-    expect(fixLabel(issue)).toBe('Remove');
-  });
-
-  test('returns "Copy ref" for missing-variable', () => {
+  test('returns "Copy" for missing-variable', () => {
     const issue: ValidationIssue = {
       type: 'missing-variable',
       severity: 'error',
@@ -113,7 +102,7 @@ describe('fixLabel', () => {
       locale: 'fr',
       referenceLocale: 'en',
     };
-    expect(fixLabel(issue)).toBe('Copy ref');
+    expect(fixLabel(issue)).toBe('Copy');
   });
 
   test('returns null for missing-namespace', () => {
@@ -148,25 +137,26 @@ describe('IssueRow', () => {
 
   test('renders warning issue with amber border', () => {
     const issue: ValidationIssue = {
-      type: 'extra-key',
+      type: 'missing-variable',
       severity: 'warning',
       namespace: 'common',
       locale: 'fr',
-      key: 'old',
+      key: 'greeting',
       referenceLocale: 'en',
+      variables: ['name'],
     };
     const html = renderToString(<IssueRow issue={issue} />);
     expect(html).toContain('amber');
-    expect(html).toContain('old');
+    expect(html).toContain('greeting');
   });
 
   test('renders fix button when onFix provided', () => {
     const issue: ValidationIssue = {
-      type: 'extra-key',
-      severity: 'warning',
+      type: 'missing-key',
+      severity: 'error',
       namespace: 'common',
       locale: 'fr',
-      key: 'old',
+      key: 'hello',
       referenceLocale: 'en',
     };
     const html = renderToString(
@@ -177,21 +167,20 @@ describe('IssueRow', () => {
         }}
       />
     );
-    expect(html).toContain('Remove');
-    expect(html).toContain('svg');
+    expect(html).toContain('lucide-wand-sparkles');
   });
 
   test('does not render fix button when no onFix', () => {
     const issue: ValidationIssue = {
-      type: 'extra-key',
-      severity: 'warning',
+      type: 'missing-key',
+      severity: 'error',
       namespace: 'common',
       locale: 'fr',
-      key: 'old',
+      key: 'hello',
       referenceLocale: 'en',
     };
     const html = renderToString(<IssueRow issue={issue} />);
-    expect(html).not.toContain('Remove');
+    expect(html).not.toContain('lucide-wand-sparkles');
   });
 
   test('renders issue without key', () => {
@@ -220,16 +209,16 @@ const sampleIssues: ValidationIssue[] = [
     referenceLocale: 'en',
   },
   {
-    type: 'extra-key',
-    severity: 'warning',
+    type: 'missing-key',
+    severity: 'error',
     namespace: 'common',
-    locale: 'fr',
+    locale: 'en',
     key: 'extra',
     referenceLocale: 'en',
   },
   {
     type: 'missing-variable',
-    severity: 'error',
+    severity: 'warning',
     namespace: 'auth',
     locale: 'fr',
     key: 'greeting',
@@ -276,6 +265,7 @@ describe('IssuesContent', () => {
   test('renders locale badges', () => {
     const html = renderToString(<IssuesContent issues={sampleIssues} filter="" />);
     expect(html).toContain('fr');
+    expect(html).toContain('en');
   });
 
   test('renders error severity styling', () => {
@@ -314,18 +304,20 @@ describe('IssuesContent', () => {
     expect(html).toContain('missing key');
   });
 
-  test('renders fix button for extra-key', () => {
-    const extraOnly: ValidationIssue[] = [
+  test('surfaces missing-key against the reference locale itself (union semantics)', () => {
+    const inverseMissing: ValidationIssue[] = [
       {
-        type: 'extra-key',
-        severity: 'warning',
-        namespace: 'ns',
-        locale: 'fr',
-        key: 'k',
+        type: 'missing-key',
+        severity: 'error',
+        namespace: 'common',
+        locale: 'en',
+        key: 'frenchOnly',
         referenceLocale: 'en',
       },
     ];
-    const html = renderToString(<IssuesContent issues={extraOnly} filter="" />);
-    expect(html).toContain('Remove');
+    const html = renderToString(<IssuesContent issues={inverseMissing} filter="" />);
+    expect(html).toContain('missing key');
+    expect(html).toContain('frenchOnly');
+    expect(html).toContain('en');
   });
 });

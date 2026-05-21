@@ -384,10 +384,7 @@
         "zod": ">=4",
       },
       "optionalPeers": [
-        "i18next",
         "i18next-browser-languagedetector",
-        "react",
-        "react-i18next",
       ],
     },
     "packages/i18n-dev": {
@@ -398,6 +395,7 @@
       },
       "devDependencies": {
         "@brika/i18n": "workspace:*",
+        "@brika/testing": "workspace:*",
         "@types/react": "^19.0.0",
         "@types/react-dom": "^19.0.0",
         "i18next": "^25.8.13",
@@ -409,7 +407,7 @@
         "zod": "^4.3.4",
       },
       "peerDependencies": {
-        "@brika/i18n": "workspace:*",
+        "@brika/i18n": ">=0.3.0",
         "i18next": ">=23.0.0",
         "lucide-react": ">=0.400.0",
         "react": ">=18.0.0",
@@ -418,16 +416,6 @@
         "vite": ">=5.0.0",
         "zod": ">=4.0.0",
       },
-      "optionalPeers": [
-        "@brika/i18n",
-        "i18next",
-        "lucide-react",
-        "react",
-        "react-dom",
-        "tailwindcss",
-        "vite",
-        "zod",
-      ],
     },
     "packages/ipc": {
       "name": "@brika/ipc",

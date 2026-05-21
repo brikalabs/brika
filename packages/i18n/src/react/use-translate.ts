@@ -8,8 +8,8 @@
 import { type TOptions } from 'i18next';
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { parseKey } from '../translate';
 import type { KnownKey } from '../registry';
+import { parseKey } from '../translate';
 import { switchLanguage } from './client';
 
 // Declaration-merge i18next's `TFunction` so calling it with `(key, options)`
@@ -44,7 +44,13 @@ export interface I18nT {
  * the namespace strings; otherwise it falls back to the broad signature.
  */
 export interface I18nTp {
-  (namespace: string, key: string, defaultValue?: string): string;
+  /**
+   * The optional 4th `__cs` parameter is reserved for build-time source-location
+   * injection (the call-site transform appends `'file:line'` so the dev overlay
+   * can show where the call lives). At runtime it's forwarded via the options
+   * bag so the i18n-devtools wrapper picks it up.
+   */
+  (namespace: string, key: string, defaultValue?: string, __cs?: string): string;
 }
 
 export interface UseTranslateResult {
@@ -76,7 +82,8 @@ export function useTranslate(): UseTranslateResult {
         // match every other call site. Day-1 the narrow overload is
         // unreachable, so all calls land on the broad signature.
         const parsed = parseKey(rawKey, defaultNamespace, nsSeparator);
-        const effectiveNs = explicitNs ?? (rawKey.includes(nsSeparator) ? parsed.namespace : undefined);
+        const effectiveNs =
+          explicitNs ?? (rawKey.includes(nsSeparator) ? parsed.namespace : undefined);
 
         // The `ns:key` syntax tells us which namespace this call needs. If
         // it's not in the resource store yet, throw the load promise — React
@@ -102,8 +109,16 @@ export function useTranslate(): UseTranslateResult {
 
   const tp = useMemo<I18nTp>(
     () =>
-      function tp(namespace: string, key: string, defaultValue?: string): string {
-        return baseT(key, { ns: namespace, defaultValue });
+      function tp(namespace: string, key: string, defaultValue?: string, __cs?: string): string {
+        // Forward `__cs` into the options bag so the i18n-devtools `t()`
+        // wrapper picks up the build-time call site for the runtime usage
+        // map. Compiler call-site injection wraps `tp()` with the same
+        // metadata; without forwarding it here, plugin tp() call sites
+        // would never appear in the overlay's "Used in N files" panel.
+        const options = __cs
+          ? { ns: namespace, defaultValue, __cs }
+          : { ns: namespace, defaultValue };
+        return baseT(key, options);
       },
     [baseT]
   );
@@ -115,8 +130,5 @@ export function useTranslate(): UseTranslateResult {
     await switchLanguage(loc);
   }, []);
 
-  return useMemo(
-    () => ({ t, tp, locale, changeLocale }),
-    [t, tp, locale, changeLocale]
-  );
+  return useMemo(() => ({ t, tp, locale, changeLocale }), [t, tp, locale, changeLocale]);
 }

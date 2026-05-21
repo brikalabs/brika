@@ -273,6 +273,33 @@ describe('scanKeyUsages', () => {
     expect(result['deep.key'][0].file).toBe('deep/nested/dir/file.tsx');
   });
 
+  test('paths are workspace-relative when rootDir is the monorepo root', async () => {
+    // Mirror brika's layout: app under apps/<x>, plugins under plugins/<y>.
+    // When the host passes the workspace root as `rootDir`, paths come out
+    // with no `../` prefix — matching the compiler-injected `__cs` field
+    // (also workspace-root relative). That alignment lets the overlay's
+    // static-scan + runtime-capture dedup work by `file:line` string equality.
+    await writeSource('apps/ui/src/main.tsx', "t('common:hello');");
+    await writeSource('plugins/weather/src/bricks/compact.tsx', "t('plugin:weather:current');");
+
+    const result = await scanKeyUsages(tempDir, [
+      { dir: join(tempDir, 'apps/ui/src') },
+      { dir: join(tempDir, 'plugins/weather'), namespace: 'plugin:weather' },
+    ]);
+
+    expect(result['common:hello']).toBeDefined();
+    expect(result['common:hello'][0].file).toBe('apps/ui/src/main.tsx');
+
+    expect(result['plugin:weather:current']).toBeDefined();
+    expect(result['plugin:weather:current'][0].file).toBe('plugins/weather/src/bricks/compact.tsx');
+    // Defensive: paths must not escape the rootDir via `..`
+    for (const usages of Object.values(result)) {
+      for (const u of usages) {
+        expect(u.file.startsWith('..')).toBe(false);
+      }
+    }
+  });
+
   test('ignores files with non-source extensions', async () => {
     await writeSource('src/style.css', "/* t('not.detected') */");
     await writeSource('src/data.yaml', "key: t('also.not.detected')");

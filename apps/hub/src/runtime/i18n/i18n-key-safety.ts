@@ -103,6 +103,36 @@ export function assertNoUnsafeKeys(data: TranslationData): void {
   }
 }
 
+/**
+ * Non-throwing variant: returns a copy of the tree with unsafe keys dropped,
+ * and logs each removal via the caller-supplied warn fn. Suitable for boot-time
+ * loaders where a planted `__proto__` segment in a hub-shipped JSON shouldn't
+ * crash the entire service. The overlay-write path uses `assertNoUnsafeKeys`
+ * (throws) because the request is user-driven and reversible.
+ */
+export function sanitizeTranslationData(
+  data: TranslationData,
+  filePath: string,
+  warn?: (message: string, ctx: { path: string }) => void
+): TranslationData {
+  const out: TranslationData = {};
+  for (const [key, value] of Object.entries(data)) {
+    if (UNSAFE_SEGMENTS.has(key)) {
+      warn?.(`Dropped unsafe key "${key}" from translation data`, { path: filePath });
+      continue;
+    }
+    if (isTranslationData(value)) {
+      out[key] = sanitizeTranslationData(value, filePath, warn);
+    } else {
+      out[key] = value;
+    }
+  }
+  return out;
+}
+
+/** Shared `UNSAFE_SEGMENTS` constant — exported so other modules can avoid duplication. */
+export const UNSAFE_KEY_SEGMENTS: ReadonlySet<string> = UNSAFE_SEGMENTS;
+
 /** Narrow caught errors to `UnsafeKeyPathError` without an `instanceof` cast. */
 export function isUnsafeKeyPathError(error: unknown): error is UnsafeKeyPathError {
   return error instanceof UnsafeKeyPathError;

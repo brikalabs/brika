@@ -1,6 +1,6 @@
-import { readdir, readFile, stat } from 'node:fs/promises';
-import { basename, dirname, join } from 'node:path';
-import { z } from 'zod';
+import { readdir, stat } from 'node:fs/promises';
+import { basename, join } from 'node:path';
+import { discoverPackageLocales, findWorkspaceRoot, PackageJsonSchema } from '@brika/i18n/node';
 
 /**
  * Shape consumed by `@brika/i18n-devtools`' `sources` option. Each entry
@@ -15,9 +15,8 @@ export interface BrikaI18nSource {
   /** Namespace the locale files map to (e.g. `'plugin:@brika/plugin-weather'`). */
   readonly namespace: string;
 }
-const packageJsonSchema = z.object({
-  name: z.string().optional(),
-});
+
+const PLUGIN_NS_PREFIX = 'plugin:';
 
 /**
  * Walk the brika workspace and return one `BrikaI18nSource` per package that
@@ -28,74 +27,40 @@ const packageJsonSchema = z.object({
  *     hub's namespace map matches what `tp('@brika/plugin-weather', ...)`
  *     looks up at runtime.
  *   - `packages/<pkg>/`  → namespace `<pkg-name-without-scope>` (`@brika/foo`
- *     → `foo`). Workspace utility packages just share the same flat namespace
+ *     → `foo`). Workspace utility packages share the same flat namespace
  *     surface as the host application; the brika scope is a publishing
  *     concern that doesn't survive into translation lookups.
  *
- * Packages without a `locales/` folder are silently skipped (most
- * workspace packages don't ship UI strings).
- *
- * The helper deliberately does NOT recurse into nested workspaces or follow
- * symlinks — it reads the root `package.json#workspaces` array and expands
- * one level of `<dir>/*`.
- *
- * @param repoRoot Absolute path to the workspace root (the dir whose
- *   `package.json` carries the `workspaces` field).
+ * Generic `packages/*` discovery is delegated to `@brika/i18n/node`. The
+ * brika-only piece — `plugin:` prefix for `plugins/*` — stays here so the
+ * shared package remains framework-agnostic.
  */
-export async function discoverBrikaI18nSources(
-  repoRoot: string
-): Promise<BrikaI18nSource[]> {
-  const workspaces = await readWorkspaces(repoRoot);
-  const sources: BrikaI18nSource[] = [];
-  for (const pattern of workspaces) {
-    const expanded = expandWorkspacePattern(pattern);
-    if (!expanded) {
-      continue;
-    }
-    const collected = await collectFromCategory(repoRoot, expanded);
-    sources.push(...collected);
-  }
-  // Stable ordering so the dev plugin's startup log is deterministic.
+export async function discoverBrikaI18nSources(repoRoot: string): Promise<BrikaI18nSource[]> {
+  const packageEntries = await discoverPackageLocales(repoRoot);
+  const pluginEntries = await discoverPluginSources(repoRoot);
+
+  const sources: BrikaI18nSource[] = [
+    ...packageEntries.map((entry) => ({
+      dir: entry.rootDir,
+      namespace: entry.namespace,
+    })),
+    ...pluginEntries,
+  ];
   return sources.sort((a, b) => a.namespace.localeCompare(b.namespace));
 }
 
-interface WorkspaceCategory {
-  /** First path segment, e.g. `'plugins'` or `'packages'`. */
-  readonly category: string;
-  /** Absolute path to the directory whose entries are candidate packages. */
-  readonly parentDir: string;
-}
-
-function expandWorkspacePattern(pattern: string): WorkspaceCategory | null {
-  // We only handle the brika-style `'plugins/*'` / `'packages/*'` patterns.
-  // Anything else (deep globs, exact paths, negation) is left to whatever
-  // tooling expects to consume it — the i18n discovery is conservative.
-  const match = /^([^/*]+)\/\*$/.exec(pattern);
-  if (!match) {
-    return null;
-  }
-  const category = match[1];
-  if (!category) {
-    return null;
-  }
-  return { category, parentDir: category };
-}
-
-async function collectFromCategory(
-  repoRoot: string,
-  category: WorkspaceCategory
-): Promise<BrikaI18nSource[]> {
-  const parent = join(repoRoot, category.parentDir);
+async function discoverPluginSources(repoRoot: string): Promise<BrikaI18nSource[]> {
+  const pluginsDir = join(repoRoot, 'plugins');
   let entries: string[];
   try {
-    entries = await readdir(parent);
+    entries = await readdir(pluginsDir);
   } catch {
     return [];
   }
   const sources: BrikaI18nSource[] = [];
   for (const entry of entries) {
-    const dir = join(parent, entry);
-    const source = await tryMakeSource(dir, category.category);
+    const dir = join(pluginsDir, entry);
+    const source = await tryMakePluginSource(dir);
     if (source) {
       sources.push(source);
     }
@@ -103,21 +68,16 @@ async function collectFromCategory(
   return sources;
 }
 
-async function tryMakeSource(
-  dir: string,
-  category: string
-): Promise<BrikaI18nSource | null> {
+async function tryMakePluginSource(dir: string): Promise<BrikaI18nSource | null> {
   const info = await stat(dir).catch(() => null);
   if (!info?.isDirectory()) {
     return null;
   }
-  const hasLocales = await dirExists(join(dir, 'locales'));
-  if (!hasLocales) {
+  if (!(await dirExists(join(dir, 'locales')))) {
     return null;
   }
-  const packageName = await readPackageName(dir);
-  const namespace = namespaceFor(category, packageName);
-  return { dir, namespace };
+  const packageName = await readPluginPackageName(dir);
+  return { dir, namespace: `${PLUGIN_NS_PREFIX}${packageName}` };
 }
 
 async function dirExists(path: string): Promise<boolean> {
@@ -125,10 +85,10 @@ async function dirExists(path: string): Promise<boolean> {
   return info?.isDirectory() ?? false;
 }
 
-async function readPackageName(packageDir: string): Promise<string> {
+async function readPluginPackageName(packageDir: string): Promise<string> {
   try {
-    const raw = await readFile(join(packageDir, 'package.json'), 'utf-8');
-    const parsed = packageJsonSchema.safeParse(JSON.parse(raw));
+    const raw: unknown = await Bun.file(join(packageDir, 'package.json')).json();
+    const parsed = PackageJsonSchema.safeParse(raw);
     if (parsed.success && parsed.data.name) {
       return parsed.data.name;
     }
@@ -138,64 +98,12 @@ async function readPackageName(packageDir: string): Promise<string> {
   return basename(packageDir);
 }
 
-function namespaceFor(category: string, packageName: string): string {
-  if (category === 'plugins') {
-    return `plugin:${packageName}`;
-  }
-  // `packages/*` — drop the `@brika/` scope so the namespace is a flat token.
-  return stripBrikaScope(packageName);
-}
-
-function stripBrikaScope(name: string): string {
-  const PREFIX = '@brika/';
-  if (name.startsWith(PREFIX)) {
-    return name.slice(PREFIX.length);
-  }
-  return name;
-}
-
-async function readWorkspaces(repoRoot: string): Promise<string[]> {
-  const raw = await readFile(join(repoRoot, 'package.json'), 'utf-8');
-  const parsed = workspaceFileSchema.safeParse(JSON.parse(raw));
-  if (!parsed.success) {
-    return [];
-  }
-  return parsed.data.workspaces;
-}
-
-const workspaceFileSchema = z.object({
-  workspaces: z.array(z.string()).default([]),
-});
-
 /**
  * Walk up from `startDir` until a `package.json` with a `workspaces` field
- * shows up. Used by `vite.config.ts` so the helper can be called without
- * baking the repo path into the config file.
+ * shows up. Re-export of `@brika/i18n/node`'s `findWorkspaceRoot` with a
+ * brika-flavoured name so `vite.config.ts` reads naturally.
  */
 export async function findBrikaWorkspaceRoot(startDir: string): Promise<string | null> {
-  let dir = startDir;
-  while (true) {
-    if (await isWorkspaceRootDir(dir)) {
-      return dir;
-    }
-    const parent = dirname(dir);
-    if (parent === dir) {
-      return null;
-    }
-    dir = parent;
-  }
+  const root = await findWorkspaceRoot(startDir);
+  return root ?? null;
 }
-
-async function isWorkspaceRootDir(dir: string): Promise<boolean> {
-  try {
-    const raw = await readFile(join(dir, 'package.json'), 'utf-8');
-    const parsed = workspaceProbeSchema.safeParse(JSON.parse(raw));
-    return parsed.success && parsed.data.workspaces.length > 0;
-  } catch {
-    return false;
-  }
-}
-
-const workspaceProbeSchema = z.object({
-  workspaces: z.array(z.string()).default([]),
-});

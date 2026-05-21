@@ -63,6 +63,12 @@ export interface I18nDevPluginOptions {
   /** Reference locale used as ground truth (default: 'en'). */
   readonly referenceLocale?: string;
   /**
+   * i18next default namespace — used by the generated `i18n-namespaces.ts`
+   * to place this name first regardless of where it sorts. Defaults to
+   * `'translation'` to match i18next's own default.
+   */
+  readonly defaultNamespace?: string;
+  /**
    * Source trees scanned for translation-key usages (`t('key')` calls).
    * Defaults to `[{ dir: './src' }]` relative to the Vite root.
    *
@@ -74,11 +80,16 @@ export interface I18nDevPluginOptions {
 }
 
 export interface ValidationIssue {
-  type: 'missing-key' | 'extra-key' | 'missing-namespace' | 'missing-variable';
+  type: 'missing-key' | 'missing-namespace' | 'missing-variable';
   severity: 'error' | 'warning';
   namespace: string;
   locale: string;
   key?: string;
+  /**
+   * Locale label attached for display purposes (e.g. so the overlay can show a
+   * primary-language value next to a missing translation). Validation itself
+   * is symmetric across all locales — no locale is privileged as ground truth.
+   */
   referenceLocale: string;
   /** For missing-variable: the variable names absent from the translation. */
   variables?: string[];
@@ -96,6 +107,12 @@ export interface ValidationResult {
   issues: ValidationIssue[];
   coverage: CoverageEntry[];
   timestamp: number;
+  /**
+   * Locale every other one is validated against. Mirrors the Vite plugin's
+   * `referenceLocale` option so the browser overlay can render diffs without
+   * baking `'en'` as a constant.
+   */
+  referenceLocale: string;
 }
 
 export interface FixEntry {

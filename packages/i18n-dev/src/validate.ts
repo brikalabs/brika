@@ -1,4 +1,4 @@
-import { flatten, getNestedValue, type TranslationData } from '@brika/i18n';
+import { flatten, type TranslationData } from '@brika/i18n';
 import type { CoverageEntry, ValidationIssue } from './types';
 
 /** Extract `{{var}}` interpolation variable names from a translation string. */
@@ -34,114 +34,188 @@ export function extractKeys(obj: TranslationData): string[] {
   return keys;
 }
 
-// ─── Namespace-level validation ────────────────────────────────────────────
+// ─── Union-based validation ────────────────────────────────────────────────
 
-interface NsContext {
-  ns: string;
-  locale: string;
-  referenceLocale: string;
-  refNsData: TranslationData;
-  targetData: TranslationData;
-  refKeys: string[];
-  targetKeySet: Set<string>;
+/**
+ * Build the per-namespace union of locale flat-key maps. Every locale present
+ * in `translations` is registered for every namespace, even when its
+ * `nsMap.get(ns)` is undefined — that way downstream code can treat "absent
+ * namespace" as a first-class case (→ `missing-namespace` issue) without
+ * special-casing the outer iteration.
+ */
+function indexByNamespace(
+  translations: Map<string, Map<string, TranslationData>>
+): Map<string, Map<string, Map<string, unknown> | undefined>> {
+  const allNamespaces = new Set<string>();
+  for (const nsMap of translations.values()) {
+    for (const ns of nsMap.keys()) {
+      allNamespaces.add(ns);
+    }
+  }
+
+  const byNamespace = new Map<string, Map<string, Map<string, unknown> | undefined>>();
+  for (const ns of allNamespaces) {
+    const perLocale = new Map<string, Map<string, unknown> | undefined>();
+    for (const [locale, nsMap] of translations) {
+      const data = nsMap.get(ns);
+      perLocale.set(locale, data ? flatten(data) : undefined);
+    }
+    byNamespace.set(ns, perLocale);
+  }
+
+  return byNamespace;
 }
 
-function buildNsContext(
+function unionOfKeys(perLocale: Map<string, Map<string, unknown> | undefined>): Set<string> {
+  const out = new Set<string>();
+  for (const flat of perLocale.values()) {
+    if (!flat) {
+      continue;
+    }
+    for (const k of flat.keys()) {
+      out.add(k);
+    }
+  }
+  return out;
+}
+
+function pushMissingNamespace(
+  issues: ValidationIssue[],
+  coverage: CoverageEntry[],
   ns: string,
   locale: string,
   referenceLocale: string,
-  refNsData: TranslationData,
-  targetData: TranslationData
-): NsContext {
-  return {
-    ns,
+  unionKeySize: number
+): void {
+  issues.push({
+    type: 'missing-namespace',
+    severity: 'error',
+    namespace: ns,
     locale,
     referenceLocale,
-    refNsData,
-    targetData,
-    refKeys: extractKeys(refNsData),
-    targetKeySet: new Set(extractKeys(targetData)),
-  };
+  });
+  coverage.push({
+    locale,
+    namespace: ns,
+    totalKeys: unionKeySize,
+    translatedKeys: 0,
+    percentage: unionKeySize === 0 ? 100 : 0,
+  });
 }
 
-function validateKeyParity(ctx: NsContext, issues: ValidationIssue[]) {
-  const refKeySet = new Set(ctx.refKeys);
-
-  for (const key of ctx.refKeys) {
-    if (!ctx.targetKeySet.has(key)) {
+function pushKeyParity(
+  issues: ValidationIssue[],
+  ns: string,
+  locale: string,
+  referenceLocale: string,
+  flat: Map<string, unknown>,
+  unionKeys: Set<string>
+): void {
+  for (const key of unionKeys) {
+    if (!flat.has(key)) {
       issues.push({
         type: 'missing-key',
         severity: 'error',
-        namespace: ctx.ns,
-        locale: ctx.locale,
+        namespace: ns,
+        locale,
         key,
-        referenceLocale: ctx.referenceLocale,
-      });
-    }
-  }
-
-  for (const key of ctx.targetKeySet) {
-    if (!refKeySet.has(key)) {
-      issues.push({
-        type: 'extra-key',
-        severity: 'warning',
-        namespace: ctx.ns,
-        locale: ctx.locale,
-        key,
-        referenceLocale: ctx.referenceLocale,
+        referenceLocale,
       });
     }
   }
 }
 
-function validateVariableParity(ctx: NsContext, issues: ValidationIssue[]) {
-  for (const key of ctx.refKeys) {
-    if (!ctx.targetKeySet.has(key)) {
+function pushCoverage(
+  coverage: CoverageEntry[],
+  ns: string,
+  locale: string,
+  flat: Map<string, unknown>,
+  unionKeySize: number
+): void {
+  const translated = unionKeySize === 0 ? 0 : flat.size;
+  coverage.push({
+    locale,
+    namespace: ns,
+    totalKeys: unionKeySize,
+    translatedKeys: translated,
+    percentage: unionKeySize === 0 ? 100 : Math.round((translated / unionKeySize) * 100),
+  });
+}
+
+function unionVariablesFor(
+  key: string,
+  perLocale: Map<string, Map<string, unknown> | undefined>
+): Set<string> {
+  const out = new Set<string>();
+  for (const flat of perLocale.values()) {
+    if (!flat) {
       continue;
     }
-    const refVal = getNestedValue(ctx.refNsData, key);
-    const tgtVal = getNestedValue(ctx.targetData, key);
-    if (typeof refVal !== 'string' || typeof tgtVal !== 'string') {
+    const v = flat.get(key);
+    if (typeof v === 'string') {
+      for (const name of extractVariables(v)) {
+        out.add(name);
+      }
+    }
+  }
+  return out;
+}
+
+function diffVariables(value: string, allVars: Set<string>): string[] {
+  const locVars = new Set(extractVariables(value));
+  return [...allVars].filter((name) => !locVars.has(name));
+}
+
+function pushVariableParity(
+  issues: ValidationIssue[],
+  ns: string,
+  referenceLocale: string,
+  perLocale: Map<string, Map<string, unknown> | undefined>,
+  unionKeys: Set<string>
+): void {
+  for (const key of unionKeys) {
+    const allVars = unionVariablesFor(key, perLocale);
+    if (allVars.size === 0) {
       continue;
     }
-    const refVars = new Set(extractVariables(refVal));
-    if (refVars.size === 0) {
-      continue;
-    }
-    const tgtVars = new Set(extractVariables(tgtVal));
-    const missing = [...refVars].filter((v) => !tgtVars.has(v));
-    if (missing.length > 0) {
+    for (const [locale, flat] of perLocale) {
+      const v = flat?.get(key);
+      if (typeof v !== 'string') {
+        continue;
+      }
+      const missing = diffVariables(v, allVars);
+      if (missing.length === 0) {
+        continue;
+      }
       issues.push({
         type: 'missing-variable',
         severity: 'warning',
-        namespace: ctx.ns,
-        locale: ctx.locale,
+        namespace: ns,
+        locale,
         key,
-        referenceLocale: ctx.referenceLocale,
+        referenceLocale,
         variables: missing,
       });
     }
   }
 }
 
-function computeCoverage(ctx: NsContext): CoverageEntry {
-  const translated = ctx.refKeys.filter((k) => ctx.targetKeySet.has(k)).length;
-  return {
-    locale: ctx.locale,
-    namespace: ctx.ns,
-    totalKeys: ctx.refKeys.length,
-    translatedKeys: translated,
-    percentage: ctx.refKeys.length > 0 ? Math.round((translated / ctx.refKeys.length) * 100) : 100,
-  };
-}
-
 // ─── Main entry ────────────────────────────────────────────────────────────
 
 /**
- * Validate translation key parity across locales and compute coverage.
+ * Validate translation parity across locales using union semantics.
+ *
+ * The total per namespace is the union of leaf keys across **every** locale —
+ * no locale is privileged as ground truth. Every locale that lacks a key
+ * present elsewhere emits a `missing-key` issue (errors). Variable parity is
+ * checked against the union of `{{var}}` names across all locales that define
+ * the key as a string.
+ *
+ * `referenceLocale` is preserved as a label on each issue so the overlay can
+ * show a primary-display value, but it has no effect on validation outcomes.
  *
  * @param translations Map of `locale → namespace → translationData`
- * @param referenceLocale The locale used as ground truth (e.g. `"en"`)
+ * @param referenceLocale Label attached to issues; does not gate validation.
  */
 export function validateLocales(
   translations: Map<string, Map<string, TranslationData>>,
@@ -150,67 +224,25 @@ export function validateLocales(
   const issues: ValidationIssue[] = [];
   const coverage: CoverageEntry[] = [];
 
-  const refData = translations.get(referenceLocale);
-  if (!refData) {
+  if (translations.size === 0) {
     return { issues, coverage };
   }
 
-  // Reference locale coverage is always 100% by definition.
-  for (const [ns, refNsData] of refData) {
-    const refKeys = extractKeys(refNsData);
-    coverage.push({
-      locale: referenceLocale,
-      namespace: ns,
-      totalKeys: refKeys.length,
-      translatedKeys: refKeys.length,
-      percentage: 100,
-    });
-  }
+  const byNamespace = indexByNamespace(translations);
 
-  for (const [locale, namespaces] of translations) {
-    if (locale === referenceLocale) {
-      continue;
-    }
+  for (const [ns, perLocale] of byNamespace) {
+    const unionKeys = unionOfKeys(perLocale);
 
-    for (const [ns, refNsData] of refData) {
-      const targetData = namespaces.get(ns);
-      if (!targetData) {
-        issues.push({
-          type: 'missing-namespace',
-          severity: 'error',
-          namespace: ns,
-          locale,
-          referenceLocale,
-        });
-        const refKeys = extractKeys(refNsData);
-        coverage.push({
-          locale,
-          namespace: ns,
-          totalKeys: refKeys.length,
-          translatedKeys: 0,
-          percentage: 0,
-        });
+    for (const [locale, flat] of perLocale) {
+      if (!flat) {
+        pushMissingNamespace(issues, coverage, ns, locale, referenceLocale, unionKeys.size);
         continue;
       }
-
-      const ctx = buildNsContext(ns, locale, referenceLocale, refNsData, targetData);
-      validateKeyParity(ctx, issues);
-      validateVariableParity(ctx, issues);
-      coverage.push(computeCoverage(ctx));
+      pushKeyParity(issues, ns, locale, referenceLocale, flat, unionKeys);
+      pushCoverage(coverage, ns, locale, flat, unionKeys.size);
     }
 
-    // Detect extra namespaces in the target that don't exist in reference.
-    for (const ns of namespaces.keys()) {
-      if (!refData.has(ns)) {
-        issues.push({
-          type: 'extra-key',
-          severity: 'warning',
-          namespace: ns,
-          locale,
-          referenceLocale,
-        });
-      }
-    }
+    pushVariableParity(issues, ns, referenceLocale, perLocale, unionKeys);
   }
 
   return { issues, coverage };

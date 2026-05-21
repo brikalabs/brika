@@ -11,8 +11,26 @@
 
 import { getStoreData, walkStoreEntries } from './i18next-store';
 
-export const REFERENCE_LOCALE = 'en';
+/**
+ * Reference locale (the locale every other one is validated against). Defaults
+ * to `'en'` because most projects use it, but the host can override via the
+ * Vite plugin's `referenceLocale` option — the validation HMR payload carries
+ * the configured value, and the overlay sets it via `setReferenceLocale` on
+ * the first event. Exposed as a getter so consumers always see the live value.
+ */
+let currentReferenceLocale = 'en';
 
+export function getReferenceLocale(): string {
+  return currentReferenceLocale;
+}
+
+export function setReferenceLocale(locale: string): void {
+  if (locale && typeof locale === 'string') {
+    currentReferenceLocale = locale;
+  }
+}
+
+export { buildFix, fixAllIssues, fixIssue, sendFixes } from './autofix';
 export {
   applyTranslationBundle,
   getLocales,
@@ -23,7 +41,6 @@ export {
   updateI18nextStore,
   walkStoreEntries,
 } from './i18next-store';
-
 export {
   applyKeyUsage,
   getKeyUsage,
@@ -34,8 +51,6 @@ export {
   subscribeRuntimeUsages,
   trackedTranslations,
 } from './usage-tracker';
-
-export { buildFix, fixAllIssues, fixIssue, sendFixes } from './autofix';
 
 interface TranslationEntry {
   ns: string;

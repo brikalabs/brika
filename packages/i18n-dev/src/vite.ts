@@ -3,21 +3,12 @@ import { fileURLToPath } from 'node:url';
 import { findWorkspaceRoot } from '@brika/i18n/node';
 import type { Plugin } from 'vite';
 import { HMR_EVENT, HMR_REQUEST, HMR_TRANSLATIONS, HMR_USAGE } from './hmr-events';
-import {
-  generateTypes,
-  type ResolvedSource,
-  runScan,
-} from './server/orchestrator';
+import { type KeyUsageMap, type ScanRoot, SOURCE_EXTENSIONS, scanKeyUsages } from './scan-usage';
 import { createOpenInEditorMiddleware } from './server/open-in-editor';
+import { generateTypes, type ResolvedSource, runScan } from './server/orchestrator';
 import { createSaveHandlerMiddleware } from './server/save-handler';
 import { startHubSseClient } from './server/sse-client';
 import { logStartupSummary } from './server/startup-log';
-import {
-  type KeyUsageMap,
-  type ScanRoot,
-  SOURCE_EXTENSIONS,
-  scanKeyUsages,
-} from './scan-usage';
 import type { I18nDevPluginOptions, ValidationResult } from './types';
 
 /** Absolute path to the overlay entry file (resolved at import time). */
@@ -48,6 +39,7 @@ function createDebouncedFn(fn: () => void, ms: number): () => void {
  */
 export function i18nDevtools(options: I18nDevPluginOptions = {}): Plugin {
   const referenceLocale = options.referenceLocale ?? 'en';
+  const defaultNamespace = options.defaultNamespace ?? 'translation';
   const explicitApiUrl = options.apiUrl?.replace(/\/$/, '');
   const apiUrl =
     explicitApiUrl ?? (options.hub ? `${options.hub.replace(/\/$/, '')}/api/i18n` : null);
@@ -135,9 +127,17 @@ export function i18nDevtools(options: I18nDevPluginOptions = {}): Plugin {
         localesDir,
         apiUrl,
         referenceLocale,
+        defaultNamespace,
         sources,
         cacheDir,
       };
+
+      // Static-scan paths are reported relative to the workspace root so they
+      // line up with the compiler-injected `__cs` field (also workspace-root
+      // relative). Without this alignment the same file shows up twice — once
+      // as `../../plugins/<x>/...` from the static scan and once as
+      // `plugins/<x>/...` from runtime, defeating the file:line dedup.
+      const usageRoot = workspaceRoot ?? rootDir;
 
       // Respond to overlay requests with the latest result.
       server.hot.on(HMR_REQUEST, async (_data, client) => {
@@ -146,7 +146,7 @@ export function i18nDevtools(options: I18nDevPluginOptions = {}): Plugin {
           lastResult = scan.validation;
           lastTranslations = scan.translations;
         }
-        lastUsage ??= await scanKeyUsages(rootDir, scanRoots);
+        lastUsage ??= await scanKeyUsages(usageRoot, scanRoots);
         if (lastTranslations) {
           client.send(HMR_TRANSLATIONS, lastTranslations);
         }
@@ -177,7 +177,7 @@ export function i18nDevtools(options: I18nDevPluginOptions = {}): Plugin {
       }, 300);
 
       const scheduleUsageScan = createDebouncedFn(async () => {
-        lastUsage = await scanKeyUsages(rootDir, scanRoots);
+        lastUsage = await scanKeyUsages(usageRoot, scanRoots);
         server.hot.send(HMR_USAGE, lastUsage);
       }, 500);
 

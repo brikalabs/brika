@@ -1,23 +1,21 @@
 /// <reference types="bun-types" />
 
 /**
- * Validates i18n translation completeness and consistency.
+ * Validates i18n translation completeness across all locales using union
+ * semantics: the total key set per namespace is the union of every locale's
+ * leaf keys. Any locale that lacks a key present elsewhere is reported.
  *
- * Checks EN/FR key parity for all core namespaces and plugin translations.
- * Auto-discovers workspace plugin locales from the monorepo root.
+ * Auto-discovers workspace package locales from the nearest monorepo root.
  *
- * Usage: bun packages/i18n-dev/src/check.ts [--locales <dir>]
+ * Usage: bun packages/i18n-dev/src/check.ts \
+ *          [--locales <dir>] [--reference-locale <locale>] [--ci]
  */
 
-import type { TranslationData } from '@brika/i18n';
-import {
-  discoverPackageLocales,
-  findWorkspaceRoot,
-  loadLocaleFolder,
-} from '@brika/i18n/node';
 import { join, resolve } from 'node:path';
-import type { ValidationIssue } from './types';
-import { extractKeys, validateLocales } from './validate';
+import type { TranslationData } from '@brika/i18n';
+import { discoverPackageLocales, findWorkspaceRoot, loadLocaleFolder } from '@brika/i18n/node';
+import type { CoverageEntry, ValidationIssue } from './types';
+import { validateLocales } from './validate';
 
 function cliFlag(name: string, fallback: string): string {
   const idx = process.argv.indexOf(name);
@@ -27,10 +25,12 @@ function cliFlag(name: string, fallback: string): string {
 // ─── Config ─────────────────────────────────────────────────────────────────
 
 const CWD = process.cwd();
-// `bun --filter <pkg>` lands here in the package dir; walk up to find the
-// workspace root so the default locales path resolves to the right place.
+// Walk up for a workspace root to position the default locales path. If no
+// workspace marker is found (single-package consumers) we fall back to the
+// current directory.
 const ROOT = (await findWorkspaceRoot(CWD)) ?? CWD;
-const CORE_LOCALES_DIR = resolve(cliFlag('--locales', join(ROOT, 'apps/hub/src/locales')));
+const CORE_LOCALES_DIR = resolve(cliFlag('--locales', join(CWD, 'src/locales')));
+const REFERENCE_LOCALE = cliFlag('--reference-locale', 'en');
 const CI_MODE = process.argv.includes('--ci');
 
 let errors = 0;
@@ -52,20 +52,39 @@ function ok(msg: string) {
   console.log(`  \x1b[32m✓\x1b[0m ${msg}`);
 }
 
-function reportIssues(label: string, issues: ValidationIssue[], keyCount: number) {
+function reportIssues(label: string, issues: ValidationIssue[], unionKeyCount: number) {
   if (issues.length === 0) {
-    ok(`${label}: ${keyCount} keys (match)`);
+    ok(`${label}: ${unionKeyCount} keys (all locales aligned)`);
     return;
   }
   const missing = issues.filter((i) => i.type === 'missing-key');
-  const extra = issues.filter((i) => i.type === 'extra-key');
-  if (missing.length > 0) {
-    error(
-      `${label}: ${missing.length} key(s) missing in FR: ${missing.map((i) => i.key).join(', ')}`
-    );
+  const missingNs = issues.filter((i) => i.type === 'missing-namespace');
+  const missingVars = issues.filter((i) => i.type === 'missing-variable');
+
+  const byLocale = new Map<string, string[]>();
+  for (const issue of missing) {
+    if (!issue.key) {
+      continue;
+    }
+    const list = byLocale.get(issue.locale) ?? [];
+    list.push(issue.key);
+    byLocale.set(issue.locale, list);
   }
-  if (extra.length > 0) {
-    warn(`${label}: ${extra.length} extra key(s) in FR: ${extra.map((i) => i.key).join(', ')}`);
+  for (const [locale, keys] of byLocale) {
+    error(`${label} [${locale}]: ${keys.length} missing — ${keys.sort().join(', ')}`);
+  }
+
+  for (const issue of missingNs) {
+    error(`${label} [${issue.locale}]: namespace missing entirely`);
+  }
+
+  if (missingVars.length > 0) {
+    const sample = missingVars
+      .slice(0, 5)
+      .map((i) => `${i.locale}/${i.key} (missing {{${i.variables?.join('}}, {{')}}})`)
+      .join('; ');
+    const more = missingVars.length > 5 ? ` … +${missingVars.length - 5} more` : '';
+    warn(`${label}: ${missingVars.length} variable mismatch(es) — ${sample}${more}`);
   }
 }
 
@@ -97,36 +116,56 @@ async function scanLocaleDirectory(
   return result;
 }
 
+function groupByNamespace<T extends { namespace: string }>(items: T[]): Map<string, T[]> {
+  const out = new Map<string, T[]>();
+  for (const item of items) {
+    const list = out.get(item.namespace) ?? [];
+    list.push(item);
+    out.set(item.namespace, list);
+  }
+  return out;
+}
+
+function unionKeyCountFromCoverage(coverage: CoverageEntry[], namespace: string): number {
+  const entry = coverage.find((c) => c.namespace === namespace);
+  return entry?.totalKeys ?? 0;
+}
+
+function collectNamespaceList(translations: Map<string, Map<string, TranslationData>>): string[] {
+  const all = new Set<string>();
+  for (const nsMap of translations.values()) {
+    for (const ns of nsMap.keys()) {
+      all.add(ns);
+    }
+  }
+  return [...all].sort((a, b) => a.localeCompare(b));
+}
+
 // ─── 1. Core namespace parity ────────────────────────────────────────────────
 
 async function checkCoreNamespaces() {
-  console.log('\nCore namespaces (EN ↔ FR)');
+  console.log(`\nCore namespaces (display reference: ${REFERENCE_LOCALE})`);
   console.log('─'.repeat(40));
 
   const translations = await scanLocaleDirectory(CORE_LOCALES_DIR);
-  const { issues } = validateLocales(translations, 'en');
-
-  const byNamespace = new Map<string, ValidationIssue[]>();
-  for (const issue of issues) {
-    const list = byNamespace.get(issue.namespace) ?? [];
-    list.push(issue);
-    byNamespace.set(issue.namespace, list);
+  if (translations.size === 0) {
+    ok(`No core translations found in ${CORE_LOCALES_DIR}`);
+    return;
   }
 
-  const enData = translations.get('en');
-  if (enData) {
-    for (const ns of [...enData.keys()].sort((a, b) => a.localeCompare(b))) {
-      const nsIssues = byNamespace.get(ns) ?? [];
-      const keyCount = extractKeys(enData.get(ns) ?? {}).length;
-      reportIssues(ns, nsIssues, keyCount);
-    }
+  const { issues, coverage } = validateLocales(translations, REFERENCE_LOCALE);
+  const issuesByNs = groupByNamespace(issues);
+
+  for (const ns of collectNamespaceList(translations)) {
+    const nsIssues = issuesByNs.get(ns) ?? [];
+    reportIssues(ns, nsIssues, unionKeyCountFromCoverage(coverage, ns));
   }
 }
 
 // ─── 2. Package namespace parity ─────────────────────────────────────────────
 
 async function checkPackageNamespaces() {
-  console.log('\nPackage namespaces (EN ↔ FR)');
+  console.log(`\nPackage namespaces (display reference: ${REFERENCE_LOCALE})`);
   console.log('─'.repeat(40));
 
   const wsRoot = await findWorkspaceRoot(ROOT);
@@ -149,10 +188,8 @@ async function checkPackageNamespaces() {
       nsMap.set(entry.namespace, data);
       localeMap.set(locale, nsMap);
     }
-    const { issues } = validateLocales(localeMap, 'en');
-    const enData = localeMap.get('en');
-    const keyCount = enData ? extractKeys(enData.get(entry.namespace) ?? {}).length : 0;
-    reportIssues(entry.namespace, issues, keyCount);
+    const { issues, coverage } = validateLocales(localeMap, REFERENCE_LOCALE);
+    reportIssues(entry.namespace, issues, unionKeyCountFromCoverage(coverage, entry.namespace));
   }
 }
 
