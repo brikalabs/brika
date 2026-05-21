@@ -64,18 +64,21 @@ describe('filterPluginEnv', () => {
     expect(out.RANDOM).toBe('value');
   });
 
-  test.each(['0', 'false', 'no', 'off', ''])(
-    'BRIKA_PLUGIN_ENV_PASSTHROUGH=%p does NOT disable filtering',
-    (value) => {
-      const out = filterPluginEnv({
-        BRIKA_PLUGIN_ENV_PASSTHROUGH: value,
-        PATH: '/usr/bin',
-        GITHUB_TOKEN: 'ghp_xxx',
-      });
-      expect(out.PATH).toBe('/usr/bin');
-      expect(out.GITHUB_TOKEN).toBeUndefined();
-    }
-  );
+  test.each([
+    '0',
+    'false',
+    'no',
+    'off',
+    '',
+  ])('BRIKA_PLUGIN_ENV_PASSTHROUGH=%p does NOT disable filtering', (value) => {
+    const out = filterPluginEnv({
+      BRIKA_PLUGIN_ENV_PASSTHROUGH: value,
+      PATH: '/usr/bin',
+      GITHUB_TOKEN: 'ghp_xxx',
+    });
+    expect(out.PATH).toBe('/usr/bin');
+    expect(out.GITHUB_TOKEN).toBeUndefined();
+  });
 
   test('preserves undefined values for allowlisted keys', () => {
     const out = filterPluginEnv({
