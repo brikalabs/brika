@@ -10,9 +10,8 @@
  */
 export function htmlEscape(value: string): string {
   let out = '';
-  for (let i = 0; i < value.length; i++) {
-    const ch = value.charCodeAt(i);
-    switch (ch) {
+  for (const ch of value) {
+    switch (ch.codePointAt(0)) {
       case 38: // &
         out += '&amp;';
         break;
@@ -29,7 +28,7 @@ export function htmlEscape(value: string): string {
         out += '&#39;';
         break;
       default:
-        out += value[i];
+        out += ch;
     }
   }
   return out;
