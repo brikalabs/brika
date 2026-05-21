@@ -28,20 +28,14 @@ describe('takeBuildTimeCallSite — no options', () => {
 
 describe('takeBuildTimeCallSite — with __cs', () => {
   test('parses file:line and strips __cs from args', () => {
-    const result = takeBuildTimeCallSite([
-      'common:hello',
-      { __cs: 'src/App.tsx:42', count: 3 },
-    ]);
+    const result = takeBuildTimeCallSite(['common:hello', { __cs: 'src/App.tsx:42', count: 3 }]);
     expect(result.site).toEqual({ file: 'src/App.tsx', line: 42 });
     expect(result.args[0]).toBe('common:hello');
     expect(result.args[1]).toEqual({ count: 3 });
   });
 
   test('handles a windows-style absolute path with a drive colon', () => {
-    const result = takeBuildTimeCallSite([
-      'k',
-      { __cs: 'C:/repo/src/App.tsx:42' },
-    ]);
+    const result = takeBuildTimeCallSite(['k', { __cs: 'C:/repo/src/App.tsx:42' }]);
     // lastIndexOf(':') is used so the drive colon is preserved in `file`
     expect(result.site).toEqual({ file: 'C:/repo/src/App.tsx', line: 42 });
   });
@@ -68,12 +62,7 @@ describe('takeBuildTimeCallSite — with __cs', () => {
   });
 
   test('preserves other args (after the options bag)', () => {
-    const result = takeBuildTimeCallSite([
-      'k',
-      { __cs: 'a:1', x: 'y' },
-      'extra',
-      42,
-    ]);
+    const result = takeBuildTimeCallSite(['k', { __cs: 'a:1', x: 'y' }, 'extra', 42]);
     expect(result.site).toEqual({ file: 'a', line: 1 });
     expect(result.args).toEqual(['k', { x: 'y' }, 'extra', 42]);
   });

@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import { realpathSync } from 'node:fs';
 import { mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises';
 import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
-import { realpathSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { createOpenInEditorMiddleware, type OpenInEditorOptions } from '../open-in-editor';
 

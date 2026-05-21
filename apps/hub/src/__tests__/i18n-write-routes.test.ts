@@ -178,9 +178,7 @@ describe('i18nRoutes — SSE events + namespace edge cases', () => {
     // Bypass `TestApp.get` because its body parser awaits the SSE stream's
     // end and the stream stays open indefinitely. We just need the response
     // headers and to confirm the listener was wired up.
-    const raw = await app.hono.fetch(
-      new Request('http://test/api/i18n/events', { method: 'GET' })
-    );
+    const raw = await app.hono.fetch(new Request('http://test/api/i18n/events', { method: 'GET' }));
     expect(raw.status).toBe(200);
     expect(raw.headers.get('content-type')).toContain('text/event-stream');
     expect(mockI18n.onChange).toHaveBeenCalled();

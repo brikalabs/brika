@@ -139,10 +139,15 @@ describe('LocaleWatcher', () => {
 
   test('removes a hub namespace/locale when its file disappears', async () => {
     writeFileSync(join(localesDir, 'en', 'common.json'), '{"hello":"world"}');
-    registry.setNamespaceLocale('common', 'en', { hello: 'world' }, {
-      merge: false,
-      source: 'hub',
-    });
+    registry.setNamespaceLocale(
+      'common',
+      'en',
+      { hello: 'world' },
+      {
+        merge: false,
+        source: 'hub',
+      }
+    );
 
     watcher = new LocaleWatcher({
       registry,
@@ -163,10 +168,15 @@ describe('LocaleWatcher', () => {
 
   test('warns when a hub file is malformed JSON and clears stale data', async () => {
     writeFileSync(join(localesDir, 'en', 'common.json'), '{"hello":"world"}');
-    registry.setNamespaceLocale('common', 'en', { hello: 'world' }, {
-      merge: false,
-      source: 'hub',
-    });
+    registry.setNamespaceLocale(
+      'common',
+      'en',
+      { hello: 'world' },
+      {
+        merge: false,
+        source: 'hub',
+      }
+    );
 
     const warnings: Array<{ message: string; path: string }> = [];
     watcher = new LocaleWatcher({
@@ -189,10 +199,15 @@ describe('LocaleWatcher', () => {
 
   test('warns and keeps prior data when a hub file is unparseable', async () => {
     writeFileSync(join(localesDir, 'en', 'common.json'), '{"hello":"world"}');
-    registry.setNamespaceLocale('common', 'en', { hello: 'world' }, {
-      merge: false,
-      source: 'hub',
-    });
+    registry.setNamespaceLocale(
+      'common',
+      'en',
+      { hello: 'world' },
+      {
+        merge: false,
+        source: 'hub',
+      }
+    );
 
     const warnings: string[] = [];
     watcher = new LocaleWatcher({
@@ -276,10 +291,15 @@ describe('LocaleWatcher', () => {
     await settleInitial();
 
     // Seed the registry — the watcher will clear it once the folder empties.
-    registry.setNamespaceLocale('pkg', 'en', { a: 'A' }, {
-      merge: false,
-      source: 'package',
-    });
+    registry.setNamespaceLocale(
+      'pkg',
+      'en',
+      { a: 'A' },
+      {
+        merge: false,
+        source: 'package',
+      }
+    );
 
     rmSync(join(pkgDir, 'locales', 'en', 'a.json'));
     await flushDebounce();

@@ -120,9 +120,7 @@ describe('getMergedKeyUsage', () => {
 
   test('dedupes file:line entries from static and runtime sources', () => {
     installTranslationTracker();
-    applyKeyUsage(
-      usage({ 'tracker_ns:greet': [{ file: 'src/App.tsx', line: 10 }] })
-    );
+    applyKeyUsage(usage({ 'tracker_ns:greet': [{ file: 'src/App.tsx', line: 10 }] }));
     // Trigger a runtime entry at the same location
     i18next.t('tracker_ns:greet', { __cs: 'src/App.tsx:10' });
     const merged = getMergedKeyUsage('tracker_ns:greet');

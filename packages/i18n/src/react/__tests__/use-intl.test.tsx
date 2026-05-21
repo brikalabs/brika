@@ -15,7 +15,7 @@ import type { ReactElement } from 'react';
 import { Suspense } from 'react';
 import { renderToString } from 'react-dom/server';
 import { I18nextProvider, initReactI18next } from 'react-i18next';
-import { useIntl, type UseIntlResult } from '../use-intl';
+import { type UseIntlResult, useIntl } from '../use-intl';
 
 interface ProbeProps {
   readonly onResult: (r: UseIntlResult) => void;

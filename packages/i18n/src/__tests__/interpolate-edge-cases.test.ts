@@ -147,11 +147,7 @@ describe('interpolate — list formatter', () => {
   });
 
   test('handles arrays containing non-printable values via JSON', () => {
-    const result = interpolate(
-      '{{xs, list}}',
-      { xs: ['a', { z: 1 }] },
-      { locale: 'en-US' }
-    );
+    const result = interpolate('{{xs, list}}', { xs: ['a', { z: 1 }] }, { locale: 'en-US' });
     expect(result).toContain('a');
     expect(result).toContain('"z":1');
   });
@@ -163,9 +159,7 @@ describe('interpolate — list formatter', () => {
 
 describe('interpolate — case formatters', () => {
   test('uppercase respects locale (Turkish dotted i)', () => {
-    expect(interpolate('{{s, uppercase}}', { s: 'istanbul' }, { locale: 'tr-TR' })).toContain(
-      'İ'
-    );
+    expect(interpolate('{{s, uppercase}}', { s: 'istanbul' }, { locale: 'tr-TR' })).toContain('İ');
   });
 
   test('lowercase respects locale', () => {

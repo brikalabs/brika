@@ -435,7 +435,10 @@ describe('createSaveHandlerMiddleware', () => {
         passThroughExcept('hub.local', async (input, init) => {
           const body = typeof init?.body === 'string' ? init.body : '';
           calls.push({ url: urlOf(input), body });
-          return new Response('{}', { status: 200, headers: { 'content-type': 'application/json' } });
+          return new Response('{}', {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+          });
         })
       );
 
@@ -485,10 +488,7 @@ describe('createSaveHandlerMiddleware', () => {
 
     test('relays the hub status and detail text on non-2xx responses', async () => {
       bun.fetch(
-        passThroughExcept(
-          'hub.local',
-          async () => new Response('locale frozen', { status: 409 })
-        )
+        passThroughExcept('hub.local', async () => new Response('locale frozen', { status: 409 }))
       );
       const { logger } = createLogger();
       const server = await mountMiddleware({
