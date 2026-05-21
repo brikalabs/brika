@@ -29,6 +29,7 @@
     "@brika/compiler": "workspace:*",
     "@brika/db": "workspace:*",
     "@brika/di": "workspace:*",
+    "@brika/errors": "workspace:*",
     "@brika/events": "workspace:*",
     "@brika/http": "workspace:*",
     "@brika/i18n": "workspace:*",

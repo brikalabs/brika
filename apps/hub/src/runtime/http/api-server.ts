@@ -1,4 +1,5 @@
 import { inject, singleton } from '@brika/di';
+import { BrikaError, brikaErrorToResponse, isRetryable } from '@brika/errors';
 import {
   type CorsOriginMatcher,
   createApp,
@@ -171,6 +172,7 @@ export class ApiServer {
     const start = performance.now();
     const url = new URL(req.url);
     const path = url.pathname;
+    const traceId = req.headers.get('x-trace-id') ?? crypto.randomUUID();
 
     try {
       const res = await this.#app.fetch(req);
@@ -182,6 +184,7 @@ export class ApiServer {
         path,
         status: res.status,
         duration,
+        traceId,
         ...(Object.keys(query).length > 0 && {
           query,
         }),
@@ -189,21 +192,23 @@ export class ApiServer {
 
       return res;
     } catch (error) {
+      const response = brikaErrorToResponse(error, { traceId, instance: path });
       const duration = formatDuration(performance.now() - start);
-      this.#logs.error(`${req.method} ${path} → 500 (${duration})`, {
+      const isBrika = error instanceof BrikaError;
+      const code = isBrika ? error.code : 'INTERNAL';
+      this.#logs.error(`${req.method} ${path} → ${response.status} (${duration})`, {
         method: req.method,
         path,
         duration,
+        status: response.status,
+        code,
+        traceId,
+        retryable: isBrika ? isRetryable(error.code) : false,
         error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        cause: isBrika && error.cause instanceof Error ? error.cause.message : undefined,
       });
-      return Response.json(
-        {
-          error: 'Internal server error',
-        },
-        {
-          status: 500,
-        }
-      );
+      return response;
     }
   }
 

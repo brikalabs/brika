@@ -1,0 +1,32 @@
+{
+  "name": "@brika/errors",
+  "version": "0.3.1",
+  "description": "Typed error catalog, factories, match helper, and RFC 9457 envelope for the Brika platform",
+  "type": "module",
+  "license": "MIT",
+  "author": "BRIKA Team",
+  "homepage": "https://github.com/brikalabs/brika/tree/main/packages/errors#readme",
+  "bugs": {
+    "url": "https://github.com/brikalabs/brika/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/brikalabs/brika.git",
+    "directory": "packages/errors"
+  },
+  "keywords": ["brika", "errors", "catalog", "rfc-9457", "problem-details"],
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": ["src", "locales", "README.md"],
+  "scripts": {
+    "test": "bun test",
+    "typecheck": "tsgo --noEmit"
+  },
+  "dependencies": {
+    "zod": "^4.3.4"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.3.5"
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "internal": {
+    "title": "Erreur interne",
+    "message": "Une erreur est survenue sur le serveur.",
+    "developerHint": "Consultez les logs du serveur pour la chaîne de cause sous-jacente."
+  },
+  "invalid_input": {
+    "title": "Entrée invalide",
+    "message": "Entrée invalide.",
+    "developerHint": "Inspectez `data.field` (si présent) et la chaîne de cause pour la liste des issues Zod."
+  },
+  "not_found": {
+    "title": "Introuvable",
+    "message": "Ressource « {{resource}} » introuvable."
+  },
+  "permission_denied": {
+    "title": "Permission refusée",
+    "message": "La permission « {{permission}} » est requise mais n'est pas accordée.",
+    "developerHint": "Ajoutez la permission au manifeste de votre plugin et rechargez-le."
+  },
+  "timeout": {
+    "title": "Délai dépassé",
+    "message": "L'opération a expiré."
+  },
+  "unavailable": {
+    "title": "Service indisponible",
+    "message": "Un service requis est indisponible."
+  },
+  "plugin_not_found": {
+    "title": "Plugin introuvable",
+    "message": "Le plugin « {{pluginId}} » n'est pas enregistré."
+  },
+  "plugin_config_invalid": {
+    "title": "Configuration de plugin invalide",
+    "message": "Le plugin « {{pluginId}} » a une configuration invalide.",
+    "developerHint": "Consultez la chaîne de cause pour les issues Zod sous-jacentes."
+  },
+  "manifest_invalid": {
+    "title": "Manifeste invalide",
+    "message": "Le manifeste du plugin « {{manifestPath}} » est invalide.",
+    "developerHint": "Consultez la chaîne de cause pour les issues Zod sous-jacentes."
+  },
+  "manifest_missing_main": {
+    "title": "Manifeste sans point d'entrée",
+    "message": "Le manifeste du plugin « {{manifestPath}} » n'a pas de point d'entrée."
+  }
+}

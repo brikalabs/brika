@@ -73,6 +73,8 @@
     "prepublishOnly": "bun run build"
   },
   "dependencies": {
+    "@brika/errors": "workspace:*",
+    "@brika/ipc": "workspace:*",
     "zod": "^4.3.4"
   },
   "peerDependencies": {

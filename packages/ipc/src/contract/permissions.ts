@@ -27,7 +27,7 @@ export type HubLocation = z.infer<typeof HubLocation>;
 /**
  * Plugin requests the hub's stored location (requires "location" permission).
  *
- * @throws {RpcError} code `PERMISSION_DENIED` if the plugin lacks the grant.
+ * @throws {BrikaError} code `PERMISSION_DENIED` if the plugin lacks the grant.
  */
 export const getHubLocation = rpc(
   'getHubLocation',

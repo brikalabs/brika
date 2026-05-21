@@ -1,0 +1,47 @@
+{
+  "internal": {
+    "title": "Internal error",
+    "message": "Something went wrong on the server.",
+    "developerHint": "Check server logs for the underlying cause chain."
+  },
+  "invalid_input": {
+    "title": "Invalid input",
+    "message": "Invalid input.",
+    "developerHint": "Inspect `data.field` (when present) and the cause chain for the Zod issue list."
+  },
+  "not_found": {
+    "title": "Not found",
+    "message": "Resource \"{{resource}}\" not found."
+  },
+  "permission_denied": {
+    "title": "Permission denied",
+    "message": "Permission \"{{permission}}\" is required but not granted.",
+    "developerHint": "Add the named permission to your plugin manifest and reload the plugin."
+  },
+  "timeout": {
+    "title": "Timeout",
+    "message": "The operation timed out."
+  },
+  "unavailable": {
+    "title": "Service unavailable",
+    "message": "A required service is unavailable."
+  },
+  "plugin_not_found": {
+    "title": "Plugin not found",
+    "message": "Plugin \"{{pluginId}}\" is not registered."
+  },
+  "plugin_config_invalid": {
+    "title": "Plugin config invalid",
+    "message": "Plugin \"{{pluginId}}\" has invalid configuration.",
+    "developerHint": "Check the cause chain for the underlying Zod issues."
+  },
+  "manifest_invalid": {
+    "title": "Manifest invalid",
+    "message": "Plugin manifest \"{{manifestPath}}\" is invalid.",
+    "developerHint": "Check the cause chain for the underlying Zod issues."
+  },
+  "manifest_missing_main": {
+    "title": "Manifest missing entry point",
+    "message": "Plugin manifest \"{{manifestPath}}\" has no entry point."
+  }
+}

@@ -1,4 +1,5 @@
 import { dirname, extname, join, resolve } from 'node:path';
+import { BrikaError, errors } from '@brika/errors';
 import { PluginPackageSchema } from '@brika/schema';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -24,10 +25,13 @@ export async function loadPluginPackageJson(packageJsonPath: string) {
   );
   if (hasMissingMain) {
     const name = isRecord(raw) && typeof raw.name === 'string' ? raw.name : '(unknown)';
-    throw new Error(`Plugin "${name}" must have a "main" field in package.json`);
+    throw errors.manifestMissingMain(
+      { manifestPath: packageJsonPath },
+      { message: `Plugin "${name}" must have a "main" field in package.json` }
+    );
   }
 
-  throw parsed.error;
+  throw errors.manifestInvalid({ manifestPath: packageJsonPath }, { cause: parsed.error });
 }
 
 /**
@@ -49,7 +53,7 @@ export class PluginResolver {
     metadata: PluginPackageSchema;
   }> {
     if (!moduleId) {
-      throw new Error('Plugin moduleId is required');
+      throw errors.invalidInput({ field: 'moduleId' }, { message: 'Plugin moduleId is required' });
     }
 
     try {
@@ -60,7 +64,7 @@ export class PluginResolver {
       const metadata = await loadPluginPackageJson(packageJsonPath);
 
       // Extract entry point
-      const entryPoint = this.#extractEntryPoint(metadata, rootPath);
+      const entryPoint = this.#extractEntryPoint(metadata, rootPath, packageJsonPath);
 
       return {
         rootDirectory: rootPath,
@@ -68,14 +72,30 @@ export class PluginResolver {
         metadata,
       };
     } catch (error) {
-      throw new Error(`Failed to resolve plugin "${moduleId}": ${error}`);
+      if (error instanceof BrikaError) {
+        throw error;
+      }
+      throw errors.manifestInvalid(
+        { manifestPath: moduleId },
+        {
+          cause: error,
+          message: `Failed to resolve plugin "${moduleId}": ${error instanceof Error ? error.message : String(error)}`,
+        }
+      );
     }
   }
 
-  #extractEntryPoint(metadata: PluginPackageSchema, rootPath: string): string {
+  #extractEntryPoint(
+    metadata: PluginPackageSchema,
+    rootPath: string,
+    manifestPath: string
+  ): string {
     // main field is required
     if (!metadata.main) {
-      throw new Error(`Plugin "${metadata.name}" must have a "main" field in package.json`);
+      throw errors.manifestMissingMain(
+        { manifestPath },
+        { message: `Plugin "${metadata.name}" must have a "main" field in package.json` }
+      );
     }
 
     return resolve(rootPath, metadata.main);

@@ -1,13 +1,13 @@
 /**
  * Tests for the secrets context module.
  *
- * Verifies the SDK delegates to the prelude bridge and propagates
- * RpcErrors through the typed error mapper.
+ * Verifies the SDK delegates to the prelude bridge and surfaces BrikaError
+ * throws unchanged (the channel already reconstructs typed errors on the wire).
  */
 
 import { beforeEach, describe, expect, test } from 'bun:test';
+import { BrikaError, errors } from '@brika/errors';
 import { setupSecrets } from '../../context/secrets';
-import { PermissionDeniedError } from '../../errors';
 import { createTestHarness } from './_test-utils';
 
 describe('setupSecrets', () => {
@@ -47,27 +47,35 @@ describe('setupSecrets', () => {
     expect(h.bridge.deleteSecret).toHaveBeenCalledWith('api-key');
   });
 
-  test('PERMISSION_DENIED RpcError surfaces as PermissionDeniedError', async () => {
-    const rpcError = Object.assign(new Error('Permission "secrets" is not granted'), {
-      code: 'PERMISSION_DENIED',
-    });
+  test('PERMISSION_DENIED BrikaError propagates from the bridge', async () => {
     h.bridge.getSecret.mockImplementation(async () => {
-      throw rpcError;
+      throw errors.permissionDenied({ permission: 'secrets' });
     });
 
-    await expect(methods.getSecret('api-key')).rejects.toBeInstanceOf(PermissionDeniedError);
+    try {
+      await methods.getSecret('api-key');
+      throw new Error('expected getSecret to reject');
+    } catch (err) {
+      if (!BrikaError.is(err, 'PERMISSION_DENIED')) {
+        throw new Error(`expected PERMISSION_DENIED BrikaError, got ${String(err)}`);
+      }
+      expect(err.data?.permission).toBe('secrets');
+    }
   });
 
   test('PERMISSION_DENIED on setSecret surfaces too', async () => {
-    const rpcError = Object.assign(new Error('Permission "secrets" is not granted'), {
-      code: 'PERMISSION_DENIED',
-    });
     h.bridge.setSecret.mockImplementation(async () => {
-      throw rpcError;
+      throw errors.permissionDenied({ permission: 'secrets' });
     });
 
-    await expect(methods.setSecret('api-key', 'value')).rejects.toBeInstanceOf(
-      PermissionDeniedError
-    );
+    try {
+      await methods.setSecret('api-key', 'value');
+      throw new Error('expected setSecret to reject');
+    } catch (err) {
+      if (!BrikaError.is(err, 'PERMISSION_DENIED')) {
+        throw new Error(`expected PERMISSION_DENIED BrikaError, got ${String(err)}`);
+      }
+      expect(err.data?.permission).toBe('secrets');
+    }
   });
 });

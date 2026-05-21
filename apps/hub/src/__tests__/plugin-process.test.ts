@@ -4,6 +4,7 @@
 
 import 'reflect-metadata';
 import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
+import { BrikaError } from '@brika/errors';
 import {
   blockEmit,
   blockLog,
@@ -1176,7 +1177,7 @@ describe('PluginProcess', () => {
         });
       });
 
-      test('throws RpcError when location permission is not granted', () => {
+      test('throws BrikaError when location permission is not granted', () => {
         (callbacks.onGetGrantedPermissions as ReturnType<typeof mock>).mockReturnValue([]);
 
         expect(() => triggerImplement(getHubLocation, {})).toThrow();
@@ -1184,16 +1185,11 @@ describe('PluginProcess', () => {
         try {
           triggerImplement(getHubLocation, {});
         } catch (e: unknown) {
-          const err = e as {
-            code?: string;
-            message?: string;
-            data?: Record<string, unknown>;
-          };
-          expect(err.code).toBe('PERMISSION_DENIED');
-          expect(err.message).toContain('location');
-          expect(err.data).toEqual({
-            permission: 'location',
-          });
+          if (!BrikaError.is(e, 'PERMISSION_DENIED')) {
+            throw new Error('expected PERMISSION_DENIED BrikaError');
+          }
+          expect(e.message).toContain('location');
+          expect(e.data?.permission).toBe('location');
         }
       });
     });

@@ -1,4 +1,5 @@
 import { inject, singleton } from '@brika/di';
+import { errors } from '@brika/errors';
 import { withPredicate } from '@brika/events';
 import type { Json } from '@brika/ipc';
 import type { Plugin } from '@brika/plugin';
@@ -95,13 +96,13 @@ export class PluginManager {
   async enable(uid: string): Promise<void> {
     const name = this.#getName(uid);
     if (!name) {
-      throw new Error(`Plugin not found: ${uid}`);
+      throw errors.pluginNotFound({ pluginId: uid });
     }
 
     await this.#state.setEnabled(name, true);
     const stored = this.#state.get(name);
     if (!stored) {
-      throw new Error(`Plugin state not found: ${name}`);
+      throw errors.pluginNotFound({ pluginId: name });
     }
 
     const racePromise = this.#events.race(
@@ -118,8 +119,9 @@ export class PluginManager {
 
     const result = await racePromise;
     if (result.type === 'plugin.configInvalid') {
-      throw new Error(
-        `Plugin ${uid} has invalid configuration: ${result.payload.errors.join(', ')}`
+      throw errors.pluginConfigInvalid(
+        { pluginId: uid },
+        { message: `Plugin ${uid} has invalid configuration: ${result.payload.errors.join(', ')}` }
       );
     }
   }
@@ -127,7 +129,7 @@ export class PluginManager {
   async disable(uid: string): Promise<void> {
     const name = this.#getName(uid);
     if (!name) {
-      throw new Error(`Plugin not found: ${uid}`);
+      throw errors.pluginNotFound({ pluginId: uid });
     }
 
     await this.#state.setEnabled(name, false);
@@ -137,7 +139,7 @@ export class PluginManager {
   async reload(uid: string): Promise<void> {
     const name = this.#getName(uid);
     if (!name) {
-      throw new Error(`Plugin not found: ${uid}`);
+      throw errors.pluginNotFound({ pluginId: uid });
     }
 
     // Unload the plugin first
@@ -151,7 +153,7 @@ export class PluginManager {
     // Get stored state to know the root directory
     const stored = this.#state.get(name);
     if (!stored) {
-      throw new Error(`Plugin state not found: ${name}`);
+      throw errors.pluginNotFound({ pluginId: name });
     }
 
     // Set up race AFTER unloading to catch events from new load
@@ -181,8 +183,9 @@ export class PluginManager {
 
     const result = await racePromise;
     if (result.type === 'plugin.configInvalid') {
-      throw new Error(
-        `Plugin ${uid} has invalid configuration: ${result.payload.errors.join(', ')}`
+      throw errors.pluginConfigInvalid(
+        { pluginId: uid },
+        { message: `Plugin ${uid} has invalid configuration: ${result.payload.errors.join(', ')}` }
       );
     }
 
@@ -200,7 +203,7 @@ export class PluginManager {
   async kill(uid: string): Promise<void> {
     const name = this.#getName(uid);
     if (!name) {
-      throw new Error(`Plugin not found: ${uid}`);
+      throw errors.pluginNotFound({ pluginId: uid });
     }
 
     const process = this.#lifecycle.getProcess(name);

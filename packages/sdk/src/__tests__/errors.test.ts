@@ -1,233 +1,169 @@
 /**
- * Tests for SDK Error Types and RPC Error Mapping
+ * Tests for the SDK's error surface (factories + match + narrowing).
+ *
+ * The SDK re-exports BrikaError + factory API from @brika/errors. These tests
+ * cover the surface plugin authors interact with.
  */
 
 import { describe, expect, test } from 'bun:test';
-import {
-  InternalError,
-  InvalidInputError,
-  NotFoundError,
-  PermissionDeniedError,
-  rethrowRpcError,
-  sdkErrors,
-} from '../errors';
+import { BrikaError, errors, matchBrikaError } from '../index';
 
-/** Create an error with a `code` and optional `data`, mimicking IPC's RpcError. */
-function codedError(code: string, message: string, data?: Record<string, unknown>): Error {
-  return Object.assign(new Error(message), { code, ...(data ? { data } : {}) });
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// PermissionDeniedError
-// ─────────────────────────────────────────────────────────────────────────────
-
-describe('PermissionDeniedError', () => {
-  test('has correct name and permission field', () => {
-    const err = new PermissionDeniedError('location');
-    expect(err).toBeInstanceOf(Error);
-    expect(err).toBeInstanceOf(PermissionDeniedError);
-    expect(err.name).toBe('PermissionDeniedError');
-    expect(err.permission).toBe('location');
-  });
-
-  test('includes permission in message', () => {
-    const err = new PermissionDeniedError('location');
+describe('errors.permissionDenied', () => {
+  test('builds a BrikaError with the catalog code, message, and data', () => {
+    const err = errors.permissionDenied({ permission: 'location' });
+    expect(err).toBeInstanceOf(BrikaError);
+    expect(err.code).toBe('PERMISSION_DENIED');
+    expect(err.data?.permission).toBe('location');
     expect(err.message).toContain('location');
     expect(err.message).toContain('permissions');
   });
 
-  test('self-registers in sdkErrors registry', () => {
-    const entry = sdkErrors.find((e) => e.rpcCode === 'PERMISSION_DENIED');
-    expect(entry).toBeDefined();
+  test('preserves cause when provided', () => {
+    const cause = new Error('underlying');
+    const err = errors.permissionDenied({ permission: 'x' }, { cause });
+    expect(err.cause).toBe(cause);
+  });
+
+  test('survives wire round-trip; BrikaError.is narrows data', () => {
+    const original = errors.permissionDenied({ permission: 'location' });
+    const restored = BrikaError.fromWire(original.toWire());
+    if (!BrikaError.is(restored, 'PERMISSION_DENIED')) {
+      throw new Error('expected PERMISSION_DENIED');
+    }
+    expect(restored.data?.permission).toBe('location');
   });
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// NotFoundError
-// ─────────────────────────────────────────────────────────────────────────────
-
-describe('NotFoundError', () => {
-  test('has correct name and resource field', () => {
-    const err = new NotFoundError('timer:block');
-    expect(err).toBeInstanceOf(Error);
-    expect(err.name).toBe('NotFoundError');
-    expect(err.resource).toBe('timer:block');
+describe('errors.notFound', () => {
+  test('carries the resource on data', () => {
+    const err = errors.notFound({ resource: 'block:timer' });
+    expect(err.code).toBe('NOT_FOUND');
+    expect(err.data?.resource).toBe('block:timer');
+    expect(err.message).toContain('block:timer');
   });
 
-  test('uses custom message when provided', () => {
-    const err = new NotFoundError('x', 'custom message');
-    expect(err.message).toBe('custom message');
-  });
-
-  test('self-registers in sdkErrors registry', () => {
-    const entry = sdkErrors.find((e) => e.rpcCode === 'NOT_FOUND');
-    expect(entry).toBeDefined();
+  test('respects a message override', () => {
+    const err = errors.notFound({ resource: 'x' }, { message: 'gone for good' });
+    expect(err.message).toBe('gone for good');
   });
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// InvalidInputError
-// ─────────────────────────────────────────────────────────────────────────────
-
-describe('InvalidInputError', () => {
-  test('has correct name and field', () => {
-    const err = new InvalidInputError('bad value', 'email');
-    expect(err).toBeInstanceOf(Error);
-    expect(err.name).toBe('InvalidInputError');
-    expect(err.field).toBe('email');
+describe('errors.invalidInput', () => {
+  test('carries field when provided', () => {
+    const err = errors.invalidInput({ field: 'email' });
+    expect(err.code).toBe('INVALID_INPUT');
+    expect(err.data?.field).toBe('email');
     expect(err.message).toContain('email');
   });
 
-  test('works without field', () => {
-    const err = new InvalidInputError('malformed');
-    expect(err.field).toBeUndefined();
-    expect(err.message).toBe('malformed');
-  });
-
-  test('self-registers in sdkErrors registry', () => {
-    const entry = sdkErrors.find((e) => e.rpcCode === 'INVALID_INPUT');
-    expect(entry).toBeDefined();
+  test('works without data', () => {
+    const err = errors.invalidInput();
+    expect(err.code).toBe('INVALID_INPUT');
+    expect(err.message).toBe('Invalid input.');
   });
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// InternalError
-// ─────────────────────────────────────────────────────────────────────────────
-
-describe('InternalError', () => {
-  test('has correct name and default message', () => {
-    const err = new InternalError();
-    expect(err).toBeInstanceOf(Error);
-    expect(err.name).toBe('InternalError');
-    expect(err.message).toContain('internal error');
+describe('errors.internal / errors.unavailable', () => {
+  test('errors.internal accepts no args and carries cause', () => {
+    const cause = new Error('underlying');
+    const err = errors.internal({ cause });
+    expect(err.code).toBe('INTERNAL');
+    expect(err.cause).toBe(cause);
   });
 
-  test('accepts custom message', () => {
-    const err = new InternalError('db crashed');
-    expect(err.message).toBe('db crashed');
-  });
-
-  test('self-registers in sdkErrors registry', () => {
-    const entry = sdkErrors.find((e) => e.rpcCode === 'INTERNAL');
-    expect(entry).toBeDefined();
+  test('errors.unavailable() has retryable=true in the catalog', () => {
+    const err = errors.unavailable();
+    expect(err.code).toBe('UNAVAILABLE');
+    expect(err.message).toContain('unavailable');
   });
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// rethrowRpcError (auto-mapping)
-// ─────────────────────────────────────────────────────────────────────────────
-
-describe('rethrowRpcError', () => {
-  test('maps PERMISSION_DENIED to PermissionDeniedError', () => {
-    const err = codedError('PERMISSION_DENIED', 'denied', { permission: 'location' });
-    expect(() => rethrowRpcError(err)).toThrow(PermissionDeniedError);
-    try {
-      rethrowRpcError(err);
-    } catch (err) {
-      expect((err as PermissionDeniedError).permission).toBe('location');
-    }
+describe('errors.timeout', () => {
+  test('builds a contextualized message from data', () => {
+    const err = errors.timeout({ operation: 'fetch', timeoutMs: 5000 });
+    expect(err.code).toBe('TIMEOUT');
+    expect(err.data?.operation).toBe('fetch');
+    expect(err.data?.timeoutMs).toBe(5000);
+    expect(err.message).toContain('fetch');
+    expect(err.message).toContain('5000');
   });
 
-  test('maps NOT_FOUND to NotFoundError', () => {
-    const err = codedError('NOT_FOUND', 'gone', { resource: 'timer:block' });
-    expect(() => rethrowRpcError(err)).toThrow(NotFoundError);
-    try {
-      rethrowRpcError(err);
-    } catch (err) {
-      expect((err as NotFoundError).resource).toBe('timer:block');
-    }
-  });
-
-  test('maps INVALID_INPUT to InvalidInputError', () => {
-    const err = codedError('INVALID_INPUT', 'bad', { field: 'email' });
-    expect(() => rethrowRpcError(err)).toThrow(InvalidInputError);
-    try {
-      rethrowRpcError(err);
-    } catch (err) {
-      expect((err as InvalidInputError).field).toBe('email');
-    }
-  });
-
-  test('maps INTERNAL to InternalError', () => {
-    const err = codedError('INTERNAL', 'boom');
-    expect(() => rethrowRpcError(err)).toThrow(InternalError);
-  });
-
-  test('falls back to "unknown" when data has no permission field', () => {
-    const err = codedError('PERMISSION_DENIED', 'msg');
-    try {
-      rethrowRpcError(err);
-    } catch (err) {
-      expect((err as PermissionDeniedError).permission).toBe('unknown');
-    }
-  });
-
-  test('rethrows unknown codes as-is', () => {
-    const err = codedError('SOME_FUTURE_CODE', 'something');
-    try {
-      rethrowRpcError(err);
-    } catch (err) {
-      expect(err).toBe(err);
-      expect((err as Record<string, unknown>).code).toBe('SOME_FUTURE_CODE');
-    }
-  });
-
-  test('rethrows non-coded errors as-is', () => {
-    const plain = new Error('plain error');
-    try {
-      rethrowRpcError(plain);
-    } catch (err) {
-      expect(err).toBe(plain);
-    }
-  });
-
-  test('rethrows non-Error values as-is', () => {
-    try {
-      rethrowRpcError('string error');
-    } catch (err) {
-      expect(err).toBe('string error');
-    }
-  });
-
-  test('always throws (never returns)', () => {
-    expect(() => rethrowRpcError(new Error('x'))).toThrow();
+  test('falls back gracefully without data', () => {
+    const err = errors.timeout();
+    expect(err.code).toBe('TIMEOUT');
+    expect(err.message).toBe('Operation timed out.');
   });
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Registry
-// ─────────────────────────────────────────────────────────────────────────────
-
-describe('sdkErrors registry', () => {
-  test('all 4 built-in errors are registered', () => {
-    const codes = sdkErrors.map((e) => e.rpcCode);
-    expect(codes).toContain('PERMISSION_DENIED');
-    expect(codes).toContain('NOT_FOUND');
-    expect(codes).toContain('INVALID_INPUT');
-    expect(codes).toContain('INTERNAL');
+describe('matchBrikaError', () => {
+  test('routes to the per-code handler with typed data', () => {
+    const err = errors.permissionDenied({ permission: 'location' });
+    const view = matchBrikaError<string>(err, {
+      PERMISSION_DENIED: ({ permission }) => `denied: ${permission}`,
+      NOT_FOUND: ({ resource }) => `gone: ${resource}`,
+      _: () => 'unknown',
+    });
+    expect(view).toBe('denied: location');
   });
 
-  test('dynamically registered error class is picked up', () => {
-    class CustomError extends Error {
-      static readonly rpcCode = 'CUSTOM_TEST';
-      static fromCodedError(err: { message: string }) {
-        return new CustomError(err.message);
-      }
-    }
-    sdkErrors.push(CustomError);
+  test('falls through to _ for unmatched codes', () => {
+    const err = errors.timeout();
+    const view = matchBrikaError<string>(err, {
+      PERMISSION_DENIED: () => 'denied',
+      _: () => 'other',
+    });
+    expect(view).toBe('other');
+  });
 
-    const err = codedError('CUSTOM_TEST', 'custom msg');
+  test('falls through to _ for non-BrikaError throws', () => {
+    const view = matchBrikaError<string>(new Error('plain'), {
+      PERMISSION_DENIED: () => 'denied',
+      _: () => 'plain',
+    });
+    expect(view).toBe('plain');
+  });
+
+  test('handler receives the full BrikaError instance as the 2nd arg', () => {
+    const err = errors.notFound({ resource: 'r' }, { cause: new Error('db down') });
+    const causeMessage = matchBrikaError<string>(err, {
+      NOT_FOUND: (_data, e) => (e.cause instanceof Error ? e.cause.message : 'no cause'),
+      _: () => '_',
+    });
+    expect(causeMessage).toBe('db down');
+  });
+});
+
+describe('BrikaError.onThrow hook', () => {
+  test('fires once per construction with the error instance', () => {
+    const seen: string[] = [];
+    const off = BrikaError.onThrow((e) => seen.push(e.code));
     try {
-      rethrowRpcError(err);
-    } catch (err) {
-      expect(err).toBeInstanceOf(CustomError);
-      expect((err as CustomError).message).toBe('custom msg');
+      errors.permissionDenied({ permission: 'a' });
+      errors.notFound({ resource: 'b' });
+    } finally {
+      off();
     }
+    expect(seen).toEqual(['PERMISSION_DENIED', 'NOT_FOUND']);
+  });
 
-    // Cleanup
-    const idx = sdkErrors.indexOf(CustomError);
-    if (idx !== -1) {
-      sdkErrors.splice(idx, 1);
+  test('a buggy handler does not break error construction', () => {
+    const off = BrikaError.onThrow(() => {
+      throw new Error('boom');
+    });
+    try {
+      const err = errors.permissionDenied({ permission: 'x' });
+      expect(err.code).toBe('PERMISSION_DENIED');
+    } finally {
+      off();
     }
+  });
+
+  test('disposer removes the handler', () => {
+    const seen: string[] = [];
+    const off = BrikaError.onThrow((e) => seen.push(e.code));
+    errors.permissionDenied({ permission: 'a' });
+    off();
+    errors.permissionDenied({ permission: 'b' });
+    expect(seen).toEqual(['PERMISSION_DENIED']);
   });
 });

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'bun:test';
+import { BrikaError } from '@brika/errors';
 import { z } from 'zod';
 import type { Middleware } from '../index';
 import { BadRequest, combineRoutes, createApp, group, NotFound, route } from '../index';
@@ -592,6 +593,58 @@ describe('@brika/router', () => {
 
       const okRes = await app.fetch(new Request('http://localhost/api/user/123'));
       expect(okRes.status).toBe(200);
+    });
+
+    it('maps a thrown BrikaError to an RFC 9457 problem envelope', async () => {
+      const app = createApp([
+        route.get({
+          path: '/api/resource/:id',
+          handler: ({ params }) => {
+            const p = params as { id: string };
+            throw new BrikaError('NOT_FOUND', 'no such resource', {
+              data: { resource: p.id },
+            });
+          },
+        }),
+      ]);
+
+      const res = await app.fetch(new Request('http://localhost/api/resource/x'));
+      expect(res.status).toBe(404);
+      const body = (await res.json()) as {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        code: string;
+        data?: Record<string, unknown>;
+        i18nKey?: string;
+        retryable: boolean;
+      };
+      expect(body.code).toBe('NOT_FOUND');
+      expect(body.type).toBe('https://brika.dev/errors/not-found');
+      expect(body.title).toBe('Not found');
+      expect(body.status).toBe(404);
+      expect(body.detail).toBe('no such resource');
+      expect(body.data).toEqual({ resource: 'x' });
+      expect(body.i18nKey).toBe('errors:not_found');
+      expect(body.retryable).toBe(false);
+    });
+
+    it('returns 500 for BrikaError with an uncataloged code', async () => {
+      const app = createApp([
+        route.get({
+          path: '/api/x',
+          handler: () => {
+            throw new BrikaError('PLUGIN_DEFINED_CODE', 'custom');
+          },
+        }),
+      ]);
+
+      const res = await app.fetch(new Request('http://localhost/api/x'));
+      expect(res.status).toBe(500);
+      const body = (await res.json()) as { code: string; type: string };
+      expect(body.code).toBe('PLUGIN_DEFINED_CODE');
+      expect(body.type).toBe('about:blank');
     });
 
     it('should handle BadRequest exception', async () => {

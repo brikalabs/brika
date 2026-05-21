@@ -10,6 +10,8 @@
  *
  * @see https://bun.sh/docs/runtime/child-process#inter-process-communication-ipc
  *
+ * For typed errors, factories, and the RFC 9457 envelope, see `@brika/errors`.
+ *
  * @example Plugin side:
  * ```ts
  * import { createClient } from "@brika/ipc";
@@ -48,6 +50,7 @@ export type { ChannelDelegateMethods } from './channel-delegate';
 // ─── Client ───
 export type { ClientOptions } from './client';
 export { Client, createClient } from './client';
+
 // ─── Definition Helpers ───
 export type {
   AnyDef,
@@ -60,11 +63,10 @@ export type {
   RpcDef,
 } from './define';
 export { isMessage, isRpc, message, rpc } from './define';
-// ─── Errors ───
-export type { RpcErrorCode, RpcErrorWire } from './errors';
-export { isRpcErrorWire, RpcError } from './errors';
+
 // ─── Global ───
 export type { IpcGlobal } from './global';
+
 // ─── Host ───
 export type { PluginChannelOptions, SpawnPluginOptions } from './host';
 export { PluginChannel, spawnPlugin } from './host';

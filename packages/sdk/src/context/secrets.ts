@@ -9,7 +9,6 @@
  * Requires the `secrets` permission in package.json.
  */
 
-import { rethrowRpcError } from '../errors';
 import { type ContextCore, registerContextModule, requireBridge } from './register';
 
 export function setupSecrets(_core: ContextCore) {
@@ -20,29 +19,29 @@ export function setupSecrets(_core: ContextCore) {
       /**
        * Read a secret previously stored by this plugin. Returns `null` if not set.
        *
-       * @throws {PermissionDeniedError} if the "secrets" permission is not granted
+       * @throws BrikaError with code 'PERMISSION_DENIED' if the "secrets" permission is not granted.
        */
       getSecret(key: string): Promise<string | null> {
-        return bridge.getSecret(key).catch(rethrowRpcError);
+        return bridge.getSecret(key);
       },
 
       /**
        * Persist a secret in the OS keychain, scoped to this plugin only.
        * Storing an empty string deletes the secret.
        *
-       * @throws {PermissionDeniedError} if the "secrets" permission is not granted
+       * @throws BrikaError with code 'PERMISSION_DENIED' if the "secrets" permission is not granted.
        */
       setSecret(key: string, value: string): Promise<void> {
-        return bridge.setSecret(key, value).catch(rethrowRpcError);
+        return bridge.setSecret(key, value);
       },
 
       /**
        * Remove a secret. Returns `true` if a secret was actually deleted.
        *
-       * @throws {PermissionDeniedError} if the "secrets" permission is not granted
+       * @throws BrikaError with code 'PERMISSION_DENIED' if the "secrets" permission is not granted.
        */
       deleteSecret(key: string): Promise<boolean> {
-        return bridge.deleteSecret(key).catch(rethrowRpcError);
+        return bridge.deleteSecret(key);
       },
     },
   };

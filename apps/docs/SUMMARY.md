@@ -26,6 +26,7 @@
 * [Sparks](api-reference/sparks.md)
 * [Lifecycle](api-reference/lifecycle.md)
 * [Preferences](api-reference/preferences.md)
+* [Errors](api-reference/errors.md)
 
 ## Architecture
 
