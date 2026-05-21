@@ -130,7 +130,7 @@ export function setNestedValue(
       current = created;
     }
   }
-  const tail = parts[parts.length - 1];
+  const tail = parts.at(-1);
   if (tail) {
     current[tail] = value;
   }

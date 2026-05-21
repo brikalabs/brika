@@ -30,7 +30,7 @@ export function observeBodyMutations(callback: () => void): MutationObserver {
     for (const m of mutations) {
       const target = m.target;
       const el = target instanceof Element ? target : target.parentElement;
-      if (el && el.closest('#i18n-dev-root') === null) {
+      if (el?.closest('#i18n-dev-root') === null) {
         externalChange = true;
         break;
       }

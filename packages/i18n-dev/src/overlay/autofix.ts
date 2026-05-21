@@ -83,8 +83,9 @@ async function postFix(fix: FixEntry): Promise<void> {
     });
     if (!res.ok) {
       const detail = await res.text().catch(() => '');
+      const suffix = detail ? ` — ${detail}` : '';
       console.error(
-        `[i18n-dev] fix failed (${fix.namespace}:${fix.key} [${fix.locale}]): HTTP ${res.status}${detail ? ` — ${detail}` : ''}`
+        `[i18n-dev] fix failed (${fix.namespace}:${fix.key} [${fix.locale}]): HTTP ${res.status}${suffix}`
       );
     }
   } catch (err) {

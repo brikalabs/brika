@@ -8,12 +8,10 @@ import { type LoaderWarn, loadMergedLocaleFolder } from './loaders';
  * derivation. `passthrough()` keeps any other fields the consumer might pass
  * around — we just don't make claims about them.
  */
-export const PackageJsonSchema = z
-  .object({
-    name: z.string().optional(),
-    workspaces: z.array(z.string()).optional(),
-  })
-  .passthrough();
+export const PackageJsonSchema = z.looseObject({
+  name: z.string().optional(),
+  workspaces: z.array(z.string()).optional(),
+});
 
 export type PackageJson = z.infer<typeof PackageJsonSchema>;
 

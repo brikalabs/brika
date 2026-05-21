@@ -25,6 +25,25 @@ export interface InterpolateOptions {
 
 const INTERPOLATION_RE = /\{\{([^{}]+)\}\}/g;
 
+/**
+ * Bare `String(value)` on an unknown turns `{ foo: 1 }` into the unhelpful
+ * `[object Object]`. JSON-stringify anything that isn't a plain printable
+ * primitive so interpolation surfaces real structure; primitives go through
+ * `String` so we don't add JSON quotes around them.
+ */
+function stringifyValue(value: unknown): string {
+  if (value === null || value === undefined) {
+    return '';
+  }
+  if (typeof value === 'string') {
+    return value;
+  }
+  if (typeof value === 'number' || typeof value === 'boolean' || typeof value === 'bigint') {
+    return String(value);
+  }
+  return JSON.stringify(value);
+}
+
 export const defaultFormatters: FormatterMap = {
   number(value, locale, option) {
     const num = Number(value);
@@ -88,7 +107,7 @@ export const defaultFormatters: FormatterMap = {
       return String(value);
     }
     return new Intl.ListFormat(locale, { style: 'long', type: 'conjunction' }).format(
-      value.map((v) => String(v))
+      value.map((v) => stringifyValue(v))
     );
   },
   uppercase(value, locale) {
@@ -126,11 +145,11 @@ export function interpolate(
 
     const formatterName = parts[1];
     if (!formatterName) {
-      return String(value);
+      return stringifyValue(value);
     }
     const formatter = formatters[formatterName];
     if (!formatter) {
-      return String(value);
+      return stringifyValue(value);
     }
     const option = parts[2];
     return formatter(value, locale, option);

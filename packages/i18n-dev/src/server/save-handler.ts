@@ -165,10 +165,11 @@ async function writeRemote(
     });
     if (!res.ok) {
       const detail = await res.text().catch(() => '');
+      const suffix = detail ? ` — ${detail}` : '';
       return {
         ok: false,
         status: res.status,
-        error: `HTTP ${res.status}${detail ? ` — ${detail}` : ''}`,
+        error: `HTTP ${res.status}${suffix}`,
       };
     }
     return { ok: true };

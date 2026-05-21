@@ -72,7 +72,8 @@ function reportIssues(label: string, issues: ValidationIssue[], unionKeyCount: n
     byLocale.set(issue.locale, list);
   }
   for (const [locale, keys] of byLocale) {
-    error(`${label} [${locale}]: ${keys.length} missing — ${keys.sort().join(', ')}`);
+    const sorted = keys.toSorted((a, b) => a.localeCompare(b));
+    error(`${label} [${locale}]: ${keys.length} missing — ${sorted.join(', ')}`);
   }
 
   for (const issue of missingNs) {

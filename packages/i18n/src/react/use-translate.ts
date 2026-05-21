@@ -30,10 +30,10 @@ declare module 'i18next' {
  * accepts any string. Once a tooling layer emits a registry augmentation, the
  * narrow overload lights up — unknown keys become compile errors.
  */
-export interface I18nT {
+export type I18nT = {
   <K extends KnownKey>(key: K, options?: TOptions): string;
   (key: string, options?: TOptions): string;
-}
+};
 
 /**
  * Typed `tp()` helper for callers that work with explicit namespaces. Takes
@@ -43,15 +43,18 @@ export interface I18nT {
  * The narrow overload is reachable once `Namespaces` is augmented to include
  * the namespace strings; otherwise it falls back to the broad signature.
  */
-export interface I18nTp {
-  /**
-   * The optional 4th `__cs` parameter is reserved for build-time source-location
-   * injection (the call-site transform appends `'file:line'` so the dev overlay
-   * can show where the call lives). At runtime it's forwarded via the options
-   * bag so the i18n-devtools wrapper picks it up.
-   */
-  (namespace: string, key: string, defaultValue?: string, __cs?: string): string;
-}
+/**
+ * The optional 4th `__cs` parameter is reserved for build-time source-location
+ * injection (the call-site transform appends `'file:line'` so the dev overlay
+ * can show where the call lives). At runtime it's forwarded via the options
+ * bag so the i18n-devtools wrapper picks it up.
+ */
+export type I18nTp = (
+  namespace: string,
+  key: string,
+  defaultValue?: string,
+  __cs?: string
+) => string;
 
 export interface UseTranslateResult {
   readonly t: I18nT;
