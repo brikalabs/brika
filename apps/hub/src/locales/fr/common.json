@@ -135,17 +135,7 @@
       "description": "Quelque chose n'a pas fonctionné comme prévu. Veuillez réessayer plus tard."
     },
     "goHome": "Aller au tableau de bord",
-    "tryAgain": "Réessayer",
-    "internal": "Une erreur est survenue sur le serveur.",
-    "invalid_input": "La requête n'a pas pu être traitée car certaines entrées sont invalides.",
-    "not_found": "La ressource demandée est introuvable.",
-    "permission_denied": "La permission « {{permission}} » est requise mais n'est pas accordée.",
-    "timeout": "L'opération a expiré.",
-    "unavailable": "Un service requis est indisponible.",
-    "plugin_not_found": "Le plugin « {{pluginId}} » n'est pas enregistré.",
-    "plugin_config_invalid": "Le plugin « {{pluginId}} » a une configuration invalide.",
-    "manifest_invalid": "Le manifeste du plugin est invalide.",
-    "manifest_missing_main": "Le manifeste du plugin n'a pas de point d'entrée."
+    "tryAgain": "Réessayer"
   },
   "code": {
     "lines_one": "{{count}} ligne",

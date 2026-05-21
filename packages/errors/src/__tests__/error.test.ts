@@ -185,7 +185,7 @@ describe('brikaErrorToResponse (RFC 9457)', () => {
     expect(body.status).toBe(403);
     expect(body.detail).toBe('Permission required');
     expect(body.data).toEqual({ permission: 'location' });
-    expect(body.i18nKey).toBe('errors.permission_denied');
+    expect(body.i18nKey).toBe('errors:permission_denied');
     expect(body.retryable).toBe(false);
   });
 

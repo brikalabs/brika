@@ -80,7 +80,7 @@ export const ErrorCatalog = {
     category: 'core',
     retryable: false,
     transient: true,
-    i18nKey: 'errors.internal',
+    i18nKey: 'errors:internal',
     developerHint: 'Check server logs for the underlying cause chain.',
     data: undefined,
     message: () => 'An internal error occurred.',
@@ -94,7 +94,7 @@ export const ErrorCatalog = {
     category: 'core',
     retryable: false,
     transient: false,
-    i18nKey: 'errors.invalid_input',
+    i18nKey: 'errors:invalid_input',
     developerHint:
       'Inspect `data.field` (when present) and the cause chain for the Zod issue list.',
     data: z.object({
@@ -111,7 +111,7 @@ export const ErrorCatalog = {
     category: 'core',
     retryable: false,
     transient: false,
-    i18nKey: 'errors.not_found',
+    i18nKey: 'errors:not_found',
     data: z.object({
       resource: z.string(),
     }),
@@ -126,7 +126,7 @@ export const ErrorCatalog = {
     category: 'core',
     retryable: false,
     transient: false,
-    i18nKey: 'errors.permission_denied',
+    i18nKey: 'errors:permission_denied',
     developerHint: 'Add the named permission to your plugin manifest and reload the plugin.',
     data: z.object({
       permission: z.string(),
@@ -144,7 +144,7 @@ export const ErrorCatalog = {
     category: 'core',
     retryable: true,
     transient: true,
-    i18nKey: 'errors.timeout',
+    i18nKey: 'errors:timeout',
     data: z.object({
       operation: z.string().optional(),
       timeoutMs: z.number().int().nonnegative().optional(),
@@ -160,7 +160,7 @@ export const ErrorCatalog = {
     category: 'core',
     retryable: true,
     transient: true,
-    i18nKey: 'errors.unavailable',
+    i18nKey: 'errors:unavailable',
     data: undefined,
     message: () => 'A required service is unavailable.',
   }),
@@ -175,7 +175,7 @@ export const ErrorCatalog = {
     category: 'manifest',
     retryable: false,
     transient: false,
-    i18nKey: 'errors.plugin_not_found',
+    i18nKey: 'errors:plugin_not_found',
     data: z.object({
       pluginId: z.string(),
     }),
@@ -190,7 +190,7 @@ export const ErrorCatalog = {
     category: 'manifest',
     retryable: false,
     transient: false,
-    i18nKey: 'errors.plugin_config_invalid',
+    i18nKey: 'errors:plugin_config_invalid',
     developerHint: 'Check the cause chain for the underlying Zod issues.',
     data: z.object({
       pluginId: z.string(),
@@ -206,7 +206,7 @@ export const ErrorCatalog = {
     category: 'manifest',
     retryable: false,
     transient: false,
-    i18nKey: 'errors.manifest_invalid',
+    i18nKey: 'errors:manifest_invalid',
     developerHint: 'Check the cause chain for the underlying Zod issues.',
     data: z.object({
       manifestPath: z.string(),
@@ -222,7 +222,7 @@ export const ErrorCatalog = {
     category: 'manifest',
     retryable: false,
     transient: false,
-    i18nKey: 'errors.manifest_missing_main',
+    i18nKey: 'errors:manifest_missing_main',
     data: z.object({
       manifestPath: z.string(),
     }),

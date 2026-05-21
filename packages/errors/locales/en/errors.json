@@ -1,0 +1,12 @@
+{
+  "internal": "Something went wrong on the server.",
+  "invalid_input": "Invalid input.",
+  "not_found": "Resource \"{{resource}}\" not found.",
+  "permission_denied": "Permission \"{{permission}}\" is required but not granted.",
+  "timeout": "The operation timed out.",
+  "unavailable": "A required service is unavailable.",
+  "plugin_not_found": "Plugin \"{{pluginId}}\" is not registered.",
+  "plugin_config_invalid": "Plugin \"{{pluginId}}\" has invalid configuration.",
+  "manifest_invalid": "Plugin manifest \"{{manifestPath}}\" is invalid.",
+  "manifest_missing_main": "Plugin manifest \"{{manifestPath}}\" has no entry point."
+}

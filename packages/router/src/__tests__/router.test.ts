@@ -626,7 +626,7 @@ describe('@brika/router', () => {
       expect(body.status).toBe(404);
       expect(body.detail).toBe('no such resource');
       expect(body.data).toEqual({ resource: 'x' });
-      expect(body.i18nKey).toBe('errors.not_found');
+      expect(body.i18nKey).toBe('errors:not_found');
       expect(body.retryable).toBe(false);
     });
 

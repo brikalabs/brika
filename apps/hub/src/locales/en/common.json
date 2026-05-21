@@ -135,17 +135,7 @@
       "description": "Something didn't work as expected. Please try again later."
     },
     "goHome": "Go to dashboard",
-    "tryAgain": "Try again",
-    "internal": "Something went wrong on the server.",
-    "invalid_input": "The request couldn't be processed because some input was invalid.",
-    "not_found": "The requested resource was not found.",
-    "permission_denied": "Permission \"{{permission}}\" is required but not granted.",
-    "timeout": "The operation timed out.",
-    "unavailable": "A required service is unavailable.",
-    "plugin_not_found": "Plugin \"{{pluginId}}\" is not registered.",
-    "plugin_config_invalid": "Plugin \"{{pluginId}}\" has invalid configuration.",
-    "manifest_invalid": "Plugin manifest is invalid.",
-    "manifest_missing_main": "Plugin manifest has no entry point."
+    "tryAgain": "Try again"
   },
   "code": {
     "lines_one": "{{count}} line",

@@ -58,3 +58,8 @@ export { brikaErrorToResponse } from './http';
 // ─── Match ───
 export type { Handler, MatchHandlers } from './match';
 export { matchBrikaError } from './match';
+
+// ─── Locales ───
+// Translation strings ship at `packages/errors/locales/{lang}/errors.json`
+// and are auto-discovered by the hub's I18nService under namespace `errors`.
+// Look them up via i18next using `err.i18nKey` (e.g., `t(err.i18nKey, err.data)`).

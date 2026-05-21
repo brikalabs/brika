@@ -39,7 +39,7 @@ describe('ErrorCatalog shape', () => {
       expect(ERROR_CATEGORIES).toContain(entry.category);
 
       if (entry.i18nKey !== undefined) {
-        expect(entry.i18nKey.startsWith('errors.')).toBe(true);
+        expect(entry.i18nKey.startsWith('errors:')).toBe(true);
       }
 
       // Catalog rows that declare a `data` schema must be Zod schemas.
