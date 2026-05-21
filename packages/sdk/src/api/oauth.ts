@@ -35,8 +35,32 @@
  */
 
 import { getContext } from '../context';
+import { htmlEscape } from '../internal/html-escape';
 import type { RouteResponse } from '../types';
 import { defineRoute } from './routes';
+
+// ─── HTML response helpers ─────────────────────────────────────────────────
+
+/**
+ * Build a minimal HTML RouteResponse. Centralizes the four ad-hoc HTML
+ * builders we used to have inline and ensures every interpolated value
+ * passes through {@link htmlEscape}.
+ */
+function htmlPage(args: {
+  status: number;
+  heading: string;
+  bodyHtml: string;
+  autoClose?: boolean;
+}): RouteResponse {
+  const close = args.autoClose
+    ? '<script>setTimeout(()=>window.close(),3000)</script>'
+    : '';
+  return {
+    status: args.status,
+    headers: { 'Content-Type': 'text/html' },
+    body: `<!doctype html><html><body style="font-family:system-ui;text-align:center;padding:3rem"><h2>${args.heading}</h2>${args.bodyHtml}${close}</body></html>`,
+  };
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -293,13 +317,11 @@ export function defineOAuth(config: OAuthProviderConfig): OAuthClient {
     if (usePkce) {
       const verifier = resolvePkceVerifier(state);
       if (!verifier) {
-        return {
+        return htmlPage({
           status: 400,
-          headers: {
-            'Content-Type': 'text/html',
-          },
-          body: '<html><body><h2>Invalid state — PKCE verifier not found</h2><p>Try authorizing again.</p></body></html>',
-        };
+          heading: 'Invalid state — PKCE verifier not found',
+          bodyHtml: '<p>Try authorizing again.</p>',
+        });
       }
       body.set('code_verifier', verifier);
     }
@@ -312,35 +334,33 @@ export function defineOAuth(config: OAuthProviderConfig): OAuthClient {
 
     if (!response.ok) {
       const text = await response.text();
-      return {
-        status: 200,
-        headers: {
-          'Content-Type': 'text/html',
-        },
-        body: `<html><body><h2>Token exchange failed</h2><pre>${text}</pre></body></html>`,
-      };
+      // 502: failure originates upstream (the OAuth provider), not the user.
+      // text comes from the OAuth provider's response body — escape it.
+      return htmlPage({
+        status: 502,
+        heading: 'Token exchange failed',
+        bodyHtml: `<pre>${htmlEscape(text)}</pre>`,
+      });
     }
 
     const token = parseTokenResponse(await response.json());
     if (!token) {
-      return {
-        status: 200,
-        headers: {
-          'Content-Type': 'text/html',
-        },
-        body: '<html><body><h2>Invalid token response</h2></body></html>',
-      };
+      // 502: upstream returned a body that didn't match the OAuth spec.
+      return htmlPage({
+        status: 502,
+        heading: 'Invalid token response',
+        bodyHtml: '<p>The upstream OAuth server returned a malformed response.</p>',
+      });
     }
 
     ctx.updatePreference(tokenPrefKey, token);
 
-    return {
+    return htmlPage({
       status: 200,
-      headers: {
-        'Content-Type': 'text/html',
-      },
-      body: '<html><body style="font-family:system-ui;text-align:center;padding:3rem"><h2>Connected!</h2><p>You can close this window.</p><script>setTimeout(()=>window.close(),2000)</script></body></html>',
-    };
+      heading: 'Connected!',
+      bodyHtml: '<p>You can close this window.</p>',
+      autoClose: true,
+    });
   }
 
   // ─── Callback route ─────────────────────────────────────────────────────
@@ -349,36 +369,37 @@ export function defineOAuth(config: OAuthProviderConfig): OAuthClient {
     const error = req.query.error;
 
     if (error) {
-      return {
-        status: 200,
-        headers: {
-          'Content-Type': 'text/html',
-        },
-        body: `<html><body><h2>Authorization failed</h2><p>${error}</p><script>setTimeout(()=>window.close(),3000)</script></body></html>`,
-      };
+      // `error` arrives from the OAuth provider's redirect query string —
+      // both the user and the upstream provider can influence its content.
+      // 400: this is a user-visible authorization failure.
+      return htmlPage({
+        status: 400,
+        heading: 'Authorization failed',
+        bodyHtml: `<p>${htmlEscape(error)}</p>`,
+        autoClose: true,
+      });
     }
 
     const code = req.query.code;
     if (!code) {
-      return {
+      return htmlPage({
         status: 400,
-        headers: {
-          'Content-Type': 'text/html',
-        },
-        body: '<html><body><h2>Missing authorization code</h2></body></html>',
-      };
+        heading: 'Missing authorization code',
+        bodyHtml: '',
+      });
     }
 
     try {
       return await exchangeCodeForToken(code, req.query.state, req.headers);
     } catch (e) {
-      return {
+      // Exception messages can carry attacker-controlled text (e.g., upstream
+      // error bodies that surfaced as `throw new Error(text)` in fetch).
+      const message = e instanceof Error ? e.message : String(e);
+      return htmlPage({
         status: 500,
-        headers: {
-          'Content-Type': 'text/html',
-        },
-        body: `<html><body><h2>Error</h2><p>${e}</p></body></html>`,
-      };
+        heading: 'Error',
+        bodyHtml: `<p>${htmlEscape(message)}</p>`,
+      });
     }
   });
 
