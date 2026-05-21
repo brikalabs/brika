@@ -2,7 +2,7 @@
 
 Brika's error system is built around three ideas:
 
-1. **One catalog drives everything** — HTTP status, severity, retryability, i18n keys, message templates, and typed data schemas all live in a single source of truth: [`packages/ipc/src/error-catalog.ts`](../../../packages/ipc/src/error-catalog.ts).
+1. **One catalog drives everything** — HTTP status, severity, retryability, i18n keys, message templates, and typed data schemas all live in a single source of truth: [`packages/errors/src/catalog.ts`](../../../packages/errors/src/catalog.ts).
 2. **Factories make throwing trivial** — `throw errors.permissionDenied({ permission: 'location' })`.
 3. **Errors round-trip cleanly** — IPC channels, HTTP responses (RFC 9457 `application/problem+json`), and the FE all share the same code + data shape.
 
@@ -89,7 +89,9 @@ Each handler is typed against the catalog data shape for its code. The `_` arm i
 
 ## Adding a new code
 
-1. **Add a catalog entry** in [`packages/ipc/src/error-catalog.ts`](../../../packages/ipc/src/error-catalog.ts):
+Everything lives inside `packages/errors/`:
+
+1. **Add a catalog entry** in [`packages/errors/src/catalog.ts`](../../../packages/errors/src/catalog.ts):
 
    ```ts
    QUOTA_EXCEEDED: entry({
@@ -101,7 +103,7 @@ Each handler is typed against the catalog data shape for its code. The `_` arm i
      category: 'core',
      retryable: true,
      transient: true,
-     i18nKey: 'errors.quota_exceeded',
+     i18nKey: 'errors:quota_exceeded',
      developerHint: 'Wait until `data.resetAt` before retrying.',
      data: z.object({
        resetAt: z.string(),  // ISO timestamp
@@ -111,18 +113,24 @@ Each handler is typed against the catalog data shape for its code. The `_` arm i
    }),
    ```
 
-2. **Add a factory** in [`packages/ipc/src/factories.ts`](../../../packages/ipc/src/factories.ts):
+2. **Add a factory** in [`packages/errors/src/factories.ts`](../../../packages/errors/src/factories.ts):
 
    ```ts
    quotaExceeded: (data: DataForCode<'QUOTA_EXCEEDED'>, opts?: FactoryOpts) =>
      buildError<'QUOTA_EXCEEDED'>('QUOTA_EXCEEDED', data, opts),
    ```
 
-3. **Add the i18n key** to `apps/hub/src/locales/{en,fr}/common.json`:
+3. **Add the translations** to [`packages/errors/locales/{en,fr}/errors.json`](../../../packages/errors/locales/en/errors.json):
 
    ```json
-   "quota_exceeded": "API quota of {{limit}}/hour exceeded."
+   "quota_exceeded": {
+     "title": "Quota exceeded",
+     "message": "API quota of {{limit}}/hour exceeded.",
+     "developerHint": "Wait until `data.resetAt` before retrying."
+   }
    ```
+
+   Each locale entry is **an object**, not a flat string. `title` and `message` are required; `developerHint` is optional. The hub i18n service auto-discovers these via `@brika/i18n`'s `discoverPackageLocales` — no extra wiring needed.
 
 4. **Use it**:
 
@@ -130,7 +138,7 @@ Each handler is typed against the catalog data shape for its code. The `_` arm i
    throw errors.quotaExceeded({ resetAt: '2026-01-01T00:00:00Z', limit: 1000 });
    ```
 
-The factory coverage test in [`packages/ipc/src/__tests__/factories.test.ts`](../../../packages/ipc/src/__tests__/factories.test.ts) ensures every throwable cataloged code has a factory.
+The factory coverage test in [`packages/errors/src/__tests__/factories.test.ts`](../../../packages/errors/src/__tests__/factories.test.ts) ensures every throwable cataloged code has a factory. The locale coverage test in [`packages/errors/src/__tests__/catalog.test.ts`](../../../packages/errors/src/__tests__/catalog.test.ts) ensures every catalog entry has matching translation keys with a valid `{title, message}` shape and no placeholder typos.
 
 ---
 
@@ -147,7 +155,7 @@ HTTP responses use [`application/problem+json`](https://www.rfc-editor.org/rfc/r
   "instance": "/api/sparks/emit",
   "code": "PERMISSION_DENIED",
   "data": { "permission": "location" },
-  "i18nKey": "errors.permission_denied",
+  "i18nKey": "errors:permission_denied",
   "developerHint": "Add \"location\" to \"permissions\" in your plugin's package.json.",
   "retryable": false,
   "traceId": "f4a2b1c0-7d3e-4a5f-8b9c-1d2e3f4a5b6c"
@@ -205,8 +213,12 @@ try {
   const data = await fetcher('/api/sparks');
 } catch (err) {
   if (isBrikaApiError(err, 'PERMISSION_DENIED')) {
-    // err.data?.permission is typed string
-    showToast(t(err.i18nKey ?? 'errors.generic', err.data));
+    // err.data?.permission is typed string. Each locale entry is an object,
+    // so append the field you want (.title, .message, .developerHint).
+    showToast({
+      title: t(`${err.i18nKey}.title`),
+      description: t(`${err.i18nKey}.message`, err.data),
+    });
   }
 }
 ```
