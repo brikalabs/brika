@@ -366,9 +366,7 @@ describe('proxyToPlugin', () => {
 
     const res = await proxyToPlugin(proc, 'r', 'GET', '/', {}, {});
 
-    // The function sets Content-Type from the resolved value AND spreads result.headers,
-    // so when result.headers has lowercase 'content-type' the Response merges both values.
-    expect(res.headers.get('Content-Type')).toBe('text/plain, text/plain');
+    expect(res.headers.get('Content-Type')).toBe('text/plain');
   });
 
   test('defaults Content-Type to application/json when no headers provided', async () => {
@@ -439,18 +437,23 @@ describe('proxyToPlugin', () => {
     expect(await res.json()).toEqual([1, 2, 3]);
   });
 
-  test('spreads extra result headers onto the response', async () => {
+  test('drops non-allowlisted plugin-supplied headers (S6 fix)', async () => {
     const proc = createMockProcess({
       status: 200,
       headers: {
         'X-Custom': 'value',
+        'Set-Cookie': 'session=hijack',
+        Authorization: 'Bearer steal',
         'Content-Type': 'text/plain',
       },
     });
 
     const res = await proxyToPlugin(proc, 'r', 'GET', '/', {}, {});
 
-    expect(res.headers.get('X-Custom')).toBe('value');
+    expect(res.headers.get('X-Custom')).toBeNull();
+    expect(res.headers.get('Set-Cookie')).toBeNull();
+    expect(res.headers.get('Authorization')).toBeNull();
+    // Allowlisted headers DO pass.
     expect(res.headers.get('Content-Type')).toBe('text/plain');
   });
 
