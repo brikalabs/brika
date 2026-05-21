@@ -25,7 +25,7 @@ export function getReferenceLocale(): string {
 }
 
 export function setReferenceLocale(locale: string): void {
-  if (locale && typeof locale === 'string') {
+  if (locale) {
     currentReferenceLocale = locale;
   }
 }

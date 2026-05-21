@@ -2,7 +2,8 @@ import { AlertTriangle, CheckCircle2, Wand2, XCircle } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import type { ValidationIssue } from '../types';
 import { useToggleSet } from './hooks';
-import { CopyButton, EmptyState, FilterPill, groupBy, NamespaceGroup } from './primitives';
+import { groupBy } from './helpers';
+import { CopyButton, EmptyState, FilterPill, NamespaceGroup } from './primitives';
 import { buildFix, fixAllIssues, fixIssue } from './store';
 
 export function emptyIssuesTitle(filter: string, severity: string): string {

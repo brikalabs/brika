@@ -1,15 +1,13 @@
 import { describe, expect, test } from 'bun:test';
 import { renderToString } from 'react-dom/server';
+import { coverageColor, groupBy, pctColor } from './helpers';
 import {
   CopyButton,
-  coverageColor,
   EmptyState,
   FilterPill,
-  groupBy,
   Kbd,
   KbdGroup,
   NamespaceGroup,
-  pctColor,
   StatCard,
 } from './primitives';
 

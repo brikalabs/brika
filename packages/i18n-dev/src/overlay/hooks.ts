@@ -1,10 +1,14 @@
 import i18next from 'i18next';
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
-import { z } from 'zod';
 import { HMR_EVENT, HMR_REQUEST, HMR_TRANSLATIONS, HMR_USAGE } from '../hmr-events';
 
-import type { KeyUsage, KeyUsageMap } from '../scan-usage';
+import type { KeyUsage, KeyUsageMap } from '../scan-usage/types';
 import type { ValidationResult } from '../types';
+import {
+  KeyUsageMapSchema,
+  TranslationsBundleSchema,
+  ValidationResultSchema,
+} from './hmr-schemas';
 import {
   applyKeyUsage,
   applyTranslationBundle,
@@ -16,60 +20,12 @@ import {
   subscribeStore,
 } from './store';
 
-// ─── Schemas for HMR boundary payloads ──────────────────────────────────────
-
-const ValidationIssueSchema = z.object({
-  type: z.enum(['missing-key', 'missing-namespace', 'missing-variable', 'unknown-key', 'dead-key']),
-  severity: z.enum(['error', 'warning']),
-  namespace: z.string(),
-  locale: z.string(),
-  key: z.string().optional(),
-  referenceLocale: z.string(),
-  variables: z.array(z.string()).optional(),
-});
-
-const CoverageEntrySchema = z.object({
-  locale: z.string(),
-  namespace: z.string(),
-  totalKeys: z.number(),
-  translatedKeys: z.number(),
-  percentage: z.number(),
-});
-
-const ValidationResultSchema = z.object({
-  issues: z.array(ValidationIssueSchema),
-  coverage: z.array(CoverageEntrySchema),
-  timestamp: z.number(),
-  referenceLocale: z.string(),
-});
-
-const TranslationsBundleSchema = z.record(
-  z.string(),
-  z.record(z.string(), z.record(z.string(), z.unknown()))
-);
-
-const KeyUsageSchema = z.object({
-  file: z.string(),
-  line: z.number(),
-});
-
-const KeyUsageMapSchema = z.object({
-  keys: z.record(z.string(), z.array(KeyUsageSchema)),
-  patterns: z.array(z.string()),
-  opaqueNamespaces: z.array(z.string()),
-  hasGlobalOpaque: z.boolean(),
-});
-
-// ─── Types ──────────────────────────────────────────────────────────────────
-
 export interface RuntimeEntry {
   key: string;
   namespace: string;
   locale: string;
   count: number;
 }
-
-// ─── Hooks ──────────────────────────────────────────────────────────────────
 
 type ToggleOp = 'toggle' | 'add' | 'delete';
 
@@ -106,6 +62,21 @@ export function useToggleSet() {
   return { set, toggle, add, remove };
 }
 
+/**
+ * `bun-types` declares `hot.on(event, callback: () => void)` with strict
+ * zero-arity callbacks; the Vite runtime actually forwards the server's
+ * payload as the first argument. Bridge each data-carrying handler through a
+ * zero-arity function that reads its arg via the legacy `arguments` object —
+ * types satisfied, runtime contract honoured, no cast or `@ts-expect-error`
+ * needed.
+ */
+function bridgeHmrHandler(handler: (data: unknown) => void): () => void {
+  return function bridged(this: unknown): void {
+    // biome-ignore lint/complexity/noArguments: see bridgeHmrHandler() comment
+    handler(arguments[0]);
+  };
+}
+
 export function useHmrValidation() {
   const [validation, setValidation] = useState<ValidationResult | null>(null);
 
@@ -118,9 +89,9 @@ export function useHmrValidation() {
     const onUpdate = (data: unknown) => {
       const parsed = ValidationResultSchema.safeParse(data);
       if (parsed.success) {
-        // Keep the overlay's reference-locale state in sync with whatever the
-        // host configured. Lets the diff view + CI-mode toggle work for hosts
-        // that use a non-English reference (`'fr'`, `'de'`, etc.).
+        // Keep the reference-locale state in sync with whatever the host
+        // configured so the diff view + CI-mode toggle work for hosts that
+        // use a non-English reference (`'fr'`, `'de'`, etc.).
         setReferenceLocale(parsed.data.referenceLocale);
         setValidation(parsed.data);
       }
@@ -138,34 +109,16 @@ export function useHmrValidation() {
       }
     };
 
-    // `bun-types` declares `hot.on(event, callback: () => void)` with strict
-    // zero-arity callbacks; the Vite runtime actually forwards the server's
-    // payload as the first argument. Bridge each data-carrying handler
-    // through a zero-arity function that reads its arg via the legacy
-    // `arguments` object — types satisfied, runtime contract honoured, no
-    // cast or `@ts-expect-error` needed.
-    // `bridge` reads the payload through `arguments[0]` because bun-types
-    // declares `hot.on(event, cb: () => void)` — an arity-0 signature — but
-    // the Vite runtime forwards the server's payload as the first arg. No
-    // rest-params/typed-signature workaround keeps both `tsc` and Biome happy
-    // without `@ts-expect-error` or an `as` cast at the call site.
-    function bridge(handler: (data: unknown) => void): () => void {
-      return function bridged(this: unknown): void {
-        // biome-ignore lint/complexity/noArguments: see bridge() comment above
-        handler(arguments[0]);
-      };
-    }
-    const onUpdateBridged = bridge(onUpdate);
-    const onTranslationsBridged = bridge(onTranslations);
-    const onUsageBridged = bridge(onUsage);
+    const onUpdateBridged = bridgeHmrHandler(onUpdate);
+    const onTranslationsBridged = bridgeHmrHandler(onTranslations);
+    const onUsageBridged = bridgeHmrHandler(onUsage);
 
     hot.on(HMR_EVENT, onUpdateBridged);
     hot.on(HMR_TRANSLATIONS, onTranslationsBridged);
     hot.on(HMR_USAGE, onUsageBridged);
-    // bun-types' `ImportMeta.hot` declaration omits `send` — but Vite's
-    // runtime (which is what's actually loaded in the browser at dev time)
-    // provides it for client→server custom events. This is the documented
-    // gap between bun-types' shape and the real Vite runtime contract.
+    // bun-types' `ImportMeta.hot` declaration omits `send`, but Vite's runtime
+    // (loaded in the browser at dev time) provides it for client→server custom
+    // events. Documented gap between bun-types and the real Vite contract.
     // @ts-expect-error bun-types missing `send` on import.meta.hot — see comment
     hot.send(HMR_REQUEST, {});
 

@@ -1,118 +1,13 @@
-import i18next from 'i18next';
-import type { ReactNode } from 'react';
 import { useEffect, useRef, useState } from 'react';
-import { isSkippedParent, observeBodyMutations } from './primitives';
+import { isSkippedParent, observeBodyMutations } from './dom-utils';
 import { getStoreData, trackedTranslations, walkStoreEntries } from './store';
 
-// ─── Variable display (uses i18next's own interpolator) ─────────────────────
-
-interface TemplatePart {
-  type: 'text' | 'var';
-  content: string;
-}
-
-const SENTINEL = '\0';
-
-type InterpolateFn = (s: string, d: object, lng: string, opts: object) => string;
-
-interface I18nInterpolator {
-  interpolate: InterpolateFn;
-}
-
-/**
- * Type-guard for the slice of `i18next.services.interpolator` we depend on.
- * Returns the original object reference (no cloning) so the method's `this`
- * binding to the interpolator instance — and the internal regex state it
- * maintains — survives across the call. Lighter than schema-parsing for
- * a value we only inspect.
- */
-function isInterpolator(value: unknown): value is I18nInterpolator {
-  if (value === null || typeof value !== 'object' || !('interpolate' in value)) {
-    return false;
-  }
-  return typeof value.interpolate === 'function';
-}
-
-function getInterpolator(): I18nInterpolator | null {
-  const services = i18next.services;
-  if (services === null || typeof services !== 'object' || !('interpolator' in services)) {
-    return null;
-  }
-  const candidate = services.interpolator;
-  return isInterpolator(candidate) ? candidate : null;
-}
-
-function splitTemplate(value: string): TemplatePart[] {
-  const interpolator = getInterpolator();
-  if (!interpolator) {
-    return [{ type: 'text', content: value }];
-  }
-
-  const vars: string[] = [];
-  const target: Record<string, string> = {};
-  const data = new Proxy(target, {
-    get(_, prop) {
-      if (typeof prop !== 'string') {
-        return undefined;
-      }
-      vars.push(prop);
-      return `${SENTINEL}${prop}${SENTINEL}`;
-    },
-    has() {
-      return true;
-    },
-  });
-
-  const interpolated = interpolator.interpolate(value, data, i18next.language, {
-    interpolation: { escapeValue: false },
-  });
-
-  if (vars.length === 0) {
-    return [{ type: 'text', content: value }];
-  }
-
-  const varSet = new Set(vars);
-  const parts: TemplatePart[] = [];
-  for (const segment of interpolated.split(SENTINEL)) {
-    if (segment.length === 0) {
-      continue;
-    }
-    if (varSet.has(segment)) {
-      parts.push({ type: 'var', content: `{{${segment}}}` });
-    } else {
-      parts.push({ type: 'text', content: segment });
-    }
-  }
-  return parts;
-}
-
-export function VariableHighlight({ value }: Readonly<{ value: string }>): ReactNode {
-  const parts = splitTemplate(value);
-  if (parts.length <= 1 && parts[0]?.type === 'text') {
-    return <>{value}</>;
-  }
-  return (
-    <>
-      {parts.map((part, i) =>
-        part.type === 'var' ? (
-          <span
-            key={`var-${part.content}-${i}`}
-            className="mx-0.5 inline-block rounded bg-indigo-500/20 px-1 font-semibold text-indigo-300"
-          >
-            {part.content}
-          </span>
-        ) : (
-          <span key={`txt-${part.content.length}-${i}`}>{part.content}</span>
-        )
-      )}
-    </>
-  );
-}
-
-// ─── Highlight Mode ─────────────────────────────────────────────────────────
+export { VariableHighlight } from './variable-highlight';
 
 const HL_KEY = 'data-i18n-key';
 const HL_RAW = 'data-i18n-raw';
+const HL_CSS = `[${HL_KEY}],[${HL_RAW}]{cursor:crosshair!important}`;
+
 function buildStoreMap(): Map<string, string> {
   const map = new Map<string, string>();
   const resources = getStoreData();
@@ -154,12 +49,6 @@ export interface HighlightHover {
   mouseX: number;
 }
 
-const HL_CSS = `[${HL_KEY}],[${HL_RAW}]{cursor:crosshair!important}`;
-
-/**
- * Hook that manages highlight scanning, attribute tagging, and hover tracking.
- * Returns the current hover state so React components can render overlay + tooltip.
- */
 export function useHighlightMode(active: boolean): HighlightHover | null {
   const [hover, setHover] = useState<HighlightHover | null>(null);
 

@@ -1,5 +1,5 @@
 import i18next from 'i18next';
-import { emptyKeyUsageMap, type KeyUsage, type KeyUsageMap } from '../scan-usage';
+import { emptyKeyUsageMap, type KeyUsage, type KeyUsageMap } from '../scan-usage/types';
 import { extractQualifiedKey, takeBuildTimeCallSite } from './call-site';
 
 // ─── Static usage (provided by the Vite plugin over HMR) ───────────────────

@@ -2,7 +2,7 @@ import { beforeAll, describe, expect, test } from 'bun:test';
 import i18next from 'i18next';
 import { createRef } from 'react';
 import { renderToString } from 'react-dom/server';
-import type { KeyUsageRecord } from '../scan-usage';
+import type { KeyUsageRecord } from '../scan-usage/types';
 import { applyKeyUsage } from './store';
 import {
   buildMultiLocaleKeys,

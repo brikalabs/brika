@@ -187,7 +187,7 @@ describe('subscribeKeyUsage', () => {
 
 function usageFromKeys(
   keys: Record<string, Array<{ file: string; line: number }>>
-): import('../scan-usage').KeyUsageMap {
+): import('../scan-usage/types').KeyUsageMap {
   return { keys, patterns: [], opaqueNamespaces: [], hasGlobalOpaque: false };
 }
 
