@@ -53,9 +53,7 @@ function htmlPage(args: {
   bodyHtml: string;
   autoClose?: boolean;
 }): RouteResponse {
-  const close = args.autoClose
-    ? '<script>setTimeout(()=>window.close(),3000)</script>'
-    : '';
+  const close = args.autoClose ? '<script>setTimeout(()=>window.close(),3000)</script>' : '';
   return {
     status: args.status,
     headers: { 'Content-Type': 'text/html' },
@@ -194,11 +192,40 @@ export function defineOAuth(config: OAuthProviderConfig): OAuthClient {
   const tokenPrefKey = `__secret_oauth_${config.id}_token`;
   const usePkce = config.pkce !== false;
 
-  // In-flight PKCE verifiers keyed by state parameter
-  const pendingVerifiers = new Map<string, string>();
+  // In-flight PKCE verifiers keyed by state parameter. Bounded by TTL +
+  // size — without these limits the map would grow on every /authorize hit
+  // and only shrink on successful /callback, leaking memory and giving an
+  // unauthenticated attacker a trivial DoS by hammering /authorize.
+  const pendingVerifiers = new Map<string, { verifier: string; expiresAt: number }>();
+  const PKCE_TTL_MS = 10 * 60 * 1000; // 10 minutes — well above any sane auth flow
+  const PKCE_MAX_ENTRIES = 64;
 
   const callbackPath = `/oauth/${config.id}/callback`;
   const authorizePath = `/oauth/${config.id}/authorize`;
+
+  /**
+   * Drop expired entries, then evict oldest survivors until under the cap.
+   * Relies on `Map`'s insertion-order iteration (oldest first).
+   */
+  function evictPkceEntries(): void {
+    const now = Date.now();
+    for (const [state, entry] of pendingVerifiers) {
+      if (entry.expiresAt <= now) {
+        pendingVerifiers.delete(state);
+      } else {
+        // Insertion-order iteration; once we hit an unexpired entry, no
+        // earlier ones could be expired (they'd have been removed already).
+        break;
+      }
+    }
+    while (pendingVerifiers.size >= PKCE_MAX_ENTRIES) {
+      const oldest = pendingVerifiers.keys().next().value;
+      if (oldest === undefined) {
+        break;
+      }
+      pendingVerifiers.delete(oldest);
+    }
+  }
 
   function getRedirectUri(headers: Record<string, string>): string {
     let host = headers['host'] || '127.0.0.1:3001';
@@ -272,7 +299,8 @@ export function defineOAuth(config: OAuthProviderConfig): OAuthClient {
     if (usePkce) {
       const verifier = generateCodeVerifier();
       const challenge = await generateCodeChallenge(verifier);
-      pendingVerifiers.set(state, verifier);
+      evictPkceEntries();
+      pendingVerifiers.set(state, { verifier, expiresAt: Date.now() + PKCE_TTL_MS });
       params.set('code_challenge_method', 'S256');
       params.set('code_challenge', challenge);
     }
@@ -287,16 +315,24 @@ export function defineOAuth(config: OAuthProviderConfig): OAuthClient {
 
   // ─── Callback helpers ───────────────────────────────────────────────────
 
-  /** Resolve the PKCE code verifier for the given state, cleaning up the pending map. */
+  /**
+   * Resolve the PKCE code verifier for the given state, cleaning up the
+   * pending map. Re-checks the entry's expiry on lookup — even if
+   * eviction hasn't run yet, a stored-but-expired entry is rejected.
+   */
   function resolvePkceVerifier(state: string | undefined): string | null {
-    const verifier = state ? pendingVerifiers.get(state) : undefined;
-    if (!verifier) {
+    if (!state) {
       return null;
     }
-    if (state) {
-      pendingVerifiers.delete(state);
+    const entry = pendingVerifiers.get(state);
+    if (!entry) {
+      return null;
     }
-    return verifier;
+    pendingVerifiers.delete(state);
+    if (entry.expiresAt <= Date.now()) {
+      return null;
+    }
+    return entry.verifier;
   }
 
   /** Exchange an authorization code for tokens, returning an HTML RouteResponse. */

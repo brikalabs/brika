@@ -215,9 +215,9 @@ describe('PluginRouteRegistry', () => {
     test('rejects a second plugin claiming the same /oauth/* path', () => {
       registry.register('@brika/spotify', 'GET', '/oauth/spotify/callback');
 
-      expect(() =>
-        registry.register('@evil/plugin', 'GET', '/oauth/spotify/callback')
-      ).toThrow(/well-known route.*already registered/i);
+      expect(() => registry.register('@evil/plugin', 'GET', '/oauth/spotify/callback')).toThrow(
+        /well-known route.*already registered/i
+      );
     });
 
     test('rejects regardless of method order on the well-known path', () => {
