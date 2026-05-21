@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { useBunMock } from '@brika/testing';
-import { discoverPackageLocales, findWorkspaceRoot } from '../workspace';
+import { discoverNamespacedSources, discoverPackageLocales, findWorkspaceRoot } from '../workspace';
 
 const bun = useBunMock();
 
@@ -122,5 +122,96 @@ describe('discoverPackageLocales', () => {
     const entries = await discoverPackageLocales('/repo');
 
     expect(entries).toEqual([]);
+  });
+});
+
+describe('discoverNamespacedSources', () => {
+  test('enumerates subdirectories that ship a locales/ folder', async () => {
+    bun
+      .fs({
+        '/repo/plugins/weather/package.json': { name: '@brika/plugin-weather' },
+        '/repo/plugins/weather/locales/en/strings.json': { ok: 'OK' },
+        '/repo/plugins/timer/package.json': { name: '@brika/plugin-timer' },
+        '/repo/plugins/timer/locales/en/strings.json': { ok: 'OK' },
+      })
+      .apply();
+
+    const sources = await discoverNamespacedSources('/repo/plugins');
+
+    expect(sources).toHaveLength(2);
+    expect(sources.map((s) => s.namespace).sort((a, b) => a.localeCompare(b))).toEqual([
+      'plugin-timer',
+      'plugin-weather',
+    ]);
+  });
+
+  test('skips subdirectories without locales/', async () => {
+    bun
+      .fs({
+        '/repo/plugins/with/package.json': { name: 'with' },
+        '/repo/plugins/with/locales/en/x.json': { ok: 'OK' },
+        '/repo/plugins/without/package.json': { name: 'without' },
+      })
+      .apply();
+
+    const sources = await discoverNamespacedSources('/repo/plugins');
+
+    expect(sources).toHaveLength(1);
+    expect(sources[0]?.namespace).toBe('with');
+  });
+
+  test('transformNamespace callback shapes the final namespace', async () => {
+    bun
+      .fs({
+        '/repo/plugins/weather/package.json': { name: '@brika/plugin-weather' },
+        '/repo/plugins/weather/locales/en/strings.json': { ok: 'OK' },
+      })
+      .apply();
+
+    const sources = await discoverNamespacedSources('/repo/plugins', {
+      transformNamespace: (name) => `plugin:${name}`,
+    });
+
+    expect(sources).toHaveLength(1);
+    expect(sources[0]?.namespace).toBe('plugin:@brika/plugin-weather');
+    expect(sources[0]?.dir).toBe('/repo/plugins/weather');
+  });
+
+  test('falls back to the directory basename when package.json is missing', async () => {
+    bun
+      .fs({
+        '/repo/plugins/standalone/locales/en/strings.json': { ok: 'OK' },
+      })
+      .apply();
+
+    const sources = await discoverNamespacedSources('/repo/plugins');
+
+    expect(sources).toHaveLength(1);
+    expect(sources[0]?.namespace).toBe('standalone');
+  });
+
+  test('returns empty array when the parent directory does not exist', async () => {
+    bun.fs({}).apply();
+
+    const sources = await discoverNamespacedSources('/repo/nothing-here');
+
+    expect(sources).toEqual([]);
+  });
+
+  test('result is sorted by namespace ascending', async () => {
+    bun
+      .fs({
+        '/repo/plugins/zebra/package.json': { name: 'zebra' },
+        '/repo/plugins/zebra/locales/en/x.json': { ok: 'OK' },
+        '/repo/plugins/alpha/package.json': { name: 'alpha' },
+        '/repo/plugins/alpha/locales/en/x.json': { ok: 'OK' },
+        '/repo/plugins/middle/package.json': { name: 'middle' },
+        '/repo/plugins/middle/locales/en/x.json': { ok: 'OK' },
+      })
+      .apply();
+
+    const sources = await discoverNamespacedSources('/repo/plugins');
+
+    expect(sources.map((s) => s.namespace)).toEqual(['alpha', 'middle', 'zebra']);
   });
 });

@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Renamed `hub` option to `remote`** — framework-agnostic naming for the
+  HTTP-served translation source. `apiUrl` is unchanged and still derives
+  from `remote` (or overrides it explicitly for non-default API paths). No
+  back-compat shim — update consumers in place.
+- **Relaxed the "required option" rule.** Filesystem-only setups are now
+  first-class: pass any one of `localesDir`, a `sources` entry with its own
+  `localesDir`, or `remote`/`apiUrl` and the plugin works. The old contract
+  required `localesDir` or `apiUrl` specifically — `sources`-only setups
+  needed a workaround.
 - **Union-based validation.** The total per-namespace key set is now the union
   of leaf keys across every locale — no locale is privileged as ground truth.
   A key present in `fr/` but missing from `en/` now surfaces as a `missing-key`

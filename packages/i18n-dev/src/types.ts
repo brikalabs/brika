@@ -35,32 +35,41 @@ export interface SourceConfig {
 /** Options for the i18n dev Vite plugin. */
 export interface I18nDevPluginOptions {
   /**
-   * Local locale directory to scan (e.g. `'apps/hub/src/locales'`).
+   * Local locale directory to scan (e.g. `'./src/locales'`).
    *
-   * Relative paths resolve against the Vite project root (so `'../hub/src/locales'`
-   * works from `apps/ui/vite.config.ts`). Absolute paths are used as-is.
-   *
-   * Optional when `apiUrl` / `hub` is supplied — without either, the plugin
-   * has nothing to do. When both are set, local files are the source of truth
-   * (HMR, edits, key usage) and the remote data is fetched alongside for diff
-   * visibility.
+   * Relative paths resolve against the Vite project root. Absolute paths are
+   * used as-is. Combine with `sources` when locale files live in multiple
+   * trees (workspace packages, plugins) — the plugin unions them all into
+   * one validation surface.
    */
   readonly localesDir?: string;
   /**
-   * Hub origin (e.g. `'http://127.0.0.1:3001'`). When set, the plugin derives
-   * `apiUrl` as `'${hub}/api/i18n'` automatically — saves you from
-   * concatenating the API suffix at the call site.
+   * URL of a running server that serves translation bundles over HTTP. The
+   * plugin fetches `${remote}/bundle/:locale` at dev time and folds the
+   * response into the union so the overlay can validate against what the
+   * deployed server actually serves.
    *
-   * Ignored when `apiUrl` is also set (explicit override wins).
+   * Use this for sources the dev plugin can't see by walking the filesystem
+   * — runtime-installed plugins, CMS-backed translations, or a remote
+   * staging server. For projects whose translations live entirely in the
+   * workspace, omit this and rely on `localesDir` + `sources`.
+   *
+   * The plugin sends an `Origin: <vite-host>` header so the server can
+   * recognise dev-tool traffic if it cares to.
    */
-  readonly hub?: string;
+  readonly remote?: string;
   /**
-   * Explicit i18n API base URL (e.g. `'http://localhost:3001/api/i18n'`).
-   * Overrides anything derived from `hub`. Use this when the hub serves its
-   * i18n API under a non-default path, or when pointing at a staging URL.
+   * Override the resolved API base URL. When set, this string is used
+   * verbatim instead of deriving from `remote`. Useful when the server
+   * mounts the bundle API under a non-default path (e.g.
+   * `'https://staging.example.com/i18n'`).
    */
   readonly apiUrl?: string;
-  /** Reference locale used as ground truth (default: 'en'). */
+  /**
+   * Display-language hint shown in the overlay's diff view (default: `'en'`).
+   * Has no effect on which issues are emitted — validation is symmetric
+   * across all locales (union-based).
+   */
   readonly referenceLocale?: string;
   /**
    * i18next default namespace — used by the generated `i18n-namespaces.ts`
@@ -69,12 +78,13 @@ export interface I18nDevPluginOptions {
    */
   readonly defaultNamespace?: string;
   /**
-   * Source trees scanned for translation-key usages (`t('key')` calls).
-   * Defaults to `[{ dir: './src' }]` relative to the Vite root.
+   * Source trees scanned for translation-key usages (`t('key')` calls) and
+   * — when an entry sets `localesDir` — additional locale files. Defaults to
+   * `[{ dir: './src' }]` relative to the Vite root.
    *
-   * The host (consuming app) is responsible for declaring its trees here.
-   * Anything that needs to be tagged with a particular namespace prefix
-   * (workspace plugins, SDK shim wrappers, etc.) is the host's concern.
+   * Pair with the `@brika/i18n/node` `discoverNamespacedSources()` helper to
+   * auto-discover monorepo packages and plugins; the host (consuming app)
+   * passes the resulting `SourceConfig[]` here verbatim.
    */
   readonly sources?: ReadonlyArray<SourceConfig>;
 }

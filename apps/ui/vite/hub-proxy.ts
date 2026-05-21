@@ -32,10 +32,7 @@ export function hubProxy(target: string, prefix = '/api'): Plugin {
     },
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
-        if (
-          !req.url?.startsWith(prefix) ||
-          !req.headers.accept?.includes('text/event-stream')
-        ) {
+        if (!req.url?.startsWith(prefix) || !req.headers.accept?.includes('text/event-stream')) {
           next();
           return;
         }

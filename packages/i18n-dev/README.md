@@ -47,7 +47,13 @@ export default defineConfig({
 
 **That's it.** No Tailwind config changes, no CSS imports, no provider wrappers. The plugin auto-injects the overlay during `vite dev` and runs inside an isolated Shadow DOM so it won't affect your app's styles.
 
-Plugin translations from workspace packages are **auto-discovered** — any workspace package with a `locales/` directory is scanned automatically.
+The plugin works in three configurations — pick whichever matches your project:
+
+- **Filesystem-only** (most common): pass `localesDir` and you're done. Walk JSON files, validate the union, edit through the overlay.
+- **Monorepo with workspace packages/plugins**: pair `localesDir` with `sources: await discoverNamespacedSources('packages')` (from `@brika/i18n/node`). Each subdirectory with its own `locales/` becomes a separate namespace.
+- **Server-backed translations**: pass `remote: 'http://localhost:3001'` (or `apiUrl` for a custom path) when some translations come from a running server — runtime-installed plugins, CMS bundles, staging hosts. The plugin unions remote data with whatever it finds on disk.
+
+You only need **one** of these to be present; the plugin throws at startup if none is configured.
 
 ### 2. Expected locale structure
 
@@ -87,12 +93,16 @@ Press **Shift + Alt + D** or click the floating badge in the bottom-right corner
 
 ## Plugin Options
 
+At least one of `localesDir`, a `sources` entry with `localesDir`, or `remote`/`apiUrl` must be configured.
+
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `localesDir` | `string` | *required* | Path to the core locale directory |
-| `referenceLocale` | `string` | `'en'` | Display-language hint for the overlay (preferred locale for "Copy" auto-fix and diff column ordering). Has no effect on which issues are emitted — validation is symmetric across all locales. |
+| `localesDir` | `string` | — | Path to the primary locale directory (e.g. `'./src/locales'`). |
+| `sources` | `SourceConfig[]` | `[{ dir: './src' }]` | Source trees scanned for `t()` call usages — and for additional locales when an entry includes its own `localesDir`. Each entry can pin a namespace so bare `t('key')` calls inside it resolve correctly. Pair with `discoverNamespacedSources()` from `@brika/i18n/node` to auto-discover monorepo packages. |
+| `remote` | `string` | — | Origin of a server that exposes `/api/i18n/bundle/:locale`. The plugin fetches each locale and folds the response into the union — use this for sources the filesystem walk can't see (CMS, runtime-installed plugins, staging hosts). |
+| `apiUrl` | `string` | derived from `remote` | Override the resolved API base when the server mounts its bundle endpoint somewhere other than `/api/i18n`. |
+| `referenceLocale` | `string` | `'en'` | Display-language hint for the overlay (preferred locale for "Copy" auto-fix and diff column ordering). Validation itself is symmetric across all locales — no locale is privileged. |
 | `defaultNamespace` | `string` | `'translation'` | i18next default namespace; placed first in the generated `i18n-namespaces.ts`. |
-| `sources` | `SourceConfig[]` | `[{ dir: './src' }]` | Source trees scanned for `t()` call usages. Each entry can pin a namespace so bare-key calls in that subtree resolve correctly. |
 
 ## CLI Scripts
 

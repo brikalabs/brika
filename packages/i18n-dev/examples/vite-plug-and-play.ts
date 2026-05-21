@@ -22,6 +22,8 @@ export default defineConfig({
   plugins: [
     react(),
     i18nDevtools({
+      // Filesystem-only setup: just point at the locale folder. No server
+      // required — the overlay validates against the local files directly.
       localesDir: './src/locales',
       // Optional: change the display-language hint shown in the overlay's
       // diff view. Validation itself is symmetric across all locales — no
@@ -34,6 +36,11 @@ export default defineConfig({
       //   { dir: './src' },
       //   { dir: './packages/checkout/src', namespace: 'checkout' },
       // ],
+      //
+      // Optional: union local files with a running server's bundles. Useful
+      // when some translations are CMS-backed or come from runtime-installed
+      // plugins the filesystem walk can't see.
+      // remote: 'http://localhost:3001',
     }),
   ],
 });

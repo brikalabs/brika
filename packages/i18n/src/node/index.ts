@@ -15,8 +15,11 @@ export {
 } from './loaders';
 export { type WatchOptions, watchLocaleSource } from './watch';
 export {
+  type DiscoverNamespacedSourcesOptions,
+  discoverNamespacedSources,
   discoverPackageLocales,
   findWorkspaceRoot,
+  type NamespacedSource,
   type PackageJson,
   PackageJsonSchema,
   type PackageLocaleEntry,

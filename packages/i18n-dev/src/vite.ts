@@ -11,6 +11,11 @@ import { startHubSseClient } from './server/sse-client';
 import { logStartupSummary } from './server/startup-log';
 import type { I18nDevPluginOptions, ValidationResult } from './types';
 
+// Re-export the public option shapes here so consumers writing a
+// `vite.config.ts` can grab everything they need from `@brika/i18n-devtools/vite`
+// — no need to also import the root entry just for the types.
+export type { I18nDevPluginOptions, SourceConfig } from './types';
+
 /** Absolute path to the overlay entry file (resolved at import time). */
 const ENTRY_PATH = fileURLToPath(new URL('./entry.ts', import.meta.url));
 
@@ -42,11 +47,14 @@ export function i18nDevtools(options: I18nDevPluginOptions = {}): Plugin {
   const defaultNamespace = options.defaultNamespace ?? 'translation';
   const explicitApiUrl = options.apiUrl?.replace(/\/$/, '');
   const apiUrl =
-    explicitApiUrl ?? (options.hub ? `${options.hub.replace(/\/$/, '')}/api/i18n` : null);
+    explicitApiUrl ?? (options.remote ? `${options.remote.replace(/\/$/, '')}/api/i18n` : null);
 
-  if (!options.localesDir && !apiUrl) {
+  const hasFileSource = Boolean(
+    options.localesDir || options.sources?.some((s) => s.localesDir)
+  );
+  if (!hasFileSource && !apiUrl) {
     throw new Error(
-      '@brika/i18n-devtools: pass either `localesDir` (local files), `hub` (origin URL), or `apiUrl` (explicit API base) — none provided.'
+      '@brika/i18n-devtools: configure at least one translation source — `localesDir`, an entry in `sources` with `localesDir`, or `remote`/`apiUrl` for an HTTP-served bundle.'
     );
   }
 
