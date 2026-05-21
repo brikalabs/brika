@@ -1,13 +1,21 @@
 import { z } from 'zod';
 
 const ValidationIssueSchema = z.object({
-  type: z.enum(['missing-key', 'missing-namespace', 'missing-variable', 'unknown-key', 'dead-key']),
+  type: z.enum([
+    'missing-key',
+    'missing-namespace',
+    'missing-variable',
+    'unknown-key',
+    'dead-key',
+    'plugin-error',
+  ]),
   severity: z.enum(['error', 'warning']),
   namespace: z.string(),
   locale: z.string(),
   key: z.string().optional(),
   referenceLocale: z.string(),
   variables: z.array(z.string()).optional(),
+  detail: z.string().optional(),
 });
 
 const CoverageEntrySchema = z.object({

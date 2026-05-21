@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { renderToString } from 'react-dom/server';
 import type { ValidationIssue } from '../types';
+import { ValidationResultSchema } from './hmr-schemas';
 import { emptyIssuesTitle, fixLabel, IssueRow, IssuesContent, issueLabel } from './issues-tab';
 
 // ─── Pure functions ────────────────────────────────────────────────────────
@@ -114,6 +115,65 @@ describe('fixLabel', () => {
       referenceLocale: 'en',
     };
     expect(fixLabel(issue)).toBeNull();
+  });
+
+  test('returns null for plugin-error', () => {
+    const issue: ValidationIssue = {
+      type: 'plugin-error',
+      severity: 'error',
+      namespace: '__plugin__',
+      locale: '*',
+      referenceLocale: '*',
+      detail: 'validation scan failed: boom',
+    };
+    expect(fixLabel(issue)).toBeNull();
+  });
+});
+
+describe('ValidationResultSchema for plugin-error', () => {
+  test('accepts a plugin-error issue with detail through HMR validation', () => {
+    const result = {
+      issues: [
+        {
+          type: 'plugin-error',
+          severity: 'error',
+          namespace: '__plugin__',
+          locale: '*',
+          referenceLocale: '*',
+          detail: 'validation scan failed: ENOENT',
+        },
+      ],
+      coverage: [],
+      timestamp: 1700000000,
+      referenceLocale: 'en',
+    };
+    const parsed = ValidationResultSchema.safeParse(result);
+    expect(parsed.success).toBe(true);
+  });
+});
+
+describe('issueLabel for plugin-error', () => {
+  test('renders the detail string verbatim', () => {
+    const issue: ValidationIssue = {
+      type: 'plugin-error',
+      severity: 'error',
+      namespace: '__plugin__',
+      locale: '*',
+      referenceLocale: '*',
+      detail: 'type generation failed: EACCES',
+    };
+    expect(issueLabel(issue)).toBe('type generation failed: EACCES');
+  });
+
+  test('falls back to generic label when detail is absent', () => {
+    const issue: ValidationIssue = {
+      type: 'plugin-error',
+      severity: 'error',
+      namespace: '__plugin__',
+      locale: '*',
+      referenceLocale: '*',
+    };
+    expect(issueLabel(issue)).toBe('plugin error');
   });
 });
 

@@ -16,13 +16,37 @@ import {
 import { createSaveHandlerMiddleware } from './server/save-handler';
 import { startHubSseClient } from './server/sse-client';
 import { logStartupSummary } from './server/startup-log';
-import type { I18nDevPluginOptions, ValidationResult } from './types';
+import type { I18nDevPluginOptions, ValidationIssue, ValidationResult } from './types';
 
 // Re-exported so a `vite.config.ts` author can grab option types from the
 // same entry as the plugin itself.
 export type { I18nDevPluginOptions, SourceConfig } from './types';
 
 const ENTRY_PATH = fileURLToPath(new URL('./entry.ts', import.meta.url));
+
+/**
+ * Sentinel namespace/locale for `plugin-error` issues. Plugin failures are
+ * global (they don't belong to a translation namespace or a specific locale),
+ * but the schema requires both fields — these markers make the synthetic
+ * nature obvious in logs and in any consumer that groups by namespace.
+ */
+const PLUGIN_ERROR_NAMESPACE = '__plugin__';
+const PLUGIN_ERROR_LOCALE = '*';
+
+function pluginErrorIssue(detail: string): ValidationIssue {
+  return {
+    type: 'plugin-error',
+    severity: 'error',
+    namespace: PLUGIN_ERROR_NAMESPACE,
+    locale: PLUGIN_ERROR_LOCALE,
+    referenceLocale: PLUGIN_ERROR_LOCALE,
+    detail,
+  };
+}
+
+function errorDetail(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
+}
 
 function createDebouncedFn(fn: () => void, ms: number): () => void {
   let timer: ReturnType<typeof setTimeout> | null = null;
@@ -165,12 +189,45 @@ export function i18nDevtools(options: I18nDevPluginOptions = {}): Plugin {
       // `lastUsage`) can be re-overlaid without rescanning the JSON files.
       let lastCoreTranslations: Map<string, Map<string, TranslationData>> = new Map();
       let lastLocaleValidation: ValidationResult | null = null;
+      // Sticky list of plugin-internal failures. They live outside the normal
+      // validation pipeline (the orchestrator never produces them) so we
+      // overlay them on top of every rebuild until the underlying operation
+      // succeeds, at which point the corresponding entry is cleared.
+      let pluginErrors: ValidationIssue[] = [];
+
+      function pushPluginError(detail: string): void {
+        // Dedup on `detail` so a recurring failure (e.g. perms on the cache
+        // dir) doesn't accumulate identical rows on every debounce tick.
+        if (pluginErrors.some((issue) => issue.detail === detail)) {
+          return;
+        }
+        pluginErrors = [...pluginErrors, pluginErrorIssue(detail)];
+      }
+
+      function clearPluginErrors(): void {
+        if (pluginErrors.length > 0) {
+          pluginErrors = [];
+        }
+      }
 
       function rebuildIssues(): void {
         if (!lastLocaleValidation) {
+          // First-scan failure path: surface plugin errors even before any
+          // successful validation has populated `lastLocaleValidation`, so
+          // the overlay shows the breakage instead of an empty Issues tab.
+          if (pluginErrors.length > 0) {
+            const fallback: ValidationResult = {
+              issues: [...pluginErrors],
+              coverage: [],
+              timestamp: Date.now(),
+              referenceLocale,
+            };
+            lastResult = fallback;
+            server.hot.send(HMR_EVENT, fallback);
+          }
           return;
         }
-        lastResult = lastUsage
+        const merged = lastUsage
           ? mergeCodeUsageIssues(
               lastLocaleValidation,
               lastCoreTranslations,
@@ -178,6 +235,10 @@ export function i18nDevtools(options: I18nDevPluginOptions = {}): Plugin {
               orchestratorOptions
             )
           : lastLocaleValidation;
+        lastResult =
+          pluginErrors.length > 0
+            ? { ...merged, issues: [...merged.issues, ...pluginErrors] }
+            : merged;
         server.hot.send(HMR_EVENT, lastResult);
         // Skip logging on the very first locale-parity pass before the
         // key-usage scan has caught up — otherwise we'd log "All OK", then
@@ -208,28 +269,51 @@ export function i18nDevtools(options: I18nDevPluginOptions = {}): Plugin {
       });
 
       const scheduleValidation = createDebouncedFn(async () => {
-        const scan = await runScan(orchestratorOptions);
-        lastLocaleValidation = scan.validation;
-        lastCoreTranslations = scan.coreTranslations;
-        lastTranslations = scan.translations;
-        server.hot.send(HMR_TRANSLATIONS, lastTranslations);
-        rebuildIssues();
+        try {
+          const scan = await runScan(orchestratorOptions);
+          lastLocaleValidation = scan.validation;
+          lastCoreTranslations = scan.coreTranslations;
+          lastTranslations = scan.translations;
+          server.hot.send(HMR_TRANSLATIONS, lastTranslations);
+          clearPluginErrors();
+          rebuildIssues();
 
-        generateTypes(orchestratorOptions, scan.coreTranslations, scan.translations).catch(
-          (err: unknown) => {
-            // Non-fatal — surface so the user can investigate cache-dir perms etc.
-            const detail = err instanceof Error ? err.message : String(err);
-            server.config.logger.warn(`[i18n-dev] type generation failed: ${detail}`, {
-              timestamp: true,
-            });
-          }
-        );
+          generateTypes(orchestratorOptions, scan.coreTranslations, scan.translations).catch(
+            (err: unknown) => {
+              const detail = errorDetail(err);
+              // Non-fatal for the runtime, but worth surfacing so the user can
+              // investigate cache-dir perms etc. — log once and push to the
+              // overlay so it isn't buried in the terminal scrollback.
+              server.config.logger.warn(`[i18n-dev] type generation failed: ${detail}`, {
+                timestamp: true,
+              });
+              pushPluginError(`type generation failed: ${detail}`);
+              rebuildIssues();
+            }
+          );
+        } catch (err) {
+          const detail = errorDetail(err);
+          server.config.logger.error(`[i18n-dev] validation scan failed: ${detail}`, {
+            timestamp: true,
+          });
+          pushPluginError(`validation scan failed: ${detail}`);
+          rebuildIssues();
+        }
       }, 300);
 
       const scheduleUsageScan = createDebouncedFn(async () => {
-        lastUsage = await scanKeyUsages(usageRoot, scanRoots);
-        server.hot.send(HMR_USAGE, lastUsage);
-        rebuildIssues();
+        try {
+          lastUsage = await scanKeyUsages(usageRoot, scanRoots);
+          server.hot.send(HMR_USAGE, lastUsage);
+          rebuildIssues();
+        } catch (err) {
+          const detail = errorDetail(err);
+          server.config.logger.error(`[i18n-dev] key-usage scan failed: ${detail}`, {
+            timestamp: true,
+          });
+          pushPluginError(`key-usage scan failed: ${detail}`);
+          rebuildIssues();
+        }
       }, 500);
 
       if (apiUrl) {

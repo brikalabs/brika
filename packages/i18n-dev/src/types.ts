@@ -139,7 +139,15 @@ export interface ValidationIssue {
      * static scanner can't see (`t(\`prefix:${dynamic}\`)`). `severity:
      * 'warning'` — usually safe to delete after a manual check.
      */
-    | 'dead-key';
+    | 'dead-key'
+    /**
+     * Internal failure of the dev plugin itself (failed scan, failed type
+     * generation, watcher crash, etc.) — distinct from translation-content
+     * issues so the overlay can surface infrastructure breakage without it
+     * being mistaken for missing keys. Carries the failure detail in
+     * `detail` (the `key` field stays unused). `severity: 'error'`.
+     */
+    | 'plugin-error';
   severity: 'error' | 'warning';
   namespace: string;
   /**
@@ -157,6 +165,12 @@ export interface ValidationIssue {
   referenceLocale: string;
   /** For missing-variable: the variable names absent from the translation. */
   variables?: string[];
+  /**
+   * For `plugin-error`: the underlying failure message. Kept in its own field
+   * (rather than overloading `key`) so the overlay can render it as a free-form
+   * sentence instead of a `namespace:key` reference.
+   */
+  detail?: string;
 }
 
 export interface CoverageEntry {
