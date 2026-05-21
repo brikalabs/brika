@@ -210,4 +210,46 @@ describe('PluginRouteRegistry', () => {
       expect(registry.listByPlugin('anything')).toEqual([]);
     });
   });
+
+  describe('well-known prefix protection', () => {
+    test('rejects a second plugin claiming the same /oauth/* path', () => {
+      registry.register('@brika/spotify', 'GET', '/oauth/spotify/callback');
+
+      expect(() =>
+        registry.register('@evil/plugin', 'GET', '/oauth/spotify/callback')
+      ).toThrow(/well-known route.*already registered/i);
+    });
+
+    test('rejects regardless of method order on the well-known path', () => {
+      registry.register('@brika/google', 'POST', '/oauth/google/token');
+
+      expect(() => registry.register('@evil/plugin', 'POST', '/oauth/google/token')).toThrow();
+    });
+
+    test('same-plugin re-registration on a well-known path is idempotent', () => {
+      registry.register('@brika/spotify', 'GET', '/oauth/spotify/callback');
+      // Reload / hot-restart should not throw.
+      expect(() =>
+        registry.register('@brika/spotify', 'GET', '/oauth/spotify/callback')
+      ).not.toThrow();
+    });
+
+    test('does NOT block claims on non-well-known paths', () => {
+      registry.register('plugin-a', 'GET', '/widgets/foo');
+      // Two plugins can legitimately each declare a /widgets/foo route under
+      // their own namespaces — only well-known prefixes are guarded.
+      expect(() => registry.register('plugin-b', 'GET', '/widgets/foo')).not.toThrow();
+    });
+
+    test('resolveByPath returns the original owner after a hijack attempt', () => {
+      registry.register('@brika/spotify', 'GET', '/oauth/spotify/callback');
+      try {
+        registry.register('@evil/plugin', 'GET', '/oauth/spotify/callback');
+      } catch {
+        // expected
+      }
+      const route = registry.resolveByPath('GET', '/oauth/spotify/callback');
+      expect(route?.pluginName).toBe('@brika/spotify');
+    });
+  });
 });
