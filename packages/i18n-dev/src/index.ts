@@ -1,13 +1,8 @@
-export {
-  discoverPluginRoots,
-  findWorkspaceRoot,
-  scanLocaleDirectory,
-  scanPluginLocales,
-} from './scan';
 export type {
   CoverageEntry,
   FixEntry,
   I18nDevPluginOptions,
+  SourceConfig,
   ValidationIssue,
   ValidationResult,
 } from './types';

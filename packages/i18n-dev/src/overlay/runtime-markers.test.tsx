@@ -24,14 +24,12 @@ const sampleMarkers: RuntimeMarker[] = [
     key: 'hello',
     namespace: 'common',
     rect: mockRect(50, 100, 200, 24),
-    componentName: 'Header',
     source: 'src/Header.tsx:15',
   },
   {
     key: 'bye',
     namespace: 'common',
     rect: mockRect(50, 150, 200, 24),
-    componentName: null,
     source: null,
   },
 ];
@@ -39,23 +37,14 @@ const sampleMarkers: RuntimeMarker[] = [
 describe('RuntimeMarkersOverlay', () => {
   test('renders nothing when no markers', () => {
     const html = renderToString(<RuntimeMarkersOverlay markers={[]} />);
-    // Should render nothing (null)
     expect(html).toBe('');
   });
 
   test('renders marker badges', () => {
     const html = renderToString(<RuntimeMarkersOverlay markers={sampleMarkers} />);
-    // React inserts <!-- --> between JSX expressions in "ns:key" text
     expect(html).toContain('common');
     expect(html).toContain('hello');
     expect(html).toContain('bye');
-  });
-
-  test('renders component name badge', () => {
-    const html = renderToString(<RuntimeMarkersOverlay markers={sampleMarkers} />);
-    expect(html).toContain('Header');
-    expect(html).toContain('&lt;');
-    expect(html).toContain('&gt;');
   });
 
   test('renders source location', () => {
@@ -74,7 +63,6 @@ describe('RuntimeMarkersOverlay', () => {
         key: 'test',
         namespace: 'ns',
         rect: mockRect(0, 0, 100, 20),
-        componentName: null,
         source: null,
       },
     ];

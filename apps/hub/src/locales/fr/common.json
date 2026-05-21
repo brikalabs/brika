@@ -26,7 +26,10 @@
     "select": "Sélectionner",
     "copy": "Copier",
     "rename": "Renommer",
-    "done": "Terminé"
+    "done": "Terminé",
+    "saving": "Enregistrement…",
+    "add": "Ajouter",
+    "remove": "Supprimer"
   },
   "status": {
     "running": "En cours",

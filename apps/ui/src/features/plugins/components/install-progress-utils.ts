@@ -1,4 +1,4 @@
-import type { TFunction } from 'i18next';
+import type { I18nT } from '@/lib/use-locale';
 import type { InstallProgress } from '../types';
 
 /**
@@ -6,7 +6,7 @@ import type { InstallProgress } from '../types';
  */
 export function getPhaseLabel(
   progress: InstallProgress | null,
-  t: TFunction,
+  t: I18nT,
   mode?: 'update' | 'reinstall'
 ): string {
   if (!progress) {

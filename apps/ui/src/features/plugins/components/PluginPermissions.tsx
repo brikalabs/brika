@@ -44,9 +44,9 @@ export function PluginPermissions({ plugin }: Readonly<PluginPermissionsProps>) 
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2">
           <Shield className="size-5 text-primary" />
-          {t('plugins:permissions.title')}
+          {t('permissions:title')}
         </CardTitle>
-        <CardDescription>{t('plugins:permissions.description')}</CardDescription>
+        <CardDescription>{t('permissions:description')}</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-2">
         {declaredPermissions.map((permission) => {

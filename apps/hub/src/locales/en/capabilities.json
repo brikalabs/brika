@@ -1,0 +1,23 @@
+{
+  "net": {
+    "allow": {
+      "label": "Sites the plugin may contact",
+      "placeholder": "api.example.com",
+      "example": "Add full hostnames or use *.example.com for a one-level wildcard."
+    }
+  },
+  "fs": {
+    "allow": {
+      "label": "Folders the plugin may access",
+      "placeholder": "/Users/me/documents/brika",
+      "example": "List absolute paths. The plugin can only read/write inside these folders."
+    }
+  },
+  "exec": {
+    "allowBinaries": {
+      "label": "Programs the plugin may run",
+      "placeholder": "git",
+      "example": "Type a program name (e.g. `git`) or full path. Wildcards are not allowed."
+    }
+  }
+}

@@ -1,249 +1,69 @@
-import { ChevronRight, FileCode } from 'lucide-react';
-import type { RefObject } from 'react';
+import { ChevronRight } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { HMR_SAVE } from '../hmr-events';
-import { VariableHighlight } from './highlight';
-import { useKeyUsage, useToggleSet } from './hooks';
-import {
-  CopyButton,
-  EmptyState,
-  FilterPill,
-  groupBy,
-  NamespaceGroup,
-  openInEditor,
-} from './primitives';
-import { getTranslations, REFERENCE_LOCALE, updateI18nextStore } from './store';
+import { groupBy } from './helpers';
+import { useToggleSet } from './hooks';
+import { KeyUsageBadge } from './key-usage';
+import { buildMultiLocaleKeys } from './multi-locale';
+import { CopyButton, EmptyState, FilterPill, NamespaceGroup } from './primitives';
+import { getNestedStoreValue, removeFromI18nextStore, updateI18nextStore } from './store';
+import { TranslationKeyExpanded } from './translation-row';
 
-// ─── Types ──────────────────────────────────────────────────────────────────
+export { KeyUsageBadge, KeyUsageList } from './key-usage';
+// Re-export so callers that pulled symbols from `./translations-tab` keep working.
+export { buildMultiLocaleKeys } from './multi-locale';
+export { TranslationKeyExpanded, TranslationLocaleValue } from './translation-row';
 
-interface MultiLocaleKey {
-  ns: string;
-  key: string;
-  values: Record<string, string | undefined>;
-  missingCount: number;
+interface EditTarget {
+  id: string;
+  locale: string;
 }
 
-// ─── Helpers ────────────────────────────────────────────────────────────────
+/**
+ * Optimistic save: render the new value immediately and revert if the HTTP
+ * round-trip fails (auth, disabled gate, unsafe key path). Browser-side fetch
+ * so the user's session cookie travels with the request — the Vite dev server
+ * proxies `/api/*` to the hub on the same origin.
+ */
+function saveTranslationToServer(
+  locale: string,
+  ns: string,
+  key: string,
+  value: string,
+  bump: () => void
+): Promise<void> {
+  const previous = getNestedStoreValue(locale, ns, key);
+  updateI18nextStore(locale, ns, key, value);
+  bump();
 
-export function buildMultiLocaleKeys(locales: string[]): MultiLocaleKey[] {
-  const refEntries = getTranslations(REFERENCE_LOCALE);
-  const localeMaps = new Map<string, Map<string, string>>();
-  for (const locale of locales) {
-    if (locale === REFERENCE_LOCALE) {
-      continue;
+  const rollback = () => {
+    if (previous === undefined) {
+      removeFromI18nextStore(locale, ns, key);
+    } else {
+      updateI18nextStore(locale, ns, key, previous);
     }
-    const map = new Map<string, string>();
-    for (const entry of getTranslations(locale)) {
-      map.set(`${entry.ns}:${entry.key}`, entry.value);
-    }
-    localeMaps.set(locale, map);
-  }
+    bump();
+  };
 
-  return refEntries.map((entry) => {
-    const values: Record<string, string | undefined> = {};
-    let missingCount = 0;
-    for (const locale of locales) {
-      if (locale === REFERENCE_LOCALE) {
-        values[locale] = entry.value;
-      } else {
-        const val = localeMaps.get(locale)?.get(`${entry.ns}:${entry.key}`);
-        values[locale] = val;
-        if (val === undefined) {
-          missingCount++;
-        }
+  return fetch(`/api/i18n/sources/${encodeURIComponent(ns)}/${encodeURIComponent(locale)}`, {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ key, value }),
+  })
+    .then(async (res) => {
+      if (res.ok) {
+        return;
       }
-    }
-    return { ns: entry.ns, key: entry.key, values, missingCount };
-  });
+      const detail = await res.text().catch(() => '');
+      const suffix = detail ? ` — ${detail}` : '';
+      throw new Error(`HTTP ${res.status}${suffix}`);
+    })
+    .catch((err: unknown) => {
+      rollback();
+      const message = err instanceof Error ? err.message : String(err);
+      console.error(`[i18n-dev] save failed (${ns}:${key} [${locale}]): ${message}`);
+    });
 }
-
-// ─── Components ─────────────────────────────────────────────────────────────
-
-export function TranslationLocaleValue({
-  value,
-  isEditing,
-  editRef,
-  editVal,
-  onEditChange,
-  onSave,
-  onCancel,
-  onStartEdit,
-}: Readonly<{
-  value: string | undefined;
-  isEditing: boolean;
-  editRef: RefObject<HTMLInputElement | null>;
-  editVal: string;
-  onEditChange: (v: string) => void;
-  onSave: () => void;
-  onCancel: () => void;
-  onStartEdit: () => void;
-}>) {
-  if (isEditing) {
-    return (
-      <div className="flex min-w-0 flex-1 items-center gap-1">
-        <input
-          ref={editRef}
-          className="min-w-0 flex-1 rounded border border-indigo-400/50 bg-dt-bg-raised px-1.5 py-0.5 font-mono text-[11px] text-dt-text outline-none focus:border-indigo-400"
-          value={editVal}
-          onChange={(e) => onEditChange(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              onSave();
-            }
-            if (e.key === 'Escape') {
-              onCancel();
-            }
-          }}
-        />
-        <button
-          type="button"
-          onClick={onSave}
-          className="shrink-0 cursor-pointer rounded border-none bg-indigo-500 px-1.5 py-0.5 font-medium text-[10px] text-white transition-colors hover:bg-indigo-600"
-        >
-          Save
-        </button>
-        <button
-          type="button"
-          onClick={onCancel}
-          className="shrink-0 cursor-pointer rounded border border-dt-border bg-transparent px-1.5 py-0.5 text-[10px] text-dt-text-3 transition-colors hover:text-dt-text-2"
-        >
-          Esc
-        </button>
-      </div>
-    );
-  }
-  if (value === undefined) {
-    return (
-      <button
-        type="button"
-        className="flex min-w-0 flex-1 cursor-pointer items-center gap-1 rounded border-none bg-transparent px-1 py-0.5 text-left text-red-400/60 italic transition-colors hover:bg-dt-bg-hover hover:text-red-400"
-        onClick={onStartEdit}
-      >
-        &mdash; missing &mdash;
-      </button>
-    );
-  }
-  return (
-    <button
-      type="button"
-      className="min-w-0 flex-1 cursor-pointer truncate rounded border-none bg-transparent px-1 py-0.5 text-left text-dt-text-2 transition-colors hover:bg-dt-bg-hover hover:text-indigo-400"
-      title="Click to edit"
-      onClick={onStartEdit}
-    >
-      <VariableHighlight value={value} />
-    </button>
-  );
-}
-
-// ─── Key Usage ─────────────────────────────────────────────────────────────
-
-export function KeyUsageList({ qualifiedKey }: Readonly<{ qualifiedKey: string }>) {
-  const usages = useKeyUsage(qualifiedKey);
-  const plural = usages.length === 1 ? '' : 's';
-  const usageLabel =
-    usages.length > 0 ? `Used in ${usages.length} file${plural}` : 'Not found in source';
-  return (
-    <div className="mt-1 border-dt-border-dim border-t pt-1">
-      <div className="mb-0.5 flex items-center gap-1 text-[10px] text-dt-text-4">
-        <FileCode className="size-3" />
-        <span>{usageLabel}</span>
-      </div>
-      {usages.length > 0 && (
-        <div className="space-y-px">
-          {usages.map((u) => (
-            <button
-              key={`${u.file}:${u.line}`}
-              type="button"
-              onClick={() => openInEditor(`${u.file}:${u.line}`)}
-              className="flex w-full cursor-pointer items-center gap-1.5 truncate rounded border-none bg-transparent px-1 py-0.5 text-left font-mono text-[10px] text-dt-text-3 transition-colors hover:bg-dt-bg-hover hover:text-indigo-400"
-              title={`Open ${u.file}:${u.line} in editor`}
-            >
-              <span className="min-w-0 flex-1 truncate">{u.file}</span>
-              <span className="shrink-0 text-dt-text-4">:{u.line}</span>
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-export function KeyUsageBadge({ qualifiedKey }: Readonly<{ qualifiedKey: string }>) {
-  const usages = useKeyUsage(qualifiedKey);
-  if (usages.length === 0) {
-    return null;
-  }
-  return (
-    <span className="rounded-full bg-indigo-500/15 px-1.5 py-px font-semibold text-[9px] text-indigo-400">
-      {usages.length} ref{usages.length === 1 ? '' : 's'}
-    </span>
-  );
-}
-
-// ─── Expanded Key ──────────────────────────────────────────────────────────
-
-export function TranslationKeyExpanded({
-  entry,
-  eId,
-  locales,
-  editTarget,
-  editRef,
-  editVal,
-  onEditChange,
-  onSave,
-  onCancelEdit,
-  onStartEdit,
-  onEditValChange,
-}: Readonly<{
-  entry: MultiLocaleKey;
-  eId: string;
-  locales: string[];
-  editTarget: { id: string; locale: string } | null;
-  editRef: RefObject<HTMLInputElement | null>;
-  editVal: string;
-  onEditChange: (v: string) => void;
-  onSave: (locale: string, ns: string, key: string, value: string) => void;
-  onCancelEdit: () => void;
-  onStartEdit: (target: { id: string; locale: string }) => void;
-  onEditValChange: (val: string) => void;
-}>) {
-  return (
-    <div className="space-y-0.5 bg-dt-bg-subtle px-4 py-1.5 pl-8">
-      {locales.map((locale) => {
-        const val = entry.values[locale];
-        const isEditing = editTarget?.id === eId && editTarget.locale === locale;
-        const isRef = locale === REFERENCE_LOCALE;
-        return (
-          <div key={locale} className="group flex items-center gap-2 text-[11px]">
-            <span
-              className={`w-6 shrink-0 font-mono font-semibold text-[10px] uppercase ${
-                isRef ? 'text-indigo-400' : 'text-dt-text-3'
-              }`}
-            >
-              {locale}
-            </span>
-            <TranslationLocaleValue
-              value={val}
-              isEditing={isEditing}
-              editRef={editRef}
-              editVal={editVal}
-              onEditChange={onEditChange}
-              onSave={() => onSave(locale, entry.ns, entry.key, editVal)}
-              onCancel={onCancelEdit}
-              onStartEdit={() => {
-                onStartEdit({ id: eId, locale });
-                onEditValChange(val ?? '');
-              }}
-            />
-          </div>
-        );
-      })}
-      <KeyUsageList qualifiedKey={eId} />
-    </div>
-  );
-}
-
-// ─── Main Content ───────────────────────────────────────────────────────────
 
 export function TranslationsContent({
   filter,
@@ -257,7 +77,7 @@ export function TranslationsContent({
   const { set: collapsed, toggle: toggleNs, remove: removeCollapsed } = useToggleSet();
   const { set: expanded, toggle: toggleKey, add: addExpanded } = useToggleSet();
   const [missingOnly, setMissingOnly] = useState(false);
-  const [editTarget, setEditTarget] = useState<{ id: string; locale: string } | null>(null);
+  const [editTarget, setEditTarget] = useState<EditTarget | null>(null);
   const [editVal, setEditVal] = useState('');
   const [refreshKey, setRefreshKey] = useState(0);
   const editRef = useRef<HTMLInputElement>(null);
@@ -310,16 +130,13 @@ export function TranslationsContent({
     }
   }, [editTarget]);
 
-  const saveTranslation = useCallback((locale: string, ns: string, key: string, value: string) => {
-    const hot = import.meta.hot;
-    if (!hot) {
-      return;
-    }
-    hot.send(HMR_SAVE, { locale, namespace: ns, key, value });
-    updateI18nextStore(locale, ns, key, value);
-    setEditTarget(null);
-    setRefreshKey((k) => k + 1);
-  }, []);
+  const saveTranslation = useCallback(
+    async (locale: string, ns: string, key: string, value: string) => {
+      setEditTarget(null);
+      await saveTranslationToServer(locale, ns, key, value, () => setRefreshKey((k) => k + 1));
+    },
+    []
+  );
 
   if (grouped.length === 0) {
     return (
@@ -358,17 +175,19 @@ export function TranslationsContent({
             const isExpanded = expanded.has(eId);
             return (
               <div key={eId} className="border-dt-border-dim border-b">
-                <button
-                  type="button"
-                  onClick={() => toggleKey(eId)}
-                  className="flex w-full cursor-pointer items-center gap-1.5 border-none bg-transparent px-4 py-1.5 text-left text-[11px] transition-colors hover:bg-dt-bg-hover"
-                >
-                  <ChevronRight
-                    className={`size-2.5 shrink-0 text-dt-text-4 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
-                  />
-                  <span className="min-w-0 flex-1 truncate font-mono text-dt-text-2" title={eId}>
-                    {entry.key}
-                  </span>
+                <div className="flex w-full items-center gap-1.5 px-4 py-1.5 text-[11px] transition-colors hover:bg-dt-bg-hover">
+                  <button
+                    type="button"
+                    onClick={() => toggleKey(eId)}
+                    className="flex min-w-0 flex-1 cursor-pointer items-center gap-1.5 border-none bg-transparent text-left"
+                  >
+                    <ChevronRight
+                      className={`size-2.5 shrink-0 text-dt-text-4 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
+                    />
+                    <span className="min-w-0 flex-1 truncate font-mono text-dt-text-2" title={eId}>
+                      {entry.key}
+                    </span>
+                  </button>
                   <CopyButton text={eId} />
                   <KeyUsageBadge qualifiedKey={eId} />
                   {entry.missingCount > 0 && (
@@ -376,7 +195,7 @@ export function TranslationsContent({
                       {entry.missingCount} missing
                     </span>
                   )}
-                </button>
+                </div>
                 {isExpanded && (
                   <TranslationKeyExpanded
                     entry={entry}

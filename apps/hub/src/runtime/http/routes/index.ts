@@ -1,10 +1,11 @@
-import { requireAuth } from '@brika/auth/server';
+import { Scope } from '@brika/auth';
+import { requireAuth, requireScope } from '@brika/auth/server';
 import { combineRoutes, group } from '@brika/router';
 import { actionRoutes } from './action-routes';
 import { blocksRoutes } from './blocks';
 import { boardsRoutes } from './boards';
 import { bricksRoutes } from './bricks';
-import { i18nRoutes } from './i18n';
+import { i18nRoutes, i18nWriteRoutes } from './i18n';
 import { logsRoutes } from './logs';
 import { oauthRoutes } from './oauth';
 import { pageRoutes } from './pages';
@@ -23,7 +24,17 @@ import { workflowsRoutes } from './workflows';
 
 /**
  * All API routes combined.
- * Health and i18n are public; everything else requires authentication.
+ *
+ * Public: health + i18n reads (bundles, namespaces, SSE event stream) +
+ * the hub setup endpoints needed to bootstrap an unconfigured install.
+ *
+ * Authenticated: everything else.
+ *
+ * Admin-only: the i18n write surface (`GET /api/i18n/sources`,
+ * `POST /api/i18n/sources/:ns/:locale`). Source-file disclosure and
+ * translation edits are gated by `Scope.ADMIN_ALL` so a low-privilege
+ * account on a multi-user hub can't read filesystem paths or mutate
+ * JSON files; auth alone isn't enough.
  */
 export const allRoutes = combineRoutes(
   healthRoute,
@@ -38,6 +49,10 @@ export const allRoutes = combineRoutes(
       blocksRoutes,
       bricksRoutes,
       boardsRoutes,
+      group({
+        middleware: [requireScope(Scope.ADMIN_ALL)],
+        routes: [i18nWriteRoutes],
+      }),
       oauthRoutes,
       pageRoutes,
       pluginRoutesHandler,

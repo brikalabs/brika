@@ -63,8 +63,8 @@ describe('Permission System', () => {
       const loc = PERMISSIONS.location;
       expect(loc.id).toBe('location');
       expect(loc.icon).toBe('map-pin');
-      expect(loc.labelKey).toBe('plugins:permissions.location');
-      expect(loc.descriptionKey).toBe('plugins:permissions.locationDesc');
+      expect(loc.labelKey).toBe('permissions:location');
+      expect(loc.descriptionKey).toBe('permissions:locationDesc');
     });
 
     test('all entries have consistent id', () => {

@@ -1,8 +1,9 @@
 import { AlertTriangle, CheckCircle2, Wand2, XCircle } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import type { ValidationIssue } from '../types';
+import { groupBy } from './helpers';
 import { useToggleSet } from './hooks';
-import { CopyButton, EmptyState, FilterPill, groupBy, NamespaceGroup } from './primitives';
+import { CopyButton, EmptyState, FilterPill, NamespaceGroup } from './primitives';
 import { buildFix, fixAllIssues, fixIssue } from './store';
 
 export function emptyIssuesTitle(filter: string, severity: string): string {
@@ -19,17 +20,22 @@ export function issueLabel(issue: ValidationIssue): string {
   if (issue.type === 'missing-variable' && issue.variables) {
     return `missing {{${issue.variables.join('}}, {{')}}}`;
   }
+  if (issue.type === 'plugin-error') {
+    // The detail string is the actual error message — show it as the row
+    // title so the user doesn't have to expand anything to see what broke.
+    // Fall through to the generic label if no detail was attached.
+    return issue.detail ?? 'plugin error';
+  }
   return issue.type.replaceAll('-', ' ');
 }
 
 export function fixLabel(issue: ValidationIssue): string | null {
   switch (issue.type) {
     case 'missing-key':
-      return 'Copy ref';
-    case 'extra-key':
-      return 'Remove';
     case 'missing-variable':
-      return 'Copy ref';
+      return 'Copy';
+    case 'plugin-error':
+      return null;
     default:
       return null;
   }

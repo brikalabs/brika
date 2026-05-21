@@ -1,12 +1,9 @@
 {
-  "extends": "../../tsconfig.base.json",
+  "extends": "../../tsconfig.json",
   "compilerOptions": {
     "outDir": "./dist",
     "rootDir": "./src",
-    "lib": ["ESNext", "DOM"],
-    "jsx": "react-jsx",
-    "types": ["vite/client", "bun-types"],
-    "noUncheckedIndexedAccess": true
+    "types": ["vite/client", "bun-types"]
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "src/check.ts", "src/generate-types.ts", "src/**/*.test.ts"]

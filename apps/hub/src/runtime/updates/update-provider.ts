@@ -75,11 +75,11 @@ export class UpdateProvider {
  */
 @injectable()
 export class GitHubUpdateProvider extends UpdateProvider {
-  check(channel: UpdateChannelId): Promise<UpdateInfo> {
+  override check(channel: UpdateChannelId): Promise<UpdateInfo> {
     return checkForUpdate(channel);
   }
 
-  apply(options: ProviderApplyOptions): Promise<ApplyResult> {
+  override apply(options: ProviderApplyOptions): Promise<ApplyResult> {
     const args: ApplyUpdateOptions = {
       force: options.force,
       channel: options.channel,

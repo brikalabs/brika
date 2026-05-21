@@ -26,7 +26,10 @@
     "select": "Select",
     "copy": "Copy",
     "rename": "Rename",
-    "done": "Done"
+    "done": "Done",
+    "saving": "Saving...",
+    "add": "Add",
+    "remove": "Remove"
   },
   "status": {
     "running": "Running",

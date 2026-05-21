@@ -25,7 +25,8 @@
       "undo": "Undo",
       "undoTooltip": "Undo last change",
       "redo": "Redo",
-      "redoTooltip": "Redo"
+      "redoTooltip": "Redo",
+      "cancel": "Cancel"
     },
     "status": {
       "saved": "Saved",
@@ -57,25 +58,63 @@
     "dialogTitle": "Theme presets",
     "dialogDescription": "Start from one of Clay's built-in themes.",
     "items": {
-      "default": { "description": "Brika's classic palette." },
-      "brika": { "description": "Brika's signature blue-grey palette." },
-      "ocean": { "description": "Cool blues and teals." },
-      "forest": { "description": "Greens and earth tones." },
-      "sunset": { "description": "Warm oranges and corals." },
-      "lavender": { "description": "Soft purples and violets." },
-      "ruby": { "description": "Bold reds and roses." },
-      "nord": { "description": "Frosty Nordic palette." },
-      "solarized": { "description": "Solarized colour palette." },
-      "candy": { "description": "Vivid pop colours." },
-      "dracula": { "description": "Dark editor classic." },
-      "synthwave": { "description": "Neon glow on a dark grid." },
-      "mono": { "description": "Pure greyscale." },
-      "brutalist": { "description": "Sharp corners, heavy borders." },
-      "editorial": { "description": "Long-form reading layout." },
-      "terminal": { "description": "Monospace hacker aesthetic." },
-      "skeuomorph": { "description": "Glossy faux-real surfaces." },
-      "glass": { "description": "Translucent frosted layers." },
-      "comic": { "description": "Loud comic-book style." }
+      "default": {
+        "description": "Brika's classic palette."
+      },
+      "brika": {
+        "description": "Brika's signature blue-grey palette."
+      },
+      "ocean": {
+        "description": "Cool blues and teals."
+      },
+      "forest": {
+        "description": "Greens and earth tones."
+      },
+      "sunset": {
+        "description": "Warm oranges and corals."
+      },
+      "lavender": {
+        "description": "Soft purples and violets."
+      },
+      "ruby": {
+        "description": "Bold reds and roses."
+      },
+      "nord": {
+        "description": "Frosty Nordic palette."
+      },
+      "solarized": {
+        "description": "Solarized colour palette."
+      },
+      "candy": {
+        "description": "Vivid pop colours."
+      },
+      "dracula": {
+        "description": "Dark editor classic."
+      },
+      "synthwave": {
+        "description": "Neon glow on a dark grid."
+      },
+      "mono": {
+        "description": "Pure greyscale."
+      },
+      "brutalist": {
+        "description": "Sharp corners, heavy borders."
+      },
+      "editorial": {
+        "description": "Long-form reading layout."
+      },
+      "terminal": {
+        "description": "Monospace hacker aesthetic."
+      },
+      "skeuomorph": {
+        "description": "Glossy faux-real surfaces."
+      },
+      "glass": {
+        "description": "Translucent frosted layers."
+      },
+      "comic": {
+        "description": "Loud comic-book style."
+      }
     }
   },
   "tabs": {
@@ -85,12 +124,30 @@
   "design": {
     "sectionsLabel": "Sections",
     "sections": {
-      "typography": { "label": "Typography", "hint": "Fonts and sizes" },
-      "geometry": { "label": "Geometry", "hint": "Radius and corners" },
-      "components": { "label": "Components", "hint": "Per-component tokens" },
-      "spacing": { "label": "Spacing", "hint": "Density and rhythm" },
-      "effects": { "label": "Effects", "hint": "Elevation, motion, focus" },
-      "atmosphere": { "label": "Atmosphere", "hint": "Backdrop and translucency" }
+      "typography": {
+        "label": "Typography",
+        "hint": "Fonts and sizes"
+      },
+      "geometry": {
+        "label": "Geometry",
+        "hint": "Radius and corners"
+      },
+      "components": {
+        "label": "Components",
+        "hint": "Per-component tokens"
+      },
+      "spacing": {
+        "label": "Spacing",
+        "hint": "Density and rhythm"
+      },
+      "effects": {
+        "label": "Effects",
+        "hint": "Elevation, motion, focus"
+      },
+      "atmosphere": {
+        "label": "Atmosphere",
+        "hint": "Backdrop and translucency"
+      }
     },
     "radius": "Radius",
     "baseUnit": "Base unit",
@@ -119,45 +176,114 @@
       "label": "Corner shape",
       "fallback": "Inherits theme",
       "options": {
-        "round": { "label": "Round", "hint": "Standard border-radius" },
-        "squircle": { "label": "Squircle", "hint": "iOS-style smooth curve" },
-        "bevel": { "label": "Bevel", "hint": "45° chamfered corner" },
-        "scoop": { "label": "Scoop", "hint": "Concave arc cut-out" },
-        "notch": { "label": "Notch", "hint": "Right-angle step cut" }
+        "round": {
+          "label": "Round",
+          "hint": "Standard border-radius"
+        },
+        "squircle": {
+          "label": "Squircle",
+          "hint": "iOS-style smooth curve"
+        },
+        "bevel": {
+          "label": "Bevel",
+          "hint": "45° chamfered corner"
+        },
+        "scoop": {
+          "label": "Scoop",
+          "hint": "Concave arc cut-out"
+        },
+        "notch": {
+          "label": "Notch",
+          "hint": "Right-angle step cut"
+        }
       }
     },
     "radius": {
       "caption": "Drag to set the base radius",
       "semanticLabel": "Semantic scale",
       "presets": {
-        "sharp": { "label": "Sharp", "hint": "Brutalist, right-angle" },
-        "subtle": { "label": "Subtle", "hint": "Barely rounded" },
-        "default": { "label": "Default", "hint": "Classic web feel" },
-        "soft": { "label": "Soft", "hint": "Brika default" },
-        "pillowy": { "label": "Pillowy", "hint": "Very rounded" },
-        "pill": { "label": "Pill", "hint": "Fully rounded" }
+        "sharp": {
+          "label": "Sharp",
+          "hint": "Brutalist, right-angle"
+        },
+        "subtle": {
+          "label": "Subtle",
+          "hint": "Barely rounded"
+        },
+        "default": {
+          "label": "Default",
+          "hint": "Classic web feel"
+        },
+        "soft": {
+          "label": "Soft",
+          "hint": "Brika default"
+        },
+        "pillowy": {
+          "label": "Pillowy",
+          "hint": "Very rounded"
+        },
+        "pill": {
+          "label": "Pill",
+          "hint": "Fully rounded"
+        }
       },
       "samples": {
-        "pill": { "label": "Pill", "hint": "Chips, badges" },
-        "control": { "label": "Control", "hint": "Buttons, inputs" },
-        "container": { "label": "Container", "hint": "Cards, panels" },
-        "surface": { "label": "Surface", "hint": "Dialogs, sheets" }
+        "pill": {
+          "label": "Pill",
+          "hint": "Chips, badges"
+        },
+        "control": {
+          "label": "Control",
+          "hint": "Buttons, inputs"
+        },
+        "container": {
+          "label": "Container",
+          "hint": "Cards, panels"
+        },
+        "surface": {
+          "label": "Surface",
+          "hint": "Dialogs, sheets"
+        }
       }
     },
     "spacing": {
       "presets": {
-        "compact": { "label": "Compact", "hint": "Dense layouts" },
-        "cozy": { "label": "Cozy", "hint": "Slightly tighter" },
-        "default": { "label": "Default", "hint": "Brika baseline" },
-        "roomy": { "label": "Roomy", "hint": "Spacious feel" }
+        "compact": {
+          "label": "Compact",
+          "hint": "Dense layouts"
+        },
+        "cozy": {
+          "label": "Cozy",
+          "hint": "Slightly tighter"
+        },
+        "default": {
+          "label": "Default",
+          "hint": "Brika baseline"
+        },
+        "roomy": {
+          "label": "Roomy",
+          "hint": "Spacious feel"
+        }
       }
     },
     "textSize": {
       "presets": {
-        "compact": { "label": "Compact", "hint": "Smaller text" },
-        "default": { "label": "Default", "hint": "Brika baseline" },
-        "comfortable": { "label": "Comfortable", "hint": "Slightly larger" },
-        "large": { "label": "Large", "hint": "More legible" }
+        "compact": {
+          "label": "Compact",
+          "hint": "Smaller text"
+        },
+        "default": {
+          "label": "Default",
+          "hint": "Brika baseline"
+        },
+        "comfortable": {
+          "label": "Comfortable",
+          "hint": "Slightly larger"
+        },
+        "large": {
+          "label": "Large",
+          "hint": "More legible"
+        }
       },
       "preview": {
         "title": "Title",
@@ -175,16 +301,46 @@
         "semanticLevels": "Semantic levels",
         "tintWithPrimary": "Tint shadow with primary",
         "levels": {
-          "surface": { "label": "Surface", "hint": "Resting cards" },
-          "raised": { "label": "Raised", "hint": "Hover or active" },
-          "overlay": { "label": "Overlay", "hint": "Popovers, dropdowns" },
-          "modal": { "label": "Modal", "hint": "Dialogs and sheets" },
-          "spotlight": { "label": "Spotlight", "hint": "Toasts, palettes" },
-          "xs": { "label": "Extra small", "hint": "" },
-          "sm": { "label": "Small", "hint": "" },
-          "md": { "label": "Medium", "hint": "" },
-          "lg": { "label": "Large", "hint": "" },
-          "xl": { "label": "Extra large", "hint": "" }
+          "surface": {
+            "label": "Surface",
+            "hint": "Resting cards"
+          },
+          "raised": {
+            "label": "Raised",
+            "hint": "Hover or active"
+          },
+          "overlay": {
+            "label": "Overlay",
+            "hint": "Popovers, dropdowns"
+          },
+          "modal": {
+            "label": "Modal",
+            "hint": "Dialogs and sheets"
+          },
+          "spotlight": {
+            "label": "Spotlight",
+            "hint": "Toasts, palettes"
+          },
+          "xs": {
+            "label": "Extra small",
+            "hint": ""
+          },
+          "sm": {
+            "label": "Small",
+            "hint": ""
+          },
+          "md": {
+            "label": "Medium",
+            "hint": ""
+          },
+          "lg": {
+            "label": "Large",
+            "hint": ""
+          },
+          "xl": {
+            "label": "Extra large",
+            "hint": ""
+          }
         }
       },
       "motion": {
@@ -206,10 +362,22 @@
       "border": {
         "preview": "Preview",
         "presets": {
-          "hairline": { "label": "Hairline", "hint": "0.5px" },
-          "regular": { "label": "Regular", "hint": "1px" },
-          "medium": { "label": "Medium", "hint": "1.5px" },
-          "bold": { "label": "Bold", "hint": "2px" }
+          "hairline": {
+            "label": "Hairline",
+            "hint": "0.5px"
+          },
+          "regular": {
+            "label": "Regular",
+            "hint": "1px"
+          },
+          "medium": {
+            "label": "Medium",
+            "hint": "1.5px"
+          },
+          "bold": {
+            "label": "Bold",
+            "hint": "2px"
+          }
         }
       },
       "ring": {
@@ -334,49 +502,154 @@
       "state": "State"
     },
     "items": {
-      "alert": { "label": "Alert", "description": "Inline notice with status colour." },
-      "avatar": { "label": "Avatar", "description": "User or workspace identity." },
-      "badge": { "label": "Badge", "description": "Compact label or counter." },
-      "button": { "label": "Button", "description": "Primary action affordance." },
-      "card": { "label": "Card", "description": "Resting surface for grouped content." },
-      "checkbox": { "label": "Checkbox", "description": "Boolean form control." },
-      "code-block": { "label": "Code block", "description": "Pre-formatted code surface." },
-      "dialog": { "label": "Dialog", "description": "Modal that commands focus." },
-      "icon": { "label": "Icon", "description": "Inline pictogram." },
-      "input": { "label": "Input", "description": "Single-line text field." },
-      "menu": { "label": "Menu", "description": "Floating action surface." },
-      "menu-item": { "label": "Menu item", "description": "Single row in a menu." },
-      "password-input": { "label": "Password input", "description": "Masked text field." },
-      "popover": { "label": "Popover", "description": "Anchored floating surface." },
-      "progress": { "label": "Progress", "description": "Determinate progress bar." },
-      "select": { "label": "Select", "description": "Dropdown picker." },
-      "separator": { "label": "Separator", "description": "Inline divider." },
-      "sheet": { "label": "Sheet", "description": "Edge-anchored modal panel." },
-      "sidebar": { "label": "Sidebar", "description": "App navigation rail." },
-      "slider": { "label": "Slider", "description": "Numeric range input." },
-      "switch": { "label": "Switch", "description": "Boolean on/off toggle." },
-      "switch-thumb": { "label": "Switch thumb", "description": "The moving thumb on a switch." },
-      "table": { "label": "Table", "description": "Tabular data layout." },
-      "tabs": { "label": "Tabs", "description": "Switch between sibling views." },
-      "textarea": { "label": "Textarea", "description": "Multi-line text field." },
-      "toast": { "label": "Toast", "description": "Transient notification." },
-      "tooltip": { "label": "Tooltip", "description": "Hover help text." },
-      "alert-dialog": { "label": "Alert Dialog", "description": "Blocking confirmation modal." },
-      "breadcrumb": { "label": "Breadcrumb", "description": "Hierarchical location trail." },
+      "alert": {
+        "label": "Alert",
+        "description": "Inline notice with status colour."
+      },
+      "avatar": {
+        "label": "Avatar",
+        "description": "User or workspace identity."
+      },
+      "badge": {
+        "label": "Badge",
+        "description": "Compact label or counter."
+      },
+      "button": {
+        "label": "Button",
+        "description": "Primary action affordance."
+      },
+      "card": {
+        "label": "Card",
+        "description": "Resting surface for grouped content."
+      },
+      "checkbox": {
+        "label": "Checkbox",
+        "description": "Boolean form control."
+      },
+      "code-block": {
+        "label": "Code block",
+        "description": "Pre-formatted code surface."
+      },
+      "dialog": {
+        "label": "Dialog",
+        "description": "Modal that commands focus."
+      },
+      "icon": {
+        "label": "Icon",
+        "description": "Inline pictogram."
+      },
+      "input": {
+        "label": "Input",
+        "description": "Single-line text field."
+      },
+      "menu": {
+        "label": "Menu",
+        "description": "Floating action surface."
+      },
+      "menu-item": {
+        "label": "Menu item",
+        "description": "Single row in a menu."
+      },
+      "password-input": {
+        "label": "Password input",
+        "description": "Masked text field."
+      },
+      "popover": {
+        "label": "Popover",
+        "description": "Anchored floating surface."
+      },
+      "progress": {
+        "label": "Progress",
+        "description": "Determinate progress bar."
+      },
+      "select": {
+        "label": "Select",
+        "description": "Dropdown picker."
+      },
+      "separator": {
+        "label": "Separator",
+        "description": "Inline divider."
+      },
+      "sheet": {
+        "label": "Sheet",
+        "description": "Edge-anchored modal panel."
+      },
+      "sidebar": {
+        "label": "Sidebar",
+        "description": "App navigation rail."
+      },
+      "slider": {
+        "label": "Slider",
+        "description": "Numeric range input."
+      },
+      "switch": {
+        "label": "Switch",
+        "description": "Boolean on/off toggle."
+      },
+      "switch-thumb": {
+        "label": "Switch thumb",
+        "description": "The moving thumb on a switch."
+      },
+      "table": {
+        "label": "Table",
+        "description": "Tabular data layout."
+      },
+      "tabs": {
+        "label": "Tabs",
+        "description": "Switch between sibling views."
+      },
+      "textarea": {
+        "label": "Textarea",
+        "description": "Multi-line text field."
+      },
+      "toast": {
+        "label": "Toast",
+        "description": "Transient notification."
+      },
+      "tooltip": {
+        "label": "Tooltip",
+        "description": "Hover help text."
+      },
+      "alert-dialog": {
+        "label": "Alert Dialog",
+        "description": "Blocking confirmation modal."
+      },
+      "breadcrumb": {
+        "label": "Breadcrumb",
+        "description": "Hierarchical location trail."
+      },
       "button-group": {
         "label": "Button Group",
         "description": "Attached buttons sharing a border."
       },
-      "chart": { "label": "Chart", "description": "Area chart for time-series metrics." },
-      "collapsible": { "label": "Collapsible", "description": "Expandable / collapsible section." },
-      "empty-state": { "label": "Empty State", "description": "Placeholder for zero-data views." },
+      "chart": {
+        "label": "Chart",
+        "description": "Area chart for time-series metrics."
+      },
+      "collapsible": {
+        "label": "Collapsible",
+        "description": "Expandable / collapsible section."
+      },
+      "empty-state": {
+        "label": "Empty State",
+        "description": "Placeholder for zero-data views."
+      },
       "input-group": {
         "label": "Input Group",
         "description": "Input with leading or trailing addon."
       },
-      "label": { "label": "Label", "description": "Accessible form field label." },
-      "overflow-list": { "label": "Overflow List", "description": "List that hides excess items." },
-      "page-header": { "label": "Page Header", "description": "Title and description for a page." },
+      "label": {
+        "label": "Label",
+        "description": "Accessible form field label."
+      },
+      "overflow-list": {
+        "label": "Overflow List",
+        "description": "List that hides excess items."
+      },
+      "page-header": {
+        "label": "Page Header",
+        "description": "Title and description for a page."
+      },
       "progress-display": {
         "label": "Progress Display",
         "description": "Step progress with log output."
@@ -385,12 +658,18 @@
         "label": "Scroll Area",
         "description": "Custom-styled scrollable container."
       },
-      "section": { "label": "Section", "description": "Semantic content section with header." },
+      "section": {
+        "label": "Section",
+        "description": "Semantic content section with header."
+      },
       "section-label": {
         "label": "Section Label",
         "description": "Small uppercase group divider."
       },
-      "skeleton": { "label": "Skeleton", "description": "Loading placeholder shimmer." }
+      "skeleton": {
+        "label": "Skeleton",
+        "description": "Loading placeholder shimmer."
+      }
     }
   },
   "tokens": {},
@@ -400,5 +679,15 @@
   },
   "confirm": {
     "deleteTheme": "Delete this theme? This cannot be undone."
+  },
+  "generator": {
+    "trigger": "Generate theme",
+    "title": "Generate a theme",
+    "description": "Pick a primary color and a style — all tokens are derived automatically from Clay's token registry.",
+    "primaryLabel": "Primary color",
+    "styleLabel": "Surface tint",
+    "radiusLabel": "Corner radius",
+    "nameLabel": "Theme name",
+    "generate": "Generate"
   }
 }

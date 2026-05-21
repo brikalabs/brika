@@ -1,6 +1,7 @@
 import { join } from 'node:path';
 import { compileClientModule, hashPluginSources } from '@brika/compiler';
 import { inject, singleton } from '@brika/di';
+import { brikaContext } from '@/runtime/context/brika-context';
 import { Logger } from '@/runtime/logs/log-router';
 import { type CacheEntry, ModuleCache } from './module-cache';
 import { TailwindCompiler } from './tailwind';
@@ -79,6 +80,9 @@ export class ModuleCompiler {
     const result = await compileClientModule({
       entrypoint,
       pluginRoot: rootDirectory,
+      // Workspace-relative source paths so the dev-server's open-in-editor
+      // endpoint resolves them without plugin-specific knowledge.
+      sourceRoot: brikaContext.rootDir,
     });
 
     if (!result.success) {

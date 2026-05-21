@@ -2,8 +2,6 @@ import { Check, ChevronRight, Copy } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useCallback, useState } from 'react';
 
-// ─── UI Primitives ──────────────────────────────────────────────────────────
-
 export function FilterPill({
   active,
   onClick,
@@ -151,90 +149,4 @@ export function KbdGroup({ keys }: Readonly<{ keys: string[] }>) {
       ))}
     </span>
   );
-}
-
-// ─── Shared constants ─────────────────────────────────────────────────────
-
-/** DOM tags to skip when walking text nodes for translation matching. */
-const SKIP_TAGS = new Set([
-  'SCRIPT',
-  'STYLE',
-  'NOSCRIPT',
-  'SVG',
-  'CODE',
-  'PRE',
-  'TEXTAREA',
-  'INPUT',
-]);
-
-/** Check if a text node's parent should be skipped during translation scanning. */
-export function isSkippedParent(el: Element | null): el is null {
-  if (!el) {
-    return true;
-  }
-  return el.closest('#i18n-dev-root') !== null || SKIP_TAGS.has(el.tagName);
-}
-
-/**
- * Create a MutationObserver that coalesces mutations via requestAnimationFrame.
- * Returns the observer — caller is responsible for calling `.disconnect()`.
- */
-export function observeBodyMutations(callback: () => void): MutationObserver {
-  let pending = false;
-  const obs = new MutationObserver(() => {
-    if (pending) {
-      return;
-    }
-    pending = true;
-    requestAnimationFrame(() => {
-      pending = false;
-      callback();
-    });
-  });
-  obs.observe(document.body, { childList: true, subtree: true, characterData: true });
-  return obs;
-}
-
-// ─── Shared utilities ──────────────────────────────────────────────────────
-
-export function openInEditor(source: string) {
-  fetch(`/__open-in-editor?file=${encodeURIComponent(source)}`).catch(() => {
-    // silently ignore — editor integration may not be available
-  });
-}
-
-// ─── Shared helpers ─────────────────────────────────────────────────────────
-
-export function groupBy<T>(items: T[], keyFn: (item: T) => string): [string, T[]][] {
-  const map = new Map<string, T[]>();
-  for (const item of items) {
-    const k = keyFn(item);
-    const list = map.get(k) ?? [];
-    list.push(item);
-    map.set(k, list);
-  }
-  return [...map.entries()].sort(([a], [b]) => a.localeCompare(b));
-}
-
-type StatusColor = 'emerald' | 'amber' | 'red';
-
-function statusColor(pct: number): StatusColor {
-  if (pct === 100) {
-    return 'emerald';
-  }
-  return pct > 80 ? 'amber' : 'red';
-}
-
-const COLOR_CLASSES: Record<StatusColor, { bar: string; text: string }> = {
-  emerald: { bar: 'bg-emerald-400', text: 'text-emerald-400' },
-  amber: { bar: 'bg-amber-400', text: 'text-amber-400' },
-  red: { bar: 'bg-red-400', text: 'text-red-400' },
-};
-
-export function coverageColor(pct: number): StatusColor {
-  return statusColor(pct);
-}
-
-export function pctColor(pct: number) {
-  return COLOR_CLASSES[statusColor(pct)];
 }

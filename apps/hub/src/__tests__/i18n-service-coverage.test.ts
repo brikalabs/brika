@@ -98,7 +98,7 @@ describe('I18nService — coverage gaps', () => {
       });
     });
 
-    test('returns empty object when no namespaces match the locale', async () => {
+    test('returns no core namespaces when the hub locales directory is empty', async () => {
       bun
         .fs({
           '/test/hub/locales/': [],
@@ -109,7 +109,10 @@ describe('I18nService — coverage gaps', () => {
 
       const result = service.getAllTranslations('en');
 
-      expect(result).toEqual({});
+      // Hub-defined core namespaces are absent. The embedded workspace archive
+      // may still contribute namespaces (e.g. permissions), which is expected.
+      expect(result.common).toBeUndefined();
+      expect(result.nav).toBeUndefined();
     });
 
     test('applies regional locale fallback in bulk response', async () => {

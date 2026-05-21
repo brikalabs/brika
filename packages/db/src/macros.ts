@@ -50,3 +50,77 @@ export async function loadTarBytes(repoRelativePath: string): Promise<number[]> 
   const archive = new Bun.Archive(files, { compress: 'gzip', level: 9 });
   return Array.from(await archive.bytes());
 }
+
+export async function loadWorkspaceLocaleArchive(): Promise<number[]> {
+  const packagesDir = resolve(REPO_ROOT, 'packages');
+  if (!existsSync(packagesDir) || !statSync(packagesDir).isDirectory()) {
+    return [];
+  }
+
+  const files: Record<string, Uint8Array> = {};
+  const pkgGlob = new Bun.Glob('*/');
+
+  for await (const dirSlash of pkgGlob.scan({
+    cwd: packagesDir,
+    absolute: false,
+    onlyFiles: false,
+  })) {
+    const pkgDirName = dirSlash.replace(/\/$/, '');
+    if (!pkgDirName) {
+      continue;
+    }
+    await collectPackageLocaleFiles(packagesDir, pkgDirName, files);
+  }
+
+  if (Object.keys(files).length === 0) {
+    return [];
+  }
+
+  const archive = new Bun.Archive(files, { compress: 'gzip', level: 9 });
+  return Array.from(await archive.bytes());
+}
+
+async function collectPackageLocaleFiles(
+  packagesDir: string,
+  pkgDirName: string,
+  out: Record<string, Uint8Array>
+): Promise<void> {
+  const pkgRoot = resolve(packagesDir, pkgDirName);
+  const localesDir = resolve(pkgRoot, 'locales');
+  if (!existsSync(localesDir) || !statSync(localesDir).isDirectory()) {
+    return;
+  }
+
+  const namespace = await deriveNamespace(pkgRoot, pkgDirName);
+  const localeGlob = new Bun.Glob('**/*.json');
+
+  for await (const relPath of localeGlob.scan({ cwd: localesDir, absolute: false })) {
+    const file = Bun.file(resolve(localesDir, relPath));
+    if (!(await file.exists())) {
+      continue;
+    }
+    try {
+      const content = await file.bytes();
+      if (content.length > 0) {
+        out[`${namespace}/${relPath}`] = content;
+      }
+    } catch {
+      // skip unreadable files
+    }
+  }
+}
+
+async function deriveNamespace(pkgRoot: string, fallback: string): Promise<string> {
+  try {
+    const parsed: unknown = await Bun.file(resolve(pkgRoot, 'package.json')).json();
+    if (parsed !== null && typeof parsed === 'object' && 'name' in parsed) {
+      const name = parsed.name;
+      if (typeof name === 'string' && name.length > 0) {
+        return name.replace(/^@[^/]+\//, '');
+      }
+    }
+  } catch {
+    // Fall through to directory-name fallback.
+  }
+  return fallback;
+}

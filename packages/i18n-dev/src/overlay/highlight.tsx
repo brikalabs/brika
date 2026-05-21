@@ -1,93 +1,13 @@
-import i18next from 'i18next';
-import type { ReactNode } from 'react';
 import { useEffect, useRef, useState } from 'react';
-import { isSkippedParent, observeBodyMutations } from './primitives';
+import { isSkippedParent, observeBodyMutations } from './dom-utils';
 import { getStoreData, trackedTranslations, walkStoreEntries } from './store';
 
-// ─── Variable display (uses i18next's own interpolator) ─────────────────────
-
-interface I18nInterpolator {
-  interpolate(str: string, data: object, lng: string, options: object): string;
-}
-
-interface TemplatePart {
-  type: 'text' | 'var';
-  content: string;
-}
-
-const SENTINEL = '\0';
-
-function splitTemplate(value: string): TemplatePart[] {
-  const interpolator = (i18next.services as unknown as Record<string, unknown> | undefined)
-    ?.interpolator as I18nInterpolator | undefined;
-  if (!interpolator) {
-    return [{ type: 'text', content: value }];
-  }
-
-  const vars: string[] = [];
-  const data = new Proxy({} as Record<string, string>, {
-    get(_, prop) {
-      if (typeof prop !== 'string') {
-        return undefined;
-      }
-      vars.push(prop);
-      return `${SENTINEL}${prop}${SENTINEL}`;
-    },
-    has() {
-      return true;
-    },
-  });
-
-  const interpolated = interpolator.interpolate(value, data, i18next.language, {
-    interpolation: { escapeValue: false },
-  });
-
-  if (vars.length === 0) {
-    return [{ type: 'text', content: value }];
-  }
-
-  const varSet = new Set(vars);
-  const parts: TemplatePart[] = [];
-  for (const segment of interpolated.split(SENTINEL)) {
-    if (segment.length === 0) {
-      continue;
-    }
-    if (varSet.has(segment)) {
-      parts.push({ type: 'var', content: `{{${segment}}}` });
-    } else {
-      parts.push({ type: 'text', content: segment });
-    }
-  }
-  return parts;
-}
-
-export function VariableHighlight({ value }: Readonly<{ value: string }>): ReactNode {
-  const parts = splitTemplate(value);
-  if (parts.length <= 1 && parts[0]?.type === 'text') {
-    return <>{value}</>;
-  }
-  return (
-    <>
-      {parts.map((part, i) =>
-        part.type === 'var' ? (
-          <span
-            key={`var-${part.content}-${i}`}
-            className="mx-0.5 inline-block rounded bg-indigo-500/20 px-1 font-semibold text-indigo-300"
-          >
-            {part.content}
-          </span>
-        ) : (
-          <span key={`txt-${part.content.length}-${i}`}>{part.content}</span>
-        )
-      )}
-    </>
-  );
-}
-
-// ─── Highlight Mode ─────────────────────────────────────────────────────────
+export { VariableHighlight } from './variable-highlight';
 
 const HL_KEY = 'data-i18n-key';
 const HL_RAW = 'data-i18n-raw';
+const HL_CSS = `[${HL_KEY}],[${HL_RAW}]{cursor:crosshair!important}`;
+
 function buildStoreMap(): Map<string, string> {
   const map = new Map<string, string>();
   const resources = getStoreData();
@@ -129,12 +49,6 @@ export interface HighlightHover {
   mouseX: number;
 }
 
-const HL_CSS = `[${HL_KEY}],[${HL_RAW}]{cursor:crosshair!important}`;
-
-/**
- * Hook that manages highlight scanning, attribute tagging, and hover tracking.
- * Returns the current hover state so React components can render overlay + tooltip.
- */
 export function useHighlightMode(active: boolean): HighlightHover | null {
   const [hover, setHover] = useState<HighlightHover | null>(null);
 
@@ -182,9 +96,10 @@ export function useHighlightMode(active: boolean): HighlightHover | null {
     function scan() {
       clearAttrs();
       const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
-      let node: Text | null;
-      while ((node = walker.nextNode() as Text | null)) {
-        tagTextNode(node);
+      for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
+        if (node instanceof Text) {
+          tagTextNode(node);
+        }
       }
     }
 
@@ -202,7 +117,8 @@ export function useHighlightMode(active: boolean): HighlightHover | null {
     }
 
     function onMove(e: MouseEvent) {
-      const t = (e.target as Element)?.closest?.(`[${HL_KEY}],[${HL_RAW}]`);
+      const target = e.target;
+      const t = target instanceof Element ? target.closest(`[${HL_KEY}],[${HL_RAW}]`) : null;
       if (t) {
         hoveredEl = t;
         lastMouseX = e.clientX;

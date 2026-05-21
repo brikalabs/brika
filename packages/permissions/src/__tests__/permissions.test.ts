@@ -44,8 +44,8 @@ describe('PERMISSIONS registry', () => {
     expect(PERMISSIONS.location).toEqual({
       id: 'location',
       icon: 'map-pin',
-      labelKey: 'plugins:permissions.location',
-      descriptionKey: 'plugins:permissions.locationDesc',
+      labelKey: 'permissions:location',
+      descriptionKey: 'permissions:locationDesc',
     });
   });
 

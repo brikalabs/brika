@@ -1,34 +1,45 @@
 {
+  // Canonical TypeScript config for every package, app, and plugin in the
+  // workspace. Each `tsconfig.json` in a sub-package extends this one and
+  // adds only the settings unique to that package (e.g. `include`, JSX or
+  // DOM `lib`, path aliases). There is NO `tsconfig.base.json` — extend
+  // this file directly.
   "compilerOptions": {
+    // ─── Output target ──────────────────────────────────────────────────
     "target": "ESNext",
     "module": "ESNext",
-    "lib": ["ESNext", "DOM"],
     "moduleResolution": "bundler",
+    "lib": ["ESNext", "DOM"],
+    "jsx": "react-jsx",
     "types": ["bun-types"],
 
-    // Strict mode
+    // ─── Strictness ─────────────────────────────────────────────────────
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "noImplicitOverride": true,
+    "forceConsistentCasingInFileNames": true,
+    // Every file is a module — no implicit global-script files. Lets us
+    // `await` at the top level of triple-slash-only entrypoints (e.g. CLIs).
+    "moduleDetection": "force",
 
-    // Emit
+    // ─── Emit ──────────────────────────────────────────────────────────
+    // `noEmit: true` is the default. Packages that emit (e.g. via `tsc -p`
+    // without `--noEmit`) override it locally. `declaration`/`declarationMap`
+    // stay on so package builds still produce `.d.ts` when they opt in.
+    "noEmit": true,
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
     "removeComments": false,
-    "jsx": "react-jsx",
 
-    // Interop
+    // ─── Interop ───────────────────────────────────────────────────────
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
-
-    // Paths
     "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
 
-    // Decorators
+    // ─── Decorators (used by @brika/di and a handful of services) ──────
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true
   },

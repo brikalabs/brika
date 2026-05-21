@@ -121,7 +121,10 @@ describe('I18nService', () => {
       await service.init();
 
       const namespaces = service.listNamespaces();
-      expect(namespaces).toEqual(['alpha', 'beta', 'zeta']);
+      // The hub-defined namespaces appear, sorted (the embedded workspace archive
+      // may add others — only assert the subset under test).
+      const hubNamespaces = namespaces.filter((n) => ['alpha', 'beta', 'zeta'].includes(n));
+      expect(hubNamespaces).toEqual(['alpha', 'beta', 'zeta']);
     });
 
     test('includes plugin namespaces with prefix', async () => {

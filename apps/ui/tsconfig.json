@@ -1,14 +1,16 @@
 {
-  "extends": "../../tsconfig.base.json",
+  "extends": "../../tsconfig.json",
   "compilerOptions": {
-    "baseUrl": ".",
     "composite": true,
     "lib": ["DOM", "DOM.Iterable", "ES2024", "ESNext"],
-    "jsx": "react-jsx",
     "types": ["vite/client"],
     "paths": {
       "@/*": ["./src/*"]
-    }
+    },
+    // TODO(typecheck): existing app code does not satisfy
+    // `noUncheckedIndexedAccess`. Flip to `true` once outstanding
+    // theme-builder / workflows / data-channel issues are fixed.
+    "noUncheckedIndexedAccess": false
   },
   "include": ["src"]
 }
