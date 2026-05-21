@@ -28,7 +28,10 @@ export function readArguments(code: string, openParen: number): Arguments | null
   while (cursor.pos < code.length) {
     const result = stepArgumentCursor(code, cursor);
     if (result.kind === 'done') {
-      return { spans: makeSpans(code, cursor.splits, result.closeParen), closeParen: result.closeParen };
+      return {
+        spans: makeSpans(code, cursor.splits, result.closeParen),
+        closeParen: result.closeParen,
+      };
     }
     if (result.kind === 'fail') {
       return null;

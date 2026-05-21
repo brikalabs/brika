@@ -25,7 +25,9 @@ describe('PluginPackageSchema — legacy permissions migration', () => {
       permissions: ['net'],
     });
     expect(result.success).toBe(false);
-    if (result.success) return;
+    if (result.success) {
+      return;
+    }
 
     const issue = result.error.issues.find((i) => i.path[0] === 'permissions');
     expect(issue).toBeDefined();

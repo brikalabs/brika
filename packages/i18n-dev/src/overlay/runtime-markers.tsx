@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import type { RuntimeEntry } from './hooks';
 import { isSkippedParent, observeBodyMutations, openInEditor } from './dom-utils';
+import type { RuntimeEntry } from './hooks';
 import { getMergedKeyUsage, trackedTranslations } from './store';
 
 // ─── Types ──────────────────────────────────────────────────────────────────

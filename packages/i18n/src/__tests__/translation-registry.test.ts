@@ -272,4 +272,3 @@ describe('TranslationRegistry — t()', () => {
     expect(reg.t('en', 'common.hello')).toBe('Hi');
   });
 });
-

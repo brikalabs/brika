@@ -7,10 +7,11 @@ import {
   type ParsedArg,
   readStringArg,
 } from './tokenizer';
-import { emptyKeyUsageMap, type KeyUsageMap, SOURCE_EXTENSIONS } from './types';
+import type { KeyUsageMap } from './types';
+import { emptyKeyUsageMap, SOURCE_EXTENSIONS } from './types';
 
-export { emptyKeyUsageMap, SOURCE_EXTENSIONS };
 export type { KeyUsage, KeyUsageMap, KeyUsageRecord } from './types';
+export { emptyKeyUsageMap, SOURCE_EXTENSIONS } from './types';
 
 const SCRIPT_EXTENSIONS = new Set(['.ts', '.tsx', '.js', '.jsx']);
 

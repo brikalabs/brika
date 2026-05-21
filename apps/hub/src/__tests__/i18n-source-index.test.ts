@@ -8,10 +8,10 @@
  */
 
 import 'reflect-metadata';
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { TranslationRegistry, UnsafeKeyPathError } from '@brika/i18n';
 import {
   assertNoUnsafeKeys,
@@ -148,7 +148,9 @@ describe('SourceIndex.write — path safety', () => {
     writeFileSync(path, '{"__proto__": {"boom": 1}, "ok": "fine"}');
     sources.record({ namespace: 'common', locale: 'en', path, kind: 'hub' });
 
-    await expect(sources.write('common', 'en', 'safe', 'value')).rejects.toThrow(UnsafeKeyPathError);
+    await expect(sources.write('common', 'en', 'safe', 'value')).rejects.toThrow(
+      UnsafeKeyPathError
+    );
   });
 
   test('throws when no source entry is registered for the pair', async () => {

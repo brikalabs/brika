@@ -67,18 +67,15 @@ describe('brikaI18nCallSitePlugin', () => {
 
   // ── False positives the regex previously matched ──
 
-  test('does NOT match cat(\'foo\')', async () => {
+  test("does NOT match cat('foo')", async () => {
     const out = await buildFile(
       'a.ts',
-      [
-        `declare function cat(s: string): string;`,
-        `export const x = cat('hello');`,
-      ].join('\n')
+      [`declare function cat(s: string): string;`, `export const x = cat('hello');`].join('\n')
     );
     expect(out).not.toContain('__cs');
   });
 
-  test('does NOT match it(\'foo\')', async () => {
+  test("does NOT match it('foo')", async () => {
     const out = await buildFile(
       'a.ts',
       [
@@ -90,93 +87,71 @@ describe('brikaI18nCallSitePlugin', () => {
     expect(out).not.toContain('__cs');
   });
 
-  test('does NOT match assert(\'foo\')', async () => {
+  test("does NOT match assert('foo')", async () => {
     const out = await buildFile(
       'a.ts',
-      [
-        `declare function assert(cond: unknown): void;`,
-        `assert('truthy');`,
-        `export {};`,
-      ].join('\n')
+      [`declare function assert(cond: unknown): void;`, `assert('truthy');`, `export {};`].join(
+        '\n'
+      )
     );
     expect(out).not.toContain('__cs');
   });
 
-  test('does NOT match obj.t(\'foo\') (member access)', async () => {
+  test("does NOT match obj.t('foo') (member access)", async () => {
     const out = await buildFile(
       'a.ts',
-      [
-        `declare const obj: { t(k: string): string };`,
-        `export const x = obj.t('hello');`,
-      ].join('\n')
+      [`declare const obj: { t(k: string): string };`, `export const x = obj.t('hello');`].join(
+        '\n'
+      )
     );
     expect(out).not.toContain('__cs');
   });
 
-  test('does NOT match obj?.t(\'foo\') (optional chaining)', async () => {
+  test("does NOT match obj?.t('foo') (optional chaining)", async () => {
     const out = await buildFile(
       'a.ts',
-      [
-        `declare const obj: { t(k: string): string };`,
-        `export const x = obj?.t('hello');`,
-      ].join('\n')
+      [`declare const obj: { t(k: string): string };`, `export const x = obj?.t('hello');`].join(
+        '\n'
+      )
     );
     expect(out).not.toContain('__cs');
   });
 
-  test('does NOT match t(\'foo\') inside a string literal', async () => {
+  test("does NOT match t('foo') inside a string literal", async () => {
+    const out = await buildFile('a.ts', `export const x = "snippet: t('hello')";`);
+    expect(out).not.toContain('__cs');
+  });
+
+  test("does NOT match t('foo') inside a // line comment", async () => {
     const out = await buildFile(
       'a.ts',
-      `export const x = "snippet: t('hello')";`
+      [`// example: t('hello')`, `export const x = 1;`].join('\n')
     );
     expect(out).not.toContain('__cs');
   });
 
-  test('does NOT match t(\'foo\') inside a // line comment', async () => {
+  test("does NOT match t('foo') inside a /* */ block comment", async () => {
     const out = await buildFile(
       'a.ts',
-      [
-        `// example: t('hello')`,
-        `export const x = 1;`,
-      ].join('\n')
+      [`/* example: t('hello') */`, `export const x = 1;`].join('\n')
     );
     expect(out).not.toContain('__cs');
   });
 
-  test('does NOT match t(\'foo\') inside a /* */ block comment', async () => {
-    const out = await buildFile(
-      'a.ts',
-      [
-        `/* example: t('hello') */`,
-        `export const x = 1;`,
-      ].join('\n')
-    );
-    expect(out).not.toContain('__cs');
-  });
-
-  test('does NOT match t(\'foo\') inside a template literal', async () => {
-    const out = await buildFile(
-      'a.ts',
-      `export const x = \`snippet: t('hello')\`;`
-    );
+  test("does NOT match t('foo') inside a template literal", async () => {
+    const out = await buildFile('a.ts', `export const x = \`snippet: t('hello')\`;`);
     expect(out).not.toContain('__cs');
   });
 
   test('DOES match t() inside ${ ... } template interpolation', async () => {
-    const out = await buildFile(
-      'a.ts',
-      `export const x = \`prefix \${t('hello')}\`;`
-    );
+    const out = await buildFile('a.ts', `export const x = \`prefix \${t('hello')}\`;`);
     expect(out).toContain('__cs');
   });
 
   // ── Two-arg t() with object literal ──
 
   test('rewrites t("key", { ns: "x" }) by splicing __cs into the object', async () => {
-    const out = await buildFile(
-      'a.ts',
-      `export const x = t('hello', { ns: 'foo' });`
-    );
+    const out = await buildFile('a.ts', `export const x = t('hello', { ns: 'foo' });`);
     expect(out).toContain('__cs');
     expect(out).toContain('a.ts:1');
     expect(out).toContain('ns');
@@ -190,10 +165,7 @@ describe('brikaI18nCallSitePlugin', () => {
   test('does NOT rewrite t("key", varOpts) when 2nd arg is identifier', async () => {
     const out = await buildFile(
       'a.ts',
-      [
-        `declare const opts: { ns: string };`,
-        `export const x = t('hello', opts);`,
-      ].join('\n')
+      [`declare const opts: { ns: string };`, `export const x = t('hello', opts);`].join('\n')
     );
     expect(out).not.toContain('__cs');
   });
@@ -201,20 +173,14 @@ describe('brikaI18nCallSitePlugin', () => {
   // ── tp() calls ──
 
   test('rewrites tp("pkg", "key") to append call-site as 4th arg', async () => {
-    const out = await buildFile(
-      'a.ts',
-      `export const x = tp('weather', 'temperature');`
-    );
+    const out = await buildFile('a.ts', `export const x = tp('weather', 'temperature');`);
     // tp's 4th positional arg is the call-site string itself — no `__cs:` key.
     expect(out).toContain('a.ts:1');
     expect(out).toContain('undefined');
   });
 
   test('rewrites tp("pkg", "key", "default") to append call-site as 4th arg', async () => {
-    const out = await buildFile(
-      'a.ts',
-      `export const x = tp('weather', 'temperature', '21°');`
-    );
+    const out = await buildFile('a.ts', `export const x = tp('weather', 'temperature', '21°');`);
     expect(out).toContain('a.ts:1');
   });
 
@@ -286,10 +252,7 @@ describe('brikaI18nCallSitePlugin', () => {
     );
     await writeFile(join(pkgDir, 'index.js'), `export const x = t('hello');\n`);
     const entryPath = join(tmpDir, 'entry.ts');
-    await writeFile(
-      entryPath,
-      [`import { x } from 'fake-pkg';`, `export { x };`].join('\n')
-    );
+    await writeFile(entryPath, [`import { x } from 'fake-pkg';`, `export { x };`].join('\n'));
     const result = await Bun.build({
       entrypoints: [entryPath],
       outdir,
@@ -310,20 +273,14 @@ describe('brikaI18nCallSitePlugin', () => {
   test('does NOT match t(...) commented-out inside a regex character class', async () => {
     // Regex literal with `/t('x')/` shape — the scanner must skip into regex
     // mode after the `=` sign and not look at `t(` inside.
-    const out = await buildFile(
-      'a.ts',
-      String.raw`export const r = /t\('x'\)/.test('foo');`
-    );
+    const out = await buildFile('a.ts', String.raw`export const r = /t\('x'\)/.test('foo');`);
     expect(out).not.toContain('__cs');
   });
 
   // ── Combined: multiple calls in one file ──
 
   test('rewrites multiple t() calls in the same file', async () => {
-    const src = [
-      `export const a = t('hello');`,
-      `export const b = t('world');`,
-    ].join('\n');
+    const src = [`export const a = t('hello');`, `export const b = t('world');`].join('\n');
     const out = await buildFile('a.ts', src);
     expect(out).toContain('a.ts:1');
     expect(out).toContain('a.ts:2');

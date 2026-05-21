@@ -1,20 +1,16 @@
 import { ChevronRight } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useToggleSet } from './hooks';
 import { groupBy } from './helpers';
+import { useToggleSet } from './hooks';
 import { KeyUsageBadge } from './key-usage';
 import { buildMultiLocaleKeys } from './multi-locale';
 import { CopyButton, EmptyState, FilterPill, NamespaceGroup } from './primitives';
-import {
-  getNestedStoreValue,
-  removeFromI18nextStore,
-  updateI18nextStore,
-} from './store';
+import { getNestedStoreValue, removeFromI18nextStore, updateI18nextStore } from './store';
 import { TranslationKeyExpanded } from './translation-row';
 
+export { KeyUsageBadge, KeyUsageList } from './key-usage';
 // Re-export so callers that pulled symbols from `./translations-tab` keep working.
 export { buildMultiLocaleKeys } from './multi-locale';
-export { KeyUsageBadge, KeyUsageList } from './key-usage';
 export { TranslationKeyExpanded, TranslationLocaleValue } from './translation-row';
 
 interface EditTarget {

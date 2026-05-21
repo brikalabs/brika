@@ -4,11 +4,7 @@ import { HMR_EVENT, HMR_REQUEST, HMR_TRANSLATIONS, HMR_USAGE } from '../hmr-even
 
 import type { KeyUsage, KeyUsageMap } from '../scan-usage/types';
 import type { ValidationResult } from '../types';
-import {
-  KeyUsageMapSchema,
-  TranslationsBundleSchema,
-  ValidationResultSchema,
-} from './hmr-schemas';
+import { KeyUsageMapSchema, TranslationsBundleSchema, ValidationResultSchema } from './hmr-schemas';
 import {
   applyKeyUsage,
   applyTranslationBundle,

@@ -24,12 +24,7 @@ export function buildEdit(code: string, call: CallStart, relPath: string): Edit 
  *   - `t('key', existing)` → skipped (would need runtime merging)
  *   - `t(\`key\`, …)`      → treated like the string forms
  */
-function buildTEdit(
-  code: string,
-  args: Arguments,
-  line: number,
-  relPath: string
-): Edit | null {
+function buildTEdit(code: string, args: Arguments, line: number, relPath: string): Edit | null {
   if (args.spans.length === 0) {
     return null;
   }
@@ -65,9 +60,7 @@ function buildObjectSpliceEdit(code: string, span: ArgSpan, meta: string): Edit 
   const firstNonWs = skipWhitespace(code, insideStart, span.end);
   const closingBrace = code.lastIndexOf('}', span.end - 1);
   const isEmpty = firstNonWs === closingBrace;
-  const insert = isEmpty
-    ? ` __cs: ${JSON.stringify(meta)} `
-    : ` __cs: ${JSON.stringify(meta)},`;
+  const insert = isEmpty ? ` __cs: ${JSON.stringify(meta)} ` : ` __cs: ${JSON.stringify(meta)},`;
   return { at: insideStart, remove: 0, insert };
 }
 
