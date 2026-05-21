@@ -36,6 +36,7 @@
 
 import { getContext } from '../context';
 import { htmlEscape } from '../internal/html-escape';
+import { singleFlight } from '../internal/single-flight';
 import type { RouteResponse } from '../types';
 import { defineRoute } from './routes';
 
@@ -464,9 +465,14 @@ export function defineOAuth(config: OAuthProviderConfig): OAuthClient {
         throw new Error(`Not authenticated. Visit ${client.getAuthUrl()} to authorize.`);
       }
 
-      // Refresh if expired (with 60s buffer)
+      // Refresh if expired (with 60s buffer). Refresh goes through a
+      // single-flight gate so concurrent fetch() calls share one POST
+      // grant_type=refresh_token — providers that rotate refresh tokens
+      // (Spotify, Google, Microsoft) accept the first and return
+      // `invalid_grant` to any racing sibling, which would clobber the
+      // freshly-stored token and force the user to re-authorize.
       if (token.expires_at < Date.now() + 60_000) {
-        const refreshed = await refreshToken(token);
+        const refreshed = await refreshTokenOnce();
         if (!refreshed) {
           throw new Error('Token expired and refresh failed. Re-authorize required.');
         }
@@ -482,6 +488,17 @@ export function defineOAuth(config: OAuthProviderConfig): OAuthClient {
       });
     },
   };
+
+  // Coalesce concurrent refresh attempts to a single network round-trip.
+  // The closure re-reads `client.getToken()` on each invocation so callers
+  // arriving after a successful refresh adopt the new token automatically.
+  const refreshTokenOnce = singleFlight<OAuthToken | null>(() => {
+    const current = client.getToken();
+    if (!current) {
+      return Promise.resolve(null);
+    }
+    return refreshToken(current);
+  });
 
   return client;
 }
