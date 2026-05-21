@@ -1,6 +1,7 @@
 import { BadRequest, createSSEStream, NotFound, route } from '@brika/router';
 import { z } from 'zod';
 import { I18nService } from '@/runtime/i18n';
+import { isUnsafeKeyPathError } from '@/runtime/i18n/i18n-key-safety';
 import { Logger } from '@/runtime/logs/log-router';
 
 /**
@@ -220,10 +221,10 @@ export const i18nWriteRoutes = [
           key: body.key,
         });
       } catch (e) {
-        const message = e instanceof Error ? e.message : 'Unknown source file';
-        if (e instanceof Error && e.name === 'UnsafeKeyPathError') {
-          throw new BadRequest(message);
+        if (isUnsafeKeyPathError(e)) {
+          throw new BadRequest(e.message);
         }
+        const message = e instanceof Error ? e.message : 'Unknown source file';
         throw new NotFound(message);
       }
       return { ok: true };

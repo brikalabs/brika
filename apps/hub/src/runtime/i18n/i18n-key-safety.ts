@@ -130,9 +130,6 @@ export function sanitizeTranslationData(
   return out;
 }
 
-/** Shared `UNSAFE_SEGMENTS` constant — exported so other modules can avoid duplication. */
-export const UNSAFE_KEY_SEGMENTS: ReadonlySet<string> = UNSAFE_SEGMENTS;
-
 /** Narrow caught errors to `UnsafeKeyPathError` without an `instanceof` cast. */
 export function isUnsafeKeyPathError(error: unknown): error is UnsafeKeyPathError {
   return error instanceof UnsafeKeyPathError;
