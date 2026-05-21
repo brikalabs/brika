@@ -3,6 +3,7 @@ import { existsSync, realpathSync } from 'node:fs';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { isAbsolute, resolve } from 'node:path';
 import type { Connect } from 'vite';
+import { isSameOrigin } from './same-origin';
 
 /** Match a `:line` or `:line:col` suffix at the end of a path string. */
 const LINE_SUFFIX_RE = /(:\d+(?::\d+)?)$/;
@@ -15,52 +16,6 @@ export interface OpenInEditorOptions {
   readonly viteRoot: string;
   readonly workspaceRoot: string | null;
   readonly logger: Logger;
-}
-
-/**
- * Resolve the host header from `req.headers.host` for the same-origin check.
- * Treats missing/invalid headers as "unknown" — the caller rejects the
- * request rather than guessing.
- */
-function sameOriginHost(req: IncomingMessage): string | null {
-  const host = req.headers.host;
-  return typeof host === 'string' && host.length > 0 ? host : null;
-}
-
-/**
- * Reject requests originating from a different origin. Only the `host` field
- * of `Origin` / `Referer` is compared — we don't care about scheme. Returns
- * `true` if the request should be served.
- */
-function isSameOrigin(req: IncomingMessage): boolean {
-  const expected = sameOriginHost(req);
-  if (!expected) {
-    return false;
-  }
-  const origin = req.headers.origin;
-  const referer = req.headers.referer;
-  // A state-changing endpoint must see at least one of Origin/Referer — both
-  // missing is the exact shape of a `<img src>` / `<script src>` drive-by from
-  // a cross-origin page (no preflight, no Origin, Referrer-Policy may strip
-  // referer). Reject outright.
-  if (typeof origin !== 'string' && typeof referer !== 'string') {
-    return false;
-  }
-  for (const raw of [origin, referer]) {
-    if (typeof raw !== 'string' || raw.length === 0) {
-      continue;
-    }
-    let candidateHost: string;
-    try {
-      candidateHost = new URL(raw).host;
-    } catch {
-      return false;
-    }
-    if (candidateHost !== expected) {
-      return false;
-    }
-  }
-  return true;
 }
 
 /**

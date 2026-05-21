@@ -7,6 +7,7 @@ import { detectIndentFromContent } from '@brika/i18n/node';
 import type { Connect } from 'vite';
 import { z } from 'zod';
 import { parseJsonObject } from '../object';
+import { isSameOrigin } from './same-origin';
 
 interface Logger {
   info(msg: string, opts?: { timestamp?: boolean }): void;
@@ -44,41 +45,6 @@ const writePayloadSchema = z.object({
 });
 
 export type WritePayload = z.infer<typeof writePayloadSchema>;
-
-function sameOriginHost(req: IncomingMessage): string | null {
-  const host = req.headers.host;
-  return typeof host === 'string' && host.length > 0 ? host : null;
-}
-
-function isSameOrigin(req: IncomingMessage): boolean {
-  const expected = sameOriginHost(req);
-  if (!expected) {
-    return false;
-  }
-  const origin = req.headers.origin;
-  const referer = req.headers.referer;
-  // State-changing endpoint: require at least one of Origin / Referer. Reject
-  // when both are absent — that's the shape of a cross-origin drive-by where
-  // neither header is sent (e.g. via Referrer-Policy: no-referrer).
-  if (typeof origin !== 'string' && typeof referer !== 'string') {
-    return false;
-  }
-  for (const raw of [origin, referer]) {
-    if (typeof raw !== 'string' || raw.length === 0) {
-      continue;
-    }
-    let candidateHost: string;
-    try {
-      candidateHost = new URL(raw).host;
-    } catch {
-      return false;
-    }
-    if (candidateHost !== expected) {
-      return false;
-    }
-  }
-  return true;
-}
 
 function readBody(req: IncomingMessage, max = 1_000_000): Promise<string> {
   return new Promise((res, rej) => {
