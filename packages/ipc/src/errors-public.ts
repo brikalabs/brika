@@ -16,6 +16,7 @@ export type {
 export {
   ErrorCatalog,
   httpStatusForCode,
+  isRetryable,
   lookupCatalogEntry,
   severityForCode,
 } from './error-catalog';
@@ -26,3 +27,7 @@ export {
   brikaErrorToResponse,
   isBrikaErrorWire,
 } from './errors';
+export type { FactoryOpts } from './factories';
+export { buildCustomError, buildError, errors } from './factories';
+export type { Handler, MatchHandlers } from './match';
+export { matchBrikaError } from './match';

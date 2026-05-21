@@ -159,39 +159,76 @@ describe('isBrikaErrorWire / schema', () => {
   });
 });
 
-describe('brikaErrorToResponse', () => {
-  it('returns the catalog httpStatus for catalogued codes', async () => {
-    const res = brikaErrorToResponse(
-      new BrikaError('PERMISSION_DENIED', 'denied', { data: { permission: 'location' } })
-    );
-    expect(res.status).toBe(403);
-    const body = z
-      .object({
-        error: z.object({
-          code: z.string(),
-          message: z.string(),
-          data: z.record(z.string(), z.unknown()).optional(),
-          i18nKey: z.string().optional(),
-        }),
-      })
-      .parse(await res.json());
-    expect(body.error.code).toBe('PERMISSION_DENIED');
-    expect(body.error.data).toEqual({ permission: 'location' });
-    expect(body.error.i18nKey).toBe('errors.permission_denied');
+describe('brikaErrorToResponse (RFC 9457)', () => {
+  const ProblemSchema = z.object({
+    type: z.string(),
+    title: z.string(),
+    status: z.number(),
+    detail: z.string(),
+    code: z.string(),
+    retryable: z.boolean(),
+    data: z.record(z.string(), z.unknown()).optional(),
+    i18nKey: z.string().optional(),
+    developerHint: z.string().optional(),
+    instance: z.string().optional(),
+    traceId: z.string().optional(),
   });
 
-  it('falls back to 500 for uncatalogued codes', () => {
+  it('emits an RFC 9457 problem+json envelope for catalogued codes', async () => {
+    const res = brikaErrorToResponse(
+      new BrikaError('PERMISSION_DENIED', 'Permission required', {
+        data: { permission: 'location' },
+      })
+    );
+    expect(res.status).toBe(403);
+    expect(res.headers.get('Content-Type')).toBe('application/problem+json');
+    const body = ProblemSchema.parse(await res.json());
+    expect(body.code).toBe('PERMISSION_DENIED');
+    expect(body.type).toBe('https://brika.dev/errors/permission-denied');
+    expect(body.title).toBe('Permission denied');
+    expect(body.status).toBe(403);
+    expect(body.detail).toBe('Permission required');
+    expect(body.data).toEqual({ permission: 'location' });
+    expect(body.i18nKey).toBe('errors.permission_denied');
+    expect(body.retryable).toBe(false);
+  });
+
+  it('marks retryable codes accordingly', async () => {
+    const res = brikaErrorToResponse(
+      new BrikaError('TIMEOUT', 'slow', { data: { timeoutMs: 5000 } })
+    );
+    const body = ProblemSchema.parse(await res.json());
+    expect(body.retryable).toBe(true);
+    expect(body.status).toBe(504);
+  });
+
+  it('includes traceId + instance when provided', async () => {
+    const res = brikaErrorToResponse(
+      new BrikaError('NOT_FOUND', 'gone', { data: { resource: 'x' } }),
+      {
+        traceId: 'req-123',
+        instance: '/api/x',
+      }
+    );
+    const body = ProblemSchema.parse(await res.json());
+    expect(body.traceId).toBe('req-123');
+    expect(body.instance).toBe('/api/x');
+  });
+
+  it('falls back to about:blank type for uncataloged codes', async () => {
     const res = brikaErrorToResponse(new BrikaError('PLUGIN_DEFINED_CODE', 'oops'));
     expect(res.status).toBe(500);
+    const body = ProblemSchema.parse(await res.json());
+    expect(body.type).toBe('about:blank');
+    expect(body.code).toBe('PLUGIN_DEFINED_CODE');
   });
 
   it('returns 500 with a generic message for non-BrikaError throws', async () => {
     const res = brikaErrorToResponse(new Error('leaky secret'));
     expect(res.status).toBe(500);
-    const body = z
-      .object({ error: z.object({ code: z.string(), message: z.string() }) })
-      .parse(await res.json());
-    expect(body.error.code).toBe('INTERNAL');
-    expect(body.error.message).toBe('Internal server error');
+    const body = ProblemSchema.parse(await res.json());
+    expect(body.code).toBe('INTERNAL');
+    expect(body.detail).toBe('Internal server error');
+    expect(body.retryable).toBe(false);
   });
 });

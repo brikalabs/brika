@@ -216,21 +216,22 @@ export type {
   DataForCode,
   ErrorCategory,
   ErrorSeverity,
+  FactoryOpts,
+  Handler,
+  MatchHandlers,
 } from '@brika/ipc';
 export {
   BrikaError,
+  buildCustomError,
+  buildError,
   ErrorCatalog,
+  errors,
   httpStatusForCode,
+  isRetryable,
   lookupCatalogEntry,
+  matchBrikaError,
   severityForCode,
 } from '@brika/ipc';
-export {
-  InternalError,
-  InvalidInputError,
-  NotFoundError,
-  PermissionDeniedError,
-  TimeoutError,
-} from './errors';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Utilities

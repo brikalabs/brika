@@ -6,6 +6,7 @@
 
 import type { InputOf, MessageDef, OutputOf, PayloadOf, RpcDef } from './define';
 import { BrikaError, isBrikaErrorWire } from './errors';
+import { errors } from './factories';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -51,7 +52,7 @@ function toErrorWire(e: unknown) {
     return e.toWire();
   }
   const message = e instanceof Error ? e.message : String(e);
-  return new BrikaError('INTERNAL', message, { cause: e }).toWire();
+  return errors.internal({ cause: e, message }).toWire();
 }
 
 function validatePayload(
@@ -302,7 +303,7 @@ export class Channel {
         this.#send({
           t: `${type}Result`,
           _id: id,
-          result: new BrikaError('INVALID_INPUT', parsed.error).toWire(),
+          result: errors.invalidInput({}, { message: parsed.error }).toWire(),
         });
         return true;
       }

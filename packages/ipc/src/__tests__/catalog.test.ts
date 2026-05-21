@@ -30,8 +30,15 @@ describe('ErrorCatalog shape', () => {
       expect(typeof entry.description).toBe('string');
       expect(entry.description.length).toBeGreaterThan(0);
 
-      expect(entry.httpStatus).toBeGreaterThanOrEqual(400);
-      expect(entry.httpStatus).toBeLessThan(600);
+      expect(entry.status).toBeGreaterThanOrEqual(400);
+      expect(entry.status).toBeLessThan(600);
+
+      expect(typeof entry.title).toBe('string');
+      expect(entry.title.length).toBeGreaterThan(0);
+      expect(entry.typeUri.startsWith('https://brika.dev/errors/')).toBe(true);
+      expect(typeof entry.retryable).toBe('boolean');
+      expect(typeof entry.transient).toBe('boolean');
+      expect(typeof entry.message).toBe('function');
 
       expect(ERROR_SEVERITIES).toContain(entry.severity);
       expect(ERROR_CATEGORIES).toContain(entry.category);

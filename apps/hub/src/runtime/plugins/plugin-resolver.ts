@@ -1,5 +1,5 @@
 import { dirname, extname, join, resolve } from 'node:path';
-import { BrikaError } from '@brika/ipc';
+import { BrikaError, errors } from '@brika/ipc';
 import { PluginPackageSchema } from '@brika/schema';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -25,17 +25,13 @@ export async function loadPluginPackageJson(packageJsonPath: string) {
   );
   if (hasMissingMain) {
     const name = isRecord(raw) && typeof raw.name === 'string' ? raw.name : '(unknown)';
-    throw new BrikaError(
-      'MANIFEST_MISSING_MAIN',
-      `Plugin "${name}" must have a "main" field in package.json`,
-      { data: { manifestPath: packageJsonPath } }
+    throw errors.manifestMissingMain(
+      { manifestPath: packageJsonPath },
+      { message: `Plugin "${name}" must have a "main" field in package.json` }
     );
   }
 
-  throw new BrikaError('MANIFEST_INVALID', 'Plugin package.json failed schema validation', {
-    data: { manifestPath: packageJsonPath },
-    cause: parsed.error,
-  });
+  throw errors.manifestInvalid({ manifestPath: packageJsonPath }, { cause: parsed.error });
 }
 
 /**
@@ -57,9 +53,7 @@ export class PluginResolver {
     metadata: PluginPackageSchema;
   }> {
     if (!moduleId) {
-      throw new BrikaError('INVALID_INPUT', 'Plugin moduleId is required', {
-        data: { field: 'moduleId' },
-      });
+      throw errors.invalidInput({ field: 'moduleId' }, { message: 'Plugin moduleId is required' });
     }
 
     try {
@@ -81,12 +75,11 @@ export class PluginResolver {
       if (error instanceof BrikaError) {
         throw error;
       }
-      throw new BrikaError(
-        'MANIFEST_INVALID',
-        `Failed to resolve plugin "${moduleId}": ${error instanceof Error ? error.message : String(error)}`,
+      throw errors.manifestInvalid(
+        { manifestPath: moduleId },
         {
-          data: { manifestPath: moduleId },
           cause: error,
+          message: `Failed to resolve plugin "${moduleId}": ${error instanceof Error ? error.message : String(error)}`,
         }
       );
     }
@@ -99,10 +92,9 @@ export class PluginResolver {
   ): string {
     // main field is required
     if (!metadata.main) {
-      throw new BrikaError(
-        'MANIFEST_MISSING_MAIN',
-        `Plugin "${metadata.name}" must have a "main" field in package.json`,
-        { data: { manifestPath } }
+      throw errors.manifestMissingMain(
+        { manifestPath },
+        { message: `Plugin "${metadata.name}" must have a "main" field in package.json` }
       );
     }
 

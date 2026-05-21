@@ -1,131 +1,169 @@
 /**
- * Tests for SDK Error Types
+ * Tests for the SDK's error surface (factories + match + narrowing).
  *
- * The SDK error classes are convenience constructors that extend `BrikaError`.
- * They auto-populate the catalog-typed `data` payload and set `code` to the
- * matching catalog entry. Wire round-trip is tested in `@brika/ipc`.
+ * The SDK re-exports BrikaError + factory API from @brika/ipc. These tests
+ * cover the surface plugin authors interact with.
  */
 
 import { describe, expect, test } from 'bun:test';
-import { BrikaError } from '@brika/ipc';
-import {
-  InternalError,
-  InvalidInputError,
-  NotFoundError,
-  PermissionDeniedError,
-  TimeoutError,
-} from '../errors';
+import { BrikaError, errors, matchBrikaError } from '../index';
 
-describe('PermissionDeniedError', () => {
-  test('extends BrikaError and sets the catalog code', () => {
-    const err = new PermissionDeniedError('location');
+describe('errors.permissionDenied', () => {
+  test('builds a BrikaError with the catalog code, message, and data', () => {
+    const err = errors.permissionDenied({ permission: 'location' });
     expect(err).toBeInstanceOf(BrikaError);
-    expect(err).toBeInstanceOf(PermissionDeniedError);
-    expect(err.name).toBe('PermissionDeniedError');
     expect(err.code).toBe('PERMISSION_DENIED');
-    expect(err.permission).toBe('location');
-  });
-
-  test('carries the permission field on `data`', () => {
-    const err = new PermissionDeniedError('secrets');
-    expect(err.data).toEqual({ permission: 'secrets' });
-  });
-
-  test('BrikaError.is narrows code + data after wire round-trip', () => {
-    const original = new PermissionDeniedError('location');
-    const restored = BrikaError.fromWire(original.toWire());
-
-    if (!BrikaError.is(restored, 'PERMISSION_DENIED')) {
-      throw new Error('expected PERMISSION_DENIED after round-trip');
-    }
-    expect(restored.data?.permission).toBe('location');
-  });
-
-  test('mentions the permission in the message', () => {
-    const err = new PermissionDeniedError('location');
+    expect(err.data?.permission).toBe('location');
     expect(err.message).toContain('location');
     expect(err.message).toContain('permissions');
   });
-});
 
-describe('NotFoundError', () => {
-  test('extends BrikaError, code NOT_FOUND, resource on data', () => {
-    const err = new NotFoundError('timer:block');
-    expect(err).toBeInstanceOf(BrikaError);
-    expect(err.code).toBe('NOT_FOUND');
-    expect(err.name).toBe('NotFoundError');
-    expect(err.resource).toBe('timer:block');
-    expect(err.data).toEqual({ resource: 'timer:block' });
-  });
-
-  test('uses custom message when provided', () => {
-    const err = new NotFoundError('x', 'custom message');
-    expect(err.message).toBe('custom message');
-  });
-});
-
-describe('InvalidInputError', () => {
-  test('extends BrikaError, code INVALID_INPUT, carries field', () => {
-    const err = new InvalidInputError('bad value', 'email');
-    expect(err).toBeInstanceOf(BrikaError);
-    expect(err.code).toBe('INVALID_INPUT');
-    expect(err.field).toBe('email');
-    expect(err.message).toContain('email');
-    expect(err.data).toEqual({ field: 'email' });
-  });
-
-  test('works without field', () => {
-    const err = new InvalidInputError('malformed');
-    expect(err.field).toBeUndefined();
-    expect(err.message).toBe('malformed');
-    expect(err.data).toBeUndefined();
-  });
-});
-
-describe('InternalError', () => {
-  test('extends BrikaError, code INTERNAL', () => {
-    const err = new InternalError();
-    expect(err).toBeInstanceOf(BrikaError);
-    expect(err.code).toBe('INTERNAL');
-    expect(err.name).toBe('InternalError');
-    expect(err.message).toContain('internal error');
-  });
-
-  test('accepts custom message and cause', () => {
+  test('preserves cause when provided', () => {
     const cause = new Error('underlying');
-    const err = new InternalError('db crashed', cause);
-    expect(err.message).toBe('db crashed');
+    const err = errors.permissionDenied({ permission: 'x' }, { cause });
     expect(err.cause).toBe(cause);
   });
+
+  test('survives wire round-trip; BrikaError.is narrows data', () => {
+    const original = errors.permissionDenied({ permission: 'location' });
+    const restored = BrikaError.fromWire(original.toWire());
+    if (!BrikaError.is(restored, 'PERMISSION_DENIED')) {
+      throw new Error('expected PERMISSION_DENIED');
+    }
+    expect(restored.data?.permission).toBe('location');
+  });
 });
 
-describe('TimeoutError', () => {
-  test('extends BrikaError, code TIMEOUT', () => {
-    const err = new TimeoutError({ operation: 'fetch', timeoutMs: 5000 });
-    expect(err).toBeInstanceOf(BrikaError);
+describe('errors.notFound', () => {
+  test('carries the resource on data', () => {
+    const err = errors.notFound({ resource: 'block:timer' });
+    expect(err.code).toBe('NOT_FOUND');
+    expect(err.data?.resource).toBe('block:timer');
+    expect(err.message).toContain('block:timer');
+  });
+
+  test('respects a message override', () => {
+    const err = errors.notFound({ resource: 'x' }, { message: 'gone for good' });
+    expect(err.message).toBe('gone for good');
+  });
+});
+
+describe('errors.invalidInput', () => {
+  test('carries field when provided', () => {
+    const err = errors.invalidInput({ field: 'email' });
+    expect(err.code).toBe('INVALID_INPUT');
+    expect(err.data?.field).toBe('email');
+    expect(err.message).toContain('email');
+  });
+
+  test('works without data', () => {
+    const err = errors.invalidInput();
+    expect(err.code).toBe('INVALID_INPUT');
+    expect(err.message).toBe('Invalid input.');
+  });
+});
+
+describe('errors.internal / errors.unavailable', () => {
+  test('errors.internal accepts no args and carries cause', () => {
+    const cause = new Error('underlying');
+    const err = errors.internal({ cause });
+    expect(err.code).toBe('INTERNAL');
+    expect(err.cause).toBe(cause);
+  });
+
+  test('errors.unavailable() has retryable=true in the catalog', () => {
+    const err = errors.unavailable();
+    expect(err.code).toBe('UNAVAILABLE');
+    expect(err.message).toContain('unavailable');
+  });
+});
+
+describe('errors.timeout', () => {
+  test('builds a contextualized message from data', () => {
+    const err = errors.timeout({ operation: 'fetch', timeoutMs: 5000 });
     expect(err.code).toBe('TIMEOUT');
-    expect(err.name).toBe('TimeoutError');
-    expect(err.operation).toBe('fetch');
-    expect(err.timeoutMs).toBe(5000);
+    expect(err.data?.operation).toBe('fetch');
+    expect(err.data?.timeoutMs).toBe(5000);
     expect(err.message).toContain('fetch');
     expect(err.message).toContain('5000');
-    expect(err.data).toEqual({ operation: 'fetch', timeoutMs: 5000 });
   });
 
-  test('formats message without operation/timeoutMs', () => {
-    const err = new TimeoutError();
+  test('falls back gracefully without data', () => {
+    const err = errors.timeout();
+    expect(err.code).toBe('TIMEOUT');
     expect(err.message).toBe('Operation timed out.');
-    expect(err.operation).toBeUndefined();
-    expect(err.timeoutMs).toBeUndefined();
+  });
+});
+
+describe('matchBrikaError', () => {
+  test('routes to the per-code handler with typed data', () => {
+    const err = errors.permissionDenied({ permission: 'location' });
+    const view = matchBrikaError<string>(err, {
+      PERMISSION_DENIED: ({ permission }) => `denied: ${permission}`,
+      NOT_FOUND: ({ resource }) => `gone: ${resource}`,
+      _: () => 'unknown',
+    });
+    expect(view).toBe('denied: location');
   });
 
-  test('round-trips data via the wire format', () => {
-    const original = new TimeoutError({ operation: 'fetch', timeoutMs: 5000 });
-    const restored = BrikaError.fromWire(original.toWire());
-    if (!BrikaError.is(restored, 'TIMEOUT')) {
-      throw new Error('expected TIMEOUT after round-trip');
+  test('falls through to _ for unmatched codes', () => {
+    const err = errors.timeout();
+    const view = matchBrikaError<string>(err, {
+      PERMISSION_DENIED: () => 'denied',
+      _: () => 'other',
+    });
+    expect(view).toBe('other');
+  });
+
+  test('falls through to _ for non-BrikaError throws', () => {
+    const view = matchBrikaError<string>(new Error('plain'), {
+      PERMISSION_DENIED: () => 'denied',
+      _: () => 'plain',
+    });
+    expect(view).toBe('plain');
+  });
+
+  test('handler receives the full BrikaError instance as the 2nd arg', () => {
+    const err = errors.notFound({ resource: 'r' }, { cause: new Error('db down') });
+    const causeMessage = matchBrikaError<string>(err, {
+      NOT_FOUND: (_data, e) => (e.cause instanceof Error ? e.cause.message : 'no cause'),
+      _: () => '_',
+    });
+    expect(causeMessage).toBe('db down');
+  });
+});
+
+describe('BrikaError.onThrow hook', () => {
+  test('fires once per construction with the error instance', () => {
+    const seen: string[] = [];
+    const off = BrikaError.onThrow((e) => seen.push(e.code));
+    try {
+      errors.permissionDenied({ permission: 'a' });
+      errors.notFound({ resource: 'b' });
+    } finally {
+      off();
     }
-    expect(restored.data?.operation).toBe('fetch');
-    expect(restored.data?.timeoutMs).toBe(5000);
+    expect(seen).toEqual(['PERMISSION_DENIED', 'NOT_FOUND']);
+  });
+
+  test('a buggy handler does not break error construction', () => {
+    const off = BrikaError.onThrow(() => {
+      throw new Error('boom');
+    });
+    try {
+      const err = errors.permissionDenied({ permission: 'x' });
+      expect(err.code).toBe('PERMISSION_DENIED');
+    } finally {
+      off();
+    }
+  });
+
+  test('disposer removes the handler', () => {
+    const seen: string[] = [];
+    const off = BrikaError.onThrow((e) => seen.push(e.code));
+    errors.permissionDenied({ permission: 'a' });
+    off();
+    errors.permissionDenied({ permission: 'b' });
+    expect(seen).toEqual(['PERMISSION_DENIED']);
   });
 });

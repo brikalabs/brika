@@ -72,6 +72,7 @@ export type {
 export {
   ErrorCatalog,
   httpStatusForCode,
+  isRetryable,
   lookupCatalogEntry,
   severityForCode,
 } from './error-catalog';
@@ -82,11 +83,15 @@ export {
   brikaErrorToResponse,
   isBrikaErrorWire,
 } from './errors';
+export type { FactoryOpts } from './factories';
+export { buildCustomError, buildError, errors } from './factories';
 // ─── Global ───
 export type { IpcGlobal } from './global';
 // ─── Host ───
 export type { PluginChannelOptions, SpawnPluginOptions } from './host';
 export { PluginChannel, spawnPlugin } from './host';
+export type { Handler, MatchHandlers } from './match';
+export { matchBrikaError } from './match';
 
 // ─── Core Types ───
 export { Json, JsonRecord } from './types';

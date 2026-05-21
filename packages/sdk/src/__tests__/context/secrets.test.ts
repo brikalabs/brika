@@ -6,7 +6,7 @@
  */
 
 import { beforeEach, describe, expect, test } from 'bun:test';
-import { BrikaError } from '@brika/ipc';
+import { BrikaError, errors } from '@brika/ipc';
 import { setupSecrets } from '../../context/secrets';
 import { createTestHarness } from './_test-utils';
 
@@ -49,9 +49,7 @@ describe('setupSecrets', () => {
 
   test('PERMISSION_DENIED BrikaError propagates from the bridge', async () => {
     h.bridge.getSecret.mockImplementation(async () => {
-      throw new BrikaError('PERMISSION_DENIED', 'Permission "secrets" is not granted', {
-        data: { permission: 'secrets' },
-      });
+      throw errors.permissionDenied({ permission: 'secrets' });
     });
 
     try {
@@ -67,9 +65,7 @@ describe('setupSecrets', () => {
 
   test('PERMISSION_DENIED on setSecret surfaces too', async () => {
     h.bridge.setSecret.mockImplementation(async () => {
-      throw new BrikaError('PERMISSION_DENIED', 'Permission "secrets" is not granted', {
-        data: { permission: 'secrets' },
-      });
+      throw errors.permissionDenied({ permission: 'secrets' });
     });
 
     try {
