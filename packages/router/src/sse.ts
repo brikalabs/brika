@@ -1,17 +1,25 @@
 /**
  * Server-Sent Events (SSE) helper for streaming responses.
+ *
+ * CORS: intentionally no `Access-Control-Allow-Origin` here — origin policy
+ * is enforced by the router's CORS middleware (per-request, per-allowlist).
+ * A wildcard here would silently bypass that.
  */
 
 const SSE_HEADERS = {
   'Content-Type': 'text/event-stream',
   'Cache-Control': 'no-cache',
   Connection: 'keep-alive',
-  'Access-Control-Allow-Origin': '*',
 };
 
 const encoder = new TextEncoder();
 const HEARTBEAT_INTERVAL = 30_000;
 const heartbeatFrame = encoder.encode(': heartbeat\n\n');
+/**
+ * Tell EventSource to reconnect quickly after a hub restart. The browser
+ * default is ~3s; 500ms keeps the UI responsive without thrashing.
+ */
+const retryFrame = encoder.encode('retry: 500\n\n');
 
 function createSSESender(controller: ReadableStreamDefaultController<Uint8Array>) {
   return (data: unknown, event?: string) => {
@@ -54,6 +62,7 @@ export function createSSEStream(
 
   const stream = new ReadableStream({
     start(controller) {
+      controller.enqueue(retryFrame);
       const send = createSSESender(controller);
 
       const close = () => {
@@ -106,6 +115,7 @@ export function createAsyncSSEStream(
 ): Response {
   const stream = new ReadableStream({
     async start(controller) {
+      controller.enqueue(retryFrame);
       const send = createSSESender(controller);
 
       try {

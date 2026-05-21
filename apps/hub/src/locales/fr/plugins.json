@@ -131,14 +131,6 @@
   },
   "pageStopped": "Le plugin n'est pas en cours d'exécution. Activez-le pour afficher cette page.",
   "pageDisconnected": "Plugin déconnecté. La page se reconnectera lorsque le plugin sera disponible.",
-  "permissions": {
-    "title": "Permissions",
-    "description": "Contrôlez les accès de ce plugin",
-    "location": "Localisation",
-    "locationDesc": "Accéder à la localisation physique du hub (adresse, coordonnées, fuseau horaire)",
-    "secrets": "Stockage sécurisé",
-    "secretsDesc": "Lire et écrire les identifiants du plugin dans le trousseau du système"
-  },
   "starter": {
     "eyebrow": "Premier plugin",
     "title": "Installez votre premier plugin",

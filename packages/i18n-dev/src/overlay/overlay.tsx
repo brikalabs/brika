@@ -1,4 +1,4 @@
-import i18next from 'i18next';
+import { switchLanguage } from '@brika/i18n/react';
 import { AlertTriangle, Globe, MousePointerClick, Search, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { CoverageContent } from './coverage-tab';
@@ -185,7 +185,9 @@ export function PanelHeader({
           <select
             className="cursor-pointer rounded-md border border-dt-border bg-dt-bg-raised px-1.5 py-0.5 font-mono font-semibold text-[10px] text-indigo-400 uppercase outline-none transition-colors focus:border-indigo-400/50"
             value={isCiMode ? 'cimode' : currentLang}
-            onChange={(e) => i18next.changeLanguage(e.target.value)}
+            onChange={(e) => {
+              void switchLanguage(e.target.value);
+            }}
             disabled={isCiMode}
           >
             {localeOptions.map((l) => (
@@ -320,10 +322,10 @@ export function I18nDevOverlay() {
 
   const toggleCiMode = useCallback(() => {
     if (isCiMode) {
-      i18next.changeLanguage(preCiLang ?? REFERENCE_LOCALE);
+      switchLanguage(preCiLang ?? REFERENCE_LOCALE).catch(() => undefined);
     } else {
       setPreCiLang(currentLang);
-      i18next.changeLanguage('cimode');
+      switchLanguage('cimode').catch(() => undefined);
     }
   }, [isCiMode, preCiLang, currentLang]);
   const togglePanel = useCallback(() => setIsOpen((v) => !v), []);

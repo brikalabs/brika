@@ -40,7 +40,7 @@ describe('scanKeyUsages', () => {
     const srcDir = join(tempDir, 'src');
     await mkdir(srcDir, { recursive: true });
 
-    const result = await scanKeyUsages(tempDir, [srcDir]);
+    const result = await scanKeyUsages(tempDir, [{ dir: srcDir }]);
     expect(result).toEqual({});
   });
 
@@ -55,7 +55,7 @@ describe('scanKeyUsages', () => {
       ].join('\n')
     );
 
-    const result = await scanKeyUsages(tempDir, [join(tempDir, 'src')]);
+    const result = await scanKeyUsages(tempDir, [{ dir: join(tempDir, 'src') }]);
 
     expect(result['greeting']).toBeDefined();
     expect(result['greeting']).toHaveLength(1);
@@ -72,7 +72,7 @@ describe('scanKeyUsages', () => {
       ['function Comp() {', '  return <p>{t("hello.world")}</p>;', '}'].join('\n')
     );
 
-    const result = await scanKeyUsages(tempDir, [join(tempDir, 'src')]);
+    const result = await scanKeyUsages(tempDir, [{ dir: join(tempDir, 'src') }]);
 
     expect(result['hello.world']).toBeDefined();
     expect(result['hello.world']).toHaveLength(1);
@@ -85,7 +85,7 @@ describe('scanKeyUsages', () => {
       ['const a = t(`static.key`);', 'const b = t(`another`);'].join('\n')
     );
 
-    const result = await scanKeyUsages(tempDir, [join(tempDir, 'src')]);
+    const result = await scanKeyUsages(tempDir, [{ dir: join(tempDir, 'src') }]);
 
     expect(result['static.key']).toBeDefined();
     expect(result['static.key'][0]).toEqual({ file: 'src/tpl.ts', line: 1 });
@@ -100,7 +100,7 @@ describe('scanKeyUsages', () => {
       ['const a = t(`prefix.${variable}`);', 'const b = t(`static.only`);'].join('\n')
     );
 
-    const result = await scanKeyUsages(tempDir, [join(tempDir, 'src')]);
+    const result = await scanKeyUsages(tempDir, [{ dir: join(tempDir, 'src') }]);
 
     // Dynamic template literal should be skipped
     expect(result['prefix.']).toBeUndefined();
@@ -121,7 +121,7 @@ describe('scanKeyUsages', () => {
       ].join('\n')
     );
 
-    const result = await scanKeyUsages(tempDir, [join(tempDir, 'src')]);
+    const result = await scanKeyUsages(tempDir, [{ dir: join(tempDir, 'src') }]);
 
     // Bare key 'title' should be qualified with 'dashboard:'
     expect(result['dashboard:title']).toBeDefined();
@@ -139,7 +139,7 @@ describe('scanKeyUsages', () => {
       ].join('\n')
     );
 
-    const result = await scanKeyUsages(tempDir, [join(tempDir, 'src')]);
+    const result = await scanKeyUsages(tempDir, [{ dir: join(tempDir, 'src') }]);
 
     // Bare key gets dashboard: prefix
     expect(result['dashboard:bare.key']).toBeDefined();
@@ -164,7 +164,7 @@ describe('scanKeyUsages', () => {
       )
     );
 
-    const result = await scanKeyUsages(tempDir, [join(tempDir, 'src/locales')]);
+    const result = await scanKeyUsages(tempDir, [{ dir: join(tempDir, 'src/locales') }]);
 
     expect(result['dashboard:stats.count']).toBeDefined();
     expect(result['dashboard:stats.count']).toHaveLength(1);
@@ -187,7 +187,7 @@ describe('scanKeyUsages', () => {
       )
     );
 
-    const result = await scanKeyUsages(tempDir, [join(tempDir, 'src')]);
+    const result = await scanKeyUsages(tempDir, [{ dir: join(tempDir, 'src') }]);
 
     expect(result['common:errors.notFound']).toBeDefined();
     expect(result['common:errors.notFound']).toHaveLength(1);
@@ -200,7 +200,7 @@ describe('scanKeyUsages', () => {
     await writeSource('src/real.ts', "t('found');");
     await writeSource('src/node_modules/lib/index.ts', "t('should.be.skipped');");
 
-    const result = await scanKeyUsages(tempDir, [join(tempDir, 'src')]);
+    const result = await scanKeyUsages(tempDir, [{ dir: join(tempDir, 'src') }]);
 
     expect(result['found']).toBeDefined();
     expect(result['should.be.skipped']).toBeUndefined();
@@ -211,7 +211,7 @@ describe('scanKeyUsages', () => {
     await writeSource('src/dist/bundle.js', "t('hidden.dist');");
     await writeSource('src/build/output.js', "t('hidden.build');");
 
-    const result = await scanKeyUsages(tempDir, [join(tempDir, 'src')]);
+    const result = await scanKeyUsages(tempDir, [{ dir: join(tempDir, 'src') }]);
 
     expect(result['visible']).toBeDefined();
     expect(result['hidden.dist']).toBeUndefined();
@@ -222,10 +222,9 @@ describe('scanKeyUsages', () => {
     // Two identical t('key') calls on the same line should produce only one usage entry
     await writeSource('src/dup.ts', "const x = t('dup') + t('dup');");
 
-    const result = await scanKeyUsages(tempDir, [join(tempDir, 'src')]);
+    const result = await scanKeyUsages(tempDir, [{ dir: join(tempDir, 'src') }]);
 
     expect(result['dup']).toBeDefined();
-    // The regex will match twice on the same line, but addUsage deduplicates by file+line
     expect(result['dup']).toHaveLength(1);
     expect(result['dup'][0]).toEqual({ file: 'src/dup.ts', line: 1 });
   });
@@ -236,7 +235,7 @@ describe('scanKeyUsages', () => {
       ["t('repeated');", '// comment', "t('repeated');"].join('\n')
     );
 
-    const result = await scanKeyUsages(tempDir, [join(tempDir, 'src')]);
+    const result = await scanKeyUsages(tempDir, [{ dir: join(tempDir, 'src') }]);
 
     expect(result['repeated']).toBeDefined();
     expect(result['repeated']).toHaveLength(2);
@@ -244,13 +243,13 @@ describe('scanKeyUsages', () => {
     expect(result['repeated'][1]).toEqual({ file: 'src/multi.ts', line: 3 });
   });
 
-  test('scans multiple srcDirs', async () => {
+  test('scans multiple source roots', async () => {
     await writeSource('app/src/page.ts', "t('app.key');");
     await writeSource('lib/src/util.ts', "t('lib.key');");
 
     const result = await scanKeyUsages(tempDir, [
-      join(tempDir, 'app/src'),
-      join(tempDir, 'lib/src'),
+      { dir: join(tempDir, 'app/src') },
+      { dir: join(tempDir, 'lib/src') },
     ]);
 
     expect(result['app.key']).toBeDefined();
@@ -261,14 +260,14 @@ describe('scanKeyUsages', () => {
   });
 
   test('handles non-existent srcDir gracefully', async () => {
-    const result = await scanKeyUsages(tempDir, [join(tempDir, 'does-not-exist')]);
+    const result = await scanKeyUsages(tempDir, [{ dir: join(tempDir, 'does-not-exist') }]);
     expect(result).toEqual({});
   });
 
   test('files produce relative paths from rootDir', async () => {
     await writeSource('deep/nested/dir/file.tsx', "t('deep.key');");
 
-    const result = await scanKeyUsages(tempDir, [join(tempDir, 'deep')]);
+    const result = await scanKeyUsages(tempDir, [{ dir: join(tempDir, 'deep') }]);
 
     expect(result['deep.key']).toBeDefined();
     expect(result['deep.key'][0].file).toBe('deep/nested/dir/file.tsx');
@@ -279,7 +278,7 @@ describe('scanKeyUsages', () => {
     await writeSource('src/data.yaml', "key: t('also.not.detected')");
     await writeSource('src/real.ts', "t('detected');");
 
-    const result = await scanKeyUsages(tempDir, [join(tempDir, 'src')]);
+    const result = await scanKeyUsages(tempDir, [{ dir: join(tempDir, 'src') }]);
 
     expect(result['not.detected']).toBeUndefined();
     expect(result['also.not.detected']).toBeUndefined();
@@ -290,7 +289,7 @@ describe('scanKeyUsages', () => {
     await writeSource('src/.hidden/secret.ts', "t('hidden.key');");
     await writeSource('src/visible.ts', "t('visible.key');");
 
-    const result = await scanKeyUsages(tempDir, [join(tempDir, 'src')]);
+    const result = await scanKeyUsages(tempDir, [{ dir: join(tempDir, 'src') }]);
 
     expect(result['hidden.key']).toBeUndefined();
     expect(result['visible.key']).toBeDefined();
@@ -302,10 +301,83 @@ describe('scanKeyUsages', () => {
       ["t( 'spaced' );", 't(  "double.spaced"  );', 't(`tpl.spaced`);'].join('\n')
     );
 
-    const result = await scanKeyUsages(tempDir, [join(tempDir, 'src')]);
+    const result = await scanKeyUsages(tempDir, [{ dir: join(tempDir, 'src') }]);
 
     expect(result['spaced']).toBeDefined();
     expect(result['double.spaced']).toBeDefined();
     expect(result['tpl.spaced']).toBeDefined();
+  });
+
+  test("tp('id', 'key') expands to <id>:<key>", async () => {
+    await writeSource(
+      'src/widget.tsx',
+      [
+        "const a = tp('@brika/plugin-weather', 'stats.feelsLike');",
+        'const b = tp("@brika/plugin-timer", "controls.start");',
+      ].join('\n')
+    );
+
+    const result = await scanKeyUsages(tempDir, [{ dir: join(tempDir, 'src') }]);
+
+    expect(result['@brika/plugin-weather:stats.feelsLike']).toBeDefined();
+    expect(result['@brika/plugin-timer:controls.start']).toBeDefined();
+  });
+
+  test('tp template-literal form also works', async () => {
+    await writeSource(
+      'src/widget.tsx',
+      ['const v = tp(`@brika/plugin-weather`, `stats.feelsLike`);'].join('\n')
+    );
+
+    const result = await scanKeyUsages(tempDir, [{ dir: join(tempDir, 'src') }]);
+
+    expect(result['@brika/plugin-weather:stats.feelsLike']).toBeDefined();
+  });
+
+  test('JSON cross-refs to qualified namespaces detected', async () => {
+    // The walker skips `locales/` by default, so place the JSON elsewhere.
+    await writeSource(
+      'data/common.json',
+      [
+        '{',
+        '  "description": "$t(plugin:@brika/plugin-weather:stats.feelsLike)",',
+        '  "fallback": "plugin:@brika/plugin-timer:controls.start"',
+        '}',
+      ].join('\n')
+    );
+
+    const result = await scanKeyUsages(tempDir, [{ dir: join(tempDir, 'data') }]);
+
+    expect(result['plugin:@brika/plugin-weather:stats.feelsLike']).toBeDefined();
+    expect(result['plugin:@brika/plugin-timer:controls.start']).toBeDefined();
+  });
+
+  test('false-positive identifiers (cat, assert, _t, setUseTranslation) ignored', async () => {
+    await writeSource(
+      'src/falsy.ts',
+      [
+        "cat('not.a.translation');",
+        "assert('not.a.translation');",
+        "_t('not.a.translation');",
+        "setUseTranslation('not.a.namespace');",
+        "t('real.key');",
+      ].join('\n')
+    );
+
+    const result = await scanKeyUsages(tempDir, [{ dir: join(tempDir, 'src') }]);
+
+    expect(result['not.a.translation']).toBeUndefined();
+    expect(result['not.a.namespace']).toBeUndefined();
+    expect(result['real.key']).toBeDefined();
+  });
+
+  test('namespace from SourceConfig used for bare-key calls when no useTranslation in file', async () => {
+    await writeSource('src/comp.tsx', "t('bare.key');");
+
+    const result = await scanKeyUsages(tempDir, [
+      { dir: join(tempDir, 'src'), namespace: 'plugin:my-plugin' },
+    ]);
+
+    expect(result['plugin:my-plugin:bare.key']).toBeDefined();
   });
 });

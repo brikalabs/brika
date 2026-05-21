@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { RuntimeEntry } from './hooks';
 import { isSkippedParent, observeBodyMutations, openInEditor } from './primitives';
-import { trackedTranslations } from './store';
+import { getMergedKeyUsage, trackedTranslations } from './store';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -9,49 +9,8 @@ export interface RuntimeMarker {
   key: string;
   namespace: string;
   rect: DOMRect;
-  componentName: string | null;
+  /** First known source location for this key (file:line), or `null`. */
   source: string | null;
-}
-
-// ─── React fiber helpers ────────────────────────────────────────────────────
-
-interface FiberLike {
-  type?: unknown;
-  _debugSource?: { fileName?: string; lineNumber?: number };
-  _debugOwner?: FiberLike | null;
-  return?: FiberLike | null;
-}
-
-function getFiber(element: Element): FiberLike | null {
-  const key = Object.keys(element).find(
-    (k) => k.startsWith('__reactFiber$') || k.startsWith('__reactInternalInstance$')
-  );
-  if (!key) {
-    return null;
-  }
-  return (element as unknown as Record<string, unknown>)[key] as FiberLike;
-}
-
-function getReactComponentInfo(element: Element): { name: string; source: string | null } | null {
-  let fiber = getFiber(element);
-  const seen = new Set<unknown>();
-  while (fiber && !seen.has(fiber)) {
-    seen.add(fiber);
-    if (typeof fiber.type === 'function') {
-      const fn = fiber.type as { displayName?: string; name?: string };
-      const name = fn.displayName ?? fn.name ?? null;
-      if (name) {
-        const src = fiber._debugSource;
-        const fileName = src?.fileName?.replace(/^.*\/src\//, 'src/') ?? null;
-        return {
-          name,
-          source: fileName && src?.lineNumber ? `${fileName}:${src.lineNumber}` : fileName,
-        };
-      }
-    }
-    fiber = fiber._debugOwner ?? fiber.return ?? null;
-  }
-  return null;
 }
 
 // ─── DOM scanner ────────────────────────────────────────────────────────────
@@ -111,14 +70,19 @@ function matchEntry(txt: string, lookup: Map<string, RuntimeEntry>): RuntimeEntr
   return undefined;
 }
 
+function pickPrimarySource(qualifiedKey: string): string | null {
+  const usages = getMergedKeyUsage(qualifiedKey);
+  const head = usages[0];
+  return head ? `${head.file}:${head.line}` : null;
+}
+
 function buildMarker(parent: Element, entry: RuntimeEntry): RuntimeMarker {
-  const info = getReactComponentInfo(parent);
+  const qualifiedKey = `${entry.namespace}:${entry.key}`;
   return {
     key: entry.key,
     namespace: entry.namespace,
     rect: parent.getBoundingClientRect(),
-    componentName: info?.name ?? null,
-    source: info?.source ?? null,
+    source: pickPrimarySource(qualifiedKey),
   };
 }
 
@@ -131,9 +95,12 @@ function scanForMissingKeys(entries: RuntimeEntry[]): RuntimeMarker[] {
   const found: RuntimeMarker[] = [];
   const seen = new Set<Element>();
   const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
-  let node: Text | null;
 
-  while ((node = walker.nextNode() as Text | null)) {
+  for (let raw = walker.nextNode(); raw !== null; raw = walker.nextNode()) {
+    if (!(raw instanceof Text)) {
+      continue;
+    }
+    const node = raw;
     const txt = node.textContent?.trim();
     if (!txt) {
       continue;
@@ -154,17 +121,45 @@ function scanForMissingKeys(entries: RuntimeEntry[]): RuntimeMarker[] {
 
 // ─── Hook ───────────────────────────────────────────────────────────────────
 
+function markersEqual(a: readonly RuntimeMarker[], b: readonly RuntimeMarker[]): boolean {
+  if (a.length !== b.length) {
+    return false;
+  }
+  for (let i = 0; i < a.length; i++) {
+    const x = a[i];
+    const y = b[i];
+    if (!x || !y) {
+      return false;
+    }
+    if (
+      x.key !== y.key ||
+      x.namespace !== y.namespace ||
+      x.source !== y.source ||
+      x.rect.top !== y.rect.top ||
+      x.rect.left !== y.rect.left ||
+      x.rect.width !== y.rect.width ||
+      x.rect.height !== y.rect.height
+    ) {
+      return false;
+    }
+  }
+  return true;
+}
+
 export function useRuntimeMarkers(entries: RuntimeEntry[], enabled: boolean): RuntimeMarker[] {
   const [markers, setMarkers] = useState<RuntimeMarker[]>([]);
 
   useEffect(() => {
     if (!enabled || entries.length === 0) {
-      setMarkers([]);
+      setMarkers((prev) => (prev.length === 0 ? prev : []));
       return;
     }
 
     function run() {
-      setMarkers(scanForMissingKeys(entries));
+      setMarkers((prev) => {
+        const next = scanForMissingKeys(entries);
+        return markersEqual(prev, next) ? prev : next;
+      });
     }
 
     run();
@@ -223,13 +218,6 @@ function MarkerBadge({ marker }: Readonly<{ marker: RuntimeMarker }>) {
         <span className="truncate">
           {marker.namespace}:{marker.key}
         </span>
-        {marker.componentName && (
-          <span className="shrink-0 rounded bg-white/20 px-1 py-px text-[8px]">
-            {'<'}
-            {marker.componentName}
-            {'>'}
-          </span>
-        )}
         {marker.source && <span className="truncate text-[8px] opacity-70">{marker.source}</span>}
       </button>
     </div>

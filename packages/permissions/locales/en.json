@@ -1,0 +1,46 @@
+{
+  "net": {
+    "label": "Network access",
+    "description": "Make outbound HTTP requests to allow-listed hosts"
+  },
+  "secrets": {
+    "label": "Secret storage",
+    "description": "Read and write per-plugin credentials in the OS keychain"
+  },
+  "fs": {
+    "label": "Filesystem access",
+    "description": "Read and write files under allow-listed paths"
+  },
+  "exec": {
+    "label": "Run programs",
+    "description": "Spawn child processes from an allow-listed list of binaries"
+  },
+  "location": {
+    "label": "Location",
+    "description": "Access the hub's physical location (address, coordinates, timezone)"
+  },
+  "sparks": {
+    "label": "Sparks",
+    "description": "Emit and subscribe to events on the spark bus"
+  },
+  "blocks": {
+    "label": "Blocks",
+    "description": "Register reactive blocks and emit block updates"
+  },
+  "bricks": {
+    "label": "Bricks",
+    "description": "Register dashboard widgets and push data to them"
+  },
+  "routes": {
+    "label": "HTTP routes",
+    "description": "Register HTTP route handlers under the plugin's namespace"
+  },
+  "actions": {
+    "label": "Actions",
+    "description": "Register actions that other plugins or the user can trigger"
+  },
+  "prefs": {
+    "label": "Preferences",
+    "description": "Write the plugin's own preference values"
+  }
+}

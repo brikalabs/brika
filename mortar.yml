@@ -41,6 +41,17 @@ services:
       BRIKA_COORDINATOR_URL: http://localhost:5174
       BRIKA_DEV_UI_PROXY: http://localhost:5173
       BRIKA_DEV_AUTOCLAIM: devhub
+      # Opt into the auth-gated /api/i18n/sources write endpoint so the
+      # devtools overlay can edit translations on disk. Off by default in
+      # production binaries (the endpoint returns NotFound) so shipped
+      # builds never expose file paths or accept JSON writes over HTTP.
+      BRIKA_ALLOW_I18N_EDITS: "1"
+      # Point the hub at the dev source files instead of the embedded
+      # archive — `rootDir` derives from BRIKA_HOME and would otherwise
+      # land on `${root}/locales` (doesn't exist), so writes can't find
+      # an on-disk source. Production binaries omit this and use the
+      # archive as a read-only fallback.
+      BRIKA_LOCALES_DIR: ${root}/apps/hub/src/locales
       # Mock the update flow without hitting GitHub. Uncomment one
       # scenario to demo /setup/update + the settings update dialog.
       # See apps/hub/README.md → "Dev-only update mock". Scenarios:

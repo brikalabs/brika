@@ -131,14 +131,6 @@
   },
   "pageStopped": "Plugin is not running. Enable it to view this page.",
   "pageDisconnected": "Plugin disconnected. The page will reconnect when the plugin is available.",
-  "permissions": {
-    "title": "Permissions",
-    "description": "Control what this plugin can access",
-    "location": "Location",
-    "locationDesc": "Access the hub's physical location (address, coordinates, timezone)",
-    "secrets": "Secret storage",
-    "secretsDesc": "Read and write per-plugin credentials in the OS keychain"
-  },
   "starter": {
     "eyebrow": "First plugin",
     "title": "Install your first plugin",

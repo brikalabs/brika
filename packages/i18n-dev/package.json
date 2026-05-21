@@ -15,6 +15,9 @@
     "./vite": "./src/vite.ts",
     "./overlay": "./src/overlay/index.tsx"
   },
+  "bin": {
+    "brika-i18n": "./src/cli.ts"
+  },
   "scripts": {
     "test": "bun test",
     "typecheck": "tsgo --noEmit",
@@ -22,12 +25,14 @@
     "generate-types": "bun src/generate-types.ts"
   },
   "peerDependencies": {
+    "@brika/i18n": "workspace:*",
     "i18next": ">=23.0.0",
     "lucide-react": ">=0.400.0",
     "react": ">=18.0.0",
     "react-dom": ">=18.0.0",
     "tailwindcss": ">=4.0.0",
-    "vite": ">=5.0.0"
+    "vite": ">=5.0.0",
+    "zod": ">=4.0.0"
   },
   "peerDependenciesMeta": {
     "i18next": { "optional": true },
@@ -35,9 +40,11 @@
     "react": { "optional": true },
     "react-dom": { "optional": true },
     "tailwindcss": { "optional": true },
-    "vite": { "optional": true }
+    "vite": { "optional": true },
+    "zod": { "optional": true }
   },
   "devDependencies": {
+    "@brika/i18n": "workspace:*",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "i18next": "^25.8.13",
@@ -45,6 +52,7 @@
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
     "tailwindcss": "^4.1.0",
-    "vite": "^7.3.0"
+    "vite": "^7.3.0",
+    "zod": "^4.3.4"
   }
 }

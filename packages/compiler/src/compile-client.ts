@@ -2,12 +2,20 @@ import type { BunPlugin } from 'bun';
 import { brikaActionsPlugin } from './plugins/actions-client';
 import { brikaExternalsPlugin } from './plugins/externals';
 import { brikaForceSideEffectsPlugin } from './plugins/force-side-effects';
+import { brikaI18nCallSitePlugin } from './plugins/i18n-call-site';
 
 export interface ClientCompileOptions {
   /** Absolute path to .tsx entrypoint */
   entrypoint: string;
   /** Absolute path to plugin root (for relative path computation in action hashes) */
   pluginRoot: string;
+  /**
+   * Base directory paths in injected `t()` call-site metadata are relative
+   * to. Defaults to `pluginRoot`. Pass the workspace root so the resulting
+   * `plugins/<pkg>/src/...` paths are resolvable by a dev server that does
+   * not know about a specific plugin's layout.
+   */
+  sourceRoot?: string;
   /** Additional Bun plugins to inject (optional) */
   extraPlugins?: BunPlugin[];
 }
@@ -31,6 +39,10 @@ export async function compileClientModule(
     brikaExternalsPlugin(),
     brikaActionsPlugin(opts.pluginRoot),
     brikaForceSideEffectsPlugin(),
+    // Inject `{ __cs: 'file:line' }` into `t('...')` calls so the i18n
+    // devtools overlay can recover the source location at runtime — the
+    // bundled output otherwise reports a single minified line.
+    brikaI18nCallSitePlugin(opts.sourceRoot ?? opts.pluginRoot),
   ];
   if (opts.extraPlugins) {
     plugins.push(...opts.extraPlugins);

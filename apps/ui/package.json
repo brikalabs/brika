@@ -18,6 +18,7 @@
   "dependencies": {
     "@brika/auth": "workspace:*",
     "@brika/clay": "^0.1.0",
+    "@brika/i18n": "workspace:*",
     "@brika/ipc": "workspace:*",
     "@brika/permissions": "workspace:*",
     "@brika/plugin": "workspace:*",
@@ -49,7 +50,6 @@
     "clsx": "^2.1.1",
     "hls.js": "^1.6.15",
     "i18next": "^25.8.13",
-    "i18next-browser-languagedetector": "^8.2.1",
     "lucide-react": "^0.575.0",
     "lucide-static": "0.575.0",
     "radix-ui": "^1.4.3",

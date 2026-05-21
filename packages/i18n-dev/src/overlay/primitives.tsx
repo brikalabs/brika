@@ -177,12 +177,24 @@ export function isSkippedParent(el: Element | null): el is null {
 
 /**
  * Create a MutationObserver that coalesces mutations via requestAnimationFrame.
- * Returns the observer — caller is responsible for calling `.disconnect()`.
+ * Skips mutations whose target is inside the overlay's own root — without this
+ * filter, every marker re-render mutates the DOM, which would re-trigger the
+ * callback, which would re-render markers, ad infinitum. Returns the observer
+ * — caller is responsible for calling `.disconnect()`.
  */
 export function observeBodyMutations(callback: () => void): MutationObserver {
   let pending = false;
-  const obs = new MutationObserver(() => {
-    if (pending) {
+  const obs = new MutationObserver((mutations) => {
+    let externalChange = false;
+    for (const m of mutations) {
+      const target = m.target;
+      const el = target instanceof Element ? target : target.parentElement;
+      if (el && el.closest('#i18n-dev-root') === null) {
+        externalChange = true;
+        break;
+      }
+    }
+    if (!externalChange || pending) {
       return;
     }
     pending = true;

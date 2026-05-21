@@ -11,7 +11,9 @@ describe('i18n routes', () => {
     listLocales: ReturnType<typeof mock>;
     listNamespaces: ReturnType<typeof mock>;
     getAllTranslations: ReturnType<typeof mock>;
+    getBundleJson: ReturnType<typeof mock>;
     getNamespaceTranslations: ReturnType<typeof mock>;
+    onChange: ReturnType<typeof mock>;
   };
 
   useTestBed(() => {
@@ -23,9 +25,14 @@ describe('i18n routes', () => {
           hello: 'Hello',
         },
       }),
+      getBundleJson: mock().mockReturnValue({
+        body: '{"common":{"hello":"Hello"}}',
+        etag: '"abc"',
+      }),
       getNamespaceTranslations: mock().mockReturnValue({
         hello: 'Hello',
       }),
+      onChange: mock().mockReturnValue(() => {}),
     };
     stub(I18nService, mockI18n);
     app = TestApp.create(i18nRoutes);
@@ -49,11 +56,16 @@ describe('i18n routes', () => {
     expect(res.body.namespaces).toEqual(['common', 'bricks']);
   });
 
-  test('GET /api/i18n/bundle/:locale returns all translations', async () => {
+  test('GET /api/i18n/bundle/:locale returns the cached bundle JSON', async () => {
     const res = await app.get<Record<string, unknown>>('/api/i18n/bundle/en');
 
     expect(res.status).toBe(200);
-    expect(mockI18n.getAllTranslations).toHaveBeenCalledWith('en');
+    expect(mockI18n.getBundleJson).toHaveBeenCalledWith('en');
+  });
+
+  test('GET /api/i18n/bundle/:locale returns 304 when If-None-Match matches', async () => {
+    const res = await app.get('/api/i18n/bundle/en', { headers: { 'if-none-match': '"abc"' } });
+    expect(res.status).toBe(304);
   });
 
   test('GET /api/i18n/:locale/:namespace returns translations', async () => {

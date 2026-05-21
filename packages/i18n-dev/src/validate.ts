@@ -1,3 +1,4 @@
+import { flatten, getNestedValue, type TranslationData } from '@brika/i18n';
 import type { CoverageEntry, ValidationIssue } from './types';
 
 /** Extract `{{var}}` interpolation variable names from a translation string. */
@@ -23,33 +24,14 @@ export function extractVariables(value: string): string[] {
 }
 
 /**
- * Extract all leaf key paths from a nested object using dot-separated notation.
- *
- * @example extractKeys({ a: { b: "x", c: "y" }, d: "z" }) → ["a.b", "a.c", "d"]
+ * Sorted list of leaf key paths inside a translation tree. Thin wrapper over
+ * `@brika/i18n#flatten` that returns the sorted dotted paths.
  */
-export function extractKeys(obj: Record<string, unknown>, prefix = ''): string[] {
-  const keys: string[] = [];
-  for (const [key, value] of Object.entries(obj)) {
-    const path = prefix ? `${prefix}.${key}` : key;
-    if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
-      keys.push(...extractKeys(value as Record<string, unknown>, path));
-    } else {
-      keys.push(path);
-    }
-  }
-  return keys.sort((a, b) => a.localeCompare(b));
-}
-
-/** Resolve a dot-path to its leaf value. */
-function getNestedValue(obj: Record<string, unknown>, path: string): unknown {
-  let current: unknown = obj;
-  for (const part of path.split('.')) {
-    if (typeof current !== 'object' || current === null) {
-      return undefined;
-    }
-    current = (current as Record<string, unknown>)[part];
-  }
-  return current;
+export function extractKeys(obj: TranslationData): string[] {
+  const flat = flatten(obj);
+  const keys = [...flat.keys()];
+  keys.sort((a, b) => a.localeCompare(b));
+  return keys;
 }
 
 // ─── Namespace-level validation ────────────────────────────────────────────
@@ -58,8 +40,8 @@ interface NsContext {
   ns: string;
   locale: string;
   referenceLocale: string;
-  refNsData: Record<string, unknown>;
-  targetData: Record<string, unknown>;
+  refNsData: TranslationData;
+  targetData: TranslationData;
   refKeys: string[];
   targetKeySet: Set<string>;
 }
@@ -68,8 +50,8 @@ function buildNsContext(
   ns: string,
   locale: string,
   referenceLocale: string,
-  refNsData: Record<string, unknown>,
-  targetData: Record<string, unknown>
+  refNsData: TranslationData,
+  targetData: TranslationData
 ): NsContext {
   return {
     ns,
@@ -162,7 +144,7 @@ function computeCoverage(ctx: NsContext): CoverageEntry {
  * @param referenceLocale The locale used as ground truth (e.g. `"en"`)
  */
 export function validateLocales(
-  translations: Map<string, Map<string, Record<string, unknown>>>,
+  translations: Map<string, Map<string, TranslationData>>,
   referenceLocale: string
 ): { issues: ValidationIssue[]; coverage: CoverageEntry[] } {
   const issues: ValidationIssue[] = [];
@@ -173,7 +155,7 @@ export function validateLocales(
     return { issues, coverage };
   }
 
-  // Add reference locale coverage (always 100% by definition)
+  // Reference locale coverage is always 100% by definition.
   for (const [ns, refNsData] of refData) {
     const refKeys = extractKeys(refNsData);
     coverage.push({
@@ -217,7 +199,7 @@ export function validateLocales(
       coverage.push(computeCoverage(ctx));
     }
 
-    // Detect extra namespaces in the target that don't exist in reference
+    // Detect extra namespaces in the target that don't exist in reference.
     for (const ns of namespaces.keys()) {
       if (!refData.has(ns)) {
         issues.push({

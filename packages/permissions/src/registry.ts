@@ -21,8 +21,8 @@ export function createRegistry<
       {
         id,
         ...meta,
-        labelKey: `plugins:permissions.${id}`,
-        descriptionKey: `plugins:permissions.${id}Desc`,
+        labelKey: `permissions:${id}`,
+        descriptionKey: `permissions:${id}Desc`,
       },
     ])
   ) as Readonly<Record<P, PermissionDefinition>>;

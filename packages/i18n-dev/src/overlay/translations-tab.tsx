@@ -1,7 +1,6 @@
 import { ChevronRight, FileCode } from 'lucide-react';
 import type { RefObject } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { HMR_SAVE } from '../hmr-events';
 import { VariableHighlight } from './highlight';
 import { useKeyUsage, useToggleSet } from './hooks';
 import {
@@ -12,7 +11,13 @@ import {
   NamespaceGroup,
   openInEditor,
 } from './primitives';
-import { getTranslations, REFERENCE_LOCALE, updateI18nextStore } from './store';
+import {
+  getNestedStoreValue,
+  getTranslations,
+  REFERENCE_LOCALE,
+  removeFromI18nextStore,
+  updateI18nextStore,
+} from './store';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -310,16 +315,54 @@ export function TranslationsContent({
     }
   }, [editTarget]);
 
-  const saveTranslation = useCallback((locale: string, ns: string, key: string, value: string) => {
-    const hot = import.meta.hot;
-    if (!hot) {
-      return;
-    }
-    hot.send(HMR_SAVE, { locale, namespace: ns, key, value });
-    updateI18nextStore(locale, ns, key, value);
-    setEditTarget(null);
-    setRefreshKey((k) => k + 1);
-  }, []);
+  const saveTranslation = useCallback(
+    async (locale: string, ns: string, key: string, value: string) => {
+      // Optimistic update — render the new value immediately so the user
+      // doesn't wait on the HTTP round-trip. On failure (auth, disabled gate,
+      // unsafe key path), revert below.
+      const previous = getNestedStoreValue(locale, ns, key);
+      updateI18nextStore(locale, ns, key, value);
+      setEditTarget(null);
+      setRefreshKey((k) => k + 1);
+
+      const rollback = () => {
+        if (previous === undefined) {
+          removeFromI18nextStore(locale, ns, key);
+        } else {
+          updateI18nextStore(locale, ns, key, previous);
+        }
+        setRefreshKey((k) => k + 1);
+      };
+
+      // Browser-side fetch so the user's session cookie travels with the
+      // request. The Vite dev server proxies `/api/*` to the hub on the
+      // same origin, so credentials flow through transparently. (The old
+      // HMR_SAVE → vite plugin → server-side fetch path had no cookies and
+      // 401'd against the auth-gated /api/i18n/sources endpoint.)
+      try {
+        const res = await fetch(
+          `/api/i18n/sources/${encodeURIComponent(ns)}/${encodeURIComponent(locale)}`,
+          {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ key, value }),
+          }
+        );
+        if (res.ok) {
+          return;
+        }
+        const detail = await res.text().catch(() => '');
+        const suffix = detail ? ` — ${detail}` : '';
+        throw new Error(`HTTP ${res.status}${suffix}`);
+      } catch (err) {
+        rollback();
+        const message = err instanceof Error ? err.message : String(err);
+        console.error(`[i18n-dev] save failed (${ns}:${key} [${locale}]): ${message}`);
+      }
+    },
+    []
+  );
 
   if (grouped.length === 0) {
     return (
@@ -358,17 +401,19 @@ export function TranslationsContent({
             const isExpanded = expanded.has(eId);
             return (
               <div key={eId} className="border-dt-border-dim border-b">
-                <button
-                  type="button"
-                  onClick={() => toggleKey(eId)}
-                  className="flex w-full cursor-pointer items-center gap-1.5 border-none bg-transparent px-4 py-1.5 text-left text-[11px] transition-colors hover:bg-dt-bg-hover"
-                >
-                  <ChevronRight
-                    className={`size-2.5 shrink-0 text-dt-text-4 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
-                  />
-                  <span className="min-w-0 flex-1 truncate font-mono text-dt-text-2" title={eId}>
-                    {entry.key}
-                  </span>
+                <div className="flex w-full items-center gap-1.5 px-4 py-1.5 text-[11px] transition-colors hover:bg-dt-bg-hover">
+                  <button
+                    type="button"
+                    onClick={() => toggleKey(eId)}
+                    className="flex min-w-0 flex-1 cursor-pointer items-center gap-1.5 border-none bg-transparent text-left"
+                  >
+                    <ChevronRight
+                      className={`size-2.5 shrink-0 text-dt-text-4 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
+                    />
+                    <span className="min-w-0 flex-1 truncate font-mono text-dt-text-2" title={eId}>
+                      {entry.key}
+                    </span>
+                  </button>
                   <CopyButton text={eId} />
                   <KeyUsageBadge qualifiedKey={eId} />
                   {entry.missingCount > 0 && (
@@ -376,7 +421,7 @@ export function TranslationsContent({
                       {entry.missingCount} missing
                     </span>
                   )}
-                </button>
+                </div>
                 {isExpanded && (
                   <TranslationKeyExpanded
                     entry={entry}

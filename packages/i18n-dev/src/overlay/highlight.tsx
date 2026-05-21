@@ -6,10 +6,6 @@ import { getStoreData, trackedTranslations, walkStoreEntries } from './store';
 
 // ─── Variable display (uses i18next's own interpolator) ─────────────────────
 
-interface I18nInterpolator {
-  interpolate(str: string, data: object, lng: string, options: object): string;
-}
-
 interface TemplatePart {
   type: 'text' | 'var';
   content: string;
@@ -17,15 +13,44 @@ interface TemplatePart {
 
 const SENTINEL = '\0';
 
+type InterpolateFn = (s: string, d: object, lng: string, opts: object) => string;
+
+interface I18nInterpolator {
+  interpolate: InterpolateFn;
+}
+
+/**
+ * Type-guard for the slice of `i18next.services.interpolator` we depend on.
+ * Returns the original object reference (no cloning) so the method's `this`
+ * binding to the interpolator instance — and the internal regex state it
+ * maintains — survives across the call. Lighter than schema-parsing for
+ * a value we only inspect.
+ */
+function isInterpolator(value: unknown): value is I18nInterpolator {
+  if (value === null || typeof value !== 'object' || !('interpolate' in value)) {
+    return false;
+  }
+  return typeof value.interpolate === 'function';
+}
+
+function getInterpolator(): I18nInterpolator | null {
+  const services = i18next.services;
+  if (services === null || typeof services !== 'object' || !('interpolator' in services)) {
+    return null;
+  }
+  const candidate = services.interpolator;
+  return isInterpolator(candidate) ? candidate : null;
+}
+
 function splitTemplate(value: string): TemplatePart[] {
-  const interpolator = (i18next.services as unknown as Record<string, unknown> | undefined)
-    ?.interpolator as I18nInterpolator | undefined;
+  const interpolator = getInterpolator();
   if (!interpolator) {
     return [{ type: 'text', content: value }];
   }
 
   const vars: string[] = [];
-  const data = new Proxy({} as Record<string, string>, {
+  const target: Record<string, string> = {};
+  const data = new Proxy(target, {
     get(_, prop) {
       if (typeof prop !== 'string') {
         return undefined;
@@ -182,9 +207,10 @@ export function useHighlightMode(active: boolean): HighlightHover | null {
     function scan() {
       clearAttrs();
       const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
-      let node: Text | null;
-      while ((node = walker.nextNode() as Text | null)) {
-        tagTextNode(node);
+      for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
+        if (node instanceof Text) {
+          tagTextNode(node);
+        }
       }
     }
 
@@ -202,7 +228,8 @@ export function useHighlightMode(active: boolean): HighlightHover | null {
     }
 
     function onMove(e: MouseEvent) {
-      const t = (e.target as Element)?.closest?.(`[${HL_KEY}],[${HL_RAW}]`);
+      const target = e.target;
+      const t = target instanceof Element ? target.closest(`[${HL_KEY}],[${HL_RAW}]`) : null;
       if (t) {
         hoveredEl = t;
         lastMouseX = e.clientX;

@@ -8,7 +8,7 @@ import {
   SectionTitle,
 } from '@brika/clay';
 import { Clock } from 'lucide-react';
-import { type TimeFormat, useTimeFormat } from '@/lib/time-format';
+import type { TimeFormat } from '@/lib/time-format';
 import { useLocale } from '@/lib/use-locale';
 
 // ─── Toggle (reusable) ──────────────────────────────────────────────────────
@@ -24,8 +24,7 @@ const OPTIONS: readonly { value: TimeFormat; labelKey: string }[] = [
 ] as const;
 
 export function TimeFormatToggle({ className }: Readonly<TimeFormatToggleProps>) {
-  const { t } = useLocale();
-  const { preference, setPreference } = useTimeFormat();
+  const { t, timeFormat, setTimeFormat } = useLocale();
 
   return (
     <div
@@ -37,14 +36,14 @@ export function TimeFormatToggle({ className }: Readonly<TimeFormatToggleProps>)
       )}
     >
       {OPTIONS.map((option) => {
-        const isActive = preference === option.value;
+        const isActive = timeFormat === option.value;
         return (
           <button
             key={option.value}
             type="button"
             role="radio"
             aria-checked={isActive}
-            onClick={() => setPreference(option.value)}
+            onClick={() => setTimeFormat(option.value)}
             className={cn(
               'rounded-sm px-3 py-1 font-medium text-[12px] transition-all',
               isActive

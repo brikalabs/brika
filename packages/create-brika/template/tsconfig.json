@@ -1,3 +1,4 @@
 {
-  "extends": "@brika/sdk/tsconfig.plugin.json"
+  "extends": "@brika/sdk/tsconfig.plugin.json",
+  "include": ["src", "dist/types"]
 }

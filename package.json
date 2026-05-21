@@ -32,6 +32,7 @@
     "lint:fix": "bunx biome check --write .",
     "i18n:types": "bun --filter @brika/i18n-devtools generate-types",
     "i18n:check": "bun --filter @brika/i18n-devtools check",
+    "postinstall": "bun run i18n:types || true",
     "bump": "bump-version",
     "publish-packages": "publish-packages",
     "local-install": "local-install"

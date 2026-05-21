@@ -1,562 +1,307 @@
 /**
- * I18n Service
+ * I18n Service — orchestration layer.
  *
- * Handles loading translations from core and plugins with namespace-based API.
- * Supports locale fallback chains (e.g., fr-CH → fr → en).
+ * Thin DI wrapper around `TranslationRegistry` from `@brika/i18n`. Delegates
+ * filesystem loading, embedded-archive fallback, the dev-mode watcher, and
+ * the on-disk source index to dedicated internal collaborators so each
+ * concern can be reasoned about (and tested) in isolation.
  *
- * Namespaces:
- * - Core: "common", "nav", "plugins", etc. (from apps/hub/locales/)
- * - Plugins: "plugin:@brika/plugin-timer", "plugin:@brika/blocks-builtin", etc.
+ *   • Hub      `apps/hub/src/locales/<lang>/<ns>.json`         → namespace `<ns>`
+ *   • Package  `packages/<X>/locales/<lang>/*.json` (merged)   → namespace `<X>` (scope stripped)
+ *   • Plugin   `<pluginDir>/locales/<lang>/*.json` (merged)    → namespace `plugin:<id>`
+ *
+ * Design choice: collaborators are plain classes/modules instantiated by this
+ * service (not separate DI singletons). They share the same `TranslationRegistry`
+ * instance and are tightly coupled to the service's lifecycle — wiring them
+ * through DI would buy no testability while adding indirection.
  */
 
-import { watch } from 'node:fs';
-import { loadTarBytes } from '@brika/db/macros' with { type: 'macro' };
 import { inject, singleton } from '@brika/di';
+import {
+  countLeafKeys,
+  type RegistryChangeListener,
+  type TranslationData,
+  TranslationRegistry,
+} from '@brika/i18n';
+import {
+  type LoaderWarn,
+  loadMergedLocaleFolder,
+  pickPrimaryLocaleFile,
+} from '@brika/i18n/node';
 import { ConfigLoader } from '@/runtime/config/config-loader';
 import { Logger } from '@/runtime/logs/log-router';
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Constants
-// ─────────────────────────────────────────────────────────────────────────────
-
-/** Prefix for plugin namespaces to avoid collisions with core namespaces */
-const PLUGIN_NS_PREFIX = 'plugin:';
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Types
-// ─────────────────────────────────────────────────────────────────────────────
-
-type TranslationData = Record<string, unknown>;
-
-interface PluginTranslations {
-  pluginId: string;
-  locales: Map<string, TranslationData>;
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Helpers
-// ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * Count leaf keys in a nested translation object.
- * Used to compare translation completeness across locales.
- */
-function countLeafKeys(obj: TranslationData, visited = new WeakSet<object>()): number {
-  if (visited.has(obj)) {
-    return 0;
-  }
-  visited.add(obj);
-
-  let count = 0;
-  for (const value of Object.values(obj)) {
-    if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
-      count += countLeafKeys(value as TranslationData, visited);
-    } else {
-      count++;
-    }
-  }
-  return count;
-}
-
-/**
- * Deep merge two objects, with source values overriding target values.
- */
-function deepMerge(target: TranslationData, source: TranslationData): TranslationData {
-  const result: TranslationData = {
-    ...target,
-  };
-
-  for (const key in source) {
-    const sourceVal = source[key];
-    const targetVal = result[key];
-
-    if (
-      sourceVal !== null &&
-      typeof sourceVal === 'object' &&
-      !Array.isArray(sourceVal) &&
-      targetVal !== null &&
-      typeof targetVal === 'object' &&
-      !Array.isArray(targetVal)
-    ) {
-      result[key] = deepMerge(targetVal as TranslationData, sourceVal as TranslationData);
-    } else {
-      result[key] = sourceVal;
-    }
-  }
-
-  return result;
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// I18n Service
-// ─────────────────────────────────────────────────────────────────────────────
+import {
+  loadHubTranslations,
+  loadPackageTranslations,
+  WorkspaceRootResolver,
+} from './i18n-disk-loader';
+import { SourceIndex } from './i18n-source-index';
+import { PLUGIN_NS_PREFIX, type PackageWatch, type SourceFileEntry } from './i18n-types';
+import { LocaleWatcher } from './i18n-watcher';
 
 @singleton()
 export class I18nService {
   readonly #config = inject(ConfigLoader);
   readonly #logs = inject(Logger).withSource('i18n');
 
-  /** Core translations by locale */
-  readonly #coreTranslations = new Map<string, TranslationData>();
+  readonly #registry = new TranslationRegistry();
 
-  /** Plugin translations by plugin ID */
-  readonly #pluginTranslations = new Map<string, PluginTranslations>();
+  /** Workspace package metadata: namespace + rootDir. Drives per-package watchers + granular reloads. */
+  readonly #packageWatches = new Map<string, PackageWatch>();
 
-  /** All available locales (from core) */
-  readonly #availableLocales = new Set<string>();
+  /** Plugin → locales it provides (for `#validatePluginTranslations`). */
+  readonly #pluginLocales = new Map<string, Set<string>>();
 
-  /** Root directory for hub locales */
+  /** Allow-roots for `writeSourceKey`. Populated as hub + workspace + plugin dirs are discovered. */
+  readonly #allowedWriteRoots = new Set<string>();
+
+  /** Source-file index — recording, lookup, edit-with-safety. */
+  readonly #sources = new SourceIndex({
+    registry: this.#registry,
+    getAllowedRoots: () => [...this.#allowedWriteRoots],
+  });
+
+  readonly #workspaceRoot = new WorkspaceRootResolver(() => this.#config.getRootDir());
+
+  /** Active filesystem watcher (null until init()). */
+  #watcher: LocaleWatcher | null = null;
+
   #localesDir = '';
 
-  #reloadTimer: ReturnType<typeof setTimeout> | null = null;
+  readonly #warn: LoaderWarn = (message, ctx, error) => {
+    this.#logs.warn(message, ctx, error === undefined ? undefined : { error });
+  };
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // Initialization
-  // ─────────────────────────────────────────────────────────────────────────
+  constructor() {
+    this.#registry.onCollision = ({ namespace, existingSource, incomingSource }) => {
+      this.#logs.warn('Namespace claimed by multiple sources', {
+        namespace,
+        existing: existingSource,
+        incoming: incomingSource,
+      });
+    };
+  }
+
+  // ─── Initialization ──────────────────────────────────────────────────────
 
   async init(): Promise<void> {
+    // BRIKA_LOCALES_DIR overrides the default `${rootDir}/locales` lookup.
+    // Needed in dev setups where the writable source files live somewhere
+    // other than under BRIKA_HOME — e.g. mortar runs the hub from the repo
+    // root, but the actual JSON files are at `apps/hub/src/locales`. In
+    // production binaries the env var is unset, and the embedded archive
+    // serves as a read-only fallback regardless.
     const rootDir = this.#config.getRootDir();
-    // Locales are in the hub's locales/ directory (relative to where hub runs)
-    this.#localesDir = `${rootDir}/locales`;
+    this.#localesDir = Bun.env.BRIKA_LOCALES_DIR ?? `${rootDir}/locales`;
+    this.#allowedWriteRoots.add(this.#localesDir);
 
-    await this.#loadCoreTranslations();
-    this.#watchLocales();
+    await this.#loadAll();
+    this.#startWatcher();
+
+    const stats = this.#registry.getStats();
     this.#logs.info('I18n system initialized', {
-      availableLocales: [...this.#availableLocales],
-      namespaceCount: this.listNamespaces().length,
+      availableLocales: this.#registry.listLocales(),
+      namespaceCount: stats.namespaces,
+      localesDir: this.#localesDir,
     });
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // Public API
-  // ─────────────────────────────────────────────────────────────────────────
+  // ─── Public API ──────────────────────────────────────────────────────────
 
-  /**
-   * Get translations for a specific namespace with locale fallback.
-   * This is the main API for fetching translations.
-   *
-   * @param locale - The requested locale (e.g., "fr-CH", "en")
-   * @param namespace - Core namespace ("common") or plugin namespace ("plugin:@brika/plugin-timer")
-   */
   getNamespaceTranslations(locale: string, namespace: string): TranslationData | null {
-    const chain = this.#buildFallbackChain(locale);
-    let result: TranslationData = {};
-
-    // Check if it's a plugin namespace
-    if (namespace.startsWith(PLUGIN_NS_PREFIX)) {
-      const pluginId = namespace.slice(PLUGIN_NS_PREFIX.length);
-      const plugin = this.#pluginTranslations.get(pluginId);
-      if (!plugin) {
-        return null;
-      }
-
-      // Apply fallback chain (reverse to start from fallback)
-      for (const loc of chain.toReversed()) {
-        const data = plugin.locales.get(loc);
-        if (data) {
-          result = deepMerge(result, data);
-        }
-      }
-
-      return Object.keys(result).length > 0 ? result : null;
-    }
-
-    // Core namespace - look up in core translations
-    for (const loc of chain.toReversed()) {
-      const coreData = this.#coreTranslations.get(loc);
-      if (coreData?.[namespace]) {
-        result = deepMerge(result, coreData[namespace] as TranslationData);
-      }
-    }
-
-    return Object.keys(result).length > 0 ? result : null;
+    return this.#registry.getNamespaceTranslations(locale, namespace);
   }
 
-  /**
-   * List all available namespaces (core + plugins).
-   * Core namespaces come from JSON file names in locales folders.
-   * Plugin namespaces are prefixed with "plugin:".
-   */
   listNamespaces(): string[] {
-    const namespaces = new Set<string>();
-
-    // Core namespaces from JSON files
-    for (const data of this.#coreTranslations.values()) {
-      for (const key of Object.keys(data)) {
-        namespaces.add(key);
-      }
-    }
-
-    // Plugin namespaces with prefix
-    for (const pluginId of this.#pluginTranslations.keys()) {
-      namespaces.add(`${PLUGIN_NS_PREFIX}${pluginId}`);
-    }
-
-    return [...namespaces].sort((a, b) => a.localeCompare(b));
+    return this.#registry.listNamespaces();
   }
 
-  /**
-   * List all available locales (from core translations).
-   * Includes "cimode" for development (i18next shows keys instead of values).
-   */
   listLocales(): string[] {
-    const locales = [...this.#availableLocales].sort((a, b) => a.localeCompare(b));
-    // Add cimode at the end - handled client-side by i18next
-    locales.push('cimode');
-    return locales;
+    return [...this.#registry.listLocales(), 'cimode'];
+  }
+
+  getAllTranslations(locale: string): Record<string, TranslationData> {
+    return this.#registry.getAllTranslations(locale);
   }
 
   /**
-   * Register translations for a plugin.
-   * Called by PluginManager when loading a plugin with a locales/ folder.
+   * Pre-stringified bundle JSON + ETag for the bulk endpoint. Cached on the
+   * registry; invalidated on any mutation. See `Registry.getBundleJson`.
    */
+  getBundleJson(locale: string): { readonly body: string; readonly etag: string } {
+    return this.#registry.getBundleJson(locale);
+  }
+
+  /** List every tracked source file across hub, packages, and plugins. */
+  listSourceFiles(): SourceFileEntry[] {
+    return this.#sources.list();
+  }
+
+  /** Look up the source file for a single (namespace, locale) pair. */
+  getSourceFile(namespace: string, locale: string): SourceFileEntry | undefined {
+    return this.#sources.get(namespace, locale);
+  }
+
+  /**
+   * Apply a dot-path edit to the source file backing `<namespace, locale>`,
+   * write it back, AND update the registry transactionally so the response
+   * doesn't return until queries reflect the new data. Rejects unknown source
+   * files (embedded-archive locales) and untrusted paths via three layers:
+   * URL-param shape, allow-root containment, and recursive prototype-pollution
+   * scan. See `SourceIndex.write`.
+   */
+  writeSourceKey(namespace: string, locale: string, key: string, value: unknown): Promise<void> {
+    return this.#sources.write(namespace, locale, key, value);
+  }
+
+  /** Subscribe to registry mutations (used by SSE / live-reload integrations). */
+  onChange(listener: RegistryChangeListener): () => void {
+    return this.#registry.onChange(listener);
+  }
+
+  /** Register translations for a plugin. Called by PluginManager on install/load. */
   async registerPluginTranslations(pluginId: string, pluginDir: string): Promise<string[]> {
-    const localesDir = `${pluginDir}/locales`;
+    const namespace = `${PLUGIN_NS_PREFIX}${pluginId}`;
     const detectedLocales: string[] = [];
 
     try {
       const glob = new Bun.Glob('*/');
       const entries = await Array.fromAsync(
-        glob.scan({
-          cwd: localesDir,
-          onlyFiles: false,
-        })
+        glob.scan({ cwd: `${pluginDir}/locales`, onlyFiles: false })
       );
+
+      // Plugin re-register replaces existing data — clear first.
+      this.#registry.removeNamespace(namespace);
+      this.#allowedWriteRoots.add(`${pluginDir}/locales`);
 
       for (const entry of entries) {
         const locale = entry.replace('/', '');
         if (!locale) {
           continue;
         }
-
         detectedLocales.push(locale);
 
-        // Load plugin translations (flattened, not namespaced by filename)
-        const localeData = await this.#loadPluginLocaleFolder(`${localesDir}/${locale}`);
-        if (Object.keys(localeData).length === 0) {
-          continue;
+        const folderPath = `${pluginDir}/locales/${locale}`;
+        const { data } = await loadMergedLocaleFolder(folderPath, this.#warn);
+        if (Object.keys(data).length > 0) {
+          this.#registry.setNamespaceLocale(namespace, locale, data, {
+            merge: false,
+            source: 'plugin',
+          });
+          const path = await pickPrimaryLocaleFile(folderPath, 'plugin');
+          if (path) {
+            this.#sources.record({ namespace, locale, path, kind: 'plugin' });
+          }
         }
-
-        // Get or create plugin translations entry
-        let plugin = this.#pluginTranslations.get(pluginId);
-        if (!plugin) {
-          plugin = {
-            pluginId,
-            locales: new Map(),
-          };
-          this.#pluginTranslations.set(pluginId, plugin);
-        }
-
-        plugin.locales.set(locale, localeData);
       }
 
       if (detectedLocales.length > 0) {
-        this.#logs.debug('Plugin translations registered', {
-          pluginId: pluginId,
-          locales: detectedLocales,
-        });
-
+        this.#pluginLocales.set(pluginId, new Set(detectedLocales));
+        this.#logs.debug('Plugin translations registered', { pluginId, locales: detectedLocales });
         this.#validatePluginTranslations(pluginId, detectedLocales);
       }
     } catch {
-      // No locales folder or error reading - that's fine
+      // No locales folder or read error — fine.
     }
 
     return detectedLocales.sort((a, b) => a.localeCompare(b));
   }
 
-  /**
-   * Get ALL translations for a locale in a single call.
-   * Returns a map of namespace → translations (with fallback chain applied).
-   * Used by the bulk loading endpoint.
-   */
-  getAllTranslations(locale: string): Record<string, TranslationData> {
-    const namespaces = this.listNamespaces();
-    const result: Record<string, TranslationData> = {};
-    for (const ns of namespaces) {
-      const data = this.getNamespaceTranslations(locale, ns);
-      if (data) {
-        result[ns] = data;
-      }
+  /** Unregister translations for a plugin. */
+  unregisterPluginTranslations(pluginId: string): void {
+    const namespace = `${PLUGIN_NS_PREFIX}${pluginId}`;
+    if (this.#registry.removeNamespace(namespace)) {
+      this.#pluginLocales.delete(pluginId);
+      this.#sources.forget(namespace);
+      this.#logs.debug('Plugin translations unregistered', { pluginId });
     }
-    return result;
   }
 
-  /**
-   * Reload core translations from disk.
-   * Called in dev mode when locale JSON files change.
-   */
+  /** Reload hub and workspace-package translations from disk. */
   async reloadCoreTranslations(): Promise<void> {
-    this.#coreTranslations.clear();
-    this.#availableLocales.clear();
-    await this.#loadCoreTranslations();
+    await this.#registry.transaction(async () => {
+      this.#registry.clear((source) => source !== 'plugin');
+      this.#packageWatches.clear();
+      this.#sources.forgetNonPlugin();
+      await this.#loadAll();
+    });
+    // Re-install watchers — `#packageWatches` was cleared and repopulated, so
+    // the disposers from the previous start() call point at stale paths.
+    // Without this, hot-reload silently stops working for package locales.
+    this.#startWatcher();
     this.#logs.info('Core translations reloaded from disk');
   }
 
-  /**
-   * Unregister translations for a plugin.
-   * Called by PluginManager when unloading a plugin.
-   */
-  unregisterPluginTranslations(pluginId: string): void {
-    if (this.#pluginTranslations.delete(pluginId)) {
-      this.#logs.debug('Plugin translations unregistered', {
-        pluginId: pluginId,
-      });
-    }
+  // ─── Internals ───────────────────────────────────────────────────────────
+
+  async #loadAll(): Promise<void> {
+    await loadHubTranslations({
+      localesDir: this.#localesDir,
+      registry: this.#registry,
+      sources: this.#sources,
+      warn: this.#warn,
+    });
+    await loadPackageTranslations({
+      registry: this.#registry,
+      sources: this.#sources,
+      warn: this.#warn,
+      workspaceRoot: await this.#workspaceRoot.resolve(),
+      onPackageDiscovered: (pkg) => {
+        this.#packageWatches.set(pkg.rootDir, pkg);
+        this.#allowedWriteRoots.add(`${pkg.rootDir}/locales`);
+      },
+    });
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // Private Methods
-  // ─────────────────────────────────────────────────────────────────────────
-
-  /**
-   * Watch the locales directory for JSON file changes and auto-reload.
-   * Uses debounce to batch rapid changes into a single reload.
-   */
-  #watchLocales(): void {
-    try {
-      watch(this.#localesDir, { recursive: true }, (_event, filename) => {
-        if (!filename || !String(filename).endsWith('.json')) {
-          return;
-        }
-        if (this.#reloadTimer) {
-          clearTimeout(this.#reloadTimer);
-        }
-        this.#reloadTimer = setTimeout(() => {
-          this.#reloadTimer = null;
-          this.reloadCoreTranslations();
-        }, 300);
-      });
-      this.#logs.debug('Watching locales directory', { directory: this.#localesDir });
-    } catch {
-      // Directory may not exist (embedded/production mode)
-    }
+  #startWatcher(): void {
+    this.#watcher?.dispose();
+    this.#watcher = new LocaleWatcher({
+      registry: this.#registry,
+      localesDir: this.#localesDir,
+      packageWatches: this.#packageWatches,
+      warn: this.#warn,
+      onWatcherError: (path, error) => {
+        this.#logs.debug('Locale watcher unavailable', { directory: path }, { error });
+      },
+      onWatcherInstalled: (path) => {
+        this.#logs.debug('Watching locales directory', { directory: path });
+      },
+    });
+    this.#watcher.start();
   }
 
-  /**
-   * Load all core translations — from the embedded archive when the
-   * locales directory doesn't exist (standalone binary), or from the
-   * filesystem when it does (development / custom install).
-   */
-  async #loadCoreTranslations(): Promise<void> {
-    try {
-      const glob = new Bun.Glob('*/');
-      const entries = await Array.fromAsync(
-        glob.scan({
-          cwd: this.#localesDir,
-          onlyFiles: false,
-        })
-      );
-
-      for (const entry of entries) {
-        const locale = entry.replace('/', '');
-        if (!locale) {
-          continue;
-        }
-
-        this.#availableLocales.add(locale);
-
-        const localeData = await this.#loadLocaleFolder(`${this.#localesDir}/${locale}`);
-        if (Object.keys(localeData).length > 0) {
-          this.#coreTranslations.set(locale, localeData);
-        }
-      }
-    } catch {
-      // Locales directory absent — load from the archive embedded at build time.
-      await this.#loadEmbeddedLocales();
-    }
-  }
-
-  /**
-   * Load core translations from the gzip-tar archive embedded at build time.
-   * Archive layout mirrors locales/: "{locale}/{namespace}.json"
-   */
-  async #loadEmbeddedLocales(): Promise<void> {
-    try {
-      const compressed = new Uint8Array(await loadTarBytes('apps/hub/src/locales'));
-      const tarData = Bun.gunzipSync(compressed);
-      const archive = new Bun.Archive(tarData);
-      const files = await archive.files();
-
-      for (const [relativePath, file] of files) {
-        const slash = relativePath.indexOf('/');
-        if (slash === -1) {
-          continue;
-        }
-        const locale = relativePath.slice(0, slash);
-        const nsFile = relativePath.slice(slash + 1);
-        if (!locale || !nsFile.endsWith('.json')) {
-          continue;
-        }
-        const namespace = nsFile.replace('.json', '');
-
-        try {
-          const content = JSON.parse(await file.text()) as TranslationData;
-          this.#availableLocales.add(locale);
-          const localeData = this.#coreTranslations.get(locale) ?? {};
-          localeData[namespace] = content;
-          this.#coreTranslations.set(locale, localeData);
-        } catch (e) {
-          this.#logs.warn(
-            'Failed to parse embedded locale',
-            {
-              path: relativePath,
-            },
-            {
-              error: e,
-            }
-          );
-        }
-      }
-    } catch (e) {
-      this.#logs.warn(
-        'Failed to load embedded core translations',
-        {},
-        {
-          error: e,
-        }
-      );
-    }
-  }
-
-  /**
-   * Load all JSON files from a locale folder and merge them.
-   * Each file becomes a namespace (e.g., common.json → { common: {...} })
-   */
-  async #loadLocaleFolder(folderPath: string): Promise<TranslationData> {
-    const result: TranslationData = {};
-
-    try {
-      const glob = new Bun.Glob('*.json');
-      const files = await Array.fromAsync(
-        glob.scan({
-          cwd: folderPath,
-        })
-      );
-
-      for (const file of files) {
-        const namespace = file.replace('.json', '');
-        try {
-          const content = await Bun.file(`${folderPath}/${file}`).json();
-          result[namespace] = content;
-        } catch (e) {
-          this.#logs.warn(
-            'Failed to load translation file',
-            {
-              filePath: `${folderPath}/${file}`,
-            },
-            {
-              error: e,
-            }
-          );
-        }
-      }
-    } catch {
-      // Folder doesn't exist or can't be read
-    }
-
-    return result;
-  }
-
-  /**
-   * Load plugin translations from a locale folder.
-   * For plugins, we merge all JSON files directly without namespacing by filename.
-   * This allows plugin.json to contain: { "name": "...", "description": "..." }
-   * which becomes accessible as: t("plugin-id:name")
-   */
-  async #loadPluginLocaleFolder(folderPath: string): Promise<TranslationData> {
-    let result: TranslationData = {};
-
-    try {
-      const glob = new Bun.Glob('*.json');
-      const files = await Array.fromAsync(
-        glob.scan({
-          cwd: folderPath,
-        })
-      );
-
-      for (const file of files) {
-        try {
-          const content = await Bun.file(`${folderPath}/${file}`).json();
-          // Merge directly without namespace
-          result = deepMerge(result, content as TranslationData);
-        } catch (e) {
-          this.#logs.warn(
-            'Failed to load translation file',
-            {
-              filePath: `${folderPath}/${file}`,
-            },
-            {
-              error: e,
-            }
-          );
-        }
-      }
-    } catch {
-      // Folder doesn't exist or can't be read
-    }
-
-    return result;
-  }
-
-  /**
-   * Build fallback chain for a locale.
-   * e.g., "fr-CH" → ["fr-CH", "fr", "en"]
-   */
-  #buildFallbackChain(locale: string): string[] {
-    const chain: string[] = [locale];
-
-    // Add base language if regional variant
-    if (locale.includes('-')) {
-      const base = locale.split('-')[0];
-      if (!chain.includes(base)) {
-        chain.push(base);
-      }
-    }
-
-    // Always fallback to English
-    if (!chain.includes('en')) {
-      chain.push('en');
-    }
-
-    return chain;
-  }
-
-  /**
-   * Validate a plugin's translations after registration.
-   * Logs warnings for missing locales or key count mismatches.
-   */
   #validatePluginTranslations(pluginId: string, detectedLocales: string[]): void {
-    // Warn about core locales the plugin doesn't cover
-    const missingLocales = [...this.#availableLocales].filter(
-      (loc) => !detectedLocales.includes(loc)
-    );
+    const pluginOwnLocales = this.#pluginLocales.get(pluginId);
+    const otherLocales = this.#registry.listLocales().filter((loc) => !pluginOwnLocales?.has(loc));
+    const missingLocales = otherLocales.filter((loc) => !detectedLocales.includes(loc));
     if (missingLocales.length > 0) {
-      this.#logs.warn('Plugin missing translations for locales', {
-        pluginId,
-        missingLocales,
-      });
+      this.#logs.warn('Plugin missing translations for locales', { pluginId, missingLocales });
     }
 
-    // Warn about key count mismatches between locales
-    const plugin = this.#pluginTranslations.get(pluginId);
-    if (plugin && plugin.locales.size > 1) {
-      const counts = [...plugin.locales.entries()].map(([loc, data]) => ({
-        loc,
-        keys: countLeafKeys(data),
-      }));
+    const namespace = `${PLUGIN_NS_PREFIX}${pluginId}`;
+    const reference = this.#registry.getNamespaceTranslations(detectedLocales[0] ?? '', namespace);
+    if (!reference || detectedLocales.length <= 1) {
+      return;
+    }
 
-      const reference = counts[0];
-      for (const other of counts.slice(1)) {
-        if (other.keys !== reference.keys) {
-          this.#logs.warn('Plugin translation key count mismatch', {
-            pluginId,
-            [reference.loc]: reference.keys,
-            [other.loc]: other.keys,
-          });
-          break;
-        }
+    const referenceCount = countLeafKeys(reference);
+    for (const locale of detectedLocales.slice(1)) {
+      const data = this.#registry.getNamespaceTranslations(locale, namespace);
+      if (!data) {
+        continue;
+      }
+      const count = countLeafKeys(data);
+      if (count !== referenceCount) {
+        this.#logs.warn('Plugin translation key count mismatch', {
+          pluginId,
+          [detectedLocales[0] ?? '']: referenceCount,
+          [locale]: count,
+        });
+        break;
       }
     }
   }
 }
+
+// Re-export for callers that imported `SourceFileEntry` from the service file.
+export type { SourceFileEntry } from './i18n-types';
