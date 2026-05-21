@@ -230,7 +230,7 @@ export class PluginLifecycle {
       [`--preload=${PRELUDE_PATH}`, buildResult.entryPath],
       {
         cwd: rootDirectory,
-        env: this.#bunRunner.env({
+        env: this.#bunRunner.pluginEnv({
           BRIKA_PLUGIN_NAME: metadata.name,
           BRIKA_PLUGIN_UID: uid,
         }),
