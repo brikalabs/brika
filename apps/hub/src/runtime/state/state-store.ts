@@ -184,10 +184,12 @@ export class StateStore {
     enabled?: boolean;
   }): Promise<void> {
     const cur = this.get(info.name);
-    const metadata = await this.refreshMetadata(info.name, info.rootDirectory);
-    const grantedPermissions = JSON.stringify(
-      cur?.grantedPermissions ?? metadata.permissions ?? []
-    );
+    await this.refreshMetadata(info.name, info.rootDirectory);
+    // New plugins start with NO granted permissions — the manifest's
+    // declared `permissions` list is a *request*, not an auto-grant. The
+    // user explicitly approves each one before it takes effect. On
+    // re-registration (upgrade / config reload), prior grants are preserved.
+    const grantedPermissions = JSON.stringify(cur?.grantedPermissions ?? []);
 
     const updateFields = {
       rootDirectory: info.rootDirectory,

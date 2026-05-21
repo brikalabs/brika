@@ -145,6 +145,41 @@ describe('StateStore', () => {
 
       expect(store.get('@test/plugin')?.enabled).toBe(false);
     });
+
+    test('new plugins start with no granted permissions (manifest is a request, not a grant)', async () => {
+      store.init();
+      await store.registerPlugin({
+        name: '@test/plugin',
+        rootDirectory: testPluginDir,
+        entryPoint: join(testPluginDir, 'index.ts'),
+        uid: 'test123',
+      });
+
+      expect(store.getGrantedPermissions('@test/plugin')).toEqual([]);
+    });
+
+    test('preserves granted permissions across re-registration', async () => {
+      store.init();
+      await store.registerPlugin({
+        name: '@test/plugin',
+        rootDirectory: testPluginDir,
+        entryPoint: join(testPluginDir, 'index.ts'),
+        uid: 'test123',
+      });
+
+      // Simulate the user granting permissions through the UI.
+      store.setGrantedPermissions('@test/plugin', ['location', 'secrets']);
+
+      // A plugin upgrade re-registers the same name.
+      await store.registerPlugin({
+        name: '@test/plugin',
+        rootDirectory: testPluginDir,
+        entryPoint: join(testPluginDir, 'index.ts'),
+        uid: 'test456',
+      });
+
+      expect(store.getGrantedPermissions('@test/plugin')).toEqual(['location', 'secrets']);
+    });
   });
 
   describe('get / getByUid', () => {
