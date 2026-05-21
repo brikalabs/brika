@@ -19,8 +19,8 @@
   "dependencies": {
     "@brika/auth": "workspace:*",
     "@brika/clay": "^0.1.0",
+    "@brika/errors": "workspace:*",
     "@brika/i18n": "workspace:*",
-    "@brika/ipc": "workspace:*",
     "@brika/permissions": "workspace:*",
     "@brika/plugin": "workspace:*",
     "@brika/registry": "workspace:*",

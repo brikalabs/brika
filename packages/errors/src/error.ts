@@ -7,7 +7,7 @@
  *
  * @example hub handler:
  * ```ts
- * import { errors } from '@brika/ipc';
+ * import { errors } from '@brika/errors';
  * throw errors.permissionDenied({ permission: 'location' });
  * ```
  *
@@ -24,9 +24,8 @@ import {
   type BrikaErrorCode,
   type CatalogedErrorCode,
   type DataForCode,
-  isRetryable,
   lookupCatalogEntry,
-} from './error-catalog';
+} from './catalog';
 
 // ─── Wire envelope schema ──────────────────────────────────────────────────
 
@@ -61,48 +60,6 @@ export const BrikaErrorWireSchema: z.ZodType<BrikaErrorWire> = z.object({
 /** True if `value` looks like a `BrikaError` wire envelope. */
 export function isBrikaErrorWire(value: unknown): value is BrikaErrorWire {
   return BrikaErrorWireSchema.safeParse(value).success;
-}
-
-// ─── RFC 9457 HTTP envelope ────────────────────────────────────────────────
-
-/**
- * Problem Details envelope (RFC 9457) plus Brika extensions.
- *
- * @see https://www.rfc-editor.org/rfc/rfc9457
- */
-export interface BrikaErrorResponseBody {
-  /** RFC 9457: URI identifying the problem type. */
-  readonly type: string;
-  /** RFC 9457: short human-readable summary. */
-  readonly title: string;
-  /** RFC 9457: HTTP status code (matches the response status). */
-  readonly status: number;
-  /** RFC 9457: human-readable explanation specific to this occurrence. */
-  readonly detail: string;
-  /** RFC 9457: URI reference identifying this specific occurrence (optional). */
-  readonly instance?: string;
-
-  // ─── Brika extensions ────────────────────────────────────────────────
-  /** Machine-readable code (extension member). */
-  readonly code: string;
-  /** Structured payload typed per code (extension member). */
-  readonly data?: Readonly<Record<string, unknown>>;
-  /** i18n lookup key for the FE (extension member). */
-  readonly i18nKey?: string;
-  /** Actionable advice for plugin authors (extension member). */
-  readonly developerHint?: string;
-  /** Whether the client should retry without changing inputs (extension). */
-  readonly retryable: boolean;
-  /** Correlation id from the request context, if available (extension). */
-  readonly traceId?: string;
-}
-
-/** Options for response building. */
-export interface ResponseOptions {
-  /** Correlation id; surfaces in the envelope as `traceId`. */
-  readonly traceId?: string;
-  /** Request path/URL surfaced as `instance` (RFC 9457). */
-  readonly instance?: string;
 }
 
 // ─── BrikaError class ──────────────────────────────────────────────────────
@@ -308,55 +265,4 @@ function deserializeCause(cause: BrikaErrorWire['cause']): BrikaError | Error | 
     return e;
   }
   return undefined;
-}
-
-// ─── HTTP boundary (RFC 9457) ──────────────────────────────────────────────
-
-const UNCATALOGED_TYPE = 'about:blank';
-const UNCATALOGED_TITLE = 'Internal error';
-
-/**
- * Convert any thrown value to an HTTP `Response` shaped per RFC 9457
- * (Problem Details for HTTP APIs) plus Brika extensions. BrikaErrors emit
- * the catalog's `status`; everything else collapses to 500 INTERNAL with
- * no leaked message.
- *
- * @see https://www.rfc-editor.org/rfc/rfc9457
- */
-export function brikaErrorToResponse(err: unknown, opts?: ResponseOptions): Response {
-  if (err instanceof BrikaError) {
-    const entry = lookupCatalogEntry(err.code);
-    const status = entry?.status ?? 500;
-    const body: BrikaErrorResponseBody = {
-      type: entry?.typeUri ?? UNCATALOGED_TYPE,
-      title: entry?.title ?? UNCATALOGED_TITLE,
-      status,
-      detail: err.message,
-      code: err.code,
-      retryable: isRetryable(err.code),
-      ...(opts?.instance ? { instance: opts.instance } : {}),
-      ...(opts?.traceId ? { traceId: opts.traceId } : {}),
-      ...(err.data ? { data: err.data } : {}),
-      ...(entry?.i18nKey ? { i18nKey: entry.i18nKey } : {}),
-      ...(entry?.developerHint ? { developerHint: entry.developerHint } : {}),
-    };
-    return Response.json(body, {
-      status,
-      headers: { 'Content-Type': 'application/problem+json' },
-    });
-  }
-  const body: BrikaErrorResponseBody = {
-    type: UNCATALOGED_TYPE,
-    title: UNCATALOGED_TITLE,
-    status: 500,
-    detail: 'Internal server error',
-    code: 'INTERNAL',
-    retryable: false,
-    ...(opts?.instance ? { instance: opts.instance } : {}),
-    ...(opts?.traceId ? { traceId: opts.traceId } : {}),
-  };
-  return Response.json(body, {
-    status: 500,
-    headers: { 'Content-Type': 'application/problem+json' },
-  });
 }

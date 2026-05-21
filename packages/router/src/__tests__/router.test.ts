@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { BrikaError } from '@brika/ipc';
+import { BrikaError } from '@brika/errors';
 import { z } from 'zod';
 import type { Middleware } from '../index';
 import { BadRequest, combineRoutes, createApp, group, NotFound, route } from '../index';

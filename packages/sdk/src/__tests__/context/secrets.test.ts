@@ -6,7 +6,7 @@
  */
 
 import { beforeEach, describe, expect, test } from 'bun:test';
-import { BrikaError, errors } from '@brika/ipc';
+import { BrikaError, errors } from '@brika/errors';
 import { setupSecrets } from '../../context/secrets';
 import { createTestHarness } from './_test-utils';
 

@@ -4,7 +4,7 @@
 
 import 'reflect-metadata';
 import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
-import { BrikaError } from '@brika/ipc';
+import { BrikaError } from '@brika/errors';
 import {
   blockEmit,
   blockLog,

@@ -6,7 +6,7 @@
  * schema-derived type, and read autocomplete-friendly in IDEs.
  *
  * ```ts
- * import { errors } from '@brika/ipc';
+ * import { errors } from '@brika/errors';
  *
  * throw errors.permissionDenied({ permission: 'location' });
  * throw errors.notFound({ resource: 'block:timer' }, { cause: dbError });
@@ -22,10 +22,9 @@ import {
   type BrikaErrorCode,
   type CatalogedErrorCode,
   type DataForCode,
-  ErrorCatalog,
   lookupCatalogEntry,
-} from './error-catalog';
-import { BrikaError } from './errors';
+} from './catalog';
+import { BrikaError } from './error';
 
 /** Optional second-argument bag accepted by every factory. */
 export interface FactoryOpts {
@@ -116,8 +115,11 @@ type FactoryKey = keyof typeof errors;
 type FactoryCodeFromKey<K extends FactoryKey> = ReturnType<(typeof errors)[K]>['code'];
 type CoveredCodes = FactoryCodeFromKey<FactoryKey>;
 
-// If this line errors, a throwable catalog code is missing a factory above.
-const _assertCoverage: ThrowableCode extends CoveredCodes ? true : false = true;
-// Silence "unused" for the assertion (it's structural only).
-void _assertCoverage;
-void ErrorCatalog;
+/**
+ * Compile-time coverage proof. If a throwable code is missing from `errors`,
+ * `CoveredCodes` won't include it and `true` is no longer assignable to the
+ * conditional — the file fails to compile, pointing at the gap.
+ *
+ * Exported (not just a local const) so it counts as used by lint rules.
+ */
+export const _factoryCoverageProof: ThrowableCode extends CoveredCodes ? true : never = true;

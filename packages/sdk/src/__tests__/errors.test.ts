@@ -1,7 +1,7 @@
 /**
  * Tests for the SDK's error surface (factories + match + narrowing).
  *
- * The SDK re-exports BrikaError + factory API from @brika/ipc. These tests
+ * The SDK re-exports BrikaError + factory API from @brika/errors. These tests
  * cover the surface plugin authors interact with.
  */
 

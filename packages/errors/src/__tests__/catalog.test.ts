@@ -12,12 +12,7 @@
 import { describe, expect, it } from 'bun:test';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
-import {
-  ERROR_CATEGORIES,
-  ERROR_SEVERITIES,
-  ErrorCatalog,
-  lookupCatalogEntry,
-} from '../error-catalog';
+import { ERROR_CATEGORIES, ERROR_SEVERITIES, ErrorCatalog, lookupCatalogEntry } from '../catalog';
 
 const REPO_ROOT = join(import.meta.dir, '..', '..', '..', '..');
 const SEARCH_DIRS = ['packages', 'apps'];

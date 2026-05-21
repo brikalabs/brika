@@ -1,5 +1,5 @@
 import { inject } from '@brika/di';
-import { BrikaError, brikaErrorToResponse } from '@brika/ipc';
+import { BrikaError, brikaErrorToResponse } from '@brika/errors';
 import { type Context, Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { ZodError, z } from 'zod';

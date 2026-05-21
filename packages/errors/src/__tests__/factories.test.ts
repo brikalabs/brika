@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test';
-import { ErrorCatalog, lookupCatalogEntry } from '../error-catalog';
-import { BrikaError } from '../errors';
+import { ErrorCatalog, lookupCatalogEntry } from '../catalog';
+import { BrikaError } from '../error';
 import { buildCustomError, buildError, errors } from '../factories';
 
 describe('errors.* factories', () => {

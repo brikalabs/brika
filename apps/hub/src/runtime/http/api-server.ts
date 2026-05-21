@@ -1,5 +1,5 @@
 import { inject, singleton } from '@brika/di';
-import { BrikaError, brikaErrorToResponse, isRetryable } from '@brika/ipc';
+import { BrikaError, brikaErrorToResponse, isRetryable } from '@brika/errors';
 import {
   type CorsOriginMatcher,
   createApp,

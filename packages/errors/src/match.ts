@@ -15,8 +15,8 @@
  * errors are always handled.
  */
 
-import type { CatalogedErrorCode, DataForCode } from './error-catalog';
-import { BrikaError } from './errors';
+import type { CatalogedErrorCode, DataForCode } from './catalog';
+import { BrikaError } from './error';
 
 /**
  * Handler signature for a given cataloged code. Extracted via indexed access

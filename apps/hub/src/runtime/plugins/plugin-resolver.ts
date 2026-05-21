@@ -1,5 +1,5 @@
 import { dirname, extname, join, resolve } from 'node:path';
-import { BrikaError, errors } from '@brika/ipc';
+import { BrikaError, errors } from '@brika/errors';
 import { PluginPackageSchema } from '@brika/schema';
 
 function isRecord(value: unknown): value is Record<string, unknown> {

@@ -7,7 +7,7 @@
  * the catalog is the single source of truth for "is this fatal".
  */
 
-import { severityForCode } from '@brika/ipc';
+import { severityForCode } from '@brika/errors';
 import type { BlockTypeDefinition, Workflow } from '../types';
 import { parsePortRef } from '../types/ports';
 import { isValidConnection } from './connections';

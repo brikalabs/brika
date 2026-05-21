@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { BrikaError } from '../errors';
+import { BrikaError } from '../error';
 import { errors } from '../factories';
 import { matchBrikaError } from '../match';
 

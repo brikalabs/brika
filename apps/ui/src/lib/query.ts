@@ -5,7 +5,7 @@
  * `BrikaApiError`. Use `isBrikaApiError(err, 'CODE')` to narrow code + data,
  * or `err.retryable` to decide whether to auto-retry.
  */
-import type { CatalogedErrorCode, DataForCode } from '@brika/ipc/errors';
+import type { CatalogedErrorCode, DataForCode } from '@brika/errors';
 import { QueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 import { apiFetch } from './api';

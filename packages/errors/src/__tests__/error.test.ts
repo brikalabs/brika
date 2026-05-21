@@ -1,11 +1,7 @@
 import { describe, expect, it } from 'bun:test';
 import { z } from 'zod';
-import {
-  BrikaError,
-  BrikaErrorWireSchema,
-  brikaErrorToResponse,
-  isBrikaErrorWire,
-} from '../errors';
+import { BrikaError, BrikaErrorWireSchema, isBrikaErrorWire } from '../error';
+import { brikaErrorToResponse } from '../http';
 
 describe('BrikaError', () => {
   it('stores code, message, and frozen data', () => {

@@ -1,4 +1,5 @@
-import { errors, type Json, type PluginChannel } from '@brika/ipc';
+import { errors } from '@brika/errors';
+import type { Json, PluginChannel } from '@brika/ipc';
 import {
   blockEmit,
   blockLog,

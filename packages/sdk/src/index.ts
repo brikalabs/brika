@@ -219,7 +219,7 @@ export type {
   FactoryOpts,
   Handler,
   MatchHandlers,
-} from '@brika/ipc';
+} from '@brika/errors';
 export {
   BrikaError,
   buildCustomError,
@@ -231,7 +231,7 @@ export {
   lookupCatalogEntry,
   matchBrikaError,
   severityForCode,
-} from '@brika/ipc';
+} from '@brika/errors';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Utilities

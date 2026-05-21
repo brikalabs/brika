@@ -4,9 +4,8 @@
  * Core channel abstraction with full type inference from contracts.
  */
 
+import { BrikaError, errors, isBrikaErrorWire } from '@brika/errors';
 import type { InputOf, MessageDef, OutputOf, PayloadOf, RpcDef } from './define';
-import { BrikaError, isBrikaErrorWire } from './errors';
-import { errors } from './factories';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types

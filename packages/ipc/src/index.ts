@@ -10,6 +10,8 @@
  *
  * @see https://bun.sh/docs/runtime/child-process#inter-process-communication-ipc
  *
+ * For typed errors, factories, and the RFC 9457 envelope, see `@brika/errors`.
+ *
  * @example Plugin side:
  * ```ts
  * import { createClient } from "@brika/ipc";
@@ -48,6 +50,7 @@ export type { ChannelDelegateMethods } from './channel-delegate';
 // ─── Client ───
 export type { ClientOptions } from './client';
 export { Client, createClient } from './client';
+
 // ─── Definition Helpers ───
 export type {
   AnyDef,
@@ -60,38 +63,13 @@ export type {
   RpcDef,
 } from './define';
 export { isMessage, isRpc, message, rpc } from './define';
-// ─── Errors ───
-export type {
-  BrikaErrorCode,
-  CatalogEntry,
-  CatalogedErrorCode,
-  DataForCode,
-  ErrorCategory,
-  ErrorSeverity,
-} from './error-catalog';
-export {
-  ErrorCatalog,
-  httpStatusForCode,
-  isRetryable,
-  lookupCatalogEntry,
-  severityForCode,
-} from './error-catalog';
-export type { BrikaErrorResponseBody, BrikaErrorWire } from './errors';
-export {
-  BrikaError,
-  BrikaErrorWireSchema,
-  brikaErrorToResponse,
-  isBrikaErrorWire,
-} from './errors';
-export type { FactoryOpts } from './factories';
-export { buildCustomError, buildError, errors } from './factories';
+
 // ─── Global ───
 export type { IpcGlobal } from './global';
+
 // ─── Host ───
 export type { PluginChannelOptions, SpawnPluginOptions } from './host';
 export { PluginChannel, spawnPlugin } from './host';
-export type { Handler, MatchHandlers } from './match';
-export { matchBrikaError } from './match';
 
 // ─── Core Types ───
 export { Json, JsonRecord } from './types';

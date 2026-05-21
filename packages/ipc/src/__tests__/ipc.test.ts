@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, mock } from 'bun:test';
+import { BrikaError, isBrikaErrorWire } from '@brika/errors';
 import { z } from 'zod';
 import { Channel, type WireMessage } from '../channel';
 import { callTool, hello, PluginInfo, ping, ready, ToolResult } from '../contract';
 import { isMessage, isRpc, message, rpc } from '../define';
-import { BrikaError, isBrikaErrorWire } from '../errors';
 
 describe('Define helpers', () => {
   it('should create a message definition', () => {

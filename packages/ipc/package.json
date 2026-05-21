@@ -17,8 +17,7 @@
   "keywords": ["brika", "ipc", "bun", "communication", "typed"],
   "exports": {
     ".": "./src/index.ts",
-    "./contract": "./src/contract/index.ts",
-    "./errors": "./src/errors-public.ts"
+    "./contract": "./src/contract/index.ts"
   },
   "files": ["src", "README.md"],
   "scripts": {
@@ -28,6 +27,7 @@
     "prepublishOnly": "bun run tsc"
   },
   "dependencies": {
+    "@brika/errors": "workspace:*",
     "zod": "^4.3.4"
   },
   "devDependencies": {

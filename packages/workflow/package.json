@@ -18,8 +18,8 @@
     "test": "bun test"
   },
   "dependencies": {
+    "@brika/errors": "workspace:*",
     "@brika/flow": "workspace:*",
-    "@brika/ipc": "workspace:*",
     "@brika/serializable": "workspace:*",
     "yaml": "^2.8.2",
     "zod": "^4.3.4"
