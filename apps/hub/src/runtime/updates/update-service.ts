@@ -59,9 +59,9 @@ export class UpdateService {
    * do a fresh remote check. Cheap to call from request handlers — multiple
    * concurrent UI consumers won't fan out to the upstream provider.
    */
-  async check(): Promise<UpdateInfo> {
+  check(): Promise<UpdateInfo> {
     if (this.#cachedInfo && Date.now() - this.#lastCheckedAt < CHECK_INTERVAL_MS) {
-      return this.#cachedInfo;
+      return Promise.resolve(this.#cachedInfo);
     }
     return this.refresh();
   }

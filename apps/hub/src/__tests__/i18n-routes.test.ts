@@ -63,5 +63,4 @@ describe('i18n routes', () => {
     const res = await app.get('/api/i18n/bundle/en', { headers: { 'if-none-match': '"abc"' } });
     expect(res.status).toBe(304);
   });
-
 });

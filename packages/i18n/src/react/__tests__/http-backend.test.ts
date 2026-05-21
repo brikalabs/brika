@@ -19,8 +19,12 @@ function installFetch(): FetchHarness {
     Promise.resolve(new Response(JSON.stringify({}), { status: 200 }));
 
   const toUrl = (input: RequestInfo | URL): string => {
-    if (typeof input === 'string') return input;
-    if (input instanceof URL) return input.href;
+    if (typeof input === 'string') {
+      return input;
+    }
+    if (input instanceof URL) {
+      return input.href;
+    }
     return input.url;
   };
   const fakeFetch = ((input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
@@ -146,9 +150,7 @@ describe('BundleNamespaceLoader — bulk path', () => {
     let etag = '"v1"';
     let body = { common: { hello: 'Hello' } };
     harness.set(() =>
-      Promise.resolve(
-        new Response(JSON.stringify(body), { status: 200, headers: { ETag: etag } })
-      )
+      Promise.resolve(new Response(JSON.stringify(body), { status: 200, headers: { ETag: etag } }))
     );
     const loader = new BundleNamespaceLoader('/api/i18n');
     await loader.load('en', 'common');
@@ -239,7 +241,6 @@ describe('BundleNamespaceLoader — prototype pollution defense', () => {
     expect(result.ui).toBeDefined();
     expect(({} as Record<string, unknown>).polluted).toBeUndefined();
   });
-
 });
 
 describe('BundleNamespaceLoader — missing-namespace revalidation', () => {
