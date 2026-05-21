@@ -218,6 +218,32 @@ describe('brikaI18nCallSitePlugin', () => {
     expect(out).toContain('a.ts:1');
   });
 
+  test('does NOT rewrite tp(varPkg, "key") when 1st arg is identifier', async () => {
+    const out = await buildFile(
+      'a.ts',
+      [
+        `declare const varPkg: string;`,
+        `declare function tp(p: string, k: string): string;`,
+        `export const x = tp(varPkg, 'temperature');`,
+      ].join('\n')
+    );
+    expect(out).not.toContain('__cs');
+    expect(out).not.toContain('a.ts:');
+  });
+
+  test('does NOT rewrite tp("pkg", varKey) when 2nd arg is identifier', async () => {
+    const out = await buildFile(
+      'a.ts',
+      [
+        `declare const varKey: string;`,
+        `declare function tp(p: string, k: string): string;`,
+        `export const x = tp('weather', varKey);`,
+      ].join('\n')
+    );
+    expect(out).not.toContain('__cs');
+    expect(out).not.toContain('a.ts:');
+  });
+
   test('does NOT touch tp(...) with 4 args already', async () => {
     const out = await buildFile(
       'a.ts',
