@@ -30,9 +30,8 @@
     "lint": "bunx biome check .",
     "lint:strict": "bunx biome check . --error-on-warnings",
     "lint:fix": "bunx biome check --write .",
-    "i18n:types": "bun packages/i18n-dev/src/generate-types.ts --locales apps/hub/src/locales/en --out node_modules/.cache/@brika/i18n-devtools",
+    "i18n:types": "bun packages/i18n-dev/src/generate-types.ts --locales apps/hub/src/locales/en",
     "i18n:check": "bun packages/i18n-dev/src/check.ts --locales apps/hub/src/locales",
-    "postinstall": "bun run i18n:types || true",
     "bump": "bump-version",
     "publish-packages": "publish-packages",
     "local-install": "local-install"

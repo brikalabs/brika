@@ -8,7 +8,42 @@ export interface KeyUsage {
 }
 
 /** Map of `namespace:key` → list of file locations where it appears. */
-export type KeyUsageMap = Record<string, KeyUsage[]>;
+export type KeyUsageRecord = Record<string, KeyUsage[]>;
+
+/**
+ * Result of a static scan. Carries enough information for the validator to
+ * be **100% accurate**: every locale key is either provably used, provably
+ * dead, or in a namespace where dynamic calls make detection unreliable
+ * (`opaqueNamespaces` / `hasGlobalOpaque`). The validator skips dead-key
+ * reporting for uncertain cases rather than producing false positives.
+ */
+export interface KeyUsageMap {
+  /** Statically-resolvable key references (`t('ns:key')`, `t(\`ns:key\`)`). */
+  keys: KeyUsageRecord;
+  /**
+   * Static prefixes from template literals — `t(\`auth:rules.${x}\`)` yields
+   * prefix `'auth:rules.'`. Any locale key starting with one of these is
+   * considered used (the dynamic suffix could resolve to any of them).
+   */
+  patterns: string[];
+  /**
+   * Namespaces where the scanner observed an opaque dynamic call —
+   * `t(someVar)` inside a file with `useTranslation('auth')` lands here as
+   * `'auth'`. Locale keys under any of these are treated as potentially used.
+   */
+  opaqueNamespaces: string[];
+  /**
+   * Set when the scanner saw a fully unscoped opaque call — `t(varName)`
+   * with no namespace context, or `t(\`${ns}:${key}\`)` with a dynamic
+   * namespace. When true, the validator suppresses dead-key reporting
+   * entirely because any key in any namespace could be the target.
+   */
+  hasGlobalOpaque: boolean;
+}
+
+export function emptyKeyUsageMap(): KeyUsageMap {
+  return { keys: {}, patterns: [], opaqueNamespaces: [], hasGlobalOpaque: false };
+}
 
 // ─── File walker ───────────────────────────────────────────────────────────
 
@@ -60,60 +95,113 @@ const JSON_T_REF_RE = /\$t\(([^)]+)\)/g;
 const JSON_QUALIFIED_KEY_RE =
   /"((?:[a-zA-Z][\w@/.-]*:[a-zA-Z@][\w@/.-]*|[a-zA-Z][\w-]*):[a-zA-Z][\w.-]*)"/g;
 
-// ─── Scanner ───────────────────────────────────────────────────────────────
+// ─── Scanner — helpers that mutate the KeyUsageMap ─────────────────────────
 
-function addUsage(
-  usageMap: KeyUsageMap,
+function qualify(rawKey: string, defaultNs: string | null): string {
+  if (rawKey.includes(':')) {
+    return rawKey;
+  }
+  return defaultNs ? `${defaultNs}:${rawKey}` : rawKey;
+}
+
+function addStaticUsage(
+  map: KeyUsageMap,
   rawKey: string,
   defaultNs: string | null,
   file: string,
   line: number
-) {
+): void {
   if (!rawKey) {
     return;
   }
-  let qualifiedKey: string;
-  if (rawKey.includes(':')) {
-    qualifiedKey = rawKey;
-  } else if (defaultNs) {
-    qualifiedKey = `${defaultNs}:${rawKey}`;
-  } else {
-    qualifiedKey = rawKey;
+  const qualifiedKey = qualify(rawKey, defaultNs);
+  const existing = map.keys[qualifiedKey];
+  if (!existing) {
+    map.keys[qualifiedKey] = [{ file, line }];
+    return;
   }
-  const existing = usageMap[qualifiedKey];
-  if (existing) {
-    if (!existing.some((u) => u.file === file && u.line === line)) {
-      existing.push({ file, line });
-    }
-  } else {
-    usageMap[qualifiedKey] = [{ file, line }];
+  if (existing.some((u) => u.file === file && u.line === line)) {
+    return;
+  }
+  existing.push({ file, line });
+}
+
+function addPattern(map: KeyUsageMap, rawPrefix: string, defaultNs: string | null): void {
+  if (!rawPrefix) {
+    // `t(\`${dynamic}\`)` — no static prefix at all. Equivalent to a fully
+    // opaque key whose namespace context (if any) is `defaultNs`.
+    addOpaque(map, defaultNs);
+    return;
+  }
+  const qualifiedPrefix = qualify(rawPrefix, defaultNs);
+  // Patterns are deduped — multiple call sites with the same prefix add no
+  // signal beyond the first.
+  if (!map.patterns.includes(qualifiedPrefix)) {
+    map.patterns.push(qualifiedPrefix);
+  }
+}
+
+function addOpaque(map: KeyUsageMap, namespace: string | null): void {
+  if (!namespace) {
+    map.hasGlobalOpaque = true;
+    return;
+  }
+  if (!map.opaqueNamespaces.includes(namespace)) {
+    map.opaqueNamespaces.push(namespace);
   }
 }
 
 // ─── AST-based source scanning ────────────────────────────────────────────
 
+export type ParsedArg =
+  /** No argument at the call site (empty parens or end of input). */
+  | { kind: 'none' }
+  /** Plain literal: `'foo'`, `"foo"`, or backtick-string with no interpolation. */
+  | { kind: 'static'; value: string; nextIndex: number }
+  /** Template literal with interpolation — `value` is the static prefix before the first `${`. */
+  | { kind: 'prefix'; value: string; nextIndex: number }
+  /** Argument is non-string (variable, function call, fully-dynamic template). */
+  | { kind: 'opaque'; nextIndex: number };
+
 /**
- * Match a string literal argument: `'foo'`, `"foo"`, or a bare template `\`foo\``.
- * Template-literal interpolations (`\`pre${x}\``) are intentionally skipped —
- * partial prefixes would create ghost entries that don't map to real keys.
+ * Parse the next argument of a function call starting at offset `from`. The
+ * scanner needs four cases distinguished:
  *
- * Returns `null` for non-static or empty literals.
+ *   - `t('foo')`              → static
+ *   - `t(\`foo\`)`            → static
+ *   - `t(\`pre.${x}\`)`       → prefix (value = `'pre.'`)
+ *   - `t(varName)`            → opaque
+ *   - `t()`                   → none
+ *
+ * `nextIndex` always points just past the consumed argument; the caller uses
+ * it to scan for a comma + next arg (for `tp(ns, key)`) or to advance past
+ * the call.
  */
-function readStringArg(src: string, from: number): { value: string; nextIndex: number } | null {
-  // Skip whitespace
+export function readStringArg(src: string, from: number): ParsedArg {
+  const i = skipWhitespace(src, from);
+  if (i >= src.length) {
+    return { kind: 'none' };
+  }
+  const first = src[i];
+  if (first === ')') {
+    return { kind: 'none' };
+  }
+  if (first === "'" || first === '"' || first === '`') {
+    return readQuoted(src, i, first);
+  }
+  return { kind: 'opaque', nextIndex: skipOpaqueArg(src, i) };
+}
+
+function skipWhitespace(src: string, from: number): number {
   let i = from;
   while (i < src.length && /\s/.test(src[i] ?? '')) {
     i++;
   }
-  if (i >= src.length) {
-    return null;
-  }
-  const quote = src[i];
-  if (quote !== "'" && quote !== '"' && quote !== '`') {
-    return null;
-  }
-  // Find closing quote (handling escapes)
-  let j = i + 1;
+  return i;
+}
+
+function readQuoted(src: string, openIdx: number, quote: string): ParsedArg {
+  let j = openIdx + 1;
   while (j < src.length) {
     const ch = src[j];
     if (ch === '\\') {
@@ -121,19 +209,139 @@ function readStringArg(src: string, from: number): { value: string; nextIndex: n
       continue;
     }
     if (ch === quote) {
-      break;
+      return { kind: 'static', value: src.slice(openIdx + 1, j), nextIndex: j + 1 };
     }
-    // Template literal interpolation — bail out, treat as dynamic.
     if (quote === '`' && ch === '$' && src[j + 1] === '{') {
-      return null;
+      const prefix = src.slice(openIdx + 1, j);
+      const closeBacktick = findTemplateClose(src, j);
+      const nextIndex = closeBacktick === -1 ? src.length : closeBacktick + 1;
+      return { kind: 'prefix', value: prefix, nextIndex };
     }
     j++;
   }
-  if (j >= src.length) {
-    return null;
+  return { kind: 'opaque', nextIndex: src.length };
+}
+
+/**
+ * Find the closing backtick of a template that opens at `from` (pointing at
+ * the `$` of the first `${`). Skips over interpolation bodies, including
+ * nested strings and template literals. Returns `-1` on unterminated input.
+ */
+function findTemplateClose(src: string, from: number): number {
+  let j = from;
+  while (j < src.length) {
+    const ch = src[j];
+    if (ch === '\\') {
+      j += 2;
+      continue;
+    }
+    if (ch === '`') {
+      return j;
+    }
+    if (ch === '$' && src[j + 1] === '{') {
+      j = skipBraceBody(src, j + 2);
+      continue;
+    }
+    j++;
   }
-  const raw = src.slice(i + 1, j);
-  return { value: raw, nextIndex: j + 1 };
+  return -1;
+}
+
+/** Advance past a `${...}` body (starting just after `${`), handling nested braces, strings, and templates. */
+function skipBraceBody(src: string, from: number): number {
+  let depth = 1;
+  let j = from;
+  while (j < src.length && depth > 0) {
+    const ch = src[j];
+    if (ch === '\\') {
+      j += 2;
+      continue;
+    }
+    if (ch === '"' || ch === "'") {
+      j = skipPlainString(src, j);
+      continue;
+    }
+    if (ch === '`') {
+      const close = findTemplateClose(src, j + 1);
+      j = close === -1 ? src.length : close + 1;
+      continue;
+    }
+    if (ch === '{') {
+      depth++;
+    } else if (ch === '}') {
+      depth--;
+    }
+    j++;
+  }
+  return j;
+}
+
+function skipPlainString(src: string, openIdx: number): number {
+  const quote = src[openIdx];
+  let j = openIdx + 1;
+  while (j < src.length) {
+    if (src[j] === '\\') {
+      j += 2;
+      continue;
+    }
+    if (src[j] === quote) {
+      return j + 1;
+    }
+    j++;
+  }
+  return src.length;
+}
+
+/**
+ * Advance past a non-string argument (variable, function call, member access,
+ * etc.) up to the next `,` or `)` at depth 0. Tracks nesting on `()[]{}` and
+ * skips string + template bodies so a `,` inside them doesn't confuse us.
+ */
+function skipOpaqueArg(src: string, from: number): number {
+  let depth = 0;
+  let j = from;
+  while (j < src.length) {
+    const step = stepThroughOpaqueChar(src, j, depth);
+    if (step.terminated) {
+      return j;
+    }
+    j = step.next;
+    depth = step.depth;
+  }
+  return src.length;
+}
+
+interface OpaqueStep {
+  next: number;
+  depth: number;
+  terminated: boolean;
+}
+
+function stepThroughOpaqueChar(src: string, j: number, depth: number): OpaqueStep {
+  const ch = src[j];
+  if (ch === '\\') {
+    return { next: j + 2, depth, terminated: false };
+  }
+  if (ch === '"' || ch === "'") {
+    return { next: skipPlainString(src, j), depth, terminated: false };
+  }
+  if (ch === '`') {
+    const close = findTemplateClose(src, j + 1);
+    return { next: close === -1 ? src.length : close + 1, depth, terminated: false };
+  }
+  if (ch === '(' || ch === '[' || ch === '{') {
+    return { next: j + 1, depth: depth + 1, terminated: false };
+  }
+  if (ch === ')' || ch === ']' || ch === '}') {
+    if (depth === 0) {
+      return { next: j, depth, terminated: true };
+    }
+    return { next: j + 1, depth: depth - 1, terminated: false };
+  }
+  if (ch === ',' && depth === 0) {
+    return { next: j, depth, terminated: true };
+  }
+  return { next: j + 1, depth, terminated: false };
 }
 
 /** Compute 1-based line number for a string offset. */
@@ -186,63 +394,128 @@ function scanSourceFile(
   usageMap: KeyUsageMap,
   inheritedNamespace: string | null
 ) {
-  // First pass: find a `useTranslation('ns')` to use as the file-level default.
-  let defaultNs: string | null = inheritedNamespace;
-  const utIdx = findCallName(content, 'useTranslation');
-  if (utIdx >= 0) {
-    const open = content.indexOf('(', utIdx);
-    if (open >= 0) {
-      const arg = readStringArg(content, open + 1);
-      if (arg) {
-        defaultNs = arg.value;
-      }
-    }
-  }
+  const defaultNs = detectDefaultNamespace(content, inheritedNamespace);
+  scanTCalls(content, relPath, usageMap, defaultNs);
+  scanTpCalls(content, relPath, usageMap);
+}
 
-  // Second pass: t(...) calls.
+function detectDefaultNamespace(content: string, inherited: string | null): string | null {
+  const utIdx = findCallName(content, 'useTranslation');
+  if (utIdx < 0) {
+    return inherited;
+  }
+  const open = content.indexOf('(', utIdx);
+  if (open < 0) {
+    return inherited;
+  }
+  const arg = readStringArg(content, open + 1);
+  // Only a literal namespace counts — `useTranslation(varName)` falls back to
+  // the inherited context; we have no way to know what the variable holds.
+  if (arg.kind === 'static') {
+    return arg.value;
+  }
+  return inherited;
+}
+
+function scanTCalls(
+  content: string,
+  relPath: string,
+  usageMap: KeyUsageMap,
+  defaultNs: string | null
+): void {
   for (const callIdx of iterateCallSites(content, 't')) {
     const open = content.indexOf('(', callIdx);
     if (open < 0) {
       continue;
     }
     const arg = readStringArg(content, open + 1);
-    if (!arg) {
-      continue;
-    }
-    addUsage(usageMap, arg.value, defaultNs, relPath, lineFromOffset(content, callIdx));
+    const line = lineFromOffset(content, callIdx);
+    dispatchTArg(arg, usageMap, defaultNs, relPath, line);
   }
+}
 
-  // Third pass: tp(...) calls (plugin-namespaced helper).
+function dispatchTArg(
+  arg: ParsedArg,
+  usageMap: KeyUsageMap,
+  defaultNs: string | null,
+  relPath: string,
+  line: number
+): void {
+  if (arg.kind === 'static') {
+    addStaticUsage(usageMap, arg.value, defaultNs, relPath, line);
+    return;
+  }
+  if (arg.kind === 'prefix') {
+    addPattern(usageMap, arg.value, defaultNs);
+    return;
+  }
+  if (arg.kind === 'opaque') {
+    addOpaque(usageMap, defaultNs);
+  }
+  // 'none' → no signal.
+}
+
+function scanTpCalls(content: string, relPath: string, usageMap: KeyUsageMap): void {
   for (const callIdx of iterateCallSites(content, 'tp')) {
     const open = content.indexOf('(', callIdx);
     if (open < 0) {
       continue;
     }
     const first = readStringArg(content, open + 1);
-    if (!first) {
+    if (first.kind === 'none') {
       continue;
     }
-    // Skip comma
-    let p = first.nextIndex;
-    while (p < content.length && /\s/.test(content[p] ?? '')) {
-      p++;
-    }
-    if (content[p] !== ',') {
+    if (first.kind === 'opaque') {
+      // `tp(varName, ...)` — namespace is dynamic, anything could match.
+      addOpaque(usageMap, null);
       continue;
     }
-    const second = readStringArg(content, p + 1);
-    if (!second) {
+    const commaIdx = findArgSeparator(content, first.nextIndex);
+    if (commaIdx === -1) {
       continue;
     }
-    // `tp(<id>, <key>)` qualifies as `<id>:<key>` — host decides what `<id>`
-    // means (plugin namespace, package id, etc.). Kept verbatim.
-    addUsage(
-      usageMap,
-      `${first.value}:${second.value}`,
-      null,
-      relPath,
-      lineFromOffset(content, callIdx)
-    );
+    const second = readStringArg(content, commaIdx + 1);
+    const line = lineFromOffset(content, callIdx);
+    dispatchTpArgs(first, second, usageMap, relPath, line);
+  }
+}
+
+function findArgSeparator(content: string, from: number): number {
+  let p = from;
+  while (p < content.length && /\s/.test(content[p] ?? '')) {
+    p++;
+  }
+  return content[p] === ',' ? p : -1;
+}
+
+function dispatchTpArgs(
+  first: ParsedArg,
+  second: ParsedArg,
+  usageMap: KeyUsageMap,
+  relPath: string,
+  line: number
+): void {
+  if (first.kind !== 'static' && first.kind !== 'prefix') {
+    return;
+  }
+  // For tp(), the first arg is the namespace. A `prefix`-kind namespace
+  // (template-literal) means the runtime namespace is partially dynamic —
+  // we record opaque against the static portion to stay conservative.
+  if (first.kind === 'prefix') {
+    addOpaque(usageMap, first.value || null);
+    return;
+  }
+  const ns = first.value;
+  if (second.kind === 'static') {
+    addStaticUsage(usageMap, `${ns}:${second.value}`, null, relPath, line);
+    return;
+  }
+  if (second.kind === 'prefix') {
+    addPattern(usageMap, `${ns}:${second.value}`, null);
+    return;
+  }
+  if (second.kind === 'opaque') {
+    addOpaque(usageMap, ns);
   }
 }
 
@@ -287,13 +560,13 @@ function scanJsonFile(content: string, relPath: string, usageMap: KeyUsageMap) {
     JSON_T_REF_RE.lastIndex = 0;
     let match: RegExpExecArray | null;
     while ((match = JSON_T_REF_RE.exec(line)) !== null) {
-      addUsage(usageMap, match[1] ?? '', null, relPath, lineNum);
+      addStaticUsage(usageMap, match[1] ?? '', null, relPath, lineNum);
     }
 
     // Match qualified "ns:key.path" strings
     JSON_QUALIFIED_KEY_RE.lastIndex = 0;
     while ((match = JSON_QUALIFIED_KEY_RE.exec(line)) !== null) {
-      addUsage(usageMap, match[1] ?? '', null, relPath, lineNum);
+      addStaticUsage(usageMap, match[1] ?? '', null, relPath, lineNum);
     }
   }
 }
@@ -321,7 +594,7 @@ export async function scanKeyUsages(
   roots: ReadonlyArray<ScanRoot>
 ): Promise<KeyUsageMap> {
   const skipDirs = new Set(['node_modules', 'dist', 'build', '.git', 'locales']);
-  const usageMap: KeyUsageMap = {};
+  const usageMap = emptyKeyUsageMap();
 
   for (const root of roots) {
     const files: string[] = [];

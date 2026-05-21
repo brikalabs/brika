@@ -8,8 +8,9 @@ import {
   generateResourceTypes,
 } from '../generate';
 import { fetchRemoteTranslations } from '../remote';
+import type { KeyUsageMap } from '../scan-usage';
 import type { ValidationResult } from '../types';
-import { validateLocales } from '../validate';
+import { validateCodeUsage, validateLocales } from '../validate';
 
 export interface ResolvedSource {
   /** Absolute path to the source directory scanned for `t()` calls. */
@@ -130,6 +131,24 @@ export interface OrchestratorOptions {
    * Defaults to `'translation'` to match i18next's own default.
    */
   readonly defaultNamespace?: string;
+  /**
+   * Namespace prefixes the host applies at runtime that the static scanner
+   * doesn't know about — e.g. brika's `tp(pluginId, key)` wrapper prepends
+   * `'plugin:'` to land in the runtime namespace. Without this, code calls
+   * to `tp()` would surface as false `unknown-key` errors.
+   */
+  readonly tpNamespacePrefixes?: ReadonlyArray<string>;
+  /**
+   * Skip `dead-key` reporting for locale namespaces served by sources the
+   * static scanner can't see (e.g. runtime-installed plugins, CMS bundles).
+   * Brika passes `['plugin:']` here so installed-plugin namespaces aren't
+   * flagged as dead just because their source isn't in the workspace.
+   */
+  readonly deadKeyIgnoreNamespaces?: ReadonlyArray<string>;
+  /** Severity override for unknown-key check. Default `'error'`. */
+  readonly unknownKeySeverity?: 'error' | 'warning' | 'off';
+  /** Severity override for dead-key check. Default `'warning'`. */
+  readonly deadKeySeverity?: 'error' | 'warning' | 'off';
 }
 
 /**
@@ -186,6 +205,31 @@ async function scanSourcesInto(
       }
     }
   }
+}
+
+/**
+ * Run `validateCodeUsage` against an existing scan and return a fresh
+ * `ValidationResult` with the cross-validation issues merged in. Used by
+ * the Vite plugin to refresh the issue stream whenever the static key-usage
+ * map changes (debounced separately from the locale-file watcher).
+ */
+export function mergeCodeUsageIssues(
+  validation: ValidationResult,
+  coreTranslations: Map<string, Map<string, TranslationData>>,
+  keyUsage: KeyUsageMap,
+  options: OrchestratorOptions
+): ValidationResult {
+  const codeIssues = validateCodeUsage(coreTranslations, keyUsage, options.referenceLocale, {
+    extraPrefixes: options.tpNamespacePrefixes,
+    deadKeyIgnoreNamespaces: options.deadKeyIgnoreNamespaces,
+    unknownKeySeverity: options.unknownKeySeverity,
+    deadKeySeverity: options.deadKeySeverity,
+  });
+  return {
+    ...validation,
+    issues: [...validation.issues, ...codeIssues],
+    timestamp: Date.now(),
+  };
 }
 
 export async function runScan(options: OrchestratorOptions): Promise<ScanResult> {

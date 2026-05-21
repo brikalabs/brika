@@ -185,24 +185,35 @@ describe('subscribeKeyUsage', () => {
 
 // ─── applyKeyUsage / getKeyUsage ──────────────────────────────────────────
 
+function usageFromKeys(
+  keys: Record<string, Array<{ file: string; line: number }>>
+): import('../scan-usage').KeyUsageMap {
+  return { keys, patterns: [], opaqueNamespaces: [], hasGlobalOpaque: false };
+}
+
 describe('key usage', () => {
   test('applyKeyUsage sets data and getKeyUsage retrieves it', () => {
-    applyKeyUsage({
-      'common:hello': [{ file: 'src/App.tsx', line: 10, col: 5 }],
-    });
+    applyKeyUsage(
+      usageFromKeys({
+        'common:hello': [{ file: 'src/App.tsx', line: 10 }],
+      })
+    );
     const usages = getKeyUsage('common:hello');
     expect(usages).toHaveLength(1);
     expect(usages[0]?.file).toBe('src/App.tsx');
   });
 
   test('getKeyUsage returns empty array for unknown key', () => {
+    applyKeyUsage(usageFromKeys({}));
     expect(getKeyUsage('unknown:key')).toEqual([]);
   });
 
   test('getKeyUsage strips plural suffix to find base key', () => {
-    applyKeyUsage({
-      'common:items': [{ file: 'src/List.tsx', line: 20, col: 3 }],
-    });
+    applyKeyUsage(
+      usageFromKeys({
+        'common:items': [{ file: 'src/List.tsx', line: 20 }],
+      })
+    );
     expect(getKeyUsage('common:items_one')).toHaveLength(1);
     expect(getKeyUsage('common:items_other')).toHaveLength(1);
     expect(getKeyUsage('common:items_zero')).toHaveLength(1);
@@ -212,10 +223,12 @@ describe('key usage', () => {
   });
 
   test('getKeyUsage prefers direct match over plural fallback', () => {
-    applyKeyUsage({
-      'common:count_one': [{ file: 'a.tsx', line: 1, col: 1 }],
-      'common:count': [{ file: 'b.tsx', line: 2, col: 1 }],
-    });
+    applyKeyUsage(
+      usageFromKeys({
+        'common:count_one': [{ file: 'a.tsx', line: 1 }],
+        'common:count': [{ file: 'b.tsx', line: 2 }],
+      })
+    );
     const result = getKeyUsage('common:count_one');
     expect(result).toHaveLength(1);
     expect(result[0]?.file).toBe('a.tsx');
@@ -224,7 +237,7 @@ describe('key usage', () => {
   test('notifies listeners on applyKeyUsage', () => {
     let called = 0;
     const unsub = subscribeKeyUsage(() => called++);
-    applyKeyUsage({});
+    applyKeyUsage(usageFromKeys({}));
     expect(called).toBe(1);
     unsub();
   });

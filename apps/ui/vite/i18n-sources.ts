@@ -24,5 +24,19 @@ export async function brikaI18nSources(configUrl: string): Promise<SourceConfig[
     }),
   ]);
 
-  return [{ dir: join(viteRoot, 'src') }, ...packages, ...plugins];
+  // Each discovered source carries its `dir` *and* its `localesDir` so the
+  // dev plugin loads the actual translation JSON alongside scanning the
+  // source code. Without `localesDir` the validator only sees the namespace
+  // names — every `t()` call would surface as a spurious `unknown-key`.
+  const attachLocales = (s: { dir: string; namespace: string }): SourceConfig => ({
+    dir: s.dir,
+    namespace: s.namespace,
+    localesDir: join(s.dir, 'locales'),
+  });
+
+  return [
+    { dir: join(viteRoot, 'src') },
+    ...packages.map(attachLocales),
+    ...plugins.map(attachLocales),
+  ];
 }

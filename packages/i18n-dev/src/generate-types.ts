@@ -24,8 +24,13 @@ function cliFlag(name: string, fallback: string): string {
 const CWD = process.cwd();
 const REFERENCE_LOCALE = cliFlag('--reference-locale', 'en');
 const LOCALES_DIR = cliFlag('--locales', join(CWD, 'src/locales', REFERENCE_LOCALE));
+// Output defaults to a hidden cache directory so the generated files don't
+// pollute the source tree. The augmentation is a *global* one
+// (`declare global { namespace BrikaI18n { ... } }`), so it merges from any
+// location on disk — consumers just need a single triple-slash reference
+// in a `vite-env.d.ts`-style file to pull it into their compilation graph.
 const OUT_DIR = cliFlag('--out', join(CWD, 'node_modules/.cache/@brika/i18n-devtools'));
-const REGISTRY_MODULE = cliFlag('--module', '@brika/i18n/registry');
+const GLOBAL_NAMESPACE = cliFlag('--global', 'BrikaI18n');
 const DEFAULT_NAMESPACE = cliFlag('--default-namespace', 'translation');
 
 // ─── Read namespaces ─────────────────────────────────────────────────────────
@@ -82,7 +87,7 @@ await Bun.write(
 );
 await Bun.write(
   registryPath,
-  generateRegistryAugmentation(namespaces, { module: REGISTRY_MODULE })
+  generateRegistryAugmentation(namespaces, { globalNamespace: GLOBAL_NAMESPACE })
 );
 
 // ─── Summary ─────────────────────────────────────────────────────────────────

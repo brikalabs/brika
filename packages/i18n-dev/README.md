@@ -103,6 +103,7 @@ At least one of `localesDir`, a `sources` entry with `localesDir`, or `remote`/`
 | `apiUrl` | `string` | derived from `remote` | Override the resolved API base when the server mounts its bundle endpoint somewhere other than `/api/i18n`. |
 | `referenceLocale` | `string` | `'en'` | Display-language hint for the overlay (preferred locale for "Copy" auto-fix and diff column ordering). Validation itself is symmetric across all locales — no locale is privileged. |
 | `defaultNamespace` | `string` | `'translation'` | i18next default namespace; placed first in the generated `i18n-namespaces.ts`. |
+| `typesDir` | `string` | `'node_modules/.cache/@brika/i18n-devtools'` | Where the generated augmentation files land. The augmentation targets the global `BrikaI18n.Namespaces` interface so location is unconstrained — but the consumer must reference the generated `i18n-registry.d.ts` from somewhere in its compilation (typically a one-line `/// <reference path="..." />` in `src/vite-env.d.ts`). |
 
 ## CLI Scripts
 
@@ -116,9 +117,20 @@ bun packages/i18n-devtools/check --locales ./src/locales
 # Generate TypeScript type declarations from the reference locale
 bun packages/i18n-devtools/generate-types \
   --locales ./src/locales/en \
-  --reference-locale en \
-  --out ./node_modules/.cache/@brika/i18n-devtools
+  --reference-locale en
 ```
+
+Defaults: emits to `node_modules/.cache/@brika/i18n-devtools/`. Add one line
+to your `src/vite-env.d.ts` so TypeScript pulls the augmentation into the
+compilation graph:
+
+```ts
+/// <reference path="../../node_modules/.cache/@brika/i18n-devtools/i18n-registry.d.ts" />
+```
+
+After that, `t('ns:topKey')` autocompletes and typos compile-error with a
+suggestion (TS2820). The cache regenerates on `bun install` and on every
+locale-file edit while `bun dev` is running.
 
 The validator reports:
 

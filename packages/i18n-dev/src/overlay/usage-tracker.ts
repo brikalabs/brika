@@ -1,10 +1,10 @@
 import i18next from 'i18next';
-import type { KeyUsage, KeyUsageMap } from '../scan-usage';
+import { emptyKeyUsageMap, type KeyUsage, type KeyUsageMap } from '../scan-usage';
 import { extractQualifiedKey, takeBuildTimeCallSite } from './call-site';
 
 // ─── Static usage (provided by the Vite plugin over HMR) ───────────────────
 
-let keyUsageData: KeyUsageMap = {};
+let keyUsageData: KeyUsageMap = emptyKeyUsageMap();
 const usageListeners = new Set<() => void>();
 const EMPTY_USAGES: KeyUsage[] = [];
 
@@ -33,14 +33,14 @@ export function applyKeyUsage(data: KeyUsageMap) {
 }
 
 export function getKeyUsage(qualifiedKey: string): KeyUsage[] {
-  const direct = keyUsageData[qualifiedKey];
+  const direct = keyUsageData.keys[qualifiedKey];
   if (direct) {
     return direct;
   }
   // Fall back to the base key without plural suffix (e.g. `ns:items_one` → `ns:items`)
   const baseKey = stripPluralSuffix(qualifiedKey);
   if (baseKey) {
-    return keyUsageData[baseKey] ?? EMPTY_USAGES;
+    return keyUsageData.keys[baseKey] ?? EMPTY_USAGES;
   }
   return EMPTY_USAGES;
 }

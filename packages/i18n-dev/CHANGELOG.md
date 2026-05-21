@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Generated type augmentation now actually merges.** Switched from module
+  augmentation (`declare module '@brika/i18n/registry'`) to **global namespace
+  augmentation** (`declare global { namespace BrikaI18n { interface Namespaces } }`).
+  Module augmentation only works when the augmenting file can resolve the
+  augmented module specifier — and files generated into
+  `node_modules/.cache/` cannot walk up to `node_modules/@brika/i18n`, so the
+  merge silently failed and every `t()` call fell through to the broad-string
+  overload. The global form dodges module resolution entirely: any `.d.ts`
+  in the compilation graph, anywhere on disk, merges into the same
+  `BrikaI18n.Namespaces` interface.
+- **Generated `.d.ts` now ends with `export {};`** so TypeScript treats it as
+  a module — required for `declare global { ... }` to take effect (in a
+  non-module file the block is a redundant top-level reopening, not an
+  augmentation).
+- **Sanitised interface names** in `i18n-resources.d.ts`. The generator
+  previously emitted `Plugin:@brika/blocksBuiltinNs` for namespaces like
+  `plugin:@brika/blocks-builtin`, which is a TypeScript syntax error.
+  `toTypeName()` now strips characters that aren't valid in TS identifiers.
+
+### Added
+
+- **`typesDir` plugin option** — overrides where the Vite plugin writes the
+  generated augmentation files. Defaults to
+  `'node_modules/.cache/@brika/i18n-devtools'`.
+
 ### Changed
 
 - **Renamed `hub` option to `remote`** — framework-agnostic naming for the

@@ -19,7 +19,7 @@ import {
 // ─── Schemas for HMR boundary payloads ──────────────────────────────────────
 
 const ValidationIssueSchema = z.object({
-  type: z.enum(['missing-key', 'missing-namespace', 'missing-variable']),
+  type: z.enum(['missing-key', 'missing-namespace', 'missing-variable', 'unknown-key', 'dead-key']),
   severity: z.enum(['error', 'warning']),
   namespace: z.string(),
   locale: z.string(),
@@ -53,7 +53,12 @@ const KeyUsageSchema = z.object({
   line: z.number(),
 });
 
-const KeyUsageMapSchema = z.record(z.string(), z.array(KeyUsageSchema));
+const KeyUsageMapSchema = z.object({
+  keys: z.record(z.string(), z.array(KeyUsageSchema)),
+  patterns: z.array(z.string()),
+  opaqueNamespaces: z.array(z.string()),
+  hasGlobalOpaque: z.boolean(),
+});
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 

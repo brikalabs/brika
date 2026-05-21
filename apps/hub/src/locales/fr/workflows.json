@@ -84,6 +84,7 @@
       "defaultSettings": "Ce bloc fonctionne avec les paramètres par défaut",
       "availableVariables": "Variables disponibles",
       "clickToCopy": "Cliquez pour copier · Utilisez dans n'importe quel champ"
-    }
+    },
+    "workflowName": "Nom du workflow"
   }
 }

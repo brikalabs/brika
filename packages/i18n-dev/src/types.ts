@@ -87,12 +87,73 @@ export interface I18nDevPluginOptions {
    * passes the resulting `SourceConfig[]` here verbatim.
    */
   readonly sources?: ReadonlyArray<SourceConfig>;
+  /**
+   * Where the generated TypeScript augmentation files land (resource shapes,
+   * namespace list, registry augmentation). Resolved relative to the Vite
+   * project root. Defaults to `'node_modules/.cache/@brika/i18n-devtools'`.
+   * The augmentation targets the global `BrikaI18n.Namespaces` interface, so
+   * any `.d.ts` in the compilation graph picks it up regardless of location
+   * — the consumer just needs one `/// <reference path="..." />` line in a
+   * `vite-env.d.ts`-style file.
+   */
+  readonly typesDir?: string;
+  /**
+   * Namespace prefixes the host applies at runtime that the static scanner
+   * doesn't reproduce. For brika's `tp(pluginId, key)` wrapper, pass
+   * `['plugin:']` — the runtime stores `tp('@brika/foo', 'k')` under namespace
+   * `'plugin:@brika/foo'` but the scanner reports `'@brika/foo:k'`. Without
+   * this option every `tp()` call surfaces as a spurious `unknown-key`.
+   *
+   * Default: `[]` — generic projects with no host-side prefix.
+   */
+  readonly tpNamespacePrefixes?: ReadonlyArray<string>;
+  /**
+   * Skip `dead-key` warnings for locale namespaces served from sources the
+   * static scanner can't see — e.g. brika's runtime-installed plugins land
+   * under `'plugin:'` namespaces in the hub bundle but their source code
+   * isn't in the workspace, so every key would otherwise show up as dead.
+   *
+   * Default: `[]`.
+   */
+  readonly deadKeyIgnoreNamespaces?: ReadonlyArray<string>;
+  /**
+   * Severity for the two code↔locale cross-checks. Set to `'off'` to silence
+   * a check entirely — useful when a project has too many dynamic-key
+   * patterns the static scanner can't see (e.g. CMS-backed keys) and the
+   * resulting noise drowns out the real signal. Defaults: `'error'` for
+   * `unknownKey`, `'warning'` for `deadKey`.
+   */
+  readonly unknownKeySeverity?: 'error' | 'warning' | 'off';
+  readonly deadKeySeverity?: 'error' | 'warning' | 'off';
 }
 
 export interface ValidationIssue {
-  type: 'missing-key' | 'missing-namespace' | 'missing-variable';
+  type:
+    | 'missing-key'
+    | 'missing-namespace'
+    | 'missing-variable'
+    /**
+     * Code calls `t('ns:key')` but `key` doesn't exist in any locale under
+     * `ns`. Either a typo in code, a key removed from locales without the
+     * call site being updated, or a missing translation entry. `severity:
+     * 'error'` — the runtime lookup will fall through to the default value
+     * or the broken-key marker.
+     */
+    | 'unknown-key'
+    /**
+     * A locale declares a key that no `t()` / `tp()` call in the scanned
+     * source uses. Either a stale translation or a dynamic-key path the
+     * static scanner can't see (`t(\`prefix:${dynamic}\`)`). `severity:
+     * 'warning'` — usually safe to delete after a manual check.
+     */
+    | 'dead-key';
   severity: 'error' | 'warning';
   namespace: string;
+  /**
+   * Locale that owns this issue. For `unknown-key`/`dead-key` (which span all
+   * locales) we report against the reference locale so the overlay can group
+   * them coherently with the other issues.
+   */
   locale: string;
   key?: string;
   /**

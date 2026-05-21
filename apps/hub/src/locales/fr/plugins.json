@@ -149,5 +149,11 @@
       "name": "Exemple Écho",
       "description": "Un petit plugin d'exemple. Utile pour voir comment les plugins sont construits."
     }
+  },
+  "capabilities": {
+    "title": "Capacités",
+    "description": "Capacités que ce plugin peut demander au système.",
+    "grant": "Accorder",
+    "revoke": "Révoquer"
   }
 }

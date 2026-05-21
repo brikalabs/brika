@@ -46,7 +46,7 @@ Commands:
                    --locales <dir>             Reference-locale folder (default: <cwd>/src/locales/<reference-locale>)
                    --reference-locale <code>   Locale used to derive types (default: en)
                    --out <dir>                 Output directory (default: <cwd>/node_modules/.cache/@brika/i18n-devtools)
-                   --module <name>             Augment a custom module (default: @brika/i18n/registry)
+                   --global <name>             Global namespace to augment (default: BrikaI18n)
                    --default-namespace <ns>    i18next default namespace (default: translation)
 
   check          Validate locale parity using union semantics

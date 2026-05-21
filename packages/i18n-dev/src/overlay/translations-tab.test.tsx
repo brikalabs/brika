@@ -2,6 +2,7 @@ import { beforeAll, describe, expect, test } from 'bun:test';
 import i18next from 'i18next';
 import { createRef } from 'react';
 import { renderToString } from 'react-dom/server';
+import type { KeyUsageRecord } from '../scan-usage';
 import { applyKeyUsage } from './store';
 import {
   buildMultiLocaleKeys,
@@ -10,6 +11,10 @@ import {
   TranslationLocaleValue,
   TranslationsContent,
 } from './translations-tab';
+
+function usage(keys: KeyUsageRecord) {
+  return { keys, patterns: [], opaqueNamespaces: [], hasGlobalOpaque: false };
+}
 
 beforeAll(async () => {
   if (!i18next.isInitialized) {
@@ -140,25 +145,27 @@ describe('TranslationLocaleValue', () => {
 
 describe('KeyUsageBadge', () => {
   test('renders null when no usages', () => {
-    applyKeyUsage({});
+    applyKeyUsage(usage({}));
     const html = renderToString(<KeyUsageBadge qualifiedKey="test_tab:missing" />);
     expect(html).toBe('');
   });
 
   test('renders ref count badge', () => {
-    applyKeyUsage({ 'test_tab:hello': [{ file: 'src/App.tsx', line: 10 }] });
+    applyKeyUsage(usage({ 'test_tab:hello': [{ file: 'src/App.tsx', line: 10 }] }));
     const html = renderToString(<KeyUsageBadge qualifiedKey="test_tab:hello" />);
     expect(html).toContain('1');
     expect(html).toContain('ref');
   });
 
   test('renders plural refs for multiple usages', () => {
-    applyKeyUsage({
-      'test_tab:hello': [
-        { file: 'src/App.tsx', line: 10 },
-        { file: 'src/Header.tsx', line: 5 },
-      ],
-    });
+    applyKeyUsage(
+      usage({
+        'test_tab:hello': [
+          { file: 'src/App.tsx', line: 10 },
+          { file: 'src/Header.tsx', line: 5 },
+        ],
+      })
+    );
     const html = renderToString(<KeyUsageBadge qualifiedKey="test_tab:hello" />);
     expect(html).toContain('2');
     // React SSR: "ref<!-- -->s"
@@ -170,13 +177,13 @@ describe('KeyUsageBadge', () => {
 
 describe('KeyUsageList', () => {
   test('renders "Not found in source" when no usages', () => {
-    applyKeyUsage({});
+    applyKeyUsage(usage({}));
     const html = renderToString(<KeyUsageList qualifiedKey="test_tab:nowhere" />);
     expect(html).toContain('Not found in source');
   });
 
   test('renders file entries', () => {
-    applyKeyUsage({ 'test_tab:hello': [{ file: 'src/App.tsx', line: 10 }] });
+    applyKeyUsage(usage({ 'test_tab:hello': [{ file: 'src/App.tsx', line: 10 }] }));
     const html = renderToString(<KeyUsageList qualifiedKey="test_tab:hello" />);
     expect(html).toContain('Used in 1 file');
     expect(html).toContain('src/App.tsx');
@@ -184,12 +191,14 @@ describe('KeyUsageList', () => {
   });
 
   test('renders plural files label', () => {
-    applyKeyUsage({
-      'test_tab:hello': [
-        { file: 'src/App.tsx', line: 10 },
-        { file: 'src/Header.tsx', line: 5 },
-      ],
-    });
+    applyKeyUsage(
+      usage({
+        'test_tab:hello': [
+          { file: 'src/App.tsx', line: 10 },
+          { file: 'src/Header.tsx', line: 5 },
+        ],
+      })
+    );
     const html = renderToString(<KeyUsageList qualifiedKey="test_tab:hello" />);
     expect(html).toContain('Used in 2 files');
   });

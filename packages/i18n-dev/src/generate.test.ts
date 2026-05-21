@@ -177,13 +177,19 @@ describe('generateResourceTypes', () => {
 });
 
 describe('generateRegistryAugmentation', () => {
-  it('emits a module augmentation for @brika/i18n/registry', () => {
+  it('emits a global namespace augmentation for BrikaI18n.Namespaces', () => {
     const result = generateRegistryAugmentation([{ name: 'common', content: { hello: 'Hello' } }]);
 
-    expect(result).toContain("declare module '@brika/i18n/registry' {");
+    expect(result).toContain('declare global {');
+    expect(result).toContain('namespace BrikaI18n {');
     expect(result).toContain('interface Namespaces {');
     expect(result).toContain('common: {');
     expect(result).toContain('hello: string;');
+    // The `export {};` marker is required: a `declare global` block only
+    // takes effect inside a *module* file, and a file with no top-level
+    // import/export is treated as a script — making the augmentation a
+    // no-op. Lock that in here.
+    expect(result.trimEnd().endsWith('export {};')).toBe(true);
   });
 
   it('sorts namespaces alphabetically', () => {
@@ -208,18 +214,18 @@ describe('generateRegistryAugmentation', () => {
     expect(result).toContain('"plugin:foo": {');
   });
 
-  it('targets the default @brika/i18n/registry module', () => {
+  it('targets the default BrikaI18n global namespace', () => {
     const result = generateRegistryAugmentation([{ name: 'common', content: { hello: 'Hi' } }]);
-    expect(result).toContain("declare module '@brika/i18n/registry' {");
+    expect(result).toContain('namespace BrikaI18n {');
     expect(result).toContain('interface Namespaces {');
   });
 
-  it('accepts custom module + interface names for non-Brika projects', () => {
+  it('accepts custom global + interface names for non-Brika projects', () => {
     const result = generateRegistryAugmentation([{ name: 'common', content: { hello: 'Hi' } }], {
-      module: 'react-i18next',
+      globalNamespace: 'MyI18n',
       interfaceName: 'CustomTypeOptions',
     });
-    expect(result).toContain("declare module 'react-i18next' {");
+    expect(result).toContain('namespace MyI18n {');
     expect(result).toContain('interface CustomTypeOptions {');
   });
 

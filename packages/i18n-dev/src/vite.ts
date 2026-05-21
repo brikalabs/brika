@@ -1,11 +1,18 @@
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import type { TranslationData } from '@brika/i18n';
 import { findWorkspaceRoot } from '@brika/i18n/node';
 import type { Plugin } from 'vite';
 import { HMR_EVENT, HMR_REQUEST, HMR_TRANSLATIONS, HMR_USAGE } from './hmr-events';
 import { type KeyUsageMap, type ScanRoot, SOURCE_EXTENSIONS, scanKeyUsages } from './scan-usage';
+import { logIssueReport } from './server/log-issues';
 import { createOpenInEditorMiddleware } from './server/open-in-editor';
-import { generateTypes, type ResolvedSource, runScan } from './server/orchestrator';
+import {
+  generateTypes,
+  mergeCodeUsageIssues,
+  type ResolvedSource,
+  runScan,
+} from './server/orchestrator';
 import { createSaveHandlerMiddleware } from './server/save-handler';
 import { startHubSseClient } from './server/sse-client';
 import { logStartupSummary } from './server/startup-log';
@@ -49,9 +56,7 @@ export function i18nDevtools(options: I18nDevPluginOptions = {}): Plugin {
   const apiUrl =
     explicitApiUrl ?? (options.remote ? `${options.remote.replace(/\/$/, '')}/api/i18n` : null);
 
-  const hasFileSource = Boolean(
-    options.localesDir || options.sources?.some((s) => s.localesDir)
-  );
+  const hasFileSource = Boolean(options.localesDir || options.sources?.some((s) => s.localesDir));
   if (!hasFileSource && !apiUrl) {
     throw new Error(
       '@brika/i18n-devtools: configure at least one translation source — `localesDir`, an entry in `sources` with `localesDir`, or `remote`/`apiUrl` for an HTTP-served bundle.'
@@ -76,7 +81,13 @@ export function i18nDevtools(options: I18nDevPluginOptions = {}): Plugin {
 
     async configResolved(config) {
       rootDir = config.root;
-      cacheDir = join(rootDir, 'node_modules/.cache/@brika/i18n-devtools');
+      // Generated augmentation uses `declare global { namespace BrikaI18n }`
+      // so module resolution doesn't gate the merge — files in
+      // `node_modules/.cache/` work just as well as anywhere else, and they
+      // stay out of the consumer's source tree.
+      cacheDir = options.typesDir
+        ? resolve(rootDir, options.typesDir)
+        : join(rootDir, 'node_modules/.cache/@brika/i18n-devtools');
 
       if (options.localesDir) {
         localesDir = resolve(rootDir, options.localesDir);
@@ -138,6 +149,10 @@ export function i18nDevtools(options: I18nDevPluginOptions = {}): Plugin {
         defaultNamespace,
         sources,
         cacheDir,
+        tpNamespacePrefixes: options.tpNamespacePrefixes,
+        deadKeyIgnoreNamespaces: options.deadKeyIgnoreNamespaces,
+        unknownKeySeverity: options.unknownKeySeverity,
+        deadKeySeverity: options.deadKeySeverity,
       };
 
       // Static-scan paths are reported relative to the workspace root so they
@@ -147,46 +162,70 @@ export function i18nDevtools(options: I18nDevPluginOptions = {}): Plugin {
       // `plugins/<x>/...` from runtime, defeating the file:line dedup.
       const usageRoot = workspaceRoot ?? rootDir;
 
+      // Last *purely-locale* validation snapshot. We keep it separate from
+      // `lastResult` so the code-vs-locale cross-validation (which depends on
+      // `lastUsage`) can be re-overlaid without rescanning the JSON files.
+      let lastCoreTranslations: Map<string, Map<string, TranslationData>> = new Map();
+      let lastLocaleValidation: ValidationResult | null = null;
+
+      function rebuildIssues(): void {
+        if (!lastLocaleValidation) {
+          return;
+        }
+        lastResult = lastUsage
+          ? mergeCodeUsageIssues(
+              lastLocaleValidation,
+              lastCoreTranslations,
+              lastUsage,
+              orchestratorOptions
+            )
+          : lastLocaleValidation;
+        server.hot.send(HMR_EVENT, lastResult);
+        // Skip logging on the very first locale-parity pass before the
+        // key-usage scan has caught up — otherwise we'd log "All OK", then
+        // immediately log "N errors" 200ms later when the code↔locale check
+        // adds its own issues. Wait until both halves have run at least once.
+        if (lastUsage !== null) {
+          logIssueReport(server.config.logger, lastResult.issues);
+        }
+      }
+
       // Respond to overlay requests with the latest result.
       server.hot.on(HMR_REQUEST, async (_data, client) => {
-        if (!lastResult) {
+        if (!lastLocaleValidation) {
           const scan = await runScan(orchestratorOptions);
-          lastResult = scan.validation;
+          lastLocaleValidation = scan.validation;
+          lastCoreTranslations = scan.coreTranslations;
           lastTranslations = scan.translations;
         }
         lastUsage ??= await scanKeyUsages(usageRoot, scanRoots);
+        rebuildIssues();
         if (lastTranslations) {
           client.send(HMR_TRANSLATIONS, lastTranslations);
         }
-        client.send(HMR_EVENT, lastResult);
+        if (lastResult) {
+          client.send(HMR_EVENT, lastResult);
+        }
         client.send(HMR_USAGE, lastUsage);
       });
 
       const scheduleValidation = createDebouncedFn(async () => {
         const scan = await runScan(orchestratorOptions);
-        lastResult = scan.validation;
+        lastLocaleValidation = scan.validation;
+        lastCoreTranslations = scan.coreTranslations;
         lastTranslations = scan.translations;
-        server.hot.send(HMR_EVENT, lastResult);
         server.hot.send(HMR_TRANSLATIONS, lastTranslations);
+        rebuildIssues();
 
         generateTypes(orchestratorOptions, scan.coreTranslations, scan.translations).catch(() => {
           // Type generation runs in background; failures are non-fatal here.
         });
-
-        const errors = lastResult.issues.filter((i) => i.severity === 'error').length;
-        const warnings = lastResult.issues.filter((i) => i.severity === 'warning').length;
-        if (errors > 0 || warnings > 0) {
-          server.config.logger.warn(`[i18n-dev] ${errors} error(s), ${warnings} warning(s)`, {
-            timestamp: true,
-          });
-        } else {
-          server.config.logger.info('[i18n-dev] All translations OK', { timestamp: true });
-        }
       }, 300);
 
       const scheduleUsageScan = createDebouncedFn(async () => {
         lastUsage = await scanKeyUsages(usageRoot, scanRoots);
         server.hot.send(HMR_USAGE, lastUsage);
+        rebuildIssues();
       }, 500);
 
       if (apiUrl) {
@@ -231,8 +270,10 @@ export function i18nDevtools(options: I18nDevPluginOptions = {}): Plugin {
         });
       }
 
-      // Run initial validation once the server is ready.
+      // Run initial validation + key-usage scan so the terminal log reflects
+      // both halves on first boot, even without a browser tab open.
       scheduleValidation();
+      scheduleUsageScan();
     },
   };
 }

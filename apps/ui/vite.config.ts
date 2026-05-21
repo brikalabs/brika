@@ -18,7 +18,19 @@ export default defineConfig(async () => ({
       metadata: { Version: pkg.version, Package: pkg.name },
     }),
     hubProxy(HUB_ORIGIN),
-    i18nDevtools({ remote: HUB_ORIGIN, sources: await brikaI18nSources(import.meta.url) }),
+    i18nDevtools({
+      remote: HUB_ORIGIN,
+      sources: await brikaI18nSources(import.meta.url),
+      // Brika's `tp(pluginId, key)` host wrapper prepends `'plugin:'` to the
+      // runtime namespace; the static scanner doesn't replicate that. Telling
+      // the validator about the convention prevents every plugin-locale key
+      // from being flagged as a false dead-key.
+      tpNamespacePrefixes: ['plugin:'],
+      // Hub's bundle includes `plugin:` namespaces from runtime-installed
+      // plugins whose source isn't in the workspace — skip dead-key checks
+      // for them to avoid hundreds of false positives.
+      deadKeyIgnoreNamespaces: ['plugin:'],
+    }),
     react(),
     tailwindcss(),
   ],

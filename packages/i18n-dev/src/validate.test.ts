@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import { extractKeys, extractVariables, validateLocales } from './validate';
+import type { KeyUsageMap } from './scan-usage';
+import { extractKeys, extractVariables, validateCodeUsage, validateLocales } from './validate';
 
 // ─── extractVariables ──────────────────────────────────────────────────────
 
@@ -231,5 +232,166 @@ describe('validateLocales', () => {
     expect(issues).toHaveLength(1);
     expect(issues[0]?.referenceLocale).toBe('de');
     expect(issues[0]?.type).toBe('missing-key');
+  });
+});
+
+// ─── validateCodeUsage ─────────────────────────────────────────────────────
+
+function makeUsage(
+  qualifiedKeys: string[],
+  extras: Partial<Omit<KeyUsageMap, 'keys'>> = {}
+): KeyUsageMap {
+  const keys: Record<string, Array<{ file: string; line: number }>> = {};
+  for (const key of qualifiedKeys) {
+    keys[key] = [{ file: 'src/app.tsx', line: 1 }];
+  }
+  return {
+    keys,
+    patterns: extras.patterns ?? [],
+    opaqueNamespaces: extras.opaqueNamespaces ?? [],
+    hasGlobalOpaque: extras.hasGlobalOpaque ?? false,
+  };
+}
+
+describe('validateCodeUsage', () => {
+  test('flags code keys absent from any locale as unknown-key (error)', () => {
+    const translations = makeTranslations({
+      en: { common: { hello: 'Hello' } },
+      fr: { common: { hello: 'Bonjour' } },
+    });
+    const usage = makeUsage(['common:hello', 'common:nonexistent']);
+
+    const issues = validateCodeUsage(translations, usage, 'en');
+
+    const unknown = issues.filter((i) => i.type === 'unknown-key');
+    expect(unknown).toHaveLength(1);
+    expect(unknown[0]?.key).toBe('nonexistent');
+    expect(unknown[0]?.namespace).toBe('common');
+    expect(unknown[0]?.severity).toBe('error');
+  });
+
+  test('flags locale keys never referenced in code as dead-key (warning)', () => {
+    const translations = makeTranslations({
+      en: { common: { hello: 'Hello', unused: 'Stale' } },
+      fr: { common: { hello: 'Bonjour', unused: 'Stale' } },
+    });
+    const usage = makeUsage(['common:hello']);
+
+    const issues = validateCodeUsage(translations, usage, 'en');
+
+    const dead = issues.filter((i) => i.type === 'dead-key');
+    expect(dead).toHaveLength(1);
+    expect(dead[0]?.key).toBe('unused');
+    expect(dead[0]?.severity).toBe('warning');
+  });
+
+  test('plural variants in locales satisfy a bare code key', () => {
+    const translations = makeTranslations({
+      en: { common: { items_one: '{{count}} item', items_other: '{{count}} items' } },
+    });
+    const usage = makeUsage(['common:items']);
+
+    const issues = validateCodeUsage(translations, usage, 'en');
+
+    // `items` is the code key; `items_one`/`items_other` cover it.
+    expect(issues.filter((i) => i.type === 'unknown-key')).toHaveLength(0);
+    // Neither plural variant is dead — the base call resolves them at runtime.
+    expect(issues.filter((i) => i.type === 'dead-key')).toHaveLength(0);
+  });
+
+  test('extraPrefixes lets brika-style tp() calls match plugin: namespaces', () => {
+    const translations = makeTranslations({
+      en: {
+        'plugin:@brika/plugin-weather': { 'stats.feelsLike': 'Feels like {{value}}' },
+      },
+    });
+    const usage = makeUsage(['@brika/plugin-weather:stats.feelsLike']);
+
+    const issuesWithoutPrefix = validateCodeUsage(translations, usage, 'en');
+    const issuesWithPrefix = validateCodeUsage(translations, usage, 'en', {
+      extraPrefixes: ['plugin:'],
+    });
+
+    expect(issuesWithoutPrefix.some((i) => i.type === 'unknown-key')).toBe(true);
+    expect(issuesWithPrefix.some((i) => i.type === 'unknown-key')).toBe(false);
+    expect(issuesWithPrefix.some((i) => i.type === 'dead-key')).toBe(false);
+  });
+
+  test('issues are anchored to the reference locale for grouping', () => {
+    const translations = makeTranslations({
+      en: { common: { hello: 'Hello' } },
+      fr: { common: { hello: 'Bonjour' } },
+    });
+    const usage = makeUsage(['common:typo']);
+
+    const issues = validateCodeUsage(translations, usage, 'de');
+
+    expect(issues[0]?.locale).toBe('de');
+    expect(issues[0]?.referenceLocale).toBe('de');
+  });
+
+  test('nested dotted code keys match nested locale keys', () => {
+    const translations = makeTranslations({
+      en: { auth: { password: { rules: { minLength: 'At least 8 chars' } } } },
+    });
+    const usage = makeUsage(['auth:password.rules.minLength', 'auth:password.rules.bogus']);
+
+    const issues = validateCodeUsage(translations, usage, 'en');
+
+    const unknown = issues.filter((i) => i.type === 'unknown-key');
+    expect(unknown).toHaveLength(1);
+    expect(unknown[0]?.key).toBe('password.rules.bogus');
+  });
+
+  test('empty inputs produce zero issues', () => {
+    const issues = validateCodeUsage(new Map(), makeUsage([]), 'en');
+    expect(issues).toEqual([]);
+  });
+
+  // ── New: dynamic-pattern + opaque-call accuracy guarantees ──────────────
+
+  test('template-literal prefix from scanner satisfies all matching locale keys', () => {
+    const translations = makeTranslations({
+      en: {
+        auth: { password: { rules: { minLength: 'A', uppercase: 'B', number: 'C' } } },
+      },
+    });
+    // Scanner saw `t(`auth:password.rules.${rule.key}`)` — emits prefix.
+    const usage = makeUsage([], { patterns: ['auth:password.rules.'] });
+
+    const issues = validateCodeUsage(translations, usage, 'en');
+
+    // No dead-key warnings: the three locale keys are all "potentially used"
+    // by the dynamic call.
+    expect(issues.filter((i) => i.type === 'dead-key')).toHaveLength(0);
+  });
+
+  test('opaque namespace suppresses dead-key for that namespace only', () => {
+    const translations = makeTranslations({
+      en: {
+        auth: { hello: 'Hi', loggingOut: 'Out' },
+        common: { unused: 'Stale' }, // genuinely dead
+      },
+    });
+    // `useTranslation('auth')` + `t(varName)` → opaque namespace 'auth'.
+    const usage = makeUsage([], { opaqueNamespaces: ['auth'] });
+
+    const issues = validateCodeUsage(translations, usage, 'en');
+
+    const dead = issues.filter((i) => i.type === 'dead-key');
+    // auth:* are conservatively considered used; common:unused is still dead.
+    expect(dead.map((i) => i.key)).toEqual(['unused']);
+  });
+
+  test('global opaque disables dead-key reporting entirely', () => {
+    const translations = makeTranslations({
+      en: { common: { unused: 'Stale', also_unused: 'Stale too' } },
+    });
+    // Bare `t(varName)` with no `useTranslation` → global opaque.
+    const usage = makeUsage([], { hasGlobalOpaque: true });
+
+    const issues = validateCodeUsage(translations, usage, 'en');
+
+    expect(issues.filter((i) => i.type === 'dead-key')).toHaveLength(0);
   });
 });
