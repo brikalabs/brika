@@ -373,7 +373,7 @@ export class MockUpdateProvider extends UpdateProvider {
     return this.#real;
   }
 
-  async check(channel: UpdateChannelId): Promise<UpdateInfo> {
+  override async check(channel: UpdateChannelId): Promise<UpdateInfo> {
     const scenario = getActiveScenario() ?? 'up-to-date';
     if (scenario === 'force-real-install') {
       // Real check against GitHub; flip `updateAvailable` on so the UI
@@ -386,7 +386,7 @@ export class MockUpdateProvider extends UpdateProvider {
     return buildFakeUpdateInfo({ scenario, channel });
   }
 
-  async apply(options: ProviderApplyOptions): Promise<ApplyResult> {
+  override async apply(options: ProviderApplyOptions): Promise<ApplyResult> {
     const scenario = getActiveScenario() ?? 'up-to-date';
     const channel = options.channel ?? DEFAULT_CHANNEL_ID;
     if (scenario === 'force-real-install') {

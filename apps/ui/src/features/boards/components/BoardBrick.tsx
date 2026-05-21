@@ -18,7 +18,7 @@ class BrickErrorBoundary extends Component<
   },
   BrickErrorBoundaryState
 > {
-  state: BrickErrorBoundaryState = {
+  override state: BrickErrorBoundaryState = {
     error: null,
   };
 
@@ -28,11 +28,11 @@ class BrickErrorBoundary extends Component<
     };
   }
 
-  componentDidCatch(error: Error, info: ErrorInfo) {
+  override componentDidCatch(error: Error, info: ErrorInfo) {
     console.error('[BrickErrorBoundary]', error, info.componentStack);
   }
 
-  render() {
+  override render() {
     if (this.state.error) {
       return (
         <div className="flex flex-1 flex-col items-center justify-center gap-1.5 p-3 text-center">

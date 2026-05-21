@@ -1,12 +1,14 @@
 {
-  "extends": "../../tsconfig.base.json",
+  "extends": "../../tsconfig.json",
   "compilerOptions": {
-    "baseUrl": ".",
     "lib": ["ES2024"],
-    "types": ["bun-types"],
     "paths": {
       "@/*": ["./src/*"]
-    }
+    },
+    // TODO(typecheck): existing hub code does not satisfy
+    // `noUncheckedIndexedAccess`. Flip to `true` once the route + persistence
+    // layers are audited.
+    "noUncheckedIndexedAccess": false
   },
   "include": ["src", "compiler"]
 }
