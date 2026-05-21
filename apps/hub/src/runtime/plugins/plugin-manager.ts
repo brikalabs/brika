@@ -1,6 +1,6 @@
 import { inject, singleton } from '@brika/di';
 import { withPredicate } from '@brika/events';
-import type { Json } from '@brika/ipc';
+import { BrikaError, type Json } from '@brika/ipc';
 import type { Plugin } from '@brika/plugin';
 import { BlockRegistry } from '@/runtime/blocks';
 import { PluginActions } from '@/runtime/events/actions';
@@ -95,13 +95,17 @@ export class PluginManager {
   async enable(uid: string): Promise<void> {
     const name = this.#getName(uid);
     if (!name) {
-      throw new Error(`Plugin not found: ${uid}`);
+      throw new BrikaError('PLUGIN_NOT_FOUND', `Plugin not found: ${uid}`, {
+        data: { pluginId: uid },
+      });
     }
 
     await this.#state.setEnabled(name, true);
     const stored = this.#state.get(name);
     if (!stored) {
-      throw new Error(`Plugin state not found: ${name}`);
+      throw new BrikaError('PLUGIN_NOT_FOUND', `Plugin state not found: ${name}`, {
+        data: { pluginId: name },
+      });
     }
 
     const racePromise = this.#events.race(
@@ -118,8 +122,10 @@ export class PluginManager {
 
     const result = await racePromise;
     if (result.type === 'plugin.configInvalid') {
-      throw new Error(
-        `Plugin ${uid} has invalid configuration: ${result.payload.errors.join(', ')}`
+      throw new BrikaError(
+        'PLUGIN_CONFIG_INVALID',
+        `Plugin ${uid} has invalid configuration: ${result.payload.errors.join(', ')}`,
+        { data: { pluginId: uid } }
       );
     }
   }
@@ -127,7 +133,9 @@ export class PluginManager {
   async disable(uid: string): Promise<void> {
     const name = this.#getName(uid);
     if (!name) {
-      throw new Error(`Plugin not found: ${uid}`);
+      throw new BrikaError('PLUGIN_NOT_FOUND', `Plugin not found: ${uid}`, {
+        data: { pluginId: uid },
+      });
     }
 
     await this.#state.setEnabled(name, false);
@@ -137,7 +145,9 @@ export class PluginManager {
   async reload(uid: string): Promise<void> {
     const name = this.#getName(uid);
     if (!name) {
-      throw new Error(`Plugin not found: ${uid}`);
+      throw new BrikaError('PLUGIN_NOT_FOUND', `Plugin not found: ${uid}`, {
+        data: { pluginId: uid },
+      });
     }
 
     // Unload the plugin first
@@ -151,7 +161,9 @@ export class PluginManager {
     // Get stored state to know the root directory
     const stored = this.#state.get(name);
     if (!stored) {
-      throw new Error(`Plugin state not found: ${name}`);
+      throw new BrikaError('PLUGIN_NOT_FOUND', `Plugin state not found: ${name}`, {
+        data: { pluginId: name },
+      });
     }
 
     // Set up race AFTER unloading to catch events from new load
@@ -181,8 +193,10 @@ export class PluginManager {
 
     const result = await racePromise;
     if (result.type === 'plugin.configInvalid') {
-      throw new Error(
-        `Plugin ${uid} has invalid configuration: ${result.payload.errors.join(', ')}`
+      throw new BrikaError(
+        'PLUGIN_CONFIG_INVALID',
+        `Plugin ${uid} has invalid configuration: ${result.payload.errors.join(', ')}`,
+        { data: { pluginId: uid } }
       );
     }
 
@@ -200,7 +214,9 @@ export class PluginManager {
   async kill(uid: string): Promise<void> {
     const name = this.#getName(uid);
     if (!name) {
-      throw new Error(`Plugin not found: ${uid}`);
+      throw new BrikaError('PLUGIN_NOT_FOUND', `Plugin not found: ${uid}`, {
+        data: { pluginId: uid },
+      });
     }
 
     const process = this.#lifecycle.getProcess(name);

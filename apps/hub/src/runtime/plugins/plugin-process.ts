@@ -1,4 +1,4 @@
-import { type Json, type PluginChannel, RpcError } from '@brika/ipc';
+import { BrikaError, type Json, type PluginChannel } from '@brika/ipc';
 import {
   blockEmit,
   blockLog,
@@ -597,8 +597,8 @@ export class PluginProcess {
   #requirePermission(permission: Permission): void {
     const granted = this.callbacks.onGetGrantedPermissions(this.name);
     if (!granted.includes(permission)) {
-      throw new RpcError('PERMISSION_DENIED', `Permission "${permission}" is not granted`, {
-        permission,
+      throw new BrikaError('PERMISSION_DENIED', `Permission "${permission}" is not granted`, {
+        data: { permission },
       });
     }
   }

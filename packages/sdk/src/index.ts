@@ -208,13 +208,28 @@ export { PRELUDE_BRAND } from './bridge';
 // Errors
 // ─────────────────────────────────────────────────────────────────────────────
 
+export type {
+  BrikaErrorCode,
+  BrikaErrorWire,
+  CatalogEntry,
+  CatalogedErrorCode,
+  DataForCode,
+  ErrorCategory,
+  ErrorSeverity,
+} from '@brika/ipc';
+export {
+  BrikaError,
+  ErrorCatalog,
+  httpStatusForCode,
+  lookupCatalogEntry,
+  severityForCode,
+} from '@brika/ipc';
 export {
   InternalError,
   InvalidInputError,
   NotFoundError,
   PermissionDeniedError,
-  rethrowRpcError,
-  sdkErrors,
+  TimeoutError,
 } from './errors';
 
 // ─────────────────────────────────────────────────────────────────────────────

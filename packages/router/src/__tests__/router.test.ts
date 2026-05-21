@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'bun:test';
+import { BrikaError } from '@brika/ipc';
 import { z } from 'zod';
 import type { Middleware } from '../index';
 import { BadRequest, combineRoutes, createApp, group, NotFound, route } from '../index';
@@ -592,6 +593,46 @@ describe('@brika/router', () => {
 
       const okRes = await app.fetch(new Request('http://localhost/api/user/123'));
       expect(okRes.status).toBe(200);
+    });
+
+    it('maps a thrown BrikaError to its catalog httpStatus + envelope', async () => {
+      const app = createApp([
+        route.get({
+          path: '/api/resource/:id',
+          handler: ({ params }) => {
+            const p = params as { id: string };
+            throw new BrikaError('NOT_FOUND', 'no such resource', {
+              data: { resource: p.id },
+            });
+          },
+        }),
+      ]);
+
+      const res = await app.fetch(new Request('http://localhost/api/resource/x'));
+      expect(res.status).toBe(404);
+      const body = (await res.json()) as {
+        error: { code: string; message: string; data?: Record<string, unknown>; i18nKey?: string };
+      };
+      expect(body.error.code).toBe('NOT_FOUND');
+      expect(body.error.message).toBe('no such resource');
+      expect(body.error.data).toEqual({ resource: 'x' });
+      expect(body.error.i18nKey).toBe('errors.not_found');
+    });
+
+    it('returns 500 for BrikaError with an uncataloged code', async () => {
+      const app = createApp([
+        route.get({
+          path: '/api/x',
+          handler: () => {
+            throw new BrikaError('PLUGIN_DEFINED_CODE', 'custom');
+          },
+        }),
+      ]);
+
+      const res = await app.fetch(new Request('http://localhost/api/x'));
+      expect(res.status).toBe(500);
+      const body = (await res.json()) as { error: { code: string } };
+      expect(body.error.code).toBe('PLUGIN_DEFINED_CODE');
     });
 
     it('should handle BadRequest exception', async () => {

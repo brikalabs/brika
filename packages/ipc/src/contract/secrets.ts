@@ -27,8 +27,8 @@ export const SecretKey = z
 /**
  * Plugin reads its own secret. Returns null when the secret is not set.
  *
- * @throws {RpcError} code `PERMISSION_DENIED` if the "secrets" permission is not granted.
- * @throws {RpcError} code `INVALID_ARGUMENT` if the key shape is rejected.
+ * @throws {BrikaError} code `PERMISSION_DENIED` if the "secrets" permission is not granted.
+ * @throws {BrikaError} code `INVALID_INPUT` if the key shape is rejected.
  */
 export const getPluginSecret = rpc(
   'getPluginSecret',
@@ -43,8 +43,8 @@ export const getPluginSecret = rpc(
 /**
  * Plugin writes its own secret. An empty `value` deletes the secret.
  *
- * @throws {RpcError} code `PERMISSION_DENIED` if the "secrets" permission is not granted.
- * @throws {RpcError} code `INVALID_ARGUMENT` if the key shape is rejected.
+ * @throws {BrikaError} code `PERMISSION_DENIED` if the "secrets" permission is not granted.
+ * @throws {BrikaError} code `INVALID_INPUT` if the key shape is rejected.
  */
 export const setPluginSecret = rpc(
   'setPluginSecret',
@@ -58,8 +58,8 @@ export const setPluginSecret = rpc(
 /**
  * Plugin deletes its own secret. Returns whether a secret was actually removed.
  *
- * @throws {RpcError} code `PERMISSION_DENIED` if the "secrets" permission is not granted.
- * @throws {RpcError} code `INVALID_ARGUMENT` if the key shape is rejected.
+ * @throws {BrikaError} code `PERMISSION_DENIED` if the "secrets" permission is not granted.
+ * @throws {BrikaError} code `INVALID_INPUT` if the key shape is rejected.
  */
 export const deletePluginSecret = rpc(
   'deletePluginSecret',

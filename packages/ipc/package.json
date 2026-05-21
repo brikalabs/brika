@@ -17,7 +17,8 @@
   "keywords": ["brika", "ipc", "bun", "communication", "typed"],
   "exports": {
     ".": "./src/index.ts",
-    "./contract": "./src/contract/index.ts"
+    "./contract": "./src/contract/index.ts",
+    "./errors": "./src/errors-public.ts"
   },
   "files": ["src", "README.md"],
   "scripts": {

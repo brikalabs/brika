@@ -61,8 +61,27 @@ export type {
 } from './define';
 export { isMessage, isRpc, message, rpc } from './define';
 // ─── Errors ───
-export type { RpcErrorCode, RpcErrorWire } from './errors';
-export { isRpcErrorWire, RpcError } from './errors';
+export type {
+  BrikaErrorCode,
+  CatalogEntry,
+  CatalogedErrorCode,
+  DataForCode,
+  ErrorCategory,
+  ErrorSeverity,
+} from './error-catalog';
+export {
+  ErrorCatalog,
+  httpStatusForCode,
+  lookupCatalogEntry,
+  severityForCode,
+} from './error-catalog';
+export type { BrikaErrorResponseBody, BrikaErrorWire } from './errors';
+export {
+  BrikaError,
+  BrikaErrorWireSchema,
+  brikaErrorToResponse,
+  isBrikaErrorWire,
+} from './errors';
 // ─── Global ───
 export type { IpcGlobal } from './global';
 // ─── Host ───

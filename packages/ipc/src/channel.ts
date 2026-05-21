@@ -5,7 +5,7 @@
  */
 
 import type { InputOf, MessageDef, OutputOf, PayloadOf, RpcDef } from './define';
-import { isRpcErrorWire, RpcError } from './errors';
+import { BrikaError, isBrikaErrorWire } from './errors';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -45,6 +45,14 @@ interface ParseableSchema {
 }
 
 type ParseResult = { ok: true; data: unknown } | { ok: false; error: string };
+
+function toErrorWire(e: unknown) {
+  if (e instanceof BrikaError) {
+    return e.toWire();
+  }
+  const message = e instanceof Error ? e.message : String(e);
+  return new BrikaError('INTERNAL', message, { cause: e }).toWire();
+}
 
 function validatePayload(
   schema: ParseableSchema | undefined,
@@ -267,9 +275,9 @@ export class Channel {
         clearTimeout(pending.timer);
         this.#pending.delete(id);
         const result = 'result' in payload ? payload.result : payload;
-        // Reconstruct typed RPC errors → reject instead of resolve
-        if (isRpcErrorWire(result)) {
-          pending.reject(RpcError.fromWire(result));
+        // Reconstruct typed BrikaErrors → reject instead of resolve
+        if (isBrikaErrorWire(result)) {
+          pending.reject(BrikaError.fromWire(result));
         } else {
           pending.resolve(result);
         }
@@ -294,7 +302,7 @@ export class Channel {
         this.#send({
           t: `${type}Result`,
           _id: id,
-          result: new RpcError('INVALID_INPUT', parsed.error).toWire(),
+          result: new BrikaError('INVALID_INPUT', parsed.error).toWire(),
         });
         return true;
       }
@@ -307,23 +315,14 @@ export class Channel {
           result,
         });
       } catch (e) {
-        // Preserve typed error codes across the wire
-        if (e instanceof RpcError) {
-          this.#send({
-            t: `${type}Result`,
-            _id: id,
-            result: e.toWire(),
-          });
-        } else {
-          this.#send({
-            t: `${type}Result`,
-            _id: id,
-            result: {
-              ok: false,
-              error: String(e),
-            },
-          });
-        }
+        // Preserve typed error codes across the wire. Non-BrikaError throws
+        // collapse to a generic INTERNAL envelope so the wire shape stays
+        // uniform — the client side sees a thrown BrikaError either way.
+        this.#send({
+          t: `${type}Result`,
+          _id: id,
+          result: toErrorWire(e),
+        });
       }
       return true;
     }

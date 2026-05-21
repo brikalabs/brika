@@ -1,4 +1,5 @@
 import { inject } from '@brika/di';
+import { BrikaError, brikaErrorToResponse } from '@brika/ipc';
 import { type Context, Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { ZodError, z } from 'zod';
@@ -111,6 +112,10 @@ function handleError(
     json: (data: unknown, status: number) => Response;
   }
 ) {
+  if (error instanceof BrikaError) {
+    return brikaErrorToResponse(error);
+  }
+
   if (error instanceof HttpException) {
     return c.json(
       {

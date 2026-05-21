@@ -1,4 +1,5 @@
 import { inject, singleton } from '@brika/di';
+import { BrikaError, brikaErrorToResponse } from '@brika/ipc';
 import {
   type CorsOriginMatcher,
   createApp,
@@ -189,21 +190,18 @@ export class ApiServer {
 
       return res;
     } catch (error) {
+      const response = brikaErrorToResponse(error);
       const duration = formatDuration(performance.now() - start);
-      this.#logs.error(`${req.method} ${path} → 500 (${duration})`, {
+      const code = error instanceof BrikaError ? error.code : 'INTERNAL';
+      this.#logs.error(`${req.method} ${path} → ${response.status} (${duration})`, {
         method: req.method,
         path,
         duration,
+        status: response.status,
+        code,
         error: error instanceof Error ? error.message : String(error),
       });
-      return Response.json(
-        {
-          error: 'Internal server error',
-        },
-        {
-          status: 500,
-        }
-      );
+      return response;
     }
   }
 

@@ -1,149 +1,278 @@
 /**
- * IPC Error Types
+ * BrikaError — typed platform error with wire round-trip.
  *
- * Typed errors that survive serialization across the IPC boundary.
- * When a handler throws an RpcError, the code, message, and optional
- * structured data are preserved on the wire and reconstructed on the
- * client side.
+ * Every error that crosses an IPC, HTTP, or process boundary is a BrikaError.
+ * Codes are looked up in {@link ErrorCatalog} for HTTP status, severity, and
+ * i18n keys. Optional structured `data` is typed per code via Zod schemas.
  *
- * @example Hub handler throwing a typed error:
+ * @example hub handler:
  * ```ts
- * channel.implement(getHubLocation, () => {
- *   if (!hasPermission) {
- *     throw new RpcError('PERMISSION_DENIED', 'Location permission required', {
- *       permission: 'location',
- *     });
- *   }
- *   return { location: data };
+ * throw new BrikaError('PERMISSION_DENIED', 'Location permission required', {
+ *   data: { permission: 'location' },
  * });
  * ```
  *
- * @example Client catching a typed error:
+ * @example client side narrowing:
  * ```ts
- * try {
- *   const result = await client.call(getHubLocation, {});
- * } catch (err) {
- *   if (err instanceof RpcError && err.code === 'PERMISSION_DENIED') {
- *     console.log(`Missing: ${err.data?.permission}`);
- *   }
+ * if (BrikaError.is(err, 'PERMISSION_DENIED')) {
+ *   console.log(err.data.permission); // string, narrowed via catalog schema
  * }
  * ```
  */
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Well-Known Error Codes
-// ─────────────────────────────────────────────────────────────────────────────
+import { z } from 'zod';
+import {
+  type BrikaErrorCode,
+  type CatalogedErrorCode,
+  type DataForCode,
+  httpStatusForCode,
+  lookupCatalogEntry,
+} from './error-catalog';
 
-/**
- * Standard RPC error codes.
- *
- * | Code                | Meaning                                          |
- * |---------------------|--------------------------------------------------|
- * | `PERMISSION_DENIED` | Plugin lacks a required permission grant          |
- * | `NOT_FOUND`         | Requested resource does not exist                 |
- * | `INVALID_INPUT`     | Input failed validation or was malformed          |
- * | `INTERNAL`          | Unexpected server-side error                      |
- *
- * Custom codes are allowed — the union is open-ended for extensibility.
- */
-export type RpcErrorCode =
-  | 'PERMISSION_DENIED'
-  | 'NOT_FOUND'
-  | 'INVALID_INPUT'
-  | 'INTERNAL'
-  // Open-ended union: custom string codes allowed, literal members provide autocomplete
-  | (string & Record<never, never>);
+// ─── Wire envelope schema ──────────────────────────────────────────────────
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Wire Format
-// ─────────────────────────────────────────────────────────────────────────────
+interface NestedCause {
+  readonly message: string;
+  readonly name?: string;
+}
 
-/** Shape of an error on the wire (JSON-serializable) */
-export interface RpcErrorWire {
-  readonly _rpcError: true;
+export interface BrikaErrorWire {
+  readonly _brikaError: true;
   readonly code: string;
   readonly message: string;
   readonly data?: Record<string, unknown>;
+  readonly cause?: BrikaErrorWire | NestedCause;
+  readonly stack?: string;
 }
 
-/**
- * Type guard for wire-format RPC errors.
- * Used by Channel to detect typed errors in responses.
- */
-export function isRpcErrorWire(value: unknown): value is RpcErrorWire {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    '_rpcError' in value &&
-    (value as Record<string, unknown>)._rpcError === true &&
-    typeof (value as Record<string, unknown>).code === 'string' &&
-    typeof (value as Record<string, unknown>).message === 'string'
-  );
+const NestedCauseSchema: z.ZodType<NestedCause> = z.object({
+  message: z.string(),
+  name: z.string().optional(),
+});
+
+export const BrikaErrorWireSchema: z.ZodType<BrikaErrorWire> = z.object({
+  _brikaError: z.literal(true),
+  code: z.string(),
+  message: z.string(),
+  data: z.record(z.string(), z.unknown()).optional(),
+  cause: z.union([z.lazy(() => BrikaErrorWireSchema), NestedCauseSchema]).optional(),
+  stack: z.string().optional(),
+});
+
+/** True if `value` looks like a `BrikaError` wire envelope. */
+export function isBrikaErrorWire(value: unknown): value is BrikaErrorWire {
+  return BrikaErrorWireSchema.safeParse(value).success;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// RpcError Class
-// ─────────────────────────────────────────────────────────────────────────────
+// ─── HTTP envelope ─────────────────────────────────────────────────────────
 
-/**
- * Typed RPC error that preserves its code across IPC serialization.
- *
- * Thrown by handlers to signal a specific error condition.
- * Automatically serialized on the wire and reconstructed on the client side,
- * so `instanceof RpcError` and `err.code` work in the calling process.
- *
- * @example
- * ```ts
- * // Throw with structured data
- * throw new RpcError('NOT_FOUND', 'Block not registered', { blockId: 'timer:set' });
- *
- * // Catch and inspect
- * catch (err) {
- *   if (err instanceof RpcError) {
- *     console.log(err.code);           // 'NOT_FOUND'
- *     console.log(err.data?.blockId);   // 'timer:set'
- *   }
- * }
- * ```
- */
-export class RpcError extends Error {
-  /** Machine-readable error code (e.g., 'PERMISSION_DENIED') */
-  readonly code: RpcErrorCode;
+/** Shape returned by {@link brikaErrorToResponse}. */
+export interface BrikaErrorResponseBody {
+  readonly error: {
+    readonly code: string;
+    readonly message: string;
+    readonly data?: Readonly<Record<string, unknown>>;
+    readonly i18nKey?: string;
+    readonly developerHint?: string;
+  };
+}
+
+// ─── BrikaError class ──────────────────────────────────────────────────────
+
+interface BrikaErrorOptions<D> {
+  readonly data?: D;
+  readonly cause?: unknown;
+}
+
+export class BrikaError<
+  C extends BrikaErrorCode = BrikaErrorCode,
+  D extends Record<string, unknown> | undefined = Record<string, unknown> | undefined,
+> extends Error {
+  /** Machine-readable error code. */
+  readonly code: C;
 
   /**
-   * Optional structured data associated with the error.
-   * Preserved across the IPC boundary (must be JSON-serializable).
+   * Structured payload. Top-level keys are frozen at construction; nested
+   * objects are NOT deep-frozen — only freeze what you mutate.
    */
-  readonly data?: Record<string, unknown>;
+  readonly data?: Readonly<D>;
 
-  constructor(code: RpcErrorCode, message: string, data?: Record<string, unknown>) {
-    super(message);
-    this.name = 'RpcError';
+  constructor(code: C, message: string, opts?: BrikaErrorOptions<D>) {
+    super(message, opts?.cause === undefined ? undefined : { cause: opts.cause });
+    this.name = 'BrikaError';
     this.code = code;
-    if (data) {
-      this.data = data;
+    if (opts?.data) {
+      this.data = Object.freeze({ ...opts.data });
     }
   }
 
-  /** Serialize to wire format */
-  toWire(): RpcErrorWire {
-    const wire: RpcErrorWire = {
-      _rpcError: true,
-      code: this.code,
-      message: this.message,
+  /** Serialize to a JSON-safe wire envelope. */
+  toWire(opts?: { readonly includeStack?: boolean }): BrikaErrorWire {
+    const seen = new WeakSet<object>();
+    seen.add(this);
+    return buildWire(this, opts, seen);
+  }
+
+  /**
+   * Reconstruct a `BrikaError` from a wire envelope (or any value the wire
+   * schema accepts).
+   */
+  static fromWire(wire: BrikaErrorWire): BrikaError {
+    const cause = deserializeCause(wire.cause);
+    const err = new BrikaError(wire.code, wire.message, {
+      data: wire.data,
+      cause,
+    });
+    if (typeof wire.stack === 'string') {
+      err.stack = `${err.stack ?? ''}\n--- remote stack ---\n${wire.stack}`;
+    }
+    return err;
+  }
+
+  /**
+   * Type guard that narrows both `code` and `data` shape via the catalog.
+   *
+   * Returns true when `err` is a `BrikaError` with the given code AND the
+   * catalog's `data` schema accepts `err.data` (or the catalog has no data
+   * schema for that code).
+   */
+  static is<Code extends CatalogedErrorCode>(
+    err: unknown,
+    code: Code
+  ): err is BrikaError<Code, DataForCode<Code>> {
+    if (!(err instanceof BrikaError) || err.code !== code) {
+      return false;
+    }
+    const schema = lookupCatalogEntry(code)?.data;
+    if (!schema) {
+      return true;
+    }
+    return schema.safeParse(err.data).success;
+  }
+}
+
+// ─── Cause helpers ─────────────────────────────────────────────────────────
+
+/**
+ * Build a wire envelope from a BrikaError instance. Threaded with a `seen`
+ * WeakSet so a cause-chain cycle terminates with a `[circular cause]` frame
+ * rather than blowing the stack.
+ */
+function buildWire(
+  err: BrikaError,
+  opts: { readonly includeStack?: boolean } | undefined,
+  seen: WeakSet<object>
+): BrikaErrorWire {
+  const wire: {
+    _brikaError: true;
+    code: string;
+    message: string;
+    data?: Record<string, unknown>;
+    cause?: BrikaErrorWire | { message: string; name?: string };
+    stack?: string;
+  } = {
+    _brikaError: true,
+    code: err.code,
+    message: err.message,
+  };
+  if (err.data) {
+    wire.data = { ...err.data };
+  }
+  const wireCause = serializeCause(err.cause, seen);
+  if (wireCause !== undefined) {
+    wire.cause = wireCause;
+  }
+  if (opts?.includeStack && typeof err.stack === 'string') {
+    wire.stack = err.stack;
+  }
+  return wire;
+}
+
+function serializeCause(
+  cause: unknown,
+  seen: WeakSet<object>
+): BrikaErrorWire | { message: string; name?: string } | undefined {
+  if (cause === undefined || cause === null) {
+    return undefined;
+  }
+  if (typeof cause === 'object') {
+    if (seen.has(cause)) {
+      return { message: '[circular cause]' };
+    }
+    seen.add(cause);
+  }
+  if (cause instanceof BrikaError) {
+    return buildWire(cause, undefined, seen);
+  }
+  if (cause instanceof Error) {
+    const frame: { message: string; name?: string } = { message: cause.message };
+    if (cause.name && cause.name !== 'Error') {
+      frame.name = cause.name;
+    }
+    return frame;
+  }
+  return { message: stringifyCause(cause) };
+}
+
+function stringifyCause(cause: unknown): string {
+  if (typeof cause === 'string') {
+    return cause;
+  }
+  if (typeof cause === 'object' && cause !== null) {
+    try {
+      return JSON.stringify(cause);
+    } catch {
+      return Object.prototype.toString.call(cause);
+    }
+  }
+  return String(cause);
+}
+
+function deserializeCause(cause: BrikaErrorWire['cause']): BrikaError | Error | undefined {
+  if (cause === undefined) {
+    return undefined;
+  }
+  const nested = BrikaErrorWireSchema.safeParse(cause);
+  if (nested.success) {
+    return BrikaError.fromWire(nested.data);
+  }
+  const flat = NestedCauseSchema.safeParse(cause);
+  if (flat.success) {
+    const e = new Error(flat.data.message);
+    if (flat.data.name) {
+      e.name = flat.data.name;
+    }
+    return e;
+  }
+  return undefined;
+}
+
+// ─── HTTP boundary ─────────────────────────────────────────────────────────
+
+/**
+ * Convert any thrown value to an HTTP `Response`. BrikaErrors emit the
+ * catalog's `httpStatus`; everything else collapses to 500 INTERNAL with no
+ * leaked message.
+ */
+export function brikaErrorToResponse(err: unknown): Response {
+  if (err instanceof BrikaError) {
+    const entry = lookupCatalogEntry(err.code);
+    const body: BrikaErrorResponseBody = {
+      error: {
+        code: err.code,
+        message: err.message,
+        ...(err.data ? { data: err.data } : {}),
+        ...(entry?.i18nKey ? { i18nKey: entry.i18nKey } : {}),
+        ...(entry?.developerHint ? { developerHint: entry.developerHint } : {}),
+      },
     };
-    if (this.data) {
-      (
-        wire as {
-          data: Record<string, unknown>;
-        }
-      ).data = this.data;
-    }
-    return wire;
+    return Response.json(body, { status: httpStatusForCode(err.code) });
   }
-
-  /** Reconstruct from wire format */
-  static fromWire(wire: RpcErrorWire): RpcError {
-    return new RpcError(wire.code, wire.message, wire.data);
-  }
+  const body: BrikaErrorResponseBody = {
+    error: {
+      code: 'INTERNAL',
+      message: 'Internal server error',
+    },
+  };
+  return Response.json(body, { status: 500 });
 }

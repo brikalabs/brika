@@ -1,12 +1,11 @@
 /**
  * Location Module
  *
- * Thin typed wrapper over the prelude's location/timezone caching.
- * The prelude handles the RPC calls and caching; the SDK adds
- * typed error mapping for PermissionDeniedError.
+ * Thin typed wrapper over the prelude's location/timezone caching. The prelude
+ * handles the RPC calls and caching; errors arrive as `BrikaError` instances
+ * already (the IPC channel reconstructs them on the wire).
  */
 
-import { rethrowRpcError } from '../errors';
 import type { HubLocation } from '../types';
 import { type ContextCore, registerContextModule, requireBridge } from './register';
 
@@ -25,10 +24,10 @@ export function setupLocation(_core: ContextCore) {
        * Returns cached result on subsequent calls.
        * Returns `null` if location is not configured on the hub.
        *
-       * @throws {PermissionDeniedError} if the "location" permission is not granted
+       * @throws BrikaError with code 'PERMISSION_DENIED' if the "location" permission is not granted.
        */
       getLocation(): Promise<HubLocation | null> {
-        return bridge.getLocation().catch(rethrowRpcError);
+        return bridge.getLocation();
       },
 
       /**
@@ -38,7 +37,7 @@ export function setupLocation(_core: ContextCore) {
        * Returns `null` if timezone is not configured on the hub.
        */
       getTimezone(): Promise<string | null> {
-        return bridge.getTimezone().catch(rethrowRpcError);
+        return bridge.getTimezone();
       },
     },
   };
