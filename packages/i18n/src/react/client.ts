@@ -1,8 +1,8 @@
 /**
  * React-side i18next bootstrap.
  *
- * Wires up a **per-namespace HTTP backend** (`GET /api/i18n/:locale/:namespace`)
- * and an SSE subscription for live registry updates (`GET /api/i18n/events`).
+ * Wires up a per-namespace HTTP backend (`GET <apiPrefix>/:locale/:namespace`)
+ * and an SSE subscription for live registry updates (`GET <apiPrefix>/events`).
  *
  * Language switching goes through `switchLanguage()`: it pre-loads the target
  * language's bundles *before* flipping `i18n.language`, so React never renders
@@ -20,7 +20,8 @@
 import i18n, { type i18n as I18nInstance } from 'i18next';
 import LanguageDetector from 'i18next-browser-languagedetector';
 import { initReactI18next } from 'react-i18next';
-import { z } from 'zod';
+import { buildHttpBackend, HttpNamespaceLoader } from './http-backend';
+import { type RegistryChange, RegistryEventStream } from './sse-stream';
 
 export interface CreateI18nOptions {
   /** API base for namespace + event endpoints. Default `'/api/i18n'`. */
@@ -44,39 +45,27 @@ export interface CreateI18nOptions {
   readonly debug?: boolean;
 }
 
-type ReadCallback = (err: unknown, data: Record<string, unknown> | boolean) => void;
-
-const RegistryChangeSchema = z.object({
-  kind: z.enum(['set', 'remove', 'clear']),
-  namespace: z.string().nullable(),
-  locale: z.string().optional(),
-  source: z.string().optional(),
-});
-
-type RegistryChange = z.infer<typeof RegistryChangeSchema>;
-
-const NamespaceDataSchema = z.record(z.string(), z.unknown());
-const BundleSchema = z.record(z.string(), NamespaceDataSchema);
-
 class I18nClient {
-  /** In-flight per-namespace fetches keyed by `<lang>:<ns>` — dedupes concurrent loads. */
-  readonly #inflight = new Map<string, Promise<Record<string, unknown>>>();
-  /** `<lang>:<ns>` confirmed absent after a fetch — prevents missing-key retry loops. */
-  readonly #knownMissing = new Set<string>();
-  readonly #apiPrefix: string;
+  readonly #loader: HttpNamespaceLoader;
+  readonly #stream: RegistryEventStream;
   readonly #defaultNamespace: string;
   readonly #eagerNamespaces: readonly string[];
   readonly #fallbackLng: string;
   readonly #debug: boolean;
-  #eventSource: EventSource | null = null;
   #initialized = false;
 
   constructor(opts: CreateI18nOptions) {
-    this.#apiPrefix = opts.apiPrefix ?? '/api/i18n';
+    const apiPrefix = opts.apiPrefix ?? '/api/i18n';
     this.#defaultNamespace = opts.defaultNamespace ?? 'common';
     this.#eagerNamespaces = opts.eagerNamespaces ?? [];
     this.#fallbackLng = opts.fallbackLng ?? 'en';
     this.#debug = opts.debug ?? false;
+    this.#loader = new HttpNamespaceLoader(apiPrefix);
+    this.#stream = new RegistryEventStream({
+      apiPrefix,
+      onChange: (change) => this.#handleRegistryChange(change),
+      onReconnect: () => void this.reloadTranslations(),
+    });
   }
 
   init(): I18nInstance {
@@ -89,7 +78,7 @@ class I18nClient {
     const namespaces = [defaultNs, ...this.#eagerNamespaces];
 
     i18n
-      .use(this.#buildBackend())
+      .use(buildHttpBackend(this.#loader))
       .use(LanguageDetector)
       .use(initReactI18next)
       .init({
@@ -118,7 +107,7 @@ class I18nClient {
         debug: this.#debug,
       });
 
-    this.#startEventStream();
+    this.#stream.start();
     return i18n;
   }
 
@@ -141,32 +130,11 @@ class I18nClient {
       const namespaces = this.#collectNamespacesToPreload(targetLanguage);
       if (namespaces.length > 0) {
         await Promise.all(
-          namespaces.map((ns) => this.#loadNamespace(targetLanguage, ns).catch(() => undefined))
+          namespaces.map((ns) => this.#loader.load(targetLanguage, ns).catch(() => undefined))
         );
       }
     }
     await i18n.changeLanguage(targetLanguage);
-  }
-
-  /**
-   * Bulk-prefetch *every* namespace for `language` via the bundle endpoint.
-   * Kept for SSR preloads / debugging — `switchLanguage` is the normal path.
-   */
-  prefetchBundle(language: string): Promise<void> {
-    if (language === 'cimode') {
-      return Promise.resolve();
-    }
-    return fetch(`${this.#apiPrefix}/bundle/${language}`).then(async (res) => {
-      if (!res.ok) {
-        throw new Error(`Failed to prefetch bundle: ${res.status}`);
-      }
-      const raw: unknown = await res.json();
-      const data = BundleSchema.parse(raw);
-      for (const [ns, translations] of Object.entries(data)) {
-        i18n.addResourceBundle(language, ns, translations, true, true);
-        this.#knownMissing.delete(`${language}:${ns}`);
-      }
-    });
   }
 
   /**
@@ -176,61 +144,11 @@ class I18nClient {
    */
   async reloadTranslations(): Promise<void> {
     const language = i18n.language;
-    this.#knownMissing.clear();
+    this.#loader.clear();
     await i18n.reloadResources(language);
   }
 
-  /**
-   * Tear down: close the event stream, drop the cached state. After calling
-   * `dispose()` the instance is useless — for tests, construct a fresh one.
-   */
-  dispose(): void {
-    if (this.#eventSource) {
-      try {
-        this.#eventSource.close();
-      } catch {
-        // already closed
-      }
-      this.#eventSource = null;
-    }
-    this.#inflight.clear();
-    this.#knownMissing.clear();
-    this.#initialized = false;
-  }
-
   // ─── Internals ──────────────────────────────────────────────────────────
-
-  #loadNamespace(language: string, namespace: string): Promise<Record<string, unknown>> {
-    const key = `${language}:${namespace}`;
-    if (this.#knownMissing.has(key)) {
-      return Promise.resolve({});
-    }
-    const existing = this.#inflight.get(key);
-    if (existing !== undefined) {
-      return existing;
-    }
-    const promise = fetch(`${this.#apiPrefix}/${language}/${encodeURIComponent(namespace)}`)
-      .then(async (res) => {
-        if (res.status === 404) {
-          this.#knownMissing.add(key);
-          i18n.addResourceBundle(language, namespace, {}, true, true);
-          return {};
-        }
-        if (!res.ok) {
-          throw new Error(`Failed to load ${namespace} for ${language}: ${res.status}`);
-        }
-        const raw: unknown = await res.json();
-        const data = NamespaceDataSchema.parse(raw);
-        i18n.addResourceBundle(language, namespace, data, true, true);
-        this.#knownMissing.delete(key);
-        return data;
-      })
-      .finally(() => {
-        this.#inflight.delete(key);
-      });
-    this.#inflight.set(key, promise);
-    return promise;
-  }
 
   /**
    * Collect every namespace the UI might need on the new language. Pulls from:
@@ -264,30 +182,11 @@ class I18nClient {
     return [...set];
   }
 
-  #buildBackend() {
-    const load = (lng: string, ns: string) => this.#loadNamespace(lng, ns);
-    return {
-      type: 'backend' as const,
-      init() {
-        // required by the i18next backend interface
-      },
-      read(language: string, namespace: string, callback: ReadCallback) {
-        if (language === 'cimode') {
-          callback(null, {});
-          return;
-        }
-        load(language, namespace)
-          .then((data) => callback(null, data))
-          .catch((err: unknown) => callback(err, false));
-      },
-    };
-  }
-
   #handleRegistryChange(change: RegistryChange): void {
     const language = i18n.language;
 
     if (change.kind === 'clear') {
-      this.#knownMissing.clear();
+      this.#loader.clear();
       void i18n.reloadResources(language);
       return;
     }
@@ -303,7 +202,7 @@ class I18nClient {
       // removal (UI shows keys via missingKey path) or refreshed data for a
       // transient swap.
       if (i18n.hasResourceBundle(language, change.namespace)) {
-        this.#knownMissing.delete(`${language}:${change.namespace}`);
+        this.#loader.forgetMissing(`${language}:${change.namespace}`);
         void i18n.reloadResources(language, change.namespace);
       }
       return;
@@ -316,53 +215,11 @@ class I18nClient {
     // Refetch if either we already have the bundle (content changed) OR we'd
     // previously 404'd it (missing→present transition — e.g. a late-registered
     // namespace). Either way clear the skip-list entry before fetching so
-    // `loadNamespace` doesn't short-circuit on the cached miss.
+    // `loader.load` doesn't short-circuit on the cached miss.
     const missingKey = `${language}:${change.namespace}`;
-    const wasMissing = this.#knownMissing.has(missingKey);
-    if (wasMissing) {
-      this.#knownMissing.delete(missingKey);
-    }
+    const wasMissing = this.#loader.forgetMissing(missingKey);
     if (wasMissing || i18n.hasResourceBundle(language, change.namespace)) {
-      void this.#loadNamespace(language, change.namespace);
-    }
-  }
-
-  #startEventStream(): void {
-    if (globalThis.window === undefined || this.#eventSource) {
-      return;
-    }
-    // EventSource auto-reconnects on transient errors, but the stream has no
-    // replay protocol — any registry mutations that happened on the hub between
-    // disconnect and reconnect are lost. Track the gap and force a reload when
-    // the connection comes back, so the UI re-syncs to current backend state.
-    let droppedConnection = false;
-    try {
-      this.#eventSource = new EventSource(`${this.#apiPrefix}/events`);
-      this.#eventSource.onmessage = (event) => {
-        let payload: unknown;
-        try {
-          payload = JSON.parse(event.data);
-        } catch {
-          // ignore malformed payloads
-          return;
-        }
-        const parsed = RegistryChangeSchema.safeParse(payload);
-        if (parsed.success) {
-          this.#handleRegistryChange(parsed.data);
-        }
-      };
-      this.#eventSource.onerror = () => {
-        droppedConnection = true;
-      };
-      this.#eventSource.onopen = () => {
-        if (!droppedConnection) {
-          return;
-        }
-        droppedConnection = false;
-        void this.reloadTranslations();
-      };
-    } catch {
-      // SSE not supported — i18next will re-fetch if useTranslation re-runs.
+      void this.#loader.load(language, change.namespace);
     }
   }
 }
@@ -374,9 +231,7 @@ let singleton: I18nClient | null = null;
  * Idempotent — calling more than once returns the existing instance.
  */
 export function createI18n(options: CreateI18nOptions = {}): I18nInstance {
-  if (!singleton) {
-    singleton = new I18nClient(options);
-  }
+  singleton ??= new I18nClient(options);
   return singleton.init();
 }
 
@@ -395,29 +250,4 @@ export function switchLanguage(targetLanguage: string): Promise<void> {
  */
 export function reloadTranslations(): Promise<void> {
   return singleton?.reloadTranslations() ?? Promise.resolve();
-}
-
-/**
- * Bulk-prefetch *every* namespace for `language` via the bundle endpoint.
- * No-op when `createI18n` hasn't been called yet.
- */
-export function prefetchBundle(language: string): Promise<void> {
-  return singleton?.prefetchBundle(language) ?? Promise.resolve();
-}
-
-/**
- * Test/diagnostics helper: which languages currently hold bundles in the
- * resource store?
- */
-export function getLoadedLanguages(): readonly string[] {
-  return Object.keys(i18n.store.data);
-}
-
-/**
- * Tear down the singleton (close SSE, drop caches). Mostly useful in tests
- * that want to assert behaviour across multiple `createI18n` calls.
- */
-export function disposeI18n(): void {
-  singleton?.dispose();
-  singleton = null;
 }

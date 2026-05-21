@@ -273,35 +273,3 @@ describe('TranslationRegistry — t()', () => {
   });
 });
 
-describe('TranslationRegistry — snapshot/restore', () => {
-  test('round-trips state through snapshot()/restore()', () => {
-    const a = new TranslationRegistry();
-    a.setNamespaceLocale('common', 'en', { hello: 'Hi' }, { merge: true, source: 'hub' });
-    a.setNamespaceLocale('common', 'fr', { hello: 'Bonjour' }, { merge: true, source: 'hub' });
-    a.setNamespaceLocale('plugin:foo', 'en', { name: 'Foo' }, { merge: false, source: 'plugin' });
-
-    const snapshot = a.snapshot();
-
-    const b = new TranslationRegistry();
-    b.restore(snapshot);
-
-    expect(b.listNamespaces()).toEqual(['common', 'plugin:foo']);
-    expect(b.getNamespaceTranslations('en', 'common')).toEqual({ hello: 'Hi' });
-    expect(b.getNamespaceTranslations('fr', 'common')).toEqual({ hello: 'Bonjour' });
-    expect(b.getNamespaceTranslations('en', 'plugin:foo')).toEqual({ name: 'Foo' });
-  });
-
-  test('restore() clears existing state first', () => {
-    const reg = new TranslationRegistry();
-    reg.setNamespaceLocale('legacy', 'en', { v: '1' }, { merge: true });
-    reg.restore({ version: 1, namespaces: [] });
-    expect(reg.listNamespaces()).toEqual([]);
-  });
-
-  test('rejects future snapshot versions', () => {
-    const reg = new TranslationRegistry();
-    expect(() => reg.restore({ version: 2 as unknown as 1, namespaces: [] })).toThrow(
-      /Unsupported snapshot version/
-    );
-  });
-});

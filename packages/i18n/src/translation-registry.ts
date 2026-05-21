@@ -1,3 +1,4 @@
+import { type BundleJson, BundleJsonCache } from './bundle';
 import { buildFallbackChain } from './fallback';
 import { deepMerge, mergeFallbackChain } from './merge';
 import { type MissingKeyHandler, parseKey, type TranslateOptions, translate } from './translate';
@@ -63,31 +64,19 @@ export class TranslationRegistry {
   readonly #availableLocales = new Set<string>();
   readonly #resolvedLocaleCache = new Map<string, Map<string, TranslationData>>();
   readonly #listeners = new Set<RegistryChangeListener>();
+  readonly #bundleJsonCache = new BundleJsonCache();
 
   readonly #defaultNamespace: string;
   readonly #nsSeparator: string;
   readonly #maxResolvedLocales: number;
-  #missingKeyHandler: MissingKeyHandler | undefined;
+  readonly #missingKeyHandler: MissingKeyHandler | undefined;
 
-  /**
-   * When > 0, we're inside one or more nested `transaction()` calls and should
-   * buffer mutation events + skip cache invalidation until the outermost call
-   * completes. Lets bulk reloads (hub init, full reload) avoid the N-cache-clears
-   * + N-events fanout when N namespaces change together.
-   */
+  // Bulk reloads (hub init, full reload) wrap N `setNamespaceLocale` calls in
+  // one transaction to collapse the N×cache-clear + N×event fanout into a
+  // single cache clear and a flush of buffered events at commit time.
   #transactionDepth = 0;
   #transactionDirty = false;
   readonly #bufferedChanges: RegistryChange[] = [];
-
-  /**
-   * Pre-stringified bundle JSON keyed by resolved-locale Map identity. The
-   * resolved-locale cache drops its Maps on every mutation, so this WeakMap
-   * naturally evicts stale entries without any explicit clearing.
-   */
-  readonly #bundleJsonCache = new WeakMap<
-    Map<string, TranslationData>,
-    { body: string; etag: string }
-  >();
 
   /** Optional callback invoked when a namespace is claimed by a second source. */
   onCollision?: (info: {
@@ -204,11 +193,8 @@ export class TranslationRegistry {
    *     for (const ns of bulkData) registry.setNamespaceLocale(...);
    *   });
    *
-   * Within the callback, individual `set`/`remove`/`clear` events still fire,
-   * but the resolved-locale cache is only invalidated once at commit time.
-   * Listeners receive each event as usual; if you want a single aggregate
-   * signal, listen for the synthetic `clear`/`set` events the registry emits
-   * at the end of the outermost transaction.
+   * Within the callback, individual `set`/`remove`/`clear` events are buffered
+   * and dispatched in one batch when the outermost transaction commits.
    *
    * Nests safely — only the outermost commit clears the cache.
    */
@@ -252,17 +238,8 @@ export class TranslationRegistry {
    *   2. Otherwise return `body` with `Content-Type: application/json` and the
    *      `ETag` header set.
    */
-  getBundleJson(locale: string): { readonly body: string; readonly etag: string } {
-    const resolved = this.#resolveLocale(locale);
-    const cached = this.#bundleJsonCache.get(resolved);
-    if (cached) {
-      return cached;
-    }
-    const body = JSON.stringify(Object.fromEntries(resolved));
-    const etag = `"${fnv1a32(body).toString(36)}"`;
-    const entry = { body, etag };
-    this.#bundleJsonCache.set(resolved, entry);
-    return entry;
+  getBundleJson(locale: string): BundleJson {
+    return this.#bundleJsonCache.get(this.#resolveLocale(locale));
   }
 
   /** All namespaces currently registered, sorted lexicographically. */
@@ -312,55 +289,6 @@ export class TranslationRegistry {
     return this.#missingKeyHandler?.(key, locale) ?? key;
   }
 
-  /** Replace the missing-key handler at runtime. */
-  setMissingKeyHandler(handler: MissingKeyHandler | undefined): void {
-    this.#missingKeyHandler = handler;
-  }
-
-  // ─── Snapshot / restore ──────────────────────────────────────────────────
-
-  /**
-   * Capture the registry's current state into a plain object. Useful for
-   * caching to disk, SSR hydration, or precomputed-bundle pipelines.
-   *
-   * Excludes listeners and the resolved-locale cache (both rebuilt on restore).
-   */
-  snapshot(): RegistrySnapshot {
-    const namespaces: SnapshotNamespace[] = [];
-    for (const [namespace, locales] of this.#translations) {
-      const localeEntries: Array<[string, TranslationData]> = [];
-      for (const [locale, data] of locales) {
-        localeEntries.push([locale, data]);
-      }
-      namespaces.push({
-        namespace,
-        source: this.#namespaceSource.get(namespace),
-        locales: localeEntries,
-      });
-    }
-    return { version: 1, namespaces };
-  }
-
-  /**
-   * Replace the registry's state from a snapshot. Existing data is dropped
-   * before restoration. Emits a single `clear` event followed by a series of
-   * `set` events for restored data.
-   */
-  restore(snapshot: RegistrySnapshot): void {
-    if (snapshot.version !== 1) {
-      throw new Error(`Unsupported snapshot version: ${snapshot.version}`);
-    }
-    this.clear(() => true);
-    for (const entry of snapshot.namespaces) {
-      for (const [locale, data] of entry.locales) {
-        this.setNamespaceLocale(entry.namespace, locale, data, {
-          merge: false,
-          source: entry.source,
-        });
-      }
-    }
-  }
-
   // ─── Internals ───────────────────────────────────────────────────────────
 
   #trackSource(namespace: string, source: string | undefined): void {
@@ -408,15 +336,6 @@ export class TranslationRegistry {
     }
 
     return result;
-  }
-
-  /**
-   * Drop the cached resolution + stringified bundle for a single locale.
-   * Returns whether anything was evicted. Useful for explicit purging
-   * (e.g. when a user switches languages and the old one is no longer needed).
-   */
-  evictLocale(locale: string): boolean {
-    return this.#resolvedLocaleCache.delete(locale);
   }
 
   #rebuildAvailableLocales(): void {
@@ -471,30 +390,4 @@ export class TranslationRegistry {
       this.#dispatch(change);
     }
   }
-}
-
-// ─── Internals ──────────────────────────────────────────────────────────────
-
-/**
- * FNV-1a 32-bit hash. Cheap, no deps, plenty of entropy for ETag use.
- * Not cryptographic — never use this for security boundaries.
- */
-function fnv1a32(input: string): number {
-  let hash = 0x811c9dc5;
-  for (let i = 0; i < input.length; i++) {
-    hash ^= input.codePointAt(i) ?? 0;
-    hash = Math.imul(hash, 0x01000193);
-  }
-  return hash >>> 0;
-}
-
-export interface SnapshotNamespace {
-  readonly namespace: string;
-  readonly source: string | undefined;
-  readonly locales: ReadonlyArray<readonly [string, TranslationData]>;
-}
-
-export interface RegistrySnapshot {
-  readonly version: 1;
-  readonly namespaces: ReadonlyArray<SnapshotNamespace>;
 }

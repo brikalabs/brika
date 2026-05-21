@@ -1,12 +1,12 @@
 /**
- * Back-compat composition hook: merges `useTranslate()` and `useIntl()`.
+ * The package's canonical React hook. Bundles `useTranslate()` (translation
+ * primitives) with `useIntl()` (locale-aware formatters + display names) so
+ * components that need both — the common case — only call one hook.
  *
- * New code should prefer the focused hooks — `useTranslate()` if you only need
- * `t` / `tp`, `useIntl()` if you only need locale-aware formatters — because
- * they avoid constructing the full `Intl.*Format` family on every locale change.
- *
- * `useLocale()` is preserved for callers that want everything in one shape,
- * and as the historical entry point.
+ * `useTranslate()` and `useIntl()` are the granular alternatives for components
+ * that touch only one half of the API. `useIntl()` constructs the full
+ * `Intl.*Format` family on every locale change; opt into it explicitly when
+ * the cost is acceptable.
  */
 
 import { useMemo } from 'react';

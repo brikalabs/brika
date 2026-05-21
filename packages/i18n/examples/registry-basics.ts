@@ -9,8 +9,7 @@ import { buildFallbackChain, TranslationRegistry } from '@brika/i18n';
 // ─── Example 1: load + look up across a fallback chain ───────────────────────
 
 const registry = new TranslationRegistry({
-  defaultLocale: 'en',
-  fallbackLocale: 'en',
+  defaultNamespace: 'common',
 });
 
 registry.setNamespaceLocale(
