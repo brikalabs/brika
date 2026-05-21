@@ -44,12 +44,14 @@ const ALLOWED_PREFIXES: readonly string[] = ['BRIKA_PLUGIN_', 'BRIKA_SECRETS_'];
  *
  * Set `BRIKA_PLUGIN_ENV_PASSTHROUGH=1` on the host to disable filtering
  * for debugging — every host env var passes through, restoring the
- * pre-S1 behavior. Off by default; on in dev only if you opt in.
+ * pre-S1 behavior. Off by default; on in dev only if you opt in. Only
+ * the literal string `"1"` enables passthrough: a plain truthy check
+ * would treat `"0"` / `"false"` as "on" and silently disable the filter.
  */
 export function filterPluginEnv(
   source: Readonly<Record<string, string | undefined>>
 ): Record<string, string | undefined> {
-  if (source.BRIKA_PLUGIN_ENV_PASSTHROUGH) {
+  if (source.BRIKA_PLUGIN_ENV_PASSTHROUGH === '1') {
     return { ...source };
   }
   const out: Record<string, string | undefined> = {};
