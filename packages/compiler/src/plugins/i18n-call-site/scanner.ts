@@ -15,7 +15,7 @@ import {
   isIdentPart,
   isIdentStart,
   REGEX_PRECEDING_KEYWORDS,
-} from './index';
+} from './lex';
 
 export interface Edit {
   readonly at: number;
