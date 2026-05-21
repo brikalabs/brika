@@ -237,8 +237,8 @@ describe('ModuleCompiler - compile()', () => {
       const buildCall = buildSpy.mock.calls[0][0] as {
         plugins: unknown[];
       };
-      // externals + actions + force-side-effects = 3 plugins
-      expect(buildCall.plugins).toHaveLength(3);
+      // externals + actions + force-side-effects + i18n-call-site = 4 plugins
+      expect(buildCall.plugins).toHaveLength(4);
     } finally {
       buildSpy.mockRestore();
     }
@@ -262,7 +262,8 @@ describe('ModuleCompiler - compile()', () => {
       const buildCall = buildSpy.mock.calls[0][0] as {
         plugins: unknown[];
       };
-      expect(buildCall.plugins).toHaveLength(3);
+      // externals + actions + force-side-effects + i18n-call-site = 4 plugins
+      expect(buildCall.plugins).toHaveLength(4);
     } finally {
       buildSpy.mockRestore();
     }
