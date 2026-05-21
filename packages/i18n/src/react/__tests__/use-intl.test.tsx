@@ -147,6 +147,18 @@ describe('useIntl — formatDate / formatTime / formatDateTime', () => {
     });
     expect(out).toMatch(/2024/);
   });
+
+  test('formatDateTime with only date components does not inject timeStyle', async () => {
+    const inst = await buildInstance('en');
+    const result = renderProbe(inst);
+    expect(() => result.formatDateTime(sample, { year: 'numeric' })).not.toThrow();
+  });
+
+  test('formatDateTime with only time components does not inject dateStyle', async () => {
+    const inst = await buildInstance('en');
+    const result = renderProbe(inst);
+    expect(() => result.formatDateTime(sample, { hour: '2-digit' })).not.toThrow();
+  });
 });
 
 describe('useIntl — formatRelativeTime / formatNumber / formatCurrency', () => {

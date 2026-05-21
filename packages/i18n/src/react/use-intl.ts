@@ -173,9 +173,15 @@ function mergeTimeOpts(opts: Intl.DateTimeFormatOptions): Intl.DateTimeFormatOpt
 function mergeDateTimeOpts(opts: Intl.DateTimeFormatOptions): Intl.DateTimeFormatOptions {
   const hasDate = hasAny(opts, DATE_COMPONENT_KEYS);
   const hasTime = hasAny(opts, TIME_COMPONENT_KEYS);
+  // Intl.DateTimeFormat throws when dateStyle/timeStyle coexist with any
+  // component-level option. If the caller opted in to fine-grained options
+  // on one side, leave the other side alone instead of injecting a *Style
+  // that would conflict.
+  if (hasDate !== hasTime) {
+    return opts;
+  }
   return {
-    ...(hasDate ? {} : { dateStyle: 'medium' }),
-    ...(hasTime ? {} : { timeStyle: 'short' }),
+    ...(hasDate ? {} : { dateStyle: 'medium', timeStyle: 'short' }),
     ...opts,
   };
 }
