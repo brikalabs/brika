@@ -69,7 +69,7 @@ ${pc.bold('Examples:')}
 const { values } = parseArgs({
   args: Bun.argv.slice(2),
   allowPositionals: true,
-  strict: false,
+  strict: true,
   options: {
     help: { type: 'boolean', short: 'h', default: false },
     filter: { type: 'string', short: 'f', multiple: true },
@@ -89,28 +89,15 @@ if (values.help) {
   process.exit(0);
 }
 
-function toStringArray(value: unknown): string[] {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-  const out: string[] = [];
-  for (const item of value) {
-    if (typeof item === 'string') {
-      out.push(item);
-    }
-  }
-  return out;
-}
-
-const filters = toStringArray(values.filter);
-const only = toStringArray(values.only);
-const skip = toStringArray(values.skip);
-const production = values.production === true;
-const fix = values.fix === true;
-const json = values.json === true;
-const strict = values.strict === true;
-const eject = values.eject === true;
-const noExitCode = values['no-exit-code'] === true;
+const filters = values.filter ?? [];
+const only = values.only ?? [];
+const skip = values.skip ?? [];
+const production = values.production ?? false;
+const fix = values.fix ?? false;
+const json = values.json ?? false;
+const strict = values.strict ?? false;
+const eject = values.eject ?? false;
+const noExitCode = values['no-exit-code'] ?? false;
 
 // ── Eject path: write config and exit ──────────────────────────────────────
 

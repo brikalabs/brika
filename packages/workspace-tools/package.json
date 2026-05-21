@@ -13,11 +13,13 @@
   "bin": {
     "bump-version": "./src/index.ts",
     "publish-packages": "./src/publish.ts",
-    "local-install": "./src/local-install.ts"
+    "local-install": "./src/local-install.ts",
+    "deadcode": "./src/find-deadcode.ts"
   },
   "scripts": {
     "dev": "bun run src/index.ts",
     "dev:publish": "bun run src/publish.ts",
+    "deadcode": "bun run src/find-deadcode.ts",
     "test": "bun test",
     "typecheck": "tsgo --noEmit"
   },
