@@ -12,7 +12,6 @@ describe('i18n routes', () => {
     listNamespaces: ReturnType<typeof mock>;
     getAllTranslations: ReturnType<typeof mock>;
     getBundleJson: ReturnType<typeof mock>;
-    getNamespaceTranslations: ReturnType<typeof mock>;
     onChange: ReturnType<typeof mock>;
   };
 
@@ -28,9 +27,6 @@ describe('i18n routes', () => {
       getBundleJson: mock().mockReturnValue({
         body: '{"common":{"hello":"Hello"}}',
         etag: '"abc"',
-      }),
-      getNamespaceTranslations: mock().mockReturnValue({
-        hello: 'Hello',
       }),
       onChange: mock().mockReturnValue(() => {}),
     };
@@ -68,18 +64,4 @@ describe('i18n routes', () => {
     expect(res.status).toBe(304);
   });
 
-  test('GET /api/i18n/:locale/:namespace returns translations', async () => {
-    const res = await app.get('/api/i18n/en/common');
-
-    expect(res.status).toBe(200);
-    expect(mockI18n.getNamespaceTranslations).toHaveBeenCalledWith('en', 'common');
-  });
-
-  test('GET /api/i18n/:locale/:namespace returns 404 for unknown namespace', async () => {
-    mockI18n.getNamespaceTranslations.mockReturnValue(null);
-
-    const res = await app.get('/api/i18n/en/unknown');
-
-    expect(res.status).toBe(404);
-  });
 });

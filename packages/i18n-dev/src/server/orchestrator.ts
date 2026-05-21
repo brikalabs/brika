@@ -1,3 +1,5 @@
+/// <reference types="bun-types" />
+
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { TranslationData } from '@brika/i18n';

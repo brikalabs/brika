@@ -24,7 +24,7 @@ export class UpdateService {
   readonly #provider = inject(UpdateProvider);
   #cachedInfo: UpdateInfo | null = null;
   #lastCheckedAt: number = 0;
-  #checking = false;
+  #inflight: Promise<UpdateInfo> | null = null;
   #timer: Timer | null = null;
 
   /** Cached update info from last check (null if never checked) */
@@ -39,8 +39,8 @@ export class UpdateService {
   /** Start periodic background checks */
   start(): void {
     // Check immediately, then periodically
-    this.check();
-    this.#timer = setInterval(() => this.check(), CHECK_INTERVAL_MS);
+    this.refresh();
+    this.#timer = setInterval(() => this.refresh(), CHECK_INTERVAL_MS);
     this.#logs.info('Update checker started', {
       intervalMs: CHECK_INTERVAL_MS,
     });
@@ -54,13 +54,37 @@ export class UpdateService {
     }
   }
 
-  /** Check for updates now (returns cached result if already checking) */
+  /**
+   * Return cached update info if it's still within the interval, otherwise
+   * do a fresh remote check. Cheap to call from request handlers — multiple
+   * concurrent UI consumers won't fan out to the upstream provider.
+   */
   async check(): Promise<UpdateInfo> {
-    if (this.#checking && this.#cachedInfo) {
+    if (this.#cachedInfo && Date.now() - this.#lastCheckedAt < CHECK_INTERVAL_MS) {
       return this.#cachedInfo;
     }
+    return this.refresh();
+  }
 
-    this.#checking = true;
+  /**
+   * Force a fresh remote check, bypassing the TTL. Used by the background
+   * interval and by callers that explicitly opt out of the cache.
+   * Concurrent callers — including the background timer racing with a
+   * user-initiated check — share the same in-flight Promise and fan in
+   * to a single upstream request.
+   */
+  refresh(): Promise<UpdateInfo> {
+    if (this.#inflight !== null) {
+      return this.#inflight;
+    }
+    const promise = this.#doRefresh().finally(() => {
+      this.#inflight = null;
+    });
+    this.#inflight = promise;
+    return promise;
+  }
+
+  async #doRefresh(): Promise<UpdateInfo> {
     try {
       this.#cachedInfo = await this.#provider.check(this.#state.getUpdateChannel());
       this.#lastCheckedAt = Date.now();
@@ -99,8 +123,6 @@ export class UpdateService {
       }
 
       return noUpdateInfo(this.#state.getUpdateChannel());
-    } finally {
-      this.#checking = false;
     }
   }
 }

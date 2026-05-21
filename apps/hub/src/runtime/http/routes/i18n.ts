@@ -122,38 +122,6 @@ export const i18nRoutes = [
       });
     },
   }),
-
-  /**
-   * GET /api/i18n/:locale/:namespace
-   * Returns translations for a specific namespace.
-   * Plugin namespaces use URL encoding for special characters.
-   *
-   * Examples:
-   * - /api/i18n/en/common → core "common" namespace
-   * - /api/i18n/fr/plugin:@brika/plugin-timer → plugin namespace (slash in @brika/plugin-timer is part of namespace)
-   */
-  route.get({
-    path: '/api/i18n/:locale/:namespace{.+}',
-    params: z.object({
-      locale: z.string(),
-      namespace: z.string(),
-    }),
-    handler: ({ inject, params }) => {
-      const i18n = inject(I18nService);
-      const locale = params.locale || 'en';
-      const namespace = params.namespace;
-
-      if (!namespace) {
-        throw new BadRequest('Namespace required');
-      }
-
-      const translations = i18n.getNamespaceTranslations(locale, namespace);
-      if (!translations) {
-        throw new NotFound(`Namespace not found: ${namespace}`);
-      }
-      return translations;
-    },
-  }),
 ];
 
 // ─── Admin-only write routes ─────────────────────────────────────────────────

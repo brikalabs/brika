@@ -2,7 +2,8 @@
  * React entry — opt-in via `@brika/i18n/react`.
  *
  * Bundles the i18next bootstrap (`createI18n`), the typed translation hooks,
- * and the SSE live-update wiring. Apps call `createI18n()` once at startup
+ * and a public `hydrateTranslations` seam for out-of-band data sources
+ * (HMR pushers, SSR hydration). Apps call `createI18n()` once at startup
  * and consume the rest as React hooks.
  *
  * Hook split:
@@ -14,7 +15,12 @@
  * `i18next-browser-languagedetector`, `zod`.
  */
 
-export { createI18n, reloadTranslations, switchLanguage } from './client';
+export {
+  createI18n,
+  hydrateTranslations,
+  switchLanguage,
+  type TranslationsBundle,
+} from './client';
 export {
   type DurationFormatOptions,
   type DurationInput,
