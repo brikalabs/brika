@@ -54,6 +54,21 @@ function splitTemplate(value: string): TemplatePart[] {
     has() {
       return true;
     },
+    // i18next ≥ 25 probes variables via Object.prototype.hasOwnProperty.call(),
+    // which bypasses the `has` trap. Returning a descriptor makes the proxy
+    // appear to own every key. `configurable: true` is required by the Proxy
+    // invariants when the underlying target has no such own property.
+    getOwnPropertyDescriptor(_, prop) {
+      if (typeof prop !== 'string') {
+        return undefined;
+      }
+      return {
+        configurable: true,
+        enumerable: true,
+        writable: true,
+        value: `${SENTINEL}${prop}${SENTINEL}`,
+      };
+    },
   });
 
   const interpolated = interpolator.interpolate(value, data, i18next.language, {
