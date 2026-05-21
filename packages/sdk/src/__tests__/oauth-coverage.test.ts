@@ -339,7 +339,9 @@ describe('OAuth coverage: callback route error cases', () => {
       })
     );
 
-    expect(result.status).toBe(200);
+    // S3: an OAuth provider returning ?error= is a user-visible auth
+    // failure, not a 200. Body must HTML-escape the provider's error value.
+    expect(result.status).toBe(400);
     expect(result.headers['Content-Type']).toBe('text/html');
     expect(result.body).toContain('Authorization failed');
     expect(result.body).toContain('access_denied');
@@ -437,7 +439,8 @@ describe('OAuth coverage: callback route error cases', () => {
       })
     );
 
-    expect(result.status).toBe(200);
+    // S3: token-exchange failure originates upstream → 502.
+    expect(result.status).toBe(502);
     expect(result.body).toContain('Token exchange failed');
     expect(result.body).toContain('Bad Request');
   });
@@ -479,8 +482,124 @@ describe('OAuth coverage: callback route error cases', () => {
       })
     );
 
-    expect(result.status).toBe(200);
+    // S3: malformed upstream response → 502.
+    expect(result.status).toBe(502);
     expect(result.body).toContain('Invalid token response');
+  });
+
+  test('S3: ?error= value is HTML-escaped (no XSS via attacker-supplied error)', async () => {
+    const id = uniqueId('xss');
+    defineOAuth(createConfig({ id }));
+
+    const callbackRoute = findRoute('GET', `/oauth/${id}/callback`);
+    const result = await callbackRoute?.handler(
+      makeReq({
+        query: { error: '<script>alert(1)</script>' },
+      })
+    );
+
+    expect(result.status).toBe(400);
+    // Raw script tag must NOT survive.
+    expect(result.body).not.toContain('<script>alert(1)</script>');
+    // Escaped form must be present.
+    expect(result.body).toContain('&lt;script&gt;alert(1)&lt;/script&gt;');
+  });
+
+  test('N6: PKCE map evicts oldest entries once 64-entry cap is reached', async () => {
+    const id = uniqueId('cap');
+    defineOAuth(createConfig({ id }));
+
+    const authorizeRoute = findRoute('GET', `/oauth/${id}/authorize`);
+    const callbackRoute = findRoute('GET', `/oauth/${id}/callback`);
+
+    // Drive 65 /authorize calls and capture each state from the redirect.
+    const states: string[] = [];
+    for (let i = 0; i < 65; i++) {
+      const res = await authorizeRoute?.handler(makeReq({}));
+      const url = new URL(res.headers.Location);
+      const state = url.searchParams.get('state');
+      if (state) {
+        states.push(state);
+      }
+    }
+    expect(states).toHaveLength(65);
+
+    // The very first state should have been evicted (cap is 64).
+    const firstState = states[0];
+    if (!firstState) {
+      throw new Error('expected first state to be defined');
+    }
+    const evictedResult = await callbackRoute?.handler(
+      makeReq({ query: { code: 'c', state: firstState } })
+    );
+    expect(evictedResult.status).toBe(400);
+    expect(evictedResult.body).toContain('PKCE verifier not found');
+
+    // The most recent state should still resolve (fails downstream because
+    // we don't mock fetch, but the verifier lookup itself succeeded).
+    globalThis.fetch = mockFetch(() => Promise.resolve(new Response('{}', { status: 200 })));
+    const lastState = states.at(-1);
+    if (!lastState) {
+      throw new Error('expected last state to be defined');
+    }
+    const lastResult = await callbackRoute?.handler(
+      makeReq({ query: { code: 'c', state: lastState } })
+    );
+    expect(lastResult.status).not.toBe(400);
+  });
+
+  test('N6: PKCE verifier rejected after TTL expires', async () => {
+    const id = uniqueId('ttl');
+    defineOAuth(createConfig({ id }));
+
+    const authorizeRoute = findRoute('GET', `/oauth/${id}/authorize`);
+    const callbackRoute = findRoute('GET', `/oauth/${id}/callback`);
+
+    // Pin Date.now so we can fast-forward past the 10min TTL.
+    const realNow = Date.now;
+    let mockTime = realNow();
+    Date.now = () => mockTime;
+    try {
+      const authResult = await authorizeRoute?.handler(makeReq({}));
+      const url = new URL(authResult.headers.Location);
+      const state = url.searchParams.get('state');
+      expect(state).toBeTruthy();
+
+      // Advance time past the 10-minute PKCE TTL.
+      mockTime += 11 * 60 * 1000;
+
+      const callbackResult = await callbackRoute?.handler(
+        makeReq({ query: { code: 'c', state: state ?? '' } })
+      );
+      expect(callbackResult.status).toBe(400);
+      expect(callbackResult.body).toContain('PKCE verifier not found');
+    } finally {
+      Date.now = realNow;
+    }
+  });
+
+  test('S3: upstream token-exchange body is HTML-escaped', async () => {
+    const id = uniqueId('xss-tok');
+    defineOAuth(
+      createConfig({
+        id,
+        pkce: false,
+        clientSecret: 'secret',
+      })
+    );
+
+    globalThis.fetch = mockFetch(() =>
+      Promise.resolve(new Response('<img src=x onerror="alert(1)">', { status: 400 }))
+    );
+
+    const callbackRoute = findRoute('GET', `/oauth/${id}/callback`);
+    const result = await callbackRoute?.handler(
+      makeReq({ query: { code: 'auth-code', state: 's' } })
+    );
+
+    expect(result.status).toBe(502);
+    expect(result.body).not.toContain('<img');
+    expect(result.body).toContain('&lt;img');
   });
 
   test('callback handles fetch/network exception with 500', async () => {

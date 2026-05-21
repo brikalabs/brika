@@ -1,4 +1,5 @@
 import { singleton } from '@brika/di';
+import { filterPluginEnv } from './plugin-env';
 
 /**
  * Encapsulates the Bun runtime used for spawning plugins and running
@@ -20,13 +21,31 @@ export class BunRunner {
   }
 
   /**
-   * Returns the environment to pass to spawned bun processes.
-   * Always sets BUN_BE_BUN=1 for consistent runtime behavior.
-   * Optional `extra` entries are merged on top.
+   * Environment for bun CLI / package-management spawns (install, add, etc).
+   * Passes the full host env through — `bun install` needs `NPM_CONFIG_*`,
+   * `BUN_INSTALL_*`, and similar to honor user/CI configuration.
+   *
+   * **Do NOT use this for plugin spawns** — use {@link pluginEnv} instead.
+   * Plugins must not see operator secrets.
    */
   env(extra?: Record<string, string | undefined>): Record<string, string | undefined> {
     const base: Record<string, string | undefined> = {
       ...process.env,
+      BUN_BE_BUN: '1',
+    };
+    return extra ? { ...base, ...extra } : base;
+  }
+
+  /**
+   * Environment for plugin-process spawns. Strips operator secrets via
+   * {@link filterPluginEnv} — plugins only see the allowlisted vars
+   * (PATH, HOME, LANG, TZ, NODE_ENV, BRIKA_PLUGIN_*, BRIKA_SECRETS_*).
+   *
+   * Opt out for debugging via `BRIKA_PLUGIN_ENV_PASSTHROUGH=1` on the host.
+   */
+  pluginEnv(extra?: Record<string, string | undefined>): Record<string, string | undefined> {
+    const base: Record<string, string | undefined> = {
+      ...filterPluginEnv(process.env),
       BUN_BE_BUN: '1',
     };
     return extra ? { ...base, ...extra } : base;

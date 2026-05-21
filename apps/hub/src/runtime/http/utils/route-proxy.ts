@@ -1,5 +1,6 @@
 import type { Json } from '@brika/ipc';
 import type { PluginProcess } from '@/runtime/plugins/plugin-process';
+import { filterPluginResponseHeaders } from './header-allowlist';
 
 const FORWARDED_HEADERS = [
   'content-type',
@@ -63,18 +64,22 @@ export async function proxyToPlugin(
 ): Promise<Response> {
   const result = await process.sendRouteRequest(routeId, method, path, query, headers, body);
 
-  const contentType =
-    result.headers?.['Content-Type'] ?? result.headers?.['content-type'] ?? 'application/json';
   let responseBody: string | null = null;
   if (result.body !== null && result.body !== undefined) {
     responseBody = typeof result.body === 'string' ? result.body : JSON.stringify(result.body);
   }
 
+  // Filter plugin-supplied headers against a strict allowlist. Without
+  // this, a plugin could set Set-Cookie, CSP overrides, Location on a
+  // non-3xx response, Authorization, etc. — and undermine the hub UI
+  // served from the same origin. Anything outside the allowlist is dropped.
+  const safeHeaders = filterPluginResponseHeaders(result.headers, result.status);
+  if (!safeHeaders['content-type']) {
+    safeHeaders['content-type'] = 'application/json';
+  }
+
   return new Response(responseBody, {
     status: result.status,
-    headers: {
-      'Content-Type': contentType,
-      ...result.headers,
-    },
+    headers: safeHeaders,
   });
 }

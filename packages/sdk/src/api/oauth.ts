@@ -35,8 +35,31 @@
  */
 
 import { getContext } from '../context';
+import { htmlEscape } from '../internal/html-escape';
+import { singleFlight } from '../internal/single-flight';
 import type { RouteResponse } from '../types';
 import { defineRoute } from './routes';
+
+// ─── HTML response helpers ─────────────────────────────────────────────────
+
+/**
+ * Build a minimal HTML RouteResponse. Centralizes the four ad-hoc HTML
+ * builders we used to have inline and ensures every interpolated value
+ * passes through {@link htmlEscape}.
+ */
+function htmlPage(args: {
+  status: number;
+  heading: string;
+  bodyHtml: string;
+  autoClose?: boolean;
+}): RouteResponse {
+  const close = args.autoClose ? '<script>setTimeout(()=>window.close(),3000)</script>' : '';
+  return {
+    status: args.status,
+    headers: { 'Content-Type': 'text/html' },
+    body: `<!doctype html><html><body style="font-family:system-ui;text-align:center;padding:3rem"><h2>${args.heading}</h2>${args.bodyHtml}${close}</body></html>`,
+  };
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -169,11 +192,40 @@ export function defineOAuth(config: OAuthProviderConfig): OAuthClient {
   const tokenPrefKey = `__secret_oauth_${config.id}_token`;
   const usePkce = config.pkce !== false;
 
-  // In-flight PKCE verifiers keyed by state parameter
-  const pendingVerifiers = new Map<string, string>();
+  // In-flight PKCE verifiers keyed by state parameter. Bounded by TTL +
+  // size — without these limits the map would grow on every /authorize hit
+  // and only shrink on successful /callback, leaking memory and giving an
+  // unauthenticated attacker a trivial DoS by hammering /authorize.
+  const pendingVerifiers = new Map<string, { verifier: string; expiresAt: number }>();
+  const PKCE_TTL_MS = 10 * 60 * 1000; // 10 minutes — well above any sane auth flow
+  const PKCE_MAX_ENTRIES = 64;
 
   const callbackPath = `/oauth/${config.id}/callback`;
   const authorizePath = `/oauth/${config.id}/authorize`;
+
+  /**
+   * Drop expired entries, then evict oldest survivors until under the cap.
+   * Relies on `Map`'s insertion-order iteration (oldest first).
+   */
+  function evictPkceEntries(): void {
+    const now = Date.now();
+    for (const [state, entry] of pendingVerifiers) {
+      if (entry.expiresAt <= now) {
+        pendingVerifiers.delete(state);
+      } else {
+        // Insertion-order iteration; once we hit an unexpired entry, no
+        // earlier ones could be expired (they'd have been removed already).
+        break;
+      }
+    }
+    while (pendingVerifiers.size >= PKCE_MAX_ENTRIES) {
+      const oldest = pendingVerifiers.keys().next().value;
+      if (oldest === undefined) {
+        break;
+      }
+      pendingVerifiers.delete(oldest);
+    }
+  }
 
   function getRedirectUri(headers: Record<string, string>): string {
     let host = headers['host'] || '127.0.0.1:3001';
@@ -247,7 +299,8 @@ export function defineOAuth(config: OAuthProviderConfig): OAuthClient {
     if (usePkce) {
       const verifier = generateCodeVerifier();
       const challenge = await generateCodeChallenge(verifier);
-      pendingVerifiers.set(state, verifier);
+      evictPkceEntries();
+      pendingVerifiers.set(state, { verifier, expiresAt: Date.now() + PKCE_TTL_MS });
       params.set('code_challenge_method', 'S256');
       params.set('code_challenge', challenge);
     }
@@ -262,16 +315,24 @@ export function defineOAuth(config: OAuthProviderConfig): OAuthClient {
 
   // ─── Callback helpers ───────────────────────────────────────────────────
 
-  /** Resolve the PKCE code verifier for the given state, cleaning up the pending map. */
+  /**
+   * Resolve the PKCE code verifier for the given state, cleaning up the
+   * pending map. Re-checks the entry's expiry on lookup — even if
+   * eviction hasn't run yet, a stored-but-expired entry is rejected.
+   */
   function resolvePkceVerifier(state: string | undefined): string | null {
-    const verifier = state ? pendingVerifiers.get(state) : undefined;
-    if (!verifier) {
+    if (!state) {
       return null;
     }
-    if (state) {
-      pendingVerifiers.delete(state);
+    const entry = pendingVerifiers.get(state);
+    if (!entry) {
+      return null;
     }
-    return verifier;
+    pendingVerifiers.delete(state);
+    if (entry.expiresAt <= Date.now()) {
+      return null;
+    }
+    return entry.verifier;
   }
 
   /** Exchange an authorization code for tokens, returning an HTML RouteResponse. */
@@ -293,13 +354,11 @@ export function defineOAuth(config: OAuthProviderConfig): OAuthClient {
     if (usePkce) {
       const verifier = resolvePkceVerifier(state);
       if (!verifier) {
-        return {
+        return htmlPage({
           status: 400,
-          headers: {
-            'Content-Type': 'text/html',
-          },
-          body: '<html><body><h2>Invalid state — PKCE verifier not found</h2><p>Try authorizing again.</p></body></html>',
-        };
+          heading: 'Invalid state — PKCE verifier not found',
+          bodyHtml: '<p>Try authorizing again.</p>',
+        });
       }
       body.set('code_verifier', verifier);
     }
@@ -312,35 +371,33 @@ export function defineOAuth(config: OAuthProviderConfig): OAuthClient {
 
     if (!response.ok) {
       const text = await response.text();
-      return {
-        status: 200,
-        headers: {
-          'Content-Type': 'text/html',
-        },
-        body: `<html><body><h2>Token exchange failed</h2><pre>${text}</pre></body></html>`,
-      };
+      // 502: failure originates upstream (the OAuth provider), not the user.
+      // text comes from the OAuth provider's response body — escape it.
+      return htmlPage({
+        status: 502,
+        heading: 'Token exchange failed',
+        bodyHtml: `<pre>${htmlEscape(text)}</pre>`,
+      });
     }
 
     const token = parseTokenResponse(await response.json());
     if (!token) {
-      return {
-        status: 200,
-        headers: {
-          'Content-Type': 'text/html',
-        },
-        body: '<html><body><h2>Invalid token response</h2></body></html>',
-      };
+      // 502: upstream returned a body that didn't match the OAuth spec.
+      return htmlPage({
+        status: 502,
+        heading: 'Invalid token response',
+        bodyHtml: '<p>The upstream OAuth server returned a malformed response.</p>',
+      });
     }
 
     ctx.updatePreference(tokenPrefKey, token);
 
-    return {
+    return htmlPage({
       status: 200,
-      headers: {
-        'Content-Type': 'text/html',
-      },
-      body: '<html><body style="font-family:system-ui;text-align:center;padding:3rem"><h2>Connected!</h2><p>You can close this window.</p><script>setTimeout(()=>window.close(),2000)</script></body></html>',
-    };
+      heading: 'Connected!',
+      bodyHtml: '<p>You can close this window.</p>',
+      autoClose: true,
+    });
   }
 
   // ─── Callback route ─────────────────────────────────────────────────────
@@ -349,36 +406,37 @@ export function defineOAuth(config: OAuthProviderConfig): OAuthClient {
     const error = req.query.error;
 
     if (error) {
-      return {
-        status: 200,
-        headers: {
-          'Content-Type': 'text/html',
-        },
-        body: `<html><body><h2>Authorization failed</h2><p>${error}</p><script>setTimeout(()=>window.close(),3000)</script></body></html>`,
-      };
+      // `error` arrives from the OAuth provider's redirect query string —
+      // both the user and the upstream provider can influence its content.
+      // 400: this is a user-visible authorization failure.
+      return htmlPage({
+        status: 400,
+        heading: 'Authorization failed',
+        bodyHtml: `<p>${htmlEscape(error)}</p>`,
+        autoClose: true,
+      });
     }
 
     const code = req.query.code;
     if (!code) {
-      return {
+      return htmlPage({
         status: 400,
-        headers: {
-          'Content-Type': 'text/html',
-        },
-        body: '<html><body><h2>Missing authorization code</h2></body></html>',
-      };
+        heading: 'Missing authorization code',
+        bodyHtml: '',
+      });
     }
 
     try {
       return await exchangeCodeForToken(code, req.query.state, req.headers);
     } catch (e) {
-      return {
+      // Exception messages can carry attacker-controlled text (e.g., upstream
+      // error bodies that surfaced as `throw new Error(text)` in fetch).
+      const message = e instanceof Error ? e.message : String(e);
+      return htmlPage({
         status: 500,
-        headers: {
-          'Content-Type': 'text/html',
-        },
-        body: `<html><body><h2>Error</h2><p>${e}</p></body></html>`,
-      };
+        heading: 'Error',
+        bodyHtml: `<p>${htmlEscape(message)}</p>`,
+      });
     }
   });
 
@@ -443,9 +501,14 @@ export function defineOAuth(config: OAuthProviderConfig): OAuthClient {
         throw new Error(`Not authenticated. Visit ${client.getAuthUrl()} to authorize.`);
       }
 
-      // Refresh if expired (with 60s buffer)
+      // Refresh if expired (with 60s buffer). Refresh goes through a
+      // single-flight gate so concurrent fetch() calls share one POST
+      // grant_type=refresh_token — providers that rotate refresh tokens
+      // (Spotify, Google, Microsoft) accept the first and return
+      // `invalid_grant` to any racing sibling, which would clobber the
+      // freshly-stored token and force the user to re-authorize.
       if (token.expires_at < Date.now() + 60_000) {
-        const refreshed = await refreshToken(token);
+        const refreshed = await refreshTokenOnce();
         if (!refreshed) {
           throw new Error('Token expired and refresh failed. Re-authorize required.');
         }
@@ -461,6 +524,17 @@ export function defineOAuth(config: OAuthProviderConfig): OAuthClient {
       });
     },
   };
+
+  // Coalesce concurrent refresh attempts to a single network round-trip.
+  // The closure re-reads `client.getToken()` on each invocation so callers
+  // arriving after a successful refresh adopt the new token automatically.
+  const refreshTokenOnce = singleFlight<OAuthToken | null>(() => {
+    const current = client.getToken();
+    if (!current) {
+      return Promise.resolve(null);
+    }
+    return refreshToken(current);
+  });
 
   return client;
 }
