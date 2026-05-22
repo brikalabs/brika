@@ -46,7 +46,6 @@ jobs:
         with:
           bun-version: ${{ needs.setup.outputs.bun_version }}
       - run: bun install --frozen-lockfile
-      - run: bun run --filter '@brika/sdk' build
       - run: bun run typecheck
 
   lint:
@@ -75,5 +74,4 @@ jobs:
         with:
           bun-version: ${{ needs.setup.outputs.bun_version }}
       - run: bun install --frozen-lockfile
-      - run: bun run --filter '@brika/sdk' build
       - run: bun run test

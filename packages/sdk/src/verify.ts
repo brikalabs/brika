@@ -1,3 +1,4 @@
+#!/usr/bin/env bun
 /**
  * brika-verify-plugin — Verify a Brika plugin package.json
  *
