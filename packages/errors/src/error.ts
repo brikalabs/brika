@@ -196,7 +196,19 @@ function buildWire(
     message: err.message,
   };
   if (err.data) {
-    wire.data = { ...err.data };
+    // Apply the catalog's publicDataShape (if any) to redact fields the
+    // hub doesn't want crossing the IPC / HTTP boundary. Failure to
+    // parse drops `data` entirely — better empty than over-shared.
+    const entry = lookupCatalogEntry(err.code);
+    const publicShape = entry?.publicDataShape;
+    if (publicShape) {
+      const parsed = publicShape.safeParse(err.data);
+      if (parsed.success) {
+        wire.data = parsed.data;
+      }
+    } else {
+      wire.data = { ...err.data };
+    }
   }
   const wireCause = serializeCause(err.cause, seen);
   if (wireCause !== undefined) {

@@ -1,0 +1,235 @@
+/**
+ * Red-team coverage for the prelude lockdown.
+ *
+ * Spawns a fresh Bun subprocess with the lockdown loaded and runs each
+ * documented escape vector. Any attack that succeeds means a hole the
+ * lockdown was supposed to close. This test IS the security contract —
+ * if you change the scrub list in lockdown.ts, mirror the change here.
+ *
+ * Subprocess approach is deliberate: the scrubs are irreversible by
+ * design, so running attacks in-process would pollute the test harness's
+ * own realm and make every later test see scrubbed globals.
+ */
+
+import { afterEach, describe, expect, setDefaultTimeout, test } from 'bun:test';
+import { mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
+// Subprocess spawn is slow under parallel load.
+setDefaultTimeout(20_000);
+
+const LOCKDOWN_PATH = join(import.meta.dir, '../runtime/plugins/prelude/lockdown.ts');
+
+interface AttackResult {
+  exitCode: number;
+  stdout: string;
+  stderr: string;
+}
+
+/**
+ * Run an attack snippet in a fresh subprocess with the lockdown
+ * **preloaded** (`--preload=lockdown.ts`). Bun.plugin's module-loader
+ * deny-list only intercepts resolutions issued after `Bun.plugin(...)`
+ * is called; if the lockdown were loaded via dynamic `await import()`
+ * from the snippet itself, the deny-list would race the snippet's own
+ * imports and miss some of them. `--preload` runs the lockdown to
+ * completion before the snippet's module graph starts.
+ *
+ * The snippet is written to a temp file (not passed via `--eval`)
+ * because `--eval` snippets and `--preload` scripts share the same
+ * module loader, and `--eval` content is parsed BEFORE preload bodies
+ * finish — making the deny-list races unreliable.
+ *
+ * `lockdownImport: false` skips the lockdown — used as a baseline
+ * sanity-check that the attack actually does something without it.
+ */
+async function runAttack(
+  snippet: string,
+  opts: { mode?: 'enforce' | 'warn' | 'off'; lockdownImport?: boolean } = {}
+): Promise<AttackResult> {
+  const { mode = 'enforce', lockdownImport = true } = opts;
+  const wrapped = `
+    try {
+      ${snippet}
+    } catch (e) {
+      console.log('CAUGHT:' + (e instanceof Error ? e.message : String(e)));
+    }
+  `;
+  const tmpDir = mkdtempSync(join(tmpdir(), 'brika-redteam-'));
+  const scriptPath = join(tmpDir, 'attack.ts');
+  writeFileSync(scriptPath, wrapped, 'utf8');
+  const args = lockdownImport
+    ? ['bun', `--preload=${LOCKDOWN_PATH}`, scriptPath]
+    : ['bun', scriptPath];
+  const proc = Bun.spawn(args, {
+    env: { ...process.env, BRIKA_LOCKDOWN_MODE: mode },
+    stdout: 'pipe',
+    stderr: 'pipe',
+  });
+  const [stdout, stderr] = await Promise.all([
+    new Response(proc.stdout).text(),
+    new Response(proc.stderr).text(),
+  ]);
+  const exitCode = await proc.exited;
+  return { exitCode, stdout: stdout.trim(), stderr: stderr.trim() };
+}
+
+describe('lockdown enforce mode — ambient I/O globals', () => {
+  test('globalThis.fetch is scrubbed and throws PermissionDeniedError', async () => {
+    const out = await runAttack(`
+      const r = await fetch('https://api.example.com/');
+      console.log('LEAKED:' + r.status);
+    `);
+    expect(out.stdout).toMatch(/CAUGHT:.*globalThis\.fetch is not available/);
+    expect(out.stdout).not.toContain('LEAKED:');
+  });
+
+  test('globalThis.WebSocket is scrubbed', async () => {
+    const out = await runAttack(`
+      const ws = new WebSocket('wss://attacker.example/');
+      console.log('LEAKED:' + typeof ws);
+    `);
+    expect(out.stdout).toContain('CAUGHT:');
+    expect(out.stdout).not.toContain('LEAKED:');
+  });
+
+  test('Bun.spawn is scrubbed', async () => {
+    const out = await runAttack(`
+      const p = Bun.spawn(['echo', 'leak']);
+      console.log('LEAKED:' + p.pid);
+    `);
+    expect(out.stdout).toMatch(/CAUGHT:.*Bun\.spawn is not available/);
+    expect(out.stdout).not.toContain('LEAKED:');
+  });
+
+  test('Bun.write is scrubbed', async () => {
+    const out = await runAttack(`
+      await Bun.write('/tmp/brika-redteam-should-not-exist', 'leak');
+      console.log('LEAKED:wrote');
+    `);
+    expect(out.stdout).toContain('CAUGHT:');
+    expect(out.stdout).not.toContain('LEAKED:');
+  });
+
+  test('Bun.file is scrubbed', async () => {
+    const out = await runAttack(`
+      const f = Bun.file('/etc/hosts');
+      console.log('LEAKED:' + (await f.text()).length);
+    `);
+    expect(out.stdout).toContain('CAUGHT:');
+    expect(out.stdout).not.toContain('LEAKED:');
+  });
+
+  test('eval is scrubbed', async () => {
+    const out = await runAttack(`
+      const r = eval('1+1');
+      console.log('LEAKED:' + r);
+    `);
+    expect(out.stdout).toContain('CAUGHT:');
+    expect(out.stdout).not.toContain('LEAKED:');
+  });
+});
+
+describe('lockdown enforce mode — documented Bun built-in-import limitation', () => {
+  // Bun 1.3.13's plugin system does NOT intercept built-in module
+  // imports (node:*, bun:*) issued as bare specifiers — they resolve
+  // through Bun's C++ module table, bypassing JS-level plugins. The
+  // deny-list registration still happens (and would catch user-space
+  // relative-path indirection that hits onResolve), but built-ins
+  // pass through. See the comment in lockdown.ts §4.
+  //
+  // These tests pin the current behaviour so we notice (loudly) when
+  // Bun closes the gap. Each failing test here is a SIGNAL: flip the
+  // assertion + remove the LIMIT_DOCUMENTED comment in lockdown.ts.
+
+  test('LIMIT_DOCUMENTED: node:fs bypasses the deny-list', async () => {
+    const out = await runAttack(`
+      const fs = await import('node:fs');
+      console.log('LEAKED:' + typeof fs.readFileSync);
+    `);
+    expect(out.stdout).toContain('LEAKED:function');
+  });
+
+  test('LIMIT_DOCUMENTED: bun:ffi bypasses the deny-list', async () => {
+    const out = await runAttack(`
+      const ffi = await import('bun:ffi');
+      console.log('LEAKED:' + typeof ffi.dlopen);
+    `);
+    expect(out.stdout).toContain('LEAKED:function');
+  });
+
+  test('non-denied node:path still resolves (positive control)', async () => {
+    const out = await runAttack(`
+      const path = await import('node:path');
+      console.log('OK:' + typeof path.join);
+    `);
+    expect(out.stdout).toContain('OK:function');
+  });
+});
+
+describe('lockdown warn mode (migration window)', () => {
+  test('warn mode logs but delegates to real fetch', async () => {
+    // Real fetch would normally hit the network — point at a guaranteed-
+    // unreachable host. The point isn't whether the fetch succeeds; the
+    // point is that the lockdown didn't THROW. We expect a "warn access"
+    // log line on stderr and either a network error or a response.
+    const out = await runAttack(
+      `
+        try {
+          await fetch('https://invalid.localhost.invalid.example/');
+        } catch {
+          /* network failure is expected — what matters is no PermissionDeniedError */
+        }
+        console.log('DELEGATED');
+      `,
+      { mode: 'warn' }
+    );
+    expect(out.stdout).toContain('DELEGATED');
+    expect(out.stdout).not.toContain('CAUGHT:');
+    expect(out.stderr).toMatch(/\[brika:lockdown\].*globalThis\.fetch/);
+  });
+});
+
+describe('lockdown baseline — without the lockdown each attack would succeed', () => {
+  // These tests prove the lockdown is what's actually doing the blocking.
+  // If any of these regressed (i.e. attack failed even without lockdown),
+  // the enforce-mode tests above would be passing for the wrong reason.
+
+  test('without lockdown, globalThis.fetch is callable', async () => {
+    const out = await runAttack(
+      `
+        try {
+          await fetch('https://invalid.localhost.invalid.example/');
+        } catch (e) {
+          // Network failure is expected; we only care it WASN'T a PermissionDenied.
+          if (e instanceof Error && e.message.includes('not available to plugins')) {
+            console.log('BLOCKED');
+          } else {
+            console.log('REACHABLE');
+          }
+        }
+      `,
+      { lockdownImport: false }
+    );
+    expect(out.stdout).toContain('REACHABLE');
+    expect(out.stdout).not.toContain('BLOCKED');
+  });
+
+  test('without lockdown, node:fs imports fine', async () => {
+    const out = await runAttack(
+      `
+        const fs = await import('node:fs');
+        console.log('REACHABLE:' + typeof fs.readFileSync);
+      `,
+      { lockdownImport: false }
+    );
+    expect(out.stdout).toContain('REACHABLE:function');
+  });
+});
+
+afterEach(() => {
+  // No-op — each test owns its subprocess and cleans itself up via
+  // proc.exited above. afterEach is here to keep the structure
+  // consistent for future expansion.
+});

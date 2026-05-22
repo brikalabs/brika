@@ -56,7 +56,7 @@ describe('hub net.fetch handler', () => {
     expect(fetcher.calls).toHaveLength(1);
   });
 
-  test('denied host throws PERMISSION_DENIED — no fetch invoked', async () => {
+  test('denied host throws NET_HOST_NOT_ALLOWED — no fetch invoked, allow-list redacted on wire', async () => {
     const fetcher = mockFetcher(() => new Response('', { status: 200 }));
     const reg = buildHubGrants(fetcher);
 
@@ -65,7 +65,7 @@ describe('hub net.fetch handler', () => {
       await reg.dispatch(
         'dev.brika.net.fetch',
         { url: 'https://attacker.example/leak', method: 'GET' },
-        handlerCtx({ allow: ['api.example.com'] })
+        handlerCtx({ allow: ['api.example.com', 'internal.host'] })
       );
     } catch (e) {
       if (e instanceof BrikaError) {
@@ -73,8 +73,15 @@ describe('hub net.fetch handler', () => {
       }
     }
     expect(thrown).toBeInstanceOf(BrikaError);
-    expect(thrown?.code).toBe('PERMISSION_DENIED');
+    expect(thrown?.code).toBe('NET_HOST_NOT_ALLOWED');
     expect(fetcher.calls).toHaveLength(0);
+    // Hub-side data carries the full allow-list for logs.
+    expect(thrown?.data).toEqual({
+      host: 'attacker.example',
+      allow: ['api.example.com', 'internal.host'],
+    });
+    // Wire output redacts everything except `host`.
+    expect(thrown?.toWire().data).toEqual({ host: 'attacker.example' });
   });
 
   test('wildcard *.foo.com matches subdomain but not bare suffix', async () => {
@@ -102,7 +109,7 @@ describe('hub net.fetch handler', () => {
         thrown = e;
       }
     }
-    expect(thrown?.code).toBe('PERMISSION_DENIED');
+    expect(thrown?.code).toBe('NET_HOST_NOT_ALLOWED');
     expect(fetcher.calls).toHaveLength(1);
   });
 

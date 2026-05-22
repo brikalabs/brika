@@ -62,6 +62,20 @@ function entry<S extends DataSchema | undefined>(e: {
   i18nKey?: string;
   developerHint?: string;
   data: S;
+  /**
+   * Schema describing the subset of `data` that's safe to expose across
+   * trust boundaries (IPC → plugin, HTTP → API consumer). When set,
+   * `BrikaError.toWire()` parses the full data through this schema and
+   * emits only the parsed result; the original `data` stays in
+   * hub-side logs.
+   *
+   * Used to hide hub state from a compromised plugin — e.g.
+   * `NET_HOST_NOT_ALLOWED` keeps `host` public but redacts the operator's
+   * full allow-list, so a denied call doesn't leak system config.
+   *
+   * Omit when the entire `data` payload is already plugin-safe.
+   */
+  publicDataShape?: DataSchema;
   message: (data: S extends DataSchema ? z.infer<S> : undefined) => string;
 }) {
   return e;
@@ -422,6 +436,34 @@ export const ErrorCatalog = {
     data: z.object({ grantId: z.string() }),
     message: (data) => `Invalid scope for grant "${data.grantId}".`,
   }),
+
+  // ─── net ──────────────────────────────────────────────────────────────
+  /**
+   * Per-grant denial when a `ctx.net.fetch` call targets a host outside
+   * the permitted allow-list. `publicDataShape` redacts the full allow
+   * list — the hub-side log keeps it, the plugin only sees its own
+   * forbidden host so it can fix the call site without learning what
+   * else the operator permitted.
+   */
+  NET_HOST_NOT_ALLOWED: entry({
+    title: 'Network host not allowed',
+    description: "A net.fetch call targeted a host outside the plugin's allow-list.",
+    typeUri: `${TYPE_BASE}grants/net-host-not-allowed`,
+    status: 403,
+    severity: 'error',
+    category: 'grants',
+    retryable: false,
+    transient: false,
+    developerHint:
+      "Add the host to the `allow` array under your manifest's `dev.brika.net.fetch` grant, then ask the operator to re-grant.",
+    data: z.object({
+      host: z.string(),
+      // Full operator allow-list — kept in hub logs only.
+      allow: z.array(z.string()),
+    }),
+    publicDataShape: z.object({ host: z.string() }),
+    message: (data) => `net.fetch: host "${data.host}" is not in this plugin's allow list.`,
+  }),
 } as const;
 
 function formatTimeoutMessage(data: {
@@ -469,6 +511,8 @@ export interface CatalogEntry {
   readonly i18nKey?: string;
   readonly developerHint?: string;
   readonly data?: DataSchema;
+  /** See `entry({ publicDataShape })` — redaction schema for cross-boundary wire payloads. */
+  readonly publicDataShape?: DataSchema;
   message(data: Record<string, unknown> | undefined): string;
 }
 

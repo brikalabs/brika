@@ -23,6 +23,7 @@ describe('errors.* factories', () => {
     produced.add(errors.notRegistered({ grantId: 'x' }).code);
     produced.add(errors.invalidOutput({ grantId: 'x' }).code);
     produced.add(errors.invalidScope({ grantId: 'x' }).code);
+    produced.add(errors.netHostNotAllowed({ host: 'h', allow: [] }).code);
 
     for (const code of expected) {
       expect(produced.has(code)).toBe(true);

@@ -113,6 +113,9 @@ export const errors = {
 
   invalidScope: (data: DataForCode<'INVALID_SCOPE'>, opts?: FactoryOpts) =>
     buildError<'INVALID_SCOPE'>('INVALID_SCOPE', data, opts),
+
+  netHostNotAllowed: (data: DataForCode<'NET_HOST_NOT_ALLOWED'>, opts?: FactoryOpts) =>
+    buildError<'NET_HOST_NOT_ALLOWED'>('NET_HOST_NOT_ALLOWED', data, opts),
 } as const;
 
 // ─── Catalog completeness guard ────────────────────────────────────────────

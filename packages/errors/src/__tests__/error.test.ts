@@ -89,6 +89,34 @@ describe('BrikaError', () => {
     expect(err.toWire({ includeStack: true }).stack).toContain('with stack');
   });
 
+  it('toWire applies catalog publicDataShape to redact fields', () => {
+    // NET_HOST_NOT_ALLOWED defines `publicDataShape = { host }` so the
+    // operator's full allow-list never crosses the wire.
+    const err = new BrikaError('NET_HOST_NOT_ALLOWED', 'denied', {
+      data: { host: 'attacker.example', allow: ['api.example.com', 'internal.host'] },
+    });
+    const wire = err.toWire();
+    expect(wire.data).toEqual({ host: 'attacker.example' });
+    expect(wire.data?.allow).toBeUndefined();
+  });
+
+  it('toWire drops data entirely if publicDataShape rejects the payload', () => {
+    // Garbage data that fails the public shape's parse should be redacted
+    // out entirely — better empty than wrong.
+    const err = new BrikaError('NET_HOST_NOT_ALLOWED', 'denied', {
+      data: { host: 123, allow: 'not-array' } as unknown as { host: string; allow: string[] },
+    });
+    expect(err.toWire().data).toBeUndefined();
+  });
+
+  it('toWire passes data verbatim for codes without publicDataShape', () => {
+    // PERMISSION_DENIED has no publicDataShape — the full data round-trips.
+    const err = new BrikaError('PERMISSION_DENIED', 'denied', {
+      data: { permission: 'fs' },
+    });
+    expect(err.toWire().data).toEqual({ permission: 'fs' });
+  });
+
   describe('static is()', () => {
     it('narrows code and data when the catalog schema matches', () => {
       const err: unknown = new BrikaError('PERMISSION_DENIED', 'denied', {

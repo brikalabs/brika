@@ -11,7 +11,7 @@
  * the original audit — they collapse into one well-tested handler.
  */
 
-import { BrikaError } from '@brika/errors';
+import { errors } from '@brika/errors';
 import { defineGrant } from '@brika/grants';
 import { type FetchArgs, type NetScope, netFetch as spec } from '@brika/sdk/grants';
 
@@ -238,11 +238,10 @@ export function buildNetGrants(cb: NetCallbacks) {
       // default port.
       const host = new URL(args.url).hostname;
       if (!isHostAllowed(host, scope.allow)) {
-        throw new BrikaError(
-          'PERMISSION_DENIED',
-          `net.fetch: host "${host}" is not in this plugin's allow list (${scope.allow.join(', ') || '(empty)'})`,
-          { data: { host, allow: scope.allow } }
-        );
+        // Throws NET_HOST_NOT_ALLOWED — the catalog's publicDataShape
+        // redacts the operator's full allow-list before crossing IPC.
+        // The plugin sees only the host it failed against.
+        throw errors.netHostNotAllowed({ host, allow: [...scope.allow] });
       }
 
       const canCoalesce =
