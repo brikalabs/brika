@@ -43,42 +43,10 @@ import type { BrickFamily, Plugin, PluginHealth } from '@brika/plugin';
 import type { PluginPackageSchema } from '@brika/schema';
 import { getProcessMetrics } from '@/runtime/metrics';
 import type { HubLocation } from '@/runtime/state/state-store';
+import { dispatchGrantRequest } from './grants/dispatch';
 import { buildHubGrants } from './grants/registry-factory';
 import { buildVectorWithUserConsent } from './grants/vector';
 import { now } from './utils';
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Constants
-// ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * Hub-side hard timeout for a single `grant.request`. A stuck handler
- * (one that ignores its abort signal, or one that wedges on a hung
- * upstream) is cancelled here so the IPC slot doesn't leak.
- *
- * Per-grant overrides land when grant specs grow a `timeoutMs` field;
- * until then this is a coarse safety net.
- */
-const GRANT_REQUEST_TIMEOUT_MS = 60_000;
-
-/**
- * Maximum jitter (in ms) added to every grant.request handler entry,
- * regardless of grant/deny verdict. Together with the same-pre-branch
- * code path above (vector recompute + args parse run before the
- * grant/deny decision), this neutralizes the application-layer timing
- * oracle a malicious plugin would otherwise use to fingerprint the
- * vector. 0–5ms is plenty for cross-IPC attackers; sub-ms oracles are
- * explicitly out of scope (see plan §14).
- */
-const GRANT_REQUEST_JITTER_MAX_MS = 5;
-
-function jitterDelay(): Promise<void> {
-  const buf = new Uint16Array(1);
-  crypto.getRandomValues(buf);
-  // biome-ignore lint/style/noNonNullAssertion: typed Uint16Array of length 1
-  const ms = Math.floor(((buf[0] ?? 0) / 0xffff) * GRANT_REQUEST_JITTER_MAX_MS);
-  return Bun.sleep(ms);
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -651,39 +619,23 @@ export class PluginProcess {
       };
     });
 
-    this.#channel.implement(grantRequest, async ({ id, args }) => {
-      const reg = this.#getGrantRegistry();
-      // Recompute vector + parse args BEFORE the grant/deny branch so the
-      // wall-time cost of denial matches the wall-time cost of a permitted
-      // call up to the dispatch boundary. Plus a 0-5ms jitter on top —
-      // together this neutralizes timing oracles a malicious plugin would
-      // otherwise use to fingerprint the vector via repeated calls.
-      const vector = this.#buildCurrentVector();
-      const entry = vector.grants.find((g) => g.id === id);
-      await jitterDelay();
-      if (!entry) {
-        throw errors.permissionDenied({ permission: id });
-      }
-      // §6 Watchdog: race dispatch against AbortSignal.timeout. A stuck
-      // grant handler can't hold the RPC slot indefinitely — it's
-      // aborted at GRANT_REQUEST_TIMEOUT_MS. The grant's own `signal`
-      // already plumbs into net.fetch and similar handlers, so the
-      // timeout cooperatively cancels the in-flight I/O. Lifetime abort
-      // (plugin stop) also fires the signal.
-      const watchdog = AbortSignal.timeout(GRANT_REQUEST_TIMEOUT_MS);
-      const signal = AbortSignal.any([this.#lifetimeAbort.signal, watchdog]);
-      const result = await reg.dispatch(id, args, {
-        pluginUid: this.uid,
-        pluginRoot: this.rootDirectory,
-        grantedScope: entry.scope,
-        log: (level, message) => this.callbacks.onLog(level, message),
-        signal,
-      });
-      // `result` is `unknown`; the wire contract's `result` field is also
-      // `unknown` (per-grant schemas validate at the registry layer). No
-      // cast needed.
-      return { result };
-    });
+    // grant.request — thin wire wrapper around the pure dispatchGrantRequest.
+    // Pure function lives in `grants/dispatch.ts` so the watchdog +
+    // jitter + vector-lookup branch is unit-testable without an IPC
+    // channel; see `grants/__tests__/dispatch.test.ts`.
+    this.#channel.implement(grantRequest, ({ id, args }) =>
+      dispatchGrantRequest(
+        {
+          registry: this.#getGrantRegistry(),
+          buildVector: () => this.#buildCurrentVector(),
+          pluginUid: this.uid,
+          pluginRoot: this.rootDirectory,
+          log: (level, message) => this.callbacks.onLog(level, message),
+          lifetimeSignal: this.#lifetimeAbort.signal,
+        },
+        { id, args }
+      )
+    );
   }
 
   /**

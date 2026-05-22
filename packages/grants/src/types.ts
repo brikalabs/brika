@@ -18,11 +18,13 @@ import type { z } from 'zod';
  *
  * Brika built-ins follow `dev.brika.<family>.<verb>` (e.g.
  * `dev.brika.net.fetch`); third-party grants use their own DNS prefix
- * (e.g. `com.acme.weather.scrape`). The string type is intentionally wide:
- * a template-literal type would block valid namespaces that don't fit
- * `a.b.c.d`; the registry validates format at registration time.
+ * (e.g. `com.acme.weather.scrape`). The structural shape is `string`;
+ * the nominal brand is purely documentation — it signals to readers that
+ * the value should be a reverse-DNS grant id rather than an arbitrary
+ * string, without blocking valid namespaces a template-literal type
+ * would reject. The registry validates the format at registration time.
  */
-export type GrantId = string;
+export type GrantId = string & { readonly __grantIdBrand?: never };
 
 /**
  * Permission gate attached to a grant. The user permits a grant with a

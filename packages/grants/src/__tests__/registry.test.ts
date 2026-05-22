@@ -251,6 +251,91 @@ describe('GrantRegistry', () => {
   });
 });
 
+describe('GrantRegistry edge cases', () => {
+  test('list() iterates in registration order', () => {
+    const reg = new GrantRegistry();
+    reg.register(ping);
+    reg.register(netFetch);
+    const ids = [...reg.list()].map((g) => g.spec.id);
+    expect(ids).toEqual(['dev.brika.test.ping', 'dev.brika.net.fetch']);
+  });
+
+  test('size reflects current registered count', () => {
+    const reg = new GrantRegistry();
+    expect(reg.size).toBe(0);
+    reg.register(ping);
+    expect(reg.size).toBe(1);
+    reg.register(netFetch);
+    expect(reg.size).toBe(2);
+  });
+
+  test('buildVector with default-scope fallback uses spec.permission.defaultScope', () => {
+    const reg = new GrantRegistry();
+    reg.register(netFetch);
+    // Permit value is undefined → registry falls back to defaultScope = { allow: [] }
+    const v = reg.buildVector({ 'dev.brika.net.fetch': {} }, { 'dev.brika.net.fetch': undefined });
+    expect(v.grants).toEqual([
+      {
+        id: 'dev.brika.net.fetch',
+        ctxPath: 'net.fetch',
+        scope: { allow: [] },
+      },
+    ]);
+  });
+
+  test('dispatch returns parsed output (schema strips unknown fields)', async () => {
+    const reg = new GrantRegistry();
+    const extraFieldGrant = defineGrant(
+      {
+        id: 'dev.brika.test.extra',
+        ctxPath: 'test.extra',
+        args: z.object({}),
+        result: z.object({ value: z.string() }),
+      },
+      // Return a result with an extra field — the registry's result.safeParse
+      // strips it per Zod's default behaviour.
+      () => ({ value: 'ok', extra: 'should-be-dropped' }) as unknown as { value: string }
+    );
+    reg.register(extraFieldGrant);
+    const out = (await reg.dispatch('dev.brika.test.extra', {}, handlerCtx())) as {
+      value: string;
+      extra?: string;
+    };
+    expect(out).toEqual({ value: 'ok' });
+    expect(out.extra).toBeUndefined();
+  });
+
+  test('dispatch throws INVALID_OUTPUT when handler returns wrong shape', async () => {
+    const reg = new GrantRegistry();
+    const wrongShape = defineGrant(
+      {
+        id: 'dev.brika.test.wrong',
+        ctxPath: 'test.wrong',
+        args: z.object({}),
+        result: z.object({ value: z.string() }),
+      },
+      () => ({ value: 42 }) as unknown as { value: string }
+    );
+    reg.register(wrongShape);
+    let thrown: GrantError | undefined;
+    try {
+      await reg.dispatch('dev.brika.test.wrong', {}, handlerCtx());
+    } catch (e) {
+      if (e instanceof GrantError) {
+        thrown = e;
+      }
+    }
+    expect(thrown?.code).toBe('INVALID_OUTPUT');
+  });
+
+  test('register exposes get(id) lookup', () => {
+    const reg = new GrantRegistry();
+    reg.register(netFetch);
+    expect(reg.get('dev.brika.net.fetch')).toBe(netFetch);
+    expect(reg.get('missing.id')).toBeUndefined();
+  });
+});
+
 describe('resolveCtxPath', () => {
   test('strips first two reverse-DNS segments by default', () => {
     expect(resolveCtxPath({ id: 'dev.brika.net.fetch' })).toBe('net.fetch');

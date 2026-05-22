@@ -108,4 +108,54 @@ describe('buildCtx Proxy', () => {
     await (ctx as any).location.get();
     expect(calls[0]?.payload).toEqual({ id: 'dev.brika.location.get', args: {} });
   });
+
+  test('grantRequest export from ctx is the same RPC definition the proxy uses', async () => {
+    // Sanity check: the SDK barrel re-exports the same RPC the Proxy
+    // dispatches through. Pinning this catches accidental wiring drift
+    // where the SDK and the prelude could diverge on the wire name.
+    const ctxModule = await import('../ctx');
+    expect(ctxModule.grantRequest.name).toBe(grantRequest.name);
+  });
+
+  test('GRANTS_BRAND is a registered Symbol.for that survives realm crossing', async () => {
+    const ctxModule = await import('../ctx');
+    // Symbol.for returns the global registry symbol — same instance across imports.
+    expect(ctxModule.GRANTS_BRAND.description).toBe('brika.grants.brand');
+    expect(typeof ctxModule.GRANTS_BRAND).toBe('symbol');
+  });
+
+  test('buildCtx with empty vector denies every path', async () => {
+    const { channel, calls } = stubChannel();
+    // biome-ignore lint/suspicious/noExplicitAny: minimal channel stub for unit test
+    const ctx = buildCtx({ grants: [] }, channel as any);
+    let thrown: BrikaError | undefined;
+    try {
+      // biome-ignore lint/suspicious/noExplicitAny: untyped path probe
+      await (ctx as any).literally.anything.at.all();
+    } catch (e) {
+      if (e instanceof BrikaError) {
+        thrown = e;
+      }
+    }
+    expect(thrown?.code).toBe('PERMISSION_DENIED');
+    expect(calls).toEqual([]);
+  });
+
+  test('deep path beyond a granted prefix still denies until the exact ctxPath matches', async () => {
+    const { channel, calls } = stubChannel();
+    // biome-ignore lint/suspicious/noExplicitAny: minimal channel stub for unit test
+    const ctx = buildCtx(vector, channel as any);
+    let thrown: BrikaError | undefined;
+    try {
+      // `net` is a prefix of `net.fetch` but not a granted path itself.
+      // biome-ignore lint/suspicious/noExplicitAny: untyped path probe
+      await (ctx as any).net.unknownVerb({ url: 'https://x.example' });
+    } catch (e) {
+      if (e instanceof BrikaError) {
+        thrown = e;
+      }
+    }
+    expect(thrown?.code).toBe('PERMISSION_DENIED');
+    expect(calls).toEqual([]);
+  });
 });
