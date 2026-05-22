@@ -136,13 +136,6 @@ jobs:
 
       - run: bun install --frozen-lockfile
 
-      # The SDK's `package.json#exports` map points subpaths at `./dist/...`
-      # so workspace consumers (apps/hub, etc.) need the SDK built before
-      # the compile-time bundler can resolve `@brika/sdk/grants`,
-      # `@brika/sdk/ctx`, and friends. The UI build step below does the
-      # equivalent for the embedded UI bundle.
-      - run: bun run --filter @brika/sdk build
-
       - uses: actions/download-artifact@v5
         with:
           name: ui-dist
