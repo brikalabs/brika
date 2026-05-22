@@ -20,10 +20,21 @@
 
 import { Channel, type Json, type WireMessage } from '@brika/ipc';
 import { PRELUDE_BRAND, type PreludeBridge } from '@brika/sdk/bridge';
+// IMPORTANT: lockdown MUST be the first import. It scrubs ambient I/O
+// (globalThis.fetch, Bun.spawn, …) and installs the module deny-list
+// before any other module body runs. See lockdown.ts for details.
+import {
+  assertSealed,
+  getSafeProcessOn,
+  getSafeProcessSend,
+  getVectorWriteKey,
+  installVectorV2,
+} from './lockdown';
 
 type StopHandler = () => void | Promise<void>;
 
 import {
+  getGrantVector,
   hello,
   type LogLevelType,
   log as logMsg,
@@ -54,10 +65,16 @@ const declaredBlocks = new Map(manifest.blocks?.map((b) => [b.id, b]) ?? []);
 const stopHandlers: StopHandler[] = [];
 
 // ---- Channel setup ----
+// `process.send` and `process.on` are scrubbed by lockdown.ts on enforce
+// mode, so reach them through the captured-reference accessors. Plugin
+// code that calls process.send directly hits the scrub stub.
+
+const safeSend = getSafeProcessSend();
+const safeOn = getSafeProcessOn();
 
 const channel = new Channel({
   send: (msg) => {
-    process.send?.(msg);
+    safeSend(msg);
   },
 });
 
@@ -85,12 +102,12 @@ async function drain(): Promise<void> {
   }
 }
 
-process.on('message', (msg: WireMessage) => {
+safeOn('message', (msg: WireMessage) => {
   messageQueue.push(msg);
   drain().catch((e) => console.error('[prelude] drain error:', e));
 });
 
-process.on('disconnect', () => {
+safeOn('disconnect', () => {
   channel.close(new Error('IPC disconnected'));
 });
 
@@ -143,8 +160,40 @@ const bridge = {
   channel,
 
   // System
-  start() {
+  async start() {
     channel.send(hello, { plugin: { id: manifest.name, version: manifest.version } });
+    // Fetch and install the grant vector before reporting ready, so any
+    // ctx.foo.bar() call after this point sees the permitted set. The hub
+    // computes the vector from manifest + permits — see
+    // apps/hub/src/runtime/plugins/grants/vector.ts.
+    try {
+      const vector = await channel.call(getGrantVector, {});
+      installVectorV2(vector, getVectorWriteKey());
+    } catch (e) {
+      // Vector install failure is fatal: if we send `ready` anyway, the
+      // plugin looks healthy but every `ctx.*` call throws the unrelated
+      // "not installed yet" diagnostic, which misleads debugging. Refuse
+      // to come up — the hub's restart-policy decides what happens next.
+      log(
+        'error',
+        'Failed to install grant vector — plugin cannot start. Restart the plugin to retry.',
+        {
+          error: e instanceof Error ? e.message : String(e),
+        }
+      );
+      process.exit(78); // EX_CONFIG (sysexits.h) — config/setup failure
+    }
+    // Final integrity gate: refuse to come up if anything mutated a
+    // scrubbed global between lockdown and now (a transitively-imported
+    // module patched fetch, etc.). Better to crash than to silently
+    // allow a hole.
+    const drift = assertSealed();
+    if (drift !== null && drift.length > 0) {
+      log('error', 'Lockdown integrity check failed — refusing to start', {
+        drift: [...drift],
+      });
+      process.exit(78);
+    }
     channel.send(ready, {});
   },
   onStop(handler: StopHandler) {

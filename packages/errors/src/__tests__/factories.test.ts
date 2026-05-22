@@ -19,6 +19,11 @@ describe('errors.* factories', () => {
     produced.add(errors.pluginConfigInvalid({ pluginId: 'x' }).code);
     produced.add(errors.manifestInvalid({ manifestPath: '/x' }).code);
     produced.add(errors.manifestMissingMain({ manifestPath: '/x' }).code);
+    produced.add(errors.alreadyRegistered({ grantId: 'x' }).code);
+    produced.add(errors.notRegistered({ grantId: 'x' }).code);
+    produced.add(errors.invalidOutput({ grantId: 'x' }).code);
+    produced.add(errors.invalidScope({ grantId: 'x' }).code);
+    produced.add(errors.netHostNotAllowed({ host: 'h', allow: [] }).code);
 
     for (const code of expected) {
       expect(produced.has(code)).toBe(true);

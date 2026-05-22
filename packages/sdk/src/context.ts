@@ -40,20 +40,29 @@ export class Context {
 
     initAllModules(core, this);
 
-    // Auto-start on next tick if not started manually
+    // Auto-start on next tick if not started manually. The returned
+    // Promise (the prelude's start() now resolves after the grant vector
+    // is installed) is intentionally discarded here — the auto-start
+    // path is fire-and-forget. Manual callers should `await start()`.
     process.nextTick(() => {
       if (!this.#started) {
-        this.start();
+        void this.start();
       }
     });
   }
 
-  start(): void {
+  /**
+   * Bring the plugin online. Returns a Promise that resolves once the
+   * prelude has fetched + installed the grant vector and sent `ready`
+   * upstream. Callers SHOULD await this if they want to know when
+   * `ctx.foo.bar(...)` calls become safe.
+   */
+  start(): Promise<void> {
     if (this.#started) {
-      return;
+      return Promise.resolve();
     }
     this.#started = true;
-    this.#bridge.start();
+    return Promise.resolve(this.#bridge.start());
   }
 
   log(level: LogLevel, message: string, meta?: AnyObj): void {

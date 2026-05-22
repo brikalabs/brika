@@ -35,6 +35,8 @@ export {
 export type { LogLevel as LogLevelType } from './events';
 // ─── Events ───
 export { LogLevel, log, ping } from './events';
+// ─── Grants ───
+export { getGrantVector, grantRequest } from './grants';
 export type {
   PluginInfo as PluginInfoType,
   PluginRequirements as PluginRequirementsType,

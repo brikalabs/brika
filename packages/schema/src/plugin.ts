@@ -313,6 +313,13 @@ export const PluginPackageSchema = BasePackageJson.extend({
   permissions: z.optional(
     z.array(z.string()).describe('Permissions required by this plugin (e.g., "location")')
   ),
+  grants: z.optional(
+    z
+      .record(z.string(), z.unknown())
+      .describe(
+        'Grants requested by this plugin, keyed by reverse-DNS id (e.g. "dev.brika.net.fetch"). The value is the requested scope (e.g. { allow: ["api.example.com"] }). Replaces the legacy `permissions` array.'
+      )
+  ),
 });
 
 /**

@@ -1,4 +1,5 @@
 import { errors } from '@brika/errors';
+import type { GrantRegistry } from '@brika/grants';
 import type { Json, PluginChannel } from '@brika/ipc';
 import {
   blockEmit,
@@ -7,9 +8,11 @@ import {
   callAction,
   deletePluginSecret,
   emitSpark,
+  getGrantVector,
   getHubLocation,
   getHubTimezone,
   getPluginSecret,
+  grantRequest,
   hello,
   log,
   preferenceOptions,
@@ -40,6 +43,9 @@ import type { BrickFamily, Plugin, PluginHealth } from '@brika/plugin';
 import type { PluginPackageSchema } from '@brika/schema';
 import { getProcessMetrics } from '@/runtime/metrics';
 import type { HubLocation } from '@/runtime/state/state-store';
+import { dispatchGrantRequest } from './grants/dispatch';
+import { buildHubGrants } from './grants/registry-factory';
+import { buildVectorWithUserConsent } from './grants/vector';
 import { now } from './utils';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -127,6 +133,8 @@ export class PluginProcess {
   readonly #actions = new Set<string>();
   readonly #sparkSubscriptions = new Map<string, () => void>(); // subscriptionId -> unsubscribe
   #stopped = false;
+  #grants: GrantRegistry | undefined;
+  readonly #lifetimeAbort = new AbortController();
 
   constructor(
     channel: PluginChannel,
@@ -420,6 +428,9 @@ export class PluginProcess {
       this.#heartbeat = undefined;
     }
 
+    // Cancel any in-flight grant handlers via the lifetime abort signal.
+    this.#lifetimeAbort.abort(new Error('Plugin stopped'));
+
     // Clean up all spark subscriptions
     for (const unsubscribe of this.#sparkSubscriptions.values()) {
       unsubscribe();
@@ -593,6 +604,65 @@ export class PluginProcess {
       const deleted = await this.callbacks.onDeletePluginSecret(this.name, key);
       return { deleted };
     });
+
+    this.#channel.implement(getGrantVector, () => {
+      // Wire-strip: `scope` lives only on the hub-side vector (we
+      // re-fetch it at dispatch). Plugin code has no need for it, and
+      // omitting it shrinks the surface a compromised plugin can
+      // introspect. See packages/ipc/src/contract/grants.ts.
+      const vector = this.#buildCurrentVector();
+      return {
+        grants: vector.grants.map((g) => ({
+          id: g.id,
+          ctxPath: g.ctxPath,
+        })),
+      };
+    });
+
+    // grant.request — thin wire wrapper around the pure dispatchGrantRequest.
+    // Pure function lives in `grants/dispatch.ts` so the watchdog +
+    // jitter + vector-lookup branch is unit-testable without an IPC
+    // channel; see `grants/__tests__/dispatch.test.ts`.
+    this.#channel.implement(grantRequest, ({ id, args }) =>
+      dispatchGrantRequest(
+        {
+          registry: this.#getGrantRegistry(),
+          buildVector: () => this.#buildCurrentVector(),
+          pluginUid: this.uid,
+          pluginRoot: this.rootDirectory,
+          log: (level, message) => this.callbacks.onLog(level, message),
+          lifetimeSignal: this.#lifetimeAbort.signal,
+        },
+        { id, args }
+      )
+    );
+  }
+
+  /**
+   * Recompute this plugin's vector now from the structured `grants` map
+   * (preferred) or the legacy `permissions` array (fallback during the
+   * StateStore migration window).
+   *
+   * Recomputed each call so a permission edit is picked up before the next
+   * dispatch — cheap because the registry itself is built once.
+   */
+  #buildCurrentVector() {
+    return buildVectorWithUserConsent(
+      this.#getGrantRegistry(),
+      this.metadata.grants,
+      this.callbacks.onGetGrantedPermissions(this.name),
+      (id, message) => this.callbacks.onLog('warn', `grant "${id}" dropped from vector: ${message}`)
+    );
+  }
+
+  #getGrantRegistry(): GrantRegistry {
+    if (this.#grants === undefined) {
+      this.#grants = buildHubGrants({
+        // net.fetch — wire to the host runtime's fetch
+        fetch: (input, init) => globalThis.fetch(input, init),
+      });
+    }
+    return this.#grants;
   }
 
   #requirePermission(permission: Permission): void {

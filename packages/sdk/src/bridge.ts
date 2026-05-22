@@ -9,6 +9,7 @@
  * The hub prelude (which has access to @brika/ipc) implements this interface.
  */
 
+import type { Channel } from '@brika/ipc';
 import type {
   HubLocation,
   Json,
@@ -56,8 +57,15 @@ export interface PluginManifest {
 export interface PreludeBridge {
   readonly [PRELUDE_BRAND]: true;
 
+  /**
+   * Raw IPC channel the prelude built. SDK helpers (e.g. the typed `ctx`
+   * Proxy in `./ctx.ts`) read this to send grant.request RPCs directly
+   * instead of going through a hand-rolled per-method bridge call.
+   */
+  readonly channel: Channel;
+
   // -- System --
-  start(): void;
+  start(): void | Promise<void>;
   log(level: LogLevel, message: string, meta?: Record<string, Json>): void;
 
   // -- Manifest --

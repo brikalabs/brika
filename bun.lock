@@ -64,6 +64,7 @@
         "@brika/di": "workspace:*",
         "@brika/errors": "workspace:*",
         "@brika/events": "workspace:*",
+        "@brika/grants": "workspace:*",
         "@brika/http": "workspace:*",
         "@brika/i18n": "workspace:*",
         "@brika/ipc": "workspace:*",
@@ -128,6 +129,7 @@
         "@brika/clay": "^0.1.0",
         "@brika/errors": "workspace:*",
         "@brika/i18n": "workspace:*",
+        "@brika/ipc": "workspace:*",
         "@brika/permissions": "workspace:*",
         "@brika/plugin": "workspace:*",
         "@brika/registry": "workspace:*",
@@ -371,6 +373,17 @@
         "@brika/serializable": "workspace:*",
       },
     },
+    "packages/grants": {
+      "name": "@brika/grants",
+      "version": "0.3.1",
+      "dependencies": {
+        "@brika/errors": "workspace:*",
+        "zod": "^4.3.4",
+      },
+      "devDependencies": {
+        "@types/bun": "^1.3.9",
+      },
+    },
     "packages/http": {
       "name": "@brika/http",
       "version": "0.3.1",
@@ -540,6 +553,7 @@
       },
       "dependencies": {
         "@brika/errors": "workspace:*",
+        "@brika/grants": "workspace:*",
         "@brika/ipc": "workspace:*",
         "zod": "^4.3.4",
       },
@@ -817,6 +831,8 @@
     "@brika/events": ["@brika/events@workspace:packages/events"],
 
     "@brika/flow": ["@brika/flow@workspace:packages/flow"],
+
+    "@brika/grants": ["@brika/grants@workspace:packages/grants"],
 
     "@brika/http": ["@brika/http@workspace:packages/http"],
 

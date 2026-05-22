@@ -205,6 +205,23 @@ export type { PluginManifest, PreludeBridge } from './bridge';
 export { PRELUDE_BRAND } from './bridge';
 
 // ─────────────────────────────────────────────────────────────────────────────
+// ctx — typed grant context (the new chokepoint for every host call)
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Side-effect import: grant modules augment the `Ctx` interface, which
+// the bare `./grants/index` re-export wouldn't trigger on its own.
+import './grants';
+
+export type { Ctx } from './ctx';
+// `installVector` / `readInjectedVector` / `GRANTS_BRAND` / `buildCtx`
+// are intentionally NOT re-exported from the SDK barrel — they are
+// prelude-internal (the prelude imports them from `@brika/sdk/ctx`).
+// Re-exporting would let plugin code install a forged vector at module
+// load time, defeating the realm-lockdown gate. The next sandbox PR
+// will harden this further with a closure-private write-key.
+export { ctx } from './ctx';
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Errors
 // ─────────────────────────────────────────────────────────────────────────────
 

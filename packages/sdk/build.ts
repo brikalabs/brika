@@ -15,6 +15,8 @@ const result = await Bun.build({
     './src/actions.ts',
     './src/bridge.ts',
     './src/brick-views.ts',
+    './src/ctx.ts',
+    './src/grants/index.ts',
     './src/sparks.ts',
     './src/lifecycle.ts',
     './src/storage.ts',

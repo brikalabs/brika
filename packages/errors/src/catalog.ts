@@ -28,7 +28,7 @@ import { z } from 'zod';
 export const ERROR_SEVERITIES = ['info', 'warning', 'error', 'fatal'] as const;
 export type ErrorSeverity = (typeof ERROR_SEVERITIES)[number];
 
-export const ERROR_CATEGORIES = ['core', 'manifest', 'workflow'] as const;
+export const ERROR_CATEGORIES = ['core', 'manifest', 'workflow', 'grants'] as const;
 export type ErrorCategory = (typeof ERROR_CATEGORIES)[number];
 
 const TYPE_BASE = 'https://brika.dev/errors/';
@@ -62,6 +62,20 @@ function entry<S extends DataSchema | undefined>(e: {
   i18nKey?: string;
   developerHint?: string;
   data: S;
+  /**
+   * Schema describing the subset of `data` that's safe to expose across
+   * trust boundaries (IPC → plugin, HTTP → API consumer). When set,
+   * `BrikaError.toWire()` parses the full data through this schema and
+   * emits only the parsed result; the original `data` stays in
+   * hub-side logs.
+   *
+   * Used to hide hub state from a compromised plugin — e.g.
+   * `NET_HOST_NOT_ALLOWED` keeps `host` public but redacts the operator's
+   * full allow-list, so a denied call doesn't leak system config.
+   *
+   * Omit when the entire `data` payload is already plugin-safe.
+   */
+  publicDataShape?: DataSchema;
   message: (data: S extends DataSchema ? z.infer<S> : undefined) => string;
 }) {
   return e;
@@ -362,6 +376,94 @@ export const ErrorCatalog = {
     data: undefined,
     message: () => 'Block has input ports but no incoming connections.',
   }),
+
+  // ─── grants ────────────────────────────────────────────────────────────
+  // Codes thrown by @brika/grants registry. Plugin code sees them as
+  // `BrikaError` rejections from `ctx.foo.bar(args)` calls.
+  ALREADY_REGISTERED: entry({
+    title: 'Grant already registered',
+    description: 'A grant with this id was registered twice on the hub.',
+    typeUri: `${TYPE_BASE}grants/already-registered`,
+    status: 500,
+    severity: 'error',
+    category: 'grants',
+    retryable: false,
+    transient: false,
+    developerHint:
+      'This is a hub-side bug: two grant specs share the same id. Audit the registry-factory.',
+    data: z.object({ grantId: z.string() }),
+    message: (data) => `Grant "${data.grantId}" was already registered.`,
+  }),
+  NOT_REGISTERED: entry({
+    title: 'Grant not registered',
+    description: 'Dispatched against a grant id the hub does not know.',
+    typeUri: `${TYPE_BASE}grants/not-registered`,
+    status: 404,
+    severity: 'error',
+    category: 'grants',
+    retryable: false,
+    transient: false,
+    developerHint:
+      'Either a typo in `ctx.<path>` / the manifest grants map, or the plugin is built against a newer SDK than the hub supports.',
+    data: z.object({ grantId: z.string() }),
+    message: (data) => `Grant "${data.grantId}" is not registered with this hub.`,
+  }),
+  INVALID_OUTPUT: entry({
+    title: 'Grant output failed schema validation',
+    description: 'A grant handler returned a value that does not match its declared result schema.',
+    typeUri: `${TYPE_BASE}grants/invalid-output`,
+    status: 500,
+    severity: 'error',
+    category: 'grants',
+    retryable: false,
+    transient: false,
+    developerHint:
+      'This is a hub-side programming error: the handler returned data the spec rejects. Audit the handler implementation.',
+    data: z.object({ grantId: z.string() }),
+    message: (data) => `Handler for "${data.grantId}" returned an invalid result.`,
+  }),
+  INVALID_SCOPE: entry({
+    title: 'Grant scope failed schema validation',
+    description: 'The permitted scope for this grant does not match the spec schema.',
+    typeUri: `${TYPE_BASE}grants/invalid-scope`,
+    status: 500,
+    severity: 'error',
+    category: 'grants',
+    retryable: false,
+    transient: false,
+    developerHint:
+      'The scope stored in StateStore drifted from the schema, or a malformed scope reached dispatch. The grant was dropped from the vector.',
+    data: z.object({ grantId: z.string() }),
+    message: (data) => `Invalid scope for grant "${data.grantId}".`,
+  }),
+
+  // ─── net ──────────────────────────────────────────────────────────────
+  /**
+   * Per-grant denial when a `ctx.net.fetch` call targets a host outside
+   * the permitted allow-list. `publicDataShape` redacts the full allow
+   * list — the hub-side log keeps it, the plugin only sees its own
+   * forbidden host so it can fix the call site without learning what
+   * else the operator permitted.
+   */
+  NET_HOST_NOT_ALLOWED: entry({
+    title: 'Network host not allowed',
+    description: "A net.fetch call targeted a host outside the plugin's allow-list.",
+    typeUri: `${TYPE_BASE}grants/net-host-not-allowed`,
+    status: 403,
+    severity: 'error',
+    category: 'grants',
+    retryable: false,
+    transient: false,
+    developerHint:
+      "Add the host to the `allow` array under your manifest's `dev.brika.net.fetch` grant, then ask the operator to re-grant.",
+    data: z.object({
+      host: z.string(),
+      // Full operator allow-list — kept in hub logs only.
+      allow: z.array(z.string()),
+    }),
+    publicDataShape: z.object({ host: z.string() }),
+    message: (data) => `net.fetch: host "${data.host}" is not in this plugin's allow list.`,
+  }),
 } as const;
 
 function formatTimeoutMessage(data: {
@@ -409,6 +511,8 @@ export interface CatalogEntry {
   readonly i18nKey?: string;
   readonly developerHint?: string;
   readonly data?: DataSchema;
+  /** See `entry({ publicDataShape })` — redaction schema for cross-boundary wire payloads. */
+  readonly publicDataShape?: DataSchema;
   message(data: Record<string, unknown> | undefined): string;
 }
 

@@ -39,4 +39,9 @@ describe('context module', () => {
     const mod = await import('../context');
     expect(typeof mod.getContext).toBe('function');
   });
+
+  // Note: Context.start() coverage is excluded from sonar (thin loader
+  // around setup modules; the start() body is exercised end-to-end by
+  // the prelude integration tests). Per-module setup tests live in
+  // __tests__/context/*.test.ts.
 });

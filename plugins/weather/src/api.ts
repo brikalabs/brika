@@ -1,3 +1,4 @@
+import { ctx } from '@brika/sdk';
 import type { CurrentWeather, DailyForecast, GeoLocation, HourlyForecast } from './types';
 
 const GEO_BASE = 'https://geocoding-api.open-meteo.com/v1';
@@ -15,11 +16,11 @@ interface GeoResult {
 
 export async function geocodeCity(name: string): Promise<GeoLocation | null> {
   const url = `${GEO_BASE}/search?name=${encodeURIComponent(name)}&count=1&language=en`;
-  const res = await fetch(url);
-  if (!res.ok) return null;
+  const res = await ctx.net.fetch({ url, method: 'GET' });
+  if (res.status < 200 || res.status >= 300) return null;
 
-  const data = (await res.json()) as { results?: GeoResult[] };
-  const first = data.results?.[0];
+  const parsed = JSON.parse(res.body) as { results?: GeoResult[] };
+  const first = parsed.results?.[0];
   if (!first) return null;
 
   return {
@@ -81,10 +82,13 @@ export async function fetchWeather(
     forecast_days: '7',
   });
 
-  const res = await fetch(`${WEATHER_BASE}/forecast?${params}`);
-  if (!res.ok) return null;
+  const res = await ctx.net.fetch({
+    url: `${WEATHER_BASE}/forecast?${params}`,
+    method: 'GET',
+  });
+  if (res.status < 200 || res.status >= 300) return null;
 
-  const data = (await res.json()) as ForecastResponse;
+  const data = JSON.parse(res.body) as ForecastResponse;
 
   const current: CurrentWeather = {
     temperature: data.current.temperature_2m,
