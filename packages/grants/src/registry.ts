@@ -36,6 +36,7 @@ import type {
  */
 export type GrantErrorCode =
   | 'NOT_REGISTERED'
+  | 'ALREADY_REGISTERED'
   | 'INVALID_INPUT'
   | 'INVALID_OUTPUT'
   | 'INVALID_SCOPE'
@@ -75,7 +76,7 @@ export class GrantRegistry {
   register(grant: AnyGrant): void {
     if (this.#grants.has(grant.spec.id)) {
       throw new GrantError(
-        'NOT_REGISTERED',
+        'ALREADY_REGISTERED',
         `Grant already registered: ${grant.spec.id}`,
         grant.spec.id
       );

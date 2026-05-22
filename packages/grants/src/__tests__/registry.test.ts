@@ -53,10 +53,19 @@ describe('GrantRegistry', () => {
     expect(reg.get('missing')).toBeUndefined();
   });
 
-  test('rejects duplicate registration', () => {
+  test('rejects duplicate registration with ALREADY_REGISTERED code', () => {
     const reg = new GrantRegistry();
     reg.register(ping);
-    expect(() => reg.register(ping)).toThrow(GrantError);
+    let thrown: GrantError | undefined;
+    try {
+      reg.register(ping);
+    } catch (e) {
+      if (e instanceof GrantError) {
+        thrown = e;
+      }
+    }
+    expect(thrown).toBeInstanceOf(GrantError);
+    expect(thrown?.code).toBe('ALREADY_REGISTERED');
   });
 
   test('dispatch returns parsed result on happy path', async () => {

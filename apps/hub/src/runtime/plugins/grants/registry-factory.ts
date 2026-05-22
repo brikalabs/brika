@@ -13,7 +13,10 @@
 import { GrantRegistry } from '@brika/grants';
 import { buildNetGrants, type NetCallbacks } from './net';
 
-export interface HubGrantCallbacks extends NetCallbacks {}
+// Type alias instead of empty `interface extends` so biome's no-empty-
+// interface lint doesn't flag it. Extend with `& XyzCallbacks` as more
+// grant families land.
+export type HubGrantCallbacks = NetCallbacks;
 
 /**
  * Create a fresh registry pre-populated with every hub-owned grant.

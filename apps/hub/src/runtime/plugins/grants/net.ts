@@ -20,16 +20,23 @@ const MAX_BACKOFF_MS = 30_000;
 const NON_IDEMPOTENT_METHODS = new Set(['POST', 'PATCH']);
 const RETRYABLE_STATUS = new Set([408, 425, 429, 500, 502, 503, 504]);
 
-/** Match a host against a pattern: literal or one-level `*.suffix` wildcard. */
+/**
+ * Match a host against a pattern: literal or one-level `*.suffix` wildcard.
+ * Both sides are lower-cased — DNS is case-insensitive (RFC 4343), and
+ * `URL.hostname` already lower-cases; we mirror that for the pattern so an
+ * operator typing `Api.Example.com` in the allow-list still works.
+ */
 export function matchesHostPattern(host: string, pattern: string): boolean {
-  if (pattern === host) {
+  const h = host.toLowerCase();
+  const p = pattern.toLowerCase();
+  if (p === h) {
     return true;
   }
-  if (pattern.startsWith('*.')) {
-    const suffix = pattern.slice(2);
+  if (p.startsWith('*.')) {
+    const suffix = p.slice(2);
     // `*.googleapis.com` matches `foo.googleapis.com` but NOT the bare
     // `googleapis.com` (which must be allow-listed explicitly).
-    return host.endsWith(`.${suffix}`);
+    return h.endsWith(`.${suffix}`);
   }
   return false;
 }
@@ -45,11 +52,16 @@ export function isHostAllowed(host: string, allow: ReadonlyArray<string>): boole
 
 /**
  * Parse a Retry-After header (RFC 7231): delta-seconds OR HTTP-date.
- * Returns the delay in milliseconds, clamped to [0, max].
+ * Returns the delay in milliseconds clamped to [0, maxMs], or null on
+ * unparseable input.
+ *
+ * Returning null on garbage matters: a hostile server sending
+ * `Retry-After: garbage` must not trigger a 0ms fast-spin retry loop.
+ * The caller falls back to the exponential backoff in that case.
  */
-export function parseRetryAfter(value: string | null | undefined, maxMs: number): number {
+export function parseRetryAfter(value: string | null | undefined, maxMs: number): number | null {
   if (!value) {
-    return 0;
+    return null;
   }
   const seconds = Number(value);
   if (Number.isFinite(seconds) && seconds >= 0) {
@@ -59,7 +71,7 @@ export function parseRetryAfter(value: string | null | undefined, maxMs: number)
   if (Number.isFinite(date)) {
     return Math.min(Math.max(date - Date.now(), 0), maxMs);
   }
-  return 0;
+  return null;
 }
 
 /** Jitter a delay by ±25% to avoid thundering herds across coalesced clients. */
@@ -117,9 +129,13 @@ function shouldRetry(
     }
     if (retry.respectRetryAfter) {
       const headerValue = res.headers.get('Retry-After');
-      if (headerValue !== null) {
-        return parseRetryAfter(headerValue, MAX_BACKOFF_MS);
+      const headerDelay = parseRetryAfter(headerValue, MAX_BACKOFF_MS);
+      if (headerDelay !== null) {
+        return headerDelay;
       }
+      // Header was missing or unparseable — fall through to the
+      // exponential backoff below. Critical so a hostile server can't
+      // induce a fast-spin retry loop with `Retry-After: garbage`.
     }
     return jitter(baseBackoff);
   }
@@ -205,7 +221,10 @@ export function buildNetGrants(cb: NetCallbacks) {
   return [
     defineGrant(spec.spec, (ctx, args) => {
       const scope: NetScope = ctx.grantedScope;
-      const host = new URL(args.url).host;
+      // Use .hostname (excludes port) — allow-list patterns are bare host
+      // names. `.host` would include `:8443` and silently 403 every non-
+      // default port.
+      const host = new URL(args.url).hostname;
       if (!isHostAllowed(host, scope.allow)) {
         throw new BrikaError(
           'PERMISSION_DENIED',

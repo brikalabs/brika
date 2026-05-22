@@ -629,7 +629,10 @@ export class PluginProcess {
         log: (level, message) => this.callbacks.onLog(level, message),
         signal: this.#lifetimeAbort.signal,
       });
-      return { result: result as Json };
+      // `result` is `unknown`; the wire contract's `result` field is also
+      // `unknown` (per-grant schemas validate at the registry layer). No
+      // cast needed.
+      return { result };
     });
   }
 
@@ -644,8 +647,9 @@ export class PluginProcess {
   #buildCurrentVector() {
     return buildVectorWithUserConsent(
       this.#getGrantRegistry(),
-      (this.metadata as { grants?: Record<string, unknown> }).grants,
-      this.callbacks.onGetGrantedPermissions(this.name)
+      this.metadata.grants,
+      this.callbacks.onGetGrantedPermissions(this.name),
+      (id, message) => this.callbacks.onLog('warn', `grant "${id}" dropped from vector: ${message}`)
     );
   }
 

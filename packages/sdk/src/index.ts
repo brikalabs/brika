@@ -213,7 +213,13 @@ export { PRELUDE_BRAND } from './bridge';
 import './grants';
 
 export type { Ctx } from './ctx';
-export { buildCtx, ctx, GRANTS_BRAND, installVector, readInjectedVector } from './ctx';
+// `installVector` / `readInjectedVector` / `GRANTS_BRAND` / `buildCtx`
+// are intentionally NOT re-exported from the SDK barrel — they are
+// prelude-internal (the prelude imports them from `@brika/sdk/ctx`).
+// Re-exporting would let plugin code install a forged vector at module
+// load time, defeating the realm-lockdown gate. The next sandbox PR
+// will harden this further with a closure-private write-key.
+export { ctx } from './ctx';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Errors

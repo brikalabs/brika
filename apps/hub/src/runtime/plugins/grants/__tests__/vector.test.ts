@@ -76,16 +76,36 @@ describe('vector construction', () => {
     expect(v.grants).toEqual([]);
   });
 
-  test('buildVectorWithUserConsent: drops unknown grant ids silently', () => {
+  test('buildVectorWithUserConsent: drops unknown grant ids and notifies onInvalidScope', () => {
     const reg = buildHubGrants(stubCb);
+    const warnings: Array<{ id: string; message: string }> = [];
     const v = buildVectorWithUserConsent(
       reg,
       {
         'dev.brika.net.fetch': { allow: ['x'] },
         'com.unknown.foo': { something: true },
       },
-      ['net']
+      ['net'],
+      (id, message) => warnings.push({ id, message })
     );
     expect(v.grants.map((g) => g.id)).toEqual(['dev.brika.net.fetch']);
+    expect(warnings).toEqual([
+      { id: 'com.unknown.foo', message: 'unknown grant — not registered with the hub' },
+    ]);
+  });
+
+  test('buildVectorWithUserConsent: malformed scope is reported via onInvalidScope', () => {
+    const reg = buildHubGrants(stubCb);
+    const warnings: Array<{ id: string; message: string }> = [];
+    const v = buildVectorWithUserConsent(
+      reg,
+      // `allow` is a string, not array — fails NetScopeSchema
+      { 'dev.brika.net.fetch': { allow: 'not-an-array' } },
+      ['net'],
+      (id, message) => warnings.push({ id, message })
+    );
+    expect(v.grants).toEqual([]);
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]?.id).toBe('dev.brika.net.fetch');
   });
 });

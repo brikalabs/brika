@@ -155,9 +155,13 @@ const bridge = {
       const vector = await channel.call(getGrantVector, {});
       installVector(vector);
     } catch (e) {
-      log('warn', 'Failed to install grant vector; ctx.* calls will fail until retried', {
-        error: e instanceof Error ? e.message : String(e),
-      });
+      log(
+        'error',
+        'Failed to install grant vector — ctx.* calls will throw for this plugin process. Restart the plugin to retry.',
+        {
+          error: e instanceof Error ? e.message : String(e),
+        }
+      );
     }
     channel.send(ready, {});
   },

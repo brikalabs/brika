@@ -24,7 +24,7 @@
 import { BrikaError } from '@brika/errors';
 import type { GrantId, GrantVector } from '@brika/grants';
 import type { Channel } from '@brika/ipc';
-import { getGrantVector, grantRequest } from '@brika/ipc/contract';
+import { grantRequest } from '@brika/ipc/contract';
 import { PRELUDE_BRAND } from './bridge';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -156,10 +156,19 @@ export function readInjectedVector(): GrantVector {
 
 /**
  * Install a vector as `globalThis.__brika_grants`. Called by the prelude
- * at plugin spawn time; not part of the plugin-facing public API.
+ * at plugin spawn time; the prelude reaches this via `@brika/sdk/ctx`
+ * directly so plugin code (which imports from `@brika/sdk`) can't.
  *
- * The installed object is frozen and branded — plugin code cannot rebind
- * the global to a more permissive vector once installed.
+ * The installed object is frozen and locked via
+ * `Object.defineProperty(writable:false, configurable:false)`. A second
+ * install attempt throws a platform-native `TypeError` — by design, so
+ * the prelude crashes loudly rather than silently overwriting.
+ *
+ * The brand symbol is `Symbol.for('brika.grants.brand')`, which is
+ * reachable to plugin code via `Symbol.for` — it is a *decoration* used to
+ * distinguish a real injection from accidental writes, NOT a security
+ * mechanism. The real lock is `defineProperty(writable:false)` plus the
+ * fact that this function is only exported from a non-public subpath.
  */
 export function installVector(vector: GrantVector): void {
   if (!vector || typeof vector !== 'object' || !Array.isArray(vector.grants)) {
@@ -168,14 +177,14 @@ export function installVector(vector: GrantVector): void {
     );
   }
   const g = globalThis as unknown as GrantsGlobal;
-  if (g.__brika_grants !== undefined) {
-    throw new Error('Grant vector already installed — refusing to overwrite.');
-  }
   const branded: InjectedVector = Object.freeze({
     ...vector,
     grants: Object.freeze([...vector.grants]),
     [GRANTS_BRAND]: true as const,
   });
+  // Throws a TypeError if `__brika_grants` was already locked. We do NOT
+  // swallow that — the prelude SHOULD crash if something installed a
+  // vector before it.
   Object.defineProperty(g, '__brika_grants', {
     value: branded,
     writable: false,

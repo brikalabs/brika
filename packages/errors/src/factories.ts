@@ -100,6 +100,19 @@ export const errors = {
 
   manifestMissingMain: (data: DataForCode<'MANIFEST_MISSING_MAIN'>, opts?: FactoryOpts) =>
     buildError<'MANIFEST_MISSING_MAIN'>('MANIFEST_MISSING_MAIN', data, opts),
+
+  // ─── grants ──────────────────────────────────────────────────────────
+  alreadyRegistered: (data: DataForCode<'ALREADY_REGISTERED'>, opts?: FactoryOpts) =>
+    buildError<'ALREADY_REGISTERED'>('ALREADY_REGISTERED', data, opts),
+
+  notRegistered: (data: DataForCode<'NOT_REGISTERED'>, opts?: FactoryOpts) =>
+    buildError<'NOT_REGISTERED'>('NOT_REGISTERED', data, opts),
+
+  invalidOutput: (data: DataForCode<'INVALID_OUTPUT'>, opts?: FactoryOpts) =>
+    buildError<'INVALID_OUTPUT'>('INVALID_OUTPUT', data, opts),
+
+  invalidScope: (data: DataForCode<'INVALID_SCOPE'>, opts?: FactoryOpts) =>
+    buildError<'INVALID_SCOPE'>('INVALID_SCOPE', data, opts),
 } as const;
 
 // ─── Catalog completeness guard ────────────────────────────────────────────
