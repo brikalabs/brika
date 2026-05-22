@@ -145,6 +145,28 @@ function shouldRetry(
   return null;
 }
 
+/**
+ * Sleep that races against an AbortSignal — important for retry backoff.
+ * Without this, a plugin shutdown while a 30s backoff is pending would
+ * have to wait the full delay before the abort takes effect.
+ */
+async function abortableSleep(ms: number, signal: AbortSignal): Promise<void> {
+  if (signal.aborted) {
+    throw signal.reason ?? new Error('aborted');
+  }
+  await new Promise<void>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      signal.removeEventListener('abort', onAbort);
+      resolve();
+    }, ms);
+    const onAbort = () => {
+      clearTimeout(timer);
+      reject(signal.reason ?? new Error('aborted'));
+    };
+    signal.addEventListener('abort', onAbort, { once: true });
+  });
+}
+
 async function performFetch(
   cb: NetCallbacks,
   args: FetchArgs,
@@ -159,24 +181,17 @@ async function performFetch(
 
   let lastError: unknown;
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    const controller = new AbortController();
-    // Forward the hub-side watchdog abort to this attempt's controller.
-    const onParentAbort = () => controller.abort(parentSignal.reason);
-    if (parentSignal.aborted) {
-      controller.abort(parentSignal.reason);
-    } else {
-      parentSignal.addEventListener('abort', onParentAbort, { once: true });
-    }
-    const timer = setTimeout(
-      () => controller.abort(new Error(`net.fetch: timed out after ${timeoutMs}ms`)),
-      timeoutMs
-    );
+    // `AbortSignal.any` plus `AbortSignal.timeout` fans out cleanly: the
+    // composed signal is GC'd with the dispatch (no listener pile-up on
+    // the long-lived `parentSignal` under high concurrency), and the
+    // per-attempt timeout signal is auto-managed by the runtime.
+    const signal = AbortSignal.any([parentSignal, AbortSignal.timeout(timeoutMs)]);
     try {
       const res = await cb.fetch(args.url, {
         method: args.method,
         headers: baseHeaders,
         body: args.body,
-        signal: controller.signal,
+        signal,
       });
       const delay = shouldRetry(res, undefined, attempt, args);
       if (delay === null) {
@@ -194,17 +209,14 @@ async function performFetch(
       }
       // Discard the response body so we don't leak the connection.
       await res.text().catch(() => undefined);
-      await Bun.sleep(delay);
+      await abortableSleep(delay, parentSignal);
     } catch (e) {
       lastError = e;
       const delay = shouldRetry(null, e, attempt, args);
       if (delay === null) {
         throw e;
       }
-      await Bun.sleep(delay);
-    } finally {
-      clearTimeout(timer);
-      parentSignal.removeEventListener('abort', onParentAbort);
+      await abortableSleep(delay, parentSignal);
     }
   }
   throw lastError ?? new Error('net.fetch: retry attempts exhausted');

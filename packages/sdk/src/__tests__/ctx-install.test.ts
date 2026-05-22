@@ -77,8 +77,12 @@ describe('installVector', () => {
     const out = await runSnippet(`
       installVector({ grants: [{ id: 'real', ctxPath: 'real' }] });
       // In non-strict eval this silently fails; in strict it throws.
-      try { (globalThis as any).__brika_grants = { grants: [{ id: 'forged', ctxPath: 'forged' }] }; }
-      catch { /* strict mode TypeError — also fine */ }
+      // Reflect.set returns false on non-writable target instead of
+      // throwing — gives us a uniform "no-op" assertion path regardless
+      // of strict mode.
+      Reflect.set(globalThis, '__brika_grants', {
+        grants: [{ id: 'forged', ctxPath: 'forged' }],
+      });
       const v = readInjectedVector();
       console.log('IDS:' + v.grants.map(g => g.id).join(','));
     `);
@@ -98,7 +102,7 @@ describe('installVector', () => {
 
   test('installVector rejects non-vector inputs with a clear TypeError', async () => {
     const out = await runSnippet(`
-      installVector(null as any);
+      installVector(null);
       console.log('SHOULD_NOT_REACH');
     `);
     expect(out.stdout).toMatch(/CAUGHT:.*installVector: expected/);

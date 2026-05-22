@@ -605,12 +605,15 @@ export class PluginProcess {
     });
 
     this.#channel.implement(getGrantVector, () => {
+      // Wire-strip: `scope` lives only on the hub-side vector (we
+      // re-fetch it at dispatch). Plugin code has no need for it, and
+      // omitting it shrinks the surface a compromised plugin can
+      // introspect. See packages/ipc/src/contract/grants.ts.
       const vector = this.#buildCurrentVector();
       return {
         grants: vector.grants.map((g) => ({
           id: g.id,
           ctxPath: g.ctxPath,
-          scope: g.scope,
         })),
       };
     });
@@ -622,6 +625,10 @@ export class PluginProcess {
       if (!entry) {
         throw errors.permissionDenied({ permission: id });
       }
+      // TODO(sandbox-PR2): wrap dispatch in AbortSignal.timeout(spec.timeoutMs
+      // ?? 60_000) so a stuck handler can be killed instead of holding the
+      // RPC slot indefinitely. Per-spec timeout + stuck-call counter →
+      // SIGTERM lives in §6 of the sandbox plan.
       const result = await reg.dispatch(id, args, {
         pluginUid: this.uid,
         pluginRoot: this.rootDirectory,

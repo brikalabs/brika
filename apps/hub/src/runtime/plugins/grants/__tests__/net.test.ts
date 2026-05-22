@@ -24,9 +24,14 @@ function mockFetcher(handler: (req: FetchCall) => Response | Promise<Response>) 
   };
 }
 
+// Mock plugin root — never written to, just satisfies the
+// GrantHandlerContext shape. Use a clearly-synthetic non-/tmp path so
+// sonar S5443 (writable directory) doesn't false-positive.
+const MOCK_PLUGIN_ROOT = '/nonexistent/brika-net-test-plugin';
+
 const handlerCtx = (scope: unknown) => ({
   pluginUid: 'plug-1',
-  pluginRoot: '/tmp/plugin',
+  pluginRoot: MOCK_PLUGIN_ROOT,
   grantedScope: scope,
   log: () => {},
   signal: new AbortController().signal,
@@ -99,6 +104,56 @@ describe('hub net.fetch handler', () => {
     }
     expect(thrown?.code).toBe('PERMISSION_DENIED');
     expect(fetcher.calls).toHaveLength(1);
+  });
+
+  test('rejects body on GET/HEAD via the schema (single-flight collision protection)', async () => {
+    const fetcher = mockFetcher(() => new Response('', { status: 200 }));
+    const reg = buildHubGrants(fetcher);
+
+    let thrown: BrikaError | undefined;
+    try {
+      await reg.dispatch(
+        'dev.brika.net.fetch',
+        { url: 'https://api.example.com/x', method: 'GET', body: 'should-not-be-here' },
+        handlerCtx({ allow: ['api.example.com'] })
+      );
+    } catch (e) {
+      if (e instanceof BrikaError) {
+        thrown = e;
+      }
+    }
+    expect(thrown?.code).toBe('INVALID_INPUT');
+    expect(fetcher.calls).toHaveLength(0);
+  });
+
+  test('parent abort short-circuits retry backoff', async () => {
+    // Force a retryable 503 so performFetch enters the backoff path,
+    // then abort the parent signal — the sleep must race the signal and
+    // bail out instead of waiting the full delay.
+    const fetcher = mockFetcher(() => new Response('', { status: 503 }));
+    const reg = buildHubGrants(fetcher);
+
+    const controller = new AbortController();
+    setTimeout(() => controller.abort(new Error('test abort')), 50);
+    const start = Date.now();
+    let thrown: unknown;
+    try {
+      await reg.dispatch(
+        'dev.brika.net.fetch',
+        {
+          url: 'https://api.example.com/x',
+          method: 'GET',
+          retry: { maxAttempts: 3, respectRetryAfter: false, backoffMs: 60_000 },
+        },
+        { ...handlerCtx({ allow: ['api.example.com'] }), signal: controller.signal }
+      );
+    } catch (e) {
+      thrown = e;
+    }
+    const elapsed = Date.now() - start;
+    expect(thrown).toBeDefined();
+    // If the abort didn't race the sleep, this would take ~60s.
+    expect(elapsed).toBeLessThan(5_000);
   });
 
   test('invalid scope is caught by the registry defensive re-parse', async () => {

@@ -16,12 +16,16 @@ import { rpc } from '../define';
 
 const Json: z.ZodType<unknown> = z.unknown();
 
-// ─── Grant entry shape (must mirror @brika/grants `GrantEntry`) ─────────────
+// ─── Grant entry shape ──────────────────────────────────────────────────────
+// Note: the hub-side `GrantEntry` carries `scope`, but the plugin process
+// has no reason to read its own scope (the hub re-fetches it from its
+// vector at dispatch time). We deliberately omit `scope` from the wire
+// payload so a compromised plugin can't introspect its scope without an
+// extra round-trip — a minor surface reduction under the RCE threat model.
 
 const GrantEntryWire = z.object({
   id: z.string(),
   ctxPath: z.string(),
-  scope: Json.optional(),
 });
 
 // ─── RPCs ────────────────────────────────────────────────────────────────────

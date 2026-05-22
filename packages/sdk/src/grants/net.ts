@@ -18,27 +18,38 @@ import { z } from 'zod';
 
 const HttpMethod = z.enum(['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']);
 
-export const FetchArgsSchema = z.object({
-  url: z.url(),
-  method: HttpMethod.default('GET'),
-  headers: z.record(z.string(), z.string()).optional(),
-  body: z.string().optional(),
-  timeoutMs: z
-    .number()
-    .int()
-    .positive()
-    .max(5 * 60_000)
-    .optional(),
-  singleFlight: z.boolean().optional(),
-  idempotencyKey: z.string().max(256).optional(),
-  retry: z
-    .object({
-      maxAttempts: z.number().int().min(1).max(10),
-      respectRetryAfter: z.boolean().default(true),
-      backoffMs: z.number().int().min(0).max(60_000),
-    })
-    .optional(),
-});
+const BODYLESS_METHODS = new Set(['GET', 'HEAD']);
+
+export const FetchArgsSchema = z
+  .object({
+    url: z.url(),
+    method: HttpMethod.default('GET'),
+    headers: z.record(z.string(), z.string()).optional(),
+    body: z.string().optional(),
+    timeoutMs: z
+      .number()
+      .int()
+      .positive()
+      .max(5 * 60_000)
+      .optional(),
+    singleFlight: z.boolean().optional(),
+    idempotencyKey: z.string().max(256).optional(),
+    retry: z
+      .object({
+        maxAttempts: z.number().int().min(1).max(10),
+        respectRetryAfter: z.boolean().default(true),
+        backoffMs: z.number().int().min(0).max(60_000),
+      })
+      .optional(),
+  })
+  // Refuse `body` on GET / HEAD: RFC 7231 §4.3.1-2 says either method has no
+  // defined semantics for a payload, and accepting one creates a real bug —
+  // the single-flight cache keys on method + url + headers, so two GETs
+  // with different bodies would coalesce and share a response.
+  .refine((args) => !(args.body !== undefined && BODYLESS_METHODS.has(args.method)), {
+    error: '`body` is not allowed on GET / HEAD requests',
+    path: ['body'],
+  });
 
 export const FetchResultSchema = z.object({
   status: z.number().int(),

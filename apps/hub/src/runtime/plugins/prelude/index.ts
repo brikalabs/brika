@@ -155,13 +155,18 @@ const bridge = {
       const vector = await channel.call(getGrantVector, {});
       installVector(vector);
     } catch (e) {
+      // Vector install failure is fatal: if we send `ready` anyway, the
+      // plugin looks healthy but every `ctx.*` call throws the unrelated
+      // "not installed yet" diagnostic, which misleads debugging. Refuse
+      // to come up — the hub's restart-policy decides what happens next.
       log(
         'error',
-        'Failed to install grant vector — ctx.* calls will throw for this plugin process. Restart the plugin to retry.',
+        'Failed to install grant vector — plugin cannot start. Restart the plugin to retry.',
         {
           error: e instanceof Error ? e.message : String(e),
         }
       );
+      process.exit(78); // EX_CONFIG (sysexits.h) — config/setup failure
     }
     channel.send(ready, {});
   },
