@@ -205,6 +205,17 @@ export type { PluginManifest, PreludeBridge } from './bridge';
 export { PRELUDE_BRAND } from './bridge';
 
 // ─────────────────────────────────────────────────────────────────────────────
+// ctx — typed grant context (the new chokepoint for every host call)
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Side-effect import: grant modules augment the `Ctx` interface, which
+// the bare `./grants/index` re-export wouldn't trigger on its own.
+import './grants';
+
+export type { Ctx } from './ctx';
+export { buildCtx, ctx, GRANTS_BRAND, installVector, readInjectedVector } from './ctx';
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Errors
 // ─────────────────────────────────────────────────────────────────────────────
 

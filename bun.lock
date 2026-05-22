@@ -552,6 +552,7 @@
       },
       "dependencies": {
         "@brika/errors": "workspace:*",
+        "@brika/grants": "workspace:*",
         "@brika/ipc": "workspace:*",
         "zod": "^4.3.4",
       },

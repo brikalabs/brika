@@ -55,6 +55,8 @@ export {
 export type { HubLocation as HubLocationType } from './permissions';
 // ─── Permissions ───
 export { getHubLocation, getHubTimezone, HubLocation, setTimezone } from './permissions';
+// ─── Grants ───
+export { getGrantVector, grantRequest } from './grants';
 export type {
   RouteMethod as RouteMethodType,
   RouteRequest as RouteRequestType,

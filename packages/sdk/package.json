@@ -56,6 +56,14 @@
       "types": "./dist/bridge.d.ts",
       "default": "./dist/bridge.js"
     },
+    "./ctx": {
+      "types": "./dist/ctx.d.ts",
+      "default": "./dist/ctx.js"
+    },
+    "./grants": {
+      "types": "./dist/grants/index.d.ts",
+      "default": "./dist/grants/index.js"
+    },
     "./actions": {
       "types": "./dist/actions.d.ts",
       "default": "./dist/actions.js"
@@ -74,6 +82,7 @@
   },
   "dependencies": {
     "@brika/errors": "workspace:*",
+    "@brika/grants": "workspace:*",
     "@brika/ipc": "workspace:*",
     "zod": "^4.3.4"
   },
