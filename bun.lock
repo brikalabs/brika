@@ -64,6 +64,7 @@
         "@brika/di": "workspace:*",
         "@brika/errors": "workspace:*",
         "@brika/events": "workspace:*",
+        "@brika/grants": "workspace:*",
         "@brika/http": "workspace:*",
         "@brika/i18n": "workspace:*",
         "@brika/ipc": "workspace:*",

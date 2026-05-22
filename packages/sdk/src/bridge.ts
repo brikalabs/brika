@@ -65,7 +65,7 @@ export interface PreludeBridge {
   readonly channel: Channel;
 
   // -- System --
-  start(): void;
+  start(): void | Promise<void>;
   log(level: LogLevel, message: string, meta?: Record<string, Json>): void;
 
   // -- Manifest --

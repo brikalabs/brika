@@ -9,6 +9,9 @@ export const { PERMISSIONS, PERMISSION_LIST, isValidPermission, filterValidPermi
     secrets: {
       icon: 'key-round',
     },
+    net: {
+      icon: 'globe',
+    },
   });
 
 export type Permission = keyof typeof PERMISSIONS;

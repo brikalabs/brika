@@ -20,10 +20,12 @@
 
 import { Channel, type Json, type WireMessage } from '@brika/ipc';
 import { PRELUDE_BRAND, type PreludeBridge } from '@brika/sdk/bridge';
+import { installVector } from '@brika/sdk/ctx';
 
 type StopHandler = () => void | Promise<void>;
 
 import {
+  getGrantVector,
   hello,
   type LogLevelType,
   log as logMsg,
@@ -143,8 +145,20 @@ const bridge = {
   channel,
 
   // System
-  start() {
+  async start() {
     channel.send(hello, { plugin: { id: manifest.name, version: manifest.version } });
+    // Fetch and install the grant vector before reporting ready, so any
+    // ctx.foo.bar() call after this point sees the permitted set. The hub
+    // computes the vector from manifest + permits — see
+    // apps/hub/src/runtime/plugins/grants/vector.ts.
+    try {
+      const vector = await channel.call(getGrantVector, {});
+      installVector(vector);
+    } catch (e) {
+      log('warn', 'Failed to install grant vector; ctx.* calls will fail until retried', {
+        error: e instanceof Error ? e.message : String(e),
+      });
+    }
     channel.send(ready, {});
   },
   onStop(handler: StopHandler) {

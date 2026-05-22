@@ -35,6 +35,8 @@ export {
 export type { LogLevel as LogLevelType } from './events';
 // ─── Events ───
 export { LogLevel, log, ping } from './events';
+// ─── Grants ───
+export { getGrantVector, grantRequest } from './grants';
 export type {
   PluginInfo as PluginInfoType,
   PluginRequirements as PluginRequirementsType,
@@ -55,8 +57,6 @@ export {
 export type { HubLocation as HubLocationType } from './permissions';
 // ─── Permissions ───
 export { getHubLocation, getHubTimezone, HubLocation, setTimezone } from './permissions';
-// ─── Grants ───
-export { getGrantVector, grantRequest } from './grants';
 export type {
   RouteMethod as RouteMethodType,
   RouteRequest as RouteRequestType,
