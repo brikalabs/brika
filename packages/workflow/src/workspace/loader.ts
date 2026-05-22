@@ -8,7 +8,7 @@ import { rm } from 'node:fs/promises';
 import type { BlockTypeDefinition, Workflow } from '../types';
 import { validateWorkspace } from '../validation';
 
-import { parseWorkspaceFile, serializeWorkspace } from './parser';
+import { parseWorkspace, serializeWorkspace } from './parser';
 
 /**
  * Block type registry for looking up block definitions.
@@ -200,12 +200,26 @@ export class WorkspaceLoader {
     // Unload previous version
     this.#unloadFile(filePath);
 
-    // Parse file
-    const result = await parseWorkspaceFile(filePath);
+    // Read + parse the file in one pass and stamp the hash. Doing both
+    // here (instead of going through parseWorkspaceFile, which only
+    // returns the parse result) means loadAll() leaves #fileHashes
+    // populated — so the first watch poll doesn't see
+    // `undefined !== <hash>` and fire a redundant reload. That race
+    // caused intermittent `pollForChanges (watch)` flakes on slow CI.
+    let content: string;
+    try {
+      content = await Bun.file(filePath).text();
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e);
+      this.#events.onError?.(`File read error: ${message}`, filePath);
+      return;
+    }
+    const result = parseWorkspace(content);
     if (!result.ok) {
       this.#events.onError?.(result.error, filePath);
       return;
     }
+    this.#fileHashes.set(filePath, Number(Bun.hash(content)));
 
     const workflow = result.workflow;
 
