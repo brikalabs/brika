@@ -77,6 +77,11 @@ export const dnsLookup = defineGrant(
     result: DnsLookupResultSchema,
     permission: DnsPermission,
     description: 'Resolve a hostname to its A and AAAA records.',
+    redact: {
+      // Hostname is safe; resolved IPs don't need to appear in every
+      // audit row — summarise as a count to keep log volume bounded.
+      result: (result) => ({ addressCount: result.addresses.length }),
+    },
   },
   () => {
     throw new Error('dns.lookup: SDK-side handler invoked — hub must rebind before dispatch.');
@@ -106,6 +111,10 @@ export const dnsResolveTxt = defineGrant(
     result: DnsResolveTxtResultSchema,
     permission: DnsPermission,
     description: 'Resolve TXT records for a hostname.',
+    redact: {
+      // TXT records can carry SPF/DKIM material — don't log them raw.
+      result: (result) => ({ recordCount: result.records.length }),
+    },
   },
   () => {
     throw new Error('dns.resolveTxt: SDK-side handler invoked — hub must rebind before dispatch.');
@@ -136,6 +145,9 @@ export const dnsResolveMx = defineGrant(
     result: DnsResolveMxResultSchema,
     permission: DnsPermission,
     description: 'Resolve MX records for a hostname.',
+    redact: {
+      result: (result) => ({ recordCount: result.records.length }),
+    },
   },
   () => {
     throw new Error('dns.resolveMx: SDK-side handler invoked — hub must rebind before dispatch.');

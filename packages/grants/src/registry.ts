@@ -20,6 +20,8 @@
 import { BrikaError } from '@brika/errors';
 import type { z } from 'zod';
 import type {
+  AuditEntry,
+  AuditLogger,
   Grant,
   GrantEntry,
   GrantHandlerContext,
@@ -64,6 +66,15 @@ export class GrantError extends BrikaError {
 /** Type-erased grant — what the registry stores internally. */
 type AnyGrant = Grant<z.ZodType, z.ZodType, z.ZodType>;
 
+export interface GrantRegistryOptions {
+  /**
+   * Optional sink for per-dispatch audit entries. The hub wires this to
+   * its structured log; tests pass a collecting array. Sink errors are
+   * caught and discarded so observability can never break a grant call.
+   */
+  readonly auditLogger?: AuditLogger;
+}
+
 /**
  * Central catalog of grants. The hub owns one instance per plugin process;
  * the SDK does not — plugin code receives a frozen vector at spawn time
@@ -71,6 +82,11 @@ type AnyGrant = Grant<z.ZodType, z.ZodType, z.ZodType>;
  */
 export class GrantRegistry {
   readonly #grants = new Map<GrantId, AnyGrant>();
+  readonly #auditLogger: AuditLogger | undefined;
+
+  constructor(opts?: GrantRegistryOptions) {
+    this.#auditLogger = opts?.auditLogger;
+  }
 
   /** Register a grant. Throws if the id is already taken. */
   register(grant: AnyGrant): void {
@@ -160,6 +176,37 @@ export class GrantRegistry {
    * is responsible for the vector gate; the registry stays pure.)
    */
   async dispatch(id: GrantId, args: unknown, handlerCtx: GrantHandlerContext): Promise<unknown> {
+    const startedAt = Date.now();
+    const startTick = performance.now();
+    try {
+      const result = await this.#runDispatch(id, args, handlerCtx);
+      this.#emitAudit({
+        id,
+        pluginUid: handlerCtx.pluginUid,
+        startedAt,
+        startTick,
+        args,
+        result,
+      });
+      return result;
+    } catch (e) {
+      this.#emitAudit({
+        id,
+        pluginUid: handlerCtx.pluginUid,
+        startedAt,
+        startTick,
+        args,
+        error: e,
+      });
+      throw e;
+    }
+  }
+
+  async #runDispatch(
+    id: GrantId,
+    args: unknown,
+    handlerCtx: GrantHandlerContext
+  ): Promise<unknown> {
     const grant = this.#grants.get(id);
     if (!grant) {
       throw new GrantError('NOT_REGISTERED', `Grant not registered: ${id}`, id);
@@ -228,6 +275,65 @@ export class GrantRegistry {
     }
     return parsedResult.data;
   }
+
+  /**
+   * Build and dispatch the audit entry for a single grant call. The
+   * sink callback runs inside a try/catch — a misbehaving observer must
+   * not crash a grant. Errors thrown from the per-grant `redact` hook
+   * fall back to a coarse `'<redaction-failed>'` placeholder so the
+   * entry still emits with the surrounding metadata.
+   */
+  #emitAudit(params: {
+    id: GrantId;
+    pluginUid: string;
+    startedAt: number;
+    startTick: number;
+    args: unknown;
+    result?: unknown;
+    error?: unknown;
+  }): void {
+    if (this.#auditLogger === undefined) {
+      return;
+    }
+    const grant = this.#grants.get(params.id);
+    const redaction = grant?.spec.redact;
+    const durationMs = Math.max(0, performance.now() - params.startTick);
+    const safeArgs = redactValue(redaction?.args, params.args);
+    const base: Omit<AuditEntry, 'result' | 'errCode'> = {
+      ts: params.startedAt,
+      pluginUid: params.pluginUid,
+      grantId: params.id,
+      args: safeArgs,
+      durationMs,
+    };
+    const entry: AuditEntry =
+      params.error === undefined
+        ? { ...base, result: redactValue(redaction?.result, params.result) }
+        : { ...base, errCode: extractErrCode(params.error) };
+    try {
+      this.#auditLogger(entry);
+    } catch {
+      // Observability MUST NOT break a grant call. Swallow.
+    }
+  }
+}
+
+function redactValue(hook: ((value: unknown) => unknown) | undefined, value: unknown): unknown {
+  if (hook === undefined) {
+    return value;
+  }
+  try {
+    return hook(value);
+  } catch {
+    return '<redaction-failed>';
+  }
+}
+
+function extractErrCode(error: unknown): string {
+  if (error instanceof BrikaError) {
+    return error.code;
+  }
+  return 'INTERNAL';
 }
 
 function formatZodIssue(error: z.ZodError): string {

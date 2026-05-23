@@ -100,6 +100,28 @@ export type NetScope = z.infer<typeof NetScopeSchema>;
  * to make accidental SDK-side dispatch (e.g. in tests with no hub)
  * obvious instead of returning bogus data.
  */
+/** Header names whose VALUES are redacted in the audit log. */
+const SENSITIVE_HEADERS: ReadonlySet<string> = new Set([
+  'authorization',
+  'proxy-authorization',
+  'cookie',
+  'set-cookie',
+  'x-api-key',
+]);
+
+function redactHeaders(
+  headers: Record<string, string> | undefined
+): Record<string, string> | undefined {
+  if (!headers) {
+    return undefined;
+  }
+  const out: Record<string, string> = {};
+  for (const [k, v] of Object.entries(headers)) {
+    out[k] = SENSITIVE_HEADERS.has(k.toLowerCase()) ? '<redacted>' : v;
+  }
+  return out;
+}
+
 export const netFetch = defineGrant(
   {
     id: 'dev.brika.net.fetch',
@@ -112,6 +134,21 @@ export const netFetch = defineGrant(
       icon: 'globe',
     },
     description: 'Make HTTP requests to allow-listed hosts',
+    redact: {
+      args: (args) => ({
+        url: args.url,
+        method: args.method,
+        headers: redactHeaders(args.headers),
+        bodyBytes: args.body === undefined ? 0 : args.body.length,
+      }),
+      result: (result) => ({
+        status: result.status,
+        statusText: result.statusText,
+        headers: redactHeaders(result.headers),
+        bodyBytes: result.body.length,
+        attempts: result.attempts,
+      }),
+    },
   },
   () => {
     throw new Error(

@@ -10,7 +10,7 @@
  * vector.ts.
  */
 
-import { GrantRegistry } from '@brika/grants';
+import { type AuditLogger, GrantRegistry } from '@brika/grants';
 import { buildDnsGrants, type DnsGrantOptions } from './dns';
 import { buildNetGrants, type NetCallbacks, type NetGrantOptions } from './net';
 
@@ -22,12 +22,19 @@ export type HubGrantCallbacks = NetCallbacks;
 /**
  * Per-family overrides callers may inject. Production wiring leaves
  * everything undefined and accepts the defaults; tests pass stub
- * resolvers / smaller caps to drive deterministic behaviour without
- * touching real DNS or fd budgets.
+ * resolvers / smaller caps / a collecting audit logger to drive
+ * deterministic behaviour without touching real DNS, fd budgets, or
+ * the hub's log pipeline.
  */
 export interface HubGrantOptions {
   readonly net?: NetGrantOptions;
   readonly dns?: DnsGrantOptions;
+  /**
+   * Sink for per-dispatch audit entries. Production wires this to the
+   * hub's structured log; tests pass a collecting array. Omit to skip
+   * audit emission entirely.
+   */
+  readonly auditLogger?: AuditLogger;
 }
 
 /**
@@ -40,7 +47,7 @@ export interface HubGrantOptions {
  * setup module, no SDK API to add.
  */
 export function buildHubGrants(cb: HubGrantCallbacks, opts?: HubGrantOptions): GrantRegistry {
-  const reg = new GrantRegistry();
+  const reg = new GrantRegistry({ auditLogger: opts?.auditLogger });
   for (const grant of buildNetGrants(cb, opts?.net)) {
     reg.register(grant);
   }

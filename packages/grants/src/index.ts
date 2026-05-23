@@ -6,14 +6,17 @@
  */
 
 export { defineGrant } from './define';
-export type { GrantErrorCode } from './registry';
+export type { GrantErrorCode, GrantRegistryOptions } from './registry';
 export { GrantError, GrantRegistry, resolveCtxPath } from './registry';
 export type {
+  AuditEntry,
+  AuditLogger,
   Grant,
   GrantEntry,
   GrantHandler,
   GrantHandlerContext,
   GrantId,
+  GrantRedaction,
   GrantSpec,
   GrantVector,
   ManifestGrantRequest,
