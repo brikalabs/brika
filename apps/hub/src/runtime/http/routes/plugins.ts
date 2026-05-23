@@ -362,7 +362,7 @@ export const pluginsRoutes = group({
         await manager.unload(plugin.name);
 
         // Remove from state store
-        await state.remove(plugin.name);
+        state.remove(plugin.name);
 
         // Remove credentials from the OS keychain
         await secrets.deleteAllForPlugin(plugin.name, secretKeys);

@@ -27,8 +27,11 @@ function resolveTarget(deviceId?: string): string | undefined {
 export const doPlay = defineAction(async (input?: { deviceId?: string }) => {
   const target = resolveTarget(input?.deviceId);
   const { playback } = usePlayerStore.get();
-  if (playback) play(target);
-  else await startPlayback(target);
+  if (playback) {
+    play(target);
+  } else {
+    await startPlayback(target);
+  }
 });
 
 export const doPause = defineAction(async (input?: { deviceId?: string }) => {

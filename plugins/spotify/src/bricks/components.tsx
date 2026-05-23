@@ -11,7 +11,9 @@ export function ScrollText({ text, className }: Readonly<{ text: string; classNa
   useEffect(() => {
     const container = containerRef.current;
     const textEl = textRef.current;
-    if (!container || !textEl) return;
+    if (!container || !textEl) {
+      return;
+    }
     const frame = requestAnimationFrame(() => {
       const diff = textEl.offsetWidth - container.offsetWidth;
       setScrollPx(diff > 2 ? diff : 0);
@@ -26,22 +28,31 @@ export function ScrollText({ text, className }: Readonly<{ text: string; classNa
     <div
       ref={containerRef}
       className={clsx('overflow-hidden', className)}
-      style={needsScroll ? {
-        maskImage: 'linear-gradient(to right, transparent, black 6%, black 94%, transparent)',
-        WebkitMaskImage: 'linear-gradient(to right, transparent, black 6%, black 94%, transparent)',
-      } : undefined}
+      style={
+        needsScroll
+          ? {
+              maskImage: 'linear-gradient(to right, transparent, black 6%, black 94%, transparent)',
+              WebkitMaskImage:
+                'linear-gradient(to right, transparent, black 6%, black 94%, transparent)',
+            }
+          : undefined
+      }
     >
       <span
         ref={textRef}
         className={needsScroll ? 'inline-block whitespace-nowrap' : 'block truncate'}
-        style={needsScroll ? {
-          animationName: 'spotify-scroll',
-          animationDuration: `${duration}s`,
-          animationTimingFunction: 'ease-in-out',
-          animationIterationCount: 'infinite',
-          animationDirection: 'alternate',
-          '--scroll-dist': `-${scrollPx}px`,
-        } as React.CSSProperties : undefined}
+        style={
+          needsScroll
+            ? ({
+                animationName: 'spotify-scroll',
+                animationDuration: `${duration}s`,
+                animationTimingFunction: 'ease-in-out',
+                animationIterationCount: 'infinite',
+                animationDirection: 'alternate',
+                '--scroll-dist': `-${scrollPx}px`,
+              } as React.CSSProperties)
+            : undefined
+        }
       >
         {text}
       </span>
@@ -49,7 +60,11 @@ export function ScrollText({ text, className }: Readonly<{ text: string; classNa
   );
 }
 
-export function AlbumCover({ trackName, artistName, albumArt }: Readonly<{
+export function AlbumCover({
+  trackName,
+  artistName,
+  albumArt,
+}: Readonly<{
   trackName: string;
   artistName: string;
   albumArt?: string;
@@ -87,7 +102,11 @@ const transportIconVariants = cva('', {
   defaultVariants: { size: 'sm' },
 });
 
-export function TransportButton({ onClick, icon: Icon, size = 'sm' }: Readonly<{
+export function TransportButton({
+  onClick,
+  icon: Icon,
+  size = 'sm',
+}: Readonly<{
   onClick: () => void;
   icon: typeof Play;
   size?: 'sm' | 'md';
@@ -110,7 +129,7 @@ const playPauseVariants = cva(
       },
     },
     defaultVariants: { variant: 'default' },
-  },
+  }
 );
 
 const playPauseIconVariants = cva('', {
@@ -120,7 +139,11 @@ const playPauseIconVariants = cva('', {
   defaultVariants: { variant: 'default' },
 });
 
-export function PlayPauseButton({ isPlaying, onToggle, variant = 'default' }: Readonly<{
+export function PlayPauseButton({
+  isPlaying,
+  onToggle,
+  variant = 'default',
+}: Readonly<{
   isPlaying: boolean;
   onToggle: () => void;
   variant?: 'default' | 'compact' | 'idle';
@@ -129,7 +152,10 @@ export function PlayPauseButton({ isPlaying, onToggle, variant = 'default' }: Re
 
   return (
     <button type="button" onClick={onToggle} className={playPauseVariants({ variant })}>
-      <Icon className={clsx(playPauseIconVariants({ variant }), !isPlaying && 'translate-x-px')} fill="currentColor" />
+      <Icon
+        className={clsx(playPauseIconVariants({ variant }), !isPlaying && 'translate-x-px')}
+        fill="currentColor"
+      />
     </button>
   );
 }

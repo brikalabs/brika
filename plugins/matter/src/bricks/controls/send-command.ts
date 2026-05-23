@@ -14,6 +14,6 @@ export function useSendCommand() {
     (nodeId: string, command: string, args?: Record<string, string>) => {
       callAction(doDeviceCommand, { nodeId, command, args });
     },
-    [callAction],
+    [callAction]
   );
 }

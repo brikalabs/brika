@@ -14,7 +14,9 @@ export class CookieJar {
 
   ingest(res: Response): void {
     res.headers.forEach((header, name) => {
-      if (name.toLowerCase() !== 'set-cookie') return;
+      if (name.toLowerCase() !== 'set-cookie') {
+        return;
+      }
       this.#parseSetCookie(header);
     });
   }
@@ -22,9 +24,13 @@ export class CookieJar {
   #parseSetCookie(header: string): void {
     const parts = header.split(';').map((p) => p.trim());
     const head = parts[0];
-    if (!head) return;
+    if (!head) {
+      return;
+    }
     const eq = head.indexOf('=');
-    if (eq <= 0) return;
+    if (eq <= 0) {
+      return;
+    }
 
     const key = head.slice(0, eq).trim();
     const value = head.slice(eq + 1).trim();
@@ -59,7 +65,9 @@ export class CookieJar {
   /** Return the first cookie value that looks like an SSO token (80+ base64 chars). */
   ssoCandidate(): string | null {
     for (const value of this.map.values()) {
-      if (/^[A-Za-z0-9+/]{80,}={0,2}$/.test(value)) return value;
+      if (/^[A-Za-z0-9+/]{80,}={0,2}$/.test(value)) {
+        return value;
+      }
     }
     return null;
   }
@@ -77,7 +85,7 @@ export class CookieJar {
 export async function fetchAndIngest(
   jar: CookieJar,
   url: string,
-  init: RequestInit & { redirect?: 'follow' | 'manual' } = {},
+  init: RequestInit & { redirect?: 'follow' | 'manual' } = {}
 ): Promise<Response> {
   const max = 10;
   let current = url;
@@ -92,11 +100,17 @@ export async function fetchAndIngest(
     const res = await timedFetch(current, { ...init, method, body, headers, redirect: 'manual' });
     jar.ingest(res);
 
-    if (!followRedirects) return res;
-    if (res.status < 300 || res.status >= 400) return res;
+    if (!followRedirects) {
+      return res;
+    }
+    if (res.status < 300 || res.status >= 400) {
+      return res;
+    }
 
     const location = res.headers.get('location');
-    if (!location) return res;
+    if (!location) {
+      return res;
+    }
 
     current = location.startsWith('http') ? location : new URL(location, current).href;
     // 303, or POST with 301/302, becomes GET per HTTP spec

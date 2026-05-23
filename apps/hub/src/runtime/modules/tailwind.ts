@@ -57,7 +57,7 @@ function minifyCss(css: string): string {
     .replace(/\/\*[\s\S]*?\*\//g, '') // block comments
     .replace(/\s*([{}:;,])\s*/g, '$1') // collapse around punctuation
     .replace(/\s+/g, ' ') // collapse runs of whitespace
-    .replace(/;}/g, '}') // drop trailing semicolons
+    .replaceAll(';}', '}') // drop trailing semicolons
     .trim();
 }
 

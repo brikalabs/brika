@@ -16,7 +16,7 @@ export class PluginLoader implements Loader {
   private readonly state = inject(StateStore);
 
   async init(): Promise<void> {
-    await this.state.init();
+    this.state.init();
     this.state.applyTimezone();
     await this.registry.init();
   }
@@ -29,7 +29,7 @@ export class PluginLoader implements Loader {
     // Sync registry — creates symlinks for workspace plugins, installs npm plugins
     await this.registry.syncToConfig(config.plugins);
     const validNames = new Set(config.plugins.map((e) => e.name));
-    await this.state.syncToConfig(validNames);
+    this.state.syncToConfig(validNames);
 
     this.logs.info('Plugin synchronization completed successfully');
 

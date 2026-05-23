@@ -61,7 +61,7 @@ export function defineAction<const TType extends string, TSchema extends z.ZodTy
     create: (payload: Payload, source?: string) => ({
       [ACTION_ID]: id,
       type,
-      payload: schema.parse(payload) as Payload,
+      payload: schema.parse(payload),
       timestamp: Date.now(),
       id: crypto.randomUUID(),
       source,

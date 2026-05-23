@@ -86,7 +86,7 @@ export function defineAction<TInput = void, TOutput = unknown>(
     }
     // @ts-expect-error -- generic handler erased to concrete Json type at IPC boundary
     getContext().registerAction(id, handler);
-    return { __actionId: id } as ActionRef<TInput, TOutput>;
+    return { __actionId: id };
   }
 
   // Deferred: create ref now, finalization assigns the ID later

@@ -266,7 +266,7 @@ function DebugSidePanel({ isOpen, onToggle, workflow }: Readonly<DebugSidePanelP
   );
 }
 
-function EditorControls({ showInteractive }: { showInteractive: boolean }) {
+function EditorControls({ showInteractive }: Readonly<{ showInteractive: boolean }>) {
   const { zoomIn, zoomOut, fitView } = useReactFlow();
   const store = useStoreApi();
   const [locked, setLocked] = useState(false);

@@ -13,12 +13,20 @@ export const playBlock = defineReactiveBlock(
       trigger: input(z.generic(), { name: 'Trigger' }),
     },
     outputs: {
-      started: output(z.object({ deviceId: z.string(), contextUri: z.string().optional() }), { name: 'Started' }),
+      started: output(z.object({ deviceId: z.string(), contextUri: z.string().optional() }), {
+        name: 'Started',
+      }),
       error: output(z.object({ message: z.string() }), { name: 'Error' }),
     },
     config: z.object({
-      contextUri: z.string().optional().describe('Spotify URI or URL (playlist, album, or track). Empty = resume last played'),
-      deviceId: z.string().optional().describe('Device name or ID. Empty = use plugin default device'),
+      contextUri: z
+        .string()
+        .optional()
+        .describe('Spotify URI or URL (playlist, album, or track). Empty = resume last played'),
+      deviceId: z
+        .string()
+        .optional()
+        .describe('Device name or ID. Empty = use plugin default device'),
     }),
   },
   ({ inputs, outputs, config }) => {
@@ -29,7 +37,9 @@ export const playBlock = defineReactiveBlock(
         const recent = await getApi().getRecentlyPlayed();
         const uri = contextUri ?? recent?.uri;
 
-        if (deviceId) await getApi().transferPlayback(deviceId);
+        if (deviceId) {
+          await getApi().transferPlayback(deviceId);
+        }
         await getApi().play(deviceId, uri);
 
         const target = deviceId ? ` on ${deviceId}` : '';
@@ -41,5 +51,5 @@ export const playBlock = defineReactiveBlock(
         outputs.error.emit({ message });
       }
     });
-  },
+  }
 );

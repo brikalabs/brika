@@ -75,7 +75,7 @@ async function handleFetchError(period: Period, err: unknown): Promise<void> {
     await fetchAndStore(period);
   } catch (retryErr) {
     log.error(
-      `SIL poll[${period}] retry failed: ${retryErr instanceof Error ? retryErr.message : String(retryErr)}`,
+      `SIL poll[${period}] retry failed: ${retryErr instanceof Error ? retryErr.message : String(retryErr)}`
     );
     patchPeriod(period, { loading: false, error: 'network' });
   }
@@ -96,19 +96,27 @@ export function acquirePeriod(period: Period): () => void {
   if (entry.refCount === 1) {
     // Mark loading immediately so bricks have a defined state to render.
     patchPeriod(period, { loading: true, error: null });
-    if (getCredentials()) pollPeriod(period);
+    if (getCredentials()) {
+      pollPeriod(period);
+    }
     entry.timer = setInterval(() => pollPeriod(period), POLL_MS_BY_PERIOD[period]);
   }
 
   let released = false;
   return () => {
-    if (released) return;
+    if (released) {
+      return;
+    }
     released = true;
     const e = entries.get(period);
-    if (!e) return;
+    if (!e) {
+      return;
+    }
     e.refCount--;
     if (e.refCount <= 0) {
-      if (e.timer) clearInterval(e.timer);
+      if (e.timer) {
+        clearInterval(e.timer);
+      }
       entries.delete(period);
     }
   };
@@ -120,7 +128,9 @@ export function activePeriods(): IterableIterator<Period> {
 
 export function stopAllPolling(): void {
   for (const entry of entries.values()) {
-    if (entry.timer) clearInterval(entry.timer);
+    if (entry.timer) {
+      clearInterval(entry.timer);
+    }
   }
   entries.clear();
 }

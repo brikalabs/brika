@@ -7,7 +7,7 @@ export function useProgress(
   anchor: { progressMs: number; timestamp: number },
   isPlaying: boolean,
   durationMs: number,
-  callAction: CallAction,
+  callAction: CallAction
 ) {
   const [localProgressMs, setLocalProgressMs] = useState(anchor.progressMs);
   const draggingRef = useRef(false);
@@ -21,7 +21,9 @@ export function useProgress(
   }, [anchor.progressMs, anchor.timestamp]);
 
   useEffect(() => {
-    if (!isPlaying || dragging) return;
+    if (!isPlaying || dragging) {
+      return;
+    }
     const id = setInterval(() => {
       const elapsed = Date.now() - anchorRef.current.timestamp;
       setLocalProgressMs(Math.min(anchorRef.current.progressMs + elapsed, durationMs));
@@ -32,14 +34,16 @@ export function useProgress(
   const positionFromPointer = useCallback(
     (clientX: number) => {
       const bar = barRef.current;
-      if (!bar || durationMs <= 0) return 0;
+      if (!bar || durationMs <= 0) {
+        return 0;
+      }
       const rect = bar.getBoundingClientRect();
       const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
       const positionMs = Math.round(ratio * durationMs);
       setLocalProgressMs(positionMs);
       return positionMs;
     },
-    [durationMs],
+    [durationMs]
   );
 
   const onPointerDown = useCallback(
@@ -49,27 +53,31 @@ export function useProgress(
       e.currentTarget.setPointerCapture(e.pointerId);
       positionFromPointer(e.clientX);
     },
-    [positionFromPointer],
+    [positionFromPointer]
   );
 
   const onPointerMove = useCallback(
     (e: React.PointerEvent) => {
-      if (!draggingRef.current) return;
+      if (!draggingRef.current) {
+        return;
+      }
       positionFromPointer(e.clientX);
     },
-    [positionFromPointer],
+    [positionFromPointer]
   );
 
   const onPointerUp = useCallback(
     (e: React.PointerEvent) => {
-      if (!draggingRef.current) return;
+      if (!draggingRef.current) {
+        return;
+      }
       draggingRef.current = false;
       setDragging(false);
       // Only send the seek API call on drag end (not on every move)
       const positionMs = positionFromPointer(e.clientX);
       callAction(doSeek, { positionMs });
     },
-    [positionFromPointer, callAction],
+    [positionFromPointer, callAction]
   );
 
   const pct = durationMs > 0 ? (localProgressMs / durationMs) * 100 : 0;

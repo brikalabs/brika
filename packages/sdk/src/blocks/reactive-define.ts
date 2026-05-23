@@ -222,7 +222,7 @@ export function defineReactiveBlock<
       const inputId = baseTypeName.replace('__passthrough:', '');
       const linkedInput = inputMap.get(inputId);
       if (linkedInput) {
-        const linkedKind = (linkedInput.type as Record<string, unknown>).kind;
+        const linkedKind = linkedInput.type.kind;
         const isResolvable =
           linkedKind === 'generic' || linkedKind === 'passthrough' || linkedKind === 'resolved';
         if (!isResolvable) {
@@ -294,7 +294,7 @@ export function defineReactiveBlock<
 
       // start() function for creating flows from values/sources/factories
       const start = <T>(input: T | Source<T> | Factory<T>): Flow<T> => {
-        return createFlowFromInput(input, setTimeoutWrapper, cleanup) as unknown as Flow<T>;
+        return createFlowFromInput(input, setTimeoutWrapper, cleanup);
       };
 
       const reactiveCtx = {

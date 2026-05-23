@@ -9,14 +9,8 @@ export const matterCommand = defineReactiveBlock(
       trigger: input(z.generic(), { name: 'Trigger' }),
     },
     outputs: {
-      success: output(
-        z.object({ nodeId: z.string(), command: z.string() }),
-        { name: 'Success' },
-      ),
-      error: output(
-        z.object({ message: z.string() }),
-        { name: 'Error' },
-      ),
+      success: output(z.object({ nodeId: z.string(), command: z.string() }), { name: 'Success' }),
+      error: output(z.object({ message: z.string() }), { name: 'Error' }),
     },
     config: z.object({
       nodeId: z.string().describe('Matter device node ID'),
@@ -33,7 +27,7 @@ export const matterCommand = defineReactiveBlock(
         const ok = await controller.sendCommand(
           config.nodeId,
           config.command as MatterCommand,
-          config.params,
+          config.params
         );
         if (ok) {
           outputs.success.emit({ nodeId: config.nodeId, command: config.command });
@@ -48,5 +42,5 @@ export const matterCommand = defineReactiveBlock(
         outputs.error.emit({ message });
       }
     });
-  },
+  }
 );

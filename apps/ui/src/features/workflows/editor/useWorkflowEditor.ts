@@ -23,7 +23,7 @@ import {
 } from '@xyflow/react';
 import { type MouseEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Workflow, WorkflowBlock } from '../api';
-import type { BlockNodeData, BlockPort } from './BlockNode';
+import type { BlockNodeData } from './BlockNode';
 import type { BlockDefinition, BlockTypeInfo } from './BlockToolbar';
 import type { RegisteredSpark } from './WorkflowEditor';
 import {

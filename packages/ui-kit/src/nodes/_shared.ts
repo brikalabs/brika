@@ -135,13 +135,13 @@ export function normalizeChildren(children: Child | Child[]): ComponentNode[] {
           key: c.key,
           params: c.params,
         },
-      } as ComponentNode);
+      });
     } else if (isIntlRef(c)) {
       result.push({
         type: 'text',
         content: resolveIntlRef(c),
         intl: c,
-      } as ComponentNode);
+      });
     } else {
       result.push(c);
     }

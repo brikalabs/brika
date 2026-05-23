@@ -39,13 +39,13 @@ export function LoginPage() {
 
   return (
     <AmbientCanvas>
-      <div className="relative w-full max-w-[420px]">
+      <div className="relative w-full max-w-105">
         <Card className="fade-in-50 slide-in-from-bottom-1 animate-in overflow-hidden border-border/60 bg-card/80 shadow-2xl shadow-black/20 backdrop-blur-xl duration-500 ease-out">
           <div className="flex flex-col items-center gap-6 px-8 pt-10 pb-2 text-center">
             {/* Logo with halo */}
             <div className="relative">
               <div aria-hidden className="absolute inset-0 rounded-2xl bg-primary/30 blur-xl" />
-              <div className="relative flex size-14 items-center justify-center rounded-xl bg-gradient-to-b from-primary to-primary/80 shadow-lg shadow-primary/30 ring-1 ring-white/10">
+              <div className="relative flex size-14 items-center justify-center rounded-xl bg-linear-to-b from-primary to-primary/80 shadow-lg shadow-primary/30 ring-1 ring-white/10">
                 <BrikaLogo className="size-7 text-white" />
               </div>
             </div>

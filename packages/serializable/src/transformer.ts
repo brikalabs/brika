@@ -73,7 +73,7 @@ export class TransformerRegistry {
    * Register a custom transformer.
    */
   register<T, S>(transformer: Transformer<T, S>): this {
-    this.#transformers.set(transformer.name, transformer as Transformer<unknown>);
+    this.#transformers.set(transformer.name, transformer);
     if (transformer.isAsync) {
       this.#hasAsync = true;
     }

@@ -41,15 +41,15 @@
     "bun": "1.3.13"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.4.11",
+    "@biomejs/biome": "2.4.15",
     "@brika/hub": "workspace:*",
     "@brika/i18n-devtools": "workspace:*",
     "@brika/mortar": "workspace:*",
     "@brika/testing": "workspace:*",
     "@brika/workspace-tools": "workspace:*",
-    "@typescript/native-preview": "7.0.0-dev.20260412.1",
-    "bun-types": "^1.3.13",
+    "@typescript/native-preview": "latest",
+    "bun-types": "^1.3.14",
     "mitata": "^1.0.34",
-    "typescript": "^6.0.2"
+    "typescript": "^6.0.3"
   }
 }

@@ -8,13 +8,7 @@
 
 import { useBrickConfig, useBrickData, useBrickSize } from '@brika/sdk/brick-views';
 import { useLocale } from '@brika/sdk/ui-kit/hooks';
-import {
-  Droplets,
-  Gauge,
-  MapPin,
-  Thermometer,
-  Wind,
-} from 'lucide-react';
+import { Droplets, Gauge, MapPin, Thermometer, Wind } from 'lucide-react';
 import type { ComponentType } from 'react';
 import {
   CityError,
@@ -96,12 +90,16 @@ export default function CurrentWeather() {
   const { width, height } = useBrickSize();
   const { t } = useLocale();
 
-  if (!data) return <LoadingSpinner />;
+  if (!data) {
+    return <LoadingSpinner />;
+  }
 
   const cityKey = resolveCity(config, data.defaultCity);
   const d = data.cities[cityKey];
 
-  if (!d) return <CityError error={data.cityErrors?.[cityKey]} />;
+  if (!d) {
+    return <CityError error={data.cityErrors?.[cityKey]} />;
+  }
 
   const unit = resolveUnit(config, data.unit);
   const isCompact = width <= 2 && height <= 1;
@@ -116,11 +114,11 @@ export default function CurrentWeather() {
       >
         <div className="flex items-center gap-2">
           <WeatherIcon name={d.icon} className="size-5 text-white/80" />
-          <span className="text-xl font-bold text-white">
+          <span className="font-bold text-white text-xl">
             {formatTempWithUnit(d.temperature, unit)}
           </span>
         </div>
-        <div className="flex items-center gap-1 text-xs text-white/60">
+        <div className="flex items-center gap-1 text-white/60 text-xs">
           <MapPin className="size-3 shrink-0" />
           <span className="truncate">{d.city}</span>
         </div>
@@ -131,27 +129,29 @@ export default function CurrentWeather() {
   // ─── Default layout ─────────────────────────────────────────────
 
   return (
-    <div
-      className="flex h-full flex-col gap-3 rounded-lg p-4"
-      style={{ background: d.gradient }}
-    >
+    <div className="flex h-full flex-col gap-3 rounded-lg p-4" style={{ background: d.gradient }}>
       {/* Header: location + condition label */}
       <div className="flex items-center gap-1.5">
         <MapPin className="size-3.5 shrink-0 text-white/50" />
         <span className="truncate font-bold text-white">{d.city}</span>
-        <span className="ml-auto shrink-0 text-xs text-white/60">{t(`conditions.${d.conditionKey}`)}</span>
+        <span className="ml-auto shrink-0 text-white/60 text-xs">
+          {t(`conditions.${d.conditionKey}`)}
+        </span>
       </div>
 
       {/* Main: icon + temp + feels like */}
       <div className="flex flex-1 items-center gap-3">
-        <div className="flex size-12 items-center justify-center rounded-full" style={{ backgroundColor: `${d.color}33` }}>
+        <div
+          className="flex size-12 items-center justify-center rounded-full"
+          style={{ backgroundColor: `${d.color}33` }}
+        >
           <WeatherIcon name={d.icon} className="size-7" color={d.color} />
         </div>
         <div className="flex flex-col gap-0.5">
-          <span className="text-3xl font-bold leading-none text-white">
+          <span className="font-bold text-3xl text-white leading-none">
             {formatTempWithUnit(d.temperature, unit)}
           </span>
-          <span className="text-xs text-white/60">
+          <span className="text-white/60 text-xs">
             {t('stats.feelsLike')} {formatTempWithUnit(d.apparentTemperature, unit)}
           </span>
         </div>

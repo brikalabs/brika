@@ -13,15 +13,15 @@ export function ThermostatControls({ device }: Readonly<{ device: DeviceState }>
 
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-2">
-      {temp != null && (
+      {temp !== null && (
         <div className="flex items-baseline gap-1">
-          <span className="text-3xl font-bold text-white">{Number(temp)}</span>
+          <span className="font-bold text-3xl text-white">{Number(temp)}</span>
           <span className="text-lg text-white/50">{'\u00B0C'}</span>
         </div>
       )}
       {modeName && (
         <span
-          className="inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-medium"
+          className="inline-flex rounded-full px-2.5 py-0.5 font-medium text-[11px]"
           style={{ backgroundColor: `${theme.accentColor}25`, color: theme.accentColor }}
         >
           {modeName}

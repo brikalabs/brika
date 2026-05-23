@@ -2,7 +2,6 @@ import { inject, singleton } from '@brika/di';
 import { PluginPackageSchema } from '@brika/schema';
 import { ConfigLoader } from '@/runtime/config/config-loader';
 import { Logger } from '@/runtime/logs/log-router';
-import type { PluginPackageData } from '../types';
 import type { RawRegistryPlugin, RegistrySource } from './registry-source';
 
 /**
@@ -134,7 +133,7 @@ export class LocalRegistry implements RegistrySource {
               homepage: pkg.homepage,
               license: pkg.license,
               engines: pkg.engines,
-            } as PluginPackageData,
+            },
             downloadCount: 0,
             source: 'local',
             installVersion: 'workspace:*',

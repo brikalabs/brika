@@ -10,13 +10,19 @@ export function kwhToWatts(kwh: number): number {
 }
 
 export function formatKwh(value: number): string {
-  if (value >= 1000) return `${(value / 1000).toFixed(1)} MWh`;
-  if (value >= 10) return `${value.toFixed(1)} kWh`;
+  if (value >= 1000) {
+    return `${(value / 1000).toFixed(1)} MWh`;
+  }
+  if (value >= 10) {
+    return `${value.toFixed(1)} kWh`;
+  }
   return `${value.toFixed(2)} kWh`;
 }
 
 export function formatPower(watts: number): string {
-  if (watts >= 1000) return `${(watts / 1000).toFixed(2)} kW`;
+  if (watts >= 1000) {
+    return `${(watts / 1000).toFixed(2)} kW`;
+  }
   return `${watts} W`;
 }
 
@@ -32,7 +38,9 @@ export function pointCost(point: ConsumptionPoint, prices: Prices): number {
 /** Net CHF cost across multiple points. */
 export function totalCost(points: readonly ConsumptionPoint[], prices: Prices): number {
   let sum = 0;
-  for (const p of points) sum += pointCost(p, prices);
+  for (const p of points) {
+    sum += pointCost(p, prices);
+  }
   return sum;
 }
 
@@ -61,7 +69,7 @@ export function Message({ icon, text }: Readonly<{ icon: string; text: string }>
   return (
     <div className="flex h-full flex-col items-center justify-center gap-2 p-4 text-center">
       <span className="text-2xl">{icon}</span>
-      <p className="text-xs text-muted-foreground">{text}</p>
+      <p className="text-muted-foreground text-xs">{text}</p>
     </div>
   );
 }

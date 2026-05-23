@@ -62,22 +62,32 @@ function pickArt(images: SpotifyImage[]): string | null {
 
 export function createSpotifyApi(oauth: OAuthClient) {
   async function api<T>(path: string, init?: RequestInit): Promise<T | null> {
-    if (!oauth.isAuthenticated()) return null;
+    if (!oauth.isAuthenticated()) {
+      return null;
+    }
 
     const res = await oauth.fetch(`${BASE}${path}`, init);
 
     // 204 = no active device/playback — legitimate "no data"
-    if (res.status === 204) return null;
+    if (res.status === 204) {
+      return null;
+    }
 
     // 401 = token invalid — bubble up so the brick can reset auth state
-    if (res.status === 401) throw new SpotifyAuthError();
+    if (res.status === 401) {
+      throw new SpotifyAuthError();
+    }
 
     // Other errors — return null (rate-limit, server error, etc.)
-    if (!res.ok) return null;
+    if (!res.ok) {
+      return null;
+    }
 
     // Some endpoints return empty bodies (play, pause, next, previous)
     const text = await res.text();
-    if (!text) return null;
+    if (!text) {
+      return null;
+    }
 
     try {
       return JSON.parse(text) as T;
@@ -106,7 +116,9 @@ export function createSpotifyApi(oauth: OAuthClient) {
         };
       }>('/me/player');
 
-      if (!data?.item) return null;
+      if (!data?.item) {
+        return null;
+      }
 
       return {
         isPlaying: data.is_playing,
@@ -179,7 +191,9 @@ export function createSpotifyApi(oauth: OAuthClient) {
           };
         }>;
       }>('/me/player/recently-played?limit=1');
-      if (!data?.items?.[0]) return null;
+      if (!data?.items?.[0]) {
+        return null;
+      }
       const { context, track } = data.items[0];
       return {
         trackName: track.name,
@@ -200,7 +214,9 @@ export function createSpotifyApi(oauth: OAuthClient) {
         }[];
       }>('/me/player/devices');
 
-      if (!data) return [];
+      if (!data) {
+        return [];
+      }
 
       return data.devices.map((d) => ({
         id: d.id,

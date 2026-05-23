@@ -46,7 +46,15 @@ import { commission, getDevices, remove, scan } from '../actions';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
-type DeviceType = 'light' | 'lock' | 'cover' | 'thermostat' | 'switch' | 'sensor' | 'bridge' | 'unknown';
+type DeviceType =
+  | 'light'
+  | 'lock'
+  | 'cover'
+  | 'thermostat'
+  | 'switch'
+  | 'sensor'
+  | 'bridge'
+  | 'unknown';
 
 interface MatterDevice {
   nodeId: string;
@@ -75,17 +83,40 @@ interface DeviceMeta {
 
 // Colors use theme-aware data tokens (data-1…data-8) compiled via @source inline()
 const DEVICE_META: Record<DeviceType, DeviceMeta> = {
-  light:      { icon: Lightbulb,   accent: 'amber',   iconClass: 'text-data-6', bgClass: 'bg-data-6/15' },
-  lock:       { icon: Lock,        accent: 'violet',  iconClass: 'text-data-5', bgClass: 'bg-data-5/15' },
-  cover:      { icon: Blinds,      accent: 'blue',    iconClass: 'text-data-1', bgClass: 'bg-data-1/15' },
-  thermostat: { icon: Thermometer, accent: 'orange',  iconClass: 'text-data-2', bgClass: 'bg-data-2/15' },
-  switch:     { icon: ToggleLeft,  accent: 'emerald', iconClass: 'text-data-3', bgClass: 'bg-data-3/15' },
-  sensor:     { icon: Eye,         accent: 'purple',  iconClass: 'text-data-8', bgClass: 'bg-data-8/15' },
-  bridge:     { icon: Network,     accent: 'blue',    iconClass: 'text-data-7', bgClass: 'bg-data-7/15' },
-  unknown:    { icon: Wrench,      accent: 'none',    iconClass: 'text-muted-foreground', bgClass: 'bg-muted' },
+  light: { icon: Lightbulb, accent: 'amber', iconClass: 'text-data-6', bgClass: 'bg-data-6/15' },
+  lock: { icon: Lock, accent: 'violet', iconClass: 'text-data-5', bgClass: 'bg-data-5/15' },
+  cover: { icon: Blinds, accent: 'blue', iconClass: 'text-data-1', bgClass: 'bg-data-1/15' },
+  thermostat: {
+    icon: Thermometer,
+    accent: 'orange',
+    iconClass: 'text-data-2',
+    bgClass: 'bg-data-2/15',
+  },
+  switch: {
+    icon: ToggleLeft,
+    accent: 'emerald',
+    iconClass: 'text-data-3',
+    bgClass: 'bg-data-3/15',
+  },
+  sensor: { icon: Eye, accent: 'purple', iconClass: 'text-data-8', bgClass: 'bg-data-8/15' },
+  bridge: { icon: Network, accent: 'blue', iconClass: 'text-data-7', bgClass: 'bg-data-7/15' },
+  unknown: {
+    icon: Wrench,
+    accent: 'none',
+    iconClass: 'text-muted-foreground',
+    bgClass: 'bg-muted',
+  },
 };
 
-const TYPE_ORDER: DeviceType[] = ['light', 'switch', 'lock', 'cover', 'thermostat', 'sensor', 'unknown'];
+const TYPE_ORDER: DeviceType[] = [
+  'light',
+  'switch',
+  'lock',
+  'cover',
+  'thermostat',
+  'sensor',
+  'unknown',
+];
 
 type TFn = (key: string, options?: Record<string, unknown>) => string;
 
@@ -106,19 +137,33 @@ function getRootNodeId(nodeId: string): string {
 
 function buildStateParts(device: MatterDevice, t: TFn): StatePart[] {
   const parts: StatePart[] = [];
-  if (device.state.on != null)
+  if (device.state.on !== null) {
     parts.push({ icon: Power, label: device.state.on ? t('device.on') : t('device.off') });
-  if (device.state.brightness != null)
-    parts.push({ icon: Sun, label: t('devicesPage.brightness', { value: device.state.brightness }) });
-  if (device.state.locked != null)
+  }
+  if (device.state.brightness !== null) {
+    parts.push({
+      icon: Sun,
+      label: t('devicesPage.brightness', { value: device.state.brightness }),
+    });
+  }
+  if (device.state.locked !== null) {
     parts.push({
       icon: device.state.locked ? Lock : LockOpen,
       label: device.state.locked ? t('device.locked') : t('device.unlocked'),
     });
-  if (device.state.temperature != null)
-    parts.push({ icon: Thermometer, label: t('devicesPage.temperature', { value: device.state.temperature }) });
-  if (device.state.coverPosition != null)
-    parts.push({ icon: Blinds, label: t('devicesPage.position', { value: device.state.coverPosition }) });
+  }
+  if (device.state.temperature !== null) {
+    parts.push({
+      icon: Thermometer,
+      label: t('devicesPage.temperature', { value: device.state.temperature }),
+    });
+  }
+  if (device.state.coverPosition !== null) {
+    parts.push({
+      icon: Blinds,
+      label: t('devicesPage.position', { value: device.state.coverPosition }),
+    });
+  }
   if (typeof device.state.systemModeName === 'string') {
     parts.push({ icon: Wrench, label: device.state.systemModeName });
   }
@@ -131,9 +176,11 @@ function buildStateParts(device: MatterDevice, t: TFn): StatePart[] {
  */
 function getBridges(devices: MatterDevice[]): MatterDevice[] {
   return devices.filter((d) => {
-    if (d.deviceType === 'bridge') return true;
+    if (d.deviceType === 'bridge') {
+      return true;
+    }
     if (!d.nodeId.includes(':')) {
-      return devices.some((other) => other.nodeId.startsWith(d.nodeId + ':'));
+      return devices.some((other) => other.nodeId.startsWith(`${d.nodeId}:`));
     }
     return false;
   });
@@ -144,26 +191,46 @@ function getBridgeChildren(bridge: MatterDevice, devices: MatterDevice[]): Matte
   return devices.filter((d) => d.nodeId !== bridge.nodeId && getRootNodeId(d.nodeId) === rootId);
 }
 
-function groupByType(devices: MatterDevice[], bridgeIds: Set<string>): [DeviceType, MatterDevice[]][] {
+function groupByType(
+  devices: MatterDevice[],
+  bridgeIds: Set<string>
+): [DeviceType, MatterDevice[]][] {
   const groups = new Map<DeviceType, MatterDevice[]>();
   for (const device of devices) {
-    if (bridgeIds.has(device.nodeId)) continue;
+    if (bridgeIds.has(device.nodeId)) {
+      continue;
+    }
     const list = groups.get(device.deviceType);
-    if (list) list.push(device);
-    else groups.set(device.deviceType, [device]);
+    if (list) {
+      list.push(device);
+    } else {
+      groups.set(device.deviceType, [device]);
+    }
   }
-  return TYPE_ORDER.filter((type) => groups.has(type)).map((type) => [type, groups.get(type) ?? []]);
+  return TYPE_ORDER.filter((type) => groups.has(type)).map((type) => [
+    type,
+    groups.get(type) ?? [],
+  ]);
 }
 
 function findBridgeName(device: MatterDevice, allDevices: MatterDevice[]): string {
   const rootId = getRootNodeId(device.nodeId);
-  const bridge = allDevices.find((d) => d.deviceType === 'bridge' && getRootNodeId(d.nodeId) === rootId);
+  const bridge = allDevices.find(
+    (d) => d.deviceType === 'bridge' && getRootNodeId(d.nodeId) === rootId
+  );
   return bridge?.name ?? bridge?.vendor ?? 'Bridge';
 }
 
 // ─── Device card ────────────────────────────────────────────────────────────
 
-function DeviceCard({ device, allDevices, onRemove, onInfo, removingId, t }: Readonly<{
+function DeviceCard({
+  device,
+  allDevices,
+  onRemove,
+  onInfo,
+  removingId,
+  t,
+}: Readonly<{
   device: MatterDevice;
   allDevices: MatterDevice[];
   onRemove: (id: string) => void;
@@ -211,12 +278,10 @@ function DeviceCard({ device, allDevices, onRemove, onInfo, removingId, t }: Rea
 
           {/* Bridge / vendor info */}
           {(bridgeName ?? device.vendor) && (
-            <p className="mt-1 flex items-center gap-1 truncate text-xs text-muted-foreground">
+            <p className="mt-1 flex items-center gap-1 truncate text-muted-foreground text-xs">
               {bridgeChild && <Network className="size-3 shrink-0" />}
               <span className="truncate">
-                {bridgeName
-                  ? t('devicesPage.viaBridge', { bridge: bridgeName })
-                  : device.vendor}
+                {bridgeName ? t('devicesPage.viaBridge', { bridge: bridgeName }) : device.vendor}
               </span>
             </p>
           )}
@@ -253,7 +318,15 @@ function DeviceCard({ device, allDevices, onRemove, onInfo, removingId, t }: Rea
 
 // ─── Type group ─────────────────────────────────────────────────────────────
 
-function DeviceTypeGroup({ type, devices, allDevices, onRemove, onInfo, removingId, t }: Readonly<{
+function DeviceTypeGroup({
+  type,
+  devices,
+  allDevices,
+  onRemove,
+  onInfo,
+  removingId,
+  t,
+}: Readonly<{
   type: DeviceType;
   devices: MatterDevice[];
   allDevices: MatterDevice[];
@@ -270,21 +343,24 @@ function DeviceTypeGroup({ type, devices, allDevices, onRemove, onInfo, removing
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
       <CollapsibleTrigger asChild>
-        <button
-          type="button"
-          className="flex w-full items-center gap-2.5 py-1 text-left"
-        >
-          <div className={`flex size-7 items-center justify-center rounded-lg ${meta.bgClass} ${meta.iconClass}`}>
+        <button type="button" className="flex w-full items-center gap-2.5 py-1 text-left">
+          <div
+            className={`flex size-7 items-center justify-center rounded-lg ${meta.bgClass} ${meta.iconClass}`}
+          >
             <Icon className="size-4" />
           </div>
           <span className="flex-1 truncate font-semibold text-sm">
             {t(`devicesPage.typesPlural.${type}`)}
           </span>
           <Badge variant="secondary" className="gap-1.5 text-xs">
-            <span className={`size-2 rounded-full ${onlineCount > 0 ? 'bg-success' : 'bg-muted-foreground'}`} />
+            <span
+              className={`size-2 rounded-full ${onlineCount > 0 ? 'bg-success' : 'bg-muted-foreground'}`}
+            />
             {`${onlineCount}/${devices.length}`}
           </Badge>
-          <ChevronRight className={`size-4 text-muted-foreground transition-transform duration-200 ${open ? 'rotate-90' : ''}`} />
+          <ChevronRight
+            className={`size-4 text-muted-foreground transition-transform duration-200 ${open ? 'rotate-90' : ''}`}
+          />
         </button>
       </CollapsibleTrigger>
       <CollapsibleContent>
@@ -312,22 +388,31 @@ function DeviceTypeGroup({ type, devices, allDevices, onRemove, onInfo, removing
 // ─── Device info dialog ─────────────────────────────────────────────────────
 
 function InfoRow({ label, value }: Readonly<{ label: string; value: string | null | undefined }>) {
-  if (!value) return null;
+  if (!value) {
+    return null;
+  }
   return (
     <div className="flex items-baseline justify-between gap-4 py-1.5">
-      <span className="shrink-0 text-xs text-muted-foreground">{label}</span>
+      <span className="shrink-0 text-muted-foreground text-xs">{label}</span>
       <span className="truncate text-sm">{value}</span>
     </div>
   );
 }
 
-function DeviceInfoDialog({ device, allDevices, onClose, t }: Readonly<{
+function DeviceInfoDialog({
+  device,
+  allDevices,
+  onClose,
+  t,
+}: Readonly<{
   device: MatterDevice | null;
   allDevices: MatterDevice[];
   onClose: () => void;
   t: TFn;
 }>) {
-  if (!device) return null;
+  if (!device) {
+    return null;
+  }
 
   const meta = DEVICE_META[device.deviceType] ?? DEVICE_META.unknown;
   const Icon = meta.icon;
@@ -336,7 +421,14 @@ function DeviceInfoDialog({ device, allDevices, onClose, t }: Readonly<{
   const children = isBridge ? getBridgeChildren(device, allDevices) : [];
 
   return (
-    <Dialog open onOpenChange={(open: boolean) => { if (!open) onClose(); }}>
+    <Dialog
+      open
+      onOpenChange={(open: boolean) => {
+        if (!open) {
+          onClose();
+        }
+      }}
+    >
       <DialogContent>
         <DialogHeader>
           <div className="flex items-center gap-3">
@@ -351,8 +443,10 @@ function DeviceInfoDialog({ device, allDevices, onClose, t }: Readonly<{
                 {t('devicesPage.vendor')}: {device.vendor ?? '-'}
               </DialogDescription>
               <div className="mt-1 flex items-center gap-1.5">
-                <span className={`size-2 rounded-full ${device.online ? 'bg-success' : 'bg-muted-foreground'}`} />
-                <span className="text-xs text-muted-foreground">
+                <span
+                  className={`size-2 rounded-full ${device.online ? 'bg-success' : 'bg-muted-foreground'}`}
+                />
+                <span className="text-muted-foreground text-xs">
                   {device.online ? t('device.online') : t('device.offline')}
                 </span>
               </div>
@@ -381,7 +475,7 @@ function DeviceInfoDialog({ device, allDevices, onClose, t }: Readonly<{
           <InfoRow label={t('devicesPage.serial')} value={device.serial} />
           <InfoRow label={t('devicesPage.software')} value={device.softwareVersion} />
           <InfoRow label="Node ID" value={device.nodeId} />
-          {device.discriminator != null && (
+          {device.discriminator !== null && (
             <InfoRow label="Discriminator" value={String(device.discriminator)} />
           )}
         </div>
@@ -400,7 +494,10 @@ function DeviceInfoDialog({ device, allDevices, onClose, t }: Readonly<{
                     const childMeta = DEVICE_META[child.deviceType] ?? DEVICE_META.unknown;
                     const ChildIcon = childMeta.icon;
                     return (
-                      <div key={child.nodeId} className="flex items-center gap-2 rounded-md px-2 py-1.5">
+                      <div
+                        key={child.nodeId}
+                        className="flex items-center gap-2 rounded-md px-2 py-1.5"
+                      >
                         <Avatar size="sm" className={childMeta.bgClass}>
                           <AvatarFallback className={`${childMeta.bgClass} ${childMeta.iconClass}`}>
                             <ChildIcon className="size-3" />
@@ -453,7 +550,9 @@ export default function DevicesPage() {
 
   const handleCommission = async () => {
     const code = pairingCode.trim();
-    if (!code) return;
+    if (!code) {
+      return;
+    }
     setCommissioning(true);
     try {
       await callAction(commission, { pairingCode: code });
@@ -532,7 +631,9 @@ export default function DevicesPage() {
               onChange={(e: ChangeEvent<HTMLInputElement>) => setPairingCode(e.target.value)}
               placeholder={t('devicesPage.commissionPlaceholder')}
               onKeyDown={(e: KeyboardEvent) => {
-                if (e.key === 'Enter') handleCommission();
+                if (e.key === 'Enter') {
+                  handleCommission();
+                }
               }}
             />
             <Button onClick={handleCommission} disabled={commissioning || !pairingCode.trim()}>
@@ -579,15 +680,18 @@ export default function DevicesPage() {
           <CardContent className="py-12 text-center">
             <Cpu className="mx-auto mb-3 size-10 opacity-30" />
             <p className="font-medium">{t('devicesPage.emptyTitle')}</p>
-            <p className="mt-1 text-sm opacity-60">
-              {t('devicesPage.emptyDescription')}
-            </p>
+            <p className="mt-1 text-sm opacity-60">{t('devicesPage.emptyDescription')}</p>
           </CardContent>
         </Card>
       )}
 
       {/* Info modal */}
-      <DeviceInfoDialog device={infoDevice} allDevices={devices} onClose={() => setInfoDevice(null)} t={t} />
+      <DeviceInfoDialog
+        device={infoDevice}
+        allDevices={devices}
+        onClose={() => setInfoDevice(null)}
+        t={t}
+      />
     </div>
   );
 }

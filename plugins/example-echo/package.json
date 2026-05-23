@@ -11,13 +11,7 @@
     "url": "https://github.com/brikalabs/brika.git",
     "directory": "plugins/example-echo"
   },
-  "keywords": [
-    "brika",
-    "brika-plugin",
-    "example",
-    "echo",
-    "demo"
-  ],
+  "keywords": ["brika", "brika-plugin", "example", "echo", "demo"],
   "engines": {
     "brika": "^0.3.0"
   },

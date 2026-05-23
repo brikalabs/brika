@@ -14,8 +14,8 @@ export function sparks(): BootstrapPlugin {
 
   return {
     name: 'sparks',
-    async onInit() {
-      await store.init();
+    onInit() {
+      store.init();
       events.setSparkStore(store);
     },
     onStop() {

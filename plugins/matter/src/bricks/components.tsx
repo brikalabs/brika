@@ -68,7 +68,7 @@ export function StatCard({
 // ─── GlassButton ─────────────────────────────────────────────────────────────
 
 const glassButtonVariants = cva(
-  'flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150 hover:scale-[1.02] active:scale-[0.98] cursor-pointer',
+  'flex cursor-pointer items-center gap-1.5 rounded-lg px-3 py-2 font-medium text-sm transition-all duration-150 hover:scale-[1.02] active:scale-[0.98]',
   {
     variants: {
       active: {
@@ -77,7 +77,7 @@ const glassButtonVariants = cva(
       },
     },
     defaultVariants: { active: false },
-  },
+  }
 );
 
 export function GlassButton({
@@ -161,7 +161,7 @@ export function DeviceSlider({
     <div className="space-y-1">
       <div className="flex items-center justify-between">
         <span className="text-[11px] text-white/50">{label}</span>
-        <span className="text-[11px] font-medium text-white tabular-nums">
+        <span className="font-medium text-[11px] text-white tabular-nums">
           {value}
           {unit ?? ''}
         </span>
@@ -178,10 +178,7 @@ export function DeviceSlider({
           step={step}
           value={value}
           onChange={(e) => onChange(Number(e.target.value))}
-          className="absolute inset-0 h-full w-full cursor-pointer appearance-none bg-transparent
-            [&::-webkit-slider-thumb]:size-3.5 [&::-webkit-slider-thumb]:appearance-none
-            [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white
-            [&::-webkit-slider-thumb]:shadow-md"
+          className="absolute inset-0 h-full w-full cursor-pointer appearance-none bg-transparent [&::-webkit-slider-thumb]:size-3.5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow-md"
         />
       </div>
     </div>
@@ -223,11 +220,10 @@ export function DeviceIcon({
 
 // ─── AmbientGlow ─────────────────────────────────────────────────────────────
 
-export function AmbientGlow({
-  color,
-  active,
-}: Readonly<{ color: string; active: boolean }>) {
-  if (!active) return null;
+export function AmbientGlow({ color, active }: Readonly<{ color: string; active: boolean }>) {
+  if (!active) {
+    return null;
+  }
   return (
     <div
       className="pointer-events-none absolute -top-[10%] -right-[10%] aspect-square h-[55%] animate-pulse rounded-full"

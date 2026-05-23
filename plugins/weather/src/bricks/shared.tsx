@@ -21,7 +21,9 @@ import type { ComponentType } from 'react';
 // ─── Temperature helpers ──────────────────────────────────────────────────────
 
 export function formatTemp(celsius: number, unit: string): string {
-  if (unit === 'fahrenheit') return `${Math.round(celsius * 9 / 5 + 32)}`;
+  if (unit === 'fahrenheit') {
+    return `${Math.round((celsius * 9) / 5 + 32)}`;
+  }
   return `${Math.round(celsius)}`;
 }
 
@@ -35,19 +37,26 @@ export function formatTempWithUnit(celsius: number, unit: string): string {
 
 // ─── Icon map ─────────────────────────────────────────────────────────────────
 
-export const ICON_MAP: Record<string, ComponentType<{ className?: string; style?: React.CSSProperties }>> = {
-  'sun': Sun,
+export const ICON_MAP: Record<
+  string,
+  ComponentType<{ className?: string; style?: React.CSSProperties }>
+> = {
+  sun: Sun,
   'cloud-sun': CloudSun,
-  'cloud': Cloud,
+  cloud: Cloud,
   'cloud-fog': CloudFog,
   'cloud-drizzle': CloudDrizzle,
   'cloud-rain': CloudRain,
-  'snowflake': Snowflake,
+  snowflake: Snowflake,
   'cloud-rain-wind': CloudRainWind,
   'cloud-lightning': CloudLightning,
 };
 
-export function WeatherIcon({ name, className, color }: Readonly<{ name: string; className?: string; color?: string }>) {
+export function WeatherIcon({
+  name,
+  className,
+  color,
+}: Readonly<{ name: string; className?: string; color?: string }>) {
   const IconComponent = ICON_MAP[name] ?? Cloud;
   return <IconComponent className={className} style={color ? { color } : undefined} />;
 }

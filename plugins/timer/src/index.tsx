@@ -8,7 +8,6 @@
 import { setBrickData } from '@brika/sdk';
 import { log, onStop } from '@brika/sdk/lifecycle';
 
-
 // Blocks (workflow nodes)
 export { countdown } from './blocks/countdown';
 export { timer } from './blocks/timer';

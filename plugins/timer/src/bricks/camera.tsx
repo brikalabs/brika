@@ -14,7 +14,7 @@ import { ChevronLeft, ChevronRight, Circle, Radio, Square, Video } from 'lucide-
 import { useCallback, useRef, useState } from 'react';
 
 const recordButtonVariants = cva(
-  'flex h-7 cursor-pointer items-center gap-1.5 rounded px-3 text-xs font-medium transition-colors',
+  'flex h-7 cursor-pointer items-center gap-1.5 rounded px-3 font-medium text-xs transition-colors',
   {
     variants: {
       recording: {
@@ -22,25 +22,38 @@ const recordButtonVariants = cva(
         false: 'bg-foreground text-background hover:opacity-90',
       },
     },
-  },
+  }
 );
 
 const STREAMS = [
   { name: 'Sintel', src: 'https://bitdash-a.akamaihd.net/content/sintel/hls/playlist.m3u8' },
   { name: 'Big Buck Bunny', src: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8' },
-  { name: 'Elephants Dream', src: 'https://playertest.longtailvideo.com/adaptive/elephants_dream_v4/index.m3u8' },
-  { name: 'Oceans', src: 'https://playertest.longtailvideo.com/adaptive/oceans_aes/oceans_aes.m3u8' },
-  { name: 'Angel One', src: 'https://storage.googleapis.com/shaka-demo-assets/angel-one-hls/hls.m3u8' },
+  {
+    name: 'Elephants Dream',
+    src: 'https://playertest.longtailvideo.com/adaptive/elephants_dream_v4/index.m3u8',
+  },
+  {
+    name: 'Oceans',
+    src: 'https://playertest.longtailvideo.com/adaptive/oceans_aes/oceans_aes.m3u8',
+  },
+  {
+    name: 'Angel One',
+    src: 'https://storage.googleapis.com/shaka-demo-assets/angel-one-hls/hls.m3u8',
+  },
 ];
 
 export default function CameraBrick() {
   const { width, height } = useBrickSize();
   const config = useBrickConfig();
 
-  const defaultStreamName = typeof config.defaultStream === 'string' ? config.defaultStream : STREAMS[0].name;
+  const defaultStreamName =
+    typeof config.defaultStream === 'string' ? config.defaultStream : STREAMS[0].name;
   const muted = typeof config.muted === 'boolean' ? config.muted : true;
 
-  const defaultIndex = Math.max(0, STREAMS.findIndex((s) => s.name === defaultStreamName));
+  const defaultIndex = Math.max(
+    0,
+    STREAMS.findIndex((s) => s.name === defaultStreamName)
+  );
   const [streamIndex, setStreamIndex] = useState(defaultIndex);
   const [recording, setRecording] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -77,7 +90,7 @@ export default function CameraBrick() {
         {recording && (
           <div className="absolute top-2 right-2 flex items-center gap-1 rounded-full bg-red-600/80 px-2 py-0.5 backdrop-blur-sm">
             <Circle className="size-2 animate-pulse fill-white text-white" />
-            <span className="text-[10px] font-bold text-white">REC</span>
+            <span className="font-bold text-[10px] text-white">REC</span>
           </div>
         )}
       </div>
@@ -87,11 +100,14 @@ export default function CameraBrick() {
         <div className="flex items-center gap-2 px-2">
           <div className="flex items-center gap-1.5">
             <Video className="size-3.5 text-red-400" />
-            <span className="truncate text-xs font-medium text-foreground">{stream.name}</span>
+            <span className="truncate font-medium text-foreground text-xs">{stream.name}</span>
           </div>
-          <div className="flex items-center gap-1 ml-auto">
+          <div className="ml-auto flex items-center gap-1">
             <span
-              className={clsx('size-2 rounded-full', recording ? 'animate-pulse bg-red-500' : 'bg-emerald-500')}
+              className={clsx(
+                'size-2 rounded-full',
+                recording ? 'animate-pulse bg-red-500' : 'bg-emerald-500'
+              )}
             />
             <span className="text-[10px] text-muted-foreground">
               {recording ? 'Recording' : 'Live'}

@@ -24,7 +24,15 @@ import { NodeStates, type PairedNode } from '@project-chip/matter.js/device';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-export type DeviceType = 'light' | 'lock' | 'cover' | 'thermostat' | 'switch' | 'sensor' | 'bridge' | 'unknown';
+export type DeviceType =
+  | 'light'
+  | 'lock'
+  | 'cover'
+  | 'thermostat'
+  | 'switch'
+  | 'sensor'
+  | 'bridge'
+  | 'unknown';
 
 export interface MatterDevice {
   nodeId: string;
@@ -41,10 +49,17 @@ export interface MatterDevice {
 }
 
 export type MatterCommand =
-  | 'on' | 'off' | 'toggle'
-  | 'setBrightness' | 'setColorTemp' | 'setHueSaturation'
-  | 'lock' | 'unlock'
-  | 'coverOpen' | 'coverClose' | 'coverStop'
+  | 'on'
+  | 'off'
+  | 'toggle'
+  | 'setBrightness'
+  | 'setColorTemp'
+  | 'setHueSaturation'
+  | 'lock'
+  | 'unlock'
+  | 'coverOpen'
+  | 'coverClose'
+  | 'coverStop'
   | 'setTargetTemp';
 
 type DeviceCallback = (device: MatterDevice) => void;
@@ -89,7 +104,9 @@ function classifyDeviceType(deviceTypeId: number): DeviceType | undefined {
 function classifyDeviceTypes(deviceTypeIds: number[]): DeviceType {
   for (const id of deviceTypeIds) {
     const type = classifyDeviceType(id);
-    if (type) return type;
+    if (type) {
+      return type;
+    }
   }
   return 'unknown';
 }
@@ -104,10 +121,16 @@ function collectAllEndpoints(topEndpoints: any[]): any[] {
     all.push(ep);
     try {
       const children = ep.getChildEndpoints?.() ?? [];
-      for (const child of children) collect(child);
-    } catch { /* no children */ }
+      for (const child of children) {
+        collect(child);
+      }
+    } catch {
+      /* no children */
+    }
   };
-  for (const ep of topEndpoints) collect(ep);
+  for (const ep of topEndpoints) {
+    collect(ep);
+  }
   return all;
 }
 
@@ -118,17 +141,19 @@ function readColorControlState(ep: any, state: Record<string, unknown>): void {
     const colorState = ep.state?.colorControl;
     if (colorState) {
       state.colorMode = colorState.colorMode;
-      if (colorState.currentHue != null) {
+      if (colorState.currentHue !== null) {
         state.hue = Math.round((Number(colorState.currentHue) / 254) * 360);
       }
-      if (colorState.currentSaturation != null) {
+      if (colorState.currentSaturation !== null) {
         state.saturation = Math.round((Number(colorState.currentSaturation) / 254) * 100);
       }
-      if (colorState.colorTemperatureMireds != null) {
+      if (colorState.colorTemperatureMireds !== null) {
         state.colorTempMireds = Number(colorState.colorTemperatureMireds);
       }
     }
-  } catch { /* cluster not present */ }
+  } catch {
+    /* cluster not present */
+  }
 }
 
 const CONTROLLER_VENDOR_NAME = 'Brika';
@@ -148,7 +173,9 @@ export class MatterController {
   #started = false;
 
   async start(): Promise<void> {
-    if (this.#started) return;
+    if (this.#started) {
+      return;
+    }
     this.#started = true;
 
     log.info('Matter controller starting...');
@@ -196,7 +223,9 @@ export class MatterController {
   }
 
   async stop(): Promise<void> {
-    if (!this.#started || !this.#controller) return;
+    if (!this.#started || !this.#controller) {
+      return;
+    }
     this.#started = false;
 
     await this.#controller.close();
@@ -208,7 +237,9 @@ export class MatterController {
   // ─── Discovery ─────────────────────────────────────────────────────────────
 
   async discover(): Promise<MatterDevice[]> {
-    if (!this.#controller) throw new Error('Controller not started');
+    if (!this.#controller) {
+      throw new Error('Controller not started');
+    }
 
     log.info('Scanning for commissionable Matter devices...');
 
@@ -217,7 +248,7 @@ export class MatterController {
       undefined,
       (device) => {
         log.info(
-          `Discovered: ${device.deviceIdentifier ?? device.DN ?? 'unknown'} (discriminator: ${device.D})`,
+          `Discovered: ${device.deviceIdentifier ?? device.DN ?? 'unknown'} (discriminator: ${device.D})`
         );
         const matterDevice: MatterDevice = {
           nodeId: `discovered-${device.D}`,
@@ -228,9 +259,11 @@ export class MatterController {
           state: {},
           discriminator: device.D,
         };
-        for (const cb of this.#onDiscovered) cb(matterDevice);
+        for (const cb of this.#onDiscovered) {
+          cb(matterDevice);
+        }
       },
-      Seconds(10),
+      Seconds(10)
     );
 
     log.info(`Discovery complete: ${discovered.length} device(s) found`);
@@ -247,7 +280,9 @@ export class MatterController {
   }
 
   async commission(pairingCode: string): Promise<string> {
-    if (!this.#controller) throw new Error('Controller not started');
+    if (!this.#controller) {
+      throw new Error('Controller not started');
+    }
 
     log.info(`Commissioning with pairing code: ${pairingCode}`);
 
@@ -261,7 +296,9 @@ export class MatterController {
 
       if (pairingCode.startsWith('MT:')) {
         const [qrData] = QrPairingCodeCodec.decode(pairingCode);
-        log.info(`Decoded QR code — discriminator: ${qrData.discriminator}, passcode: ${qrData.passcode}`);
+        log.info(
+          `Decoded QR code — discriminator: ${qrData.discriminator}, passcode: ${qrData.passcode}`
+        );
         options = {
           commissioning,
           discovery: { identifierData: { longDiscriminator: qrData.discriminator } },
@@ -269,7 +306,9 @@ export class MatterController {
         };
       } else {
         const manualData = ManualPairingCodeCodec.decode(pairingCode);
-        log.info(`Decoded manual code — discriminator: ${manualData.shortDiscriminator}, passcode: ${manualData.passcode}`);
+        log.info(
+          `Decoded manual code — discriminator: ${manualData.shortDiscriminator}, passcode: ${manualData.passcode}`
+        );
         options = {
           commissioning,
           discovery: { identifierData: { shortDiscriminator: manualData.shortDiscriminator } },
@@ -285,7 +324,9 @@ export class MatterController {
 
       const device = this.#deviceCache.get(String(nodeId));
       if (device) {
-        for (const cb of this.#onStateChanged) cb(device);
+        for (const cb of this.#onStateChanged) {
+          cb(device);
+        }
       }
 
       return String(nodeId);
@@ -300,12 +341,16 @@ export class MatterController {
   }
 
   async removeDevice(deviceId: string): Promise<boolean> {
-    if (!this.#controller) return false;
+    if (!this.#controller) {
+      return false;
+    }
 
     // Resolve to the actual node ID (strip endpoint suffix for bridge children)
     const nodeId = deviceId.split(':')[0];
     const pairedNode = this.#pairedNodes.get(nodeId);
-    if (!pairedNode) return false;
+    if (!pairedNode) {
+      return false;
+    }
 
     try {
       await pairedNode.decommission();
@@ -356,7 +401,7 @@ export class MatterController {
   async sendCommand(
     deviceId: string,
     command: MatterCommand,
-    params?: Record<string, string>,
+    params?: Record<string, string>
   ): Promise<boolean> {
     // deviceId can be "nodeId" or "nodeId:endpointNumber" (bridge children)
     const [nodeIdPart, epPart] = deviceId.split(':');
@@ -405,7 +450,9 @@ export class MatterController {
         case 'setColorTemp': {
           const mireds = Number(params?.mireds ?? 370);
           // Access commands via generic endpoint.commands (ColorControlClient isn't barrel-exported)
-          const colorCmds = (endpoint.commands as Record<string, Record<string, (args: unknown) => Promise<void>>>).colorControl;
+          const colorCmds = (
+            endpoint.commands as Record<string, Record<string, (args: unknown) => Promise<void>>>
+          ).colorControl;
           await colorCmds.moveToColorTemperature({
             colorTemperatureMireds: mireds,
             transitionTime: 5,
@@ -417,7 +464,9 @@ export class MatterController {
         case 'setHueSaturation': {
           const hue = Number(params?.hue ?? 0);
           const saturation = Number(params?.saturation ?? 254);
-          const hsCmds = (endpoint.commands as Record<string, Record<string, (args: unknown) => Promise<void>>>).colorControl;
+          const hsCmds = (
+            endpoint.commands as Record<string, Record<string, (args: unknown) => Promise<void>>>
+          ).colorControl;
           await hsCmds.moveToHueAndSaturation({
             hue,
             saturation,
@@ -465,13 +514,17 @@ export class MatterController {
   #notifyNodeDevices(nodeIdStr: string): void {
     for (const device of this.#deviceCache.values()) {
       if (device.nodeId === nodeIdStr || device.nodeId.startsWith(`${nodeIdStr}:`)) {
-        for (const cb of this.#onStateChanged) cb(device);
+        for (const cb of this.#onStateChanged) {
+          cb(device);
+        }
       }
     }
   }
 
   async #connectNode(nodeId: NodeId): Promise<void> {
-    if (!this.#controller) return;
+    if (!this.#controller) {
+      return;
+    }
 
     const node = await this.#controller.getNode(nodeId);
     const nodeIdStr = String(nodeId);
@@ -480,7 +533,7 @@ export class MatterController {
     // Subscribe to attribute changes
     node.events.attributeChanged.on(({ path, value }) => {
       log.info(
-        `Attribute changed on ${nodeIdStr}: ${path.endpointId}/${path.clusterId}/${path.attributeName} = ${value}`,
+        `Attribute changed on ${nodeIdStr}: ${path.endpointId}/${path.clusterId}/${path.attributeName} = ${value}`
       );
       this.#refreshDeviceState(nodeIdStr, node);
       this.#notifyNodeDevices(nodeIdStr);
@@ -502,7 +555,9 @@ export class MatterController {
           const wasOnline = device.online;
           device.online = online;
           if (wasOnline !== online) {
-            for (const cb of this.#onStateChanged) cb(device);
+            for (const cb of this.#onStateChanged) {
+              cb(device);
+            }
           }
         }
       }
@@ -534,7 +589,9 @@ export class MatterController {
     const topEndpoints = node.getDevices();
     const allEndpoints = collectAllEndpoints(topEndpoints);
 
-    log.info(`Node ${nodeIdStr}: ${topEndpoints.length} top-level, ${allEndpoints.length} total endpoint(s)`);
+    log.info(
+      `Node ${nodeIdStr}: ${topEndpoints.length} top-level, ${allEndpoints.length} total endpoint(s)`
+    );
 
     // Remove stale entries for this node before rebuilding
     for (const key of this.#deviceCache.keys()) {
@@ -597,7 +654,9 @@ export class MatterController {
           serial = bridgedInfo.serialNumber;
           softwareVersion = bridgedInfo.softwareVersionString;
         }
-      } catch { /* not a bridged endpoint */ }
+      } catch {
+        /* not a bridged endpoint */
+      }
       epName ??= hasMultiple ? `${info?.productName ?? 'Device'} #${epNumber}` : undefined;
       epName ??= info?.productName ?? info?.nodeLabel ?? `Device ${nodeIdStr}`;
       vendor ??= info?.vendorName;
@@ -626,8 +685,12 @@ export class MatterController {
 
     try {
       const onOffState = ep.maybeStateOf(OnOffClient);
-      if (onOffState) state.on = onOffState.onOff;
-    } catch { /* cluster not present */ }
+      if (onOffState) {
+        state.on = onOffState.onOff;
+      }
+    } catch {
+      /* cluster not present */
+    }
 
     try {
       const levelState = ep.maybeStateOf(LevelControlClient);
@@ -635,7 +698,9 @@ export class MatterController {
         const level = levelState.currentLevel ?? 0;
         state.brightness = Math.round((Number(level) / 254) * 100);
       }
-    } catch { /* cluster not present */ }
+    } catch {
+      /* cluster not present */
+    }
 
     readColorControlState(ep, state);
 
@@ -646,7 +711,9 @@ export class MatterController {
         state.locked = ls === DoorLock.LockState.Locked;
         state.lockState = ls;
       }
-    } catch { /* cluster not present */ }
+    } catch {
+      /* cluster not present */
+    }
 
     try {
       const coverState = ep.maybeStateOf(WindowCoveringClient);
@@ -654,17 +721,21 @@ export class MatterController {
         state.coverPosition = coverState.currentPositionLiftPercentage ?? null;
         state.coverOperational = coverState.operationalStatus;
       }
-    } catch { /* cluster not present */ }
+    } catch {
+      /* cluster not present */
+    }
 
     try {
       const thermoState = ep.maybeStateOf(ThermostatClient);
       if (thermoState) {
         const local = thermoState.localTemperature;
-        state.temperature = local == null ? null : Number(local) / 100;
+        state.temperature = local === null ? null : Number(local) / 100;
         state.systemMode = thermoState.systemMode;
         state.systemModeName = Thermostat.SystemMode[thermoState.systemMode] ?? 'unknown';
       }
-    } catch { /* cluster not present */ }
+    } catch {
+      /* cluster not present */
+    }
 
     return state;
   }

@@ -9,13 +9,17 @@ type Config = Record<string, unknown> | null | undefined;
 
 export function resolveStyle(config: Config): ChartStyle {
   const v = config?.style;
-  if (v === 'area' || v === 'line' || v === 'bar') return v;
+  if (v === 'area' || v === 'line' || v === 'bar') {
+    return v;
+  }
   return 'bar';
 }
 
 export function resolvePeriod(config: Config): Period {
   const v = config?.period;
-  if (typeof v === 'string' && (VALID_PERIODS as string[]).includes(v)) return v as Period;
+  if (typeof v === 'string' && (VALID_PERIODS as string[]).includes(v)) {
+    return v as Period;
+  }
   return '12m';
 }
 
@@ -44,7 +48,7 @@ export function buildRows(
   points: ConsumptionPoint[],
   granularity: Granularity,
   locale: string,
-  prices: Prices,
+  prices: Prices
 ): ChartRow[] {
   return points.map((p) => {
     const ts = new Date(p.timestamp).getTime();

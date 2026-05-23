@@ -99,7 +99,7 @@ export class PluginManager {
       throw errors.pluginNotFound({ pluginId: uid });
     }
 
-    await this.#state.setEnabled(name, true);
+    this.#state.setEnabled(name, true);
     const stored = this.#state.get(name);
     if (!stored) {
       throw errors.pluginNotFound({ pluginId: name });
@@ -132,7 +132,7 @@ export class PluginManager {
       throw errors.pluginNotFound({ pluginId: uid });
     }
 
-    await this.#state.setEnabled(name, false);
+    this.#state.setEnabled(name, false);
     await this.#lifecycle.unload(name);
   }
 
@@ -212,7 +212,7 @@ export class PluginManager {
     }
 
     process.kill(9);
-    await this.#state.setHealth(name, 'crashed', PluginErrors.killed());
+    this.#state.setHealth(name, 'crashed', PluginErrors.killed());
     await this.#lifecycle.unload(name);
   }
 
@@ -232,7 +232,7 @@ export class PluginManager {
       await this.#lifecycle.unload(name);
     }
     this.#lifecycle.removeModules(name, rootDirectory);
-    await this.#state.remove(name);
+    this.#state.remove(name);
     this.#eventHandler.onPluginRemoved(name);
   }
 

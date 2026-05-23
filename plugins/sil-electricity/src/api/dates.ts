@@ -35,7 +35,11 @@ export function dateRangeForPeriod(period: Period): [string, string] {
 }
 
 export function granularityForPeriod(period: Period): Granularity {
-  if (period === '24h') return 'minute';
-  if (period === '7d' || period === '30d') return 'day';
+  if (period === '24h') {
+    return 'minute';
+  }
+  if (period === '7d' || period === '30d') {
+    return 'day';
+  }
   return 'month';
 }

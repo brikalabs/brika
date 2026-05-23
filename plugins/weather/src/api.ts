@@ -17,11 +17,15 @@ interface GeoResult {
 export async function geocodeCity(name: string): Promise<GeoLocation | null> {
   const url = `${GEO_BASE}/search?name=${encodeURIComponent(name)}&count=1&language=en`;
   const res = await ctx.net.fetch({ url, method: 'GET' });
-  if (res.status < 200 || res.status >= 300) return null;
+  if (res.status < 200 || res.status >= 300) {
+    return null;
+  }
 
   const parsed = JSON.parse(res.body) as { results?: GeoResult[] };
   const first = parsed.results?.[0];
-  if (!first) return null;
+  if (!first) {
+    return null;
+  }
 
   return {
     name: first.name,
@@ -68,7 +72,7 @@ export interface WeatherData {
 
 export async function fetchWeather(
   latitude: number,
-  longitude: number,
+  longitude: number
 ): Promise<WeatherData | null> {
   const params = new URLSearchParams({
     latitude: String(latitude),
@@ -86,7 +90,9 @@ export async function fetchWeather(
     url: `${WEATHER_BASE}/forecast?${params}`,
     method: 'GET',
   });
-  if (res.status < 200 || res.status >= 300) return null;
+  if (res.status < 200 || res.status >= 300) {
+    return null;
+  }
 
   const data = JSON.parse(res.body) as ForecastResponse;
 

@@ -2,7 +2,7 @@
 export function withCircleWipe(apply: () => void, origin?: Element | null) {
   if (
     !('startViewTransition' in document) ||
-    window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    globalThis.matchMedia('(prefers-reduced-motion: reduce)').matches
   ) {
     apply();
     return;

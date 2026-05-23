@@ -6,13 +6,7 @@ import {
   onPreferencesChange,
   onStop,
 } from '@brika/sdk/lifecycle';
-import {
-  acquirePeriod,
-  setCredentials,
-  setPrices,
-  stopAll,
-  useElectricityStore,
-} from './store';
+import { acquirePeriod, setCredentials, setPrices, stopAll, useElectricityStore } from './store';
 import type { ElectricityState, Period } from './types';
 
 interface SilPrefs {
@@ -49,16 +43,22 @@ function isPeriod(value: unknown): value is Period {
  * into its `<Loader/>` fallback for the duration of the next poll.
  */
 function isInformative(state: ElectricityState): boolean {
-  if (!state.credentialsSet) return true;
+  if (!state.credentialsSet) {
+    return true;
+  }
   for (const period of Object.values(state.periods)) {
-    if (period?.data != null || period?.error != null) return true;
+    if (period?.data !== null || period?.error !== null) {
+      return true;
+    }
   }
   return false;
 }
 
 function pushState(): void {
   const state = useElectricityStore.get();
-  if (!isInformative(state)) return;
+  if (!isInformative(state)) {
+    return;
+  }
   setBrickData('chart', state);
   setBrickData('summary', state);
   setBrickData('live', state);
@@ -71,11 +71,17 @@ const instanceReleases = new Map<string, { period: Period; release: () => void }
 const baseReleases: (() => void)[] = [];
 
 function bindInstance(instanceId: string, config: Record<string, unknown>): void {
-  if (!isPeriod(config.period)) return;
+  if (!isPeriod(config.period)) {
+    return;
+  }
   const previous = instanceReleases.get(instanceId);
-  if (previous?.period === config.period) return;
+  if (previous?.period === config.period) {
+    return;
+  }
 
-  if (previous) previous.release();
+  if (previous) {
+    previous.release();
+  }
   instanceReleases.set(instanceId, {
     period: config.period,
     release: acquirePeriod(config.period),
@@ -113,8 +119,12 @@ onInit(async () => {
 });
 
 onStop(() => {
-  for (const release of baseReleases) release();
-  for (const { release } of instanceReleases.values()) release();
+  for (const release of baseReleases) {
+    release();
+  }
+  for (const { release } of instanceReleases.values()) {
+    release();
+  }
   instanceReleases.clear();
   baseReleases.length = 0;
   stopAll();

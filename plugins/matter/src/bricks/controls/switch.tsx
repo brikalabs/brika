@@ -36,7 +36,7 @@ export function SwitchControls({ device }: Readonly<{ device: DeviceState }>) {
       >
         <Power className={clsx('size-7', isOn ? 'text-white' : 'text-white/40')} />
       </button>
-      <span className={clsx('text-sm font-semibold', isOn ? 'text-white' : 'text-white/50')}>
+      <span className={clsx('font-semibold text-sm', isOn ? 'text-white' : 'text-white/50')}>
         {isOn ? 'On' : 'Off'}
       </span>
     </div>

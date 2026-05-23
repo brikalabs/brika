@@ -20,9 +20,7 @@ function buildQuery(granularity: Granularity, dateRange: [string, string]): Cube
   return {
     measures: ['MeterReading.mrReadingvalue'],
     segments: ['MeterReading.standardGroup'],
-    timeDimensions: [
-      { dimension: 'MeterReading.mrReadingtimestamp', granularity, dateRange },
-    ],
+    timeDimensions: [{ dimension: 'MeterReading.mrReadingtimestamp', granularity, dateRange }],
     order: [],
     limit: 50000,
     dimensions: ['MeterReading.typehour'],
@@ -53,11 +51,17 @@ interface CubeResponse {
 }
 
 function isCubeResponse(value: unknown): value is CubeResponse {
-  if (typeof value !== 'object' || value === null) return false;
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
   const obj = value as Record<string, unknown>;
-  if (!Array.isArray(obj['results'])) return false;
+  if (!Array.isArray(obj['results'])) {
+    return false;
+  }
   const first = (obj['results'] as unknown[])[0];
-  if (typeof first !== 'object' || first === null) return false;
+  if (typeof first !== 'object' || first === null) {
+    return false;
+  }
   return Array.isArray((first as Record<string, unknown>)['data']);
 }
 
@@ -85,7 +89,7 @@ function aggregatePoints(rows: CubeDataRow[], granularity: Granularity): Consump
 
 export async function fetchConsumption(
   cookie: string,
-  period: Period,
+  period: Period
 ): Promise<ConsumptionPoint[]> {
   const granularity = granularityForPeriod(period);
   const dateRange = dateRangeForPeriod(period);
@@ -99,15 +103,23 @@ export async function fetchConsumption(
     headers: { Cookie: cookie, Referer: `${BASE}${GOTO}` },
   });
 
-  if (res.status === 401 || res.status === 403) throw new Error('AUTH_FAILED');
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  if (res.status === 401 || res.status === 403) {
+    throw new Error('AUTH_FAILED');
+  }
+  if (!res.ok) {
+    throw new Error(`HTTP ${res.status}`);
+  }
 
   // HTML response means we were redirected to the login page (session expired)
   const contentType = res.headers.get('content-type') ?? '';
-  if (contentType.includes('text/html')) throw new Error('AUTH_FAILED');
+  if (contentType.includes('text/html')) {
+    throw new Error('AUTH_FAILED');
+  }
 
   const json: unknown = await res.json();
-  if (!isCubeResponse(json)) throw new Error('INVALID_RESPONSE');
+  if (!isCubeResponse(json)) {
+    throw new Error('INVALID_RESPONSE');
+  }
 
   return aggregatePoints(json.results[0]?.data ?? [], granularity);
 }

@@ -46,7 +46,9 @@ export async function silLogin(email: string, password: string): Promise<string>
   const ssoToken = await fetchSsoToken(jar);
   await submitSsoToken(jar, ssoToken);
 
-  if (jar.size === 0) throw new Error('AUTH_NO_COOKIE');
+  if (jar.size === 0) {
+    throw new Error('AUTH_NO_COOKIE');
+  }
   return jar.toString();
 }
 
@@ -96,7 +98,9 @@ async function postCredentials(jar: CookieJar, email: string, password: string):
   });
   jar.ingest(r);
 
-  if (r.status !== 202) throw new Error('AUTH_FAILED');
+  if (r.status !== 202) {
+    throw new Error('AUTH_FAILED');
+  }
   // Drain the JSON body so the connection can be reused.
   await r.json().catch(() => null);
 }
@@ -116,7 +120,9 @@ async function fetchSsoToken(jar: CookieJar): Promise<string> {
 
   const html = await r.text().catch(() => '');
   const token = extractSsoFromHtml(html) ?? jar.ssoCandidate();
-  if (!token) throw new Error('AUTH_NO_TOKEN');
+  if (!token) {
+    throw new Error('AUTH_NO_TOKEN');
+  }
   return token;
 }
 

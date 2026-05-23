@@ -57,9 +57,6 @@ export function miredsToHex(mireds: number): string {
     g = Math.min(255, Math.max(0, 288.12 * (t - 60) ** -0.0755));
     b = 255;
   }
-  const toHex = (n: number) =>
-    Math.round(n)
-      .toString(16)
-      .padStart(2, '0');
+  const toHex = (n: number) => Math.round(n).toString(16).padStart(2, '0');
   return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 }

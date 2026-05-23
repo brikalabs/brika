@@ -174,7 +174,7 @@ export function createTestHarness(manifest?: Partial<Manifest>): TestHarness {
     },
     log: mock((level: string, message: string) => {
       logMessages.push({ level, message });
-    }) as unknown as ContextCore['log'],
+    }),
   };
 
   function reset() {
