@@ -158,10 +158,11 @@ function getFieldValue(data: unknown, path: string): unknown {
  * - Plain dot paths: "count", "data.status"
  * - Expression syntax: "{{ inputs.in.count }}" → resolves "count" on data
  */
-// The capture excludes `{` and `}` so the closing `}}` can never be matched
-// inside the path -- prevents the regex from backtracking across the
-// terminator (Sonar S5852, super-linear ReDoS).
-const FIELD_EXPRESSION_RE = /^\{\{\s*inputs\.\w+\.([^{}\s][^{}]*?)\s*\}\}$/;
+// Path is a dot-separated identifier chain (word chars + dots only).
+// The character class is disjoint from `\s` and `{}`, so there is no
+// overlap with the surrounding whitespace or braces -- linear-time
+// match, no backtracking ambiguity (Sonar S5852, super-linear ReDoS).
+const FIELD_EXPRESSION_RE = /^\{\{\s*inputs\.\w+\.([\w.]+)\s*\}\}$/;
 
 function resolveFieldValue(data: unknown, field: string): unknown {
   // Strip {{ }} expression wrapper and resolve the path
