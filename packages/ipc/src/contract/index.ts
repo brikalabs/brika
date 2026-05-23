@@ -91,6 +91,9 @@ export {
   subscribeSpark,
   unsubscribeSpark,
 } from './sparks';
+// ─── Streams (hub → plugin push events for stateful grants) ───
+export type { StreamEvent as StreamEventType, StreamEventKind } from './streams';
+export { StreamEventKindSchema, StreamEventSchema, streamEvent } from './streams';
 export type {
   ActiveTheme as ActiveThemeType,
   ActiveThemeUpdate as ActiveThemeUpdateType,

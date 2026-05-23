@@ -84,3 +84,24 @@ export {
 } from './fs';
 export type { FetchArgs, FetchResult, NetScope } from './net';
 export { FetchArgsSchema, FetchResultSchema, NetScopeSchema, netFetch } from './net';
+export type {
+  WsCloseArgs,
+  WsCloseResult,
+  WsConnectArgs,
+  WsConnectResult,
+  WsScope,
+  WsSendArgs,
+  WsSendResult,
+} from './ws';
+export {
+  WsCloseArgsSchema,
+  WsCloseResultSchema,
+  WsConnectArgsSchema,
+  WsConnectResultSchema,
+  WsScopeSchema,
+  WsSendArgsSchema,
+  WsSendResultSchema,
+  wsClose,
+  wsConnect,
+  wsSend,
+} from './ws';

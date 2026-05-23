@@ -14,6 +14,7 @@ import { type AuditLogger, GrantRegistry } from '@brika/grants';
 import { buildDnsGrants, type DnsGrantOptions } from './dns';
 import { buildFsGrants, type FsGrantOptions } from './fs';
 import { buildNetGrants, type NetCallbacks, type NetGrantOptions } from './net';
+import { buildWsGrants, type WsGrantOptions } from './ws';
 
 // Type alias instead of empty `interface extends` so biome's no-empty-
 // interface lint doesn't flag it. Extend with `& XyzCallbacks` as more
@@ -38,6 +39,12 @@ export interface HubGrantOptions {
    * `PERMISSION_DENIED`).
    */
   readonly fs?: FsGrantOptions;
+  /**
+   * WebSocket grant configuration. Required to register the
+   * `dev.brika.ws.*` family — the hub needs the stream sink (the
+   * plugin's IPC channel) to push inbound frames at the plugin.
+   */
+  readonly ws?: WsGrantOptions;
   /**
    * Sink for per-dispatch audit entries. Production wires this to the
    * hub's structured log; tests pass a collecting array. Omit to skip
@@ -65,6 +72,12 @@ export function buildHubGrants(cb: HubGrantCallbacks, opts?: HubGrantOptions): G
   }
   if (opts?.fs !== undefined) {
     for (const grant of buildFsGrants(opts.fs)) {
+      reg.register(grant);
+    }
+  }
+  if (opts?.ws !== undefined) {
+    const { grants: wsGrants } = buildWsGrants(opts.ws);
+    for (const grant of wsGrants) {
       reg.register(grant);
     }
   }

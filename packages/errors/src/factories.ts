@@ -150,6 +150,16 @@ export const errors = {
 
   fsNotFound: (data: DataForCode<'FS_NOT_FOUND'>, opts?: FactoryOpts) =>
     buildError<'FS_NOT_FOUND'>('FS_NOT_FOUND', data, opts),
+
+  // ─── ws ──────────────────────────────────────────────────────────────
+  wsOpenLimitExceeded: (data: DataForCode<'WS_OPEN_LIMIT_EXCEEDED'>, opts?: FactoryOpts) =>
+    buildError<'WS_OPEN_LIMIT_EXCEEDED'>('WS_OPEN_LIMIT_EXCEEDED', data, opts),
+
+  wsHandleNotFound: (data: DataForCode<'WS_HANDLE_NOT_FOUND'>, opts?: FactoryOpts) =>
+    buildError<'WS_HANDLE_NOT_FOUND'>('WS_HANDLE_NOT_FOUND', data, opts),
+
+  wsFrameTooLarge: (data: DataForCode<'WS_FRAME_TOO_LARGE'>, opts?: FactoryOpts) =>
+    buildError<'WS_FRAME_TOO_LARGE'>('WS_FRAME_TOO_LARGE', data, opts),
 } as const;
 
 // ─── Catalog completeness guard ────────────────────────────────────────────

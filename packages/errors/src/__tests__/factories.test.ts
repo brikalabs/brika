@@ -37,6 +37,9 @@ describe('errors.* factories', () => {
     produced.add(errors.fsFileTooLarge({ limit: 10, requested: 20 }).code);
     produced.add(errors.fsAlreadyExists({ path: '/data/x' }).code);
     produced.add(errors.fsNotFound({ path: '/data/x' }).code);
+    produced.add(errors.wsOpenLimitExceeded({ limit: 8 }).code);
+    produced.add(errors.wsHandleNotFound({ handleId: 'ws_x' }).code);
+    produced.add(errors.wsFrameTooLarge({ limit: 10, requested: 11 }).code);
 
     for (const code of expected) {
       expect(produced.has(code)).toBe(true);

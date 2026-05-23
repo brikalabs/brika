@@ -19,6 +19,7 @@ import { swapInProxy } from '../lockdown';
 import { buildBunFileProxy } from './bun-file-proxy';
 import { buildDnsProxies } from './dns-proxy';
 import { buildFetchProxy } from './fetch-proxy';
+import { buildWebSocketProxy } from './websocket-proxy';
 
 export interface InstallProxiesDeps {
   readonly channel: Channel;
@@ -39,6 +40,21 @@ export function installNetProxies(deps: InstallProxiesDeps): void {
   installFetch(deps);
   installDns(deps);
   installBunFile(deps);
+  installWebSocket(deps);
+}
+
+function installWebSocket(deps: InstallProxiesDeps): void {
+  // Swap the deny-stubbed `globalThis.WebSocket` for a proxy that
+  // dispatches `ws.connect` to the hub and listens for `streamEvent`
+  // pushes targeted at handles owned by this channel. The hub-side
+  // grant is registered separately via `buildHubGrants({ws: ...})`.
+  const { Constructor } = buildWebSocketProxy({ channel: deps.channel });
+  if (!swapInProxy('globalThis', 'WebSocket', Constructor)) {
+    deps.log(
+      'warn',
+      'installWebSocket: scrub slot was not found — globalThis.WebSocket is still a deny stub.'
+    );
+  }
 }
 
 function installBunFile(deps: InstallProxiesDeps): void {
