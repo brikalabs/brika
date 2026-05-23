@@ -71,3 +71,7 @@ apps/signaling-worker/public/
 
 # Claude Code local state
 .claude/
+
+# archunit DSL tests create/destroy `.test-fixtures/` per-test (see
+# packages/archunit/src/__tests__/dsl.test.ts). The dir should not be tracked.
+**/__tests__/.test-fixtures/
