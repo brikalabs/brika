@@ -13,5 +13,26 @@
  * hub side. No bridge interface to touch.
  */
 
+export type {
+  DnsLookupArgs,
+  DnsLookupResult,
+  DnsResolveMxArgs,
+  DnsResolveMxResult,
+  DnsResolveTxtArgs,
+  DnsResolveTxtResult,
+  DnsScope,
+} from './dns';
+export {
+  DnsLookupArgsSchema,
+  DnsLookupResultSchema,
+  DnsResolveMxArgsSchema,
+  DnsResolveMxResultSchema,
+  DnsResolveTxtArgsSchema,
+  DnsResolveTxtResultSchema,
+  DnsScopeSchema,
+  dnsLookup,
+  dnsResolveMx,
+  dnsResolveTxt,
+} from './dns';
 export type { FetchArgs, FetchResult, NetScope } from './net';
 export { FetchArgsSchema, FetchResultSchema, NetScopeSchema, netFetch } from './net';

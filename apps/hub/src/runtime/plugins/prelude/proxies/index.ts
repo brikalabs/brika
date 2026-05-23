@@ -16,6 +16,7 @@
 import type { Channel } from '@brika/ipc';
 import type { LogLevelType } from '@brika/ipc/contract';
 import { swapInProxy } from '../lockdown';
+import { buildDnsProxies } from './dns-proxy';
 import { buildFetchProxy } from './fetch-proxy';
 
 export interface InstallProxiesDeps {
@@ -35,6 +36,7 @@ export interface InstallProxiesDeps {
  */
 export function installNetProxies(deps: InstallProxiesDeps): void {
   installFetch(deps);
+  installDns(deps);
 }
 
 function installFetch(deps: InstallProxiesDeps): void {
@@ -52,5 +54,22 @@ function installFetch(deps: InstallProxiesDeps): void {
       'warn',
       'installFetch: scrub slot was not found — global fetch is still a deny stub. This usually means the runtime had no fetch global to begin with.'
     );
+  }
+}
+
+function installDns(deps: InstallProxiesDeps): void {
+  const proxies = buildDnsProxies({ channel: deps.channel });
+  const entries: ReadonlyArray<[string, unknown]> = [
+    ['lookup', proxies.lookup],
+    ['resolveTxt', proxies.resolveTxt],
+    ['resolveMx', proxies.resolveMx],
+  ];
+  for (const [key, proxy] of entries) {
+    if (!swapInProxy('Bun.dns', key, proxy)) {
+      deps.log(
+        'warn',
+        `installDns: scrub slot Bun.dns.${key} was not found — the method is still a deny stub. Plugins calling it will see PERMISSION_DENIED.`
+      );
+    }
   }
 }
