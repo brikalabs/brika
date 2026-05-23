@@ -80,6 +80,18 @@ function flush(ms = 50): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+// Poll a predicate until it returns true or timeout expires. Use this instead of
+// fixed flush() sleeps for assertions that must see a specific state — under
+// CPU contention (e.g. `bun --filter '*' test --parallel` with many workspaces
+// in flight) the React render loop can be slow enough that a fixed sleep races.
+async function waitFor(predicate: () => boolean, timeoutMs = 2000): Promise<void> {
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    if (predicate()) return;
+    await new Promise((resolve) => setTimeout(resolve, 25));
+  }
+}
+
 interface ConsumerProps {
   readonly onResult: (cli: CliState) => void;
 }
@@ -176,7 +188,7 @@ describe('<CliProvider>', () => {
     writePid(process.pid);
     const latest: { current: CliState | null } = { current: null };
     const { unmount } = mount(latest);
-    await flush(150);
+    await waitFor(() => latest.current?.hub.state === 'running');
     expect(latest.current?.hub.state).toBe('running');
     if (latest.current?.hub.state === 'running') {
       expect(latest.current.hub.pid).toBe(process.pid);
