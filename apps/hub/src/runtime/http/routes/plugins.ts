@@ -294,11 +294,11 @@ export const pluginsRoutes = group({
         permission: z.string(),
         granted: z.boolean(),
       }),
-      handler: async ({ params, body, inject }) => {
+      handler: ({ params, body, inject }) => {
         const plugin = getOrThrow(inject(PluginManager).get(params.uid), 'Plugin not found');
         const permService = inject(PluginPermissionService);
 
-        const updated = await permService.setPermission(plugin.name, body.permission, body.granted);
+        const updated = permService.setPermission(plugin.name, body.permission, body.granted);
         return {
           grantedPermissions: updated,
         };

@@ -43,14 +43,14 @@ export function ScrollText({ text, className }: Readonly<{ text: string; classNa
         className={needsScroll ? 'inline-block whitespace-nowrap' : 'block truncate'}
         style={
           needsScroll
-            ? ({
+            ? {
                 animationName: 'spotify-scroll',
                 animationDuration: `${duration}s`,
                 animationTimingFunction: 'ease-in-out',
                 animationIterationCount: 'infinite',
                 animationDirection: 'alternate',
                 '--scroll-dist': `-${scrollPx}px`,
-              } as React.CSSProperties)
+              }
             : undefined
         }
       >
