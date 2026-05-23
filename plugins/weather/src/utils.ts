@@ -158,7 +158,12 @@ export type TranslateFn = (key: string, params?: Record<string, string | number>
 
 const WEEKDAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const;
 
-export function dayName(dateStr: string, t: TranslateFn): I18nRef {
+/**
+ * Resolve the i18n key for `dateStr` -- `days.today`, `days.tomorrow`,
+ * or `days.<weekday>`. Pure helper so brick code that uses a different
+ * `t(): string` shape can call it without depending on `TranslateFn`.
+ */
+export function dayKey(dateStr: string): string {
   const date = new Date(`${dateStr}T00:00:00`);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -167,10 +172,14 @@ export function dayName(dateStr: string, t: TranslateFn): I18nRef {
   tomorrow.setDate(tomorrow.getDate() + 1);
 
   if (date.getTime() === today.getTime()) {
-    return t('days.today');
+    return 'days.today';
   }
   if (date.getTime() === tomorrow.getTime()) {
-    return t('days.tomorrow');
+    return 'days.tomorrow';
   }
-  return t(`days.${WEEKDAY_KEYS[date.getDay()]}`);
+  return `days.${WEEKDAY_KEYS[date.getDay()]}`;
+}
+
+export function dayName(dateStr: string, t: TranslateFn): I18nRef {
+  return t(dayKey(dateStr));
 }

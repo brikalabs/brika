@@ -83,14 +83,19 @@ describe('Prelude', () => {
   let helper: ReturnType<typeof spawnWithPrelude> | null = null;
 
   afterEach(async () => {
-    if (helper) {
-      try {
-        helper.proc.kill();
-        await helper.proc.exited;
-      } catch {
-        // already dead
-      }
-      helper = null;
+    if (!helper) {
+      return;
+    }
+    const proc = helper.proc;
+    helper = null;
+    try {
+      // SIGKILL (9) so a child ignoring SIGTERM can't keep the test alive,
+      // and race the wait against a 2s ceiling so a stuck `proc.exited`
+      // doesn't pin the whole runner.
+      proc.kill(9);
+      await Promise.race([proc.exited, new Promise((resolve) => setTimeout(resolve, 2000))]);
+    } catch {
+      // already dead
     }
   });
 

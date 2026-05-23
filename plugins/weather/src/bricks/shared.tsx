@@ -20,20 +20,9 @@ import type { ComponentType } from 'react';
 
 // ─── Temperature helpers ──────────────────────────────────────────────────────
 
-export function formatTemp(celsius: number, unit: string): string {
-  if (unit === 'fahrenheit') {
-    return `${Math.round((celsius * 9) / 5 + 32)}`;
-  }
-  return `${Math.round(celsius)}`;
-}
-
-export function tempUnit(unit: string): string {
-  return unit === 'fahrenheit' ? '\u00b0F' : '\u00b0C';
-}
-
-export function formatTempWithUnit(celsius: number, unit: string): string {
-  return `${formatTemp(celsius, unit)}${tempUnit(unit)}`;
-}
+// Temperature helpers live in ../utils \u2014 re-exported here so existing
+// `from './shared'` imports stay valid without duplicating the implementations.
+export { formatTemp, formatTempWithUnit, tempUnit } from '../utils';
 
 // ─── Icon map ─────────────────────────────────────────────────────────────────
 

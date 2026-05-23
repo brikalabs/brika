@@ -9,6 +9,7 @@
 import { useBrickConfig, useBrickData, useBrickSize } from '@brika/sdk/brick-views';
 import { useLocale } from '@brika/sdk/ui-kit/hooks';
 import { MapPin } from 'lucide-react';
+import { dayKey } from '../utils';
 import {
   CityError,
   formatTempWithUnit,
@@ -42,27 +43,6 @@ interface ForecastWeatherData {
   cityErrors?: Record<string, string>;
 }
 
-// ─── Helpers ────────────────────────────────────────────────────────────────
-
-const WEEKDAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const;
-
-function dayLabel(dateStr: string, t: (key: string) => string): string {
-  const date = new Date(`${dateStr}T00:00:00`);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  const tomorrow = new Date(today);
-  tomorrow.setDate(tomorrow.getDate() + 1);
-
-  if (date.getTime() === today.getTime()) {
-    return t('days.today');
-  }
-  if (date.getTime() === tomorrow.getTime()) {
-    return t('days.tomorrow');
-  }
-  return t(`days.${WEEKDAY_KEYS[date.getDay()]}`);
-}
-
 // ─── Day row (narrow list layout) ───────────────────────────────────────────
 
 function DayRow({ day, unit }: Readonly<{ day: ForecastDay; unit: string }>) {
@@ -75,9 +55,7 @@ function DayRow({ day, unit }: Readonly<{ day: ForecastDay; unit: string }>) {
       >
         <WeatherIcon name={day.icon} color={day.color} className="size-4" />
       </div>
-      <span className="flex-1 truncate font-medium text-sm text-white">
-        {dayLabel(day.date, t)}
-      </span>
+      <span className="flex-1 truncate font-medium text-sm text-white">{t(dayKey(day.date))}</span>
       <span className="font-bold text-white">{formatTempWithUnit(day.tempMax, unit)}</span>
       <span className="text-sm text-white/35">{formatTempWithUnit(day.tempMin, unit)}</span>
     </div>
@@ -90,7 +68,7 @@ function DayCell({ day, unit }: Readonly<{ day: ForecastDay; unit: string }>) {
   const { t } = useLocale();
   return (
     <div className="flex flex-col items-center gap-1.5">
-      <span className="font-semibold text-[11px] text-white/70">{dayLabel(day.date, t)}</span>
+      <span className="font-semibold text-[11px] text-white/70">{t(dayKey(day.date))}</span>
       <div
         className="flex size-8 items-center justify-center rounded-full"
         style={{ backgroundColor: `${day.color}33` }}

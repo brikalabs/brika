@@ -65,6 +65,10 @@ jobs:
   test:
     needs: setup
     runs-on: ubuntu-latest
+    # Hard cap: a clean run is ~1 min. If we're past 10 the suite is wedged
+    # (typically a leaked plugin subprocess) -- fail fast instead of burning
+    # the full 6-hour job ceiling.
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
