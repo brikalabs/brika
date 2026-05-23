@@ -19,5 +19,3 @@ export const crouchEmote = defineEmote('crouch', {
     { kind: 'face', face: 'happy' },
   ],
 });
-
-export default crouchEmote;

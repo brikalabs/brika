@@ -22,5 +22,3 @@ export const shockEmote = defineEmote('shock', {
     { kind: 'face', face: 'neutral' },
   ],
 });
-
-export default shockEmote;

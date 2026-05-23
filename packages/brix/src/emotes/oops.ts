@@ -22,5 +22,3 @@ export const oopsEmote = defineEmote('oops', {
     { kind: 'wait', ms: 160 },
   ],
 });
-
-export default oopsEmote;

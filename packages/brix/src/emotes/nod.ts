@@ -23,5 +23,3 @@ export const nodEmote = defineEmote('nod', {
     { kind: 'tween', h: 3, ms: 120, ease: 'easeOut' },
   ],
 });
-
-export default nodEmote;

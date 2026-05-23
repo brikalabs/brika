@@ -35,5 +35,3 @@ export const panicEmote = defineEmote('panic', {
     { kind: 'waitLand', maxMs: 400 },
   ],
 });
-
-export default panicEmote;

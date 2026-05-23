@@ -21,7 +21,6 @@
   "dependencies": {
     "@brika/cli": "workspace:*",
     "@brika/tui": "workspace:*",
-    "@inkjs/ui": "^2.0.0",
     "ink": "^7.0.3",
     "picocolors": "^1.1.1",
     "react": "^19.2.3",

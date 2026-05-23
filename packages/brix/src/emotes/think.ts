@@ -22,5 +22,3 @@ export const thinkEmote = defineEmote('think', {
     { kind: 'wait', ms: 300 },
   ],
 });
-
-export default thinkEmote;

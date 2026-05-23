@@ -25,5 +25,3 @@ export const hopEmote = defineEmote('hop', {
     { kind: 'wait', ms: 220 },
   ],
 });
-
-export default hopEmote;

@@ -36,5 +36,3 @@ export const somersaultEmote = defineEmote('somersault', {
     { kind: 'wait', ms: 350 },
   ],
 });
-
-export default somersaultEmote;

@@ -45,7 +45,6 @@
     "@brika/type-system": "workspace:*",
     "@brika/ui-kit": "workspace:*",
     "@brika/workflow": "workspace:*",
-    "bcryptjs": "^3.0.3",
     "date-fns": "^4.3.0",
     "hono": "^4.12.22",
     "picocolors": "^1.1.1",

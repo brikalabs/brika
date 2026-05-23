@@ -103,9 +103,9 @@ describe('PluginPermissionService', () => {
     });
 
     test('throws for unknown permission', () => {
-      expect(() =>
-        service.setPermission('@brika/plugin-weather', 'unknown-perm', true)
-      ).toThrow('Unknown permission: "unknown-perm"');
+      expect(() => service.setPermission('@brika/plugin-weather', 'unknown-perm', true)).toThrow(
+        'Unknown permission: "unknown-perm"'
+      );
     });
 
     test('does not duplicate already-granted permission', () => {

@@ -29,5 +29,3 @@ export const idleEmote = defineEmote('idle', {
     { kind: 'face', face: 'neutral' },
   ],
 });
-
-export default idleEmote;

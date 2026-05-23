@@ -23,5 +23,3 @@ export const bowEmote = defineEmote('bow', {
     { kind: 'wait', ms: 160 },
   ],
 });
-
-export default bowEmote;

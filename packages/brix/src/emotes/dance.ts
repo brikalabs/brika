@@ -35,5 +35,3 @@ export const danceEmote = defineEmote('dance', {
     { kind: 'tween', cx: 7, ms: 100 },
   ],
 });
-
-export default danceEmote;

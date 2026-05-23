@@ -19,5 +19,3 @@ export const winkEmote = defineEmote('wink', {
     { kind: 'wait', ms: 200 },
   ],
 });
-
-export default winkEmote;

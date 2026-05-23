@@ -26,5 +26,3 @@ export const wraparoundEmote = defineEmote('wraparound', {
     { kind: 'wait', ms: 350 },
   ],
 });
-
-export default wraparoundEmote;

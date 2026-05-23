@@ -77,5 +77,3 @@ export const poopEmote = defineEmote('poop', {
     { kind: 'wait', ms: 400 },
   ],
 });
-
-export default poopEmote;

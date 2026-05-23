@@ -31,5 +31,3 @@ export const celebrateEmote = defineEmote('celebrate', {
     { kind: 'wait', ms: 300 },
   ],
 });
-
-export default celebrateEmote;

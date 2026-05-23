@@ -50,5 +50,3 @@ export const boogieEmote = defineEmote('boogie', {
     { kind: 'wait', ms: 250 },
   ],
 });
-
-export default boogieEmote;

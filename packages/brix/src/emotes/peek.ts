@@ -33,5 +33,3 @@ export const peekEmote = defineEmote('peek', {
     { kind: 'wait', ms: 800 },
   ],
 });
-
-export default peekEmote;

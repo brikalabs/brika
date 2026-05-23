@@ -24,5 +24,3 @@ export const loveEmote = defineEmote('love', {
     { kind: 'face', face: 'love' },
   ],
 });
-
-export default loveEmote;
