@@ -49,6 +49,7 @@ import { setupBricks } from './bricks';
 import { setupLifecycle } from './lifecycle';
 import { setupLocation } from './location';
 import { loadManifest } from './manifest';
+import { installNetProxies } from './proxies';
 import { setupRoutes } from './routes';
 import { setupSecrets } from './secrets';
 import { setupSparks } from './sparks';
@@ -183,6 +184,11 @@ const bridge = {
       );
       process.exit(78); // EX_CONFIG (sysexits.h) — config/setup failure
     }
+    // Swap the scrubbed deny-stubs (globalThis.fetch, etc.) for real
+    // grant-mediated proxies now that the vector is installed and the
+    // channel is live. swapInProxy keeps the snapshot in sync so
+    // assertSealed() below still passes.
+    installNetProxies({ channel, log: (level, message) => log(level, message) });
     // Final integrity gate: refuse to come up if anything mutated a
     // scrubbed global between lockdown and now (a transitively-imported
     // module patched fetch, etc.). Better to crash than to silently

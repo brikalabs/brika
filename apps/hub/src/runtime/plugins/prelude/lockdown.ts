@@ -467,5 +467,71 @@ export function assertSealed(): ReadonlyArray<string> | null {
   return drift.length === 0 ? null : drift;
 }
 
+/**
+ * Replace a previously-scrubbed slot with a real, grant-mediated proxy
+ * (e.g. swap the `() => deny('fetch')` stub for the actual fetch proxy
+ * the prelude installs after the vector arrives).
+ *
+ * Mirrors the new value into the same snapshot map `assertSealed` checks,
+ * so the integrity gate sees the proxy as the sealed value rather than
+ * reporting drift. Callers MUST invoke this between scrub-time (lockdown
+ * preload) and the integrity check (just before `ready`).
+ *
+ * Returns true on success, false if the slot couldn't be updated (e.g.
+ * the original member wasn't snapshotted). The caller decides whether to
+ * crash on failure.
+ */
+type ProxyOwner = 'globalThis' | 'Bun' | 'Bun.dns' | 'process';
+
+export function swapInProxy(ownerName: ProxyOwner, key: string, replacement: unknown): boolean {
+  if (MODE === 'off') {
+    return false;
+  }
+  const target = resolveOwner(ownerName);
+  if (!target) {
+    return false;
+  }
+  if (!tryReplace(target, key, replacement)) {
+    return false;
+  }
+  const snapshot = resolveSnapshot(ownerName);
+  if (!snapshot.has(key)) {
+    // The key wasn't part of the original scrub — caller used the wrong
+    // owner/key. Refuse to record so a stray write doesn't poison the
+    // integrity check.
+    return false;
+  }
+  snapshot.set(key, replacement);
+  return true;
+}
+
+function resolveOwner(ownerName: ProxyOwner): MutableTarget | undefined {
+  const g = globalThis as unknown as MutableTarget;
+  if (ownerName === 'globalThis') {
+    return g;
+  }
+  const bunNs = (g as { Bun?: MutableTarget }).Bun;
+  if (ownerName === 'Bun') {
+    return bunNs;
+  }
+  if (ownerName === 'Bun.dns') {
+    return (bunNs as { dns?: MutableTarget } | undefined)?.dns;
+  }
+  return (g as { process?: MutableTarget }).process;
+}
+
+function resolveSnapshot(ownerName: ProxyOwner): Map<string, unknown> {
+  switch (ownerName) {
+    case 'globalThis':
+      return globalScrubSnapshot;
+    case 'Bun':
+      return bunScrubSnapshot;
+    case 'Bun.dns':
+      return bunDnsScrubSnapshot;
+    case 'process':
+      return processScrubSnapshot;
+  }
+}
+
 // Re-export GRANTS_BRAND for downstream introspection.
 export { GRANTS_BRAND } from '@brika/sdk/ctx';
