@@ -21,16 +21,15 @@ export class FsWatchMock {
       if (callback) {
         callbacks.set(dir, callback);
       }
+      // @ts-expect-error — FSWatcher has many methods we don't need; tests only call close().
       return {
         close: () => {
           callbacks.delete(dir);
         },
-      } as fsModule.FSWatcher;
+      };
     };
-    // spyOn doesn't type `watch` properly due to overloads — cast the method name
-    this.#spy = spyOn(fsModule, 'watch' as 'writeFileSync').mockImplementation(
-      impl as unknown as () => void
-    );
+    // @ts-expect-error — bun:test's spyOn can't narrow fs.watch's overloads to our impl.
+    this.#spy = spyOn(fsModule, 'watch').mockImplementation(impl);
   }
 
   /**

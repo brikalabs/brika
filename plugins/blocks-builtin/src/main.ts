@@ -158,9 +158,11 @@ function getFieldValue(data: unknown, path: string): unknown {
  * - Plain dot paths: "count", "data.status"
  * - Expression syntax: "{{ inputs.in.count }}" → resolves "count" on data
  */
+const FIELD_EXPRESSION_RE = /^\{\{\s*inputs\.\w+\.(.+?)\s*\}\}$/;
+
 function resolveFieldValue(data: unknown, field: string): unknown {
   // Strip {{ }} expression wrapper and resolve the path
-  const match = field.trim().match(/^\{\{\s*inputs\.\w+\.(.+?)\s*\}\}$/);
+  const match = FIELD_EXPRESSION_RE.exec(field.trim());
   const path = match ? match[1] : field;
   return getFieldValue(data, path);
 }

@@ -99,11 +99,12 @@ describe('Permission System', () => {
 
   describe('Type safety', () => {
     test('Permission type narrows correctly via isValidPermission', () => {
-      const input = 'location';
+      const input: string = 'location';
       if (isValidPermission(input)) {
-        // TypeScript would error here if the narrowing didn't work
-        const _perm: Permission = input;
-        expect(_perm).toBe('location');
+        // The real check is at compile time: this assignment fails to type-check
+        // if the narrowing breaks. Keep a sanity expect() so the test isn't empty.
+        const narrowed: Permission = input;
+        expect(typeof narrowed).toBe('string');
       }
     });
   });

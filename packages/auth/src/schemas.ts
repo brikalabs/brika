@@ -16,7 +16,7 @@ export const ScopeSchema = z.enum(scopeValues);
 
 export const ConnectionTypeSchema = z.enum(['http', 'rtc', 'ws']);
 
-export const EmailSchema = z.email('Invalid email address').toLowerCase();
+export const EmailSchema = z.email({ message: 'Invalid email address' }).toLowerCase();
 
 export const NameSchema = z.string().min(2, 'Name must be at least 2 characters').max(255);
 
