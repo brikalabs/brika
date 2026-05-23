@@ -22,5 +22,3 @@ export const yawnEmote = defineEmote('yawn', {
     { kind: 'wait', ms: 300 },
   ],
 });
-
-export default yawnEmote;

@@ -41,11 +41,11 @@ export function withScopeGuard<P extends object>(
   const Wrapper = (props: P) => {
     const canAccess = useCanAccess(requiredScopes);
 
-    if (!canAccess) {
-      return options?.fallback !== undefined ? options.fallback : DEFAULT_FALLBACK;
+    if (canAccess) {
+      return <Component {...props} />;
     }
 
-    return <Component {...props} />;
+    return options?.fallback === undefined ? DEFAULT_FALLBACK : options.fallback;
   };
 
   Wrapper.displayName = displayName;

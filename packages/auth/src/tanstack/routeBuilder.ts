@@ -200,11 +200,8 @@ function buildRoute<TPath extends string>(
     route: route as AnyRoute,
     path: displayPath as TPath,
     scopes: effectiveScopes,
-    to: ((...args: unknown[]) =>
-      resolvePath(
-        displayPath,
-        args[0] as Record<string, string> | undefined
-      )) as ProtectedRouteResult<TPath>['to'],
+    to: (...args: unknown[]) =>
+      resolvePath(displayPath, args[0] as Record<string, string> | undefined),
   };
 }
 

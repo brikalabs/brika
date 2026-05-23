@@ -6,7 +6,6 @@
 
 import { inject, singleton } from '@brika/di';
 import type { BlockDefinition } from '@brika/sdk';
-import type { TypeDescriptor } from '@brika/type-system';
 import { isCompatible, parsePortType } from '@brika/type-system';
 
 /** Runtime block info (includes ports from running plugin) */

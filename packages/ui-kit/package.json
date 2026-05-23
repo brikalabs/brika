@@ -25,8 +25,5 @@
     "typecheck": "tsgo --noEmit",
     "prepublishOnly": "bun run tsc"
   },
-  "dependencies": {
-    "@brika/plugin": "workspace:*",
-    "zod": "^4.3.4"
-  }
+  "dependencies": {}
 }

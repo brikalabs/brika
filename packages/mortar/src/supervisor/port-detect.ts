@@ -149,12 +149,6 @@ async function preflight(): Promise<void> {
   preflighted = true;
 }
 
-/** Test-only: reset memoized preflight so each test gets a fresh check. */
-export function resetPreflightForTesting(): void {
-  preflighted = false;
-  preflightError = null;
-}
-
 // ─── Subprocess helpers ────────────────────────────────────────────────────
 
 async function pgrepChildren(parent: number): Promise<number[]> {

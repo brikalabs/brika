@@ -55,7 +55,7 @@ export function parseWorkspace(yamlContent: string): ParseResult {
 
     return {
       ok: true,
-      workflow: result.data as Workflow,
+      workflow: result.data,
     };
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);

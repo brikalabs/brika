@@ -109,6 +109,14 @@ export function installVectorV2(vector: GrantVector, writeKey: symbol): void {
  * Globals that perform host I/O the plugin must not reach directly. Every
  * one of these has a hub-mediated grant equivalent (`ctx.net.fetch`, …);
  * direct access is the bypass we're closing.
+ *
+ * NOT INCLUDED — `Request` and `Response`: these are pure in-memory value
+ * constructors. `new Request(url)` opens no connection; the network only
+ * happens when the object is passed to `fetch`, which is scrubbed above.
+ * Scrubbing them with an arrow stub also breaks any library that does
+ * `class X extends Request {}` (e.g. `@matter/nodejs`'s
+ * `NodeJsHttpRequest`), since arrow functions have no `[[Construct]]`
+ * slot and ES rejects them as a superclass at class-body evaluation time.
  */
 const SCRUBBED_GLOBALS = [
   'fetch',
@@ -116,14 +124,19 @@ const SCRUBBED_GLOBALS = [
   'EventSource',
   'XMLHttpRequest',
   'BroadcastChannel',
-  'Request',
-  'Response',
 ] as const;
 
 /**
  * Bun namespace members that bypass the grant registry. `Bun.spawn` is
  * the obvious one; `Bun.write` / `Bun.file` give direct filesystem
  * access; the server/socket APIs let a plugin open its own ports.
+ *
+ * NOT INCLUDED — `Bun.dns`: the `dns` slot itself ships with `writable:
+ * false, configurable: false` on Bun ≥1.3, so neither `Reflect.set` nor
+ * `defineProperty` can replace it (this used to log a `scrub-skipped`
+ * warning that misleadingly suggested partial coverage). The real
+ * surface — the I/O methods *on* `Bun.dns` — IS writable; see
+ * `SCRUBBED_BUN_DNS_KEYS` below.
  */
 const SCRUBBED_BUN_KEYS = [
   'spawn',
@@ -134,7 +147,33 @@ const SCRUBBED_BUN_KEYS = [
   'connect',
   'listen',
   'udpSocket',
-  'dns',
+] as const;
+
+/**
+ * Methods on `Bun.dns` that issue DNS queries (network I/O) or mutate
+ * resolver configuration. All ship with `writable: true` so direct
+ * assignment via `Reflect.set` works. Constants (`ADDRCONFIG`, `ALL`,
+ * `V4MAPPED`) are deliberately left alone — they're plain integers.
+ */
+const SCRUBBED_BUN_DNS_KEYS = [
+  'lookup',
+  'resolve',
+  'resolveSrv',
+  'resolveTxt',
+  'resolveSoa',
+  'resolveNaptr',
+  'resolveMx',
+  'resolveCaa',
+  'resolveNs',
+  'resolvePtr',
+  'resolveCname',
+  'resolveAny',
+  'reverse',
+  'lookupService',
+  'prefetch',
+  'getServers',
+  'setServers',
+  'getCacheStats',
 ] as const;
 
 /**
@@ -242,6 +281,7 @@ function tryReplace(owner: object, key: string, replacement: unknown): boolean {
 
 const globalScrubSnapshot = new Map<string, unknown>();
 const bunScrubSnapshot = new Map<string, unknown>();
+const bunDnsScrubSnapshot = new Map<string, unknown>();
 
 if (MODE !== 'off') {
   // 1. Ambient I/O globals.
@@ -258,6 +298,17 @@ if (MODE !== 'off') {
     for (const key of SCRUBBED_BUN_KEYS) {
       if (key in bunNs) {
         replaceMember(bunNs, 'Bun', key);
+      }
+    }
+  }
+
+  // 2b. Bun.dns methods — see SCRUBBED_BUN_DNS_KEYS docstring for why
+  //     we can't replace `Bun.dns` itself.
+  const bunDnsNs = (bunNs as { dns?: MutableTarget } | undefined)?.dns;
+  if (bunDnsNs) {
+    for (const key of SCRUBBED_BUN_DNS_KEYS) {
+      if (key in bunDnsNs) {
+        replaceMember(bunDnsNs, 'Bun.dns', key);
       }
     }
   }
@@ -334,11 +385,34 @@ if (MODE !== 'off') {
       }
     }
   }
+  if (bunDnsNs) {
+    for (const key of SCRUBBED_BUN_DNS_KEYS) {
+      if (key in bunDnsNs) {
+        bunDnsScrubSnapshot.set(key, bunDnsNs[key]);
+      }
+    }
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Integrity gate
 // ─────────────────────────────────────────────────────────────────────────────
+
+function collectDrift(
+  owner: MutableTarget | undefined,
+  ownerName: string,
+  snapshot: ReadonlyMap<string, unknown>,
+  drift: string[]
+): void {
+  if (!owner) {
+    return;
+  }
+  for (const [key, snap] of snapshot) {
+    if (owner[key] !== snap) {
+      drift.push(`${ownerName}.${key}`);
+    }
+  }
+}
 
 /**
  * Re-check the scrubbed globals against the snapshot taken at lockdown
@@ -352,19 +426,11 @@ export function assertSealed(): ReadonlyArray<string> | null {
   }
   const drift: string[] = [];
   const g = globalThis as unknown as MutableTarget;
-  for (const [key, snap] of globalScrubSnapshot) {
-    if (g[key] !== snap) {
-      drift.push(`globalThis.${key}`);
-    }
-  }
   const bunNs = (globalThis as unknown as { Bun?: MutableTarget }).Bun;
-  if (bunNs) {
-    for (const [key, snap] of bunScrubSnapshot) {
-      if (bunNs[key] !== snap) {
-        drift.push(`Bun.${key}`);
-      }
-    }
-  }
+  const bunDnsNs = (bunNs as { dns?: MutableTarget } | undefined)?.dns;
+  collectDrift(g, 'globalThis', globalScrubSnapshot, drift);
+  collectDrift(bunNs, 'Bun', bunScrubSnapshot, drift);
+  collectDrift(bunDnsNs, 'Bun.dns', bunDnsScrubSnapshot, drift);
   return drift.length === 0 ? null : drift;
 }
 

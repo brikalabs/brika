@@ -15,7 +15,6 @@
     "typecheck": "tsgo --noEmit"
   },
   "dependencies": {
-    "@brika/console": "workspace:*",
     "@brika/hub": "workspace:*",
     "picocolors": "^1.1.1"
   },

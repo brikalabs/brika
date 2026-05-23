@@ -118,7 +118,7 @@ export async function promptForBump(
               hint: 'Enter an exact version number',
             },
           ],
-          initialValue: 'patch' as string,
+          initialValue: 'patch',
         });
       },
 

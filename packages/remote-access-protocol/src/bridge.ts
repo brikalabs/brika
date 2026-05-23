@@ -281,6 +281,20 @@ async function streamBodyAsChunks<T extends RpcMessage>(
   abortSignal: AbortSignal | undefined,
   sendBinary?: SendBinaryChunk
 ): Promise<boolean> {
+  // Resolve the per-slice dispatch path once, not on every chunk: decoder
+  // picks text, sendBinary picks raw binary, otherwise we fall back to b64.
+  const dispatchSlice = (slice: Uint8Array): void | Promise<void> => {
+    if (decoder) {
+      return emit(buildChunk({ dataText: decoder.decode(slice, { stream: true }) }));
+    }
+    if (sendBinary) {
+      // `channel.send` consumes synchronously per WebRTC spec, so forward
+      // the subarray view directly — no defensive copy needed.
+      return sendBinary(slice);
+    }
+    return emit(buildChunk({ dataB64: bytesToBase64(slice) }));
+  };
+
   const reader = body.getReader();
   try {
     while (true) {
@@ -295,19 +309,8 @@ async function streamBodyAsChunks<T extends RpcMessage>(
         continue;
       }
       for (let offset = 0; offset < value.byteLength; offset += MAX_CHUNK_PAYLOAD_BYTES) {
-        const slice = value.subarray(
-          offset,
-          Math.min(offset + MAX_CHUNK_PAYLOAD_BYTES, value.byteLength)
-        );
-        if (decoder) {
-          await emit(buildChunk({ dataText: decoder.decode(slice, { stream: true }) }));
-        } else if (sendBinary) {
-          // `channel.send` consumes synchronously per WebRTC spec, so forward
-          // the subarray view directly — no defensive copy needed.
-          await sendBinary(slice);
-        } else {
-          await emit(buildChunk({ dataB64: bytesToBase64(slice) }));
-        }
+        const end = Math.min(offset + MAX_CHUNK_PAYLOAD_BYTES, value.byteLength);
+        await dispatchSlice(value.subarray(offset, end));
       }
     }
     if (decoder) {

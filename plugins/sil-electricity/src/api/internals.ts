@@ -22,7 +22,10 @@ const FETCH_TIMEOUT_MS = 30_000;
  * as a `network` error on the brick). Forwards any caller-supplied signal
  * via `AbortSignal.any`.
  */
-export function timedFetch(input: string | URL | Request, init: RequestInit = {}): Promise<Response> {
+export function timedFetch(
+  input: string | URL | Request,
+  init: RequestInit = {}
+): Promise<Response> {
   const timeoutSignal = AbortSignal.timeout(FETCH_TIMEOUT_MS);
   const signal = init.signal ? AbortSignal.any([init.signal, timeoutSignal]) : timeoutSignal;
   return fetch(input, { ...init, signal });

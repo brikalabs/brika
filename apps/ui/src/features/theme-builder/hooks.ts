@@ -17,8 +17,3 @@ export function useCustomThemes(): ThemeConfig[] {
     () => []
   );
 }
-
-export function useCustomTheme(id: string | undefined): ThemeConfig | undefined {
-  const all = useCustomThemes();
-  return id ? all.find((t) => t.id === id) : undefined;
-}

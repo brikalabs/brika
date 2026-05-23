@@ -1,18 +1,6 @@
 export { BlockNode, type BlockNodeData, type BlockPort } from './BlockNode';
-export {
-  BLOCK_TYPES,
-  type BlockDefinition,
-  BlockToolbar,
-  type BlockTypeInfo,
-} from './BlockToolbar';
+export { type BlockDefinition, BlockToolbar, type BlockTypeInfo } from './BlockToolbar';
 export { ConfigPanel } from './ConfigPanel';
 export { DebugPanel } from './DebugPanel';
-export { ExpressionInput } from './ExpressionInput';
-export {
-  type BlockStatus,
-  type EditorState,
-  type ExecutionLog,
-  useWorkflowEditor,
-} from './useWorkflowEditor';
-export { VariablePicker } from './VariablePicker';
+export { type BlockStatus, type ExecutionLog, useWorkflowEditor } from './useWorkflowEditor';
 export { WorkflowEditor, type WorkflowEditorProps } from './WorkflowEditor';

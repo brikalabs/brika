@@ -1,5 +1,5 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.4.11/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.4.15/schema.json",
   "vcs": {
     "enabled": true,
     "clientKind": "git",
@@ -25,6 +25,7 @@
     "includes": [
       "apps/**",
       "packages/**",
+      "plugins/**",
       "scripts/**",
       "*.json",
       "*.config.*",
@@ -48,9 +49,11 @@
     "includes": [
       "apps/**/src/**/*.{ts,tsx,js,jsx,mts,cts}",
       "packages/**/src/**/*.{ts,tsx,js,jsx,mts,cts}",
+      "plugins/**/src/**/*.{ts,tsx,js,jsx,mts,cts}",
       "scripts/**/*.{ts,tsx,js,jsx,mts,cts}",
       "apps/**/src/**/*.{html,vue,svelte,astro,mdx}",
       "packages/**/src/**/*.{html,vue,svelte,astro,mdx}",
+      "plugins/**/src/**/*.{html,vue,svelte,astro,mdx}",
       "!**/template/**"
     ],
     "rules": {
@@ -208,6 +211,36 @@
   },
 
   "overrides": [
+    {
+      "includes": ["plugins/**/src/**/*.{ts,tsx}"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "useAwait": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["plugins/spotify/src/**/*.{ts,tsx}"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noImportCycles": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["plugins/matter/src/matter-controller.ts"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noExplicitAny": "off"
+          }
+        }
+      }
+    },
     {
       "includes": [
         "**/__tests__/**/*.{ts,tsx,mts,cts,js,jsx}",

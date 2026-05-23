@@ -32,5 +32,3 @@ export const cryEmote = defineEmote('cry', {
     { kind: 'wait', ms: 420 },
   ],
 });
-
-export default cryEmote;

@@ -24,5 +24,3 @@ export const deadEmote = defineEmote('dead', {
     { kind: 'wait', ms: 1200 },
   ],
 });
-
-export default deadEmote;

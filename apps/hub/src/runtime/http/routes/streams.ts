@@ -111,7 +111,7 @@ export const streamsRoutes = [
           workflowId: params.id,
           blocks: workflow.blocks?.map((b) => b.id) ?? [],
           timestamp: Date.now(),
-        } as WorkflowEvent);
+        });
 
         // Subscribe to events related to this workflow
         const unsub = events.subscribeGlob(

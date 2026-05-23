@@ -79,5 +79,3 @@ export const systemRoute = route.get({
     };
   },
 });
-
-export const statusRoutes = [healthRoute, systemRoute];

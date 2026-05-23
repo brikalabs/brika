@@ -44,5 +44,3 @@ export const sleepEmote = defineEmote('sleep', {
     { kind: 'wait', ms: 700 },
   ],
 });
-
-export default sleepEmote;

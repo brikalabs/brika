@@ -34,11 +34,11 @@ function stateLabel(device: DeviceState): string {
       return device.state.locked ? 'Locked' : 'Unlocked';
     case 'cover': {
       const pos = device.state.coverPosition;
-      return pos == null ? 'Cover' : `${Number(pos)}%`;
+      return pos === null ? 'Cover' : `${Number(pos)}%`;
     }
     case 'thermostat': {
       const temp = device.state.temperature;
-      return temp == null ? '—' : `${Number(temp)}°`;
+      return temp === null ? '—' : `${Number(temp)}°`;
     }
     default:
       return device.online ? 'Online' : 'Offline';
@@ -57,12 +57,13 @@ interface DeviceLayoutProps {
 
 function MicroLayout({ device, theme, isActive, onTap }: Readonly<DeviceLayoutProps>) {
   const tappable = TAPPABLE_TYPES.has(device.deviceType);
-  const base = 'relative flex h-full flex-col items-center justify-center gap-1.5 overflow-hidden rounded-lg';
+  const base =
+    'relative flex h-full flex-col items-center justify-center gap-1.5 overflow-hidden rounded-lg';
   const children = (
     <>
       <AmbientGlow color={theme.glow} active={isActive} />
       <DeviceIcon type={device.deviceType} />
-      <span className="relative text-xs font-medium text-white/70">{stateLabel(device)}</span>
+      <span className="relative font-medium text-white/70 text-xs">{stateLabel(device)}</span>
     </>
   );
   if (tappable) {
@@ -92,10 +93,10 @@ function StripLayout({ device, theme, isActive, typeLabel, onTap }: Readonly<Dev
       <AmbientGlow color={theme.glow} active={isActive} />
       <DeviceIcon type={device.deviceType} size="sm" />
       <div className="relative flex flex-1 flex-col overflow-hidden">
-        <span className="truncate text-sm font-semibold text-white">{device.name}</span>
+        <span className="truncate font-semibold text-sm text-white">{device.name}</span>
         <span className="text-[10px] text-white/50">{typeLabel}</span>
       </div>
-      <span className="relative text-xs font-medium text-white/60">{stateLabel(device)}</span>
+      <span className="relative font-medium text-white/60 text-xs">{stateLabel(device)}</span>
     </>
   );
   if (tappable) {
@@ -145,7 +146,7 @@ export default function DeviceBrick() {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-2 p-3">
         <Settings className="size-6 text-muted-foreground/50" />
-        <span className="text-xs text-muted-foreground">{t('device.noDeviceSelected')}</span>
+        <span className="text-muted-foreground text-xs">{t('device.noDeviceSelected')}</span>
       </div>
     );
   }
@@ -158,7 +159,7 @@ export default function DeviceBrick() {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-2 p-3">
         <Settings className="size-6 text-muted-foreground/50" />
-        <span className="text-xs text-muted-foreground">{t('device.deviceNotFound')}</span>
+        <span className="text-muted-foreground text-xs">{t('device.deviceNotFound')}</span>
       </div>
     );
   }
@@ -180,13 +181,29 @@ export default function DeviceBrick() {
   // ─── Micro layout (1×1) ──────────────────────────────────────────────
 
   if (width <= 1 && height <= 1) {
-    return <MicroLayout device={device} theme={theme} isActive={isActive} typeLabel={typeLabel} onTap={handleTap} />;
+    return (
+      <MicroLayout
+        device={device}
+        theme={theme}
+        isActive={isActive}
+        typeLabel={typeLabel}
+        onTap={handleTap}
+      />
+    );
   }
 
   // ─── Strip layout (height ≤ 1) ───────────────────────────────────────
 
   if (height <= 1) {
-    return <StripLayout device={device} theme={theme} isActive={isActive} typeLabel={typeLabel} onTap={handleTap} />;
+    return (
+      <StripLayout
+        device={device}
+        theme={theme}
+        isActive={isActive}
+        typeLabel={typeLabel}
+        onTap={handleTap}
+      />
+    );
   }
 
   // ─── Main layout ─────────────────────────────────────────────────────
@@ -197,7 +214,7 @@ export default function DeviceBrick() {
     <div
       className={clsx(
         'relative flex h-full flex-col overflow-hidden rounded-lg',
-        compact ? 'gap-2 p-3' : 'gap-3 p-4',
+        compact ? 'gap-2 p-3' : 'gap-3 p-4'
       )}
       style={{ background: theme.gradient }}
     >

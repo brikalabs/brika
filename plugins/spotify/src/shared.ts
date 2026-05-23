@@ -28,7 +28,9 @@ export function getApi(): ReturnType<typeof createSpotifyApi> {
  */
 export function resolveDeviceId(instanceDeviceId?: string): string | undefined {
   const id = instanceDeviceId?.trim() || undefined;
-  if (id) return id;
+  if (id) {
+    return id;
+  }
   const prefs = getPreferences<{ defaultDevice?: string }>();
   return prefs.defaultDevice?.trim() || undefined;
 }
@@ -39,11 +41,15 @@ export function resolveDeviceId(instanceDeviceId?: string): string | undefined {
  */
 export async function resolveDevice(value?: string): Promise<string | undefined> {
   const id = resolveDeviceId(value);
-  if (!id) return undefined;
+  if (!id) {
+    return undefined;
+  }
 
   const devices = await getApi().getDevices();
   // Exact ID match — return as-is
-  if (devices.some((d) => d.id === id)) return id;
+  if (devices.some((d) => d.id === id)) {
+    return id;
+  }
   // Name match (case-insensitive)
   const byName = devices.find((d) => d.name.toLowerCase() === id.toLowerCase());
   return byName?.id ?? id;
@@ -62,9 +68,15 @@ const SPOTIFY_URL_RE = /^https?:\/\/open\.spotify\.com\/(track|album|playlist)\/
  */
 export function toSpotifyUri(input?: string): string | undefined {
   const value = input?.trim();
-  if (!value) return undefined;
-  if (value.startsWith('spotify:')) return value;
+  if (!value) {
+    return undefined;
+  }
+  if (value.startsWith('spotify:')) {
+    return value;
+  }
   const match = SPOTIFY_URL_RE.exec(value);
-  if (match) return `spotify:${match[1]}:${match[2]}`;
+  if (match) {
+    return `spotify:${match[1]}:${match[2]}`;
+  }
   return undefined;
 }

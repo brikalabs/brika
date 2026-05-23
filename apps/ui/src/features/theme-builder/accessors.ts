@@ -10,7 +10,7 @@
  */
 
 import { recomputeRecipes } from './recipes';
-import type { CornerStyle, ElevationStyle, MotionStyle, ThemeConfig, TokenMap } from './types';
+import type { CornerStyle, ElevationStyle, MotionStyle, ThemeConfig } from './types';
 
 // ─── Number/CSS-string helpers ──────────────────────────────────────────────
 
@@ -68,20 +68,6 @@ export function setBackdropBlur(t: ThemeConfig, value: number | undefined): Them
     geo.backdropBlur = `${value}px`;
   }
   return { ...t, geometry: geo };
-}
-
-export function getFontSans(t: ThemeConfig): string {
-  return t.geometry?.fontSans ?? 'Inter, ui-sans-serif, system-ui, sans-serif';
-}
-export function setFontSans(t: ThemeConfig, value: string): ThemeConfig {
-  return { ...t, geometry: { ...t.geometry, fontSans: value } };
-}
-
-export function getFontMono(t: ThemeConfig): string {
-  return t.geometry?.fontMono ?? '"JetBrains Mono", ui-monospace, SFMono-Regular, monospace';
-}
-export function setFontMono(t: ThemeConfig, value: string): ThemeConfig {
-  return { ...t, geometry: { ...t.geometry, fontMono: value } };
 }
 
 // ─── Borders / focus ────────────────────────────────────────────────────────
@@ -168,61 +154,4 @@ export function getCorners(t: ThemeConfig): CornerStyle | undefined {
 }
 export function setCorners(t: ThemeConfig, value: CornerStyle | undefined): ThemeConfig {
   return mergeBrika(t, { corners: value });
-}
-
-export function getStateOpacity(t: ThemeConfig): NonNullable<ThemeConfig['brika']>['stateOpacity'] {
-  return t.brika?.stateOpacity;
-}
-export function setStateOpacity(
-  t: ThemeConfig,
-  value: NonNullable<ThemeConfig['brika']>['stateOpacity']
-): ThemeConfig {
-  return mergeBrika(t, { stateOpacity: value });
-}
-
-// ─── Colors ─────────────────────────────────────────────────────────────────
-
-export function getLightColors(t: ThemeConfig): TokenMap {
-  return t.colors?.light ?? {};
-}
-export function getDarkColors(t: ThemeConfig): TokenMap {
-  return t.colors?.dark ?? {};
-}
-
-export function setLightColors(t: ThemeConfig, value: TokenMap): ThemeConfig {
-  return { ...t, colors: { ...t.colors, light: { ...value } } };
-}
-export function setDarkColors(t: ThemeConfig, value: TokenMap): ThemeConfig {
-  return { ...t, colors: { ...t.colors, dark: { ...value } } };
-}
-
-export function setColorsForMode(
-  t: ThemeConfig,
-  mode: 'light' | 'dark',
-  value: TokenMap
-): ThemeConfig {
-  return mode === 'light' ? setLightColors(t, value) : setDarkColors(t, value);
-}
-
-// ─── Component tokens ───────────────────────────────────────────────────────
-
-export function getComponentTokens(
-  t: ThemeConfig,
-  component: string
-): Record<string, string> | undefined {
-  return t.components?.[component];
-}
-
-export function setComponentTokens(
-  t: ThemeConfig,
-  component: string,
-  value: Record<string, string> | undefined
-): ThemeConfig {
-  const components = { ...t.components };
-  if (!value || Object.keys(value).length === 0) {
-    delete components[component];
-  } else {
-    components[component] = { ...value };
-  }
-  return { ...t, components: Object.keys(components).length > 0 ? components : undefined };
 }

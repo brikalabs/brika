@@ -57,8 +57,12 @@ export default function SpotifyPlayer() {
   const onToggle = useCallback(() => {
     callAction(isPlaying ? doPause : doPlay, { deviceId });
   }, [callAction, isPlaying, deviceId]);
-  const onNext = useCallback(() => { callAction(doNext); }, [callAction]);
-  const onPrev = useCallback(() => { callAction(doPrevious); }, [callAction]);
+  const onNext = useCallback(() => {
+    callAction(doNext);
+  }, [callAction]);
+  const onPrev = useCallback(() => {
+    callAction(doPrevious);
+  }, [callAction]);
 
   // ─── Loading ──────────────────────────────────────────────────────
 
@@ -103,7 +107,11 @@ export default function SpotifyPlayer() {
   if (width <= 2 && height <= 2) {
     return (
       <div className="relative flex h-full items-center justify-center overflow-hidden rounded-lg">
-        <AlbumCover trackName={track.trackName} artistName={track.artistName} albumArt={track.albumArt} />
+        <AlbumCover
+          trackName={track.trackName}
+          artistName={track.artistName}
+          albumArt={track.albumArt}
+        />
         <div className="absolute inset-0 bg-radial from-black/10 to-black/50" />
         <div className="relative flex items-center gap-2">
           <TransportButton onClick={onPrev} icon={SkipBack} size="md" />
@@ -122,21 +130,31 @@ export default function SpotifyPlayer() {
 
       {/* Album cover + track info */}
       <div className="relative flex-1 overflow-hidden">
-        <AlbumCover trackName={track.trackName} artistName={track.artistName} albumArt={track.albumArt} />
+        <AlbumCover
+          trackName={track.trackName}
+          artistName={track.artistName}
+          albumArt={track.albumArt}
+        />
         <div className="absolute inset-0 bg-linear-to-t from-black/85 via-black/15 to-black/25" />
         <div className="absolute inset-x-0 bottom-0 px-3 pb-2">
-          <ScrollText text={track.trackName} className="text-sm font-bold text-white [text-shadow:0_1px_4px_rgba(0,0,0,0.8)]" />
-          <ScrollText text={track.artistName} className="mt-0.5 text-[11px] text-[rgba(255,255,255,0.8)] [text-shadow:0_1px_3px_rgba(0,0,0,0.6)]" />
+          <ScrollText
+            text={track.trackName}
+            className="font-bold text-sm text-white [text-shadow:0_1px_4px_rgba(0,0,0,0.8)]"
+          />
+          <ScrollText
+            text={track.artistName}
+            className="mt-0.5 text-[11px] text-[rgba(255,255,255,0.8)] [text-shadow:0_1px_3px_rgba(0,0,0,0.6)]"
+          />
         </div>
       </div>
 
       {/* Controls */}
-      <div className="space-y-1.5 px-3 pb-3 pt-2">
+      <div className="space-y-1.5 px-3 pt-2 pb-3">
         {/* Progress bar */}
         <div>
           <div
             ref={progress.barRef}
-            className="group/bar relative h-1 cursor-pointer rounded-full bg-muted touch-none"
+            className="group/bar relative h-1 cursor-pointer touch-none rounded-full bg-muted"
             onPointerDown={progress.onPointerDown}
             onPointerMove={progress.onPointerMove}
             onPointerUp={progress.onPointerUp}
@@ -154,7 +172,7 @@ export default function SpotifyPlayer() {
               }}
             />
             <div
-              className="absolute top-1/2 -translate-y-1/2 size-2.5 rounded-full bg-primary shadow-sm opacity-0 transition-opacity group-hover/bar:opacity-100"
+              className="absolute top-1/2 size-2.5 -translate-y-1/2 rounded-full bg-primary opacity-0 shadow-sm transition-opacity group-hover/bar:opacity-100"
               style={{ left: `calc(${progress.pct}% - 5px)` }}
             />
           </div>

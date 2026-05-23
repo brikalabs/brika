@@ -7,14 +7,7 @@
   "author": "Maxime Scharwath",
   "license": "MIT",
   "icon": "./icon.svg",
-  "keywords": [
-    "brika",
-    "brika-plugin",
-    "electricity",
-    "energy",
-    "sil",
-    "lausanne"
-  ],
+  "keywords": ["brika", "brika-plugin", "electricity", "energy", "sil", "lausanne"],
   "type": "module",
   "main": "./src/index.tsx",
   "exports": {
@@ -45,7 +38,7 @@
       "type": "number",
       "label": "Price per kWh (CHF)",
       "description": "Your SIL electricity rate. Find it on your latest bill (typical: 0.25–0.35).",
-      "default": 0.30,
+      "default": 0.3,
       "min": 0,
       "max": 1
     },
@@ -54,7 +47,7 @@
       "type": "number",
       "label": "Injection price per kWh (CHF)",
       "description": "Credit you receive for solar production injected into the grid.",
-      "default": 0.10,
+      "default": 0.1,
       "min": 0,
       "max": 1
     }
@@ -73,11 +66,21 @@
           "name": "period",
           "label": "Period",
           "options": [
-            { "value": "24h" },
-            { "value": "7d" },
-            { "value": "30d" },
-            { "value": "12m" },
-            { "value": "24m" }
+            {
+              "value": "24h"
+            },
+            {
+              "value": "7d"
+            },
+            {
+              "value": "30d"
+            },
+            {
+              "value": "12m"
+            },
+            {
+              "value": "24m"
+            }
           ],
           "default": "12m"
         },
@@ -86,9 +89,15 @@
           "name": "style",
           "label": "Chart Style",
           "options": [
-            { "value": "bar" },
-            { "value": "area" },
-            { "value": "line" }
+            {
+              "value": "bar"
+            },
+            {
+              "value": "area"
+            },
+            {
+              "value": "line"
+            }
           ],
           "default": "bar"
         }
@@ -123,12 +132,7 @@
     "@brika/sdk": "workspace:*"
   },
   "devDependencies": {
-    "recharts": "^3.7.0"
+    "recharts": "^3.8.1"
   },
-  "files": [
-    "src",
-    "locales",
-    "icon.svg",
-    "README.md"
-  ]
+  "files": ["src", "locales", "icon.svg", "README.md"]
 }

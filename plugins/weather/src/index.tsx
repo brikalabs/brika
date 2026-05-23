@@ -1,3 +1,4 @@
+// biome-ignore lint/suspicious/noDeprecatedImports: getDeviceLocation() is deprecated only inside brick render functions; here it is used in onInit() which is the correct surface
 import { getDeviceLocation, getPreferences, setBrickData } from '@brika/sdk';
 import {
   log,
@@ -13,10 +14,10 @@ import { acquirePolling, useWeatherMap } from './weather-store';
 
 // ─── Preferences ────────────────────────────────────────────────────────────
 
-interface WeatherPrefs {
+type WeatherPrefs = {
   city?: string;
   unit?: string;
-}
+};
 
 function getUnit(prefs?: WeatherPrefs): string {
   return (prefs ?? getPreferences<WeatherPrefs>()).unit ?? 'celsius';
@@ -32,7 +33,9 @@ let currentUnit = getUnit();
 const cityReleases = new Map<string, () => void>();
 
 function ensurePolling(city: string): void {
-  if (!city || cityReleases.has(city)) return;
+  if (!city || cityReleases.has(city)) {
+    return;
+  }
   cityReleases.set(city, acquirePolling(city));
 }
 
@@ -45,7 +48,9 @@ function stopPolling(city: string): void {
 }
 
 function setDefaultCity(city: string): void {
-  if (!city || city === defaultCity) return;
+  if (!city || city === defaultCity) {
+    return;
+  }
   stopPolling(defaultCity);
   defaultCity = city;
   ensurePolling(defaultCity);
@@ -70,7 +75,9 @@ function pushBrickData() {
       cityErrors[city] = weather.error;
     }
 
-    if (!weather?.current || !weather.location) continue;
+    if (!weather?.current || !weather.location) {
+      continue;
+    }
 
     const code = weather.current.weatherCode;
     const meta = getWeatherMeta(code);
@@ -130,10 +137,6 @@ useWeatherMap.subscribe(() => {
   pushBrickData();
 });
 
-// ─── Start polling immediately with fallback city ───────────────────────────
-
-ensurePolling(defaultCity);
-
 // ─── Brick config changes (per-instance city) ──────────────────────────────
 
 /** Tracks which city each brick instance is currently polling. */
@@ -143,7 +146,9 @@ onBrickConfigChange((instanceId, config) => {
   const city = typeof config.city === 'string' ? config.city.trim() : '';
   const previousCity = instanceCities.get(instanceId);
 
-  if (city === previousCity) return;
+  if (city === previousCity) {
+    return;
+  }
 
   // Release the old city polling if no other instance uses it
   if (previousCity) {
@@ -167,20 +172,20 @@ onInit(async () => {
   currentUnit = getUnit(prefs);
 
   if (prefCity) {
-    setDefaultCity(prefCity);
-    return;
+    defaultCity = prefCity;
+  } else {
+    try {
+      const location = await getDeviceLocation();
+      if (location?.city) {
+        log.info(`Auto-detected city from hub location: ${location.city}`);
+        defaultCity = location.city;
+      }
+    } catch {
+      // Location permission denied or unavailable — keep fallback
+    }
   }
 
-  // No preference city — try hub location
-  try {
-    const location = await getDeviceLocation();
-    if (location?.city) {
-      log.info(`Auto-detected city from hub location: ${location.city}`);
-      setDefaultCity(location.city);
-    }
-  } catch {
-    // Location permission denied or unavailable — keep fallback
-  }
+  ensurePolling(defaultCity);
 });
 
 // ─── Subsequent preference changes ──────────────────────────────────────────

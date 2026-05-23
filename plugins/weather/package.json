@@ -12,13 +12,7 @@
     "directory": "plugins/weather"
   },
   "icon": "./icon.svg",
-  "keywords": [
-    "brika",
-    "brika-plugin",
-    "weather",
-    "forecast",
-    "temperature"
-  ],
+  "keywords": ["brika", "brika-plugin", "weather", "forecast", "temperature"],
   "type": "module",
   "main": "./src/index.tsx",
   "exports": {
@@ -27,16 +21,10 @@
   "engines": {
     "brika": "^0.3.0"
   },
-  "permissions": [
-    "location",
-    "net"
-  ],
+  "permissions": ["location", "net"],
   "grants": {
     "dev.brika.net.fetch": {
-      "allow": [
-        "geocoding-api.open-meteo.com",
-        "api.open-meteo.com"
-      ]
+      "allow": ["geocoding-api.open-meteo.com", "api.open-meteo.com"]
     }
   },
   "scripts": {
@@ -181,14 +169,6 @@
   "dependencies": {
     "@brika/sdk": "workspace:*"
   },
-  "devDependencies": {
-    "class-variance-authority": "^0.7.1",
-    "clsx": "^2.1.1"
-  },
-  "files": [
-    "src",
-    "locales",
-    "icon.svg",
-    "README.md"
-  ]
+  "devDependencies": {},
+  "files": ["src", "locales", "icon.svg", "README.md"]
 }

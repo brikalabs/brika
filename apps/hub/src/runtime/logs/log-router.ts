@@ -8,12 +8,6 @@ import type { LogError, LogEvent, LogLevel, LogSource } from "./types";
 import { captureCallSite } from "./utils/call-site";
 import { RingBuffer } from "./utils/ring-buffer";
 
-export interface LogRouterOptions {
-  level: LogLevel;
-  color: boolean;
-  ringSize?: number;
-}
-
 export interface LogOptions {
   meta?: Record<string, Json>;
   error?: unknown;

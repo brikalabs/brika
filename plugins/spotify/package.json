@@ -12,13 +12,7 @@
     "directory": "plugins/spotify"
   },
   "icon": "./icon.svg",
-  "keywords": [
-    "brika",
-    "brika-plugin",
-    "spotify",
-    "music",
-    "player"
-  ],
+  "keywords": ["brika", "brika-plugin", "spotify", "music", "player"],
   "type": "module",
   "main": "./src/index.tsx",
   "exports": {
@@ -112,10 +106,5 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1"
   },
-  "files": [
-    "src",
-    "locales",
-    "icon.svg",
-    "README.md"
-  ]
+  "files": ["src", "locales", "icon.svg", "README.md"]
 }

@@ -146,7 +146,7 @@ export async function promptForConfig(pluginName?: string): Promise<PluginConfig
   return {
     name: answers.name,
     description: answers.description as string,
-    features: answers.features as PluginFeature[],
+    features: answers.features,
     category: answers.category as PluginConfig['category'],
     author: answers.author,
   };

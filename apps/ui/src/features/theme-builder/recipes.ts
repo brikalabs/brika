@@ -13,7 +13,6 @@
 import type {
   BrikaThemeMeta,
   ComponentTokens,
-  CornerStyle,
   ElevationStyle,
   MotionStyle,
   ThemeConfig,
@@ -82,12 +81,6 @@ const MOTION_RECIPES: Record<MotionStyle, MotionRecipe> = {
 
 export function motionRecipeFor(style: MotionStyle | undefined): MotionRecipe {
   return MOTION_RECIPES[style ?? 'smooth'];
-}
-
-// ─── Corner helpers ─────────────────────────────────────────────────────────
-
-export function cornerShapeKeyword(style: CornerStyle | undefined): string {
-  return style ?? 'round';
 }
 
 // ─── Shadow tint ────────────────────────────────────────────────────────────

@@ -35,12 +35,16 @@ export default function CompactWeather() {
   const config = useBrickConfig();
   const { t } = useLocale();
 
-  if (!data) return <LoadingSpinner />;
+  if (!data) {
+    return <LoadingSpinner />;
+  }
 
   const cityKey = resolveCity(config, data.defaultCity);
   const cityData = data.cities[cityKey];
 
-  if (!cityData) return <CityError error={data.cityErrors?.[cityKey]} />;
+  if (!cityData) {
+    return <CityError error={data.cityErrors?.[cityKey]} />;
+  }
 
   const unit = resolveUnit(config, data.unit);
 
@@ -50,16 +54,20 @@ export default function CompactWeather() {
       style={{ background: cityData.gradient }}
     >
       <div className="flex items-center gap-2">
-        <span className="text-2xl font-bold text-white">{formatTempWithUnit(cityData.temperature, unit)}</span>
+        <span className="font-bold text-2xl text-white">
+          {formatTempWithUnit(cityData.temperature, unit)}
+        </span>
         <span className="text-sm text-white/70">{t(`conditions.${cityData.conditionKey}`)}</span>
       </div>
-      <div className="flex items-center gap-1 text-xs text-white/60">
+      <div className="flex items-center gap-1 text-white/60 text-xs">
         <MapPin className="size-3" />
         <span className="truncate">{cityData.city}</span>
       </div>
-      <div className="flex items-center gap-1 text-xs text-white/50">
+      <div className="flex items-center gap-1 text-white/50 text-xs">
         <Thermometer className="size-3" />
-        <span>{t('stats.feelsLike')} {formatTempWithUnit(cityData.apparentTemperature, unit)}</span>
+        <span>
+          {t('stats.feelsLike')} {formatTempWithUnit(cityData.apparentTemperature, unit)}
+        </span>
       </div>
     </div>
   );

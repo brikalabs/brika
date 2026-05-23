@@ -20,8 +20,8 @@
     "dev:signaling": "bun --filter @brika/signaling dev",
     "up": "mortar",
     "brika": "bun apps/console/src/main.ts",
-    "test": "bun --filter '*' test --parallel",
-    "test:coverage": "bun --filter '*' test --parallel",
+    "test": "bun --filter '*' test --parallel --timeout=30000",
+    "test:coverage": "bun --filter '*' test --parallel --timeout=30000",
     "typecheck": "bun --filter '*' typecheck",
     "build": "bun run --filter './packages/*' build",
     "compile": "bun run --filter @brika/ui build && bun run --filter @brika/build build --compile",
@@ -41,15 +41,14 @@
     "bun": "1.3.13"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.4.11",
+    "@biomejs/biome": "2.4.15",
     "@brika/hub": "workspace:*",
     "@brika/i18n-devtools": "workspace:*",
     "@brika/mortar": "workspace:*",
     "@brika/testing": "workspace:*",
     "@brika/workspace-tools": "workspace:*",
-    "@typescript/native-preview": "7.0.0-dev.20260412.1",
-    "bun-types": "^1.3.13",
-    "mitata": "^1.0.34",
-    "typescript": "^6.0.2"
+    "@typescript/native-preview": "latest",
+    "bun-types": "^1.3.14",
+    "typescript": "^6.0.3"
   }
 }

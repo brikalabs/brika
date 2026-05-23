@@ -22,5 +22,3 @@ export const shakeEmote = defineEmote('shake', {
     { kind: 'wait', ms: 160 },
   ],
 });
-
-export default shakeEmote;

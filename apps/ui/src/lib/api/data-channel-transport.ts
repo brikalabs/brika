@@ -761,7 +761,7 @@ export class DataChannelTransport implements Transport {
 
   #assertChannelOpen(): RTCDataChannel {
     const channel = this.#channel;
-    if (!channel || channel.readyState !== 'open') {
+    if (channel?.readyState !== 'open') {
       this.#onUnexpectedClose('channel-closed', 'Channel not open at send time');
       throw new TransportError('channel-closed', 'Channel not open at send time');
     }

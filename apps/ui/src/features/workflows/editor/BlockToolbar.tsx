@@ -441,6 +441,3 @@ export function BlockToolbar({ onDragStart, onCollapse, className }: Readonly<Bl
 export interface BlockTypeInfo extends BlockDefinition {
   defaultConfig?: Record<string, unknown>;
 }
-
-// Re-export for compatibility
-export const BLOCK_TYPES: BlockDefinition[] = [];

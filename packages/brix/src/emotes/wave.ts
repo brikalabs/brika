@@ -23,5 +23,3 @@ export const waveEmote = defineEmote('wave', {
     { kind: 'wait', ms: 160 },
   ],
 });
-
-export default waveEmote;

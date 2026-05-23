@@ -36,7 +36,9 @@ export default function PhotoBrick() {
   }, []);
 
   useEffect(() => {
-    if (!autoRotate) return;
+    if (!autoRotate) {
+      return;
+    }
     const id = setInterval(() => {
       setIndex((i) => (i + 1) % PHOTOS.length);
     }, interval);
@@ -56,21 +58,27 @@ export default function PhotoBrick() {
     >
       {/* Gradient overlay at bottom */}
       <div className="mt-auto flex items-center justify-between gap-2 bg-black/50 px-3 py-2 backdrop-blur-sm">
-        <span className="truncate text-xs font-medium text-white">{photo.caption}</span>
+        <span className="truncate font-medium text-white text-xs">{photo.caption}</span>
 
         {width > 2 && height > 2 && (
           <div className="flex shrink-0 items-center gap-1.5">
-            <span className="text-[10px] tabular-nums text-white/70">{counter}</span>
+            <span className="text-[10px] text-white/70 tabular-nums">{counter}</span>
             <button
               type="button"
-              onClick={(e) => { e.stopPropagation(); handlePrev(); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                handlePrev();
+              }}
               className="flex size-6 cursor-pointer items-center justify-center rounded text-white/80 transition-colors hover:bg-white/20 hover:text-white"
             >
               <ChevronLeft className="size-3.5" />
             </button>
             <button
               type="button"
-              onClick={(e) => { e.stopPropagation(); handleNext(); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleNext();
+              }}
               className="flex size-6 cursor-pointer items-center justify-center rounded text-white/80 transition-colors hover:bg-white/20 hover:text-white"
             >
               <ChevronRight className="size-3.5" />

@@ -30,42 +30,6 @@ export {
 export { FetchTransport } from './fetch-transport';
 export type { Transport } from './transport';
 
-/** Are we running through the WebRTC bridge (vs. on a LAN hub directly)? */
-export function isRemoteMode(): boolean {
-  return detectRemote() !== null;
-}
-
-/**
- * Disconnect from the current hub binding and return to the bootstrap
- * landing screen. Clears `localStorage` hub name, drops every `brika-*`
- * cache (so the next bind fetches fresh assets), and navigates to the
- * coordinator origin's root. Only meaningful in remote mode; no-op
- * otherwise.
- */
-export async function disconnectFromHub(): Promise<void> {
-  const remote = detectRemote();
-  if (!remote || typeof localStorage === 'undefined') {
-    return;
-  }
-  try {
-    localStorage.removeItem('brika.bootstrap.hubName');
-  } catch {
-    /* private mode — already not stored */
-  }
-  // Purge cached hub bundle so the next bind doesn't serve stale modules.
-  if (typeof caches !== 'undefined') {
-    try {
-      const names = await caches.keys();
-      await Promise.all(names.filter((n) => n.startsWith('brika-')).map((n) => caches.delete(n)));
-    } catch {
-      /* best effort */
-    }
-  }
-  // Navigate to the coordinator root — the bootstrap landing card lets the
-  // user pick a different hub name.
-  globalThis.location.replace(remote.coordinatorOrigin);
-}
-
 const CANONICAL_HOST = 'hub.brika.dev';
 const DEFAULT_COORDINATOR_ORIGIN = `https://${CANONICAL_HOST}`;
 const HUB_QUERY_PARAM = 'hub';

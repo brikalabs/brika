@@ -25,7 +25,9 @@ export function setCredentials(email: string, password: string): void {
 
   if (changed) {
     // Re-poll every active period so bricks see fresh data with the new creds.
-    for (const period of activePeriods()) pollPeriod(period);
+    for (const period of activePeriods()) {
+      pollPeriod(period);
+    }
   }
 }
 

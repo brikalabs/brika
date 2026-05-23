@@ -27,5 +27,3 @@ export interface SecretBackend {
   /** Returns true if a value was removed, false if it did not exist. */
   delete(ref: SecretRef): Promise<boolean>;
 }
-
-export type SecretBackendKind = 'keychain' | 'file';

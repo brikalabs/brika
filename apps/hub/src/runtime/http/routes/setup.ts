@@ -42,9 +42,9 @@ export const hubSetupProtectedRoutes = group({
   routes: [
     route.post({
       path: '/complete',
-      handler: async ({ inject }) => {
+      handler: ({ inject }) => {
         const state = inject(StateStore);
-        await state.setSetupCompleted(true);
+        state.setSetupCompleted(true);
         return { ok: true };
       },
     }),

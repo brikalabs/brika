@@ -423,12 +423,7 @@ describe('createEventStream', () => {
     // Cancel the stream
     await reader.cancel();
 
-    // Emit an event - should not cause errors
-    await bus.emit('source', 'output', {
-      value: 1,
-    });
-
-    // If we got here, the unsubscribe worked correctly
-    expect(true).toBe(true);
+    // Emit an event after cancel - emit itself must not throw
+    await bus.emit('source', 'output', { value: 1 });
   });
 });

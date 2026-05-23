@@ -38,7 +38,7 @@ export function getTypeMarker(description?: string): TypeMarkerValue | null {
   }
   for (const marker of Object.values(TypeMarker)) {
     if (description.includes(marker)) {
-      return marker as TypeMarkerValue;
+      return marker;
     }
   }
   return null;
@@ -263,7 +263,7 @@ export function passthrough<K extends string>(sourcePortId: K): PassthroughRef<K
     __passthrough: sourcePortId,
     __type: 'passthrough',
     _schema: z.unknown().describe(`${PASSTHROUGH_MARKER}:${sourcePortId}`),
-  } as PassthroughRef<K>;
+  };
 }
 
 /**
@@ -336,7 +336,7 @@ export function generic<T extends string = 'T'>(typeVar?: T): GenericRef<T> {
     __generic: name,
     __type: 'generic',
     _schema: z.unknown().describe(`${GENERIC_MARKER}:${name}`),
-  } as GenericRef<T>;
+  };
 }
 
 /**
@@ -406,7 +406,7 @@ export function resolved<S extends string, K extends string>(
     __configField: configField,
     __type: 'resolved',
     _schema: z.unknown().describe(`${RESOLVED_MARKER}:${source}:${configField}`),
-  } as ResolvedRef<S, K>;
+  };
 }
 
 /**

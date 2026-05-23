@@ -50,7 +50,7 @@
   },
   "peerDependencies": {
     "zod": "^4.0.0",
-    "lucide-react": ">=0.400.0"
+    "lucide-react": "^1.16.0"
   },
   "peerDependenciesMeta": {
     "lucide-react": {

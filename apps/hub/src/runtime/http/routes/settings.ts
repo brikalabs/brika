@@ -35,9 +35,9 @@ export const settingsRoutes = group({
     route.put({
       path: '/location',
       body: HubLocationSchema,
-      handler: async ({ body, inject }) => {
+      handler: ({ body, inject }) => {
         const state = inject(StateStore);
-        await state.setHubLocation(body);
+        state.setHubLocation(body);
         return {
           location: body,
         };
@@ -47,9 +47,9 @@ export const settingsRoutes = group({
     /** Clear the hub's location */
     route.delete({
       path: '/location',
-      handler: async ({ inject }) => {
+      handler: ({ inject }) => {
         const state = inject(StateStore);
-        await state.setHubLocation(null);
+        state.setHubLocation(null);
         return {
           ok: true,
         };
@@ -71,12 +71,12 @@ export const settingsRoutes = group({
     route.put({
       path: '/timezone',
       body: z.object({ timezone: z.string() }),
-      handler: async ({ body, inject }) => {
+      handler: ({ body, inject }) => {
         const state = inject(StateStore);
         if (body.timezone === state.getHubTimezone()) {
           return { timezone: body.timezone };
         }
-        await state.setHubTimezone(body.timezone);
+        state.setHubTimezone(body.timezone);
         state.applyTimezone();
         inject(PluginManager).broadcastTimezone(body.timezone);
         return {
@@ -88,12 +88,12 @@ export const settingsRoutes = group({
     /** Clear the hub's timezone */
     route.delete({
       path: '/timezone',
-      handler: async ({ inject }) => {
+      handler: ({ inject }) => {
         const state = inject(StateStore);
         if (state.getHubTimezone() === null) {
           return { ok: true };
         }
-        await state.setHubTimezone(null);
+        state.setHubTimezone(null);
         state.applyTimezone();
         inject(PluginManager).broadcastTimezone(null);
         return {
@@ -114,8 +114,8 @@ export const settingsRoutes = group({
     route.put({
       path: '/update-channel',
       body: z.object({ channel: z.enum(UPDATE_CHANNEL_IDS) }),
-      handler: async ({ body, inject }) => {
-        await inject(StateStore).setUpdateChannel(body.channel);
+      handler: ({ body, inject }) => {
+        inject(StateStore).setUpdateChannel(body.channel);
         return { channel: body.channel };
       },
     }),

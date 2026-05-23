@@ -12,8 +12,9 @@ export class WorkflowsLoader implements Loader {
   private readonly workflowLoader = inject(WorkflowLoader);
   private readonly configLoader = inject(ConfigLoader);
 
+  // biome-ignore lint/suspicious/useAwait: interface Loader requires Promise<void> return; engine.init() is currently sync but may become async later.
   async init(): Promise<void> {
-    await this.engine.init();
+    this.engine.init();
   }
 
   async load(_config: BrikaConfig): Promise<void> {
@@ -22,8 +23,9 @@ export class WorkflowsLoader implements Loader {
     this.workflowLoader.watch();
   }
 
+  // biome-ignore lint/suspicious/useAwait: interface Loader requires Promise<void> return; engine.stop() is currently sync but may become async later.
   async stop(): Promise<void> {
     this.workflowLoader.stopWatching();
-    await this.engine.stop();
+    this.engine.stop();
   }
 }

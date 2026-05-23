@@ -26,19 +26,18 @@
     "@brika/di": "workspace:*",
     "@brika/photon": "workspace:*",
     "@brika/router": "workspace:*",
-    "bcryptjs": "^2.4.3",
+    "bcryptjs": "^3.0.3",
     "zod": "^4.3.4"
   },
   "devDependencies": {
-    "@types/bcryptjs": "^2.4.6",
     "@types/bun": "latest",
-    "@types/react": "^19.2.0",
-    "react": "^19.2.0",
-    "@tanstack/react-router": "^1.163.2"
+    "@types/react": "^19.2.15",
+    "react": "^19.2.3",
+    "@tanstack/react-router": "^1.170.7"
   },
   "peerDependencies": {
-    "react": "^18 || ^19",
-    "@tanstack/react-router": ">=1.29.0"
+    "react": "^18.2.0 || ^19.0.0",
+    "@tanstack/react-router": "^1.170.7"
   },
   "peerDependenciesMeta": {
     "react": {

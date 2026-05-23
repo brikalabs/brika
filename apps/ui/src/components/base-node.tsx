@@ -65,13 +65,3 @@ export function BaseNodeContent({ className, ...props }: ComponentProps<'div'>) 
     />
   );
 }
-
-export function BaseNodeFooter({ className, ...props }: ComponentProps<'div'>) {
-  return (
-    <div
-      data-slot="base-node-footer"
-      className={cn('flex flex-col items-center gap-y-2 border-t px-3 pt-2 pb-3', className)}
-      {...props}
-    />
-  );
-}

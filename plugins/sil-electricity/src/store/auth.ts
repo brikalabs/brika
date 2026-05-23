@@ -47,9 +47,15 @@ export function updateCredentials(email: string, password: string): boolean {
  * so the SIL portal sees only one login attempt at a time.
  */
 export async function authenticate(): Promise<boolean> {
-  if (!credentials) return false;
-  if (sessionCookie) return true;
-  if (authInFlight) return authInFlight;
+  if (!credentials) {
+    return false;
+  }
+  if (sessionCookie) {
+    return true;
+  }
+  if (authInFlight) {
+    return authInFlight;
+  }
 
   const creds = credentials;
   authInFlight = (async () => {

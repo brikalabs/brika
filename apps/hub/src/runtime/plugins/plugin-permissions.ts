@@ -54,11 +54,7 @@ export class PluginPermissionService {
    * @returns The updated list of granted permissions
    * @throws If the permission is not a valid, recognized permission ID
    */
-  async setPermission(
-    pluginName: string,
-    permission: string,
-    granted: boolean
-  ): Promise<Permission[]> {
+  setPermission(pluginName: string, permission: string, granted: boolean): Permission[] {
     if (!isValidPermission(permission)) {
       this.#logs.warn('Rejected unknown permission', {
         pluginName,
@@ -76,7 +72,7 @@ export class PluginPermissionService {
     }
 
     const updated = filterValidPermissions([...current]);
-    await this.#state.setGrantedPermissions(pluginName, updated);
+    this.#state.setGrantedPermissions(pluginName, updated);
 
     this.#logs.info(`Permission ${granted ? 'granted' : 'revoked'}`, {
       pluginName,

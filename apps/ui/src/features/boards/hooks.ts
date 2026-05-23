@@ -3,7 +3,7 @@ import { useCallback, useEffect } from 'react';
 import { getStreamUrl } from '@/lib/query';
 import type { Json } from '@/types';
 import type { BoardSummary } from './api';
-import { boardKeys, boardsApi, brickInstancesApi, brickTypesApi } from './api';
+import { boardKeys, boardsApi, brickTypesApi } from './api';
 import { useBoardStore } from './store';
 
 // ─── Data fetching ─────────────────────────────────────────────────────────
@@ -139,22 +139,6 @@ export function useReorderBoards() {
         queryKey: boardKeys.all,
       });
     },
-  });
-}
-
-// ─── Brick instance action ──────────────────────────────────────────────────
-
-export function useBrickInstanceAction() {
-  return useMutation({
-    mutationFn: ({
-      instanceId,
-      actionId,
-      payload,
-    }: {
-      instanceId: string;
-      actionId: string;
-      payload?: unknown;
-    }) => brickInstancesApi.action(instanceId, actionId, payload),
   });
 }
 

@@ -37,11 +37,7 @@ export const HEALTH_POLL_INTERVAL_MS = 250;
 
 // ─── TUI ────────────────────────────────────────────────────────────────────
 
-/** Minimum visible-lines for the log pane even on a tiny terminal. */
-export const TUI_MIN_VISIBLE_LINES = 5;
 /** Lines reserved for chrome (borders, header, footer) — subtracted from rows. */
 export const TUI_CHROME_LINES = 9;
 /** Lines to scroll on Shift+↑/↓. */
 export const TUI_FAST_SCROLL_LINES = 10;
-/** Shutdown-overlay dot animation tick. */
-export const TUI_SHUTDOWN_DOT_INTERVAL_MS = 250;

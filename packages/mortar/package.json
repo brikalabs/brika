@@ -21,8 +21,7 @@
   "dependencies": {
     "@brika/cli": "workspace:*",
     "@brika/tui": "workspace:*",
-    "@inkjs/ui": "^2.0.0",
-    "ink": "^6.0.1",
+    "ink": "^7.0.3",
     "picocolors": "^1.1.1",
     "react": "^19.2.3",
     "yaml": "^2.6.0"
@@ -30,6 +29,6 @@
   "devDependencies": {
     "@brika/testing": "workspace:*",
     "@types/bun": "^1.3.5",
-    "@types/react": "^19.0.0"
+    "@types/react": "^19.2.15"
   }
 }

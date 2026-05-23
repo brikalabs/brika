@@ -1,20 +1,33 @@
 {
+  "$schema": "https://schema.brika.dev/plugin.schema.json",
   "name": "@brika/plugin-demo-config",
   "displayName": "Config Demo",
   "version": "0.3.1",
   "private": true,
-  "type": "module",
-  "main": "src/index.ts",
   "description": "Demo plugin showcasing the preferences system",
   "author": "BRIKA",
   "license": "MIT",
-  "engines": {
-    "brika": "^0.2.0"
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/brikalabs/brika.git",
+    "directory": "plugins/demo-config"
   },
-  "keywords": ["demo", "config", "preferences"],
+  "keywords": ["brika", "brika-plugin", "demo", "config", "preferences"],
+  "engines": {
+    "brika": "^0.3.0"
+  },
+  "type": "module",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": ["src", "README.md"],
   "scripts": {
+    "link": "bun link",
+    "typecheck": "tsgo --noEmit",
     "prepublishOnly": "brika-verify-plugin"
   },
+  "grants": {},
   "preferences": [
     {
       "name": "apiKey",

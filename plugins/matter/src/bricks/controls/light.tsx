@@ -32,12 +32,7 @@ const COLOR_PRESETS = [
 ] as const;
 
 /** Color temperature presets in mireds */
-const TEMP_PRESETS = [
-  { mireds: 153 },
-  { mireds: 230 },
-  { mireds: 333 },
-  { mireds: 454 },
-] as const;
+const TEMP_PRESETS = [{ mireds: 153 }, { mireds: 230 }, { mireds: 333 }, { mireds: 454 }] as const;
 
 // ─── Preset Matching ─────────────────────────────────────────────────────────
 
@@ -78,18 +73,21 @@ export function LightControls({
 }: Readonly<{ device: DeviceState; height: number }>) {
   const theme = getDeviceTheme('light');
   const isOn = Boolean(device.state.on);
-  const brightness = device.state.brightness == null ? null : Number(device.state.brightness);
-  const hue = device.state.hue == null ? null : Number(device.state.hue);
-  const saturation = device.state.saturation == null ? null : Number(device.state.saturation);
+  const brightness = device.state.brightness === null ? null : Number(device.state.brightness);
+  const hue = device.state.hue === null ? null : Number(device.state.hue);
+  const saturation = device.state.saturation === null ? null : Number(device.state.saturation);
   const colorTempMireds =
-    device.state.colorTempMireds == null ? null : Number(device.state.colorTempMireds);
-  const hasColor = hue != null && saturation != null;
-  const hasColorTemp = colorTempMireds != null;
+    device.state.colorTempMireds === null ? null : Number(device.state.colorTempMireds);
+  const hasColor = hue !== null && saturation !== null;
+  const hasColorTemp = colorTempMireds !== null;
   const sendCommand = useSendCommand();
 
   let previewColor = theme.accentColor;
-  if (hasColor) previewColor = hsvToHex(hue, saturation, brightness ?? 100);
-  else if (hasColorTemp) previewColor = miredsToHex(colorTempMireds);
+  if (hasColor) {
+    previewColor = hsvToHex(hue, saturation, brightness ?? 100);
+  } else if (hasColorTemp) {
+    previewColor = miredsToHex(colorTempMireds);
+  }
 
   const brightnessPct = brightness ?? 0;
   const showLabels = height >= 3;
@@ -111,12 +109,12 @@ export function LightControls({
 
   const activeColorIdx = useMemo(
     () => (hasColor ? closestColorPreset(hue, saturation) : -1),
-    [hue, saturation, hasColor],
+    [hue, saturation, hasColor]
   );
 
   const activeTempIdx = useMemo(
     () => (hasColorTemp && !hasColor ? closestTempPreset(colorTempMireds) : -1),
-    [colorTempMireds, hasColorTemp, hasColor],
+    [colorTempMireds, hasColorTemp, hasColor]
   );
 
   // ─── Handlers ──────────────────────────────────────────────────────
@@ -134,7 +132,7 @@ export function LightControls({
         sendCommand(device.nodeId, 'setBrightness', { level: String(level) });
       }, 150);
     },
-    [sendCommand, device.nodeId],
+    [sendCommand, device.nodeId]
   );
 
   const handleColorPreset = useCallback(
@@ -146,14 +144,14 @@ export function LightControls({
         saturation: String(matterSat),
       });
     },
-    [sendCommand, device.nodeId],
+    [sendCommand, device.nodeId]
   );
 
   const handleTempPreset = useCallback(
     (mireds: number) => {
       sendCommand(device.nodeId, 'setColorTemp', { mireds: String(mireds) });
     },
-    [sendCommand, device.nodeId],
+    [sendCommand, device.nodeId]
   );
 
   // ─── Render ────────────────────────────────────────────────────────
@@ -167,24 +165,20 @@ export function LightControls({
           className="size-7 shrink-0 rounded-full transition-all duration-300"
           style={{
             backgroundColor: previewColor,
-            boxShadow: isOn
-              ? `0 0 20px ${previewColor}80, 0 0 6px ${previewColor}40`
-              : 'none',
+            boxShadow: isOn ? `0 0 20px ${previewColor}80, 0 0 6px ${previewColor}40` : 'none',
             opacity: isOn ? 1 : 0.3,
           }}
         />
         <div className="flex flex-col gap-0.5">
-          <span className="text-sm font-semibold text-white">{isOn ? 'On' : 'Off'}</span>
-          {brightness != null && (
-            <span className="text-[10px] text-white/40 tabular-nums">
-              {localBrightness}%
-            </span>
+          <span className="font-semibold text-sm text-white">{isOn ? 'On' : 'Off'}</span>
+          {brightness !== null && (
+            <span className="text-[10px] text-white/40 tabular-nums">{localBrightness}%</span>
           )}
         </div>
       </div>
 
       {/* ── Brightness slider ──────────────────────────────────────── */}
-      {brightness != null && (
+      {brightness !== null && (
         <div className={showLabels ? 'space-y-1.5' : ''}>
           {showLabels && (
             <div className="flex items-center justify-between">
@@ -192,7 +186,7 @@ export function LightControls({
                 <Sun className="size-3 text-white/40" />
                 <span className="text-[11px] text-white/40">Brightness</span>
               </div>
-              <span className="text-[11px] font-medium text-white tabular-nums">
+              <span className="font-medium text-[11px] text-white tabular-nums">
                 {localBrightness}%
               </span>
             </div>
@@ -212,10 +206,7 @@ export function LightControls({
               step={1}
               value={localBrightness}
               onChange={(e) => handleBrightness(Number(e.target.value))}
-              className="absolute inset-0 h-full w-full cursor-pointer appearance-none bg-transparent
-                [&::-webkit-slider-thumb]:size-4 [&::-webkit-slider-thumb]:appearance-none
-                [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white
-                [&::-webkit-slider-thumb]:shadow-[0_1px_4px_rgba(0,0,0,0.3)]"
+              className="absolute inset-0 h-full w-full cursor-pointer appearance-none bg-transparent [&::-webkit-slider-thumb]:size-4 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow-[0_1px_4px_rgba(0,0,0,0.3)]"
             />
           </div>
         </div>

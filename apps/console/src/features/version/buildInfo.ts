@@ -45,14 +45,6 @@ const RAW: BuildInfo = {
 
 export const BUILD_INFO: BuildInfo = RAW;
 
-export const EMPTY_BUILD_INFO: BuildInfo = {
-  branch: null,
-  commit: null,
-  commitFull: null,
-  commitDate: null,
-  buildTime: null,
-};
-
 /** Backwards-compatible accessor. Always returns the baked-in info. */
 export function readBuildInfo(): BuildInfo {
   return BUILD_INFO;

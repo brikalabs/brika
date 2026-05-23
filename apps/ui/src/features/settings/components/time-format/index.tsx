@@ -1,13 +1,4 @@
-import {
-  cn,
-  SectionContent,
-  SectionDescription,
-  SectionHeader,
-  SectionIcon,
-  SectionInfo,
-  SectionTitle,
-} from '@brika/clay';
-import { Clock } from 'lucide-react';
+import { cn } from '@brika/clay';
 import type { TimeFormat } from '@/lib/time-format';
 import { useLocale } from '@/lib/use-locale';
 
@@ -73,34 +64,5 @@ export function TimeFormatAutoHint() {
     <span className="font-mono text-[11px] text-muted-foreground/70">
       {t('settings:timeFormat.autoHint', { example: sample })}
     </span>
-  );
-}
-
-// ─── Settings section ───────────────────────────────────────────────────────
-
-export function TimeFormatSettings() {
-  const { t } = useLocale();
-
-  return (
-    <>
-      <SectionHeader>
-        <SectionInfo>
-          <SectionIcon>
-            <Clock className="size-4" />
-          </SectionIcon>
-          <div>
-            <SectionTitle>{t('settings:timeFormat.title')}</SectionTitle>
-            <SectionDescription>{t('settings:timeFormat.description')}</SectionDescription>
-          </div>
-        </SectionInfo>
-      </SectionHeader>
-
-      <SectionContent>
-        <div className="flex items-center gap-3">
-          <TimeFormatToggle />
-          <TimeFormatAutoHint />
-        </div>
-      </SectionContent>
-    </>
   );
 }

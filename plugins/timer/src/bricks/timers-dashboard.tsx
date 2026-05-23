@@ -22,17 +22,26 @@ interface DashboardData {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function formatUptime(seconds: number): string {
-  if (seconds < 60) return `${seconds}s`;
+  if (seconds < 60) {
+    return `${seconds}s`;
+  }
   const m = Math.floor(seconds / 60);
   const s = seconds % 60;
-  if (m < 60) return `${m}m ${s}s`;
+  if (m < 60) {
+    return `${m}m ${s}s`;
+  }
   const h = Math.floor(m / 60);
   return `${h}h ${m % 60}m`;
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-function StatCard({ label, value, icon: Icon, color }: Readonly<{
+function StatCard({
+  label,
+  value,
+  icon: Icon,
+  color,
+}: Readonly<{
   label: string;
   value: string | number;
   icon: typeof Clock;
@@ -44,12 +53,16 @@ function StatCard({ label, value, icon: Icon, color }: Readonly<{
         <Icon className="size-3" style={color ? { color } : undefined} />
         <span className="text-[10px] text-muted-foreground">{label}</span>
       </div>
-      <span className="text-sm font-semibold text-foreground">{value}</span>
+      <span className="font-semibold text-foreground text-sm">{value}</span>
     </div>
   );
 }
 
-function StatusIndicator({ label, online, icon: Icon }: Readonly<{
+function StatusIndicator({
+  label,
+  online,
+  icon: Icon,
+}: Readonly<{
   label: string;
   online: boolean;
   icon: typeof Activity;
@@ -57,7 +70,7 @@ function StatusIndicator({ label, online, icon: Icon }: Readonly<{
   return (
     <div className="flex items-center gap-2 rounded-md bg-muted/50 px-3 py-1.5">
       <Icon className="size-3.5 text-muted-foreground" />
-      <span className="text-xs text-foreground">{label}</span>
+      <span className="text-foreground text-xs">{label}</span>
       <span
         className={clsx('ml-auto size-2 rounded-full', online ? 'bg-emerald-500' : 'bg-zinc-400')}
       />
@@ -67,7 +80,9 @@ function StatusIndicator({ label, online, icon: Icon }: Readonly<{
 }
 
 function MiniChart({ history, color }: Readonly<{ history: number[]; color: string }>) {
-  if (history.length < 2) return null;
+  if (history.length < 2) {
+    return null;
+  }
   const max = Math.max(...history, 1);
   const barCount = history.length;
 
@@ -95,7 +110,8 @@ export default function TimersDashboard() {
   const config = useBrickConfig();
   const data = useBrickData<DashboardData>();
 
-  const refreshInterval = typeof config.refreshInterval === 'number' ? config.refreshInterval : 5000;
+  const refreshInterval =
+    typeof config.refreshInterval === 'number' ? config.refreshInterval : 5000;
 
   const [monitoring, setMonitoring] = useState(true);
   const [uptime, setUptime] = useState(0);
@@ -142,7 +158,7 @@ export default function TimersDashboard() {
           <button
             type="button"
             onClick={handleToggleMonitoring}
-            className="flex cursor-pointer items-center gap-2 rounded-md bg-muted/50 px-3 py-1.5 text-xs text-foreground transition-colors hover:bg-muted"
+            className="flex cursor-pointer items-center gap-2 rounded-md bg-muted/50 px-3 py-1.5 text-foreground text-xs transition-colors hover:bg-muted"
           >
             {monitoring ? <Eye className="size-3.5" /> : <EyeOff className="size-3.5" />}
             Monitoring
@@ -173,7 +189,7 @@ export default function TimersDashboard() {
           <button
             type="button"
             onClick={handleToggleMonitoring}
-            className="flex cursor-pointer items-center gap-2 rounded-md bg-muted/50 px-3 py-1.5 text-xs text-foreground transition-colors hover:bg-muted"
+            className="flex cursor-pointer items-center gap-2 rounded-md bg-muted/50 px-3 py-1.5 text-foreground text-xs transition-colors hover:bg-muted"
           >
             {monitoring ? <Eye className="size-3.5" /> : <EyeOff className="size-3.5" />}
             Monitoring
@@ -190,7 +206,7 @@ export default function TimersDashboard() {
     <div className="flex h-full flex-col gap-3 p-3">
       {/* Overview section */}
       <div>
-        <h3 className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+        <h3 className="mb-1.5 font-semibold text-[10px] text-muted-foreground uppercase tracking-wider">
           Overview
         </h3>
         <div className={`grid gap-2 ${width >= 6 ? 'grid-cols-3' : 'grid-cols-2'}`}>
@@ -206,7 +222,7 @@ export default function TimersDashboard() {
       {/* Blocks section */}
       {height >= 3 && (
         <div>
-          <h3 className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+          <h3 className="mb-1.5 font-semibold text-[10px] text-muted-foreground uppercase tracking-wider">
             Blocks
           </h3>
           <div className="grid grid-cols-2 gap-2">
@@ -219,7 +235,7 @@ export default function TimersDashboard() {
       {/* Uptime chart */}
       {height >= 4 && (
         <div>
-          <h3 className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+          <h3 className="mb-1.5 font-semibold text-[10px] text-muted-foreground uppercase tracking-wider">
             Uptime History
           </h3>
           <MiniChart history={history} color="#22c55e" />
@@ -230,7 +246,7 @@ export default function TimersDashboard() {
       <button
         type="button"
         onClick={handleToggleMonitoring}
-        className="flex cursor-pointer items-center gap-2 rounded-md bg-muted/50 px-3 py-1.5 text-xs text-foreground transition-colors hover:bg-muted"
+        className="flex cursor-pointer items-center gap-2 rounded-md bg-muted/50 px-3 py-1.5 text-foreground text-xs transition-colors hover:bg-muted"
       >
         {monitoring ? <Eye className="size-3.5" /> : <EyeOff className="size-3.5" />}
         Monitoring

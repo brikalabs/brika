@@ -4,14 +4,19 @@ import { TrendingDown, TrendingUp, Zap } from 'lucide-react';
 import type { ConsumptionPoint, ElectricityState } from '../types';
 import { formatChf, formatKwh, Loader, pointCost } from '../ui/states';
 
-function currentAndPreviousMonth(points: ConsumptionPoint[]): { current: number; previous: number } {
+function currentAndPreviousMonth(points: ConsumptionPoint[]): {
+  current: number;
+  previous: number;
+} {
   const last = points.at(-1);
   const prev = points.at(-2);
   return { current: last?.total ?? 0, previous: prev?.total ?? 0 };
 }
 
 function trendPercent(current: number, previous: number): number | null {
-  if (previous === 0) return null;
+  if (previous === 0) {
+    return null;
+  }
   return Math.round(((current - previous) / previous) * 100);
 }
 
@@ -26,7 +31,9 @@ function NoCredentials() {
 }
 
 function Sparkline({ points }: Readonly<{ points: ConsumptionPoint[] }>) {
-  if (points.length < 2) return null;
+  if (points.length < 2) {
+    return null;
+  }
   const recent = points.slice(-6);
   const max = Math.max(...recent.map((p) => p.total), 1);
   return (
@@ -51,12 +58,20 @@ export default function ElectricitySummary() {
 
   const data = state?.periods?.['12m']?.data;
 
-  if (!state) return <Loader tone="yellow" />;
-  if (!state.credentialsSet) return <NoCredentials />;
-  if (!data || data.points.length === 0) return <Loader tone="yellow" />;
+  if (!state) {
+    return <Loader tone="yellow" />;
+  }
+  if (!state.credentialsSet) {
+    return <NoCredentials />;
+  }
+  if (!data || data.points.length === 0) {
+    return <Loader tone="yellow" />;
+  }
 
   const last = data.points.at(-1);
-  if (!last) return <Loader tone="yellow" />;
+  if (!last) {
+    return <Loader tone="yellow" />;
+  }
 
   const { current, previous } = currentAndPreviousMonth(data.points);
   const trend = trendPercent(current, previous);
@@ -64,14 +79,14 @@ export default function ElectricitySummary() {
     locale,
     data.granularity === 'month'
       ? { month: 'long', year: 'numeric' }
-      : { day: 'numeric', month: 'short' },
+      : { day: 'numeric', month: 'short' }
   );
 
   return (
     <div className="flex h-full flex-col justify-between p-1">
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+          <p className="text-[10px] text-muted-foreground uppercase tracking-wide">
             {t('ui.consumption')}
           </p>
           <p className="text-[10px] text-muted-foreground/70">{periodLabel}</p>
@@ -80,7 +95,7 @@ export default function ElectricitySummary() {
       </div>
 
       <div className="flex flex-col gap-0.5">
-        <span className="text-2xl font-bold leading-none text-foreground tabular-nums">
+        <span className="font-bold text-2xl text-foreground tabular-nums leading-none">
           {formatKwh(current)}
         </span>
         <span className="text-[10px] text-muted-foreground">
@@ -94,7 +109,7 @@ export default function ElectricitySummary() {
               <TrendingDown className="size-3 text-success" />
             )}
             <span
-              className={`text-[10px] font-medium ${trend > 0 ? 'text-destructive' : 'text-success'}`}
+              className={`font-medium text-[10px] ${trend > 0 ? 'text-destructive' : 'text-success'}`}
             >
               {trend > 0 ? '+' : ''}
               {trend}% {t('ui.vsPrevious')}

@@ -121,6 +121,29 @@ describe('lockdown enforce mode — ambient I/O globals', () => {
     expect(out.stdout).not.toContain('LEAKED:');
   });
 
+  // `Bun.dns` itself is non-writable/non-configurable so we can't replace
+  // the namespace; instead each I/O method on it is replaced individually.
+  // Pinning `lookup` here as the canonical case — if this regresses, the
+  // whole DNS surface (resolve*, reverse, prefetch, setServers, …) is
+  // probably also broken.
+  test('Bun.dns.lookup is scrubbed', async () => {
+    const out = await runAttack(`
+      const r = await Bun.dns.lookup('example.com');
+      console.log('LEAKED:' + JSON.stringify(r));
+    `);
+    expect(out.stdout).toMatch(/CAUGHT:.*Bun\.dns\.lookup is not available/);
+    expect(out.stdout).not.toContain('LEAKED:');
+  });
+
+  test('Bun.dns.setServers is scrubbed', async () => {
+    const out = await runAttack(`
+      Bun.dns.setServers(['8.8.8.8']);
+      console.log('LEAKED:setServers ran');
+    `);
+    expect(out.stdout).toMatch(/CAUGHT:.*Bun\.dns\.setServers is not available/);
+    expect(out.stdout).not.toContain('LEAKED:');
+  });
+
   test('eval is scrubbed', async () => {
     const out = await runAttack(`
       const r = eval('1+1');
@@ -128,6 +151,33 @@ describe('lockdown enforce mode — ambient I/O globals', () => {
     `);
     expect(out.stdout).toContain('CAUGHT:');
     expect(out.stdout).not.toContain('LEAKED:');
+  });
+
+  // `Request` and `Response` are deliberately NOT scrubbed — they're pure
+  // value constructors with no I/O of their own. Pinning the behaviour
+  // here so a future "tighten the lockdown" PR doesn't silently re-add
+  // them and break libraries (e.g. @matter/nodejs's NodeJsHttpRequest)
+  // that subclass them. The actual network gate is `fetch`, covered above.
+  test('Request is constructible and subclassable (value-only, no scrub)', async () => {
+    const out = await runAttack(`
+      const r = new Request('https://example.invalid/');
+      class MyRequest extends Request {}
+      const m = new MyRequest('https://example.invalid/');
+      console.log('OK:' + r.url + ':' + (m instanceof Request));
+    `);
+    expect(out.stdout).toContain('OK:https://example.invalid/:true');
+    expect(out.stdout).not.toContain('CAUGHT:');
+  });
+
+  test('Response is constructible and subclassable (value-only, no scrub)', async () => {
+    const out = await runAttack(`
+      const r = new Response('hello', { status: 200 });
+      class MyResponse extends Response {}
+      const m = new MyResponse('body');
+      console.log('OK:' + r.status + ':' + (m instanceof Response));
+    `);
+    expect(out.stdout).toContain('OK:200:true');
+    expect(out.stdout).not.toContain('CAUGHT:');
   });
 });
 

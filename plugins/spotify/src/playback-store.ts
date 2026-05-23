@@ -14,7 +14,10 @@ import { SpotifyAuthError } from './spotify-api';
 
 // ─── Store ───────────────────────────────────────────────────────────────────
 
-export interface Anchor { progressMs: number; timestamp: number }
+export interface Anchor {
+  progressMs: number;
+  timestamp: number;
+}
 
 interface PlayerState {
   playback: PlaybackState | null;
@@ -44,7 +47,9 @@ let lastTrack = '';
 
 /** Reset the polling interval so the next poll is a full POLL_MS away. */
 function resetPollTimer(): void {
-  if (!timer) return;
+  if (!timer) {
+    return;
+  }
   clearInterval(timer);
   timer = setInterval(poll, POLL_MS);
 }
@@ -56,7 +61,9 @@ function pollNow(): void {
 }
 
 function emitTrackChanged(state: PlaybackState): void {
-  if (state.trackName === lastTrack) return;
+  if (state.trackName === lastTrack) {
+    return;
+  }
   lastTrack = state.trackName;
   trackChanged.emit({
     trackName: state.trackName,
@@ -69,7 +76,14 @@ function emitTrackChanged(state: PlaybackState): void {
 
 async function poll(): Promise<void> {
   if (!spotify.isAuthenticated()) {
-    usePlayerStore.set({ playback: null, recentTrack: null, devices: [], isAuthed: false, loaded: true, anchor: { progressMs: 0, timestamp: Date.now() } });
+    usePlayerStore.set({
+      playback: null,
+      recentTrack: null,
+      devices: [],
+      isAuthed: false,
+      loaded: true,
+      anchor: { progressMs: 0, timestamp: Date.now() },
+    });
     return;
   }
 
@@ -87,9 +101,18 @@ async function poll(): Promise<void> {
         recentTrack ? Promise.resolve(recentTrack) : getApi().getRecentlyPlayed(),
       ]);
     }
-    usePlayerStore.set({ playback: state, recentTrack, devices, isAuthed: true, loaded: true, anchor });
+    usePlayerStore.set({
+      playback: state,
+      recentTrack,
+      devices,
+      isAuthed: true,
+      loaded: true,
+      anchor,
+    });
 
-    if (state) emitTrackChanged(state);
+    if (state) {
+      emitTrackChanged(state);
+    }
   } catch (err) {
     if (err instanceof SpotifyAuthError) {
       usePlayerStore.set((prev) => ({ ...prev, playback: null, isAuthed: false, loaded: true }));
@@ -114,7 +137,9 @@ export function acquirePolling(): () => void {
 
   let released = false;
   return () => {
-    if (released) return;
+    if (released) {
+      return;
+    }
     released = true;
     refCount--;
     if (refCount === 0 && timer) {
@@ -136,7 +161,9 @@ function silent(promise: Promise<unknown>): void {
 export function play(deviceId?: string): void {
   silent(getApi().play(deviceId));
   usePlayerStore.set((prev) => {
-    if (!prev.playback) return prev;
+    if (!prev.playback) {
+      return prev;
+    }
     const elapsed = Date.now() - prev.anchor.timestamp;
     return {
       ...prev,
@@ -150,7 +177,9 @@ export function play(deviceId?: string): void {
 export function pause(deviceId?: string): void {
   silent(getApi().pause(deviceId));
   usePlayerStore.set((prev) => {
-    if (!prev.playback) return prev;
+    if (!prev.playback) {
+      return prev;
+    }
     const elapsed = Date.now() - prev.anchor.timestamp;
     const progressMs = Math.min(prev.anchor.progressMs + elapsed, prev.playback.durationMs);
     return {
@@ -163,11 +192,19 @@ export function pause(deviceId?: string): void {
 }
 
 export function next(): void {
-  silent(getApi().next().then(() => pollNow()));
+  silent(
+    getApi()
+      .next()
+      .then(() => pollNow())
+  );
 }
 
 export function previous(): void {
-  silent(getApi().previous().then(() => pollNow()));
+  silent(
+    getApi()
+      .previous()
+      .then(() => pollNow())
+  );
 }
 
 export function seek(positionMs: number): void {
@@ -183,18 +220,26 @@ export function seek(positionMs: number): void {
 export function setVolume(percent: number): void {
   silent(getApi().setVolume(percent));
   usePlayerStore.set((prev) => {
-    if (!prev.playback) return prev;
+    if (!prev.playback) {
+      return prev;
+    }
     return { ...prev, playback: { ...prev.playback, volume: percent } };
   });
   resetPollTimer();
 }
 
 export function transferPlayback(deviceId: string): void {
-  silent(getApi().transferPlayback(deviceId).then(() => pollNow()));
+  silent(
+    getApi()
+      .transferPlayback(deviceId)
+      .then(() => pollNow())
+  );
 }
 
 export async function startPlayback(deviceId?: string): Promise<void> {
-  if (deviceId) await getApi().transferPlayback(deviceId);
+  if (deviceId) {
+    await getApi().transferPlayback(deviceId);
+  }
   const recent = await getApi().getRecentlyPlayed();
   await getApi().play(deviceId, recent?.uri);
   pollNow();

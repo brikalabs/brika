@@ -216,12 +216,8 @@ export class PluginLifecycle {
         errors: buildResult.errors.join('; '),
       });
       // Persist plugin state before setting health so it can be restored later
-      await this.#state.registerPlugin({ name: pluginName, rootDirectory, entryPoint, uid });
-      await this.#state.setHealth(
-        pluginName,
-        'crashed',
-        PluginErrors.buildFailed(buildResult.errors)
-      );
+      this.#state.registerPlugin({ name: pluginName, rootDirectory, entryPoint, uid });
+      this.#state.setHealth(pluginName, 'crashed', PluginErrors.buildFailed(buildResult.errors));
       return;
     }
 
@@ -375,7 +371,7 @@ export class PluginLifecycle {
       entryPoint,
       uid,
     });
-    await this.#state.setHealth(pluginName, 'restarting');
+    this.#state.setHealth(pluginName, 'restarting');
 
     this.#watcher.watch(pluginName, rootDirectory);
   }
@@ -410,7 +406,7 @@ export class PluginLifecycle {
     this.#metrics.clear(name);
 
     const restartState = this.#restartPolicy.getState(name);
-    await this.#state.setHealth(name, restartState?.pendingTimer ? 'restarting' : 'stopped');
+    this.#state.setHealth(name, restartState?.pendingTimer ? 'restarting' : 'stopped');
 
     if (!skipRestartReset) {
       this.#restartPolicy.reset(name);
@@ -516,7 +512,7 @@ export class PluginLifecycle {
           reason: 'package.json not found',
         });
         this.#moduleCompiler.remove(state.name, state.rootDirectory);
-        await this.#state.remove(state.name);
+        this.#state.remove(state.name);
       }
     }
   }
@@ -703,7 +699,7 @@ export class PluginLifecycle {
     });
     await this.#i18n.registerPluginTranslations(metadata.name, rootDirectory);
     const required = metadata.engines?.brika;
-    await this.#state.setHealth(
+    this.#state.setHealth(
       pluginName,
       'incompatible',
       required ? PluginErrors.incompatibleVersion(required) : PluginErrors.incompatibleUnknown()

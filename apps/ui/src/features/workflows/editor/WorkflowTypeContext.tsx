@@ -30,10 +30,3 @@ export function usePortTypeName(nodeId: string, portId: string): string | undefi
   const desc = usePortType(nodeId, portId);
   return desc ? displayType(desc) : undefined;
 }
-
-/**
- * Get the full PortTypeMap.
- */
-export function usePortTypeMap(): PortTypeMap {
-  return useContext(WorkflowTypeContext);
-}

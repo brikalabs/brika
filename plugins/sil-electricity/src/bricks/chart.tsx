@@ -18,19 +18,27 @@ export default function ConsumptionChart() {
 
   const prices = state?.prices;
   const rows = useMemo(() => {
-    if (!periodState?.data || !prices) return [];
+    if (!periodState?.data || !prices) {
+      return [];
+    }
     return buildRows(periodState.data.points, periodState.data.granularity, locale, prices);
   }, [periodState?.data, locale, prices]);
 
-  if (!state) return <Loader />;
-  if (!state.credentialsSet) return <Message icon="⚡" text={t('ui.noCookie')} />;
+  if (!state) {
+    return <Loader />;
+  }
+  if (!state.credentialsSet) {
+    return <Message icon="⚡" text={t('ui.noCookie')} />;
+  }
   if (periodState?.error === 'auth' && !periodState.data) {
     return <Message icon="🔒" text={t('ui.authError')} />;
   }
   if (periodState?.error === 'network' && !periodState.data) {
     return <Message icon="📡" text={t('ui.networkError')} />;
   }
-  if (rows.length === 0) return <Loader />;
+  if (rows.length === 0) {
+    return <Loader />;
+  }
 
   const granularity: Granularity = periodState?.data?.granularity ?? 'month';
   const style = resolveStyle(config);
@@ -40,17 +48,13 @@ export default function ConsumptionChart() {
   return (
     <div className="flex h-full flex-col">
       <div className="flex shrink-0 items-center justify-between px-1 pb-1">
-        <span className="text-xs font-semibold text-foreground/80">
+        <span className="font-semibold text-foreground/80 text-xs">
           {t(`ui.${granularity}Consumption`)}
         </span>
         <span className="text-[10px] text-muted-foreground">kWh</span>
       </div>
       <div className="min-h-0 flex-1">
-        <ResponsiveContainer
-          width="100%"
-          height="100%"
-          initialDimension={{ width: 1, height: 1 }}
-        >
+        <ResponsiveContainer width="100%" height="100%" initialDimension={{ width: 1, height: 1 }}>
           {style === 'bar' && <BarVariant {...props} />}
           {style === 'area' && <AreaVariant {...props} />}
           {style === 'line' && <LineVariant {...props} />}

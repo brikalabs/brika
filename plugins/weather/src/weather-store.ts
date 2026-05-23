@@ -62,7 +62,9 @@ function updateCity(city: string, patch: Partial<WeatherState>): void {
 
 async function pollCity(city: string): Promise<void> {
   const entry = cities.get(city);
-  if (!entry) return;
+  if (!entry) {
+    return;
+  }
 
   try {
     let location = entry.cachedLocation;
@@ -95,7 +97,9 @@ async function pollCity(city: string): Promise<void> {
       },
     }));
   } catch (err) {
-    log.error(`Weather poll for "${city}" failed: ${err instanceof Error ? err.message : String(err)}`);
+    log.error(
+      `Weather poll for "${city}" failed: ${err instanceof Error ? err.message : String(err)}`
+    );
     updateCity(city, { loading: false, error: 'Network error' });
   }
 }
@@ -116,7 +120,9 @@ export function acquirePolling(city: string): () => void {
 
   let released = false;
   return () => {
-    if (released) return;
+    if (released) {
+      return;
+    }
     released = true;
     entry.refCount--;
     if (entry.refCount === 0 && entry.timer) {

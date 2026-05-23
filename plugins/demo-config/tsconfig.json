@@ -1,12 +1,7 @@
 {
+  "extends": "@brika/sdk/tsconfig.plugin.json",
   "compilerOptions": {
-    "target": "ESNext",
-    "module": "ESNext",
-    "moduleResolution": "bundler",
-    "strict": true,
-    "skipLibCheck": true,
-    "noEmit": true
-  },
-  "include": ["src"]
+    "jsx": "react-jsx",
+    "jsxImportSource": "react"
+  }
 }
-

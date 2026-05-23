@@ -23,7 +23,7 @@ import {
 } from '@xyflow/react';
 import { type MouseEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Workflow, WorkflowBlock } from '../api';
-import type { BlockNodeData, BlockPort } from './BlockNode';
+import type { BlockNodeData } from './BlockNode';
 import type { BlockDefinition, BlockTypeInfo } from './BlockToolbar';
 import type { RegisteredSpark } from './WorkflowEditor';
 import {
@@ -40,15 +40,6 @@ import {
 export type { BlockStatus, ExecutionLog } from './workflow-conversion';
 
 import type { BlockStatus, ExecutionLog } from './workflow-conversion';
-
-export interface EditorState {
-  workflow: Workflow;
-  selectedNodeId: string | null;
-  isDirty: boolean;
-  blockStatuses: Record<string, BlockStatus>;
-  blockOutputs: Record<string, unknown>;
-  executionLogs: ExecutionLog[];
-}
 
 export interface UseWorkflowEditorOptions {
   /** Lookup function for external type data (e.g., spark schemas) */

@@ -16,7 +16,7 @@ export const ScopeSchema = z.enum(scopeValues);
 
 export const ConnectionTypeSchema = z.enum(['http', 'rtc', 'ws']);
 
-export const EmailSchema = z.string().email('Invalid email address').toLowerCase();
+export const EmailSchema = z.email({ message: 'Invalid email address' }).toLowerCase();
 
 export const NameSchema = z.string().min(2, 'Name must be at least 2 characters').max(255);
 
@@ -58,7 +58,7 @@ export const PasswordSchema = z
   });
 
 export const UserSchema = z.object({
-  id: z.string().uuid(),
+  id: z.uuid(),
   email: EmailSchema,
   name: NameSchema,
   role: RoleSchema,
@@ -70,7 +70,7 @@ export const UserSchema = z.object({
 export const SessionSchema = z.object({
   id: z.string(),
   userId: z.string(),
-  userEmail: z.string().email(),
+  userEmail: z.email(),
   userName: z.string(),
   userRole: RoleSchema,
   scopes: z.array(ScopeSchema),

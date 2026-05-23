@@ -132,10 +132,12 @@ describe('http-request block', () => {
     test('passes an AbortSignal to fetch', async () => {
       let capturedSignal: AbortSignal | undefined;
 
-      fetchSpy = spyOn(globalThis, 'fetch').mockImplementation(mockFetchImpl(async (_url, opts) => {
-        capturedSignal = opts?.signal as AbortSignal;
-        return new Response(JSON.stringify({}), { status: 200 });
-      }));
+      fetchSpy = spyOn(globalThis, 'fetch').mockImplementation(
+        mockFetchImpl(async (_url, opts) => {
+          capturedSignal = opts?.signal as AbortSignal;
+          return new Response(JSON.stringify({}), { status: 200 });
+        })
+      );
 
       const { triggerHandler } = invokeBlock({ url: 'https://example.com' });
       await triggerHandler();
@@ -146,10 +148,12 @@ describe('http-request block', () => {
     test('signal is not yet aborted on a fast response', async () => {
       let capturedSignal: AbortSignal | undefined;
 
-      fetchSpy = spyOn(globalThis, 'fetch').mockImplementation(mockFetchImpl(async (_url, opts) => {
-        capturedSignal = opts?.signal as AbortSignal;
-        return new Response('ok', { status: 200 });
-      }));
+      fetchSpy = spyOn(globalThis, 'fetch').mockImplementation(
+        mockFetchImpl(async (_url, opts) => {
+          capturedSignal = opts?.signal as AbortSignal;
+          return new Response('ok', { status: 200 });
+        })
+      );
 
       const { triggerHandler } = invokeBlock({ url: 'https://example.com', timeoutMs: 5000 });
       await triggerHandler();
@@ -158,20 +162,22 @@ describe('http-request block', () => {
     });
 
     test('aborts fetch and emits error when timeoutMs elapses', async () => {
-      fetchSpy = spyOn(globalThis, 'fetch').mockImplementation(mockFetchImpl(async (_url, opts) => {
-        const signal = opts?.signal as AbortSignal;
-        // Simulate a hanging fetch that respects the abort signal
-        await new Promise<void>((_, reject) => {
-          if (signal?.aborted) {
-            reject(new DOMException('The operation was aborted.', 'AbortError'));
-            return;
-          }
-          signal?.addEventListener('abort', () => {
-            reject(new DOMException('The operation was aborted.', 'AbortError'));
+      fetchSpy = spyOn(globalThis, 'fetch').mockImplementation(
+        mockFetchImpl(async (_url, opts) => {
+          const signal = opts?.signal as AbortSignal;
+          // Simulate a hanging fetch that respects the abort signal
+          await new Promise<void>((_, reject) => {
+            if (signal?.aborted) {
+              reject(new DOMException('The operation was aborted.', 'AbortError'));
+              return;
+            }
+            signal?.addEventListener('abort', () => {
+              reject(new DOMException('The operation was aborted.', 'AbortError'));
+            });
           });
-        });
-        return new Response();
-      }));
+          return new Response();
+        })
+      );
 
       const { triggerHandler, errorEmit, responseEmit } = invokeBlock({
         url: 'https://example.com',
@@ -251,10 +257,12 @@ describe('http-request block', () => {
     test('uses GET method by default', async () => {
       let capturedMethod: string | undefined;
 
-      fetchSpy = spyOn(globalThis, 'fetch').mockImplementation(mockFetchImpl(async (_url, opts) => {
-        capturedMethod = opts?.method as string;
-        return new Response('ok', { status: 200 });
-      }));
+      fetchSpy = spyOn(globalThis, 'fetch').mockImplementation(
+        mockFetchImpl(async (_url, opts) => {
+          capturedMethod = opts?.method as string;
+          return new Response('ok', { status: 200 });
+        })
+      );
 
       const { triggerHandler } = invokeBlock({ url: 'https://example.com' });
       await triggerHandler();
@@ -263,7 +271,9 @@ describe('http-request block', () => {
     });
 
     test('default timeoutMs is 30000', () => {
-      if (!capturedConfigSchema) throw new Error('schema not captured');
+      if (!capturedConfigSchema) {
+        throw new Error('schema not captured');
+      }
       const parsed = capturedConfigSchema.parse({ url: 'https://example.com' });
       expect(parsed.timeoutMs).toBe(30000);
     });

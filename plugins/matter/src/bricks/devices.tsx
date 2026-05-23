@@ -18,8 +18,12 @@ import type { DeviceSummary, DevicesData } from './types';
 const OVERVIEW_GRADIENT = 'linear-gradient(135deg, #1a1e38 0%, #252a48 50%, #303658 100%)';
 
 function gridCols(width: number): string {
-  if (width >= 6) return 'grid-cols-3';
-  if (width >= 4) return 'grid-cols-2';
+  if (width >= 6) {
+    return 'grid-cols-3';
+  }
+  if (width >= 4) {
+    return 'grid-cols-2';
+  }
   return 'grid-cols-1';
 }
 
@@ -29,13 +33,14 @@ function DeviceCard({ device }: Readonly<{ device: DeviceSummary }>) {
     <div className="flex items-center gap-2 rounded-lg bg-white/8 px-2.5 py-2 transition-colors hover:bg-white/12">
       <DeviceIcon type={device.deviceType} size="sm" />
       <div className="flex flex-1 flex-col overflow-hidden">
-        <span className="truncate text-xs font-medium text-white">{device.name}</span>
-        <span className="text-[10px] text-white/40">
-          {t(`device.types.${device.deviceType}`)}
-        </span>
+        <span className="truncate font-medium text-white text-xs">{device.name}</span>
+        <span className="text-[10px] text-white/40">{t(`device.types.${device.deviceType}`)}</span>
       </div>
       <span
-        className={clsx('size-2 shrink-0 rounded-full', device.online ? 'bg-emerald-400' : 'bg-white/20')}
+        className={clsx(
+          'size-2 shrink-0 rounded-full',
+          device.online ? 'bg-emerald-400' : 'bg-white/20'
+        )}
         style={device.online ? { boxShadow: '0 0 4px rgba(52,211,153,0.4)' } : undefined}
       />
     </div>
@@ -77,7 +82,7 @@ export default function DevicesBrick() {
         <div>
           <span className="text-[11px] text-white/50">{t('device.matterDevices')}</span>
           <div className="flex items-baseline gap-1">
-            <span className="text-xl font-bold text-white">{online.length}</span>
+            <span className="font-bold text-white text-xl">{online.length}</span>
             <span className="text-sm text-white/40">/ {commissioned.length}</span>
           </div>
         </div>
@@ -98,7 +103,7 @@ export default function DevicesBrick() {
       {/* Empty state */}
       {commissioned.length === 0 && (
         <div className="flex flex-1 items-center justify-center">
-          <span className="text-xs text-white/40">{t('device.noDevicesCommissioned')}</span>
+          <span className="text-white/40 text-xs">{t('device.noDevicesCommissioned')}</span>
         </div>
       )}
     </div>

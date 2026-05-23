@@ -25,23 +25,23 @@
     "@brika/clay": "^0.1.0",
     "@brika/components": "workspace:*",
     "@brika/remote-access-protocol": "workspace:*",
-    "@tanstack/react-router": "^1.163.2",
+    "@tanstack/react-router": "^1.170.7",
     "hono": "^4.12.2",
-    "lucide-react": "^0.475.0",
+    "lucide-react": "^1.16.0",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
     "zod": "^4.3.4"
   },
   "devDependencies": {
-    "@cloudflare/vite-plugin": "^1.36.4",
-    "@cloudflare/workers-types": "^4.20251101.0",
+    "@cloudflare/vite-plugin": "^1.38.0",
+    "@cloudflare/workers-types": "^4.20260523.1",
     "@tailwindcss/vite": "^4.2.1",
-    "@types/react": "^19.0.0",
+    "@types/react": "^19.2.15",
     "@types/react-dom": "^19.0.0",
-    "@vitejs/plugin-react": "^5.1.4",
-    "esbuild": "^0.24.0",
+    "@vitejs/plugin-react": "^6.0.2",
+    "esbuild": "^0.28.0",
     "tailwindcss": "^4.2.1",
-    "vite": "^7.3.0",
-    "wrangler": "^4.0.0"
+    "vite": "^8.0.14",
+    "wrangler": "^4.94.0"
   }
 }

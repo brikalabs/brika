@@ -34,27 +34,45 @@ export const commission = defineAction(async (input: { pairingCode: string }) =>
 });
 
 /** Send command to a device */
-export const command = defineAction(async (input: { nodeId: string; command: string; params?: Record<string, string> }) => {
-  const controller = getMatterController();
-  const ok = await controller.sendCommand(input.nodeId, input.command as MatterCommand, input.params);
-  if (!ok) throw new Error('Command failed');
-  return { ok };
-});
+export const command = defineAction(
+  async (input: { nodeId: string; command: string; params?: Record<string, string> }) => {
+    const controller = getMatterController();
+    const ok = await controller.sendCommand(
+      input.nodeId,
+      input.command as MatterCommand,
+      input.params
+    );
+    if (!ok) {
+      throw new Error('Command failed');
+    }
+    return { ok };
+  }
+);
 
 /** Decommission and remove a device */
 export const remove = defineAction(async (input: { nodeId: string }) => {
   const controller = getMatterController();
   const ok = await controller.removeDevice(input.nodeId);
-  if (!ok) throw new Error('Device not found');
+  if (!ok) {
+    throw new Error('Device not found');
+  }
   return { ok };
 });
 
 // ─── Brick Actions (called from client-rendered bricks via callAction) ──────
 
 /** Send a command to a Matter device from a client brick */
-export const doDeviceCommand = defineAction(async (input: { nodeId: string; command: string; args?: Record<string, string> }) => {
-  const controller = getMatterController();
-  const ok = await controller.sendCommand(input.nodeId, input.command as MatterCommand, input.args);
-  if (!ok) throw new Error(`Command "${input.command}" failed on device ${input.nodeId}`);
-  return { ok };
-});
+export const doDeviceCommand = defineAction(
+  async (input: { nodeId: string; command: string; args?: Record<string, string> }) => {
+    const controller = getMatterController();
+    const ok = await controller.sendCommand(
+      input.nodeId,
+      input.command as MatterCommand,
+      input.args
+    );
+    if (!ok) {
+      throw new Error(`Command "${input.command}" failed on device ${input.nodeId}`);
+    }
+    return { ok };
+  }
+);

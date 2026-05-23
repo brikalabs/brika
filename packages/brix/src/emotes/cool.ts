@@ -17,5 +17,3 @@ export const coolEmote = defineEmote('cool', {
     { kind: 'wait', ms: 480 },
   ],
 });
-
-export default coolEmote;
