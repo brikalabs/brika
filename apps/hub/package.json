@@ -24,7 +24,6 @@
   },
   "dependencies": {
     "@brika/auth": "workspace:*",
-    "@brika/cli": "workspace:*",
     "@brika/banner": "workspace:*",
     "@brika/compiler": "workspace:*",
     "@brika/db": "workspace:*",
