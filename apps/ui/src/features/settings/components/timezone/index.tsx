@@ -1,54 +1,9 @@
-import {
-  Button,
-  cn,
-  Input,
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-  SectionContent,
-  SectionDescription,
-  SectionHeader,
-  SectionIcon,
-  SectionInfo,
-  SectionTitle,
-} from '@brika/clay';
+import { Button, cn, Input, Popover, PopoverContent, PopoverTrigger } from '@brika/clay';
 import { Check, Clock, Search } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useLocale } from '@/lib/use-locale';
-import { useHubTimezone, useUpdateHubTimezone } from './hooks';
 
 const ALL_TIMEZONES = Intl.supportedValuesOf('timeZone');
-
-export function TimezoneSettings() {
-  const { t } = useLocale();
-  const { data } = useHubTimezone();
-  const mutation = useUpdateHubTimezone();
-  const current = data?.timezone ?? null;
-
-  return (
-    <>
-      <SectionHeader>
-        <SectionInfo>
-          <SectionIcon>
-            <Clock className="size-4" />
-          </SectionIcon>
-          <div>
-            <SectionTitle>{t('settings:timezone.title')}</SectionTitle>
-            <SectionDescription>{t('settings:timezone.description')}</SectionDescription>
-          </div>
-        </SectionInfo>
-      </SectionHeader>
-
-      <SectionContent>
-        <TimezonePicker
-          value={current}
-          onChange={(tz) => mutation.mutate(tz)}
-          placeholder={t('settings:timezone.select')}
-        />
-      </SectionContent>
-    </>
-  );
-}
 
 // ─── Timezone Picker ──────────────────────────────────────────────────────────
 

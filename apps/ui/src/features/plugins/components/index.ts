@@ -17,7 +17,6 @@ export { PluginSparksList } from './PluginSparksList';
 export { PluginStats } from './PluginStats';
 export { PluginsEmptyStarter } from './PluginsEmptyStarter';
 export { PluginsPageHeader } from './PluginsPageHeader';
-export { PluginUpdateBadge } from './PluginUpdateBadge';
 export { PreferenceField } from './PreferenceField';
 export { UpdateAllButton } from './UpdateAllButton';
 export { UpdatePluginDialog } from './UpdatePluginDialog';

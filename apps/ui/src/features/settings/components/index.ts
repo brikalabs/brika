@@ -1,7 +1,5 @@
 export { HubControlSection } from './hub-control';
-export { LanguageSelector } from './language';
 export { LocationSettings } from './location';
 export { SystemInfo } from './system-info';
-export { TimeFormatSettings, TimeFormatToggle } from './time-format';
-export { TimezoneSettings } from './timezone';
+export { TimeFormatToggle } from './time-format';
 export { UpdateSection } from './update';
