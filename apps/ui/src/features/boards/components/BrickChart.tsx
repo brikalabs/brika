@@ -24,7 +24,7 @@ const DEFAULT_COLORS = [
   'var(--color-chart-5)',
 ];
 
-function ChartTooltip({ active, payload }: TooltipContentProps<number, string>) {
+function ChartTooltip({ active, payload }: TooltipContentProps) {
   if (!active || !payload?.length) {
     return null;
   }
