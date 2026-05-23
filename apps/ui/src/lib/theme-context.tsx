@@ -1,19 +1,10 @@
-import { builtInThemes as clayThemes } from '@brika/clay/themes/registry';
 import type { MouseEvent } from 'react';
 import { createContext, useContext } from 'react';
 
 /**
- * Every theme id Clay ships, in registry order. Pulled directly from
- * `@brika/clay/themes` so adding a new theme to Clay automatically
- * surfaces it in the Brika theme selector — no second list to maintain.
- */
-export const builtInThemes: readonly string[] = clayThemes.map((t) => t.id);
-
-/**
  * Theme name: a built-in name, or `custom-{id}` for a user-created theme
  * loaded via the theme-builder. We keep the type as a plain string so
- * arbitrary custom ids are allowed; a `isBuiltInTheme` guard is exported
- * for cases that need to discriminate.
+ * arbitrary custom ids are allowed.
  */
 export type ThemeName = string;
 
@@ -35,8 +26,4 @@ export function useTheme() {
     throw new Error('useTheme must be used within ThemeProvider');
   }
   return context;
-}
-
-export function isBuiltInTheme(name: string): boolean {
-  return builtInThemes.includes(name);
 }

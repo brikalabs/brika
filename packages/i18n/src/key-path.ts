@@ -24,21 +24,6 @@ export function getNestedValue(data: TranslationData, path: string): unknown {
   return current;
 }
 
-/**
- * Visit every leaf in a translation tree. Arrays count as leaves (matching
- * i18next semantics), so a key whose value is an array is passed to `visitor`
- * once with the array as `value`.
- *
- * Use this when you want to stream over leaves without materialising the full
- * `Map`. `flatten` / `flattenInto` are implemented in terms of `walkLeaves`.
- */
-export function walkLeaves(
-  data: TranslationData,
-  visitor: (path: string, value: unknown) => void
-): void {
-  walkLeavesWithPrefix(data, '', visitor);
-}
-
 function walkLeavesWithPrefix(
   data: TranslationData,
   prefix: string,

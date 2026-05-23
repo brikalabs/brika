@@ -33,11 +33,6 @@ export const COMPONENT_TOKEN_INDEX: Readonly<Record<string, readonly ResolvedTok
     return map;
   })();
 
-/** Sorted list of every component name that has at least one Layer-2 token. */
-export const COMPONENT_NAMES: readonly string[] = Object.keys(COMPONENT_TOKEN_INDEX).toSorted(
-  (a, b) => a.localeCompare(b)
-);
-
 /**
  * Tokens for a component, grouped by category. Categories empty for the
  * component are omitted. Tokens within each category preserve registry order.

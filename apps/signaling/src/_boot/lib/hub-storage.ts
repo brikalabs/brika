@@ -50,9 +50,7 @@ function writeStorage(value: string | null): void {
  *   2. localStorage value.
  *   3. `null` — the bootstrap shows the landing screen.
  *
- * Pure read — does NOT persist. Use {@link commitQueryHub} to persist
- * a `?hub=` override after the page has mounted; doing it inside the
- * pure read would silently drop the cache-purge promise on rebind.
+ * Pure read — does NOT persist.
  */
 export function loadHubName(): string | null {
   const fromQuery = readQueryHub();
@@ -61,19 +59,6 @@ export function loadHubName(): string | null {
   }
   const stored = readStorage();
   return stored && isValidHubName(stored) ? stored : null;
-}
-
-/**
- * Persist a `?hub=` override into localStorage and (when the prior bound
- * hub differs) purge `brika-*` caches. Call once at mount from an effect;
- * await the returned promise before the bootstrap connects so a hostile
- * rebind cannot continue serving the prior hub's cached modules.
- */
-export async function commitQueryHub(): Promise<void> {
-  const fromQuery = readQueryHub();
-  if (fromQuery) {
-    await storeHubName(fromQuery);
-  }
 }
 
 /**

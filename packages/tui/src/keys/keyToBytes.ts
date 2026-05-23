@@ -15,7 +15,6 @@
 
 import type { Key } from 'ink';
 
-const SS3 = '\x1bO'; // application-mode arrows on some terminals; CSI is more common
 const CSI = '\x1b[';
 
 export function keyToBytes(input: string, key: Key): string | null {
@@ -96,6 +95,3 @@ function ctrlToBytes(input: string): string | null {
   }
   return null;
 }
-
-/** Sentinel re-export for App.tsx — internal helper above does the work. */
-export { SS3 };

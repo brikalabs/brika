@@ -18,11 +18,3 @@ export const UPDATE_CHANNEL_IDS = UPDATE_CHANNELS.map((c) => c.id) as [
   UpdateChannelId,
   ...UpdateChannelId[],
 ];
-
-export function resolveChannel(id: string | null | undefined): UpdateChannel {
-  return (
-    UPDATE_CHANNELS.find((c) => c.id === id) ??
-    // biome-ignore lint/style/noNonNullAssertion: DEFAULT_CHANNEL_ID is always present in UPDATE_CHANNELS
-    UPDATE_CHANNELS.find((c) => c.id === DEFAULT_CHANNEL_ID)!
-  );
-}
