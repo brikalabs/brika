@@ -424,6 +424,6 @@ describe('createEventStream', () => {
     await reader.cancel();
 
     // Emit an event after cancel - emit itself must not throw
-    await expect(bus.emit('source', 'output', { value: 1 })).resolves.not.toThrow();
+    await bus.emit('source', 'output', { value: 1 });
   });
 });

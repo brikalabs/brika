@@ -84,43 +84,43 @@ describe('PluginPermissionService', () => {
   // ─── setPermission ─────────────────────────────────────────────────────────
 
   describe('setPermission', () => {
-    test('grants a valid permission', async () => {
+    test('grants a valid permission', () => {
       mockGetGranted.mockReturnValue([]);
 
-      const result = await service.setPermission('@brika/plugin-weather', 'location', true);
+      const result = service.setPermission('@brika/plugin-weather', 'location', true);
 
       expect(mockSetGranted).toHaveBeenCalledWith('@brika/plugin-weather', ['location']);
       expect(result).toEqual(['location']);
     });
 
-    test('revokes a valid permission', async () => {
+    test('revokes a valid permission', () => {
       mockGetGranted.mockReturnValue(['location']);
 
-      const result = await service.setPermission('@brika/plugin-weather', 'location', false);
+      const result = service.setPermission('@brika/plugin-weather', 'location', false);
 
       expect(mockSetGranted).toHaveBeenCalledWith('@brika/plugin-weather', []);
       expect(result).toEqual([]);
     });
 
-    test('throws for unknown permission', async () => {
-      await expect(
+    test('throws for unknown permission', () => {
+      expect(() =>
         service.setPermission('@brika/plugin-weather', 'unknown-perm', true)
-      ).rejects.toThrow('Unknown permission: "unknown-perm"');
+      ).toThrow('Unknown permission: "unknown-perm"');
     });
 
-    test('does not duplicate already-granted permission', async () => {
+    test('does not duplicate already-granted permission', () => {
       mockGetGranted.mockReturnValue(['location']);
 
-      const result = await service.setPermission('@brika/plugin-weather', 'location', true);
+      const result = service.setPermission('@brika/plugin-weather', 'location', true);
 
       expect(mockSetGranted).toHaveBeenCalledWith('@brika/plugin-weather', ['location']);
       expect(result).toEqual(['location']);
     });
 
-    test('revoking non-granted permission is a no-op', async () => {
+    test('revoking non-granted permission is a no-op', () => {
       mockGetGranted.mockReturnValue([]);
 
-      const result = await service.setPermission('@brika/plugin-weather', 'location', false);
+      const result = service.setPermission('@brika/plugin-weather', 'location', false);
 
       expect(mockSetGranted).toHaveBeenCalledWith('@brika/plugin-weather', []);
       expect(result).toEqual([]);
