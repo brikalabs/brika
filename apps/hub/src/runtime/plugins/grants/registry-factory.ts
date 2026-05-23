@@ -11,12 +11,22 @@
  */
 
 import { GrantRegistry } from '@brika/grants';
-import { buildNetGrants, type NetCallbacks } from './net';
+import { buildNetGrants, type NetCallbacks, type NetGrantOptions } from './net';
 
 // Type alias instead of empty `interface extends` so biome's no-empty-
 // interface lint doesn't flag it. Extend with `& XyzCallbacks` as more
 // grant families land.
 export type HubGrantCallbacks = NetCallbacks;
+
+/**
+ * Per-family overrides callers may inject. Production wiring leaves
+ * everything undefined and accepts the defaults; tests pass a stub
+ * resolver / smaller concurrency cap to drive deterministic behaviour
+ * without touching real DNS or fd budgets.
+ */
+export interface HubGrantOptions {
+  readonly net?: NetGrantOptions;
+}
 
 /**
  * Create a fresh registry pre-populated with every hub-owned grant.
@@ -27,9 +37,9 @@ export type HubGrantCallbacks = NetCallbacks;
  * above, and register here. No PreludeBridge interface to update, no domain
  * setup module, no SDK API to add.
  */
-export function buildHubGrants(cb: HubGrantCallbacks): GrantRegistry {
+export function buildHubGrants(cb: HubGrantCallbacks, opts?: HubGrantOptions): GrantRegistry {
   const reg = new GrantRegistry();
-  for (const grant of buildNetGrants(cb)) {
+  for (const grant of buildNetGrants(cb, opts?.net)) {
     reg.register(grant);
   }
   return reg;

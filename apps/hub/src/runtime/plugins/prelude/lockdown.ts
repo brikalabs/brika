@@ -150,6 +150,17 @@ const SCRUBBED_BUN_KEYS = [
 ] as const;
 
 /**
+ * Methods on `process` that reach host capabilities outside the grant
+ * vector. `process.kill` can signal other processes (including the hub
+ * itself if PIDs are guessable); `process.dlopen` loads native modules,
+ * bypassing the `bun:ffi` deny-list. The rest of `process` (cwd, env,
+ * versions, …) is informational and stays available — `bun-runner`
+ * already filters env to remove operator secrets before the plugin
+ * subprocess starts.
+ */
+const SCRUBBED_PROCESS_KEYS = ['kill', 'dlopen'] as const;
+
+/**
  * Methods on `Bun.dns` that issue DNS queries (network I/O) or mutate
  * resolver configuration. All ship with `writable: true` so direct
  * assignment via `Reflect.set` works. Constants (`ADDRCONFIG`, `ALL`,
@@ -282,6 +293,7 @@ function tryReplace(owner: object, key: string, replacement: unknown): boolean {
 const globalScrubSnapshot = new Map<string, unknown>();
 const bunScrubSnapshot = new Map<string, unknown>();
 const bunDnsScrubSnapshot = new Map<string, unknown>();
+const processScrubSnapshot = new Map<string, unknown>();
 
 if (MODE !== 'off') {
   // 1. Ambient I/O globals.
@@ -309,6 +321,18 @@ if (MODE !== 'off') {
     for (const key of SCRUBBED_BUN_DNS_KEYS) {
       if (key in bunDnsNs) {
         replaceMember(bunDnsNs, 'Bun.dns', key);
+      }
+    }
+  }
+
+  // 2c. `process` capabilities that bypass the grant vector. Keep the rest
+  //     of `process` available: `cwd`, `env` (already filtered upstream by
+  //     bun-runner), `version`, `platform`, etc. are informational.
+  const processNs = (globalThis as unknown as { process?: MutableTarget }).process;
+  if (processNs) {
+    for (const key of SCRUBBED_PROCESS_KEYS) {
+      if (key in processNs) {
+        replaceMember(processNs, 'process', key);
       }
     }
   }
@@ -392,6 +416,13 @@ if (MODE !== 'off') {
       }
     }
   }
+  if (processNs) {
+    for (const key of SCRUBBED_PROCESS_KEYS) {
+      if (key in processNs) {
+        processScrubSnapshot.set(key, processNs[key]);
+      }
+    }
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -428,9 +459,11 @@ export function assertSealed(): ReadonlyArray<string> | null {
   const g = globalThis as unknown as MutableTarget;
   const bunNs = (globalThis as unknown as { Bun?: MutableTarget }).Bun;
   const bunDnsNs = (bunNs as { dns?: MutableTarget } | undefined)?.dns;
+  const processNs = (globalThis as unknown as { process?: MutableTarget }).process;
   collectDrift(g, 'globalThis', globalScrubSnapshot, drift);
   collectDrift(bunNs, 'Bun', bunScrubSnapshot, drift);
   collectDrift(bunDnsNs, 'Bun.dns', bunDnsScrubSnapshot, drift);
+  collectDrift(processNs, 'process', processScrubSnapshot, drift);
   return drift.length === 0 ? null : drift;
 }
 

@@ -116,6 +116,21 @@ export const errors = {
 
   netHostNotAllowed: (data: DataForCode<'NET_HOST_NOT_ALLOWED'>, opts?: FactoryOpts) =>
     buildError<'NET_HOST_NOT_ALLOWED'>('NET_HOST_NOT_ALLOWED', data, opts),
+
+  netProtocolBlocked: (data: DataForCode<'NET_PROTOCOL_BLOCKED'>, opts?: FactoryOpts) =>
+    buildError<'NET_PROTOCOL_BLOCKED'>('NET_PROTOCOL_BLOCKED', data, opts),
+
+  netPrivateIpBlocked: (data: DataForCode<'NET_PRIVATE_IP_BLOCKED'>, opts?: FactoryOpts) =>
+    buildError<'NET_PRIVATE_IP_BLOCKED'>('NET_PRIVATE_IP_BLOCKED', data, opts),
+
+  netRedirectBlocked: (data: DataForCode<'NET_REDIRECT_BLOCKED'>, opts?: FactoryOpts) =>
+    buildError<'NET_REDIRECT_BLOCKED'>('NET_REDIRECT_BLOCKED', data, opts),
+
+  netRedirectLoop: (data: DataForCode<'NET_REDIRECT_LOOP'>, opts?: FactoryOpts) =>
+    buildError<'NET_REDIRECT_LOOP'>('NET_REDIRECT_LOOP', data, opts),
+
+  netBodyTooLarge: (data: DataForCode<'NET_BODY_TOO_LARGE'>, opts?: FactoryOpts) =>
+    buildError<'NET_BODY_TOO_LARGE'>('NET_BODY_TOO_LARGE', data, opts),
 } as const;
 
 // ─── Catalog completeness guard ────────────────────────────────────────────

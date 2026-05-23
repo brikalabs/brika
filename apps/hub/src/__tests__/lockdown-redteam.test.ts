@@ -153,6 +153,29 @@ describe('lockdown enforce mode — ambient I/O globals', () => {
     expect(out.stdout).not.toContain('LEAKED:');
   });
 
+  // `process.kill` would let a plugin signal any pid it can guess — most
+  // dangerously the hub process itself (`process.kill(parentPid, 'SIGTERM')`).
+  // `process.dlopen` loads arbitrary native libraries, bypassing the
+  // `bun:ffi` module deny-list. Both are out-of-band capabilities that
+  // are NOT reachable through the grant vector.
+  test('process.kill is scrubbed', async () => {
+    const out = await runAttack(`
+      process.kill(process.pid, 0);
+      console.log('LEAKED:kill ran');
+    `);
+    expect(out.stdout).toMatch(/CAUGHT:.*process\.kill is not available/);
+    expect(out.stdout).not.toContain('LEAKED:');
+  });
+
+  test('process.dlopen is scrubbed', async () => {
+    const out = await runAttack(`
+      process.dlopen({ exports: {} }, '/nonexistent.so', 0);
+      console.log('LEAKED:dlopen ran');
+    `);
+    expect(out.stdout).toMatch(/CAUGHT:.*process\.dlopen is not available/);
+    expect(out.stdout).not.toContain('LEAKED:');
+  });
+
   // `Request` and `Response` are deliberately NOT scrubbed — they're pure
   // value constructors with no I/O of their own. Pinning the behaviour
   // here so a future "tighten the lockdown" PR doesn't silently re-add

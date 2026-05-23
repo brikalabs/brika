@@ -41,6 +41,26 @@ export const FetchArgsSchema = z
         backoffMs: z.number().int().min(0).max(60_000),
       })
       .optional(),
+    /**
+     * Hard cap on response-body bytes. The hub streams the body and aborts
+     * as soon as the cap is crossed — a hostile server can't make the hub
+     * buffer an unbounded response. Defaults at the host side
+     * (`DEFAULT_MAX_RESPONSE_BYTES`) when omitted; operators can lower the
+     * ceiling, plugins can lower further per-call.
+     */
+    maxResponseBytes: z
+      .number()
+      .int()
+      .positive()
+      .max(256 * 1024 * 1024)
+      .optional(),
+    /**
+     * Max redirect hops to follow. Set to 0 to refuse all redirects (the
+     * caller will see the raw 3xx). Each hop revalidates the new host
+     * against the allow-list, so the cap is also a defense in depth against
+     * open-redirect chains.
+     */
+    maxRedirects: z.number().int().min(0).max(10).optional(),
   })
   // Refuse `body` on GET / HEAD: RFC 7231 §4.3.1-2 says either method has no
   // defined semantics for a payload, and accepting one creates a real bug —
