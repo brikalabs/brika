@@ -12,6 +12,7 @@
 
 import { type AuditLogger, GrantRegistry } from '@brika/grants';
 import { buildDnsGrants, type DnsGrantOptions } from './dns';
+import { buildFsGrants, type FsGrantOptions } from './fs';
 import { buildNetGrants, type NetCallbacks, type NetGrantOptions } from './net';
 
 // Type alias instead of empty `interface extends` so biome's no-empty-
@@ -29,6 +30,14 @@ export type HubGrantCallbacks = NetCallbacks;
 export interface HubGrantOptions {
   readonly net?: NetGrantOptions;
   readonly dns?: DnsGrantOptions;
+  /**
+   * Filesystem grant configuration. Required to register the
+   * `dev.brika.fs.*` family: the hub must know which backing host
+   * directories the plugin's virtual roots map to. Omit to leave the
+   * fs grants unregistered (a plugin that calls `ctx.fs.*` then sees
+   * `PERMISSION_DENIED`).
+   */
+  readonly fs?: FsGrantOptions;
   /**
    * Sink for per-dispatch audit entries. Production wires this to the
    * hub's structured log; tests pass a collecting array. Omit to skip
@@ -53,6 +62,11 @@ export function buildHubGrants(cb: HubGrantCallbacks, opts?: HubGrantOptions): G
   }
   for (const grant of buildDnsGrants(opts?.dns)) {
     reg.register(grant);
+  }
+  if (opts?.fs !== undefined) {
+    for (const grant of buildFsGrants(opts.fs)) {
+      reg.register(grant);
+    }
   }
   return reg;
 }

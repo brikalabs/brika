@@ -131,6 +131,25 @@ export const errors = {
 
   netBodyTooLarge: (data: DataForCode<'NET_BODY_TOO_LARGE'>, opts?: FactoryOpts) =>
     buildError<'NET_BODY_TOO_LARGE'>('NET_BODY_TOO_LARGE', data, opts),
+
+  // ─── fs ──────────────────────────────────────────────────────────────
+  fsPathOutsideRoot: (data: DataForCode<'FS_PATH_OUTSIDE_ROOT'>, opts?: FactoryOpts) =>
+    buildError<'FS_PATH_OUTSIDE_ROOT'>('FS_PATH_OUTSIDE_ROOT', data, opts),
+
+  fsSymlinkEscape: (data: DataForCode<'FS_SYMLINK_ESCAPE'>, opts?: FactoryOpts) =>
+    buildError<'FS_SYMLINK_ESCAPE'>('FS_SYMLINK_ESCAPE', data, opts),
+
+  fsQuotaExceeded: (data: DataForCode<'FS_QUOTA_EXCEEDED'>, opts?: FactoryOpts) =>
+    buildError<'FS_QUOTA_EXCEEDED'>('FS_QUOTA_EXCEEDED', data, opts),
+
+  fsFileTooLarge: (data: DataForCode<'FS_FILE_TOO_LARGE'>, opts?: FactoryOpts) =>
+    buildError<'FS_FILE_TOO_LARGE'>('FS_FILE_TOO_LARGE', data, opts),
+
+  fsAlreadyExists: (data: DataForCode<'FS_ALREADY_EXISTS'>, opts?: FactoryOpts) =>
+    buildError<'FS_ALREADY_EXISTS'>('FS_ALREADY_EXISTS', data, opts),
+
+  fsNotFound: (data: DataForCode<'FS_NOT_FOUND'>, opts?: FactoryOpts) =>
+    buildError<'FS_NOT_FOUND'>('FS_NOT_FOUND', data, opts),
 } as const;
 
 // ─── Catalog completeness guard ────────────────────────────────────────────

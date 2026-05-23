@@ -31,6 +31,12 @@ describe('errors.* factories', () => {
     produced.add(errors.netRedirectBlocked({ from: 'a', to: 'b', allow: [] }).code);
     produced.add(errors.netRedirectLoop({ url: 'https://x/', hops: 5 }).code);
     produced.add(errors.netBodyTooLarge({ limit: 10, received: 11 }).code);
+    produced.add(errors.fsPathOutsideRoot({ path: '/etc/passwd' }).code);
+    produced.add(errors.fsSymlinkEscape({ path: '/data/x' }).code);
+    produced.add(errors.fsQuotaExceeded({ root: '/data', limit: 10, requested: 20 }).code);
+    produced.add(errors.fsFileTooLarge({ limit: 10, requested: 20 }).code);
+    produced.add(errors.fsAlreadyExists({ path: '/data/x' }).code);
+    produced.add(errors.fsNotFound({ path: '/data/x' }).code);
 
     for (const code of expected) {
       expect(produced.has(code)).toBe(true);
