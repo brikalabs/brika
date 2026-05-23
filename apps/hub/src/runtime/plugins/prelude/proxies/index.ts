@@ -16,6 +16,7 @@
 import type { Channel } from '@brika/ipc';
 import type { LogLevelType } from '@brika/ipc/contract';
 import { swapInProxy } from '../lockdown';
+import { buildBunFileProxy } from './bun-file-proxy';
 import { buildDnsProxies } from './dns-proxy';
 import { buildFetchProxy } from './fetch-proxy';
 
@@ -37,6 +38,19 @@ export interface InstallProxiesDeps {
 export function installNetProxies(deps: InstallProxiesDeps): void {
   installFetch(deps);
   installDns(deps);
+  installBunFile(deps);
+}
+
+function installBunFile(deps: InstallProxiesDeps): void {
+  // `Bun.file` was scrubbed in lockdown.ts; swap in a real proxy that
+  // routes reads through `ctx.fs` (via `globalThis.__brika_fs`).
+  const factory = buildBunFileProxy();
+  if (!swapInProxy('Bun', 'file', factory)) {
+    deps.log(
+      'warn',
+      'installBunFile: scrub slot Bun.file was not found — Bun.file() is still a deny stub.'
+    );
+  }
 }
 
 function installFetch(deps: InstallProxiesDeps): void {

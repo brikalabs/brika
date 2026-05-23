@@ -2,6 +2,7 @@ import { mkdir, rm } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import { hashPluginSources } from './hash-sources';
 import { brikaServerActionsPlugin } from './plugins/actions-server';
+import { nodeFsShimPlugin } from './plugins/node-fs-shim';
 import { nodeOsShimPlugin } from './plugins/node-os-shim';
 
 export interface ServerCompileOptions {
@@ -53,7 +54,7 @@ export async function compileServerEntry(opts: ServerCompileOptions): Promise<Se
     splitting: opts.splitting ?? true,
     minify: true,
     external: opts.external,
-    plugins: [brikaServerActionsPlugin(opts.pluginRoot), nodeOsShimPlugin()],
+    plugins: [brikaServerActionsPlugin(opts.pluginRoot), nodeOsShimPlugin(), nodeFsShimPlugin()],
   });
 
   if (!result.success) {
