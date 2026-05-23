@@ -1,16 +1,53 @@
 #!/usr/bin/env sh
-set -eu
+# Pre-push: run typecheck + lint + tests concurrently and fail the push if any
+# of them errors. Wall time is gated by the slowest (tests, ~30s) instead of
+# the sum (~45s sequential).
+#
+# Each task streams its output into its own log file. On any failure we tail
+# the failing log so the developer sees the actionable error before exit.
+set -u
 
 if ! command -v bun >/dev/null 2>&1; then
   echo "Error: 'bun' is required for pre-push checks."
   exit 1
 fi
 
-echo "Running tests..."
-bun run test
+LOG_DIR="$(mktemp -d -t brika-prepush.XXXXXX)"
+trap 'rm -rf "$LOG_DIR"' EXIT
 
-echo "Running TypeScript checks..."
-bun run typecheck
+run() {
+  name="$1"; shift
+  log="$LOG_DIR/$name.log"
+  echo "▶  $name (logging to $log)"
+  if "$@" >"$log" 2>&1; then
+    echo "✓  $name"
+    echo "ok" >"$LOG_DIR/$name.status"
+  else
+    echo "✗  $name"
+    echo "fail" >"$LOG_DIR/$name.status"
+  fi
+}
 
-echo "Running Biome check (warnings are blocking)..."
-bun run lint:strict
+run typecheck bun run typecheck &
+run lint      bun run lint:strict &
+run test      bun run test &
+wait
+
+fail=0
+for name in typecheck lint test; do
+  if [ ! -f "$LOG_DIR/$name.status" ] || [ "$(cat "$LOG_DIR/$name.status")" != "ok" ]; then
+    fail=1
+    echo ""
+    echo "── $name failed ─────────────────────────────────────────"
+    tail -n 40 "$LOG_DIR/$name.log"
+  fi
+done
+
+if [ "$fail" -ne 0 ]; then
+  echo ""
+  echo "❌ Push aborted. Fix the failures above and try again."
+  exit 1
+fi
+
+echo ""
+echo "✅ All pre-push checks passed."
