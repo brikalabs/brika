@@ -1,4 +1,4 @@
-import { type ActionsUnion, defineActions } from '@brika/events';
+import { defineActions } from '@brika/events';
 import { z } from 'zod';
 
 // Plugin actions
@@ -29,8 +29,6 @@ export const PluginActions = defineActions('plugin', {
   }),
 });
 
-export type PluginAction = ActionsUnion<typeof PluginActions>;
-
 // Spark actions for typed events
 export const SparkActions = defineActions('spark', {
   emit: z.object({
@@ -42,8 +40,6 @@ export const SparkActions = defineActions('spark', {
     payload: z.unknown(),
   }),
 });
-
-export type SparkAction = ActionsUnion<typeof SparkActions>;
 
 // Brick actions for board bricks
 export const BrickActions = defineActions('brick', {
@@ -65,8 +61,6 @@ export const BrickActions = defineActions('brick', {
     moduleUrl: z.string(),
   }),
 });
-
-export type BrickAction = ActionsUnion<typeof BrickActions>;
 
 // Board actions for layout management
 export const BoardActions = defineActions('board', {
@@ -109,8 +103,6 @@ export const BoardActions = defineActions('board', {
   }),
 });
 
-export type BoardAction = ActionsUnion<typeof BoardActions>;
-
 // Update actions for hub version updates
 export const UpdateActions = defineActions('update', {
   available: z.object({
@@ -119,8 +111,6 @@ export const UpdateActions = defineActions('update', {
     releaseCommit: z.string(),
   }),
 });
-
-export type UpdateAction = ActionsUnion<typeof UpdateActions>;
 
 // Theme actions — fan-out signal so other tabs/devices refetch theme state
 export const ThemeActions = defineActions('theme', {
@@ -132,5 +122,3 @@ export const ThemeActions = defineActions('theme', {
     mode: z.enum(['light', 'dark', 'system']),
   }),
 });
-
-export type ThemeAction = ActionsUnion<typeof ThemeActions>;

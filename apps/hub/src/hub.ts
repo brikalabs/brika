@@ -18,11 +18,6 @@ export const hub = pkg;
 export const HUB_VERSION = hub.version;
 
 /**
- * Hub name string (shorthand for hub.name).
- */
-export const HUB_NAME = hub.name;
-
-/**
  * GitHub repository slug (e.g. "brikalabs/brika"), derived from package.json.
  */
 export const HUB_REPO = hub.repository.url

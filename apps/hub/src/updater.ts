@@ -18,15 +18,9 @@
 import { chmod, cp, mkdir, rename, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import pc from 'picocolors';
-import { CliError } from '@/errors';
 import { HUB_GITHUB_RELEASES_API, HUB_GITHUB_RELEASES_LIST_API, hub } from '@/hub';
 import { buildInfo } from '@/runtime/http/routes/status';
-import {
-  DEFAULT_CHANNEL_ID,
-  resolveChannel,
-  type UpdateChannelId,
-} from '@/runtime/updates/channels';
+import { DEFAULT_CHANNEL_ID, type UpdateChannelId } from '@/runtime/updates/channels';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -612,71 +606,4 @@ async function replaceDir(newDir: string, currentDir: string): Promise<void> {
   await cp(newDir, currentDir, {
     recursive: true,
   });
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// CLI entry point (interactive with terminal output)
-// ─────────────────────────────────────────────────────────────────────────────
-
-/** Read the persisted update channel from state.json without the DI container */
-async function readChannelFromState(): Promise<UpdateChannelId> {
-  const home = process.env.BRIKA_HOME ?? join(process.cwd(), '.brika');
-  try {
-    const file = Bun.file(`${home}/state.json`);
-    if (!(await file.exists())) {
-      return DEFAULT_CHANNEL_ID;
-    }
-    const parsed = JSON.parse(await file.text()) as { updateChannel?: string };
-    return resolveChannel(parsed.updateChannel).id;
-  } catch {
-    return DEFAULT_CHANNEL_ID;
-  }
-}
-
-export async function selfUpdate(options?: {
-  force?: boolean;
-  channel?: UpdateChannelId;
-}): Promise<void> {
-  const currentCommitLabel = pc.dim(`(${buildInfo.commit})`);
-  const versionLabel = pc.dim(`v${hub.version}`);
-  console.log(`${pc.cyan('brika')} ${versionLabel} ${currentCommitLabel}`);
-  console.log();
-
-  const channel = options?.channel ?? (await readChannelFromState());
-
-  try {
-    const result = await applyUpdate({
-      force: options?.force,
-      channel,
-      onProgress(phase, detail) {
-        if (phase !== 'complete') {
-          console.log(`  ${pc.dim(detail)}`);
-        }
-      },
-    });
-
-    // Regenerate completions with the new binary (it's already on disk)
-    try {
-      const proc = Bun.spawn([process.execPath, 'completions'], {
-        stdout: 'ignore',
-        stderr: 'ignore',
-      });
-      await proc.exited;
-    } catch {
-      // Non-critical
-    }
-
-    const prev = `v${result.previousVersion} (${result.previousCommit})`;
-    const newCommitLabel = result.newCommit ? ` (${result.newCommit})` : '';
-    const next = pc.bold(`v${result.newVersion}${newCommitLabel}`);
-    console.log();
-    console.log(`  ${pc.green('Updated successfully!')} ${prev} → ${next}`);
-  } catch (error) {
-    const msg = error instanceof Error ? error.message : String(error);
-    if (msg.includes('Already up to date')) {
-      console.log(`  ${pc.green(msg)}`);
-    } else {
-      throw new CliError(`  ${pc.red('Update failed:')} ${msg}`);
-    }
-  }
 }

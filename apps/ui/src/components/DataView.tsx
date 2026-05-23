@@ -234,13 +234,3 @@ export function useDataView<T>({ data, isLoading, isEmpty: isEmptyFn }: UseDataV
     };
   }, [data, isLoading, isEmptyFn]);
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Default export for simple cases
-// ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * Pre-created DataView for unknown/any types.
- * For better type safety, use createDataView<T>() instead.
- */
-export const DefaultDataView = createDataView<unknown>();

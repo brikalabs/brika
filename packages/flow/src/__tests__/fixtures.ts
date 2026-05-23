@@ -64,15 +64,3 @@ export function createMockEmitter<T>(): Emitter<T> & {
     emitted,
   };
 }
-
-/**
- * Push multiple values to a flow with optional delays between each.
- */
-export async function pushValues<T>(flow: FlowImpl<T>, values: T[], delayMs = 0): Promise<void> {
-  for (const v of values) {
-    flow.push(v);
-    if (delayMs > 0) {
-      await wait(delayMs);
-    }
-  }
-}

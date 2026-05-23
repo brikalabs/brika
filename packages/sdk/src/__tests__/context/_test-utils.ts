@@ -10,10 +10,6 @@ import { mock } from 'bun:test';
 import { PRELUDE_BRAND, type PreludeBridge } from '../../bridge';
 import type { ContextCore, Manifest } from '../../context/register';
 
-// ─── Types ───────────────────────────────────────────────────────────────────
-
-export type Handler = (...args: unknown[]) => unknown;
-
 // ─── Noop Mock ───────────────────────────────────────────────────────────────
 
 /** Create a fresh mock function with a noop body (biome-safe). */

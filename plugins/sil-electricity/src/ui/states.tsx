@@ -35,15 +35,6 @@ export function pointCost(point: ConsumptionPoint, prices: Prices): number {
   return point.total * prices.perKwh - point.injection * prices.perInjection;
 }
 
-/** Net CHF cost across multiple points. */
-export function totalCost(points: readonly ConsumptionPoint[], prices: Prices): number {
-  let sum = 0;
-  for (const p of points) {
-    sum += pointCost(p, prices);
-  }
-  return sum;
-}
-
 type Tone = 'blue' | 'yellow' | 'emerald' | 'violet';
 
 // Map each brick's accent tone to a clay data-viz slot so the spinner

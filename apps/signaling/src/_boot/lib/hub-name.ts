@@ -11,31 +11,6 @@ export function isValidHubName(candidate: string | null | undefined): candidate 
 }
 
 /**
- * Resolve the hub name the page is targeting. Order of preference:
- *
- *   1. `<meta name="brika:hub">` stamped by the signaling worker. Most
- *      reliable because the worker has D1 + the request URL.
- *   2. First non-empty path segment, validated against the same shape.
- *
- * Returns `null` when neither yields a valid name (e.g. the bare
- * `hub.brika.dev/` landing).
- */
-export function readHubNameFromDocument(): string | null {
-  if (typeof document === 'undefined') {
-    return null;
-  }
-  const meta = document.querySelector('meta[name="brika:hub"]')?.getAttribute('content');
-  if (isValidHubName(meta)) {
-    return meta;
-  }
-  const first = location.pathname.split('/').find((s) => s.length > 0);
-  if (isValidHubName(first)) {
-    return first;
-  }
-  return null;
-}
-
-/**
  * Coordinator origin. Defaults to the page's origin (production: the
  * signaling worker serves both the bootstrap AND the API). A
  * `?coordinator=` override points the bootstrap at a locally-running

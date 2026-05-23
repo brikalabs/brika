@@ -2,17 +2,6 @@ import { useAuth } from '@brika/auth/react';
 import { type SubmitEvent, useRef, useState } from 'react';
 import { useLocale } from '@/lib/use-locale';
 
-export interface PasswordFormState {
-  currentPassword: string;
-  newPassword: string;
-  confirmPassword: string;
-  saving: boolean;
-  saved: boolean;
-  error: string | null;
-  /** Which field the error relates to */
-  errorField: 'current' | 'new' | null;
-}
-
 export function usePasswordForm() {
   const { client } = useAuth();
   const { t } = useLocale();

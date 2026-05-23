@@ -228,5 +228,3 @@ export function createSpotifyApi(oauth: OAuthClient) {
     },
   };
 }
-
-export type SpotifyApi = ReturnType<typeof createSpotifyApi>;

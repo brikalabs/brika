@@ -41,15 +41,6 @@ export type { BlockStatus, ExecutionLog } from './workflow-conversion';
 
 import type { BlockStatus, ExecutionLog } from './workflow-conversion';
 
-export interface EditorState {
-  workflow: Workflow;
-  selectedNodeId: string | null;
-  isDirty: boolean;
-  blockStatuses: Record<string, BlockStatus>;
-  blockOutputs: Record<string, unknown>;
-  executionLogs: ExecutionLog[];
-}
-
 export interface UseWorkflowEditorOptions {
   /** Lookup function for external type data (e.g., spark schemas) */
   typeLookup?: <T>(key: string) => T | undefined;
