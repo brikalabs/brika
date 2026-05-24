@@ -64,6 +64,17 @@ export function classifyIp(ip: string): string | null {
  * Resolve `host` and reject if any answer is in a forbidden range. Always
  * checks every returned record — a server with one public and one private
  * answer is still blocked, since fetch could connect to either.
+ *
+ * KNOWN LIMITATION (TOCTOU): the subsequent `fetch` / WebSocket open
+ * performs its OWN DNS lookup, so an attacker who controls an
+ * allow-listed domain can return a public address to this guard and a
+ * private address to the actual connect within the OS resolver TTL.
+ * Mitigating this end-to-end needs the connect routed through a fixed
+ * IP (custom dispatcher or socket-level bind) — tracked as a
+ * follow-up. The L3 sandbox is the second line of defence: when
+ * `allowNetwork: false` in the launcher profile the kernel-level
+ * deny on outbound IP sockets blocks the connection even if rebinding
+ * succeeds at the resolver level.
  */
 export async function assertPublicHost(host: string, resolver: DnsResolver): Promise<void> {
   // Literal IP in the URL? Skip DNS and classify directly.

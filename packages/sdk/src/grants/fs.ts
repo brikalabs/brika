@@ -106,9 +106,23 @@ export const fsReadFile = defineGrant(
 
 // ─── writeFile ──────────────────────────────────────────────────────────────
 
+/**
+ * Wire-level cap on a single writeFile payload. The hub's per-call
+ * `maxFileBytes` (default 50 MiB) is the security boundary; this 64
+ * MiB ceiling is a defence-in-depth so a malicious plugin can't
+ * force the IPC decode to allocate gigabytes before the cap check
+ * runs.
+ */
+const MAX_WRITE_BYTES = 64 * 1024 * 1024;
+
 export const FsWriteFileArgsSchema = z.object({
   path: FsPathSchema,
-  content: z.union([z.string(), z.instanceof(Uint8Array)]),
+  content: z.union([
+    z.string().max(MAX_WRITE_BYTES),
+    z.instanceof(Uint8Array).refine((b) => b.byteLength <= MAX_WRITE_BYTES, {
+      error: `content exceeds the wire-level ${MAX_WRITE_BYTES}-byte cap`,
+    }),
+  ]),
   /**
    * `overwrite` (default) replaces the file; `append` adds to the end;
    * `create-new` fails with `FS_ALREADY_EXISTS` if the file exists.

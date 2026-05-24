@@ -25,7 +25,17 @@ export const FetchArgsSchema = z
     url: z.url(),
     method: HttpMethod.default('GET'),
     headers: z.record(z.string(), z.string()).optional(),
-    body: z.string().optional(),
+    /**
+     * Outbound body cap at the schema level — short-circuits a
+     * malicious plugin pushing a multi-GB string through the IPC
+     * decode before the per-call response cap can reject it. 16 MiB
+     * is a generous ceiling for typical API calls; tighten via the
+     * hub's `maxFileBytes` analogue if you need a stricter policy.
+     */
+    body: z
+      .string()
+      .max(16 * 1024 * 1024)
+      .optional(),
     timeoutMs: z
       .number()
       .int()

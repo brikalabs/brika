@@ -19,6 +19,7 @@ import { PluginEventHandler } from './plugin-events';
 import { PluginResolver } from './plugin-resolver';
 import { PluginWatcher } from './plugin-watcher';
 import { RestartPolicy } from './restart-policy';
+import { pickLauncher, readSandboxModeFromEnv, type SandboxLauncher } from './sandbox';
 import { ensurePluginTsconfig, generateUid, HUB_VERSION, satisfiesVersion } from './utils';
 
 type PluginProcessInstance = InstanceType<typeof PluginProcess>;
@@ -49,6 +50,13 @@ export class PluginLifecycle {
   readonly #stabilityTimers = new Map<string, Timer>();
   readonly #restartPolicy: RestartPolicy;
   readonly #watcher = inject(PluginWatcher);
+  /**
+   * L3 sandbox launcher. macOS wraps every plugin spawn in
+   * `sandbox-exec`; Linux + Windows currently no-op (the JS-layer
+   * defences still apply). Mode read from `BRIKA_SANDBOX_MODE` once
+   * at construction so operator flips on restart, not mid-session.
+   */
+  readonly #sandboxLauncher: SandboxLauncher = pickLauncher(readSandboxModeFromEnv());
 
   constructor() {
     this.#restartPolicy = new RestartPolicy({
@@ -221,31 +229,43 @@ export class PluginLifecycle {
       return;
     }
 
-    const channel = spawnPlugin(
+    // L3 sandbox: wrap the bun command in the platform's launcher.
+    // The launcher inspects the plugin's writable backing dirs and
+    // emits an SBPL profile (macOS) / no-op (Linux + Windows pending
+    // landlock/AppContainer) so the kernel refuses writes outside
+    // scope even if L1+L2 break.
+    const sandboxPlan = this.#sandboxLauncher.wrap(
       this.#bunRunner.bin,
       [`--preload=${PRELUDE_PATH}`, buildResult.entryPath],
       {
-        cwd: rootDirectory,
-        env: this.#bunRunner.pluginEnv({
-          BRIKA_PLUGIN_NAME: metadata.name,
-          BRIKA_PLUGIN_UID: uid,
-        }),
-        processName: `brika:${metadata.name}`,
-        defaultTimeoutMs: this.#config.callTimeoutMs,
-        onDisconnect: (error) => this.#handleDisconnect(pluginName, error),
-        onStderr: (line) =>
-          this.#logs.error(
-            'Plugin error output received',
-            {
-              pluginName: pluginName,
-              message: line,
-            },
-            {
-              source: 'stderr',
-            }
-          ),
+        pluginUid: uid,
+        readableDirs: [rootDirectory],
+        writableDirs: [rootDirectory],
+        allowNetwork: true,
       }
     );
+
+    const channel = spawnPlugin(sandboxPlan.cmd, [...sandboxPlan.args], {
+      cwd: rootDirectory,
+      env: this.#bunRunner.pluginEnv({
+        BRIKA_PLUGIN_NAME: metadata.name,
+        BRIKA_PLUGIN_UID: uid,
+      }),
+      processName: `brika:${metadata.name}`,
+      defaultTimeoutMs: this.#config.callTimeoutMs,
+      onDisconnect: (error) => this.#handleDisconnect(pluginName, error),
+      onStderr: (line) =>
+        this.#logs.error(
+          'Plugin error output received',
+          {
+            pluginName: pluginName,
+            message: line,
+          },
+          {
+            source: 'stderr',
+          }
+        ),
+    });
 
     const process = new PluginProcess(
       channel,

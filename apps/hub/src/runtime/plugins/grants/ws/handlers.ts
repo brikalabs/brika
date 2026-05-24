@@ -52,7 +52,12 @@ export function buildWsConnectGrant(deps: WsHandlerDeps) {
       const cap = deps.maxFrameBytes ?? DEFAULT_MAX_FRAME_BYTES;
       conn.onopen = () => deps.sink({ kind: 'open', handleId });
       conn.onmessage = (data) => {
-        const size = typeof data === 'string' ? data.length : data.byteLength;
+        // String `length` is UTF-16 code units; the cap is in BYTES,
+        // so a peer streaming multi-byte UTF-8 could bypass by ~2x
+        // if we used `.length`. Buffer.byteLength returns true UTF-8
+        // byte count for strings; for Uint8Array we already have
+        // byteLength directly.
+        const size = typeof data === 'string' ? Buffer.byteLength(data, 'utf-8') : data.byteLength;
         if (size > cap) {
           deps.sink({
             kind: 'error',
@@ -85,7 +90,10 @@ export function buildWsSendGrant(deps: WsHandlerDeps) {
       throw errors.wsHandleNotFound({ handleId: args.handleId });
     }
     const cap = deps.maxFrameBytes ?? DEFAULT_MAX_FRAME_BYTES;
-    const size = typeof args.data === 'string' ? args.data.length : args.data.byteLength;
+    // `.length` on a string is UTF-16 code units; for the cap (a
+    // byte budget) we need the UTF-8 byte count.
+    const size =
+      typeof args.data === 'string' ? Buffer.byteLength(args.data, 'utf-8') : args.data.byteLength;
     if (size > cap) {
       throw errors.wsFrameTooLarge({ limit: cap, requested: size });
     }

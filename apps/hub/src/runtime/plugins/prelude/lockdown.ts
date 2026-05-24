@@ -375,16 +375,32 @@ if (MODE !== 'off') {
     globalThis as unknown as { Bun?: { plugin?: (cfg: BunPluginConfig) => void } }
   ).Bun;
   if (bunWithPlugin?.plugin) {
+    // Narrow the filter to ONLY the denied module names. Bun's
+    // documented behaviour (see feedback_bun_onresolve_undefined in
+    // memory) is that any onResolve callback returning `undefined`
+    // silently drops the import. A broad `^(?:node|bun):/` filter
+    // would therefore break legitimate non-denied builtins
+    // (`node:crypto`, `node:path`, …) the moment the callback ran.
+    // We build the filter from `DENIED_NATIVE_MODULES` so the
+    // callback fires only on the deny set and never has a "pass
+    // through" branch to mishandle.
+    const escaped: string[] = [];
+    for (const mod of DENIED_NATIVE_MODULES) {
+      escaped.push(escapeRegex(mod));
+    }
+    const denyFilter = new RegExp(`^(?:${escaped.join('|')})$`);
     bunWithPlugin.plugin({
       name: 'brika-deny-native',
       setup(build) {
-        build.onResolve({ filter: /^(?:node|bun):/ }, (args) => {
-          if (!DENIED_NATIVE_MODULES.has(args.path)) {
-            return undefined;
-          }
+        build.onResolve({ filter: denyFilter }, (args) => {
           if (MODE === 'warn') {
             logViolation('warn-import', args.path);
-            return undefined;
+            // In warn mode we still want the legitimate module to
+            // load (instrumented). Returning {path, external: true}
+            // tells Bun "we know about this import, resolve it
+            // normally", avoiding the undefined-drops-the-import
+            // pitfall.
+            return { path: args.path, external: true };
           }
           throw new BrikaError(
             'PERMISSION_DENIED',
@@ -531,6 +547,17 @@ function resolveSnapshot(ownerName: ProxyOwner): Map<string, unknown> {
     case 'process':
       return processScrubSnapshot;
   }
+}
+
+/**
+ * Escape every RegExp metacharacter in `s` so it matches literally
+ * when embedded in a pattern. Used to build the deny-list filter
+ * from `DENIED_NATIVE_MODULES` without surprises (e.g. the `:` in
+ * `node:fs` is harmless, but if a future deny entry contains `.` or
+ * `*` the unescaped form would silently broaden the filter).
+ */
+function escapeRegex(s: string): string {
+  return s.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
 }
 
 // Re-export GRANTS_BRAND for downstream introspection.

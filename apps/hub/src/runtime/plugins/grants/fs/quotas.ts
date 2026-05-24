@@ -18,7 +18,7 @@
  * absolute cap is enforced by the rough check.
  */
 
-import { readdir, stat } from 'node:fs/promises';
+import { lstat, readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { errors } from '@brika/errors';
 import { DEFAULT_FS_QUOTAS, type FsBackingDirs, type FsQuotas } from './types';
@@ -115,7 +115,11 @@ export async function scanDirSize(dir: string): Promise<number> {
   for (const name of names) {
     const full = join(dir, name);
     try {
-      const s = await stat(full);
+      // lstat — never follow symlinks during the size walk. A
+      // malicious symlink pointing at a huge file would otherwise
+      // inflate the counter and let the plugin starve other roots
+      // through quota accounting alone.
+      const s = await lstat(full);
       if (s.isFile()) {
         total += s.size;
       } else if (s.isDirectory()) {

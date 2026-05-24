@@ -7,9 +7,8 @@
  * to tear down any lingering sockets.
  */
 
+import { randomBytes } from 'node:crypto';
 import type { WsConnection } from './types';
-
-let nextHandleSeq = 1;
 
 export class WsHandleRegistry {
   readonly #handles = new Map<string, WsConnection>();
@@ -19,9 +18,13 @@ export class WsHandleRegistry {
     this.#maxOpen = maxOpen;
   }
 
-  /** Register a connection. Returns the new handle id. */
+  /**
+   * Register a connection. Returns the new handle id — 16 random
+   * hex bytes rather than a counter, so plugins can't infer hub-wide
+   * connection rates from the returned values.
+   */
   register(conn: WsConnection): string {
-    const id = `ws_${nextHandleSeq++}`;
+    const id = `ws_${randomBytes(8).toString('hex')}`;
     this.#handles.set(id, conn);
     return id;
   }
