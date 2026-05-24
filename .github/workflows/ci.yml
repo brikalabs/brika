@@ -99,10 +99,10 @@ jobs:
 
       - name: Run tests with coverage
         run: |
-          # Each workspace runs in its own bun process for mock.module()
-          # isolation (oven-sh/bun#12823); `xargs -P 4` fans out across
-          # runner cores. Coverage is passed via `bun run test` which
-          # forwards extra args to the workspace's own `test` script.
+          # Fan out across the runner's cores with `xargs -P 4`. Each
+          # workspace runs `bun run test` in its own process, which forwards
+          # the extra `--coverage` flags to whatever `bun test` invocation
+          # the workspace's `test` script defines.
           find apps packages plugins -mindepth 2 -maxdepth 2 -name package.json -print0 2>/dev/null \
             | xargs -0 -P 4 -I{} bash -c '
                 dir=$(dirname "$1")
