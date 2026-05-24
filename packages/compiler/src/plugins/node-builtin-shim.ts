@@ -44,8 +44,8 @@ export function createNodeBuiltinShimPlugin(opts: NodeBuiltinShimOptions): BunPl
   const replacement = `'${opts.shimPath}'`;
   const moduleEsc = escapeRegex(opts.module);
   const prefix = opts.alsoRewriteBare ? `(?:node:)?` : 'node:';
-  const fromRegex = new RegExp(`(from\\s*)(['"])${prefix}${moduleEsc}\\2`, 'g');
-  const sideEffectRegex = new RegExp(`(import\\s*)(['"])${prefix}${moduleEsc}\\2`, 'g');
+  const fromRegex = new RegExp(String.raw`(from\s*)(['"])${prefix}${moduleEsc}\2`, 'g');
+  const sideEffectRegex = new RegExp(String.raw`(import\s*)(['"])${prefix}${moduleEsc}\2`, 'g');
   // Cheap pre-check so we can skip files that can't possibly need a
   // rewrite without paying the regex cost. The plain `module` name
   // covers both `node:<module>` and the bare form.
@@ -92,5 +92,5 @@ function pickLoader(path: string): Loader {
  * against a future module name with `.` or other regex metacharacters.
  */
 function escapeRegex(s: string): string {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return s.replace(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
 }
