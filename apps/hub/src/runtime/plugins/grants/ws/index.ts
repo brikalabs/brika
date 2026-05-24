@@ -104,10 +104,14 @@ function noopError(_message: string): void {
   // Intentional no-op: rebound before error events arrive.
 }
 
-export function buildWsGrants(opts: WsGrantOptions): {
-  grants: ReadonlyArray<Grant>;
-  registry: WsHandleRegistry;
-} {
+/**
+ * Build the three `ctx.ws.*` grants. The per-plugin handle registry is
+ * created inside this function and closed over by the handlers — callers
+ * don't need it directly (closeAll on shutdown is handled by killing the
+ * plugin process). Return shape matches every other family so
+ * `registry-factory.ts` can register them in a uniform loop.
+ */
+export function buildWsGrants(opts: WsGrantOptions): ReadonlyArray<Grant> {
   const registry = new WsHandleRegistry(opts.maxOpenSockets ?? DEFAULT_MAX_OPEN_SOCKETS);
   const deps = {
     factory: opts.factory ?? defaultWsFactory,
@@ -116,8 +120,5 @@ export function buildWsGrants(opts: WsGrantOptions): {
     sink: opts.sink,
     maxFrameBytes: opts.maxFrameBytes ?? DEFAULT_MAX_FRAME_BYTES,
   };
-  return {
-    grants: [buildWsConnectGrant(deps), buildWsSendGrant(deps), buildWsCloseGrant(deps)],
-    registry,
-  };
+  return [buildWsConnectGrant(deps), buildWsSendGrant(deps), buildWsCloseGrant(deps)];
 }

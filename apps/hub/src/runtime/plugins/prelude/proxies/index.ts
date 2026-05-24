@@ -30,6 +30,15 @@ export interface InstallProxiesDeps {
   readonly log: (level: LogLevelType, message: string) => void;
 }
 
+/** Owner namespaces accepted by `swapInProxy`. Mirrors `ProxyOwner` in lockdown.ts. */
+type ProxyOwner = 'globalThis' | 'Bun' | 'Bun.dns' | 'process';
+
+interface ProxyEntry {
+  readonly owner: ProxyOwner;
+  readonly key: string;
+  readonly replacement: unknown;
+}
+
 /**
  * Install every network-side proxy. Each step is independent; we don't
  * stop on partial failure because a missing slot just means the lockdown
@@ -37,40 +46,8 @@ export interface InstallProxiesDeps {
  * global) — which is fine and reported via the log for visibility.
  */
 export function installNetProxies(deps: InstallProxiesDeps): void {
-  installFetch(deps);
-  installDns(deps);
-  installBunFile(deps);
-  installWebSocket(deps);
-}
-
-function installWebSocket(deps: InstallProxiesDeps): void {
-  // Swap the deny-stubbed `globalThis.WebSocket` for a proxy that
-  // dispatches `ws.connect` to the hub and listens for `streamEvent`
-  // pushes targeted at handles owned by this channel. The hub-side
-  // grant is registered separately via `buildHubGrants({ws: ...})`.
-  const { Constructor } = buildWebSocketProxy({ channel: deps.channel });
-  if (!swapInProxy('globalThis', 'WebSocket', Constructor)) {
-    deps.log(
-      'warn',
-      'installWebSocket: scrub slot was not found — globalThis.WebSocket is still a deny stub.'
-    );
-  }
-}
-
-function installBunFile(deps: InstallProxiesDeps): void {
-  // `Bun.file` was scrubbed in lockdown.ts; swap in a real proxy that
-  // routes reads through `ctx.fs` (via `globalThis.__brika_fs`).
-  const factory = buildBunFileProxy();
-  if (!swapInProxy('Bun', 'file', factory)) {
-    deps.log(
-      'warn',
-      'installBunFile: scrub slot Bun.file was not found — Bun.file() is still a deny stub.'
-    );
-  }
-}
-
-function installFetch(deps: InstallProxiesDeps): void {
-  const proxy = buildFetchProxy({
+  const dnsProxies = buildDnsProxies({ channel: deps.channel });
+  const fetchProxy = buildFetchProxy({
     channel: deps.channel,
     onUnmodeled: (key) => {
       deps.log(
@@ -79,26 +56,22 @@ function installFetch(deps: InstallProxiesDeps): void {
       );
     },
   });
-  if (!swapInProxy('globalThis', 'fetch', proxy)) {
-    deps.log(
-      'warn',
-      'installFetch: scrub slot was not found — global fetch is still a deny stub. This usually means the runtime had no fetch global to begin with.'
-    );
-  }
-}
+  const { Constructor: WebSocketCtor } = buildWebSocketProxy({ channel: deps.channel });
 
-function installDns(deps: InstallProxiesDeps): void {
-  const proxies = buildDnsProxies({ channel: deps.channel });
-  const entries: ReadonlyArray<[string, unknown]> = [
-    ['lookup', proxies.lookup],
-    ['resolveTxt', proxies.resolveTxt],
-    ['resolveMx', proxies.resolveMx],
+  const entries: ReadonlyArray<ProxyEntry> = [
+    { owner: 'globalThis', key: 'fetch', replacement: fetchProxy },
+    { owner: 'globalThis', key: 'WebSocket', replacement: WebSocketCtor },
+    { owner: 'Bun', key: 'file', replacement: buildBunFileProxy() },
+    { owner: 'Bun.dns', key: 'lookup', replacement: dnsProxies.lookup },
+    { owner: 'Bun.dns', key: 'resolveTxt', replacement: dnsProxies.resolveTxt },
+    { owner: 'Bun.dns', key: 'resolveMx', replacement: dnsProxies.resolveMx },
   ];
-  for (const [key, proxy] of entries) {
-    if (!swapInProxy('Bun.dns', key, proxy)) {
+
+  for (const { owner, key, replacement } of entries) {
+    if (!swapInProxy(owner, key, replacement)) {
       deps.log(
         'warn',
-        `installDns: scrub slot Bun.dns.${key} was not found — the method is still a deny stub. Plugins calling it will see PERMISSION_DENIED.`
+        `installNetProxies: scrub slot ${owner}.${key} was not found — the proxy was not installed and the slot remains a deny stub.`
       );
     }
   }

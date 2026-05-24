@@ -14,7 +14,6 @@
  */
 
 import type { Channel } from '@brika/ipc';
-import { grantRequest } from '@brika/ipc/contract';
 import {
   type DnsLookupArgs,
   type DnsLookupResult,
@@ -26,6 +25,7 @@ import {
   type DnsResolveTxtResult,
   DnsResolveTxtResultSchema,
 } from '@brika/sdk/grants';
+import { callGrant } from './_rpc';
 
 const DNS_LOOKUP_GRANT_ID = 'dev.brika.dns.lookup';
 const DNS_RESOLVE_TXT_GRANT_ID = 'dev.brika.dns.resolveTxt';
@@ -114,21 +114,4 @@ function buildResolveMxProxy(channel: Channel): BunResolveMx {
     );
     return result.records;
   };
-}
-
-// ─── shared call helper ─────────────────────────────────────────────────────
-
-/**
- * Issue one grant call and re-parse the result. The wire `result` field
- * is `unknown` (each grant validates its own shape on the hub side); we
- * re-parse here so the return narrows without an `as` cast.
- */
-async function callGrant<R>(
-  channel: Channel,
-  id: string,
-  args: unknown,
-  parse: (raw: unknown) => R
-): Promise<R> {
-  const response = await channel.call(grantRequest, { id, args });
-  return parse(response.result);
 }

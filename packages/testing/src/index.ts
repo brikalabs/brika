@@ -16,5 +16,5 @@
  * ```
  */
 
-export { BunMock, mockBun, useBunMock } from './mock-bun';
+export { BunMock, mockBun, realFetch, useBunMock } from './mock-bun';
 export { proxify } from './proxify';

@@ -18,7 +18,7 @@ import {
   type DnsScope,
   dnsResolveTxt as spec,
 } from '@brika/sdk/grants';
-import { assertHostInDnsScope } from './scope';
+import { assertHostAllowed } from '../net/host-allow';
 
 export type DnsTxtResolver = (host: string) => Promise<ReadonlyArray<ReadonlyArray<string>>>;
 
@@ -61,7 +61,7 @@ export function buildResolveTxtGrant(resolver: DnsTxtResolver = defaultTxtResolv
     spec.spec,
     async (ctx, args: DnsResolveTxtArgs): Promise<DnsResolveTxtResult> => {
       const scope: DnsScope = ctx.grantedScope;
-      assertHostInDnsScope(args.hostname, scope.allow);
+      assertHostAllowed(args.hostname, scope.allow);
       const records = await resolver(args.hostname);
       return { records: records.map((r) => [...r]) };
     }

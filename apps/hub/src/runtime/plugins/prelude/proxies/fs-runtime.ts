@@ -17,7 +17,6 @@
  */
 
 import type { Channel } from '@brika/ipc';
-import { grantRequest } from '@brika/ipc/contract';
 import {
   FsExistsResultSchema,
   FsMkdirResultSchema,
@@ -28,6 +27,7 @@ import {
   FsWriteFileResultSchema,
 } from '@brika/sdk/grants';
 import type { BrikaFsRuntime } from '@brika/sdk/grants/fs-runtime';
+import { callGrant } from './_rpc';
 
 export type { BrikaFsRuntime } from '@brika/sdk/grants/fs-runtime';
 
@@ -50,23 +50,15 @@ export function installFsRuntime(deps: FsRuntimeDeps): void {
 
 function buildRuntime(channel: Channel): BrikaFsRuntime {
   return {
-    readFile: (args) => call(channel, 'dev.brika.fs.readFile', args, FsReadFileResultSchema.parse),
+    readFile: (args) =>
+      callGrant(channel, 'dev.brika.fs.readFile', args, FsReadFileResultSchema.parse),
     writeFile: (args) =>
-      call(channel, 'dev.brika.fs.writeFile', args, FsWriteFileResultSchema.parse),
-    readdir: (args) => call(channel, 'dev.brika.fs.readdir', args, FsReaddirResultSchema.parse),
-    stat: (args) => call(channel, 'dev.brika.fs.stat', args, FsStatResultSchema.parse),
-    mkdir: (args) => call(channel, 'dev.brika.fs.mkdir', args, FsMkdirResultSchema.parse),
-    rm: (args) => call(channel, 'dev.brika.fs.rm', args, FsRmResultSchema.parse),
-    exists: (args) => call(channel, 'dev.brika.fs.exists', args, FsExistsResultSchema.parse),
+      callGrant(channel, 'dev.brika.fs.writeFile', args, FsWriteFileResultSchema.parse),
+    readdir: (args) =>
+      callGrant(channel, 'dev.brika.fs.readdir', args, FsReaddirResultSchema.parse),
+    stat: (args) => callGrant(channel, 'dev.brika.fs.stat', args, FsStatResultSchema.parse),
+    mkdir: (args) => callGrant(channel, 'dev.brika.fs.mkdir', args, FsMkdirResultSchema.parse),
+    rm: (args) => callGrant(channel, 'dev.brika.fs.rm', args, FsRmResultSchema.parse),
+    exists: (args) => callGrant(channel, 'dev.brika.fs.exists', args, FsExistsResultSchema.parse),
   };
-}
-
-async function call<R>(
-  channel: Channel,
-  id: string,
-  args: unknown,
-  parse: (raw: unknown) => R
-): Promise<R> {
-  const response = await channel.call(grantRequest, { id, args });
-  return parse(response.result);
 }

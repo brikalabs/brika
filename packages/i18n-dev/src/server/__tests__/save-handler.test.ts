@@ -4,7 +4,7 @@ import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { useBunMock } from '@brika/testing';
+import { realFetch, useBunMock } from '@brika/testing';
 import { createSaveHandlerMiddleware, type SaveHandlerOptions } from '../save-handler';
 
 interface LoggerCalls {
@@ -92,8 +92,6 @@ interface PostOpts {
   readonly path?: string;
   readonly rawBody?: string;
 }
-
-const realFetch = globalThis.fetch;
 
 function urlOf(input: Parameters<typeof fetch>[0]): string {
   if (typeof input === 'string') {

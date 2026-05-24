@@ -84,8 +84,7 @@ export function buildHubGrants(cb: HubGrantCallbacks, opts?: HubGrantOptions): G
     }
   }
   if (opts?.ws !== undefined) {
-    const { grants: wsGrants } = buildWsGrants(opts.ws);
-    for (const grant of wsGrants) {
+    for (const grant of buildWsGrants(opts.ws)) {
       reg.register(grant);
     }
   }

@@ -21,6 +21,7 @@ import {
   type FsWriteFileResult,
   fsWriteFile as spec,
 } from '@brika/sdk/grants';
+import { byteLength } from '../../net/byte-size';
 import { backingDirFor, resolveVirtualPath } from '../paths';
 import type { QuotaTracker } from '../quotas';
 import { assertAccess } from '../scope';
@@ -78,10 +79,6 @@ export function buildWriteFileGrant(deps: WriteFileDeps) {
     }
     return { bytesWritten: bytes };
   });
-}
-
-function byteLength(content: string | Uint8Array): number {
-  return typeof content === 'string' ? Buffer.byteLength(content, 'utf-8') : content.byteLength;
 }
 
 async function pathExists(path: string): Promise<boolean> {

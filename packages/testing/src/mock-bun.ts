@@ -26,6 +26,41 @@
 import { spyOn } from 'bun:test';
 import { proxify } from './proxify';
 
+/**
+ * The TRUE original `globalThis.fetch`, captured exactly once when this
+ * module first loads.
+ *
+ * Why this matters: every `BunMock` instance historically captured
+ * `#originalFetch = globalThis.fetch` in its constructor (= per test's
+ * beforeEach). Under parallel test execution that capture races with
+ * other test files' spies — if file A has already installed a spy when
+ * file B's BunMock is constructed, B captures A's spy as its "original"
+ * and a passthrough from B → A → B becomes infinite recursion, surfacing
+ * as `RangeError: Maximum call stack size exceeded`. The thrown overflow
+ * then skips `afterEach`, leaking the spy into the next describe block.
+ *
+ * Capturing at module-load of `mock-bun.ts` is safe because the module
+ * loads before any test file's `beforeEach` runs. Bun loads all test
+ * modules first, then schedules tests, so this reference always points
+ * at the real implementation regardless of subsequent spying.
+ *
+ * Test files that need to bypass their own mock (e.g. a
+ * `passThroughExcept` forwarder that should hit the real local test
+ * server rather than loop back through the spy) should import
+ * `realFetch` from `@brika/testing` rather than capturing
+ * `globalThis.fetch` themselves.
+ */
+const TRUE_ORIGINAL_FETCH: typeof fetch = globalThis.fetch;
+
+/**
+ * The real `fetch` from before any mock was installed. Use this in test
+ * files instead of `const realFetch = globalThis.fetch` at module scope
+ * — the file-scope capture is what causes the parallel-run recursion.
+ *
+ * Safe to call as `realFetch(input, init)` exactly like `globalThis.fetch`.
+ */
+export const realFetch: typeof fetch = TRUE_ORIGINAL_FETCH;
+
 type SpyInstance = ReturnType<typeof spyOn>;
 
 interface SpawnConfig {
@@ -62,7 +97,12 @@ export class BunMock {
   #fetchSpy: SpyInstance | null = null;
 
   readonly #originalGlob = Bun.Glob;
-  readonly #originalFetch = globalThis.fetch;
+  /**
+   * Snapshot of the TRUE original fetch (see {@link TRUE_ORIGINAL_FETCH}).
+   * Use this when the mock impl needs to delegate to the real network.
+   * Capturing `globalThis.fetch` here would race with parallel spies.
+   */
+  readonly #originalFetch = TRUE_ORIGINAL_FETCH;
 
   /**
    * Define a virtual filesystem

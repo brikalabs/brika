@@ -28,8 +28,8 @@
  */
 
 import type { Channel } from '@brika/ipc';
-import { grantRequest } from '@brika/ipc/contract';
 import { type FetchArgs, type FetchResult, FetchResultSchema } from '@brika/sdk/grants';
+import { callGrant } from './_rpc';
 
 /** Grant id the proxy routes through. Matches the SDK spec. */
 const NET_FETCH_GRANT_ID = 'dev.brika.net.fetch';
@@ -84,7 +84,12 @@ export function buildFetchProxy(deps: FetchProxyDeps): FetchProxy {
       reportUnmodeled(init, warn);
     }
     const args = await buildArgsFromInit(input, init);
-    const result = await callGrant(deps.channel, args);
+    const result = await callGrant<FetchResult>(
+      deps.channel,
+      NET_FETCH_GRANT_ID,
+      args,
+      FetchResultSchema.parse
+    );
     return shapeResponse(result);
   };
 
@@ -267,14 +272,6 @@ function extractStringBody(body: unknown): string | undefined {
   // alternative (throwing) would break plugins that pass these
   // accidentally on an OPTIONS preflight, etc.
   return undefined;
-}
-
-async function callGrant(channel: Channel, args: FetchArgs): Promise<FetchResult> {
-  const response = await channel.call(grantRequest, { id: NET_FETCH_GRANT_ID, args });
-  // `grantRequest.result` is `unknown` on the wire — re-parse with the
-  // grant's own schema so the proxy returns properly-typed data without
-  // a cast. Costs one extra schema pass; cheap and worth the safety.
-  return FetchResultSchema.parse(response.result);
 }
 
 function shapeResponse(result: FetchResult): Response {

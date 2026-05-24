@@ -13,7 +13,7 @@ import {
   type DnsScope,
   dnsResolveMx as spec,
 } from '@brika/sdk/grants';
-import { assertHostInDnsScope } from './scope';
+import { assertHostAllowed } from '../net/host-allow';
 
 export interface MxRecord {
   readonly priority: number;
@@ -65,7 +65,7 @@ export function buildResolveMxGrant(resolver: DnsMxResolver = defaultMxResolver)
     spec.spec,
     async (ctx, args: DnsResolveMxArgs): Promise<DnsResolveMxResult> => {
       const scope: DnsScope = ctx.grantedScope;
-      assertHostInDnsScope(args.hostname, scope.allow);
+      assertHostAllowed(args.hostname, scope.allow);
       const records = await resolver(args.hostname);
       return { records: records.map((r) => ({ priority: r.priority, exchange: r.exchange })) };
     }

@@ -12,11 +12,10 @@
  * transparent to callers.
  */
 
-import { errors } from '@brika/errors';
 import { defineGrant } from '@brika/grants';
 import { type FetchArgs, type NetScope, netFetch as spec } from '@brika/sdk/grants';
 import { assertPublicHost, type DnsResolver, defaultDnsResolver } from './dns-guard';
-import { isHostAllowed } from './host-allow';
+import { assertHostAllowed } from './host-allow';
 import { performFetch } from './perform';
 import { ConcurrencyLimiter } from './semaphore';
 import { SingleFlightCache, singleFlightKey } from './single-flight';
@@ -49,9 +48,7 @@ export function buildNetGrants(cb: NetCallbacks, opts?: NetGrantOptions) {
     defineGrant(spec.spec, async (ctx, args) => {
       const scope: NetScope = ctx.grantedScope;
       const url = assertSafeUrl(args.url);
-      if (!isHostAllowed(url.hostname, scope.allow)) {
-        throw errors.netHostNotAllowed({ host: url.hostname, allow: [...scope.allow] });
-      }
+      assertHostAllowed(url.hostname, scope.allow);
       await assertPublicHost(url.hostname, resolver);
 
       const release = await limiter.acquire(ctx.pluginUid);

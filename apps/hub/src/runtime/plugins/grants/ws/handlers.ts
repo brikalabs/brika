@@ -21,8 +21,9 @@ import {
   type WsSendArgs,
   type WsSendResult,
 } from '@brika/sdk/grants';
+import { byteLength } from '../net/byte-size';
 import { assertPublicHost, type DnsResolver } from '../net/dns-guard';
-import { isHostAllowed } from '../net/host-allow';
+import { assertHostAllowed } from '../net/host-allow';
 import type { WsHandleRegistry } from './registry';
 import { DEFAULT_MAX_FRAME_BYTES, type StreamSink, type WsFactory } from './types';
 
@@ -40,9 +41,7 @@ export function buildWsConnectGrant(deps: WsHandlerDeps) {
     async (ctx, args: WsConnectArgs): Promise<WsConnectResult> => {
       const scope: WsScope = ctx.grantedScope;
       const url = assertSafeWsUrl(args.url);
-      if (!isHostAllowed(url.hostname, scope.allow)) {
-        throw errors.netHostNotAllowed({ host: url.hostname, allow: [...scope.allow] });
-      }
+      assertHostAllowed(url.hostname, scope.allow);
       await assertPublicHost(url.hostname, deps.resolver);
       if (deps.registry.atCapacity()) {
         throw errors.wsOpenLimitExceeded({ limit: deps.registry.size() });
@@ -52,12 +51,7 @@ export function buildWsConnectGrant(deps: WsHandlerDeps) {
       const cap = deps.maxFrameBytes ?? DEFAULT_MAX_FRAME_BYTES;
       conn.onopen = () => deps.sink({ kind: 'open', handleId });
       conn.onmessage = (data) => {
-        // String `length` is UTF-16 code units; the cap is in BYTES,
-        // so a peer streaming multi-byte UTF-8 could bypass by ~2x
-        // if we used `.length`. Buffer.byteLength returns true UTF-8
-        // byte count for strings; for Uint8Array we already have
-        // byteLength directly.
-        const size = typeof data === 'string' ? Buffer.byteLength(data, 'utf-8') : data.byteLength;
+        const size = byteLength(data);
         if (size > cap) {
           deps.sink({
             kind: 'error',
@@ -90,10 +84,7 @@ export function buildWsSendGrant(deps: WsHandlerDeps) {
       throw errors.wsHandleNotFound({ handleId: args.handleId });
     }
     const cap = deps.maxFrameBytes ?? DEFAULT_MAX_FRAME_BYTES;
-    // `.length` on a string is UTF-16 code units; for the cap (a
-    // byte budget) we need the UTF-8 byte count.
-    const size =
-      typeof args.data === 'string' ? Buffer.byteLength(args.data, 'utf-8') : args.data.byteLength;
+    const size = byteLength(args.data);
     if (size > cap) {
       throw errors.wsFrameTooLarge({ limit: cap, requested: size });
     }

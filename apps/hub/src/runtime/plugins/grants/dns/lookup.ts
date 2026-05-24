@@ -18,7 +18,7 @@ import {
   dnsLookup as spec,
 } from '@brika/sdk/grants';
 import { classifyIp, type DnsResolver } from '../net/dns-guard';
-import { assertHostInDnsScope } from './scope';
+import { assertHostAllowed } from '../net/host-allow';
 
 /**
  * Full lookup result before filtering. Mirrors `Bun.dns.lookup` /
@@ -48,7 +48,7 @@ export const defaultLookupResolver: DnsLookupResolver = async (host, family) => 
 export function buildLookupGrant(resolver: DnsLookupResolver = defaultLookupResolver) {
   return defineGrant(spec.spec, async (ctx, args: DnsLookupArgs): Promise<DnsLookupResult> => {
     const scope: DnsScope = ctx.grantedScope;
-    assertHostInDnsScope(args.hostname, scope.allow);
+    assertHostAllowed(args.hostname, scope.allow);
     const records = await resolver(args.hostname, args.family);
     const addresses: DnsAddressRecord[] = [];
     for (const record of records) {
