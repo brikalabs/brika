@@ -73,21 +73,21 @@ function makeTestPng(width: number, height: number = width): Buffer {
 // ---------------------------------------------------------------------------
 
 describe('processAvatar', () => {
-  it('should return a Buffer', () => {
+  it('should return a Buffer', async () => {
     const input = makeTestPng(16);
-    const result = processAvatar(input);
+    const result = await processAvatar(input);
     expect(result).toBeInstanceOf(Buffer);
   });
 
-  it('should produce a non-empty output', () => {
+  it('should produce a non-empty output', async () => {
     const input = makeTestPng(16);
-    const result = processAvatar(input);
+    const result = await processAvatar(input);
     expect(result.byteLength).toBeGreaterThan(0);
   });
 
-  it('should produce WebP output (RIFF....WEBP magic bytes)', () => {
+  it('should produce WebP output (RIFF....WEBP magic bytes)', async () => {
     const input = makeTestPng(16);
-    const result = processAvatar(input);
+    const result = await processAvatar(input);
     // WebP files start with RIFF
     expect(result[0]).toBe(0x52); // R
     expect(result[1]).toBe(0x49); // I
@@ -100,10 +100,10 @@ describe('processAvatar', () => {
     expect(result[11]).toBe(0x50); // P
   });
 
-  it('should produce consistent output for the same input', () => {
+  it('should produce consistent output for the same input', async () => {
     const input = makeTestPng(16);
-    const r1 = processAvatar(input);
-    const r2 = processAvatar(input);
+    const r1 = await processAvatar(input);
+    const r2 = await processAvatar(input);
     expect(Buffer.compare(r1, r2)).toBe(0);
   });
 });
@@ -130,24 +130,24 @@ describe('UserService — avatar & deleteUser', () => {
   // -------------------------------------------------------------------------
 
   describe('setAvatar', () => {
-    it('should return a hash string', () => {
+    it('should return a hash string', async () => {
       const user = service.createUser('avatar@example.com', 'Avatar User', Role.USER);
-      const hash = service.setAvatar(user.id, makeTestPng(16));
+      const hash = await service.setAvatar(user.id, makeTestPng(16));
       expect(typeof hash).toBe('string');
       expect(hash.length).toBeGreaterThan(0);
     });
 
-    it('should return a short alphanumeric hash (base-36, max 8 chars)', () => {
+    it('should return a short alphanumeric hash (base-36, max 8 chars)', async () => {
       const user = service.createUser('avatar@example.com', 'Avatar User', Role.USER);
-      const hash = service.setAvatar(user.id, makeTestPng(16));
+      const hash = await service.setAvatar(user.id, makeTestPng(16));
       expect(hash).toMatch(/^[0-9a-z]{1,8}$/);
     });
 
-    it('should produce the same hash for the same image', () => {
+    it('should produce the same hash for the same image', async () => {
       const user = service.createUser('avatar@example.com', 'Avatar User', Role.USER);
       const input = makeTestPng(16);
-      const h1 = service.setAvatar(user.id, input);
-      const h2 = service.setAvatar(user.id, input);
+      const h1 = await service.setAvatar(user.id, input);
+      const h2 = await service.setAvatar(user.id, input);
       expect(h1).toBe(h2);
     });
   });
@@ -157,9 +157,9 @@ describe('UserService — avatar & deleteUser', () => {
   // -------------------------------------------------------------------------
 
   describe('getAvatarData', () => {
-    it('should retrieve avatar data after setAvatar', () => {
+    it('should retrieve avatar data after setAvatar', async () => {
       const user = service.createUser('avatar@example.com', 'Avatar User', Role.USER);
-      service.setAvatar(user.id, makeTestPng(16));
+      await service.setAvatar(user.id, makeTestPng(16));
 
       const result = service.getAvatarData(user.id);
       expect(result).not.toBeNull();
@@ -168,9 +168,9 @@ describe('UserService — avatar & deleteUser', () => {
       expect(result?.data.byteLength).toBeGreaterThan(0);
     });
 
-    it('should return image/webp mimeType after setAvatar', () => {
+    it('should return image/webp mimeType after setAvatar', async () => {
       const user = service.createUser('avatar@example.com', 'Avatar User', Role.USER);
-      service.setAvatar(user.id, makeTestPng(16));
+      await service.setAvatar(user.id, makeTestPng(16));
 
       const result = service.getAvatarData(user.id);
       expect(result?.mimeType).toBe('image/webp');
@@ -193,9 +193,9 @@ describe('UserService — avatar & deleteUser', () => {
   // -------------------------------------------------------------------------
 
   describe('removeAvatar', () => {
-    it('should clear avatar so getAvatarData returns null', () => {
+    it('should clear avatar so getAvatarData returns null', async () => {
       const user = service.createUser('avatar@example.com', 'Avatar User', Role.USER);
-      service.setAvatar(user.id, makeTestPng(16));
+      await service.setAvatar(user.id, makeTestPng(16));
 
       // Confirm avatar was set
       expect(service.getAvatarData(user.id)).not.toBeNull();
@@ -212,9 +212,9 @@ describe('UserService — avatar & deleteUser', () => {
       expect(service.getAvatarData(user.id)).toBeNull();
     });
 
-    it('should clear avatarHash on user after removeAvatar', () => {
+    it('should clear avatarHash on user after removeAvatar', async () => {
       const user = service.createUser('avatar@example.com', 'Avatar User', Role.USER);
-      service.setAvatar(user.id, makeTestPng(16));
+      await service.setAvatar(user.id, makeTestPng(16));
 
       const before = service.getUser(user.id);
       expect(before?.avatarHash).not.toBeNull();

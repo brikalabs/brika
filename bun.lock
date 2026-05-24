@@ -183,7 +183,6 @@
       "dependencies": {
         "@brika/db": "workspace:*",
         "@brika/di": "workspace:*",
-        "@brika/photon": "workspace:*",
         "@brika/router": "workspace:*",
         "bcryptjs": "^3.0.3",
         "zod": "^4.3.4",
@@ -468,16 +467,6 @@
       "version": "0.3.1",
       "devDependencies": {
         "@types/bun": "^1.3.9",
-      },
-    },
-    "packages/photon": {
-      "name": "@brika/photon",
-      "version": "0.3.1",
-      "dependencies": {
-        "@cf-wasm/photon": "^0.3.4",
-      },
-      "devDependencies": {
-        "@types/bun": "latest",
       },
     },
     "packages/plugin": {
@@ -790,8 +779,6 @@
 
     "@brika/permissions": ["@brika/permissions@workspace:packages/permissions"],
 
-    "@brika/photon": ["@brika/photon@workspace:packages/photon"],
-
     "@brika/plugin": ["@brika/plugin@workspace:packages/plugin"],
 
     "@brika/plugin-demo-config": ["@brika/plugin-demo-config@workspace:plugins/demo-config"],
@@ -835,10 +822,6 @@
     "@brika/workflow": ["@brika/workflow@workspace:packages/workflow"],
 
     "@brika/workspace-tools": ["@brika/workspace-tools@workspace:packages/workspace-tools"],
-
-    "@cf-wasm/internals": ["@cf-wasm/internals@0.1.2", "", {}, "sha512-9d/I3JFv1IpQFYOrIw5RQShQPyuZRw9DyeBylF39Uj/MH7my8+EzKDPpUCHiqZ5O7tZS/A6zwP08egpeI5NBhA=="],
-
-    "@cf-wasm/photon": ["@cf-wasm/photon@0.3.5", "", { "dependencies": { "@cf-wasm/internals": "0.1.2" } }, "sha512-+roU+03gyEAecfoeqxrxlEqRJh63b+tLRZaXYUELlfYX/5tIEIqh6TK2VJik7z7xPrP4taYe3mbclbAk5tkN0A=="],
 
     "@clack/core": ["@clack/core@1.3.1", "", { "dependencies": { "fast-wrap-ansi": "^0.2.0", "sisteransi": "^1.0.5" } }, "sha512-fT1qHVGAag4IEkrupZ6lRRbNCs1vS9P01KB/sG8zKgvUztbYtFBtQpjSITNwooDZ83tpsPzP0mRNs1/KVszCRA=="],
 

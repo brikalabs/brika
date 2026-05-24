@@ -4,7 +4,6 @@
  */
 
 import type { Database } from 'bun:sqlite';
-import { photon } from '@brika/photon';
 import bcryptjs from 'bcryptjs';
 import { ROLE_SCOPES } from '../constants';
 import { validatePassword } from '../schemas';
@@ -54,11 +53,11 @@ function toUser(row: UserRow): User {
   };
 }
 
-/** Center-crop to square, compress as webp. */
-export function processAvatar(input: Buffer): Buffer {
-  return photon(input)
+/** Resize to 256×256 (stretches to exact dims) and encode as WebP via Bun.Image. */
+export function processAvatar(input: Buffer): Promise<Buffer> {
+  return new Bun.Image(input)
     .resize(AVATAR_SIZE, AVATAR_SIZE, {
-      fit: 'cover',
+      fit: 'fill',
     })
     .webp()
     .toBuffer();
@@ -159,8 +158,8 @@ export class UserService {
   }
 
   /** Set avatar from raw image data (processed to webp). Returns content hash for cache busting. */
-  setAvatar(userId: string, imageData: Buffer): string {
-    const processed = processAvatar(imageData);
+  async setAvatar(userId: string, imageData: Buffer): Promise<string> {
+    const processed = await processAvatar(imageData);
     const hash = Bun.hash(processed).toString(36).slice(0, 8);
     this.db
       .prepare(

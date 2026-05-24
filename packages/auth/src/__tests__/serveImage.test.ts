@@ -2,7 +2,7 @@
  * @brika/auth - serveImage Tests
  *
  * Tests for the image serving utility: null data handling, cache headers,
- * ETag generation, 304 responses, and query parameter parsing with photon resize.
+ * ETag generation, 304 responses, and query parameter parsing with Bun.Image resize.
  */
 
 import { describe, expect, it } from 'bun:test';
@@ -92,8 +92,8 @@ describe('serveImage', () => {
   // -------------------------------------------------------------------------
 
   describe('null data', () => {
-    it('should return 204 when data is null', () => {
-      const response = serveImage(null, createCtx());
+    it('should return 204 when data is null', async () => {
+      const response = await serveImage(null, createCtx());
       expect(response.status).toBe(204);
       expect(response.body).toBeNull();
     });
@@ -104,18 +104,18 @@ describe('serveImage', () => {
   // -------------------------------------------------------------------------
 
   describe('basic response', () => {
-    it('should return webp content type', () => {
-      const response = serveImage(TINY_IMAGE, createCtx());
+    it('should return webp content type', async () => {
+      const response = await serveImage(TINY_IMAGE, createCtx());
       expect(response.headers.get('Content-Type')).toBe('image/webp');
     });
 
-    it('should return 200 status', () => {
-      const response = serveImage(TINY_IMAGE, createCtx());
+    it('should return 200 status', async () => {
+      const response = await serveImage(TINY_IMAGE, createCtx());
       expect(response.status).toBe(200);
     });
 
-    it('should include ETag header', () => {
-      const response = serveImage(TINY_IMAGE, createCtx());
+    it('should include ETag header', async () => {
+      const response = await serveImage(TINY_IMAGE, createCtx());
       const etag = response.headers.get('ETag');
       expect(etag).not.toBeNull();
       expect(etag).toStartWith('"');
@@ -123,21 +123,21 @@ describe('serveImage', () => {
     });
 
     it('should return body as Uint8Array', async () => {
-      const response = serveImage(TINY_IMAGE, createCtx());
+      const response = await serveImage(TINY_IMAGE, createCtx());
       const body = await response.arrayBuffer();
       expect(body.byteLength).toBeGreaterThan(0);
     });
 
-    it('should produce consistent ETag for same data', () => {
-      const r1 = serveImage(TINY_IMAGE, createCtx());
-      const r2 = serveImage(TINY_IMAGE, createCtx());
+    it('should produce consistent ETag for same data', async () => {
+      const r1 = await serveImage(TINY_IMAGE, createCtx());
+      const r2 = await serveImage(TINY_IMAGE, createCtx());
       expect(r1.headers.get('ETag')).toBe(r2.headers.get('ETag'));
     });
 
-    it('should produce different ETag for different data', () => {
+    it('should produce different ETag for different data', async () => {
       const otherImage = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x00]);
-      const r1 = serveImage(TINY_IMAGE, createCtx());
-      const r2 = serveImage(otherImage, createCtx());
+      const r1 = await serveImage(TINY_IMAGE, createCtx());
+      const r2 = await serveImage(otherImage, createCtx());
       expect(r1.headers.get('ETag')).not.toBe(r2.headers.get('ETag'));
     });
   });
@@ -147,8 +147,8 @@ describe('serveImage', () => {
   // -------------------------------------------------------------------------
 
   describe('304 Not Modified', () => {
-    it('should return 304 when If-None-Match matches ETag', () => {
-      const firstResponse = serveImage(TINY_IMAGE, createCtx());
+    it('should return 304 when If-None-Match matches ETag', async () => {
+      const firstResponse = await serveImage(TINY_IMAGE, createCtx());
       const etag = firstResponse.headers.get('ETag');
       if (!etag) {
         throw new Error('Expected ETag header to be defined');
@@ -160,25 +160,25 @@ describe('serveImage', () => {
           'If-None-Match': etag,
         }
       );
-      const response = serveImage(TINY_IMAGE, ctx);
+      const response = await serveImage(TINY_IMAGE, ctx);
 
       expect(response.status).toBe(304);
       expect(response.headers.get('ETag')).toBe(etag);
     });
 
-    it('should return 200 when If-None-Match does not match', () => {
+    it('should return 200 when If-None-Match does not match', async () => {
       const ctx = createCtx(
         {},
         {
           'If-None-Match': '"stale-etag"',
         }
       );
-      const response = serveImage(TINY_IMAGE, ctx);
+      const response = await serveImage(TINY_IMAGE, ctx);
       expect(response.status).toBe(200);
     });
 
-    it('should return 304 with null body', () => {
-      const firstResponse = serveImage(TINY_IMAGE, createCtx());
+    it('should return 304 with null body', async () => {
+      const firstResponse = await serveImage(TINY_IMAGE, createCtx());
       const etag = firstResponse.headers.get('ETag');
       if (!etag) {
         throw new Error('Expected ETag header to be defined');
@@ -190,7 +190,7 @@ describe('serveImage', () => {
           'If-None-Match': etag,
         }
       );
-      const response = serveImage(TINY_IMAGE, ctx);
+      const response = await serveImage(TINY_IMAGE, ctx);
       expect(response.status).toBe(304);
       expect(response.body).toBeNull();
     });
@@ -201,22 +201,22 @@ describe('serveImage', () => {
   // -------------------------------------------------------------------------
 
   describe('Cache-Control', () => {
-    it('should default to 1-year max-age with immutable', () => {
-      const response = serveImage(TINY_IMAGE, createCtx());
+    it('should default to 1-year max-age with immutable', async () => {
+      const response = await serveImage(TINY_IMAGE, createCtx());
       const cc = response.headers.get('Cache-Control');
       expect(cc).toBe('public, max-age=31536000, immutable');
     });
 
-    it('should use custom maxAge with immutable', () => {
-      const response = serveImage(TINY_IMAGE, createCtx(), {
+    it('should use custom maxAge with immutable', async () => {
+      const response = await serveImage(TINY_IMAGE, createCtx(), {
         maxAge: 7200,
       });
       const cc = response.headers.get('Cache-Control');
       expect(cc).toBe('public, max-age=7200, immutable');
     });
 
-    it('should use no-cache when maxAge is 0', () => {
-      const response = serveImage(TINY_IMAGE, createCtx(), {
+    it('should use no-cache when maxAge is 0', async () => {
+      const response = await serveImage(TINY_IMAGE, createCtx(), {
         maxAge: 0,
       });
       const cc = response.headers.get('Cache-Control');
@@ -225,18 +225,18 @@ describe('serveImage', () => {
   });
 
   // -------------------------------------------------------------------------
-  // Query parameters (w, h, s) — resize via @cf-wasm/photon
+  // Query parameters (w, h, s) — resize via Bun.Image
   // -------------------------------------------------------------------------
 
   describe('query parameters', () => {
-    it('should handle empty query', () => {
-      const response = serveImage(TINY_IMAGE, createCtx({}));
+    it('should handle empty query', async () => {
+      const response = await serveImage(TINY_IMAGE, createCtx({}));
       expect(response.status).toBe(200);
     });
 
-    it('should resize with ?s (square)', () => {
+    it('should resize with ?s (square)', async () => {
       const validImage = makeTestPng(4);
-      const response = serveImage(
+      const response = await serveImage(
         validImage,
         createCtx({
           s: 2,
@@ -246,9 +246,9 @@ describe('serveImage', () => {
       expect(response.headers.get('Content-Type')).toBe('image/webp');
     });
 
-    it('should resize with ?w only', () => {
+    it('should resize with ?w only', async () => {
       const validImage = makeTestPng(4);
-      const response = serveImage(
+      const response = await serveImage(
         validImage,
         createCtx({
           w: 3,
@@ -257,9 +257,9 @@ describe('serveImage', () => {
       expect(response.status).toBe(200);
     });
 
-    it('should resize with ?w and ?h', () => {
+    it('should resize with ?w and ?h', async () => {
       const validImage = makeTestPng(4);
-      const response = serveImage(
+      const response = await serveImage(
         validImage,
         createCtx({
           w: 3,
@@ -269,8 +269,19 @@ describe('serveImage', () => {
       expect(response.status).toBe(200);
     });
 
-    it('should skip resize when no dimensions provided', () => {
-      const response = serveImage(TINY_IMAGE, createCtx({}));
+    it('should resize with ?h only (derives width from aspect)', async () => {
+      const validImage = makeTestPng(4);
+      const response = await serveImage(
+        validImage,
+        createCtx({
+          h: 2,
+        })
+      );
+      expect(response.status).toBe(200);
+    });
+
+    it('should skip resize when no dimensions provided', async () => {
+      const response = await serveImage(TINY_IMAGE, createCtx({}));
       expect(response.status).toBe(200);
     });
   });

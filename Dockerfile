@@ -17,7 +17,7 @@
 #   cp Dockerfile "$ctx/"
 #   docker build -t brika:dev "$ctx"
 
-ARG BUN_VERSION=1.3.13
+ARG BUN_VERSION=1.3.14
 
 # Multi-arch source for the bun runtime (used to spawn plugin child
 # processes). buildx picks the matching arch automatically.

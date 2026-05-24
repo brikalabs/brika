@@ -95,7 +95,7 @@ describe('PUT /profile/avatar — JSON base64 upload', () => {
 
   useTestBed(() => {
     stub(UserService, {
-      setAvatar: () => 'abc12345',
+      setAvatar: async () => 'abc12345',
     });
     app = TestApp.create(profileRoutes, [withSession(userSession)]);
   });
@@ -137,7 +137,7 @@ describe('PUT /profile/avatar — binary upload', () => {
 
   useTestBed(() => {
     stub(UserService, {
-      setAvatar: () => 'bin12345',
+      setAvatar: async () => 'bin12345',
     });
     app = TestApp.create(profileRoutes, [withSession(userSession)]);
   });

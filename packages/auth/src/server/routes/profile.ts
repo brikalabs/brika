@@ -89,7 +89,7 @@ const uploadAvatar = route.put({
     }
 
     const userService = inject(UserService);
-    const avatarHash = userService.setAvatar(session.userId, imageBuffer);
+    const avatarHash = await userService.setAvatar(session.userId, imageBuffer);
     return {
       ok: true,
       avatarHash,
@@ -149,13 +149,13 @@ const changePassword = route.put({
 const getAvatar = route.get({
   path: '/avatar/:userId',
   query: ImageQuerySchema,
-  handler: (ctx) => {
+  handler: async (ctx) => {
     const userService = inject(UserService);
     const { userId } = ctx.params as {
       userId: string;
     };
     const avatar = userService.getAvatarData(userId);
-    return serveImage(avatar?.data ?? null, ctx);
+    return await serveImage(avatar?.data ?? null, ctx);
   },
 });
 
