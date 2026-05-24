@@ -31,6 +31,7 @@
     "./bridge": "./src/bridge.ts",
     "./ctx": "./src/ctx.ts",
     "./grants": "./src/grants/index.ts",
+    "./grants/fs-runtime": "./src/grants/fs-runtime.ts",
     "./actions": "./src/actions.ts",
     "./tsconfig.plugin.json": "./tsconfig.plugin.json"
   },

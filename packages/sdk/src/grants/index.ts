@@ -35,6 +35,7 @@ export {
   dnsResolveTxt,
 } from './dns';
 export type {
+  BrikaFsRuntime,
   FsDirEntry,
   FsExistsArgs,
   FsExistsResult,

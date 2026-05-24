@@ -136,7 +136,10 @@ export function buildWebSocketProxy(deps: WebSocketProxyDeps): WebSocketProxyIns
         this.#pendingSends.push(data);
         return;
       }
-      void this.#dispatchSend(data);
+      this.#dispatchSend(data).catch(() => {
+        // Send failures surface through the channel's own error
+        // emission; nothing to do here.
+      });
     }
 
     async #dispatchSend(data: string | Uint8Array): Promise<void> {
@@ -159,9 +162,15 @@ export function buildWebSocketProxy(deps: WebSocketProxyDeps): WebSocketProxyIns
         return;
       }
       const id = this.#handleId;
-      void deps.channel
+      deps.channel
         .call(grantRequest, { id: 'dev.brika.ws.close', args: { handleId: id, code, reason } })
-        .then((r) => WsCloseResultSchema.parse(r.result));
+        .then((r) => WsCloseResultSchema.parse(r.result))
+        .catch(() => {
+          // Close is best-effort: if the hub-side handle already
+          // dropped (peer closed, plugin shutting down, …) the call
+          // rejects. The local readyState is already CLOSING; we
+          // don't surface this to the plugin.
+        });
     }
 
     /** @internal — called by the proxy dispatcher; not a public API. */
@@ -295,6 +304,10 @@ interface WebSocketProxyLike {
  */
 function kickOffConnect(proxy: WebSocketProxyLike, protocols?: string | string[]): void {
   queueMicrotask(() => {
-    void proxy._runConnect(protocols);
+    proxy._runConnect(protocols).catch(() => {
+      // `_runConnect` already routes failures through `_onStreamEvent`
+      // (error kind). The catch here exists only so unhandled-promise
+      // rejection telemetry stays quiet — there's no recovery to do.
+    });
   });
 }

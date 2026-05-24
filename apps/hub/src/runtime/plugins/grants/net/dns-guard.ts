@@ -123,46 +123,51 @@ function parseIpv4(s: string): [number, number, number, number] | null {
   return [octets[0] ?? 0, octets[1] ?? 0, octets[2] ?? 0, octets[3] ?? 0];
 }
 
-function classifyIpv4(octets: [number, number, number, number]): string | null {
-  const [a, b] = octets;
-  if (a === 0) {
-    return 'unspecified';
-  }
-  if (a === 10) {
-    return 'rfc1918-10';
-  }
-  if (a === 127) {
-    return 'loopback';
-  }
-  if (a === 169 && b === 254) {
-    return 'link-local';
-  }
-  if (a === 172 && b >= 16 && b <= 31) {
-    return 'rfc1918-172';
-  }
-  if (a === 192 && b === 168) {
-    return 'rfc1918-192';
-  }
-  if (a === 192 && b === 0 && octets[2] === 0) {
-    return 'rfc6890-protocol-assignments';
-  }
-  if (a === 192 && b === 0 && octets[2] === 2) {
-    return 'rfc5737-documentation';
-  }
-  if (a === 198 && (b === 18 || b === 19)) {
-    return 'rfc2544-benchmark';
-  }
-  if (a === 198 && b === 51 && octets[2] === 100) {
-    return 'rfc5737-documentation';
-  }
-  if (a === 203 && b === 0 && octets[2] === 113) {
-    return 'rfc5737-documentation';
-  }
-  if (a >= 224 && a <= 239) {
-    return 'multicast';
-  }
-  if (a >= 240) {
-    return 'reserved';
+/**
+ * Forbidden IPv4 range table. Each entry is a predicate over the
+ * 4-octet tuple plus the category name. First match wins — order
+ * matters only for ranges that could overlap (none do today). The
+ * table form keeps `classifyIpv4` flat and well under sonar's
+ * cognitive-complexity threshold while staying easy to audit.
+ */
+const IPV4_FORBIDDEN_RANGES: ReadonlyArray<{
+  readonly category: string;
+  readonly match: (octets: Ipv4Octets) => boolean;
+}> = [
+  { category: 'unspecified', match: ([a]) => a === 0 },
+  { category: 'rfc1918-10', match: ([a]) => a === 10 },
+  { category: 'loopback', match: ([a]) => a === 127 },
+  { category: 'link-local', match: ([a, b]) => a === 169 && b === 254 },
+  { category: 'rfc1918-172', match: ([a, b]) => a === 172 && b >= 16 && b <= 31 },
+  { category: 'rfc1918-192', match: ([a, b]) => a === 192 && b === 168 },
+  {
+    category: 'rfc6890-protocol-assignments',
+    match: ([a, b, c]) => a === 192 && b === 0 && c === 0,
+  },
+  {
+    category: 'rfc5737-documentation',
+    match: ([a, b, c]) => a === 192 && b === 0 && c === 2,
+  },
+  { category: 'rfc2544-benchmark', match: ([a, b]) => a === 198 && (b === 18 || b === 19) },
+  {
+    category: 'rfc5737-documentation',
+    match: ([a, b, c]) => a === 198 && b === 51 && c === 100,
+  },
+  {
+    category: 'rfc5737-documentation',
+    match: ([a, b, c]) => a === 203 && b === 0 && c === 113,
+  },
+  { category: 'multicast', match: ([a]) => a >= 224 && a <= 239 },
+  { category: 'reserved', match: ([a]) => a >= 240 },
+];
+
+type Ipv4Octets = readonly [number, number, number, number];
+
+function classifyIpv4(octets: Ipv4Octets): string | null {
+  for (const range of IPV4_FORBIDDEN_RANGES) {
+    if (range.match(octets)) {
+      return range.category;
+    }
   }
   return null;
 }
@@ -266,7 +271,7 @@ function parseGroup(part: string): number | null {
   if (part.length === 0 || part.length > 4 || !/^[0-9a-fA-F]+$/.test(part)) {
     return null;
   }
-  return parseInt(part, 16);
+  return Number.parseInt(part, 16);
 }
 
 function classifyIpv6(groups: readonly number[]): string | null {

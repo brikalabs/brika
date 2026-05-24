@@ -17,6 +17,7 @@
     "test": "bun test"
   },
   "devDependencies": {
+    "@brika/sdk": "workspace:*",
     "@types/bun": "^1.3.9"
   }
 }

@@ -16,30 +16,7 @@
 
 /* eslint-disable no-var */
 
-interface BrikaFsRuntime {
-  readFile(args: {
-    path: string;
-    encoding: 'utf-8' | 'binary';
-  }): Promise<{ encoding: 'utf-8'; content: string } | { encoding: 'binary'; content: Uint8Array }>;
-  writeFile(args: {
-    path: string;
-    content: string | Uint8Array;
-    mode: 'overwrite' | 'append' | 'create-new';
-  }): Promise<{ bytesWritten: number }>;
-  readdir(args: { path: string; recursive: boolean }): Promise<{
-    entries: Array<{ name: string; isFile: boolean; isDirectory: boolean; isSymlink: boolean }>;
-  }>;
-  stat(args: { path: string }): Promise<{
-    size: number;
-    mtimeMs: number;
-    isFile: boolean;
-    isDirectory: boolean;
-    isSymlink: boolean;
-  }>;
-  mkdir(args: { path: string; recursive: boolean }): Promise<{ created: boolean }>;
-  rm(args: { path: string; recursive: boolean; force: boolean }): Promise<{ removed: boolean }>;
-  exists(args: { path: string }): Promise<{ exists: boolean }>;
-}
+import type { BrikaFsRuntime } from '@brika/sdk/grants/fs-runtime';
 
 declare global {
   var __brika_fs: BrikaFsRuntime | undefined;
@@ -205,12 +182,10 @@ export async function exists(path: string): Promise<boolean> {
 export async function copyFile(src: string, dst: string): Promise<void> {
   // Implemented on top of read+write because the hub doesn't expose a
   // single-call copy yet. Two IPC hops + a buffer; fine for v1.
-  const { content, encoding } = await runtime().readFile({ path: src, encoding: 'binary' });
-  await runtime().writeFile({
-    path: dst,
-    content: encoding === 'utf-8' ? content : content,
-    mode: 'overwrite',
-  });
+  // We pin binary encoding on read so the buffer round-trips
+  // byte-for-byte regardless of file contents.
+  const { content } = await runtime().readFile({ path: src, encoding: 'binary' });
+  await runtime().writeFile({ path: dst, content, mode: 'overwrite' });
 }
 
 export const cp = copyFile;

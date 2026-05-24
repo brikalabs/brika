@@ -10,10 +10,10 @@
  * so we don't need the vector to be installed for the runtime to work
  * — the hub rejects calls that aren't in scope.
  *
- * Type declaration is exported as `BrikaFsRuntime` so the shim files
- * in `packages/compiler/src/runtime/` reference the same shape
- * without importing this module (they ship in plugin bundles, not on
- * the hub side).
+ * The runtime's method signatures live in `@brika/sdk/grants` so the
+ * compile-time `node:fs/promises` shim and the hub-side prelude share
+ * one declaration. We re-export the type here for ergonomics — the
+ * `Bun.file` proxy in this same directory consumes it as a peer.
  */
 
 import type { Channel } from '@brika/ipc';
@@ -27,31 +27,9 @@ import {
   FsStatResultSchema,
   FsWriteFileResultSchema,
 } from '@brika/sdk/grants';
+import type { BrikaFsRuntime } from '@brika/sdk/grants/fs-runtime';
 
-export interface BrikaFsRuntime {
-  readFile(args: {
-    path: string;
-    encoding: 'utf-8' | 'binary';
-  }): Promise<{ encoding: 'utf-8'; content: string } | { encoding: 'binary'; content: Uint8Array }>;
-  writeFile(args: {
-    path: string;
-    content: string | Uint8Array;
-    mode: 'overwrite' | 'append' | 'create-new';
-  }): Promise<{ bytesWritten: number }>;
-  readdir(args: { path: string; recursive: boolean }): Promise<{
-    entries: Array<{ name: string; isFile: boolean; isDirectory: boolean; isSymlink: boolean }>;
-  }>;
-  stat(args: { path: string }): Promise<{
-    size: number;
-    mtimeMs: number;
-    isFile: boolean;
-    isDirectory: boolean;
-    isSymlink: boolean;
-  }>;
-  mkdir(args: { path: string; recursive: boolean }): Promise<{ created: boolean }>;
-  rm(args: { path: string; recursive: boolean; force: boolean }): Promise<{ removed: boolean }>;
-  exists(args: { path: string }): Promise<{ exists: boolean }>;
-}
+export type { BrikaFsRuntime } from '@brika/sdk/grants/fs-runtime';
 
 declare global {
   // eslint-disable-next-line no-var

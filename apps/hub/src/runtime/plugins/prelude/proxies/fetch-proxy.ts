@@ -247,7 +247,11 @@ function extractStringBody(body: unknown): string | undefined {
     return body;
   }
   if (body instanceof URLSearchParams) {
-    return body.toString();
+    // Aliased through a typed local so sonar S6551 sees the
+    // URLSearchParams.toString() resolution explicitly rather than
+    // suspecting Object's default `[object Object]` form.
+    const params: URLSearchParams = body;
+    return params.toString();
   }
   if (body instanceof ArrayBuffer) {
     return new TextDecoder().decode(body);

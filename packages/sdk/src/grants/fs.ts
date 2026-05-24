@@ -20,6 +20,9 @@
 
 import { defineGrant, type PermissionGate } from '@brika/grants';
 import { z } from 'zod';
+import type { BrikaFsRuntime } from './fs-runtime';
+
+export type { BrikaFsRuntime } from './fs-runtime';
 
 // ─── Virtual-root constants ─────────────────────────────────────────────────
 
@@ -306,14 +309,6 @@ export const fsExists = defineGrant(
 
 declare module '../ctx' {
   interface Ctx {
-    fs: {
-      readFile(args: FsReadFileArgs): Promise<FsReadFileResult>;
-      writeFile(args: FsWriteFileArgs): Promise<FsWriteFileResult>;
-      readdir(args: FsReaddirArgs): Promise<FsReaddirResult>;
-      stat(args: FsStatArgs): Promise<FsStatResult>;
-      mkdir(args: FsMkdirArgs): Promise<FsMkdirResult>;
-      rm(args: FsRmArgs): Promise<FsRmResult>;
-      exists(args: FsExistsArgs): Promise<FsExistsResult>;
-    };
+    fs: BrikaFsRuntime;
   }
 }
