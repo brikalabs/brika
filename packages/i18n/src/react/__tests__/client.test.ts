@@ -8,6 +8,7 @@
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
+import { realFetch } from '@brika/testing';
 import i18n from 'i18next';
 import { createI18n, hydrateTranslations, switchLanguage } from '../client';
 
@@ -35,7 +36,6 @@ const harness: FetchHarness = {
   bundles: new Map(),
 };
 
-let savedFetch: typeof fetch;
 let savedWindow: unknown;
 let hadWindow: boolean;
 
@@ -52,7 +52,6 @@ const toUrl = (input: RequestInfo | URL): string => {
 beforeAll(async () => {
   const g = globalThis as Record<string, unknown>;
 
-  savedFetch = globalThis.fetch;
   const fakeFetch = ((input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
     const url = toUrl(input);
     harness.calls.push(url);
@@ -94,7 +93,7 @@ beforeAll(async () => {
     const body = harness.fixtures.get(fxKey) ?? {};
     return Promise.resolve(new Response(JSON.stringify(body), { status }));
   }) as typeof fetch;
-  fakeFetch.preconnect = savedFetch.preconnect;
+  fakeFetch.preconnect = realFetch.preconnect;
   globalThis.fetch = fakeFetch;
 
   hadWindow = 'window' in g;
@@ -139,7 +138,10 @@ beforeAll(async () => {
 
 afterAll(() => {
   const g = globalThis as Record<string, unknown>;
-  globalThis.fetch = savedFetch;
+  // Restore to the TRUE original (see @brika/testing#realFetch). Capturing
+  // `globalThis.fetch` at beforeAll could grab another file's spy under
+  // parallel `bun test` and re-install it on restore.
+  globalThis.fetch = realFetch;
   if (hadWindow) {
     g.window = savedWindow;
   } else {

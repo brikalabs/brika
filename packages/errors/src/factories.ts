@@ -116,6 +116,50 @@ export const errors = {
 
   netHostNotAllowed: (data: DataForCode<'NET_HOST_NOT_ALLOWED'>, opts?: FactoryOpts) =>
     buildError<'NET_HOST_NOT_ALLOWED'>('NET_HOST_NOT_ALLOWED', data, opts),
+
+  netProtocolBlocked: (data: DataForCode<'NET_PROTOCOL_BLOCKED'>, opts?: FactoryOpts) =>
+    buildError<'NET_PROTOCOL_BLOCKED'>('NET_PROTOCOL_BLOCKED', data, opts),
+
+  netPrivateIpBlocked: (data: DataForCode<'NET_PRIVATE_IP_BLOCKED'>, opts?: FactoryOpts) =>
+    buildError<'NET_PRIVATE_IP_BLOCKED'>('NET_PRIVATE_IP_BLOCKED', data, opts),
+
+  netRedirectBlocked: (data: DataForCode<'NET_REDIRECT_BLOCKED'>, opts?: FactoryOpts) =>
+    buildError<'NET_REDIRECT_BLOCKED'>('NET_REDIRECT_BLOCKED', data, opts),
+
+  netRedirectLoop: (data: DataForCode<'NET_REDIRECT_LOOP'>, opts?: FactoryOpts) =>
+    buildError<'NET_REDIRECT_LOOP'>('NET_REDIRECT_LOOP', data, opts),
+
+  netBodyTooLarge: (data: DataForCode<'NET_BODY_TOO_LARGE'>, opts?: FactoryOpts) =>
+    buildError<'NET_BODY_TOO_LARGE'>('NET_BODY_TOO_LARGE', data, opts),
+
+  // ─── fs ──────────────────────────────────────────────────────────────
+  fsPathOutsideRoot: (data: DataForCode<'FS_PATH_OUTSIDE_ROOT'>, opts?: FactoryOpts) =>
+    buildError<'FS_PATH_OUTSIDE_ROOT'>('FS_PATH_OUTSIDE_ROOT', data, opts),
+
+  fsSymlinkEscape: (data: DataForCode<'FS_SYMLINK_ESCAPE'>, opts?: FactoryOpts) =>
+    buildError<'FS_SYMLINK_ESCAPE'>('FS_SYMLINK_ESCAPE', data, opts),
+
+  fsQuotaExceeded: (data: DataForCode<'FS_QUOTA_EXCEEDED'>, opts?: FactoryOpts) =>
+    buildError<'FS_QUOTA_EXCEEDED'>('FS_QUOTA_EXCEEDED', data, opts),
+
+  fsFileTooLarge: (data: DataForCode<'FS_FILE_TOO_LARGE'>, opts?: FactoryOpts) =>
+    buildError<'FS_FILE_TOO_LARGE'>('FS_FILE_TOO_LARGE', data, opts),
+
+  fsAlreadyExists: (data: DataForCode<'FS_ALREADY_EXISTS'>, opts?: FactoryOpts) =>
+    buildError<'FS_ALREADY_EXISTS'>('FS_ALREADY_EXISTS', data, opts),
+
+  fsNotFound: (data: DataForCode<'FS_NOT_FOUND'>, opts?: FactoryOpts) =>
+    buildError<'FS_NOT_FOUND'>('FS_NOT_FOUND', data, opts),
+
+  // ─── ws ──────────────────────────────────────────────────────────────
+  wsOpenLimitExceeded: (data: DataForCode<'WS_OPEN_LIMIT_EXCEEDED'>, opts?: FactoryOpts) =>
+    buildError<'WS_OPEN_LIMIT_EXCEEDED'>('WS_OPEN_LIMIT_EXCEEDED', data, opts),
+
+  wsHandleNotFound: (data: DataForCode<'WS_HANDLE_NOT_FOUND'>, opts?: FactoryOpts) =>
+    buildError<'WS_HANDLE_NOT_FOUND'>('WS_HANDLE_NOT_FOUND', data, opts),
+
+  wsFrameTooLarge: (data: DataForCode<'WS_FRAME_TOO_LARGE'>, opts?: FactoryOpts) =>
+    buildError<'WS_FRAME_TOO_LARGE'>('WS_FRAME_TOO_LARGE', data, opts),
 } as const;
 
 // ─── Catalog completeness guard ────────────────────────────────────────────

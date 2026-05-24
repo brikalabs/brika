@@ -1,10 +1,18 @@
 #!/usr/bin/env sh
-# Pre-push: run typecheck + lint + tests concurrently and fail the push if any
-# of them errors. Wall time is gated by the slowest (tests, ~30s) instead of
-# the sum (~45s sequential).
+# Pre-push: typecheck + lint in parallel (CPU-bound, both fast and deterministic),
+# then tests on their own.
+#
+# Why not run all three concurrently any more: `bun run test` is itself
+# `bun --filter '*' test --parallel`, fanning out across ~50 packages.
+# Stacking that fan-out under another typecheck + biome process led to CPU
+# starvation that flaked timing-sensitive suites (TUI's useShortcut, brix
+# render scheduling). Running tests on a dedicated CPU window after the
+# static checks costs ~10-15s of wall time vs the prior 3-way parallel and
+# eliminates the flakes the team was chasing in commits 4e67a6fe and 165e14b9.
 #
 # Each task streams its output into its own log file. On any failure we tail
 # the failing log so the developer sees the actionable error before exit.
+
 set -u
 
 if ! command -v bun >/dev/null 2>&1; then
@@ -28,14 +36,34 @@ run() {
   fi
 }
 
+# Phase 1: static checks in parallel — fast, deterministic, CPU-bound.
 run typecheck bun run typecheck &
 run lint      bun run lint:strict &
-run test      bun run test &
 wait
+
+# Phase 2: tests alone — they get the whole CPU. Skip if the cheap phase
+# already failed; tests would just slow down the eventual failure message.
+phase1_failed=0
+for name in typecheck lint; do
+  if [ ! -f "$LOG_DIR/$name.status" ] || [ "$(cat "$LOG_DIR/$name.status")" != "ok" ]; then
+    phase1_failed=1
+  fi
+done
+
+if [ "$phase1_failed" -eq 0 ]; then
+  run test bun run test
+else
+  echo "↷  test (skipped — static checks failed)"
+  echo "skip" >"$LOG_DIR/test.status"
+fi
 
 fail=0
 for name in typecheck lint test; do
-  if [ ! -f "$LOG_DIR/$name.status" ] || [ "$(cat "$LOG_DIR/$name.status")" != "ok" ]; then
+  status=""
+  if [ -f "$LOG_DIR/$name.status" ]; then
+    status="$(cat "$LOG_DIR/$name.status")"
+  fi
+  if [ "$status" != "ok" ] && [ "$status" != "skip" ]; then
     fail=1
     echo ""
     echo "── $name failed ─────────────────────────────────────────"

@@ -15,6 +15,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
+import { realFetch } from '@brika/testing';
 import type { OAuthClient, OAuthProviderConfig } from '../api/oauth';
 
 // ─── Mock Setup ─────────────────────────────────────────────────────────────────
@@ -122,8 +123,6 @@ function makeReq(
 // ─── Tests ──────────────────────────────────────────────────────────────────────
 
 describe('OAuth coverage: authorize route + PKCE', () => {
-  let originalFetch: typeof globalThis.fetch;
-
   beforeEach(() => {
     for (const key of Object.keys(preferences)) {
       delete preferences[key];
@@ -132,11 +131,10 @@ describe('OAuth coverage: authorize route + PKCE', () => {
     mockGetPreferences.mockClear();
     mockUpdatePreference.mockClear();
     mockRegisterRoute.mockClear();
-    originalFetch = globalThis.fetch;
   });
 
   afterEach(() => {
-    globalThis.fetch = originalFetch;
+    globalThis.fetch = realFetch;
   });
 
   test('authorize route returns 302 redirect with PKCE params', async () => {
@@ -308,18 +306,15 @@ describe('OAuth coverage: authorize route non-PKCE', () => {
 });
 
 describe('OAuth coverage: callback route error cases', () => {
-  let originalFetch: typeof globalThis.fetch;
-
   beforeEach(() => {
     for (const key of Object.keys(preferences)) {
       delete preferences[key];
     }
     registeredRoutes.length = 0;
-    originalFetch = globalThis.fetch;
   });
 
   afterEach(() => {
-    globalThis.fetch = originalFetch;
+    globalThis.fetch = realFetch;
   });
 
   test('callback returns error HTML when error query param is present', async () => {
@@ -778,18 +773,15 @@ describe('OAuth coverage: callback route error cases', () => {
 });
 
 describe('OAuth coverage: PKCE full authorize + callback flow', () => {
-  let originalFetch: typeof globalThis.fetch;
-
   beforeEach(() => {
     for (const key of Object.keys(preferences)) {
       delete preferences[key];
     }
     registeredRoutes.length = 0;
-    originalFetch = globalThis.fetch;
   });
 
   afterEach(() => {
-    globalThis.fetch = originalFetch;
+    globalThis.fetch = realFetch;
   });
 
   test('PKCE flow: authorize sets verifier, callback sends code_verifier', async () => {
@@ -914,18 +906,15 @@ describe('OAuth coverage: PKCE full authorize + callback flow', () => {
 });
 
 describe('OAuth coverage: parseTokenResponse edge cases (via callback)', () => {
-  let originalFetch: typeof globalThis.fetch;
-
   beforeEach(() => {
     for (const key of Object.keys(preferences)) {
       delete preferences[key];
     }
     registeredRoutes.length = 0;
-    originalFetch = globalThis.fetch;
   });
 
   afterEach(() => {
-    globalThis.fetch = originalFetch;
+    globalThis.fetch = realFetch;
   });
 
   test('token response without expires_in defaults to 3600s', async () => {
@@ -1384,18 +1373,15 @@ describe('OAuth coverage: getStringPreference + getClientId/getClientSecret', ()
 });
 
 describe('OAuth coverage: authenticated fetch', () => {
-  let originalFetch: typeof globalThis.fetch;
-
   beforeEach(() => {
     for (const key of Object.keys(preferences)) {
       delete preferences[key];
     }
     registeredRoutes.length = 0;
-    originalFetch = globalThis.fetch;
   });
 
   afterEach(() => {
-    globalThis.fetch = originalFetch;
+    globalThis.fetch = realFetch;
   });
 
   test('fetch sets Authorization header with token_type and access_token', async () => {
@@ -1811,18 +1797,15 @@ describe('OAuth coverage: authenticated fetch', () => {
 });
 
 describe('OAuth coverage: refresh sends correct body params', () => {
-  let originalFetch: typeof globalThis.fetch;
-
   beforeEach(() => {
     for (const key of Object.keys(preferences)) {
       delete preferences[key];
     }
     registeredRoutes.length = 0;
-    originalFetch = globalThis.fetch;
   });
 
   afterEach(() => {
-    globalThis.fetch = originalFetch;
+    globalThis.fetch = realFetch;
   });
 
   test('refresh sends grant_type=refresh_token with client_id', async () => {

@@ -6,6 +6,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
+import { realFetch } from '@brika/testing';
 import { buildInfo } from '@/build-info';
 import { hub } from '@/hub';
 import type { UpdateInfo } from '@/updater';
@@ -112,7 +113,6 @@ function createGitHubReleaseFetch(tagName: string, options?: MockReleaseOptions)
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('getAssetName (indirect)', () => {
-  const originalFetch = globalThis.fetch;
   let mockFetch: ReturnType<typeof mock>;
 
   beforeEach(() => {
@@ -121,7 +121,7 @@ describe('getAssetName (indirect)', () => {
   });
 
   afterEach(() => {
-    globalThis.fetch = originalFetch;
+    globalThis.fetch = realFetch;
   });
 
   test('matches brika-<platform>-<arch>.tar.gz on non-windows', async () => {
@@ -433,7 +433,6 @@ describe('noUpdateInfo', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('fetchLatestRelease (indirect)', () => {
-  const originalFetch = globalThis.fetch;
   let mockFetch: ReturnType<typeof mock>;
 
   beforeEach(() => {
@@ -442,7 +441,7 @@ describe('fetchLatestRelease (indirect)', () => {
   });
 
   afterEach(() => {
-    globalThis.fetch = originalFetch;
+    globalThis.fetch = realFetch;
   });
 
   test('throws on non-OK response from GitHub API', async () => {
@@ -567,7 +566,6 @@ describe('fetchLatestRelease (indirect)', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('compareRelease (indirect)', () => {
-  const originalFetch = globalThis.fetch;
   let mockFetch: ReturnType<typeof mock>;
 
   beforeEach(() => {
@@ -576,7 +574,7 @@ describe('compareRelease (indirect)', () => {
   });
 
   afterEach(() => {
-    globalThis.fetch = originalFetch;
+    globalThis.fetch = realFetch;
   });
 
   test('version bump detected when latest > current', async () => {
@@ -691,7 +689,6 @@ describe('compareRelease (indirect)', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('verifySha256 (metadata population)', () => {
-  const originalFetch = globalThis.fetch;
   let mockFetch: ReturnType<typeof mock>;
 
   beforeEach(() => {
@@ -700,7 +697,7 @@ describe('verifySha256 (metadata population)', () => {
   });
 
   afterEach(() => {
-    globalThis.fetch = originalFetch;
+    globalThis.fetch = realFetch;
   });
 
   test('release-meta.json checksums are propagated to releaseCommit', async () => {
@@ -751,7 +748,6 @@ describe('verifySha256 (metadata population)', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('checkForUpdate', () => {
-  const originalFetch = globalThis.fetch;
   let mockFetch: ReturnType<typeof mock>;
 
   beforeEach(() => {
@@ -760,7 +756,7 @@ describe('checkForUpdate', () => {
   });
 
   afterEach(() => {
-    globalThis.fetch = originalFetch;
+    globalThis.fetch = realFetch;
   });
 
   test('returns updateAvailable=false when already on latest', async () => {

@@ -80,6 +80,28 @@ export interface GrantSpec<
   readonly permission?: PermissionGate<S>;
   /** Short human-readable description shown in the permission UI. */
   readonly description?: string;
+  /**
+   * Optional redaction for the audit log entry the registry emits on
+   * every dispatch. The default behaviour is to log args + result
+   * verbatim, which is fine for small typed grants but leaks user PII /
+   * inflates log volume for grants that ship raw bytes (fetch body, fs
+   * file contents, …). Defining `redact` lets each grant specify what's
+   * safe and compact to record without leaking secrets.
+   */
+  readonly redact?: GrantRedaction<I, O>;
+}
+
+export interface GrantRedaction<I extends z.ZodType, O extends z.ZodType> {
+  /**
+   * Project the dispatched args into the audit-safe shape. Defaults to
+   * the full args when omitted. Implementations typically replace large
+   * fields (`body`) with a size summary and drop secrets.
+   */
+  readonly args?: (args: z.infer<I>) => unknown;
+  /**
+   * Project the result. Same defaults / rationale as `args`.
+   */
+  readonly result?: (result: z.infer<O>) => unknown;
 }
 
 /**
@@ -134,6 +156,39 @@ export interface GrantEntry {
   readonly ctxPath: string;
   readonly scope?: unknown;
 }
+
+/**
+ * Structured record emitted for every grant dispatch when an
+ * `AuditLogger` is attached to the registry. Captures the call shape
+ * without leaking secrets — per-grant `redact` hooks shape `args` and
+ * `result` into the audit-safe projection.
+ *
+ * Exactly one of `result` (success) or `errCode` (failure) is set per
+ * entry; callers branch on the presence of either.
+ */
+export interface AuditEntry {
+  /** UNIX epoch milliseconds when the dispatch started. */
+  readonly ts: number;
+  /** Caller plugin uid. */
+  readonly pluginUid: string;
+  /** Grant id that was invoked. */
+  readonly grantId: GrantId;
+  /** Redacted args; the full payload stays in hub-side handler context. */
+  readonly args: unknown;
+  /** Redacted result. Present on success. */
+  readonly result?: unknown;
+  /** Brika error code. Present on failure. */
+  readonly errCode?: string;
+  /** Wall-clock duration of the dispatch in milliseconds. */
+  readonly durationMs: number;
+}
+
+/**
+ * Audit sink. The hub wires this to its structured log; tests use a
+ * collecting array to make assertions. Errors thrown from the sink are
+ * caught and discarded — observability MUST NOT break a grant call.
+ */
+export type AuditLogger = (entry: AuditEntry) => void;
 
 /**
  * The grant vector — the full set of operations a plugin process is

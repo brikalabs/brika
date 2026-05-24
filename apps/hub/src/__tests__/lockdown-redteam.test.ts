@@ -153,6 +153,79 @@ describe('lockdown enforce mode — ambient I/O globals', () => {
     expect(out.stdout).not.toContain('LEAKED:');
   });
 
+  // `process.kill` would let a plugin signal any pid it can guess — most
+  // dangerously the hub process itself (`process.kill(parentPid, 'SIGTERM')`).
+  // `process.dlopen` loads arbitrary native libraries, bypassing the
+  // `bun:ffi` module deny-list. Both are out-of-band capabilities that
+  // are NOT reachable through the grant vector.
+  test('process.kill is scrubbed', async () => {
+    const out = await runAttack(`
+      process.kill(process.pid, 0);
+      console.log('LEAKED:kill ran');
+    `);
+    expect(out.stdout).toMatch(/CAUGHT:.*process\.kill is not available/);
+    expect(out.stdout).not.toContain('LEAKED:');
+  });
+
+  test('process.dlopen is scrubbed', async () => {
+    const out = await runAttack(`
+      process.dlopen({ exports: {} }, '/nonexistent.so', 0);
+      console.log('LEAKED:dlopen ran');
+    `);
+    expect(out.stdout).toMatch(/CAUGHT:.*process\.dlopen is not available/);
+    expect(out.stdout).not.toContain('LEAKED:');
+  });
+
+  // ─── swapInProxy: prelude can replace scrubbed slots after vector install ───
+  // The fetch proxy lives in prelude/proxies/fetch-proxy.ts and installs
+  // AFTER lockdown via swapInProxy(). This test verifies the swap
+  // mechanism: it replaces the deny-stub atomically AND updates the
+  // snapshot so assertSealed() still passes. Without the snapshot
+  // update, the integrity gate would crash the plugin.
+  test('swapInProxy replaces a scrubbed slot AND keeps assertSealed() happy', async () => {
+    const out = await runAttack(`
+      const { swapInProxy, assertSealed } = await import('${LOCKDOWN_PATH}');
+      // Pre-swap: fetch is the deny stub, which throws SYNCHRONOUSLY.
+      // Wrap to capture the message without escaping the outer try.
+      let before = 'allowed-unexpectedly';
+      try { fetch('https://x/'); } catch (e) { before = e.message; }
+      // Swap in a real implementation.
+      const replacement = () => Promise.resolve(new Response('swapped'));
+      const ok = swapInProxy('globalThis', 'fetch', replacement);
+      const drift = assertSealed();
+      const after = await fetch('https://x/').then((r) => r.text());
+      console.log(JSON.stringify({ ok, before, drift, after }));
+    `);
+    const line = out.stdout.split('\n').find((l) => l.startsWith('{')) ?? '{}';
+    if (line === '{}') {
+      // Surface what the snippet did print so the failure has signal.
+      throw new Error(`no JSON line found in output:\nstdout=${out.stdout}\nstderr=${out.stderr}`);
+    }
+    const parsed = JSON.parse(line) as {
+      ok: boolean;
+      before: string;
+      drift: ReadonlyArray<string> | null;
+      after: string;
+    };
+    expect(parsed.ok).toBe(true);
+    expect(parsed.before).toMatch(/globalThis\.fetch is not available/);
+    expect(parsed.drift).toBeNull();
+    expect(parsed.after).toBe('swapped');
+  });
+
+  // Belt-and-suspenders: swapInProxy on an owner/key that wasn't part of
+  // the scrub list refuses to record a snapshot entry, so a future
+  // tampering attempt that happens to match the swap target would still
+  // be caught.
+  test('swapInProxy refuses to record an entry for an unscrubbed key', async () => {
+    const out = await runAttack(`
+      const { swapInProxy } = await import('${LOCKDOWN_PATH}');
+      const ok = swapInProxy('globalThis', 'nonexistent_slot', () => 1);
+      console.log('ok:' + ok);
+    `);
+    expect(out.stdout).toContain('ok:false');
+  });
+
   // `Request` and `Response` are deliberately NOT scrubbed — they're pure
   // value constructors with no I/O of their own. Pinning the behaviour
   // here so a future "tighten the lockdown" PR doesn't silently re-add

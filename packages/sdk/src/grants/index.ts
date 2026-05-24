@@ -13,5 +13,98 @@
  * hub side. No bridge interface to touch.
  */
 
+export type {
+  DnsLookupArgs,
+  DnsLookupResult,
+  DnsResolveMxArgs,
+  DnsResolveMxResult,
+  DnsResolveTxtArgs,
+  DnsResolveTxtResult,
+  DnsScope,
+} from './dns';
+export {
+  DnsLookupArgsSchema,
+  DnsLookupResultSchema,
+  DnsResolveMxArgsSchema,
+  DnsResolveMxResultSchema,
+  DnsResolveTxtArgsSchema,
+  DnsResolveTxtResultSchema,
+  DnsScopeSchema,
+  dnsLookup,
+  dnsResolveMx,
+  dnsResolveTxt,
+} from './dns';
+export type {
+  BrikaFsRuntime,
+  FsDirEntry,
+  FsExistsArgs,
+  FsExistsResult,
+  FsMkdirArgs,
+  FsMkdirResult,
+  FsPath,
+  FsReaddirArgs,
+  FsReaddirResult,
+  FsReadFileArgs,
+  FsReadFileResult,
+  FsRmArgs,
+  FsRmResult,
+  FsScope,
+  FsStatArgs,
+  FsStatResult,
+  FsWriteFileArgs,
+  FsWriteFileResult,
+  VirtualRoot,
+} from './fs';
+export {
+  FsDirEntrySchema,
+  FsExistsArgsSchema,
+  FsExistsResultSchema,
+  FsMkdirArgsSchema,
+  FsMkdirResultSchema,
+  FsPathSchema,
+  FsPatternSchema,
+  FsReaddirArgsSchema,
+  FsReaddirResultSchema,
+  FsReadFileArgsSchema,
+  FsReadFileResultSchema,
+  FsRmArgsSchema,
+  FsRmResultSchema,
+  FsScopeSchema,
+  FsStatArgsSchema,
+  FsStatResultSchema,
+  FsWriteFileArgsSchema,
+  FsWriteFileResultSchema,
+  fsExists,
+  fsMkdir,
+  fsReaddir,
+  fsReadFile,
+  fsRm,
+  fsStat,
+  fsWriteFile,
+  VIRTUAL_ROOTS,
+} from './fs';
 export type { FetchArgs, FetchResult, NetScope } from './net';
 export { FetchArgsSchema, FetchResultSchema, NetScopeSchema, netFetch } from './net';
+export type { UiPickFileArgs, UiPickFileResult, UiScope } from './ui';
+export { UiPickFileArgsSchema, UiPickFileResultSchema, UiScopeSchema, uiPickFile } from './ui';
+export type {
+  WsCloseArgs,
+  WsCloseResult,
+  WsConnectArgs,
+  WsConnectResult,
+  WsScope,
+  WsSendArgs,
+  WsSendResult,
+} from './ws';
+export {
+  WsCloseArgsSchema,
+  WsCloseResultSchema,
+  WsConnectArgsSchema,
+  WsConnectResultSchema,
+  WsScopeSchema,
+  WsSendArgsSchema,
+  WsSendResultSchema,
+  wsClose,
+  wsConnect,
+  wsSend,
+} from './ws';

@@ -6,11 +6,11 @@
  */
 
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import { realFetch } from '@brika/testing';
 import { MemoryCache } from '../cache';
 import { HttpClient } from '../client';
 import { HttpError } from '../types';
 
-let originalFetch: typeof globalThis.fetch;
 let fetchCallCount: number;
 
 /**
@@ -106,7 +106,6 @@ describe('HttpClient', () => {
   let client: HttpClient;
 
   beforeEach(() => {
-    originalFetch = globalThis.fetch;
     globalThis.fetch = createMockFetch() as typeof globalThis.fetch;
     // Disable retry to keep tests fast
     client = HttpClient.create({
@@ -119,7 +118,8 @@ describe('HttpClient', () => {
   });
 
   afterEach(() => {
-    globalThis.fetch = originalFetch;
+    // Restore to the TRUE original (see @brika/testing#realFetch).
+    globalThis.fetch = realFetch;
   });
 
   describe('Basic requests', () => {

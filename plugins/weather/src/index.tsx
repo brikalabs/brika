@@ -1,4 +1,3 @@
-// biome-ignore lint/suspicious/noDeprecatedImports: getDeviceLocation() is deprecated only inside brick render functions; here it is used in onInit() which is the correct surface
 import { getDeviceLocation, getPreferences, setBrickData } from '@brika/sdk';
 import {
   log,

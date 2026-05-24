@@ -1,14 +1,12 @@
-import { afterEach, beforeEach, expect, test } from 'bun:test';
+import { afterEach, expect, test } from 'bun:test';
+import { realFetch } from '@brika/testing';
 import { HttpClient } from '../client';
 
-let originalFetch: typeof globalThis.fetch;
-
-beforeEach(() => {
-  originalFetch = globalThis.fetch;
-});
-
+// Restore to the TRUE original fetch from @brika/testing rather than
+// a per-test capture of globalThis.fetch — under cross-file parallel
+// `bun test` the per-test capture can grab another file's spy.
 afterEach(() => {
-  globalThis.fetch = originalFetch;
+  globalThis.fetch = realFetch;
 });
 
 test('HttpClient uses globalThis.fetch', async () => {

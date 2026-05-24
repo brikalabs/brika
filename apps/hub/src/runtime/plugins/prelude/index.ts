@@ -49,6 +49,8 @@ import { setupBricks } from './bricks';
 import { setupLifecycle } from './lifecycle';
 import { setupLocation } from './location';
 import { loadManifest } from './manifest';
+import { installNetProxies } from './proxies';
+import { installFsRuntime } from './proxies/fs-runtime';
 import { setupRoutes } from './routes';
 import { setupSecrets } from './secrets';
 import { setupSparks } from './sparks';
@@ -77,6 +79,14 @@ const channel = new Channel({
     safeSend(msg);
   },
 });
+
+// Install `globalThis.__brika_fs` immediately. The compile-time
+// `node:fs/promises` shim references this global at call time; if a
+// plugin's bundled top-level body imports the shim and calls fs
+// methods before `start()`, the runtime needs to already be there.
+// The hub-side scope check is what enforces permissions — the
+// runtime just dispatches.
+installFsRuntime({ channel });
 
 // ---- Sequential message queue ----
 // Channel.handle() is async, so dispatching multiple buffered messages in
@@ -183,6 +193,11 @@ const bridge = {
       );
       process.exit(78); // EX_CONFIG (sysexits.h) — config/setup failure
     }
+    // Swap the scrubbed deny-stubs (globalThis.fetch, etc.) for real
+    // grant-mediated proxies now that the vector is installed and the
+    // channel is live. swapInProxy keeps the snapshot in sync so
+    // assertSealed() below still passes.
+    installNetProxies({ channel, log: (level, message) => log(level, message) });
     // Final integrity gate: refuse to come up if anything mutated a
     // scrubbed global between lockdown and now (a transitively-imported
     // module patched fetch, etc.). Better to crash than to silently

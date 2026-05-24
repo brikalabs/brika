@@ -14,8 +14,7 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "typecheck": "tsgo --noEmit",
-    "test": "bun test"
+    "typecheck": "tsgo --noEmit"
   },
   "dependencies": {
     "@brika/type-system": "workspace:*"

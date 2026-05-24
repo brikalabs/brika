@@ -311,13 +311,17 @@ export const PluginPackageSchema = BasePackageJson.extend({
     z.array(PreferenceSchema).describe('Plugin preferences/configuration schema')
   ),
   permissions: z.optional(
-    z.array(z.string()).describe('Permissions required by this plugin (e.g., "location")')
+    z
+      .array(z.string())
+      .describe(
+        'Permission families required by this plugin for non-grant SDK capabilities (e.g. "location" for getHubLocation, "secrets" for the secret store). Each family is a coarse opt-in the user toggles. Grants — the typed wire-call family — are declared separately under `grants`.'
+      )
   ),
   grants: z.optional(
     z
       .record(z.string(), z.unknown())
       .describe(
-        'Grants requested by this plugin, keyed by reverse-DNS id (e.g. "dev.brika.net.fetch"). The value is the requested scope (e.g. { allow: ["api.example.com"] }). Replaces the legacy `permissions` array.'
+        'Grants requested by this plugin, keyed by reverse-DNS id (e.g. "dev.brika.net.fetch"). The value is the requested scope (e.g. { allow: ["api.example.com"] }).'
       )
   ),
 });

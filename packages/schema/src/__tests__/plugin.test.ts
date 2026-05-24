@@ -8,39 +8,28 @@ const validManifest = {
   engines: { brika: '^1.0.0' },
 };
 
-describe('PluginPackageSchema — legacy permissions migration', () => {
-  test('parses a manifest with the new `capabilities` map', () => {
+describe('PluginPackageSchema — grants', () => {
+  test('parses a manifest with the `grants` map', () => {
     const result = PluginPackageSchema.safeParse({
       ...validManifest,
-      capabilities: {
+      grants: {
         'dev.brika.net.fetch': { allow: ['api.example.com'] },
       },
     });
     expect(result.success).toBe(true);
   });
 
-  test('rejects a manifest carrying the legacy `permissions: string[]` field', () => {
+  test('parses a manifest with an empty `grants` map', () => {
     const result = PluginPackageSchema.safeParse({
       ...validManifest,
-      permissions: ['net'],
+      grants: {},
     });
-    expect(result.success).toBe(false);
-    if (result.success) {
-      return;
-    }
-
-    const issue = result.error.issues.find((i) => i.path[0] === 'permissions');
-    expect(issue).toBeDefined();
-    expect(issue?.message).toContain("'permissions' field has been replaced by 'capabilities'");
-    expect(issue?.message).toContain('https://docs.brika.dev');
+    expect(result.success).toBe(true);
   });
 
-  test('rejects a manifest carrying `permissions` even when `capabilities` is also set', () => {
-    const result = PluginPackageSchema.safeParse({
-      ...validManifest,
-      capabilities: { 'dev.brika.net.fetch': {} },
-      permissions: ['net'],
-    });
-    expect(result.success).toBe(false);
+  test('parses a manifest with no grants field', () => {
+    // grants is optional — a plugin that requests nothing is valid.
+    const result = PluginPackageSchema.safeParse(validManifest);
+    expect(result.success).toBe(true);
   });
 });

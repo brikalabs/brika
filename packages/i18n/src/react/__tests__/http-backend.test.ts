@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import { realFetch } from '@brika/testing';
 import i18n from 'i18next';
 import { BundleNamespaceLoader, buildHttpBackend, type NamespaceLoader } from '../http-backend';
 
@@ -13,7 +14,6 @@ interface FetchHarness {
 }
 
 function installFetch(): FetchHarness {
-  const original = globalThis.fetch;
   const calls: FetchCall[] = [];
   let impl: (url: string, init?: RequestInit) => Promise<Response> = () =>
     Promise.resolve(new Response(JSON.stringify({}), { status: 200 }));
@@ -33,7 +33,7 @@ function installFetch(): FetchHarness {
     calls.push({ url, ifNoneMatch });
     return impl(url, init);
   }) as typeof fetch;
-  fakeFetch.preconnect = original.preconnect;
+  fakeFetch.preconnect = realFetch.preconnect;
   globalThis.fetch = fakeFetch;
 
   return {
@@ -44,11 +44,9 @@ function installFetch(): FetchHarness {
   };
 }
 
-let savedFetch: typeof fetch;
 let harness: FetchHarness;
 
 beforeEach(async () => {
-  savedFetch = globalThis.fetch;
   harness = installFetch();
   if (i18n.isInitialized) {
     await i18n.changeLanguage('en');
@@ -58,7 +56,8 @@ beforeEach(async () => {
 });
 
 afterEach(() => {
-  globalThis.fetch = savedFetch;
+  // Restore to the TRUE original (see @brika/testing#realFetch).
+  globalThis.fetch = realFetch;
 });
 
 describe('BundleNamespaceLoader — bulk path', () => {

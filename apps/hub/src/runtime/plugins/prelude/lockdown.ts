@@ -150,6 +150,17 @@ const SCRUBBED_BUN_KEYS = [
 ] as const;
 
 /**
+ * Methods on `process` that reach host capabilities outside the grant
+ * vector. `process.kill` can signal other processes (including the hub
+ * itself if PIDs are guessable); `process.dlopen` loads native modules,
+ * bypassing the `bun:ffi` deny-list. The rest of `process` (cwd, env,
+ * versions, …) is informational and stays available — `bun-runner`
+ * already filters env to remove operator secrets before the plugin
+ * subprocess starts.
+ */
+const SCRUBBED_PROCESS_KEYS = ['kill', 'dlopen'] as const;
+
+/**
  * Methods on `Bun.dns` that issue DNS queries (network I/O) or mutate
  * resolver configuration. All ship with `writable: true` so direct
  * assignment via `Reflect.set` works. Constants (`ADDRCONFIG`, `ALL`,
@@ -282,6 +293,7 @@ function tryReplace(owner: object, key: string, replacement: unknown): boolean {
 const globalScrubSnapshot = new Map<string, unknown>();
 const bunScrubSnapshot = new Map<string, unknown>();
 const bunDnsScrubSnapshot = new Map<string, unknown>();
+const processScrubSnapshot = new Map<string, unknown>();
 
 if (MODE !== 'off') {
   // 1. Ambient I/O globals.
@@ -309,6 +321,18 @@ if (MODE !== 'off') {
     for (const key of SCRUBBED_BUN_DNS_KEYS) {
       if (key in bunDnsNs) {
         replaceMember(bunDnsNs, 'Bun.dns', key);
+      }
+    }
+  }
+
+  // 2c. `process` capabilities that bypass the grant vector. Keep the rest
+  //     of `process` available: `cwd`, `env` (already filtered upstream by
+  //     bun-runner), `version`, `platform`, etc. are informational.
+  const processNs = (globalThis as unknown as { process?: MutableTarget }).process;
+  if (processNs) {
+    for (const key of SCRUBBED_PROCESS_KEYS) {
+      if (key in processNs) {
+        replaceMember(processNs, 'process', key);
       }
     }
   }
@@ -351,16 +375,32 @@ if (MODE !== 'off') {
     globalThis as unknown as { Bun?: { plugin?: (cfg: BunPluginConfig) => void } }
   ).Bun;
   if (bunWithPlugin?.plugin) {
+    // Narrow the filter to ONLY the denied module names. Bun's
+    // documented behaviour (see feedback_bun_onresolve_undefined in
+    // memory) is that any onResolve callback returning `undefined`
+    // silently drops the import. A broad `^(?:node|bun):/` filter
+    // would therefore break legitimate non-denied builtins
+    // (`node:crypto`, `node:path`, …) the moment the callback ran.
+    // We build the filter from `DENIED_NATIVE_MODULES` so the
+    // callback fires only on the deny set and never has a "pass
+    // through" branch to mishandle.
+    const escaped: string[] = [];
+    for (const mod of DENIED_NATIVE_MODULES) {
+      escaped.push(escapeRegex(mod));
+    }
+    const denyFilter = new RegExp(`^(?:${escaped.join('|')})$`);
     bunWithPlugin.plugin({
       name: 'brika-deny-native',
       setup(build) {
-        build.onResolve({ filter: /^(?:node|bun):/ }, (args) => {
-          if (!DENIED_NATIVE_MODULES.has(args.path)) {
-            return undefined;
-          }
+        build.onResolve({ filter: denyFilter }, (args) => {
           if (MODE === 'warn') {
             logViolation('warn-import', args.path);
-            return undefined;
+            // In warn mode we still want the legitimate module to
+            // load (instrumented). Returning {path, external: true}
+            // tells Bun "we know about this import, resolve it
+            // normally", avoiding the undefined-drops-the-import
+            // pitfall.
+            return { path: args.path, external: true };
           }
           throw new BrikaError(
             'PERMISSION_DENIED',
@@ -389,6 +429,13 @@ if (MODE !== 'off') {
     for (const key of SCRUBBED_BUN_DNS_KEYS) {
       if (key in bunDnsNs) {
         bunDnsScrubSnapshot.set(key, bunDnsNs[key]);
+      }
+    }
+  }
+  if (processNs) {
+    for (const key of SCRUBBED_PROCESS_KEYS) {
+      if (key in processNs) {
+        processScrubSnapshot.set(key, processNs[key]);
       }
     }
   }
@@ -428,10 +475,89 @@ export function assertSealed(): ReadonlyArray<string> | null {
   const g = globalThis as unknown as MutableTarget;
   const bunNs = (globalThis as unknown as { Bun?: MutableTarget }).Bun;
   const bunDnsNs = (bunNs as { dns?: MutableTarget } | undefined)?.dns;
+  const processNs = (globalThis as unknown as { process?: MutableTarget }).process;
   collectDrift(g, 'globalThis', globalScrubSnapshot, drift);
   collectDrift(bunNs, 'Bun', bunScrubSnapshot, drift);
   collectDrift(bunDnsNs, 'Bun.dns', bunDnsScrubSnapshot, drift);
+  collectDrift(processNs, 'process', processScrubSnapshot, drift);
   return drift.length === 0 ? null : drift;
+}
+
+/**
+ * Replace a previously-scrubbed slot with a real, grant-mediated proxy
+ * (e.g. swap the `() => deny('fetch')` stub for the actual fetch proxy
+ * the prelude installs after the vector arrives).
+ *
+ * Mirrors the new value into the same snapshot map `assertSealed` checks,
+ * so the integrity gate sees the proxy as the sealed value rather than
+ * reporting drift. Callers MUST invoke this between scrub-time (lockdown
+ * preload) and the integrity check (just before `ready`).
+ *
+ * Returns true on success, false if the slot couldn't be updated (e.g.
+ * the original member wasn't snapshotted). The caller decides whether to
+ * crash on failure.
+ */
+type ProxyOwner = 'globalThis' | 'Bun' | 'Bun.dns' | 'process';
+
+export function swapInProxy(ownerName: ProxyOwner, key: string, replacement: unknown): boolean {
+  if (MODE === 'off') {
+    return false;
+  }
+  const target = resolveOwner(ownerName);
+  if (!target) {
+    return false;
+  }
+  if (!tryReplace(target, key, replacement)) {
+    return false;
+  }
+  const snapshot = resolveSnapshot(ownerName);
+  if (!snapshot.has(key)) {
+    // The key wasn't part of the original scrub — caller used the wrong
+    // owner/key. Refuse to record so a stray write doesn't poison the
+    // integrity check.
+    return false;
+  }
+  snapshot.set(key, replacement);
+  return true;
+}
+
+function resolveOwner(ownerName: ProxyOwner): MutableTarget | undefined {
+  const g = globalThis as unknown as MutableTarget;
+  if (ownerName === 'globalThis') {
+    return g;
+  }
+  const bunNs = (g as { Bun?: MutableTarget }).Bun;
+  if (ownerName === 'Bun') {
+    return bunNs;
+  }
+  if (ownerName === 'Bun.dns') {
+    return (bunNs as { dns?: MutableTarget } | undefined)?.dns;
+  }
+  return (g as { process?: MutableTarget }).process;
+}
+
+function resolveSnapshot(ownerName: ProxyOwner): Map<string, unknown> {
+  switch (ownerName) {
+    case 'globalThis':
+      return globalScrubSnapshot;
+    case 'Bun':
+      return bunScrubSnapshot;
+    case 'Bun.dns':
+      return bunDnsScrubSnapshot;
+    case 'process':
+      return processScrubSnapshot;
+  }
+}
+
+/**
+ * Escape every RegExp metacharacter in `s` so it matches literally
+ * when embedded in a pattern. Used to build the deny-list filter
+ * from `DENIED_NATIVE_MODULES` without surprises (e.g. the `:` in
+ * `node:fs` is harmless, but if a future deny entry contains `.` or
+ * `*` the unescaped form would silently broaden the filter).
+ */
+function escapeRegex(s: string): string {
+  return s.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
 }
 
 // Re-export GRANTS_BRAND for downstream introspection.
