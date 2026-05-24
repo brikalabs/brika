@@ -14,46 +14,10 @@ import { describe, expect, mock, test } from 'bun:test';
 import { Text } from 'ink';
 import { render } from 'ink-testing-library';
 import React from 'react';
+import { flush, waitFor } from '../_test-helpers';
 import { TuiShellProvider, useCaptureInput } from '../shell';
 import { KeyScope } from './KeyScope';
 import { useShortcut } from './useShortcut';
-
-// 250ms is well above the ~10ms ink-testing-library typically needs to
-// commit a render + cleanup, but generous enough to absorb the worst-case
-// CI slot under parallel test pressure (where 30ms was failing).
-function flush(): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, 250));
-}
-
-/**
- * Poll an assertion until it passes or the timeout elapses. Used for
- * positive expectations after a state change — exits as soon as the
- * condition holds, so the common-case wall time stays near the ink
- * commit latency (~10ms). Under heavy parallel-test load the timeout
- * absorbs starvation without forcing every assertion to wait the
- * worst-case duration.
- *
- * Negative expectations ("did NOT fire") cannot use this shape —
- * they still need a fixed `flush()` because there's no positive
- * signal to wait for.
- */
-async function waitFor(check: () => void, timeoutMs = 3000): Promise<void> {
-  const start = Date.now();
-  let lastError: unknown;
-  // 20ms interval is short enough to feel synchronous when the
-  // condition is already true, long enough to avoid burning the
-  // event loop while React commits.
-  while (Date.now() - start < timeoutMs) {
-    try {
-      check();
-      return;
-    } catch (err) {
-      lastError = err;
-      await new Promise<void>((resolve) => setTimeout(resolve, 20));
-    }
-  }
-  throw lastError ?? new Error(`waitFor: condition still false after ${timeoutMs}ms`);
-}
 
 function Bind({
   spec,
@@ -79,7 +43,8 @@ describe('useShortcut', () => {
     const { stdin, unmount } = render(withShell(React.createElement(Bind, { spec: 'q', on: onQ })));
     await flush();
     stdin.write('q');
-    await waitFor(() => expect(onQ).toHaveBeenCalledTimes(1));
+    await waitFor(() => onQ.mock.calls.length >= 1);
+    expect(onQ).toHaveBeenCalledTimes(1);
     unmount();
   });
 
@@ -148,9 +113,10 @@ describe('useShortcut', () => {
     // 250ms `flush()`. We retry the write until the bind has
     // observed the release (or the poll times out).
     setterRef.current?.(false);
+    // Retry the write each tick until the bind has observed the release.
     await waitFor(() => {
       stdin.write('q');
-      expect(onQ).toHaveBeenCalled();
+      return onQ.mock.calls.length > 0;
     });
     expect(onQ).toHaveBeenCalledTimes(1);
     unmount();

@@ -16,11 +16,8 @@ import { describe, expect, mock, test } from 'bun:test';
 import { TuiShellProvider } from '@brika/tui';
 import { render } from 'ink-testing-library';
 import React from 'react';
+import { flush, waitFor } from '../../../../_test-helpers';
 import { FilterDraft } from './FilterDraft';
-
-function flush(ms = 250): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 function withShell(tree: React.ReactNode): React.ReactElement {
   return React.createElement(TuiShellProvider, { onQuit: () => undefined }, tree);
@@ -105,7 +102,7 @@ describe('<FilterDraft>', () => {
     await flush();
     // `\x1b` is parsed as Escape.
     stdin.write('\x1b');
-    await flush();
+    await waitFor(() => onCancel.mock.calls.length > 0);
     expect(onCancel).toHaveBeenCalledTimes(1);
     expect(onCommit).not.toHaveBeenCalled();
     unmount();

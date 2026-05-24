@@ -19,6 +19,7 @@ import { defineCommand } from '@brika/cli';
 import { Text } from 'ink';
 import { render } from 'ink-testing-library';
 import React from 'react';
+import { waitFor } from '../../_test-helpers';
 
 const exitCallback = mock<(delayMs?: number) => void>(() => undefined);
 const useExitMock = mock(() => exitCallback);
@@ -31,10 +32,6 @@ const completionsHookModule = await import('./useCompletionsInstall');
 const { useCompletionsInstall } = completionsHookModule;
 type Phase = ReturnType<typeof completionsHookModule.useCompletionsInstall>['phase'];
 
-function flush(ms = 250): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
 const COMMANDS: Command[] = [
   defineCommand({
     name: 'hub',
@@ -44,7 +41,10 @@ const COMMANDS: Command[] = [
 ];
 
 function Probe({ onResult }: Readonly<{ onResult: (phase: Phase) => void }>): React.ReactElement {
-  const { phase } = useCompletionsInstall(COMMANDS);
+  const { phase } = useCompletionsInstall(COMMANDS, {
+    exitDelayMs: 5,
+    exitErrorDelayMs: 5,
+  });
   onResult(phase);
   return React.createElement(Text, null, '.');
 }
@@ -86,7 +86,7 @@ describe('useCompletionsInstall', () => {
       })
     );
 
-    await flush(500);
+    await waitFor(() => exitCallback.mock.calls.length > 0);
 
     const final = phases.at(-1);
     expect(final?.kind).toBe('installed');
@@ -110,7 +110,7 @@ describe('useCompletionsInstall', () => {
         },
       })
     );
-    await flush(500);
+    await waitFor(() => exitCallback.mock.calls.length > 0);
     expect(latest.current?.kind).toBe('noShell');
     expect(exitCallback).toHaveBeenCalled();
     unmount();
@@ -135,7 +135,7 @@ describe('useCompletionsInstall', () => {
         },
       })
     );
-    await flush(500);
+    await waitFor(() => exitCallback.mock.calls.length > 0);
     expect(latest.current?.kind).toBe('error');
     if (latest.current?.kind === 'error') {
       expect(latest.current.message).toBe('disk full');

@@ -141,5 +141,59 @@ describe('runScan coverage', () => {
     });
     expect(result.validation.coverage).toEqual([]);
     expect(result.validation.issues).toEqual([]);
+    expect(result.warnings).toEqual([]);
+  });
+
+  test('source without `namespace` exposes each JSON file as its own namespace', async () => {
+    const hubLocales = join(workDir, 'hub', 'locales');
+    await writeJson(join(hubLocales, 'en', 'auth.json'), { profile: 'Profile' });
+    await writeJson(join(hubLocales, 'en', 'nav.json'), { help: 'Help' });
+    await writeJson(join(hubLocales, 'fr', 'auth.json'), { profile: 'Profil' });
+    await writeJson(join(hubLocales, 'fr', 'nav.json'), { help: 'Aide' });
+
+    const result = await runScan({
+      localesDir: null,
+      apiUrl: null,
+      referenceLocale: 'en',
+      sources: [{ dir: join(workDir, 'hub'), localesDir: hubLocales }],
+      cacheDir: join(workDir, '.cache'),
+    });
+
+    const namespaces = new Set(result.validation.coverage.map((c) => c.namespace));
+    expect(namespaces).toEqual(new Set(['auth', 'nav']));
+
+    const enAuth = result.coreTranslations.get('en')?.get('auth');
+    const frNav = result.coreTranslations.get('fr')?.get('nav');
+    expect(enAuth).toEqual({ profile: 'Profile' });
+    expect(frNav).toEqual({ help: 'Aide' });
+  });
+
+  test('surfaces remote-fetch failures as warnings instead of swallowing them', async () => {
+    bun.fetch(() => Promise.reject(new Error('ECONNREFUSED 127.0.0.1:3001')));
+
+    const result = await runScan({
+      localesDir: null,
+      apiUrl: 'http://127.0.0.1:3001/api/i18n',
+      referenceLocale: 'en',
+      sources: [],
+      cacheDir: join(workDir, '.cache'),
+    });
+
+    expect(result.warnings.length).toBeGreaterThan(0);
+    expect(result.warnings.join(' ')).toContain('ECONNREFUSED');
+  });
+
+  test('reports HTTP error status from remote endpoints in warnings', async () => {
+    bun.fetch(() => Promise.resolve(jsonResponse({}, 503)));
+
+    const result = await runScan({
+      localesDir: null,
+      apiUrl: 'http://hub.local/api/i18n',
+      referenceLocale: 'en',
+      sources: [],
+      cacheDir: join(workDir, '.cache'),
+    });
+
+    expect(result.warnings.some((w) => w.includes('HTTP 503'))).toBe(true);
   });
 });

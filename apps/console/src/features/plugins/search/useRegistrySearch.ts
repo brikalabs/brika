@@ -21,7 +21,13 @@ export interface UseRegistrySearch {
   readonly startInstall: (pkg: RegistrySearchResult) => void;
 }
 
-export function useRegistrySearch(): UseRegistrySearch {
+export interface UseRegistrySearchOptions {
+  /** Debounce window before the search fetch fires. Default 300ms. */
+  readonly debounceMs?: number;
+}
+
+export function useRegistrySearch(options: UseRegistrySearchOptions = {}): UseRegistrySearch {
+  const debounceMs = options.debounceMs ?? 300;
   // Own copy of the installed-name set (refetched on tab focus) so the
   // "installed" badge stays accurate without needing the Installed tab
   // to be mounted.
@@ -66,7 +72,7 @@ export function useRegistrySearch(): UseRegistrySearch {
           }
         }
       })();
-    }, 300);
+    }, debounceMs);
     return () => {
       cancelled = true;
       clearTimeout(timer);

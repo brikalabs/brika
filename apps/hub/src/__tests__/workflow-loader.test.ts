@@ -12,6 +12,7 @@ import { Logger } from '@/runtime/logs/log-router';
 import type { Workflow } from '@/runtime/workflows/types';
 import { WorkflowEngine } from '@/runtime/workflows/workflow-engine';
 import { WorkflowLoader } from '@/runtime/workflows/workflow-loader';
+import { sleep } from './_test-helpers';
 import { FsWatchMock } from './fs-watch-mock';
 
 useTestBed({
@@ -72,26 +73,6 @@ async function waitForWorkflowUnregister(workflowId: string, timeoutMs = 25_000)
   throw new Error('Timed out waiting for workflow unregister');
 }
 
-async function _primeWatcher(label: string): Promise<void> {
-  const workflowId = `__watch-ready-${label}`;
-  const filePath = join(TEST_DIR, `${workflowId}.yaml`);
-  const content = createWorkflowYaml(workflowId, `Watch Ready ${label}`);
-
-  // Write immediately, then re-nudge every 500 ms until the watcher fires.
-  // fs.watch events can be silently dropped under heavy parallel test load.
-  const ready = waitForWorkflowRegister(workflowId);
-  await Bun.write(filePath, content);
-  const nudge = setInterval(() => Bun.write(filePath, content), 500);
-  try {
-    await ready;
-  } finally {
-    clearInterval(nudge);
-  }
-
-  await new Promise((resolve) => setTimeout(resolve, 100));
-  mockRegister.mockClear();
-}
-
 describe('WorkflowLoader - Port Parsing', () => {
   beforeEach(async () => {
     await rm(TEST_DIR, {
@@ -147,8 +128,6 @@ blocks:
     const workflowPath = join(TEST_DIR, 'test.yaml');
     await Bun.write(workflowPath, yamlContent);
 
-    await new Promise((resolve) => setTimeout(resolve, 100));
-
     const files = await Array.fromAsync(
       new Bun.Glob('*.yaml').scan({
         cwd: TEST_DIR,
@@ -179,8 +158,6 @@ blocks:
     const workflowPath = join(TEST_DIR, 'test2.yaml');
     await Bun.write(workflowPath, yamlContent);
 
-    await new Promise((resolve) => setTimeout(resolve, 100));
-
     const files = await Array.fromAsync(
       new Bun.Glob('*.yaml').scan({
         cwd: TEST_DIR,
@@ -208,8 +185,6 @@ blocks:
 
     const workflowPath = join(TEST_DIR, 'test3.yaml');
     await Bun.write(workflowPath, yamlContent);
-
-    await new Promise((resolve) => setTimeout(resolve, 100));
 
     const files = await Array.fromAsync(
       new Bun.Glob('*.yaml').scan({
@@ -239,8 +214,6 @@ blocks:
 
     const workflowPath = join(TEST_DIR, 'test4.yaml');
     await Bun.write(workflowPath, yamlContent);
-
-    await new Promise((resolve) => setTimeout(resolve, 100));
 
     const files = await Array.fromAsync(
       new Bun.Glob('*.yaml').scan({
@@ -274,8 +247,6 @@ blocks:
     const workflowPath = join(TEST_DIR, 'test5.yaml');
     await Bun.write(workflowPath, yamlContent);
 
-    await new Promise((resolve) => setTimeout(resolve, 100));
-
     const files = await Array.fromAsync(
       new Bun.Glob('*.yaml').scan({
         cwd: TEST_DIR,
@@ -307,8 +278,6 @@ blocks:
 
     const workflowPath = join(TEST_DIR, 'test6.yaml');
     await Bun.write(workflowPath, yamlContent);
-
-    await new Promise((resolve) => setTimeout(resolve, 100));
 
     const files = await Array.fromAsync(
       new Bun.Glob('*.yaml').scan({
@@ -415,8 +384,6 @@ workspace:
 blocks: []
 `
     );
-
-    await new Promise((resolve) => setTimeout(resolve, 100));
 
     const files = await Array.fromAsync(
       new Bun.Glob('*.{yaml,yml}').scan({
@@ -1225,8 +1192,8 @@ describe('WorkflowLoader - Watch Callbacks (with FsWatchMock)', () => {
     await Bun.write(join(TEST_DIR, 'readme.txt'), 'not a workflow');
     fsWatchMock.simulateChange(TEST_DIR, 'readme.txt');
 
-    // Wait a bit and verify no registration happened
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    // Negative assertion: confirm no register triggered by the non-YAML file
+    await sleep(20);
     expect(mockRegister.mock.calls.length).toBe(registerCountBefore);
 
     // Now add a valid YAML file

@@ -6,5 +6,5 @@
  */
 
 export { splitCommand } from './command-parser';
-export { Supervisor } from './Supervisor';
+export { Supervisor, type SupervisorOptions } from './Supervisor';
 export type { Listener, ServiceState, ServiceStatus, SupervisorEvent } from './types';

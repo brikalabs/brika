@@ -240,17 +240,17 @@ describe('HttpClient', () => {
       const response1 = await client
         .get(url)
         .cache({
-          ttl: 100,
+          ttl: 20,
         })
         .send();
 
       // Wait for cache to expire
-      await new Promise((resolve) => setTimeout(resolve, 150));
+      await new Promise((resolve) => setTimeout(resolve, 30));
 
       const response2 = await client
         .get(url)
         .cache({
-          ttl: 100,
+          ttl: 20,
         })
         .send();
 

@@ -13,12 +13,9 @@
 import { describe, expect, test } from 'bun:test';
 import { render } from 'ink-testing-library';
 import React from 'react';
+import { flush } from '../../../../_test-helpers';
 import type { PluginListItem, PluginMetrics } from '../../../../shared/cli/api/plugins';
 import { CpuBadge, cpuVariant, formatBytes, PluginMeta } from './PluginMeta';
-
-function flush(ms = 250): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 const base: PluginListItem = {
   uid: 'uid-1',

@@ -40,7 +40,7 @@
   },
   "files": ["src", "tsconfig.plugin.json"],
   "scripts": {
-    "test": "bun test",
+    "test": "bun test --parallel",
     "typecheck": "tsgo --noEmit"
   },
   "dependencies": {

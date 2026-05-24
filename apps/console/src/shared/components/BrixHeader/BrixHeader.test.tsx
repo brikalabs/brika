@@ -11,13 +11,10 @@ import type { EmoteName, Mood } from '@brika/brix';
 import { createRouter, RouterProvider } from '@brika/tui';
 import { render } from 'ink-testing-library';
 import React from 'react';
+import { flush, waitFor } from '../../../_test-helpers';
 import { routes } from '../../../routes';
 import { CliContext, type CliState, type HubStatus } from '../../hooks/useCli';
 import { BrixHeader } from './index';
-
-function flush(ms = 250): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 interface CliOverrides {
   readonly hub?: HubStatus;
@@ -55,7 +52,7 @@ describe('<BrixHeader>', () => {
     const { lastFrame, unmount } = render(
       withCli(makeCli({ statusText: 'watching' }), React.createElement(BrixHeader, null))
     );
-    await flush(20);
+    await flush();
     expect(lastFrame() ?? '').toContain('watching');
     unmount();
   });
@@ -72,13 +69,10 @@ describe('<BrixHeader>', () => {
         React.createElement(BrixHeader, null)
       )
     );
-    // Let the initial reactive emote dispatch + the first reveal tick
-    // play through. The hub greeting line typewriters in, so we wait
-    // long enough for at least the first few chars to appear.
-    await flush(400);
-    const frame = lastFrame() ?? '';
     // The "running" REACTION line is "hub is awake — hi!", which the
-    // reducer reveals char-by-char. Verify any prefix is visible.
+    // reducer reveals char-by-char. Poll until any frame content lands.
+    await waitFor(() => (lastFrame() ?? '').length > 0, 1000);
+    const frame = lastFrame() ?? '';
     expect(frame.length).toBeGreaterThan(0);
     unmount();
   });
@@ -94,7 +88,7 @@ describe('<BrixHeader>', () => {
         React.createElement(BrixHeader, null)
       )
     );
-    await flush(20);
+    await flush();
     // While idle (the initial frame) the bubble shows raw statusText.
     expect(lastFrame() ?? '').toContain('hub is sleeping');
     unmount();
@@ -111,7 +105,7 @@ describe('<BrixHeader>', () => {
         React.createElement(BrixHeader, null)
       )
     );
-    await flush(20);
+    await flush();
     expect(lastFrame() ?? '').toContain('stale pid');
     unmount();
   });
@@ -153,7 +147,7 @@ describe('<BrixHeader>', () => {
           React.createElement(BrixHeader, null)
         )
       );
-      await flush(20);
+      await flush();
       expect(lastFrame() ?? '').toContain(`mood-${mood}`);
       unmount();
     }
@@ -164,18 +158,20 @@ describe('<BrixHeader>', () => {
     const { lastFrame, rerender, unmount } = render(
       withCli(initial, React.createElement(BrixHeader, null))
     );
-    await flush(20);
+    await flush();
     expect(lastFrame() ?? '').toContain('first line');
 
     rerender(
       withCli(makeCli({ statusText: 'second line' }), React.createElement(BrixHeader, null))
     );
-    // After dispatch + a few reveal ticks the new prefix should appear.
-    await flush(400);
-    const frame = lastFrame() ?? '';
     // Either the reveal stream has started or the new text is fully
-    // present; both prove the prop update propagated. We assert the
-    // first character is visible to keep the test deterministic.
+    // present; both prove the prop update propagated. Poll until the
+    // first character of the new line is visible.
+    await waitFor(() => {
+      const frame = lastFrame() ?? '';
+      return frame.includes('s') || frame.includes('first line');
+    }, 1000);
+    const frame = lastFrame() ?? '';
     expect(frame.includes('s') || frame.includes('first line')).toBe(true);
     unmount();
   });

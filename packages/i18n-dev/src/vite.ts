@@ -210,6 +210,67 @@ export function i18nDevtools(options: I18nDevPluginOptions = {}): Plugin {
         }
       }
 
+      // ── Hub-reachability grace period ────────────────────────────────────
+      // Mortar (and other dev orchestrators) routinely start the UI before
+      // the hub is listening, so the very first scan after boot often fails
+      // to reach the remote. Surfacing that as a `plugin-error` in the
+      // overlay (and as a warn line in the terminal) for the 3-or-so seconds
+      // until the SSE client reconnects produces dev-cycle noise the user
+      // can't act on. Instead we hold the first wave of hub warnings for
+      // `HUB_GRACE_MS`; if any rescan in that window succeeds (the SSE
+      // reconnect path forces one — see `sse-client.ts`), the warnings are
+      // dropped silently. If the grace period elapses without success the
+      // warnings are surfaced — that's the genuine "URL really is wrong /
+      // hub really is down" signal worth showing.
+      const HUB_GRACE_MS = 10_000;
+      let hubEverReached = false;
+      let pendingHubWarnings: readonly string[] = [];
+      let hubGraceTimer: ReturnType<typeof setTimeout> | null = null;
+
+      function surfaceHubWarnings(warnings: readonly string[]): void {
+        for (const warning of warnings) {
+          server.config.logger.warn(`[i18n-dev] ${warning}`, { timestamp: true });
+          pushPluginError(warning);
+        }
+      }
+
+      function clearHubGrace(): void {
+        if (hubGraceTimer) {
+          clearTimeout(hubGraceTimer);
+          hubGraceTimer = null;
+        }
+      }
+
+      function handleScanWarnings(warnings: readonly string[]): void {
+        if (warnings.length === 0) {
+          // Clean scan — the hub answered. Remember it so any future failure
+          // (hub crash mid-session) surfaces immediately instead of waiting
+          // another full grace period.
+          hubEverReached = true;
+          pendingHubWarnings = [];
+          clearHubGrace();
+          return;
+        }
+        if (hubEverReached) {
+          surfaceHubWarnings(warnings);
+          return;
+        }
+        // Still in the post-boot grace window — keep the most recent set so
+        // the eventual flush carries the actual reason, then arm the timer
+        // if it isn't already running.
+        pendingHubWarnings = warnings;
+        hubGraceTimer ??= setTimeout(() => {
+          hubGraceTimer = null;
+          const warningsToFlush = pendingHubWarnings;
+          pendingHubWarnings = [];
+          if (warningsToFlush.length === 0) {
+            return;
+          }
+          surfaceHubWarnings(warningsToFlush);
+          rebuildIssues();
+        }, HUB_GRACE_MS);
+      }
+
       function rebuildIssues(): void {
         if (!lastLocaleValidation) {
           // First-scan failure path: surface plugin errors even before any
@@ -276,6 +337,7 @@ export function i18nDevtools(options: I18nDevPluginOptions = {}): Plugin {
           lastTranslations = scan.translations;
           server.hot.send(HMR_TRANSLATIONS, lastTranslations);
           clearPluginErrors();
+          handleScanWarnings(scan.warnings);
           rebuildIssues();
 
           generateTypes(orchestratorOptions, scan.coreTranslations, scan.translations).catch(
@@ -320,6 +382,7 @@ export function i18nDevtools(options: I18nDevPluginOptions = {}): Plugin {
         const stop = startHubSseClient({ apiUrl, onChange: scheduleValidation });
         server.httpServer?.once('close', stop);
       }
+      server.httpServer?.once('close', clearHubGrace);
 
       if (localesDir) {
         server.watcher.add(localesDir);

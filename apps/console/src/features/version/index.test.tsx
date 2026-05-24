@@ -14,12 +14,9 @@
 import { describe, expect, test } from 'bun:test';
 import { render } from 'ink-testing-library';
 import React from 'react';
+import { flush } from '../../_test-helpers';
 import { CLI_VERSION } from '../../version';
 import { VersionView } from './index';
-
-function flush(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 describe('<VersionView>', () => {
   test('renders the CLI version + standard labels', async () => {

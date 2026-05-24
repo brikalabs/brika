@@ -1,0 +1,23 @@
+{
+  "net": {
+    "allow": {
+      "label": "Sites que le plugin peut contacter",
+      "placeholder": "api.example.com",
+      "example": "Ajoutez des noms d'hôte complets ou utilisez *.example.com pour un joker à un niveau."
+    }
+  },
+  "fs": {
+    "allow": {
+      "label": "Dossiers auxquels le plugin peut accéder",
+      "placeholder": "/Users/moi/documents/brika",
+      "example": "Indiquez des chemins absolus. Le plugin ne peut lire/écrire qu'à l'intérieur de ces dossiers."
+    }
+  },
+  "exec": {
+    "allowBinaries": {
+      "label": "Programmes que le plugin peut exécuter",
+      "placeholder": "git",
+      "example": "Saisissez le nom d'un programme (ex. `git`) ou un chemin complet. Les jokers ne sont pas autorisés."
+    }
+  }
+}

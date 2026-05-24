@@ -1,10 +1,13 @@
 /**
- * Main-view navigation keybinds: tab focus, route changes, search nav.
+ * Main-view navigation keybinds: route changes, search nav.
  *
  *   Esc            clear active search (no-op when no search is active)
- *   Tab / Shift+Tab cycle focused service
  *   / n N          enter search, next match, previous match
  *   ? d i f        open help / deps / input / toggle fullscreen
+ *
+ * `Tab` / `Shift+Tab` are NOT bound here — Ink's focus manager handles
+ * panel cycling natively (service list ↔ log pane). Inside the focused
+ * panel, `↑` / `↓` / `j` / `k` walk rows or scroll lines.
  *
  * Quit (`q` / `Ctrl+C`) is NOT registered here — it lives in
  * {@link useGlobalQuit} so it works from every screen.
@@ -15,7 +18,7 @@ import type { Routes } from '../routes';
 import { useMortar } from '../useMortar';
 
 export function useNavigationKeys(enabled: boolean): void {
-  const { services, focus, scroll, search, toast, fullscreen } = useMortar();
+  const { focus, scroll, search, toast, fullscreen } = useMortar();
   const router = useRouter<Routes>();
   const focused = focus.focused;
 
@@ -28,23 +31,6 @@ export function useNavigationKeys(enabled: boolean): void {
       scroll.goLive();
     },
     enabled && Boolean(search.query)
-  );
-
-  useShortcut(
-    'tab',
-    () => {
-      focus.setFocusedIndex((i) => (i + 1) % services.length);
-      scroll.goLive();
-    },
-    enabled && services.length > 0
-  );
-  useShortcut(
-    'shift+tab',
-    () => {
-      focus.setFocusedIndex((i) => (i - 1 + services.length) % services.length);
-      scroll.goLive();
-    },
-    enabled && services.length > 0
   );
 
   useShortcut('/', () => search.enter(), enabled);

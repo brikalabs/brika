@@ -11,12 +11,9 @@ import { useBunMock } from '@brika/testing';
 import { Text } from 'ink';
 import { render } from 'ink-testing-library';
 import React from 'react';
+import { flush, waitFor } from '../../../_test-helpers';
 import { CliContext, type CliState, type HubStatus } from '../../../shared/hooks/useCli';
 import { type UseRegistrySearch, useRegistrySearch } from './useRegistrySearch';
-
-function flush(ms = 250): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 function makeCli(hub: HubStatus): CliState {
   return {
@@ -70,10 +67,12 @@ function urlOf(input: Parameters<typeof fetch>[0]): string {
   return input.url;
 }
 
+const TEST_DEBOUNCE_MS = 20;
+
 function Probe({
   onResult,
 }: Readonly<{ onResult: (r: UseRegistrySearch) => void }>): React.ReactElement {
-  const r = useRegistrySearch();
+  const r = useRegistrySearch({ debounceMs: TEST_DEBOUNCE_MS });
   onResult(r);
   return React.createElement(Text, null, '.');
 }
@@ -119,7 +118,9 @@ describe('useRegistrySearch', () => {
         })
       )
     );
-    await flush(450);
+    // Negative assertion: wait long enough that any debounced search would
+    // have fired. 3× the test debounce window is comfortably past it.
+    await flush(TEST_DEBOUNCE_MS * 3);
     expect(searchCalls).toBe(0);
     expect(latest.current?.results).toEqual([]);
     expect(latest.current?.searching).toBe(false);
@@ -157,9 +158,10 @@ describe('useRegistrySearch', () => {
         })
       )
     );
-    await flush(20);
+    await flush();
     latest.current?.setQuery('http');
-    await flush(450);
+    // Debounce fires at ~300ms; poll until the search response lands.
+    await waitFor(() => (latest.current?.results.length ?? 0) >= 2, 1000);
 
     expect(lastSearchQueryRef.current).toBe('http');
     expect(latest.current?.results).toHaveLength(2);
@@ -187,9 +189,9 @@ describe('useRegistrySearch', () => {
         })
       )
     );
-    await flush(20);
+    await flush();
     latest.current?.setQuery('x');
-    await flush(450);
+    await waitFor(() => latest.current?.searchError !== null, 1000);
     expect(latest.current?.searchError).toMatch(/500/);
     expect(latest.current?.results).toEqual([]);
     unmount();

@@ -23,6 +23,7 @@ import { PluginResolver } from '@/runtime/plugins/plugin-resolver';
 import { SecretStore } from '@/runtime/secrets/secret-store';
 import { StateStore } from '@/runtime/state/state-store';
 import { type BunSecretsMock, installBunSecretsMock } from './_bun-secrets-mock';
+import { sleep, waitFor } from './_test-helpers';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Capture variables for mock.module callbacks
@@ -606,7 +607,8 @@ describe('PluginLifecycle (with mocked spawn)', () => {
       const callbacks = await loadPlugin();
       const process = mockProcessInstance as unknown as PluginProcess;
       callbacks.onDisconnect(process, new Error('crash'));
-      await new Promise((r) => setTimeout(r, 50));
+      // Negative assertion: confirm no restart scheduled
+      await sleep(20);
 
       const healthCalls = mockState.setHealth.mock.calls;
       const restartingCalls = healthCalls.filter(
@@ -627,7 +629,8 @@ describe('PluginLifecycle (with mocked spawn)', () => {
       const callbacks = await loadPlugin();
       const process = mockProcessInstance as unknown as PluginProcess;
       callbacks.onDisconnect(process, new Error('crash'));
-      await new Promise((r) => setTimeout(r, 50));
+      // Negative assertion: confirm no restart scheduled when disabled
+      await sleep(20);
 
       const healthCalls = mockState.setHealth.mock.calls;
       const restartingCalls = healthCalls.filter(
@@ -648,7 +651,15 @@ describe('PluginLifecycle (with mocked spawn)', () => {
       const callbacks = await loadPlugin();
       const process = mockProcessInstance as unknown as PluginProcess;
       callbacks.onDisconnect(process, new Error('crash'));
-      await new Promise((r) => setTimeout(r, 100));
+      await waitFor(() =>
+        mockState.setHealth.mock.calls.some(
+          (c: unknown[]) =>
+            c[0] === '@test/plugin' &&
+            c[1] === 'restarting' &&
+            typeof c[2] === 'object' &&
+            (c[2] as Record<string, unknown>).key === 'plugins:errors.restarting'
+        )
+      );
 
       const healthCalls = mockState.setHealth.mock.calls;
       const restartingCalls = healthCalls.filter(
@@ -672,6 +683,7 @@ describe('PluginLifecycle (with mocked spawn)', () => {
       for (let i = 0; i < 6; i++) {
         capturedCallbacks = null;
         mockProcessInstance = null;
+        const setHealthCallsBefore = mockState.setHealth.mock.calls.length;
         try {
           await lifecycle.load('/mock/path', true);
         } catch {
@@ -681,8 +693,10 @@ describe('PluginLifecycle (with mocked spawn)', () => {
           const cbs = capturedCallbacks as PluginProcessCallbacks;
           const process = mockProcessInstance as unknown as PluginProcess;
           cbs.onDisconnect(process, new Error(`crash-${i}`));
-          // Wait for the fire-and-forget unload() (which has a 50ms internal delay)
-          await new Promise((r) => setTimeout(r, 200));
+          // Wait for fire-and-forget unload() (50ms internal delay) to surface a health update
+          await waitFor(() => mockState.setHealth.mock.calls.length > setHealthCallsBefore, {
+            timeoutMs: 1000,
+          });
         }
       }
 

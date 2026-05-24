@@ -11,16 +11,11 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { Text } from 'ink';
 import { render } from 'ink-testing-library';
 import React from 'react';
+import { flush } from '../_test-helpers';
 import { debugBuffer } from './buffer';
 import { DebugProvider } from './DebugProvider';
 import type { DebugContextValue } from './types';
 import { useDebug, useOptionalDebug } from './useDebug';
-
-// 250ms matches the rest of the suite — generous enough for ink-testing-
-// library's stdin tick under CI pressure.
-function flush(): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, 250));
-}
 
 beforeEach(() => {
   debugBuffer.uninstall();

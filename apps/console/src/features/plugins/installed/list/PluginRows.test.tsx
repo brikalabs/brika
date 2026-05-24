@@ -11,12 +11,9 @@ import { describe, expect, test } from 'bun:test';
 import { TuiShellProvider } from '@brika/tui';
 import { render } from 'ink-testing-library';
 import React from 'react';
+import { flush } from '../../../../_test-helpers';
 import type { PluginListItem } from '../../../../shared/cli/api/plugins';
 import { PluginRows } from './PluginRows';
-
-function flush(ms = 250): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 function withShell(tree: React.ReactNode): React.ReactElement {
   return React.createElement(TuiShellProvider, { onQuit: () => undefined }, tree);

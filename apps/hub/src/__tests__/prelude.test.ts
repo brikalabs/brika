@@ -90,10 +90,10 @@ describe('Prelude', () => {
     helper = null;
     try {
       // SIGKILL (9) so a child ignoring SIGTERM can't keep the test alive,
-      // and race the wait against a 2s ceiling so a stuck `proc.exited`
+      // and race the wait against a short ceiling so a stuck `proc.exited`
       // doesn't pin the whole runner.
       proc.kill(9);
-      await Promise.race([proc.exited, new Promise((resolve) => setTimeout(resolve, 2000))]);
+      await Promise.race([proc.exited, new Promise((resolve) => setTimeout(resolve, 500))]);
     } catch {
       // already dead
     }

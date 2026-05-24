@@ -6,12 +6,9 @@
 import { describe, expect, test } from 'bun:test';
 import { render } from 'ink-testing-library';
 import React from 'react';
+import { flush } from './_test-helpers';
 import { SpriteView } from './SpriteView';
 import { EMPTY_SPRITE, parseSprite } from './sprite';
-
-function flush(): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, 250));
-}
 
 describe('<SpriteView>', () => {
   test('renders the empty sprite without crashing', async () => {

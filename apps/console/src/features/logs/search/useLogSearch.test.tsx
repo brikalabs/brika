@@ -9,12 +9,9 @@ import { useBunMock } from '@brika/testing';
 import { Text } from 'ink';
 import { render } from 'ink-testing-library';
 import React from 'react';
+import { flush } from '../../../_test-helpers';
 import type { StoredLogEventDto } from '../../../shared/cli/api';
 import { type LogSearchControls, useLogSearch } from './useLogSearch';
-
-function flush(ms = 50): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 function urlOf(input: Parameters<typeof fetch>[0]): string {
   if (typeof input === 'string') {
@@ -64,7 +61,7 @@ describe('useLogSearch', () => {
         },
       })
     );
-    await flush(20);
+    await flush();
     expect(latest.current?.mode).toBe('idle');
     expect(latest.current?.query).toBe('');
     expect(latest.current?.results).toEqual([]);
@@ -84,9 +81,9 @@ describe('useLogSearch', () => {
         },
       })
     );
-    await flush(20);
+    await flush();
     latest.current?.enter();
-    await flush(20);
+    await flush();
     expect(latest.current?.mode).toBe('editing');
     unmount();
   });
@@ -101,11 +98,11 @@ describe('useLogSearch', () => {
         },
       })
     );
-    await flush(20);
+    await flush();
     latest.current?.enter();
-    await flush(20);
+    await flush();
     latest.current?.cancel();
-    await flush(20);
+    await flush();
     expect(latest.current?.mode).toBe('idle');
     unmount();
   });
@@ -120,14 +117,14 @@ describe('useLogSearch', () => {
         },
       })
     );
-    await flush(20);
+    await flush();
     latest.current?.commit('error');
-    await flush(50);
+    await flush();
     expect(latest.current?.mode).toBe('ready');
     latest.current?.enter();
-    await flush(20);
+    await flush();
     latest.current?.cancel();
-    await flush(20);
+    await flush();
     expect(latest.current?.mode).toBe('ready');
     unmount();
   });
@@ -146,9 +143,9 @@ describe('useLogSearch', () => {
         },
       })
     );
-    await flush(20);
+    await flush();
     latest.current?.commit('');
-    await flush(20);
+    await flush();
     expect(latest.current?.mode).toBe('idle');
     expect(latest.current?.query).toBe('');
     expect(latest.current?.results).toEqual([]);
@@ -174,9 +171,9 @@ describe('useLogSearch', () => {
         },
       })
     );
-    await flush(20);
+    await flush();
     latest.current?.commit('error');
-    await flush(50);
+    await flush();
     expect(lastSearchRef.current).toBe('error');
     expect(latest.current?.mode).toBe('ready');
     expect(latest.current?.query).toBe('error');
@@ -197,9 +194,9 @@ describe('useLogSearch', () => {
         },
       })
     );
-    await flush(20);
+    await flush();
     latest.current?.commit('boom');
-    await flush(50);
+    await flush();
     expect(latest.current?.mode).toBe('error');
     expect(latest.current?.results).toEqual([]);
     expect(latest.current?.error).toMatch(/500/);
@@ -222,27 +219,27 @@ describe('useLogSearch', () => {
         },
       })
     );
-    await flush(20);
+    await flush();
     latest.current?.commit('x');
-    await flush(50);
+    await flush();
     expect(latest.current?.currentIdx).toBe(0);
 
     latest.current?.next();
-    await flush(20);
+    await flush();
     expect(latest.current?.currentIdx).toBe(1);
 
     latest.current?.next();
-    await flush(20);
+    await flush();
     expect(latest.current?.currentIdx).toBe(2);
 
     // wrap forward
     latest.current?.next();
-    await flush(20);
+    await flush();
     expect(latest.current?.currentIdx).toBe(0);
 
     // wrap backward
     latest.current?.prev();
-    await flush(20);
+    await flush();
     expect(latest.current?.currentIdx).toBe(2);
     unmount();
   });
@@ -257,10 +254,10 @@ describe('useLogSearch', () => {
         },
       })
     );
-    await flush(20);
+    await flush();
     latest.current?.next();
     latest.current?.prev();
-    await flush(20);
+    await flush();
     expect(latest.current?.currentIdx).toBe(0);
     expect(latest.current?.results).toEqual([]);
     unmount();
@@ -276,13 +273,13 @@ describe('useLogSearch', () => {
         },
       })
     );
-    await flush(20);
+    await flush();
     latest.current?.commit('hit');
-    await flush(50);
+    await flush();
     expect(latest.current?.results).toHaveLength(1);
 
     latest.current?.clear();
-    await flush(20);
+    await flush();
     expect(latest.current?.mode).toBe('idle');
     expect(latest.current?.query).toBe('');
     expect(latest.current?.results).toEqual([]);
@@ -329,9 +326,9 @@ describe('useLogSearch', () => {
         },
       })
     );
-    await flush(20);
+    await flush();
     latest.current?.commit('first');
-    await flush(20);
+    await flush();
     latest.current?.commit('second');
     await flush(80);
 

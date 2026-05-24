@@ -15,11 +15,8 @@ import {
 } from '@brika/tui';
 import { render } from 'ink-testing-library';
 import React from 'react';
+import { flush } from '../../_test-helpers';
 import { useShellKeys } from './useShellKeys';
-
-function flush(ms = 250): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 // Mirror the production route table closely enough for the section
 // hotkeys to map to real keys. `NAV_SECTIONS` is the source of truth

@@ -9,6 +9,18 @@ import { join } from 'node:path';
 import type { BlockTypeDefinition, Workflow } from '../types';
 import { type BlockTypeRegistry, type LoaderEvents, WorkspaceLoader } from '../workspace/loader';
 
+/** Poll `predicate` until truthy or timeout. Short-circuits as soon as the
+ *  loader's setInterval fires and lands the expected state. */
+async function waitFor(predicate: () => boolean, timeoutMs = 2000): Promise<void> {
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    if (predicate()) {
+      return;
+    }
+    await new Promise((r) => setTimeout(r, 5));
+  }
+}
+
 // Create a temporary directory for tests
 const createTempDir = (): string => {
   const dir = join(tmpdir(), `workflow-loader-test-${Date.now()}`);
@@ -387,7 +399,7 @@ blocks: []
       const loader = new WorkspaceLoader({
         dir: tempDir,
         registry,
-        pollInterval: 50,
+        pollInterval: 20,
         events: {
           onLoad: (workflow) => loaded.push(workflow.workspace.id),
         },
@@ -400,8 +412,7 @@ blocks: []
         // Write a new file after watch started
         writeFileSync(join(tempDir, 'new.yaml'), createWorkspaceYaml('new-wf', 'New'));
 
-        // Wait for poll to detect the change
-        await new Promise((resolve) => setTimeout(resolve, 200));
+        await waitFor(() => loaded.includes('new-wf'));
 
         expect(loaded).toContain('new-wf');
         expect(loader.get('new-wf')).toBeDefined();
@@ -417,7 +428,7 @@ blocks: []
       const loader = new WorkspaceLoader({
         dir: tempDir,
         registry,
-        pollInterval: 50,
+        pollInterval: 20,
         events: {
           onLoad: (workflow) => loaded.push(workflow.workspace.name),
         },
@@ -431,7 +442,7 @@ blocks: []
         // Modify the file
         writeFileSync(join(tempDir, 'modify.yaml'), createWorkspaceYaml('modify-wf', 'Updated'));
 
-        await new Promise((resolve) => setTimeout(resolve, 200));
+        await waitFor(() => loaded.includes('Updated'));
 
         expect(loaded).toContain('Updated');
       } finally {
@@ -446,7 +457,7 @@ blocks: []
       const loader = new WorkspaceLoader({
         dir: tempDir,
         registry,
-        pollInterval: 50,
+        pollInterval: 20,
         events: {
           onUnload: (id) => unloaded.push(id),
         },
@@ -457,14 +468,13 @@ blocks: []
       loader.watch();
 
       try {
-        // Wait for the first poll to register the file hash
-        await new Promise((resolve) => setTimeout(resolve, 150));
+        // Wait for the first poll to register the file hash (one poll cycle).
+        await new Promise((resolve) => setTimeout(resolve, 40));
 
         // Now delete the file
         rmSync(join(tempDir, 'delete-me.yaml'));
 
-        // Wait for the next poll to detect the deletion
-        await new Promise((resolve) => setTimeout(resolve, 200));
+        await waitFor(() => unloaded.includes('delete-wf'));
 
         expect(unloaded).toContain('delete-wf');
         expect(loader.get('delete-wf')).toBeUndefined();
@@ -480,7 +490,7 @@ blocks: []
       const loader = new WorkspaceLoader({
         dir: tempDir,
         registry,
-        pollInterval: 50,
+        pollInterval: 20,
         events: {
           onLoad: () => loadCount++,
         },
@@ -490,12 +500,12 @@ blocks: []
       loader.watch();
 
       try {
-        // Wait for the first poll to establish the hash (this triggers one reload)
-        await new Promise((resolve) => setTimeout(resolve, 100));
+        // Wait for the first poll to establish the hash (this triggers one reload).
+        await waitFor(() => loadCount >= 1);
         const countAfterHashEstablished = loadCount;
 
-        // Wait for several more poll cycles — should NOT reload again
-        await new Promise((resolve) => setTimeout(resolve, 200));
+        // Wait for several more poll cycles — should NOT reload again.
+        await new Promise((resolve) => setTimeout(resolve, 100));
 
         expect(loadCount).toBe(countAfterHashEstablished);
       } finally {
@@ -510,7 +520,7 @@ blocks: []
       const loader = new WorkspaceLoader({
         dir: badDir,
         registry,
-        pollInterval: 50,
+        pollInterval: 20,
         events: {
           onError: (error) => errors.push(error),
         },
@@ -520,7 +530,7 @@ blocks: []
       loader.watch();
 
       try {
-        await new Promise((resolve) => setTimeout(resolve, 200));
+        await waitFor(() => errors.some((e) => e.startsWith('Watch error:')));
 
         expect(errors.some((e) => e.startsWith('Watch error:'))).toBe(true);
       } finally {

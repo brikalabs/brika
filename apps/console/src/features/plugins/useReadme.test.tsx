@@ -7,14 +7,11 @@ import { describe, expect, mock, test } from 'bun:test';
 import { Text } from 'ink';
 import { render } from 'ink-testing-library';
 import React from 'react';
+import { flush } from '../../_test-helpers';
 import { type UseReadme, useReadme } from './useReadme';
 
 // 250ms is the project-wide ink-testing flush ceiling — generous enough
 // to absorb CI under parallel test pressure (see List.test.tsx).
-function flush(ms = 250): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
 interface ProbeProps {
   readonly fetcher: (key: string) => Promise<string>;
   readonly k: string;
@@ -47,7 +44,7 @@ describe('useReadme', () => {
     );
     // One flush lets the effect run (which sets loading=true) but the
     // promise never resolves, so we observe the in-flight state.
-    await flush(20);
+    await flush();
     expect(latest).not.toBeNull();
     expect(latest.current?.loading).toBe(true);
     expect(latest.current?.text).toBeNull();
@@ -112,12 +109,12 @@ describe('useReadme', () => {
     const { rerender, unmount } = render(
       React.createElement(Probe, { fetcher, k: 'first', onResult })
     );
-    await flush(20);
+    await flush();
     expect(fetcher).toHaveBeenCalledTimes(1);
 
     // Switch keys before the first promise resolves.
     rerender(React.createElement(Probe, { fetcher, k: 'second', onResult }));
-    await flush(20);
+    await flush();
     expect(fetcher).toHaveBeenCalledTimes(2);
 
     // Resolve the stale (first) call last — its value must be ignored

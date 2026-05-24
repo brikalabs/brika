@@ -7,7 +7,16 @@
  * supplies the per-tree namespace, including any prefix conventions like
  * `plugin:<pkg>` or `package:<id>`.
  *
- * Optional `localesDir` lets per-source JSON live outside the main `localesDir`.
+ * Two locale-folder layouts are supported, picked by whether `namespace` is set:
+ *
+ *   • **Merged layout** (`namespace` set) — every `*.json` under `<localesDir>/<locale>/`
+ *     is deep-merged into one bag and exposed under that single `namespace`.
+ *     Standard for workspace packages where one package owns one namespace.
+ *
+ *   • **Per-file layout** (`namespace` omitted) — each `*.json` becomes its own
+ *     namespace named after the file basename (`auth.json` → `auth`). Use this
+ *     when the source serves many namespaces from a single locales folder (e.g.
+ *     a host app whose runtime exposes one namespace per file).
  */
 export interface SourceConfig {
   /** Absolute path to the source directory to scan for `t()` calls. */
@@ -15,7 +24,8 @@ export interface SourceConfig {
   /**
    * Namespace prefix for bare-key calls inside this source tree. Pass the
    * caller's prefix verbatim (e.g. `plugin:@scope/foo`) — the dev tool does
-   * not interpret it.
+   * not interpret it. Omit to opt into the per-file locale layout described
+   * on `SourceConfig`.
    */
   readonly namespace?: string;
   /**

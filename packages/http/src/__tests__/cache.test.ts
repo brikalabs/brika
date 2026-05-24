@@ -30,12 +30,12 @@ describe('MemoryCache', () => {
   });
 
   test('should expire entries after TTL', async () => {
-    cache.set('key1', 'value1', 100);
+    cache.set('key1', 'value1', 20);
 
     expect(cache.get('key1')).toBe('value1');
 
     // Wait for expiration
-    await new Promise((resolve) => setTimeout(resolve, 150));
+    await new Promise((resolve) => setTimeout(resolve, 30));
 
     expect(cache.get('key1')).toBe(null);
     expect(cache.has('key1')).toBe(false);
@@ -100,11 +100,11 @@ describe('MemoryCache', () => {
   });
 
   test('should cleanup expired entries', async () => {
-    cache.set('key1', 'value1', 100);
+    cache.set('key1', 'value1', 20);
     cache.set('key2', 'value2', 60_000);
 
     // Wait for first entry to expire
-    await new Promise((resolve) => setTimeout(resolve, 150));
+    await new Promise((resolve) => setTimeout(resolve, 30));
 
     cache.cleanup();
 

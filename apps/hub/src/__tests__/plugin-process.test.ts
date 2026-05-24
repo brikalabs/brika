@@ -33,6 +33,7 @@ import {
   type PluginProcessCallbacks,
   type PluginProcessConfig,
 } from '@/runtime/plugins/plugin-process';
+import { sleep, waitFor } from './_test-helpers';
 
 describe('PluginProcess', () => {
   let process: PluginProcess;
@@ -746,7 +747,7 @@ describe('PluginProcess', () => {
       );
 
       try {
-        await new Promise((resolve) => setTimeout(resolve, 150));
+        await waitFor(() => mockChannel.ping.mock.calls.length > 0 && pp.lastPong > 0);
 
         expect(mockChannel.ping).toHaveBeenCalled();
         expect(pp.lastPong).toBeGreaterThan(0);
@@ -779,11 +780,11 @@ describe('PluginProcess', () => {
       );
 
       try {
-        await new Promise((resolve) => setTimeout(resolve, 150));
+        const onHeartbeatFailed = callbacks.onHeartbeatFailed as ReturnType<typeof mock>;
+        await waitFor(() => onHeartbeatFailed.mock.calls.length > 0);
 
         expect(callbacks.onHeartbeatFailed).toHaveBeenCalled();
-        const [failedProcess, silentMs] = (callbacks.onHeartbeatFailed as ReturnType<typeof mock>)
-          .mock.calls[0];
+        const [failedProcess, silentMs] = onHeartbeatFailed.mock.calls[0];
         expect(failedProcess).toBe(pp);
         expect(silentMs).toBeGreaterThanOrEqual(0);
       } finally {
@@ -815,7 +816,8 @@ describe('PluginProcess', () => {
       pp.stop();
 
       const callsBefore = mockChannel.ping.mock.calls.length;
-      await new Promise((resolve) => setTimeout(resolve, 150));
+      // Negative assertion: a heartbeat would fire within 50ms — wait twice that
+      await sleep(100);
 
       // No new pings after stop
       expect(mockChannel.ping.mock.calls.length).toBe(callsBefore);
@@ -847,7 +849,7 @@ describe('PluginProcess', () => {
       );
 
       try {
-        await new Promise((resolve) => setTimeout(resolve, 150));
+        await waitFor(() => mockChannel.ping.mock.calls.length > 0);
         // The heartbeat ran; the metrics branch was entered (onMetrics is defined)
         // but getProcessMetrics(12345) returns null for a fake pid, so onMetrics
         // is not called. The important thing is the code path is covered.
@@ -884,7 +886,7 @@ describe('PluginProcess', () => {
       );
 
       try {
-        await new Promise((resolve) => setTimeout(resolve, 150));
+        await waitFor(() => mockChannel.ping.mock.calls.length > 0);
         // Heartbeat ran but skipped metrics branch because onMetrics is undefined
         expect(mockChannel.ping).toHaveBeenCalled();
       } finally {

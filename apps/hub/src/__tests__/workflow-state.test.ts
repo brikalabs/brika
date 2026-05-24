@@ -14,6 +14,7 @@ import { PluginManager } from '@/runtime/plugins/plugin-manager';
 import type { Workflow } from '@/runtime/workflows/types';
 import { WorkflowEngine } from '@/runtime/workflows/workflow-engine';
 import type { ExecutionEvent } from '@/runtime/workflows/workflow-executor';
+import { waitFor } from './_test-helpers';
 
 useTestBed({
   autoStub: false,
@@ -401,8 +402,7 @@ describe('WorkflowEngine - Execution Control', () => {
 
     engine.register(workflow);
 
-    // Give async start time to complete
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    await waitFor(() => engine.get('auto-start')?.status === 'running');
 
     const registered = engine.get('auto-start');
     expect(registered?.status).toBe('running');
@@ -413,8 +413,7 @@ describe('WorkflowEngine - Execution Control', () => {
     const workflow = createWorkflow('no-auto-start', false);
 
     engine.register(workflow);
-    await new Promise((resolve) => setTimeout(resolve, 50));
-
+    // Sync state: registration with `enabled: false` does not schedule start
     const registered = engine.get('no-auto-start');
     expect(registered?.status).toBe('stopped');
     expect(registered?.startedAt).toBeUndefined();
@@ -424,7 +423,7 @@ describe('WorkflowEngine - Execution Control', () => {
     const workflow = createWorkflow('running-check', true);
 
     engine.register(workflow);
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    await waitFor(() => engine.isWorkflowRunning('running-check'));
 
     expect(engine.isWorkflowRunning('running-check')).toBeTrue();
     expect(engine.isWorkflowRunning('non-existent')).toBeFalse();
@@ -437,7 +436,7 @@ describe('WorkflowEngine - Execution Control', () => {
     const result = await engine.setEnabled('enable-test', true);
 
     expect(result).toBeTrue();
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    await waitFor(() => engine.get('enable-test')?.status === 'running');
 
     const updated = engine.get('enable-test');
     expect(updated?.enabled).toBeTrue();
@@ -447,7 +446,7 @@ describe('WorkflowEngine - Execution Control', () => {
   test('should disable and stop workflow', async () => {
     const workflow = createWorkflow('disable-test', true);
     engine.register(workflow);
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    await waitFor(() => engine.get('disable-test')?.status === 'running');
 
     const result = await engine.setEnabled('disable-test', false);
 
@@ -480,7 +479,7 @@ describe('WorkflowEngine - Execution Control', () => {
     const workflow = createWorkflow('error-workflow', true);
     engine.register(workflow);
 
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    await waitFor(() => engine.get('error-workflow')?.status === 'error');
 
     const registered = engine.get('error-workflow');
     expect(registered?.status).toBe('error');
@@ -561,7 +560,7 @@ describe('WorkflowEngine - Global Listeners', () => {
     const workflow = createWorkflow('listener-test', true);
     engine.register(workflow);
 
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    await waitFor(() => events.some((e) => e.type === 'workflow.started'));
 
     expect(events.length).toBeGreaterThan(0);
     const startEvent = events.find((e) => e.type === 'workflow.started');
@@ -579,7 +578,7 @@ describe('WorkflowEngine - Global Listeners', () => {
     const workflow = createWorkflow('multi-listener', true);
     engine.register(workflow);
 
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    await waitFor(() => events1.length > 0 && events2.length > 0);
 
     expect(events1.length).toBeGreaterThan(0);
     expect(events2.length).toBeGreaterThan(0);
@@ -593,7 +592,7 @@ describe('WorkflowEngine - Global Listeners', () => {
     const workflow1 = createWorkflow('listener-remove-1', true);
     engine.register(workflow1);
 
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    await waitFor(() => events.some((e) => e.type === 'workflow.started'));
     const countAfterFirst = events.length;
 
     unsubscribe();
@@ -601,7 +600,8 @@ describe('WorkflowEngine - Global Listeners', () => {
     const workflow2 = createWorkflow('listener-remove-2', true);
     engine.register(workflow2);
 
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    // Allow the engine to start workflow2 so the post-unsubscribe state is observable
+    await waitFor(() => engine.get('listener-remove-2')?.status === 'running');
 
     // Should not receive new events after unsubscribe
     expect(events.length).toBe(countAfterFirst);
@@ -647,7 +647,9 @@ describe('WorkflowEngine - Lifecycle', () => {
     engine.register(workflow1);
     engine.register(workflow2);
 
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    await waitFor(
+      () => engine.isWorkflowRunning('stop-test-1') && engine.isWorkflowRunning('stop-test-2')
+    );
 
     expect(engine.isWorkflowRunning('stop-test-1')).toBeTrue();
     expect(engine.isWorkflowRunning('stop-test-2')).toBeTrue();

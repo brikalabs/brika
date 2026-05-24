@@ -10,13 +10,10 @@ import { useBunMock } from '@brika/testing';
 import { Text } from 'ink';
 import { render } from 'ink-testing-library';
 import React from 'react';
+import { flush } from '../../_test-helpers';
 import type { UpdateInfoDto } from '../../shared/cli/api/updates';
 import { CliContext, type CliState, type HubStatus } from '../../shared/hooks/useCli';
 import { type UseUpdates, useUpdates } from './useUpdates';
-
-function flush(ms = 250): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 function makeCli(hub: HubStatus): CliState {
   return {

@@ -8,14 +8,11 @@
 import { describe, expect, test } from 'bun:test';
 import { render } from 'ink-testing-library';
 import React from 'react';
+import { flush } from '../../_test-helpers';
 import { Markdown } from './Markdown';
 
 // Project-wide ink-testing flush ceiling — matches the helper in
 // `useReadme.test.tsx` so this file behaves the same under parallel CI.
-function flush(ms = 250): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
 function renderMarkdown(source: string): { frame: string; unmount: () => void } {
   const { lastFrame, unmount } = render(React.createElement(Markdown, { source }));
   return { frame: lastFrame() ?? '', unmount };

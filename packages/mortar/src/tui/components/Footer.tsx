@@ -139,7 +139,7 @@ function KeybindsLine(): React.ReactElement {
   return (
     <Text>
       <Kbd>tab</Kbd>
-      <Text dimColor> switch </Text>
+      <Text dimColor> panel </Text>
       <Kbd>r</Kbd>
       <Text dimColor> restart </Text>
       <Kbd>/</Kbd>

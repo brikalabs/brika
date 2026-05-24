@@ -1,12 +1,13 @@
-import { statusColor, statusGlyph } from '@brika/tui';
+import { List, ListItem, statusColor, statusGlyph } from '@brika/tui';
 import { Box, Text } from 'ink';
 import type React from 'react';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import type { ServiceState } from '../../supervisor';
 
 interface Props {
   readonly services: ReadonlyArray<ServiceState>;
-  readonly focusedIndex: number;
+  readonly focusedId: string | null;
+  readonly onFocusChange: (id: string) => void;
 }
 
 /**
@@ -21,11 +22,21 @@ const MAX_WIDTH = 40;
 
 /**
  * Left column: one row per service with a status dot + label.
- * The box auto-sizes to fit the longest label so we don't waste
- * horizontal space when labels are short OR truncate mid-word when
- * one label is slightly longer than a fixed width.
+ *
+ * Backed by `<List>` from `@brika/tui` so the column is a single focus
+ * slot in the Tab cycle, navigable with `↑` / `↓` / `j` / `k` while
+ * focused, and clickable with the mouse (click selects the service and
+ * parks focus here). The outer border switches to bold/cyan when the
+ * list owns focus so the user can see at a glance which pane the
+ * keyboard is talking to — mirrors the [LogPane] focused styling.
  */
-export function ServiceList({ services, focusedIndex }: Readonly<Props>): React.ReactElement {
+export function ServiceList({
+  services,
+  focusedId,
+  onFocusChange,
+}: Readonly<Props>): React.ReactElement {
+  const [listFocused, setListFocused] = useState(false);
+
   const width = useMemo(() => {
     let longest = 'Services'.length;
     for (const svc of services) {
@@ -44,28 +55,38 @@ export function ServiceList({ services, focusedIndex }: Readonly<Props>): React.
   }, [services]);
 
   return (
-    <Box flexDirection="column" width={width} borderStyle="single" borderColor="gray" paddingX={1}>
-      <Text bold>Services</Text>
-      <Box marginTop={1} flexDirection="column">
-        {services.map((svc, i) => (
-          <Box key={svc.spec.id}>
-            <Text color={i === focusedIndex ? 'cyan' : undefined}>
-              {i === focusedIndex ? '▸ ' : '  '}
-            </Text>
-            <Text color={statusColor(svc.status)}>{statusGlyph(svc.status)} </Text>
-            {/*
-              `wrap="truncate-end"` + `flexShrink` keeps each row to a
-              single line. Without it, ink reflows the wrapped portion
-              back to the row's left edge — visually unaligned with the
-              status dot. Only kicks in when a label exceeds MAX_WIDTH.
-            */}
-            <Box flexShrink={1}>
-              <Text bold={i === focusedIndex} wrap="truncate-end">
-                {svc.spec.label}
-              </Text>
-            </Box>
-          </Box>
-        ))}
+    <Box
+      flexDirection="column"
+      width={width}
+      borderStyle={listFocused ? 'bold' : 'single'}
+      borderColor={listFocused ? 'cyan' : 'gray'}
+      paddingX={1}
+    >
+      <Text bold color={listFocused ? 'cyan' : undefined}>
+        Services
+      </Text>
+      <Box marginTop={1}>
+        <List
+          value={focusedId ?? undefined}
+          onValueChange={onFocusChange}
+          onFocusChange={setListFocused}
+          autoFocus
+        >
+          {services.map((svc) => (
+            <ListItem key={svc.spec.id} value={svc.spec.id}>
+              <Text color={statusColor(svc.status)}>{statusGlyph(svc.status)} </Text>
+              {/*
+                `wrap="truncate-end"` + `flexShrink` keeps each row to a
+                single line. Without it, ink reflows the wrapped portion
+                back to the row's left edge — visually unaligned with the
+                status dot. Only kicks in when a label exceeds MAX_WIDTH.
+              */}
+              <Box flexShrink={1}>
+                <Text wrap="truncate-end">{svc.spec.label}</Text>
+              </Box>
+            </ListItem>
+          ))}
+        </List>
       </Box>
     </Box>
   );

@@ -10,12 +10,9 @@ import { useBunMock } from '@brika/testing';
 import { Text } from 'ink';
 import { render } from 'ink-testing-library';
 import React from 'react';
+import { flush, waitFor } from '../../../_test-helpers';
 import type { LogEventDto } from '../../../shared/cli/api';
 import { type LiveTail, RING_BUFFER_LINES, useLiveTail } from './useLiveTail';
-
-function flush(ms = 50): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 function urlOf(input: Parameters<typeof fetch>[0]): string {
   if (typeof input === 'string') {
@@ -131,7 +128,7 @@ describe('useLiveTail', () => {
         },
       })
     );
-    await flush(50);
+    await flush();
     expect(calls).toBe(0);
     expect(latest.current?.events).toEqual([]);
     expect(latest.current?.lines).toEqual([]);
@@ -168,7 +165,7 @@ describe('useLiveTail', () => {
         },
       })
     );
-    await flush(100);
+    await flush();
     expect(latest.current?.events).toHaveLength(5);
     expect(latest.current?.lines).toHaveLength(5);
     // hydrate bumps revision once, then each of 3 SSE events bumps it.
@@ -197,7 +194,7 @@ describe('useLiveTail', () => {
         },
       })
     );
-    await flush(80);
+    await flush();
     expect(latest.current?.events).toEqual([]);
     expect(latest.current?.lines).toEqual([]);
     expect(latest.current?.revision).toBe(0);
@@ -233,7 +230,7 @@ describe('useLiveTail', () => {
         },
       })
     );
-    await flush(400);
+    await waitFor(() => latest.current?.events.length === RING_BUFFER_LINES, 1000);
     expect(latest.current?.events.length).toBe(RING_BUFFER_LINES);
     expect(latest.current?.lines.length).toBe(RING_BUFFER_LINES);
     // Oldest seed entry must be gone — verify by message identity.
@@ -272,13 +269,13 @@ describe('useLiveTail', () => {
         },
       })
     );
-    await flush(80);
+    await flush();
     // Stream is established and consuming.
     expect(controls.length).toBe(1);
 
     // Push one event while mounted — should land.
     controls[0]?.push(makeEvent({ ts: 1, message: 'pre-unmount' }));
-    await flush(60);
+    await flush();
     expect(latest.current?.events.some((e) => e.message === 'pre-unmount')).toBe(true);
 
     const renderCountBeforeUnmount = renderCount;
@@ -287,7 +284,7 @@ describe('useLiveTail', () => {
     // Try pushing after unmount — should be a no-op because the SSE
     // controller was aborted (and the stream's controller closed).
     controls[0]?.push(makeEvent({ ts: 2, message: 'post-unmount' }));
-    await flush(60);
+    await flush();
 
     // No further onResult calls should have landed after unmount —
     // the Probe is gone.

@@ -8,12 +8,9 @@ import { describe, expect, mock, test } from 'bun:test';
 import { Text } from 'ink';
 import { render } from 'ink-testing-library';
 import React from 'react';
+import { flush, waitFor } from '../../_test-helpers';
 import { CliContext, type CliState, type HubStatus } from './useCli';
 import { type HubResource, useHubResource } from './useHubResource';
-
-function flush(ms = 250): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 function makeCli(hub: HubStatus): CliState {
   return {
@@ -131,11 +128,11 @@ describe('useHubResource', () => {
         })
       )
     );
-    await flush();
+    await waitFor(() => latest.current?.data?.[0] === 'v1');
     expect(latest.current?.data).toEqual(['v1']);
 
     latest.current?.refresh();
-    await flush();
+    await waitFor(() => latest.current?.data?.[0] === 'v2');
     expect(fetcher).toHaveBeenCalledTimes(2);
     expect(latest.current?.data).toEqual(['v2']);
     unmount();

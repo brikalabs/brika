@@ -86,31 +86,31 @@ describe('SqliteCache', () => {
 
   describe('TTL expiration', () => {
     it('should expire entries after TTL', async () => {
-      cache.set('expiring', 'value', 50); // 50ms TTL
+      cache.set('expiring', 'value', 10); // 10ms TTL
 
       expect(cache.get('expiring')).toBe('value');
 
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 20));
 
       expect(cache.get('expiring')).toBeNull();
     });
 
     it('should not return expired entries with has()', async () => {
-      cache.set('expiring', 'value', 50);
+      cache.set('expiring', 'value', 10);
 
       expect(cache.has('expiring')).toBe(true);
 
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 20));
 
       expect(cache.has('expiring')).toBe(false);
     });
 
     it('should clean up expired entries', async () => {
       cache.set('keep', 'value', 60_000);
-      cache.set('expire1', 'value', 10);
-      cache.set('expire2', 'value', 10);
+      cache.set('expire1', 'value', 5);
+      cache.set('expire2', 'value', 5);
 
-      await new Promise((resolve) => setTimeout(resolve, 50));
+      await new Promise((resolve) => setTimeout(resolve, 15));
 
       cache.cleanup();
 
@@ -180,9 +180,9 @@ describe('SqliteCache', () => {
 
     it('should count expired entries', async () => {
       cache.set('keep', 'value', 60_000);
-      cache.set('expire', 'value', 10);
+      cache.set('expire', 'value', 5);
 
-      await new Promise((resolve) => setTimeout(resolve, 50));
+      await new Promise((resolve) => setTimeout(resolve, 15));
 
       const stats = cache.stats();
       expect(stats.expired).toBe(1);
@@ -211,9 +211,9 @@ describe('SqliteCache', () => {
     });
 
     it('should return null for expired entries', async () => {
-      cache.set('key1', 'value', 10);
+      cache.set('key1', 'value', 5);
 
-      await new Promise((resolve) => setTimeout(resolve, 50));
+      await new Promise((resolve) => setTimeout(resolve, 15));
 
       const entry = cache.getEntry('key1');
       expect(entry).toBeNull();

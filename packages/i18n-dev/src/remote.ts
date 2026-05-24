@@ -3,8 +3,9 @@
  *
  * Used when `i18nDevtools({ apiUrl })` is set. The hub already exposes the
  * endpoints we need (`/locales`, `/namespaces`, `/bundle/:locale`) so this
- * module is a thin HTTP client — no caching, no retries. Errors surface as
- * empty results so the local-file pipeline keeps working.
+ * module is a thin HTTP client — no caching, no retries. Failures surface in
+ * the `errors` array so the caller can show them in the overlay instead of
+ * disguising them as missing keys.
  */
 
 import { isPlainObject } from './object';
@@ -14,6 +15,16 @@ export interface RemoteScanResult {
   readonly translations: Map<string, Map<string, Record<string, unknown>>>;
   /** Locales the hub advertises (may be a superset of what's actually returned). */
   readonly locales: readonly string[];
+  /**
+   * Human-readable failures encountered during the scan (network error,
+   * non-2xx, JSON parse error, …). Empty when the scan succeeded cleanly.
+   */
+  readonly errors: readonly string[];
+}
+
+interface FetchOutcome {
+  readonly value: unknown;
+  readonly error?: string;
 }
 
 export async function fetchRemoteTranslations(
@@ -21,22 +32,31 @@ export async function fetchRemoteTranslations(
   options: { signal?: AbortSignal } = {}
 ): Promise<RemoteScanResult> {
   const base = apiUrl.replace(/\/$/, '');
+  const errors: string[] = [];
 
-  const localesResponse = await safeFetchJson(`${base}/locales`, options.signal);
-  const locales = extractLocales(localesResponse);
+  const localesOutcome = await fetchJson(`${base}/locales`, options.signal);
+  if (localesOutcome.error) {
+    errors.push(`failed to load ${base}/locales: ${localesOutcome.error}`);
+  }
+  const locales = extractLocales(localesOutcome.value);
   if (locales.length === 0) {
-    return { translations: new Map(), locales: [] };
+    return { translations: new Map(), locales: [], errors };
   }
 
   const translations = new Map<string, Map<string, Record<string, unknown>>>();
   await Promise.all(
     locales.map(async (locale) => {
-      const bundle = await safeFetchJson(`${base}/bundle/${locale}`, options.signal);
-      if (!isPlainObject(bundle)) {
+      const url = `${base}/bundle/${locale}`;
+      const { value, error } = await fetchJson(url, options.signal);
+      if (error) {
+        errors.push(`failed to load ${url}: ${error}`);
+        return;
+      }
+      if (!isPlainObject(value)) {
         return;
       }
       const nsMap = new Map<string, Record<string, unknown>>();
-      for (const [ns, data] of Object.entries(bundle)) {
+      for (const [ns, data] of Object.entries(value)) {
         if (isPlainObject(data)) {
           nsMap.set(ns, data);
         }
@@ -47,18 +67,18 @@ export async function fetchRemoteTranslations(
     })
   );
 
-  return { translations, locales };
+  return { translations, locales, errors };
 }
 
-async function safeFetchJson(url: string, signal?: AbortSignal): Promise<unknown> {
+async function fetchJson(url: string, signal?: AbortSignal): Promise<FetchOutcome> {
   try {
     const res = await fetch(url, { signal });
     if (!res.ok) {
-      return undefined;
+      return { value: undefined, error: `HTTP ${res.status}` };
     }
-    return await res.json();
-  } catch {
-    return undefined;
+    return { value: await res.json() };
+  } catch (err) {
+    return { value: undefined, error: err instanceof Error ? err.message : String(err) };
   }
 }
 

@@ -4,6 +4,7 @@
 
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { RestartPolicy } from '@/runtime/plugins/restart-policy';
+import { sleep, waitFor } from './_test-helpers';
 
 describe('RestartPolicy', () => {
   let policy: RestartPolicy;
@@ -135,8 +136,7 @@ describe('RestartPolicy', () => {
       fastPolicy.onCrash('test');
       fastPolicy.onStart('test');
 
-      // Wait for stability threshold
-      await new Promise((resolve) => setTimeout(resolve, 60));
+      await waitFor(() => fastPolicy.checkStability('test'), { timeoutMs: 1000 });
 
       const isStable = fastPolicy.checkStability('test');
       expect(isStable).toBe(true);
@@ -159,7 +159,7 @@ describe('RestartPolicy', () => {
       });
 
       expect(called).toBe(false);
-      await new Promise((resolve) => setTimeout(resolve, 60));
+      await waitFor(() => called, { timeoutMs: 1000 });
       expect(called).toBe(true);
     });
 
@@ -174,7 +174,9 @@ describe('RestartPolicy', () => {
         secondCalled = true;
       });
 
-      await new Promise((resolve) => setTimeout(resolve, 150));
+      await waitFor(() => secondCalled, { timeoutMs: 1000 });
+      // Wait past the first timer's deadline to ensure it was actually cancelled
+      await sleep(80);
 
       expect(firstCalled).toBe(false);
       expect(secondCalled).toBe(true);
@@ -189,7 +191,8 @@ describe('RestartPolicy', () => {
       });
 
       policy.cancelPending('test');
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      // Negative assertion: wait past the original deadline to confirm cancellation
+      await sleep(80);
 
       expect(called).toBe(false);
     });
@@ -216,7 +219,8 @@ describe('RestartPolicy', () => {
       });
 
       policy.reset('test');
-      await new Promise((resolve) => setTimeout(resolve, 150));
+      // Negative assertion: wait past the original deadline to confirm cancellation
+      await sleep(130);
 
       expect(called).toBe(false);
     });

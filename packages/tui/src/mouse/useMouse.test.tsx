@@ -19,13 +19,8 @@ import { describe, expect, mock, test } from 'bun:test';
 import { Text } from 'ink';
 import { render } from 'ink-testing-library';
 import React from 'react';
+import { flush } from '../_test-helpers';
 import { type MouseEvent, useMouse } from './useMouse';
-
-// 250ms is the project-wide ink-testing flush ceiling — generous enough
-// to absorb CI under parallel test pressure (see List.test.tsx).
-function flush(ms = 250): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 function Probe({ onEvent }: Readonly<{ onEvent: (e: MouseEvent) => void }>): React.ReactElement {
   useMouse(onEvent);

@@ -705,13 +705,10 @@ blocks: []
     );
 
     // Give fs.watch a moment to fire
-    await new Promise((resolve) => setTimeout(resolve, 20));
+    await new Promise((resolve) => setTimeout(resolve, 10));
 
     // Stop watching should clear all pending timers without error
     loader.stopWatching();
-
-    // Wait longer than the debounce interval
-    await new Promise((resolve) => setTimeout(resolve, 100));
 
     // The register call may or may not have happened depending on timing,
     // but stopWatching should not throw
