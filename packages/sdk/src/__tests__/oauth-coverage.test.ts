@@ -123,7 +123,6 @@ function makeReq(
 // ─── Tests ──────────────────────────────────────────────────────────────────────
 
 describe('OAuth coverage: authorize route + PKCE', () => {
-
   beforeEach(() => {
     for (const key of Object.keys(preferences)) {
       delete preferences[key];
@@ -307,7 +306,6 @@ describe('OAuth coverage: authorize route non-PKCE', () => {
 });
 
 describe('OAuth coverage: callback route error cases', () => {
-
   beforeEach(() => {
     for (const key of Object.keys(preferences)) {
       delete preferences[key];
@@ -775,7 +773,6 @@ describe('OAuth coverage: callback route error cases', () => {
 });
 
 describe('OAuth coverage: PKCE full authorize + callback flow', () => {
-
   beforeEach(() => {
     for (const key of Object.keys(preferences)) {
       delete preferences[key];
@@ -909,7 +906,6 @@ describe('OAuth coverage: PKCE full authorize + callback flow', () => {
 });
 
 describe('OAuth coverage: parseTokenResponse edge cases (via callback)', () => {
-
   beforeEach(() => {
     for (const key of Object.keys(preferences)) {
       delete preferences[key];
@@ -1377,7 +1373,6 @@ describe('OAuth coverage: getStringPreference + getClientId/getClientSecret', ()
 });
 
 describe('OAuth coverage: authenticated fetch', () => {
-
   beforeEach(() => {
     for (const key of Object.keys(preferences)) {
       delete preferences[key];
@@ -1802,7 +1797,6 @@ describe('OAuth coverage: authenticated fetch', () => {
 });
 
 describe('OAuth coverage: refresh sends correct body params', () => {
-
   beforeEach(() => {
     for (const key of Object.keys(preferences)) {
       delete preferences[key];
