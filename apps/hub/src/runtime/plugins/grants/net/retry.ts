@@ -48,9 +48,16 @@ export function parseRetryAfter(value: string | null | undefined, maxMs: number)
 /**
  * Jitter a delay by ±25% to avoid thundering herds when many coalesced
  * clients all retry at the same exponential checkpoint.
+ *
+ * Uses Web Crypto rather than `Math.random` not because the jitter is
+ * security-sensitive (it isn't — predicting it confers no advantage),
+ * but because SonarCloud's S2245 flags every `Math.random` call as a
+ * hotspot. Using a CSPRNG is structurally equivalent here and removes
+ * the manual-review burden.
  */
 export function jitter(ms: number): number {
-  const factor = 0.75 + Math.random() * 0.5;
+  const raw = crypto.getRandomValues(new Uint32Array(1))[0] ?? 0;
+  const factor = 0.75 + (raw / 0xffffffff) * 0.5;
   return Math.round(ms * factor);
 }
 
