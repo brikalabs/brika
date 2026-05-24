@@ -1,12 +1,13 @@
 /**
  * Shared timing helpers for async tests.
  *
- * `flush()` (no args) drains two macrotask cycles back-to-back —
- * zero real wall-clock, enough for a typical
+ * `flush()` (no args) yields ~10ms — enough for a typical
  * `useEffect → fetcher → setState → re-render` chain to land plus an
- * ink key-event roundtrip. Pass `flush(ms)` only when the production
- * code under test relies on a real timer firing (debounce, animation,
- * interval) and there's no observable predicate worth polling.
+ * ink key-event roundtrip on a slow CI runner. Tuned to be the
+ * smallest delay that doesn't flake on a 2-vCPU GitHub runner.
+ * Pass an explicit `flush(ms)` only when the production code relies
+ * on a longer real timer firing (debounce, animation, interval) and
+ * there's no observable predicate worth polling.
  *
  * `waitFor(predicate)` polls every 10ms until the predicate returns
  * true or `timeoutMs` (default 2000) elapses. Returns silently on
@@ -16,13 +17,10 @@
  * soon as the state lands.
  */
 
-export function flush(ms?: number): Promise<void> {
-  if (ms !== undefined) {
-    return new Promise((resolve) => setTimeout(resolve, ms));
-  }
-  return new Promise<void>((resolve) => {
-    setTimeout(() => setTimeout(resolve, 0), 0);
-  });
+const DEFAULT_FLUSH_MS = 10;
+
+export function flush(ms: number = DEFAULT_FLUSH_MS): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 export async function waitFor(predicate: () => boolean, timeoutMs = 2000): Promise<void> {
