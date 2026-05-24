@@ -36,15 +36,16 @@ export interface DeviceLocation {
 /**
  * Get the hub's configured location.
  *
- * Returns cached result on subsequent calls.
- * Returns `null` if location is not configured on the hub.
+ * Returns cached result on subsequent calls. Returns `null` if location
+ * is not configured on the hub.
+ *
+ * Use this in plugin lifecycle hooks (`onInit`, block handlers, action
+ * handlers). Inside brick render functions, prefer the context-bound
+ * `getLocation()` from `@brika/sdk/brick-views` — it ties into the
+ * render-cycle re-evaluation.
  *
  * @throws {PermissionDeniedError} if the "location" permission is not granted.
  *   Add `"permissions": ["location"]` to your plugin's package.json.
- *
- * @deprecated Prefer importing from `@brika/sdk` and calling `getDeviceLocation()`
- * directly — the function still works but will be removed in a future major version.
- * Inside brick render functions, use the context-based `getLocation()` instead.
  */
 export async function getDeviceLocation(): Promise<DeviceLocation | null> {
   // Lazy import to avoid circular deps and ensure context is initialized

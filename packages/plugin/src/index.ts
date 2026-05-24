@@ -12,8 +12,15 @@ export * from './manifests';
 export * from './preferences';
 export * from './store';
 
-import { isCompatible, T, type TypeDescriptor } from '@brika/type-system';
 import type { BlockManifest, BrickManifest, PageManifest, SparkManifest } from './manifests';
+
+// Port-type compatibility checking is provided by @brika/type-system.
+// Plugin authors and the workflow editor should import `isCompatible`
+// (and `parseTypeName` when working with legacy `typeName` strings)
+// directly from `@brika/type-system` — that's the single source of
+// truth. We re-export `isCompatible` here for ergonomic access from
+// plugin code that already imports from `@brika/plugin`.
+export { isCompatible } from '@brika/type-system';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Plugin Health & Runtime Representation
@@ -124,52 +131,4 @@ export interface Plugin {
   // ─── i18n ───────────────────────────────────────────────────────────────────
   /** Available translation locales (e.g., ["en", "fr", "fr-CH"]) */
   locales: string[];
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Port Type Compatibility
-// ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * Check if two port types are compatible for connection.
- * Returns true if source type can flow into target type.
- *
- * @deprecated Use `isCompatible()` from `@brika/type-system` instead.
- * This function delegates to the structural type checker.
- */
-export function arePortTypesCompatible(sourceType?: string, targetType?: string): boolean {
-  return isCompatible(parseTypeName(sourceType), parseTypeName(targetType));
-}
-
-// Re-export for consumers migrating to @brika/type-system
-export { isCompatible } from '@brika/type-system';
-
-/** Parse a typeName string to a TypeDescriptor for backward compatibility */
-function parseTypeName(typeName?: string): TypeDescriptor {
-  if (!typeName) {
-    return T.generic();
-  }
-  if (typeName.startsWith('generic') || typeName === 'unknown' || typeName === 'any') {
-    return T.generic();
-  }
-  const lower = typeName.toLowerCase().trim();
-  if (lower === 'string') {
-    return T.string;
-  }
-  if (['number', 'integer', 'float', 'double'].includes(lower)) {
-    return T.number;
-  }
-  if (lower === 'boolean') {
-    return T.boolean;
-  }
-  if (lower === 'null') {
-    return T.null;
-  }
-  if (['object', 'json', 'record'].includes(lower)) {
-    return T.record(T.unknown);
-  }
-  if (lower.endsWith('[]')) {
-    return T.array(parseTypeName(lower.slice(0, -2)));
-  }
-  return T.unknown;
 }
