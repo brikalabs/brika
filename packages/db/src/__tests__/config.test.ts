@@ -1,12 +1,17 @@
-import { describe, expect, test } from 'bun:test';
+import { beforeEach, describe, expect, test } from 'bun:test';
 import { join } from 'node:path';
-import { configureDatabases, resolveDatabasePath } from '../config';
+import { __resetDatabaseConfig, configureDatabases, resolveDatabasePath } from '../config';
 
-// NOTE: `globalDir` is module-level state that persists across tests in a
-// single worker. The throw-when-unconfigured case MUST run before any call to
-// `configureDatabases()`, so it is placed in its own describe block at the top.
+// `globalDir` is module-level state that persists across tests in a
+// single worker — `__resetDatabaseConfig()` clears it so the
+// unconfigured-throw path doesn't depend on test-file load order under
+// `bun test` from the repo root.
 
 describe('resolveDatabasePath — before configureDatabases is called', () => {
+  beforeEach(() => {
+    __resetDatabaseConfig();
+  });
+
   test('throws for a relative path when globalDir is not set', () => {
     expect(() => resolveDatabasePath('relative.db')).toThrow(
       'call configureDatabases() before opening databases'
