@@ -25,6 +25,36 @@ function flush(): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, 250));
 }
 
+/**
+ * Poll an assertion until it passes or the timeout elapses. Used for
+ * positive expectations after a state change — exits as soon as the
+ * condition holds, so the common-case wall time stays near the ink
+ * commit latency (~10ms). Under heavy parallel-test load the timeout
+ * absorbs starvation without forcing every assertion to wait the
+ * worst-case duration.
+ *
+ * Negative expectations ("did NOT fire") cannot use this shape —
+ * they still need a fixed `flush()` because there's no positive
+ * signal to wait for.
+ */
+async function waitFor(check: () => void, timeoutMs = 3000): Promise<void> {
+  const start = Date.now();
+  let lastError: unknown;
+  // 20ms interval is short enough to feel synchronous when the
+  // condition is already true, long enough to avoid burning the
+  // event loop while React commits.
+  while (Date.now() - start < timeoutMs) {
+    try {
+      check();
+      return;
+    } catch (err) {
+      lastError = err;
+      await new Promise<void>((resolve) => setTimeout(resolve, 20));
+    }
+  }
+  throw lastError ?? new Error(`waitFor: condition still false after ${timeoutMs}ms`);
+}
+
 function Bind({
   spec,
   on,
@@ -49,8 +79,7 @@ describe('useShortcut', () => {
     const { stdin, unmount } = render(withShell(React.createElement(Bind, { spec: 'q', on: onQ })));
     await flush();
     stdin.write('q');
-    await flush();
-    expect(onQ).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(onQ).toHaveBeenCalledTimes(1));
     unmount();
   });
 
@@ -113,11 +142,16 @@ describe('useShortcut', () => {
     stdin.write('q');
     await flush();
     expect(onQ).not.toHaveBeenCalled();
-    // Release capture.
+    // Release capture. The state update flips `isInputCaptured` →
+    // false via a React commit + capture-counter effect; under heavy
+    // parallel-test load that pipeline can take more than the fixed
+    // 250ms `flush()`. We retry the write until the bind has
+    // observed the release (or the poll times out).
     setterRef.current?.(false);
-    await flush();
-    stdin.write('q');
-    await flush();
+    await waitFor(() => {
+      stdin.write('q');
+      expect(onQ).toHaveBeenCalled();
+    });
     expect(onQ).toHaveBeenCalledTimes(1);
     unmount();
   });
