@@ -18,6 +18,7 @@
     "@brika/di": "workspace:*"
   },
   "devDependencies": {
+    "@brika/testing": "workspace:*",
     "@types/bun": "latest"
   },
   "scripts": {

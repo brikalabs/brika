@@ -5,17 +5,23 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
+import { realFetch } from '@brika/testing';
 import { AuthClient, createAuthClient, getAuthClient } from '../client/AuthClient';
 
 // ---------------------------------------------------------------------------
 // Mock fetch
+//
+// We restore to `realFetch` (the TRUE original captured at module-load of
+// `@brika/testing`) rather than `globalThis.fetch` at beforeEach time.
+// Under cross-file parallel `bun test`, another file's spy may be active
+// when this beforeEach runs, so a per-test capture of `globalThis.fetch`
+// would re-install that other spy on restore. The shared `realFetch`
+// reference is stable across the whole test run.
 // ---------------------------------------------------------------------------
 
 const mockFetch = vi.fn();
-let originalFetch: typeof globalThis.fetch;
 
 beforeEach(() => {
-  originalFetch = globalThis.fetch;
   globalThis.fetch = Object.assign(mockFetch, {
     preconnect: () => {},
   });
@@ -23,7 +29,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  globalThis.fetch = originalFetch;
+  globalThis.fetch = realFetch;
 });
 
 // ---------------------------------------------------------------------------
