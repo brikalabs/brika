@@ -11,11 +11,10 @@
  */
 
 import { beforeEach, describe, expect, test } from 'bun:test';
-import { useBunMock } from '@brika/testing';
+import { flush, useBunMock } from '@brika/testing';
 import { TuiShellProvider } from '@brika/tui';
 import { render } from 'ink-testing-library';
 import React from 'react';
-import { flush } from '../../../../_test-helpers';
 import type { RegistrySearchResult } from '../../../../shared/cli/api/registry';
 import { RegistryDetail, RegistryReadme, RegistryStatusBadge } from './index';
 

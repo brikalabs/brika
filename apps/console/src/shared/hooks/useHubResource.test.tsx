@@ -5,10 +5,10 @@
  */
 
 import { describe, expect, mock, test } from 'bun:test';
+import { flush, waitFor } from '@brika/testing';
 import { Text } from 'ink';
 import { render } from 'ink-testing-library';
 import React from 'react';
-import { flush, waitFor } from '../../_test-helpers';
 import { CliContext, type CliState, type HubStatus } from './useCli';
 import { type HubResource, useHubResource } from './useHubResource';
 

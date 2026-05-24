@@ -9,10 +9,10 @@
  */
 
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import { flush } from '@brika/testing';
 import { Text } from 'ink';
 import { render } from 'ink-testing-library';
 import React from 'react';
-import { flush } from '../_test-helpers';
 import { debugBuffer } from './buffer';
 import { DebugProvider } from './DebugProvider';
 import type { DebugContextValue, DebugLevel } from './types';

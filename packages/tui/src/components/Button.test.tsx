@@ -8,9 +8,9 @@
  */
 
 import { describe, expect, mock, test } from 'bun:test';
+import { flush } from '@brika/testing';
 import { render } from 'ink-testing-library';
 import React from 'react';
-import { flush } from '../_test-helpers';
 import { TuiShellProvider } from '../shell';
 import { Button } from './Button';
 

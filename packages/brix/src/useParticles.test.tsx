@@ -7,10 +7,10 @@
  */
 
 import { describe, expect, test } from 'bun:test';
+import { flush, waitFor } from '@brika/testing';
 import { Text } from 'ink';
 import { render } from 'ink-testing-library';
 import React from 'react';
-import { flush, waitFor } from './_test-helpers';
 import { sparkles } from './particleEmitters';
 import type { Sprite } from './sprite';
 import { useParticles } from './useParticles';

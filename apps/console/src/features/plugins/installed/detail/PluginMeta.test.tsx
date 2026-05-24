@@ -11,9 +11,9 @@
  */
 
 import { describe, expect, test } from 'bun:test';
+import { flush } from '@brika/testing';
 import { render } from 'ink-testing-library';
 import React from 'react';
-import { flush } from '../../../../_test-helpers';
 import type { PluginListItem, PluginMetrics } from '../../../../shared/cli/api/plugins';
 import { CpuBadge, cpuVariant, formatBytes, PluginMeta } from './PluginMeta';
 

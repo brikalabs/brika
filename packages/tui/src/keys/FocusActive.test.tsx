@@ -10,10 +10,10 @@
  */
 
 import { describe, expect, test } from 'bun:test';
+import { flush } from '@brika/testing';
 import { Text, useFocus } from 'ink';
 import { render } from 'ink-testing-library';
 import React from 'react';
-import { flush } from '../_test-helpers';
 import { FocusActive, useFocusActive } from './FocusActive';
 
 function Probe({ id, label }: Readonly<{ id: string; label: string }>): React.ReactElement {

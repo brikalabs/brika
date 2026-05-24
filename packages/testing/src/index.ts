@@ -18,3 +18,4 @@
 
 export { BunMock, mockBun, realFetch, useBunMock } from './mock-bun';
 export { proxify } from './proxify';
+export { flush, waitFor } from './timing';

@@ -12,10 +12,10 @@
  */
 
 import { describe, expect, mock, test } from 'bun:test';
+import { flush } from '@brika/testing';
 import { Box, type DOMElement, Text } from 'ink';
 import { render } from 'ink-testing-library';
 import React, { useRef } from 'react';
-import { flush } from '../_test-helpers';
 import { type ClickHandler, useClickable } from './useClickable';
 
 interface ProbeProps {

@@ -5,11 +5,10 @@
  */
 
 import { describe, expect, test } from 'bun:test';
-import { useBunMock } from '@brika/testing';
+import { flush, useBunMock } from '@brika/testing';
 import { Text } from 'ink';
 import { render } from 'ink-testing-library';
 import React from 'react';
-import { flush } from '../../../_test-helpers';
 import type { StoredLogEventDto } from '../../../shared/cli/api';
 import { type LogSearchControls, useLogSearch } from './useLogSearch';
 

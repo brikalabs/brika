@@ -99,56 +99,20 @@ jobs:
 
       - name: Run tests with coverage
         run: |
-          # Each workspace runs in its own bun process so `mock.module()`
-          # state can't bleed between workspaces (oven-sh/bun#12823).
-          # We fan out across the runner's cores with `xargs -P` and
-          # capture per-workspace output to a log file, then emit those
-          # logs in deterministic order at the end so the GitHub job
-          # output stays readable.
-          mkdir -p /tmp/test-logs
-          workspaces=()
-          for dir in packages/* apps/* plugins/*; do
-            [ -f "$dir/package.json" ] || continue
-            test_cmd=$(jq -r '.scripts.test // empty' "$dir/package.json")
-            [ -n "$test_cmd" ] || continue
-            workspaces+=("$dir")
-          done
-
-          # Worker: bun's own `bun test` gets `--coverage` appended so we
-          # always emit lcov regardless of what the workspace's own test
-          # script does. Non-`bun test` scripts (e.g. ones that pre-build)
-          # fall through to `bun run test`.
-          export -f true 2>/dev/null
-          printf '%s\n' "${workspaces[@]}" | xargs -P 4 -I{} bash -c '
-            dir="$1"
-            slug=$(basename "$dir")
-            log="/tmp/test-logs/$slug.log"
-            tc=$(jq -r .scripts.test "$dir/package.json")
-            case "$tc" in
-              "bun test"|"bun test --parallel"|"bun test --parallel "*)
-                (cd "$dir" && eval "$tc --timeout=30000 --coverage --coverage-reporter=lcov") > "$log" 2>&1
-                ;;
-              *)
-                (cd "$dir" && bun run test) > "$log" 2>&1
-                ;;
-            esac
-            echo $? > "$log.exitcode"
-          ' _ {}
-
-          fail=0
-          for dir in "${workspaces[@]}"; do
-            name=$(jq -r .name "$dir/package.json")
-            slug=$(basename "$dir")
-            log="/tmp/test-logs/$slug.log"
-            ec=$(cat "$log.exitcode" 2>/dev/null || echo 1)
-            echo "::group::Testing $name (exit=$ec)"
-            cat "$log" 2>/dev/null || true
-            echo "::endgroup::"
-            [ "$ec" != "0" ] && fail=1
-          done
-          if [ "$fail" -ne 0 ]; then
-            echo "::error::One or more workspaces had failing tests."
-          fi
+          # Each workspace runs in its own bun process for mock.module()
+          # isolation (oven-sh/bun#12823); `xargs -P 4` fans out across
+          # runner cores. Coverage is passed via `bun run test` which
+          # forwards extra args to the workspace's own `test` script.
+          find apps packages plugins -mindepth 2 -maxdepth 2 -name package.json -print0 2>/dev/null \
+            | xargs -0 -P 4 -I{} bash -c '
+                dir=$(dirname "$1")
+                jq -e ".scripts.test // empty" "$1" >/dev/null || exit 0
+                echo "::group::$(jq -r .name "$1")"
+                (cd "$dir" && bun run test --coverage --coverage-reporter=lcov --timeout=30000)
+                ec=$?
+                echo "::endgroup::"
+                exit $ec
+              ' _ {}
           # Always merge lcov so the sonar job has a report even on partial failure.
           # Each workspace's lcov has `SF:` paths relative to ITS root, so we
           # prefix with the workspace dir and collapse any leading `..` segments

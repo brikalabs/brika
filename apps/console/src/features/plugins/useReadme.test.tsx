@@ -4,10 +4,10 @@
  */
 
 import { describe, expect, mock, test } from 'bun:test';
+import { flush } from '@brika/testing';
 import { Text } from 'ink';
 import { render } from 'ink-testing-library';
 import React from 'react';
-import { flush } from '../../_test-helpers';
 import { type UseReadme, useReadme } from './useReadme';
 
 // 250ms is the project-wide ink-testing flush ceiling — generous enough

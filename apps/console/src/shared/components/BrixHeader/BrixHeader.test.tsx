@@ -8,10 +8,10 @@
 
 import { describe, expect, test } from 'bun:test';
 import type { EmoteName, Mood } from '@brika/brix';
+import { flush, waitFor } from '@brika/testing';
 import { createRouter, RouterProvider } from '@brika/tui';
 import { render } from 'ink-testing-library';
 import React from 'react';
-import { flush, waitFor } from '../../../_test-helpers';
 import { routes } from '../../../routes';
 import { CliContext, type CliState, type HubStatus } from '../../hooks/useCli';
 import { BrixHeader } from './index';

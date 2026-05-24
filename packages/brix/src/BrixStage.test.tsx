@@ -7,9 +7,9 @@
  */
 
 import { describe, expect, test } from 'bun:test';
+import { flush, waitFor } from '@brika/testing';
 import { render } from 'ink-testing-library';
 import React from 'react';
-import { flush, waitFor } from './_test-helpers';
 import { BrixStage } from './BrixStage';
 import { type EmoteApi, EmoteProvider, useEmote } from './EmoteProvider';
 import { EMOTE_LIBRARY } from './emotes';

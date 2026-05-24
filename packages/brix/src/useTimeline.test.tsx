@@ -6,10 +6,10 @@
  */
 
 import { describe, expect, test } from 'bun:test';
+import { flush, waitFor } from '@brika/testing';
 import { Text } from 'ink';
 import { render } from 'ink-testing-library';
 import React from 'react';
-import { flush, waitFor } from './_test-helpers';
 import { parseSprite } from './sprite';
 import { clip, type Timeline, timeline } from './timeline';
 import { type TimelineState, useTimeline } from './useTimeline';

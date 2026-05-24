@@ -24,11 +24,10 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { useBunMock } from '@brika/testing';
+import { flush, useBunMock, waitFor } from '@brika/testing';
 import { Text } from 'ink';
 import { render } from 'ink-testing-library';
 import React from 'react';
-import { flush, waitFor } from './_test-helpers';
 import { CliProvider } from './CliProvider';
 import { useCli } from './shared/hooks/useCli';
 

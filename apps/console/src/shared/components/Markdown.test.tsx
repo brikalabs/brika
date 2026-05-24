@@ -6,9 +6,9 @@
  */
 
 import { describe, expect, test } from 'bun:test';
+import { flush } from '@brika/testing';
 import { render } from 'ink-testing-library';
 import React from 'react';
-import { flush } from '../../_test-helpers';
 import { Markdown } from './Markdown';
 
 // Project-wide ink-testing flush ceiling — matches the helper in

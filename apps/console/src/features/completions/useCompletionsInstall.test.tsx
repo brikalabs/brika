@@ -16,10 +16,10 @@ import * as os from 'node:os';
 import { join } from 'node:path';
 import type { Command } from '@brika/cli';
 import { defineCommand } from '@brika/cli';
+import { waitFor } from '@brika/testing';
 import { Text } from 'ink';
 import { render } from 'ink-testing-library';
 import React from 'react';
-import { waitFor } from '../../_test-helpers';
 
 const exitCallback = mock<(delayMs?: number) => void>(() => undefined);
 const useExitMock = mock(() => exitCallback);

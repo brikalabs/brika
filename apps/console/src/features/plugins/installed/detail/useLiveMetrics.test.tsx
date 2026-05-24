@@ -16,11 +16,10 @@
  */
 
 import { beforeEach, describe, expect, test } from 'bun:test';
-import { useBunMock } from '@brika/testing';
+import { flush, useBunMock } from '@brika/testing';
 import { Text } from 'ink';
 import { render } from 'ink-testing-library';
 import React from 'react';
-import { flush } from '../../../../_test-helpers';
 import type { PluginMetrics } from '../../../../shared/cli/api/plugins';
 import { useLiveMetrics } from './useLiveMetrics';
 

@@ -6,6 +6,7 @@
  */
 
 import { describe, expect, mock, test } from 'bun:test';
+import { flush } from '@brika/testing';
 import {
   createRouter,
   defineRoute,
@@ -15,7 +16,6 @@ import {
 } from '@brika/tui';
 import { render } from 'ink-testing-library';
 import React from 'react';
-import { flush } from '../../_test-helpers';
 import { useShellKeys } from './useShellKeys';
 
 // Mirror the production route table closely enough for the section

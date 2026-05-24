@@ -7,9 +7,9 @@
  */
 
 import { describe, expect, mock, test } from 'bun:test';
+import { flush, waitFor } from '@brika/testing';
 import { render } from 'ink-testing-library';
 import React from 'react';
-import { flush, waitFor } from '../../_test-helpers';
 import { BootScreen } from './index';
 
 describe('<BootScreen>', () => {

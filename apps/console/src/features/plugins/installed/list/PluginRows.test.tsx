@@ -8,10 +8,10 @@
  */
 
 import { describe, expect, test } from 'bun:test';
+import { flush } from '@brika/testing';
 import { TuiShellProvider } from '@brika/tui';
 import { render } from 'ink-testing-library';
 import React from 'react';
-import { flush } from '../../../../_test-helpers';
 import type { PluginListItem } from '../../../../shared/cli/api/plugins';
 import { PluginRows } from './PluginRows';
 
