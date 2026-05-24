@@ -4,15 +4,14 @@
  * Serve binary image data as a Response with resize, cache, and ETag support.
  *
  * Query params (validated via ImageQuerySchema in the route):
- * - `?s=128`       → square resize (128×128 cover crop)
- * - `?w=200&h=100` → explicit width/height (cover crop)
+ * - `?s=128`       → 128×128 (stretched to exact dimensions)
+ * - `?w=200&h=100` → explicit width/height (stretched)
  * - `?w=200`       → resize width, keep aspect ratio
  * - `?h=100`       → resize height, keep aspect ratio
  *
  * All output as webp. Cache-Control + ETag for caching. 304 on match.
  */
 
-import { photon } from '@brika/photon';
 import { z } from 'zod';
 
 const MAX_PX = 2048;
@@ -31,14 +30,14 @@ interface ServeImageOptions {
   immutable?: boolean;
 }
 
-export function serveImage(
+export async function serveImage(
   data: Buffer | null,
   ctx: {
     req: Request;
     query: ImageQuery;
   },
   options?: ServeImageOptions
-): Response {
+): Promise<Response> {
   if (!data) {
     return new Response(null, {
       status: 204,
@@ -50,17 +49,9 @@ export function serveImage(
   const width = s ?? w;
   const height = s ?? h;
 
-  let output: Buffer = data;
-  if (width ?? height) {
-    const fit = width && height ? 'cover' : 'contain';
-    output = photon(data)
-      .resize({
-        width,
-        height,
-        fit,
-      })
-      .webp()
-      .toBuffer();
+  let output: Uint8Array = data;
+  if (width !== undefined || height !== undefined) {
+    output = await resize(data, width, height);
   }
 
   const etag = `"${Bun.hash(output).toString(36)}"`;
@@ -88,4 +79,25 @@ export function serveImage(
       ETag: etag,
     },
   });
+}
+
+async function resize(
+  data: Buffer,
+  width: number | undefined,
+  height: number | undefined
+): Promise<Uint8Array> {
+  const img = new Bun.Image(data);
+  if (width !== undefined && height !== undefined) {
+    img.resize(width, height, {
+      fit: 'fill',
+    });
+  } else if (width !== undefined) {
+    img.resize(width);
+  } else if (height !== undefined) {
+    // Bun.Image.resize requires width; derive it from the source aspect ratio.
+    const meta = await new Bun.Image(data).metadata();
+    const derivedW = Math.max(1, Math.round((meta.width / meta.height) * height));
+    img.resize(derivedW, height);
+  }
+  return img.webp().bytes();
 }
