@@ -6,7 +6,7 @@
  */
 
 import { beforeEach, describe, expect, test } from 'bun:test';
-import { flush, useBunMock } from '@brika/testing';
+import { flush, useBunMock, waitFor } from '@brika/testing';
 import { Text } from 'ink';
 import { render } from 'ink-testing-library';
 import React from 'react';
@@ -246,7 +246,7 @@ describe('useUpdates', () => {
     );
     await flush();
     latest.current?.startApply();
-    await flush();
+    await waitFor(() => latest.current?.progress?.phase === 'complete');
 
     expect(latest.current?.applying).toBe(false);
     expect(latest.current?.progress?.phase).toBe('complete');
@@ -284,7 +284,7 @@ describe('useUpdates', () => {
     );
     await flush();
     latest.current?.startApply();
-    await flush();
+    await waitFor(() => latest.current?.progress?.phase === 'error');
 
     expect(latest.current?.error).toBe('bad checksum');
     expect(latest.current?.progress?.phase).toBe('error');
@@ -321,7 +321,10 @@ describe('useUpdates', () => {
     );
     await flush();
     latest.current?.startApply();
-    await flush();
+    // SSE stream emits installing → restarting → complete; the hook
+    // stops at restarting. Poll until that final state lands instead
+    // of guessing how long the stream takes.
+    await waitFor(() => latest.current?.progress?.phase === 'restarting');
 
     expect(latest.current?.progress?.phase).toBe('restarting');
     expect(latest.current?.error).toBeNull();
