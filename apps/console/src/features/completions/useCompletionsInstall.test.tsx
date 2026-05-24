@@ -41,9 +41,11 @@ const COMMANDS: Command[] = [
 ];
 
 function Probe({ onResult }: Readonly<{ onResult: (phase: Phase) => void }>): React.ReactElement {
+  // Production defaults are 300/400ms; small but non-zero values keep
+  // CI runners from racing setState commits against the exit timer.
   const { phase } = useCompletionsInstall(COMMANDS, {
-    exitDelayMs: 5,
-    exitErrorDelayMs: 5,
+    exitDelayMs: 30,
+    exitErrorDelayMs: 30,
   });
   onResult(phase);
   return React.createElement(Text, null, '.');
