@@ -21,12 +21,13 @@ import type { FsBackingDirs } from '../types';
 
 export interface ExistsDeps {
   readonly dirs: FsBackingDirs;
+  readonly ephemeral?: import('../ephemeral').EphemeralRoots;
 }
 
 export function buildExistsGrant(deps: ExistsDeps) {
   return defineGrant(spec.spec, async (ctx, args: FsExistsArgs): Promise<FsExistsResult> => {
     const scope: FsScope = ctx.grantedScope;
-    const resolved = resolveVirtualPath(args.path, deps.dirs);
+    const resolved = resolveVirtualPath(args.path, deps.dirs, deps.ephemeral);
     assertAccess(resolved, scope, 'read');
     try {
       await stat(resolved.hostPath);

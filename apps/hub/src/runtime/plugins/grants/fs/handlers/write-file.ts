@@ -29,6 +29,7 @@ import { DEFAULT_MAX_FILE_BYTES, type FsBackingDirs } from '../types';
 
 export interface WriteFileDeps {
   readonly dirs: FsBackingDirs;
+  readonly ephemeral?: import('../ephemeral').EphemeralRoots;
   readonly quotas: QuotaTracker;
   readonly maxFileBytes?: number;
 }
@@ -37,7 +38,7 @@ export function buildWriteFileGrant(deps: WriteFileDeps) {
   const cap = deps.maxFileBytes ?? DEFAULT_MAX_FILE_BYTES;
   return defineGrant(spec.spec, async (ctx, args: FsWriteFileArgs): Promise<FsWriteFileResult> => {
     const scope: FsScope = ctx.grantedScope;
-    const resolved = resolveVirtualPath(args.path, deps.dirs);
+    const resolved = resolveVirtualPath(args.path, deps.dirs, deps.ephemeral);
     assertAccess(resolved, scope, 'write');
     const bytes = byteLength(args.content);
     if (bytes > cap) {

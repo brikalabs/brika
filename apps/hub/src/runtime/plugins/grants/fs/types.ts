@@ -54,6 +54,14 @@ export interface ResolvedPath {
   readonly virtualPath: string;
   readonly hostPath: string;
   readonly root: VirtualRoot;
-  /** True iff the virtual root is read-only (`/bundle`). */
+  /** True iff the virtual root is read-only (`/bundle` or `/user`). */
   readonly readOnly: boolean;
+  /**
+   * True for `/user/<token>/...` paths minted by `ctx.ui.pickFile`.
+   * Ephemeral paths bypass the named-root scope rules: they require
+   * an explicit `/user/**` read pattern in scope, and they skip the
+   * within-backing-dir symlink check (the user's pick IS the
+   * boundary).
+   */
+  readonly isEphemeral?: true;
 }

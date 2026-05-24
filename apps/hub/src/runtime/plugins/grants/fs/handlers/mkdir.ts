@@ -22,12 +22,13 @@ import type { FsBackingDirs } from '../types';
 
 export interface MkdirDeps {
   readonly dirs: FsBackingDirs;
+  readonly ephemeral?: import('../ephemeral').EphemeralRoots;
 }
 
 export function buildMkdirGrant(deps: MkdirDeps) {
   return defineGrant(spec.spec, async (ctx, args: FsMkdirArgs): Promise<FsMkdirResult> => {
     const scope: FsScope = ctx.grantedScope;
-    const resolved = resolveVirtualPath(args.path, deps.dirs);
+    const resolved = resolveVirtualPath(args.path, deps.dirs, deps.ephemeral);
     assertAccess(resolved, scope, 'write');
     await assertWithinBackingDir(resolved, backingDirFor(resolved, deps.dirs), { missingOk: true });
     const created = await mkdir(resolved.hostPath, { recursive: args.recursive });

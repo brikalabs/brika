@@ -25,6 +25,7 @@ import { DEFAULT_MAX_DIR_ENTRIES, type FsBackingDirs } from '../types';
 
 export interface ReaddirDeps {
   readonly dirs: FsBackingDirs;
+  readonly ephemeral?: import('../ephemeral').EphemeralRoots;
   readonly maxEntries?: number;
 }
 
@@ -32,7 +33,7 @@ export function buildReaddirGrant(deps: ReaddirDeps) {
   const cap = deps.maxEntries ?? DEFAULT_MAX_DIR_ENTRIES;
   return defineGrant(spec.spec, async (ctx, args: FsReaddirArgs): Promise<FsReaddirResult> => {
     const scope: FsScope = ctx.grantedScope;
-    const resolved = resolveVirtualPath(args.path, deps.dirs);
+    const resolved = resolveVirtualPath(args.path, deps.dirs, deps.ephemeral);
     assertAccess(resolved, scope, 'read');
     await assertWithinBackingDir(resolved, backingDirFor(resolved, deps.dirs));
     const entries: FsDirEntry[] = [];

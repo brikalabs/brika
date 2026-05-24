@@ -14,6 +14,7 @@ import { type AuditLogger, GrantRegistry } from '@brika/grants';
 import { buildDnsGrants, type DnsGrantOptions } from './dns';
 import { buildFsGrants, type FsGrantOptions } from './fs';
 import { buildNetGrants, type NetCallbacks, type NetGrantOptions } from './net';
+import { buildUiGrants, type UiGrantOptions } from './ui';
 import { buildWsGrants, type WsGrantOptions } from './ws';
 
 // Type alias instead of empty `interface extends` so biome's no-empty-
@@ -45,6 +46,13 @@ export interface HubGrantOptions {
    * plugin's IPC channel) to push inbound frames at the plugin.
    */
   readonly ws?: WsGrantOptions;
+  /**
+   * UI grant configuration. Required to register `ctx.ui.pickFile`.
+   * Needs the same `EphemeralRoots` instance the `fs` family was
+   * built with so a token minted by the picker resolves on the
+   * plugin's next `ctx.fs.readFile`.
+   */
+  readonly ui?: UiGrantOptions;
   /**
    * Sink for per-dispatch audit entries. Production wires this to the
    * hub's structured log; tests pass a collecting array. Omit to skip
@@ -78,6 +86,11 @@ export function buildHubGrants(cb: HubGrantCallbacks, opts?: HubGrantOptions): G
   if (opts?.ws !== undefined) {
     const { grants: wsGrants } = buildWsGrants(opts.ws);
     for (const grant of wsGrants) {
+      reg.register(grant);
+    }
+  }
+  if (opts?.ui !== undefined) {
+    for (const grant of buildUiGrants(opts.ui)) {
       reg.register(grant);
     }
   }

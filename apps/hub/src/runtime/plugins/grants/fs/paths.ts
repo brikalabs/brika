@@ -21,6 +21,7 @@
 import { join, normalize as nodeNormalize, posix, sep } from 'node:path';
 import { errors } from '@brika/errors';
 import { VIRTUAL_ROOTS, type VirtualRoot } from '@brika/sdk/grants';
+import type { EphemeralRoots } from './ephemeral';
 import type { FsBackingDirs, ResolvedPath } from './types';
 
 const VIRTUAL_ROOT_SET: ReadonlySet<string> = new Set(VIRTUAL_ROOTS);
@@ -30,8 +31,17 @@ const VIRTUAL_ROOT_SET: ReadonlySet<string> = new Set(VIRTUAL_ROOTS);
  * `FS_PATH_OUTSIDE_ROOT` for inputs that escape the virtual roots.
  *
  * The check is purely string-level — symlinks are resolved later.
+ *
+ * `/user/<token>/...` paths consult the optional `EphemeralRoots`
+ * registry: if a token was minted by `ctx.ui.pickFile`, the resolver
+ * returns a host path pointing at the file the user picked. Without
+ * the registry argument, every `/user/...` path is rejected.
  */
-export function resolveVirtualPath(virtualPath: string, dirs: FsBackingDirs): ResolvedPath {
+export function resolveVirtualPath(
+  virtualPath: string,
+  dirs: FsBackingDirs,
+  ephemeral?: EphemeralRoots
+): ResolvedPath {
   if (!virtualPath.startsWith('/')) {
     throw errors.fsPathOutsideRoot({ path: virtualPath });
   }
@@ -48,6 +58,30 @@ export function resolveVirtualPath(virtualPath: string, dirs: FsBackingDirs): Re
   const normalized = posix.normalize(virtualPath);
   if (normalized.startsWith('..') || normalized === '/' || !normalized.startsWith('/')) {
     throw errors.fsPathOutsideRoot({ path: virtualPath });
+  }
+  // /user/<token>/... lives in a per-pick ephemeral registry; resolution
+  // happens BEFORE the named-root check because the host path may live
+  // anywhere on disk (the user picked it). The returned `ResolvedPath`
+  // is flagged `isEphemeral` so the scope check and symlink guard can
+  // treat it specially.
+  if (normalized.startsWith('/user/')) {
+    if (!ephemeral) {
+      throw errors.fsPathOutsideRoot({ path: virtualPath });
+    }
+    const hostPath = ephemeral.resolve(normalized);
+    if (hostPath === null) {
+      throw errors.fsPathOutsideRoot({ path: virtualPath });
+    }
+    return {
+      virtualPath: normalized,
+      hostPath: nodeNormalize(hostPath),
+      // `root` is required by the type; `/bundle` is the closest
+      // sandboxed-read parallel, but the `isEphemeral` flag below is
+      // what callers actually branch on.
+      root: '/bundle',
+      readOnly: true,
+      isEphemeral: true,
+    };
   }
   const root = pickRoot(normalized);
   if (root === null) {

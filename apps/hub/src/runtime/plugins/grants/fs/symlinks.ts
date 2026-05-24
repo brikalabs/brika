@@ -41,6 +41,18 @@ export async function assertWithinBackingDir(
   backingDir: string,
   opts: { missingOk?: boolean } = {}
 ): Promise<void> {
+  // Ephemeral `/user/<token>` paths: the user picked the file
+  // explicitly. We still realpath the file to confirm it exists,
+  // but don't enforce a containment check against a backing dir —
+  // the user's pick IS the boundary, and the file can live anywhere
+  // they pointed at.
+  if (resolved.isEphemeral) {
+    const real = await safeRealpath(resolved.hostPath);
+    if (real === null) {
+      throw errors.fsNotFound({ path: resolved.virtualPath });
+    }
+    return;
+  }
   const realBacking = (await safeRealpath(backingDir)) ?? backingDir;
   const real = opts.missingOk
     ? await realpathOrAncestor(resolved.hostPath)

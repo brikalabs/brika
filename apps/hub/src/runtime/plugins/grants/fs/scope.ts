@@ -33,6 +33,23 @@ export function assertAccess(resolved: ResolvedPath, scope: FsScope, kind: FsAcc
       permission: `fs:write:${resolved.virtualPath}`,
     });
   }
+  // Ephemeral `/user/<token>` paths require an explicit `/user/**`
+  // read pattern in scope — NOT the implicit /bundle bypass below.
+  // The user's pick is consent for THAT file; the scope is consent
+  // for the plugin to accept user picks at all.
+  if (resolved.isEphemeral) {
+    if (kind === 'write') {
+      throw errors.permissionDenied({
+        permission: `fs:write:${resolved.virtualPath}`,
+      });
+    }
+    if (!matchesAny('/user/__', scope.read) && !matchesAny('/user/__', scope.write)) {
+      throw errors.permissionDenied({
+        permission: 'fs:read:/user/**',
+      });
+    }
+    return;
+  }
   // /bundle is implicitly readable. Skip the pattern check.
   if (kind === 'read' && resolved.root === '/bundle') {
     return;

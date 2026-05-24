@@ -84,6 +84,8 @@ export {
 } from './fs';
 export type { FetchArgs, FetchResult, NetScope } from './net';
 export { FetchArgsSchema, FetchResultSchema, NetScopeSchema, netFetch } from './net';
+export type { UiPickFileArgs, UiPickFileResult, UiScope } from './ui';
+export { UiPickFileArgsSchema, UiPickFileResultSchema, UiScopeSchema, uiPickFile } from './ui';
 export type {
   WsCloseArgs,
   WsCloseResult,

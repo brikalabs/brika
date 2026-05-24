@@ -22,6 +22,7 @@ import { DEFAULT_MAX_FILE_BYTES, type FsBackingDirs } from '../types';
 
 export interface ReadFileDeps {
   readonly dirs: FsBackingDirs;
+  readonly ephemeral?: import('../ephemeral').EphemeralRoots;
   readonly maxFileBytes?: number;
 }
 
@@ -29,7 +30,7 @@ export function buildReadFileGrant(deps: ReadFileDeps) {
   const cap = deps.maxFileBytes ?? DEFAULT_MAX_FILE_BYTES;
   return defineGrant(spec.spec, async (ctx, args: FsReadFileArgs): Promise<FsReadFileResult> => {
     const scope: FsScope = ctx.grantedScope;
-    const resolved = resolveVirtualPath(args.path, deps.dirs);
+    const resolved = resolveVirtualPath(args.path, deps.dirs, deps.ephemeral);
     assertAccess(resolved, scope, 'read');
     await assertWithinBackingDir(resolved, backingDirFor(resolved, deps.dirs));
     const info = await stat(resolved.hostPath);

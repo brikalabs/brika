@@ -18,13 +18,14 @@ import type { FsBackingDirs } from '../types';
 
 export interface RmDeps {
   readonly dirs: FsBackingDirs;
+  readonly ephemeral?: import('../ephemeral').EphemeralRoots;
   readonly quotas: QuotaTracker;
 }
 
 export function buildRmGrant(deps: RmDeps) {
   return defineGrant(spec.spec, async (ctx, args: FsRmArgs): Promise<FsRmResult> => {
     const scope: FsScope = ctx.grantedScope;
-    const resolved = resolveVirtualPath(args.path, deps.dirs);
+    const resolved = resolveVirtualPath(args.path, deps.dirs, deps.ephemeral);
     assertAccess(resolved, scope, 'write');
     await assertWithinBackingDir(resolved, backingDirFor(resolved, deps.dirs), { missingOk: true });
     const pre = await measure(resolved.hostPath);

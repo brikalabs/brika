@@ -23,12 +23,13 @@ import type { FsBackingDirs } from '../types';
 
 export interface StatDeps {
   readonly dirs: FsBackingDirs;
+  readonly ephemeral?: import('../ephemeral').EphemeralRoots;
 }
 
 export function buildStatGrant(deps: StatDeps) {
   return defineGrant(spec.spec, async (ctx, args: FsStatArgs): Promise<FsStatResult> => {
     const scope: FsScope = ctx.grantedScope;
-    const resolved = resolveVirtualPath(args.path, deps.dirs);
+    const resolved = resolveVirtualPath(args.path, deps.dirs, deps.ephemeral);
     assertAccess(resolved, scope, 'read');
     await assertWithinBackingDir(resolved, backingDirFor(resolved, deps.dirs));
     try {
