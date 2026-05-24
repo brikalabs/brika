@@ -102,7 +102,10 @@ jobs:
           # Fan out across the runner's cores with `xargs -P 4`. Each
           # workspace runs `bun run test` in its own process, which forwards
           # the extra `--coverage` flags to whatever `bun test` invocation
-          # the workspace's `test` script defines.
+          # the workspace's `test` script defines. xargs returns non-zero
+          # if any worker failed; we capture that and still run the lcov
+          # merge below so Sonar gets a report on partial failure.
+          set +e
           find apps packages plugins -mindepth 2 -maxdepth 2 -name package.json -print0 2>/dev/null \
             | xargs -0 -P 4 -I{} bash -c '
                 dir=$(dirname "$1")
@@ -113,6 +116,8 @@ jobs:
                 echo "::endgroup::"
                 exit $ec
               ' _ {}
+          fail=$?
+          set -e
           # Always merge lcov so the sonar job has a report even on partial failure.
           # Each workspace's lcov has `SF:` paths relative to ITS root, so we
           # prefix with the workspace dir and collapse any leading `..` segments
