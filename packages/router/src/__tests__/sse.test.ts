@@ -23,7 +23,7 @@ describe('SSE', () => {
         send({
           message: 'world',
         });
-        setTimeout(close, 10);
+        queueMicrotask(close);
       });
 
       const text = await response.text();
@@ -40,7 +40,7 @@ describe('SSE', () => {
           },
           'custom-event'
         );
-        setTimeout(close, 10);
+        queueMicrotask(close);
       });
 
       const text = await response.text();
@@ -82,7 +82,7 @@ describe('SSE', () => {
         send({
           type: 'start',
         });
-        await new Promise((r) => setTimeout(r, 5));
+        await Promise.resolve();
         send({
           type: 'end',
         });

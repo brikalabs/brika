@@ -131,13 +131,13 @@ describe('EventSystem', () => {
   it('should support once with Promise', async () => {
     const events = new EventSystem();
 
-    setTimeout(() => {
+    queueMicrotask(() => {
       events.dispatch(
         TestActions.hello.create({
           message: 'Hello',
         })
       );
-    }, 50);
+    });
 
     const action = await events.once(TestActions.hello, {
       timeout: 1000,
@@ -159,7 +159,7 @@ describe('EventSystem', () => {
   it('should support waitFor with withPredicate', async () => {
     const events = new EventSystem();
 
-    setTimeout(() => {
+    queueMicrotask(() => {
       events.dispatch(
         TestActions.count.create({
           value: 10,
@@ -170,7 +170,7 @@ describe('EventSystem', () => {
           value: 20,
         })
       );
-    }, 50);
+    });
 
     const action = await events.waitFor(
       withPredicate(TestActions.count, (a) => a.payload.value === 20),
@@ -186,13 +186,13 @@ describe('EventSystem', () => {
   it('should support race with action creators', async () => {
     const events = new EventSystem();
 
-    setTimeout(() => {
+    queueMicrotask(() => {
       events.dispatch(
         TestActions.goodbye.create({
           message: 'Goodbye',
         })
       );
-    }, 50);
+    });
 
     const action = await events.race([TestActions.hello, TestActions.goodbye], {
       timeout: 1000,
@@ -268,7 +268,7 @@ describe('EventSystem', () => {
     let resolved = false;
 
     events.subscribe(TestActions.hello, async () => {
-      await new Promise((resolve) => setTimeout(resolve, 10));
+      await Promise.resolve();
       resolved = true;
     });
 
@@ -315,7 +315,7 @@ describe('EventSystem', () => {
     let handlerCompleted = false;
 
     events.subscribe(TestActions.hello, async () => {
-      await new Promise((resolve) => setTimeout(resolve, 50));
+      await Promise.resolve();
       handlerCompleted = true;
     });
 
@@ -335,17 +335,17 @@ describe('EventSystem', () => {
     const order: number[] = [];
 
     events.subscribe(TestActions.hello, async () => {
-      await new Promise((resolve) => setTimeout(resolve, 30));
+      await Promise.resolve();
       order.push(1);
     });
 
     events.subscribe(TestActions.hello, async () => {
-      await new Promise((resolve) => setTimeout(resolve, 10));
+      await Promise.resolve();
       order.push(2);
     });
 
     events.subscribeAll(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 20));
+      await Promise.resolve();
       order.push(3);
     });
 
@@ -436,7 +436,7 @@ describe('EventSystem', () => {
   it('should support waitFor with predicate that filters actions', async () => {
     const events = new EventSystem();
 
-    setTimeout(() => {
+    queueMicrotask(() => {
       events.dispatch(
         TestActions.count.create({
           value: 10,
@@ -452,7 +452,7 @@ describe('EventSystem', () => {
           value: 30,
         })
       );
-    }, 50);
+    });
 
     const action = await events.waitFor(
       withPredicate(TestActions.count, (a) => a.payload.value === 20),
@@ -468,13 +468,13 @@ describe('EventSystem', () => {
   it('should support race with multiple patterns', async () => {
     const events = new EventSystem();
 
-    setTimeout(() => {
+    queueMicrotask(() => {
       events.dispatch(
         TestActions.goodbye.create({
           message: 'Goodbye',
         })
       );
-    }, 50);
+    });
 
     const action = await events.race([TestActions.hello, TestActions.goodbye, TestActions.count], {
       timeout: 1000,
@@ -738,14 +738,14 @@ describe('defineAction (single action without namespace)', () => {
   it('should work with once()', async () => {
     const events = new EventSystem();
 
-    setTimeout(() => {
+    queueMicrotask(() => {
       events.dispatch(
         SystemStarted.create({
           version: '1.0.0',
           timestamp: Date.now(),
         })
       );
-    }, 50);
+    });
 
     const action = await events.once(SystemStarted, {
       timeout: 1000,
@@ -758,7 +758,7 @@ describe('defineAction (single action without namespace)', () => {
   it('should work with waitFor()', async () => {
     const events = new EventSystem();
 
-    setTimeout(() => {
+    queueMicrotask(() => {
       events.dispatch(
         UserLoggedIn.create({
           userId: 'other',
@@ -771,7 +771,7 @@ describe('defineAction (single action without namespace)', () => {
           email: 'admin@example.com',
         })
       );
-    }, 50);
+    });
 
     const action = await events.waitFor(
       withPredicate(UserLoggedIn, (a) => a.payload.userId === 'admin'),
@@ -787,14 +787,14 @@ describe('defineAction (single action without namespace)', () => {
   it('should work with race()', async () => {
     const events = new EventSystem();
 
-    setTimeout(() => {
+    queueMicrotask(() => {
       events.dispatch(
         SystemStarted.create({
           version: '1.0.0',
           timestamp: Date.now(),
         })
       );
-    }, 50);
+    });
 
     const action = await events.race([UserLoggedIn, SystemStarted], {
       timeout: 1000,
@@ -808,7 +808,7 @@ describe('withPredicate', () => {
   it('should filter events in race by predicate', async () => {
     const events = new EventSystem();
 
-    setTimeout(() => {
+    queueMicrotask(() => {
       // Dispatch with value 5 - should NOT match
       events.dispatch(
         TestActions.count.create({
@@ -821,7 +821,7 @@ describe('withPredicate', () => {
           value: 15,
         })
       );
-    }, 50);
+    });
 
     const action = await events.race(
       [withPredicate(TestActions.count, (a) => a.payload.value > 10)],
@@ -837,7 +837,7 @@ describe('withPredicate', () => {
   it('should filter different events with different predicates in race', async () => {
     const events = new EventSystem();
 
-    setTimeout(() => {
+    queueMicrotask(() => {
       // Dispatch hello with wrong message - should NOT match
       events.dispatch(
         TestActions.hello.create({
@@ -850,7 +850,7 @@ describe('withPredicate', () => {
           message: 'correct',
         })
       );
-    }, 50);
+    });
 
     const action = await events.race(
       [
@@ -869,7 +869,7 @@ describe('withPredicate', () => {
   it('should work with mixed filtered and unfiltered patterns', async () => {
     const events = new EventSystem();
 
-    setTimeout(() => {
+    queueMicrotask(() => {
       // Dispatch count with low value - filtered out
       events.dispatch(
         TestActions.count.create({
@@ -882,7 +882,7 @@ describe('withPredicate', () => {
           message: 'bye',
         })
       );
-    }, 50);
+    });
 
     const action = await events.race(
       [
@@ -912,7 +912,7 @@ describe('withPredicate', () => {
     const events = new EventSystem();
     const targetUid = 'plugin-123';
 
-    setTimeout(() => {
+    queueMicrotask(() => {
       // Other plugin loads - should NOT match
       events.dispatch(
         PluginActions.loaded.create({
@@ -927,7 +927,7 @@ describe('withPredicate', () => {
           name: 'Target',
         })
       );
-    }, 50);
+    });
 
     const action = await events.race(
       [
@@ -949,13 +949,13 @@ describe('withPredicate', () => {
   it('should timeout when predicate never matches', () => {
     const events = new EventSystem();
 
-    setTimeout(() => {
+    queueMicrotask(() => {
       events.dispatch(
         TestActions.count.create({
           value: 5,
         })
       );
-    }, 50);
+    });
 
     expect(
       events.race([withPredicate(TestActions.count, (a) => a.payload.value > 100)], {
@@ -1095,7 +1095,7 @@ describe('subscribeGlob', () => {
     let resolved = false;
 
     events.subscribeGlob('test.*', async () => {
-      await new Promise((r) => setTimeout(r, 10));
+      await Promise.resolve();
       resolved = true;
     });
 

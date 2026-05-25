@@ -51,7 +51,9 @@ describe('SingleFlightCache', () => {
     const promise = () =>
       cache.run('key', async () => {
         upstreamCalls += 1;
-        await new Promise((r) => setTimeout(r, 10));
+        // Yield once so all three concurrent callers register on the
+        // single-flight entry before the upstream settles.
+        await Promise.resolve();
         return { status: 200, statusText: '', headers: {}, body: 'hi', attempts: 1 };
       });
     const [a, b, c] = await Promise.all([promise(), promise(), promise()]);

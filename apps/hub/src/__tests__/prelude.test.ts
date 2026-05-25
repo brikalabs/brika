@@ -11,6 +11,7 @@ import { afterEach, describe, expect, setDefaultTimeout, test } from 'bun:test';
 setDefaultTimeout(30_000);
 
 import { join } from 'node:path';
+import { sleep } from './_test-helpers';
 
 const BUN = process.execPath;
 const PRELUDE = join(import.meta.dir, '../runtime/plugins/prelude/index.ts');
@@ -93,7 +94,8 @@ describe('Prelude', () => {
       // and race the wait against a short ceiling so a stuck `proc.exited`
       // doesn't pin the whole runner.
       proc.kill(9);
-      await Promise.race([proc.exited, new Promise((resolve) => setTimeout(resolve, 500))]);
+      // Ceiling — guard against a stuck `proc.exited` (negative wait).
+      await Promise.race([proc.exited, sleep(500)]);
     } catch {
       // already dead
     }

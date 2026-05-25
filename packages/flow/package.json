@@ -26,5 +26,8 @@
   },
   "dependencies": {
     "@brika/serializable": "workspace:*"
+  },
+  "devDependencies": {
+    "@brika/testing": "workspace:*"
   }
 }

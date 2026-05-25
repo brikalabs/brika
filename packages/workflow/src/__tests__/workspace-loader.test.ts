@@ -6,20 +6,9 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { flush, waitFor } from '@brika/testing';
 import type { BlockTypeDefinition, Workflow } from '../types';
 import { type BlockTypeRegistry, type LoaderEvents, WorkspaceLoader } from '../workspace/loader';
-
-/** Poll `predicate` until truthy or timeout. Short-circuits as soon as the
- *  loader's setInterval fires and lands the expected state. */
-async function waitFor(predicate: () => boolean, timeoutMs = 2000): Promise<void> {
-  const start = Date.now();
-  while (Date.now() - start < timeoutMs) {
-    if (predicate()) {
-      return;
-    }
-    await new Promise((r) => setTimeout(r, 5));
-  }
-}
 
 // Create a temporary directory for tests
 const createTempDir = (): string => {
@@ -468,10 +457,8 @@ blocks: []
       loader.watch();
 
       try {
-        // Wait for the first poll to register the file hash (one poll cycle).
-        await new Promise((resolve) => setTimeout(resolve, 40));
-
-        // Now delete the file
+        // loadAll() already seeded #fileHashes, so the watcher can detect
+        // the delete on its next poll without warming up first.
         rmSync(join(tempDir, 'delete-me.yaml'));
 
         await waitFor(() => unloaded.includes('delete-wf'));
@@ -504,8 +491,9 @@ blocks: []
         await waitFor(() => loadCount >= 1);
         const countAfterHashEstablished = loadCount;
 
-        // Wait for several more poll cycles — should NOT reload again.
-        await new Promise((resolve) => setTimeout(resolve, 100));
+        // Negative assertion: give the watcher several poll cycles (pollInterval=20ms)
+        // to potentially misbehave, then assert loadCount didn't change.
+        await flush(80);
 
         expect(loadCount).toBe(countAfterHashEstablished);
       } finally {

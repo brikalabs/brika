@@ -113,9 +113,9 @@ describe('RpcServer', () => {
   });
 
   it('refuses a duplicate id with response.error{code: duplicate-id}', async () => {
-    const api = makeApiServer(
-      () => new Promise<Response>((resolve) => setTimeout(() => resolve(new Response('ok')), 50))
-    );
+    // Never-resolving upstream so the first request stays in-flight when
+    // the duplicate arrives; the response itself isn't observed here.
+    const api = makeApiServer(() => new Promise<Response>(() => undefined));
     const { server, outbox } = makeServer(api);
     const sender = makeSender(outbox);
 
@@ -184,9 +184,8 @@ describe('RpcServer', () => {
   });
 
   it('shutdown aborts all in-flight requests', async () => {
-    const api = makeApiServer(
-      () => new Promise<Response>((resolve) => setTimeout(() => resolve(new Response('ok')), 500))
-    );
+    // Never-resolving upstream — shutdown is what surfaces the abort.
+    const api = makeApiServer(() => new Promise<Response>(() => undefined));
     const { server, outbox } = makeServer(api);
     const sender = makeSender(outbox);
 

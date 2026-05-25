@@ -5,6 +5,7 @@ import { HubConfig } from '@/runtime/config';
 import { PluginActions, SparkActions } from '@/runtime/events/actions';
 import { EventSystem } from '@/runtime/events/event-system';
 import { Logger } from '@/runtime/logs/log-router';
+import { waitFor } from './_test-helpers';
 
 useTestBed({
   autoStub: false,
@@ -83,7 +84,7 @@ describe('EventSystem', () => {
       )
     );
 
-    await new Promise((resolve) => setTimeout(resolve, 10));
+    await waitFor(() => handler.mock.calls.length === 3);
 
     expect(handler.mock.calls.length).toBe(3);
   });
@@ -126,7 +127,7 @@ describe('EventSystem', () => {
       )
     );
 
-    await new Promise((resolve) => setTimeout(resolve, 10));
+    await waitFor(() => handler.mock.calls.length === 3);
 
     expect(handler.mock.calls.length).toBe(3);
   });
@@ -147,12 +148,12 @@ describe('EventSystem', () => {
         'src'
       )
     );
-    await new Promise((resolve) => setTimeout(resolve, 10));
+    await waitFor(() => handler.mock.calls.length === 1);
     expect(handler.mock.calls.length).toBe(1);
 
     unsub();
 
-    events.dispatch(
+    const dispatched = events.dispatch(
       SparkActions.emit.create(
         {
           type: 'test',
@@ -162,8 +163,10 @@ describe('EventSystem', () => {
         'src'
       )
     );
-    await new Promise((resolve) => setTimeout(resolve, 10));
-    expect(handler.mock.calls.length).toBe(1); // Still 1, not called again
+    // Negative assertion — the unsubscribed handler must not fire even
+    // after the dispatch has fully settled.
+    await dispatched;
+    expect(handler.mock.calls.length).toBe(1);
   });
 
   it('should notify global subscribers', async () => {
@@ -199,7 +202,9 @@ describe('EventSystem', () => {
       )
     );
 
-    await new Promise((resolve) => setTimeout(resolve, 10));
+    await waitFor(
+      () => globalHandler.mock.calls.length === 2 && patternHandler.mock.calls.length === 1
+    );
 
     expect(globalHandler.mock.calls.length).toBe(2);
     expect(patternHandler.mock.calls.length).toBe(1);
@@ -245,7 +250,7 @@ describe('EventSystem', () => {
       )
     );
 
-    await new Promise((resolve) => setTimeout(resolve, 10));
+    await waitFor(() => events.query().length >= 3);
 
     const history = events.query();
 
@@ -261,9 +266,10 @@ describe('EventSystem', () => {
       throw new Error('Handler crashed!');
     });
 
+    let dispatched: Promise<unknown> | undefined;
     // Should not throw
     expect(() => {
-      events.dispatch(
+      dispatched = events.dispatch(
         SparkActions.emit.create(
           {
             type: 'error.test',
@@ -275,8 +281,9 @@ describe('EventSystem', () => {
       );
     }).not.toThrow();
 
-    await new Promise((resolve) => setTimeout(resolve, 10));
-    // Error should be logged (handled by SubscriberManager)
+    // Awaiting the dispatch lets the error path settle (logged through
+    // SubscriberManager) before the test exits.
+    await dispatched;
   });
 
   it('should support array of action creators', async () => {
@@ -308,7 +315,7 @@ describe('EventSystem', () => {
       )
     );
 
-    await new Promise((resolve) => setTimeout(resolve, 10));
+    await waitFor(() => handler.mock.calls.length === 2);
 
     expect(handler.mock.calls.length).toBe(2);
   });

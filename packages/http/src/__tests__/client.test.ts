@@ -6,7 +6,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { realFetch } from '@brika/testing';
+import { flush, realFetch } from '@brika/testing';
 import { MemoryCache } from '../cache';
 import { HttpClient } from '../client';
 import { HttpError } from '../types';
@@ -237,22 +237,12 @@ describe('HttpClient', () => {
     test('should respect cache TTL', async () => {
       const url = 'https://httpbin.org/uuid';
 
-      const response1 = await client
-        .get(url)
-        .cache({
-          ttl: 20,
-        })
-        .send();
+      const response1 = await client.get(url).cache({ ttl: 10 }).send();
 
-      // Wait for cache to expire
-      await new Promise((resolve) => setTimeout(resolve, 30));
+      // TTL is millisecond-precise; flush past it so the second request misses.
+      await flush(20);
 
-      const response2 = await client
-        .get(url)
-        .cache({
-          ttl: 20,
-        })
-        .send();
+      const response2 = await client.get(url).cache({ ttl: 10 }).send();
 
       expect(response1.cached).toBe(false);
       expect(response2.cached).toBe(false);

@@ -3,6 +3,7 @@
  */
 
 import { afterEach, describe, expect, test } from 'bun:test';
+import { waitFor } from '@brika/testing';
 import { Hono } from 'hono';
 import { RateLimitStore, rateLimit } from '../middleware/rate-limit';
 
@@ -116,13 +117,12 @@ describe('RateLimitStore', () => {
     // Manually trigger sweep behavior: entries older than 2*window are removed
     // We'll use a new store with short cleanup for this
     store.destroy();
-    store = new RateLimitStore(1_000, 5, 50);
+    store = new RateLimitStore(1_000, 5, 20);
 
     store.check('ip-1', Date.now() - 5_000);
     store.check('ip-2', Date.now());
 
-    // Wait for cleanup to run
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    await waitFor(() => store.size === 1);
 
     // Only the recent entry should remain
     expect(store.size).toBe(1);

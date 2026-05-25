@@ -32,6 +32,7 @@ import { Logger } from '@/runtime/logs/log-router';
 import type { Workflow } from '@/runtime/workflows/types';
 import { WorkflowEngine } from '@/runtime/workflows/workflow-engine';
 import { WorkflowLoader } from '@/runtime/workflows/workflow-loader';
+import { sleep } from './_test-helpers';
 
 useTestBed({
   autoStub: false,
@@ -704,8 +705,10 @@ blocks: []
 `
     );
 
-    // Give fs.watch a moment to fire
-    await new Promise((resolve) => setTimeout(resolve, 10));
+    // Negative wait — the test deliberately exercises stopWatching
+    // racing against a pending debounce timer, so we need a real window
+    // to let fs.watch fire without observing any positive signal.
+    await sleep(10);
 
     // Stop watching should clear all pending timers without error
     loader.stopWatching();

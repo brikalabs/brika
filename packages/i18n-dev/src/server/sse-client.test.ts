@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { useBunMock } from '@brika/testing';
+import { flush, useBunMock, waitFor } from '@brika/testing';
 import { startHubSseClient } from './sse-client';
 
 const bun = useBunMock();
@@ -19,24 +19,6 @@ function emptyStream(): ReadableStream<Uint8Array> {
   });
 }
 
-function waitForCalls(counter: { count: number }, target: number, timeoutMs = 500): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const start = Date.now();
-    const tick = () => {
-      if (counter.count >= target) {
-        resolve();
-        return;
-      }
-      if (Date.now() - start > timeoutMs) {
-        reject(new Error(`onChange called ${counter.count} times, expected ${target}`));
-        return;
-      }
-      setTimeout(tick, 10);
-    };
-    tick();
-  });
-}
-
 describe('startHubSseClient', () => {
   test('fires onChange once when the stream successfully connects', async () => {
     bun.fetch(() => Promise.resolve(sseResponse(emptyStream())));
@@ -50,7 +32,7 @@ describe('startHubSseClient', () => {
       reconnectMs: 60_000,
     });
 
-    await waitForCalls(counter, 1);
+    await waitFor(() => counter.count >= 1);
     expect(counter.count).toBe(1);
     stop();
   });
@@ -67,7 +49,8 @@ describe('startHubSseClient', () => {
       reconnectMs: 60_000,
     });
 
-    await new Promise((r) => setTimeout(r, 50));
+    // Negative assertion: give the connect path a few ticks to (not) fire.
+    await flush(20);
     expect(counter.count).toBe(0);
     stop();
   });
@@ -86,7 +69,7 @@ describe('startHubSseClient', () => {
       reconnectMs: 20,
     });
 
-    await waitForCalls(counter, 2);
+    await waitFor(() => counter.count >= 2);
     expect(counter.count).toBeGreaterThanOrEqual(2);
     stop();
   });

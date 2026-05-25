@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 import { unlinkSync } from 'node:fs';
+import { waitFor } from '@brika/testing';
 import { SqliteCache } from '../cache/sqlite-cache';
 
 describe('SqliteCache', () => {
@@ -90,7 +91,7 @@ describe('SqliteCache', () => {
 
       expect(cache.get('expiring')).toBe('value');
 
-      await new Promise((resolve) => setTimeout(resolve, 20));
+      await waitFor(() => cache.get('expiring') === null);
 
       expect(cache.get('expiring')).toBeNull();
     });
@@ -100,7 +101,7 @@ describe('SqliteCache', () => {
 
       expect(cache.has('expiring')).toBe(true);
 
-      await new Promise((resolve) => setTimeout(resolve, 20));
+      await waitFor(() => !cache.has('expiring'));
 
       expect(cache.has('expiring')).toBe(false);
     });
@@ -110,7 +111,7 @@ describe('SqliteCache', () => {
       cache.set('expire1', 'value', 5);
       cache.set('expire2', 'value', 5);
 
-      await new Promise((resolve) => setTimeout(resolve, 15));
+      await waitFor(() => !cache.has('expire1') && !cache.has('expire2'));
 
       cache.cleanup();
 
@@ -182,7 +183,7 @@ describe('SqliteCache', () => {
       cache.set('keep', 'value', 60_000);
       cache.set('expire', 'value', 5);
 
-      await new Promise((resolve) => setTimeout(resolve, 15));
+      await waitFor(() => cache.stats().expired === 1);
 
       const stats = cache.stats();
       expect(stats.expired).toBe(1);
@@ -213,7 +214,7 @@ describe('SqliteCache', () => {
     it('should return null for expired entries', async () => {
       cache.set('key1', 'value', 5);
 
-      await new Promise((resolve) => setTimeout(resolve, 15));
+      await waitFor(() => cache.getEntry('key1') === null);
 
       const entry = cache.getEntry('key1');
       expect(entry).toBeNull();

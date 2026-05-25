@@ -5,6 +5,7 @@
  */
 
 import { describe, expect, test } from 'bun:test';
+import { sleep } from '../../../../../__tests__/_test-helpers';
 import { ConcurrencyLimiter } from '../semaphore';
 
 describe('ConcurrencyLimiter', () => {
@@ -29,8 +30,9 @@ describe('ConcurrencyLimiter', () => {
       queuedFinished = true;
       r();
     });
-    // The waiter cannot have resolved yet.
-    await new Promise((r) => setTimeout(r, 5));
+    // Negative assertion — the waiter must not resolve while the slot
+    // is still held. A short window is the right tool here.
+    await sleep(5);
     expect(queuedFinished).toBe(false);
     expect(limiter.waiting('p')).toBe(1);
     r1();

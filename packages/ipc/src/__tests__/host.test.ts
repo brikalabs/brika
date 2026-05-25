@@ -3,6 +3,7 @@
  */
 
 import { describe, expect, mock, test } from 'bun:test';
+import { waitFor } from '@brika/testing';
 import type { WireMessage } from '../channel';
 import { hello, ping, ready, stop } from '../contract';
 import { PluginChannel } from '../host';
@@ -268,8 +269,7 @@ describe('PluginChannel', () => {
         onDisconnect,
       });
 
-      // Wait for process to "exit"
-      await new Promise((resolve) => setTimeout(resolve, 50));
+      await waitFor(() => channel.isDisconnected);
 
       expect(channel.isDisconnected).toBe(true);
       expect(onDisconnect).toHaveBeenCalled();
@@ -454,8 +454,7 @@ describe('PluginChannel', () => {
         onDisconnect,
       });
 
-      // Wait for process to "exit"
-      await new Promise((resolve) => setTimeout(resolve, 50));
+      await waitFor(() => onDisconnect.mock.calls.length > 0);
 
       expect(onDisconnect).toHaveBeenCalled();
       const error = (onDisconnect.mock.calls as unknown[][])[0]?.[0] as Error;
@@ -493,8 +492,7 @@ describe('PluginChannel', () => {
         onStderr,
       });
 
-      // Wait for async stderr reading to complete
-      await new Promise((resolve) => setTimeout(resolve, 50));
+      await waitFor(() => stderrLines.length >= 2);
 
       expect(stderrLines).toContain('error line 1');
       expect(stderrLines).toContain('error line 2');
@@ -518,15 +516,14 @@ describe('PluginChannel', () => {
         stdin: null,
         stdout: null,
         stderr: stderrStream,
-        exited: new Promise<number>((resolve) => setTimeout(() => resolve(1), 60)),
+        exited: new Promise<number>((resolve) => setTimeout(() => resolve(1), 5)),
       } as unknown as ReturnType<typeof Bun.spawn>;
 
       const _channel = new PluginChannel(proc, {
         onDisconnect,
       });
 
-      // Wait for stderr reading and process exit
-      await new Promise((resolve) => setTimeout(resolve, 120));
+      await waitFor(() => onDisconnect.mock.calls.length > 0);
 
       expect(onDisconnect).toHaveBeenCalled();
       const error = (onDisconnect.mock.calls as unknown[][])[0]?.[0] as Error;
@@ -562,7 +559,7 @@ describe('PluginChannel', () => {
         onStderr,
       });
 
-      await new Promise((resolve) => setTimeout(resolve, 50));
+      await waitFor(() => stderrLines.includes('no newline at end'));
 
       expect(stderrLines).toContain('no newline at end');
     });
@@ -593,15 +590,14 @@ describe('PluginChannel', () => {
         stdin: null,
         stdout: null,
         stderr: stderrStream,
-        exited: new Promise<number>((resolve) => setTimeout(() => resolve(1), 60)),
+        exited: new Promise<number>((resolve) => setTimeout(() => resolve(1), 5)),
       } as unknown as ReturnType<typeof Bun.spawn>;
 
       const _channel = new PluginChannel(proc, {
         onDisconnect,
       });
 
-      // Wait for stderr and process exit
-      await new Promise((resolve) => setTimeout(resolve, 120));
+      await waitFor(() => onDisconnect.mock.calls.length > 0);
 
       expect(onDisconnect).toHaveBeenCalled();
       const error = (onDisconnect.mock.calls as unknown[][])[0]?.[0] as Error;
@@ -638,7 +634,7 @@ describe('PluginChannel', () => {
         onStderr,
       });
 
-      await new Promise((resolve) => setTimeout(resolve, 50));
+      await waitFor(() => stderrLines.length >= 2);
 
       expect(stderrLines).toEqual(['real line', 'another real line']);
     });
