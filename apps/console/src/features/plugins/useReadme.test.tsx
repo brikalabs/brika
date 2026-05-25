@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, mock, test } from 'bun:test';
-import { flush } from '@brika/testing';
+import { flush, waitFor } from '@brika/testing';
 import { Text } from 'ink';
 import { render } from 'ink-testing-library';
 import React from 'react';
@@ -88,7 +88,7 @@ describe('useReadme', () => {
         },
       })
     );
-    await flush();
+    await waitFor(() => latest.current?.error === 'network down');
     expect(latest.current?.error).toBe('network down');
     expect(latest.current?.text).toBeNull();
     expect(latest.current?.loading).toBe(false);
@@ -109,19 +109,19 @@ describe('useReadme', () => {
     const { rerender, unmount } = render(
       React.createElement(Probe, { fetcher, k: 'first', onResult })
     );
-    await flush();
+    await waitFor(() => fetcher.mock.calls.length >= 1);
     expect(fetcher).toHaveBeenCalledTimes(1);
 
     // Switch keys before the first promise resolves.
     rerender(React.createElement(Probe, { fetcher, k: 'second', onResult }));
-    await flush();
+    await waitFor(() => fetcher.mock.calls.length >= 2);
     expect(fetcher).toHaveBeenCalledTimes(2);
 
     // Resolve the stale (first) call last — its value must be ignored
     // because the cleanup flagged it as cancelled.
     pending.get('second')?.('SECOND_README');
     pending.get('first')?.('FIRST_README');
-    await flush();
+    await waitFor(() => latest.current?.text === 'SECOND_README');
 
     expect(latest.current?.text).toBe('SECOND_README');
     expect(latest.current?.loading).toBe(false);

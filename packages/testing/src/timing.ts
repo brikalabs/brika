@@ -17,7 +17,7 @@
  * soon as the state lands.
  */
 
-const DEFAULT_FLUSH_MS = 10;
+const DEFAULT_FLUSH_MS = 25;
 
 export function flush(ms: number = DEFAULT_FLUSH_MS): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));

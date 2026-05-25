@@ -429,10 +429,10 @@ describe('<CliProvider>', () => {
     bun.fetch(async (): Promise<Response> => new Response('ok', { status: 200 }));
     const latest: { current: CliState | null } = { current: null };
     const { unmount } = mount(latest);
-    await flush(30);
+    await waitFor(() => latest.current?.hub.state === 'running');
     expect(latest.current?.hub.state).toBe('running');
     await latest.current?.restartHub();
-    await flush();
+    await waitFor(() => latest.current?.mood === 'suspicious');
     expect(latest.current?.mood).toBe('suspicious');
     expect(latest.current?.statusText).toMatch(/can't restart/);
     unmount();
@@ -485,11 +485,11 @@ describe('<CliProvider>', () => {
     await clearPid();
     const latest: { current: CliState | null } = { current: null };
     const { unmount } = mount(latest);
-    await flush(30);
+    await waitFor(() => latest.current?.hub.state === 'stopped');
 
     // Trigger a transient: openUi while stopped sets a distinctive caption.
     await latest.current?.openUi();
-    await flush();
+    await waitFor(() => /isn't running/.test(latest.current?.statusText ?? ''));
     expect(latest.current?.statusText).toMatch(/isn't running/);
 
     // The transient caption clears after 2.5s — poll until that happens
