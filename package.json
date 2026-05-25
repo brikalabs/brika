@@ -22,7 +22,7 @@
     "brika": "bun apps/console/src/main.ts",
     "test": "bun --filter '*' --parallel test --timeout=30000",
     "test:coverage": "bun --filter '*' --parallel test --timeout=30000",
-    "typecheck": "bun --filter '*' typecheck",
+    "typecheck": "bun --filter '*' --parallel typecheck",
     "build": "bun run --filter './packages/*' build",
     "compile": "bun run --filter @brika/ui build && bun run --filter @brika/build build --compile",
     "compile:headless": "bun run --filter @brika/build build --compile --target=headless",
