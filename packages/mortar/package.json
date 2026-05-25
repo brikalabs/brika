@@ -1,7 +1,7 @@
 {
   "name": "@brika/mortar",
   "version": "0.3.1",
-  "description": "Local dev stack orchestrator — spawns, supervises, and tails your services with a TUI. Generic (could ship standalone); ships in the Brika monorepo for now.",
+  "description": "Local dev stack orchestrator \u2014 spawns, supervises, and tails your services with a TUI. Generic (could ship standalone); ships in the Brika monorepo for now.",
   "type": "module",
   "private": true,
   "license": "MIT",
@@ -15,7 +15,7 @@
   },
   "scripts": {
     "dev": "bun run src/cli.ts",
-    "test": "bun test",
+    "test": "bun test --parallel",
     "typecheck": "tsgo --noEmit"
   },
   "dependencies": {

@@ -19,15 +19,16 @@
  * Accessibility model
  *   - `<List>` is a single focus slot (not one slot per item) and
  *     joins the Tab cycle so keyboard-only users can reach it.
- *   - **Arrow keys / Enter never block on focus.** They fire whenever
- *     the list is mounted and has items, so navigating to a section
- *     and immediately hitting `↑` / `↓` / `Enter` does what you'd
- *     expect — no Tab dance required. The arrows auto-suspend during
- *     input capture (when an `<Input>` / `<Confirm>` / `<Form>` is
- *     active), so typing in a sibling search field still goes to the
- *     field, not the list.
+ *   - **Arrow keys / Enter are scoped to focus.** `↑` / `↓` / `j` / `k`
+ *     / `Enter` only fire when the list actually owns focus, so the
+ *     same keys can mean other things elsewhere on the screen (the log
+ *     pane's scroller, a sibling form's vim motions). Combine with
+ *     `autoFocus` to make the list usable the moment a view mounts
+ *     without a Tab dance. Bindings auto-suspend during input capture
+ *     (`<Input>` / `<Confirm>` / `<Form>`) so typing in a sibling
+ *     search field never leaks into list navigation.
  *   - Click a row to select it; the list claims focus as a side effect
- *     so subsequent Tab traversal starts from there.
+ *     so subsequent keystrokes land here.
  *
  * Bindings:
  *   - `↑` / `↓` / `k` / `j` — move the cursor.
@@ -83,6 +84,11 @@ export interface ListProps {
   readonly defaultValue?: string;
   readonly onValueChange?: (value: string) => void;
   readonly onSelect?: (value: string) => void;
+  /** Fires when the list's keyboard-focus state changes. Use this to
+   *  drive external chrome (e.g. a wrapping pane's border accent) since
+   *  the List owns its focus slot internally — there's no other way to
+   *  observe `isFocused` from outside the subtree. */
+  readonly onFocusChange?: (focused: boolean) => void;
   readonly autoFocus?: boolean;
   readonly id?: string;
   /** Opt out of the Tab cycle while staying clickable. Default `true`. */
@@ -95,6 +101,7 @@ export function List({
   defaultValue,
   onValueChange,
   onSelect,
+  onFocusChange,
   autoFocus = false,
   id,
   focusable = true,
@@ -115,6 +122,12 @@ export function List({
   });
   const { focus } = useFocusManager();
   const focusList = useCallback(() => focus(focusId), [focus, focusId]);
+
+  const onFocusChangeRef = useRef(onFocusChange);
+  onFocusChangeRef.current = onFocusChange;
+  useEffect(() => {
+    onFocusChangeRef.current?.(isFocused);
+  }, [isFocused]);
 
   const onSelectRef = useRef<typeof onSelect>(onSelect);
   onSelectRef.current = onSelect;
@@ -188,20 +201,19 @@ export function List({
     onSelectRef.current?.(v);
   }, []);
 
-  // Arrow keys do NOT gate on `isFocused` — the list owns its key
-  // namespace whenever it's on screen. This makes the list usable the
-  // moment a view mounts without requiring the user to Tab into it.
-  // `useShortcut` still auto-suspends during input capture (Input /
+  // Arrows / vim keys / Enter are focus-gated so the same keys can
+  // legitimately mean something else elsewhere on the screen — e.g.
+  // mortar's log pane uses `↑` / `↓` for line-scroll while the
+  // service list is on the same view. Combine with `autoFocus` to
+  // make the list keyboard-driven from the moment a view mounts.
+  // `useShortcut` also auto-suspends during input capture (Input /
   // Form / Confirm), so typing in a sibling search field never leaks
   // into list navigation.
-  const enabled = focusable && items.length > 0;
+  const enabled = focusable && items.length > 0 && isFocused;
   useShortcut('upArrow', () => move(-1), enabled);
   useShortcut('downArrow', () => move(1), enabled);
   useShortcut('k', () => move(-1), enabled);
   useShortcut('j', () => move(1), enabled);
-  // Enter only fires when the list actually owns focus — without that
-  // guard, hitting Enter on a Button in the same view would also
-  // accidentally invoke `onSelect` on the focused list row.
   useShortcut(
     'return',
     () => {
@@ -210,7 +222,7 @@ export function List({
         select(focused.value);
       }
     },
-    isFocused && items.length > 0 && Boolean(onSelect)
+    enabled && Boolean(onSelect)
   );
 
   const ctx = useMemo<ListContextValue>(

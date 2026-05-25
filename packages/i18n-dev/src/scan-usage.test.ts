@@ -386,6 +386,29 @@ describe('scanKeyUsages', () => {
     expect(result.keys['plugin:@brika/plugin-timer:controls.start']).toBeDefined();
   });
 
+  test('JSON property keys that contain `:` are NOT mistaken for cross-refs', async () => {
+    // Real-world case: the hub's users.json uses scope strings (`workflow:read`)
+    // as nested property names, e.g. `users.scopes["workflow:read"]`. Without
+    // the value-vs-key discriminator, these would surface as 9 bogus unknown-key
+    // errors because the actual key path is `users:scopes.workflow:read`.
+    await writeSource(
+      'data/users.json',
+      [
+        '{',
+        '  "scopes": {',
+        '    "workflow:read": "Read workflows",',
+        '    "workflow:write": "Create and edit workflows"',
+        '  }',
+        '}',
+      ].join('\n')
+    );
+
+    const result = await scanKeyUsages(tempDir, [{ dir: join(tempDir, 'data') }]);
+
+    expect(result.keys['workflow:read']).toBeUndefined();
+    expect(result.keys['workflow:write']).toBeUndefined();
+  });
+
   test('false-positive identifiers (cat, assert, _t, setUseTranslation) ignored', async () => {
     await writeSource(
       'src/falsy.ts',

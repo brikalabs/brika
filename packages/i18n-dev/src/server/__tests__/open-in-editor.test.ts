@@ -5,6 +5,7 @@ import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
+import { flush, waitFor } from '@brika/testing';
 import { createOpenInEditorMiddleware, type OpenInEditorOptions } from '../open-in-editor';
 
 interface MountedServer {
@@ -329,8 +330,8 @@ describe('createOpenInEditorMiddleware', () => {
       try {
         const res = await callOpen(server, { file: 'good.ts' });
         expect(res.status).toBe(200);
-        // execFile fires asynchronously; give it a tick to settle.
-        await new Promise((r) => setTimeout(r, 50));
+        // Negative assertion: give execFile a window to (not) emit a warning.
+        await flush(30);
         expect(calls.warn).toHaveLength(0);
       } finally {
         await server.close();
@@ -346,7 +347,7 @@ describe('createOpenInEditorMiddleware', () => {
       try {
         const res = await callOpen(server, { file: 'good.ts' });
         expect(res.status).toBe(200);
-        await new Promise((r) => setTimeout(r, 100));
+        await waitFor(() => calls.warn.length > 0);
         expect(calls.warn.length).toBeGreaterThan(0);
         expect(calls.warn[0]).toContain('Failed to open editor');
       } finally {

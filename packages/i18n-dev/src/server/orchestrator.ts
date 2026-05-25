@@ -3,7 +3,7 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { TranslationData } from '@brika/i18n';
-import { loadMergedLocaleFolder } from '@brika/i18n/node';
+import { loadLocaleFolder, loadMergedLocaleFolder } from '@brika/i18n/node';
 import {
   generateNamespaceList,
   generateRegistryAugmentation,
@@ -30,6 +30,13 @@ export interface ScanResult {
   translations: Record<string, Record<string, TranslationData>>;
   /** Core locale data used for type generation. */
   coreTranslations: Map<string, Map<string, TranslationData>>;
+  /**
+   * Non-fatal failures encountered while assembling the scan (currently:
+   * remote-hub fetch errors). The Vite plugin folds each entry into a
+   * `plugin-error` issue so the overlay surfaces "hub unreachable" instead
+   * of disguising it as 700+ missing-key errors.
+   */
+  warnings: readonly string[];
 }
 
 function flattenTranslations(
@@ -45,14 +52,11 @@ function flattenTranslations(
   return out;
 }
 
-interface PackageScanEntry {
-  readonly namespace: string;
-  readonly locales: Map<string, Map<string, TranslationData>>;
-}
+type LocaleNsMap = Map<string, Map<string, TranslationData>>;
 
-async function scanSourceLocales(source: ResolvedSource): Promise<PackageScanEntry | undefined> {
+async function scanSourceLocales(source: ResolvedSource): Promise<LocaleNsMap | undefined> {
   const { localesDir, namespace } = source;
-  if (!localesDir || !namespace) {
+  if (!localesDir) {
     return undefined;
   }
   let localeDirs: string[];
@@ -62,24 +66,42 @@ async function scanSourceLocales(source: ResolvedSource): Promise<PackageScanEnt
   } catch {
     return undefined;
   }
-  const locales = new Map<string, Map<string, TranslationData>>();
+  const locales: LocaleNsMap = new Map();
   for (const slash of localeDirs) {
     const locale = slash.replace('/', '');
     if (!locale) {
       continue;
     }
-    const { data } = await loadMergedLocaleFolder(`${localesDir}/${locale}`);
-    if (Object.keys(data).length === 0) {
+    const nsMap = namespace
+      ? await loadMergedNamespace(`${localesDir}/${locale}`, namespace)
+      : await loadPerFileNamespaces(`${localesDir}/${locale}`);
+    if (nsMap.size === 0) {
       continue;
     }
-    const nsMap = new Map<string, TranslationData>();
-    nsMap.set(namespace, data);
     locales.set(locale, nsMap);
   }
-  if (locales.size === 0) {
-    return undefined;
+  return locales.size > 0 ? locales : undefined;
+}
+
+async function loadMergedNamespace(
+  folderPath: string,
+  namespace: string
+): Promise<Map<string, TranslationData>> {
+  const { data } = await loadMergedLocaleFolder(folderPath);
+  const nsMap = new Map<string, TranslationData>();
+  if (Object.keys(data).length > 0) {
+    nsMap.set(namespace, data);
   }
-  return { namespace, locales };
+  return nsMap;
+}
+
+async function loadPerFileNamespaces(folderPath: string): Promise<Map<string, TranslationData>> {
+  const map = await loadLocaleFolder(folderPath);
+  const nsMap = new Map<string, TranslationData>();
+  for (const [ns, data] of Object.entries(map)) {
+    nsMap.set(ns, data);
+  }
+  return nsMap;
 }
 
 export interface OrchestratorOptions {
@@ -118,16 +140,21 @@ export interface OrchestratorOptions {
  * Fold remote-hub translations into the core map. Local data wins on overlap
  * (the same key/locale won't be overwritten), but remote-only namespaces fill
  * in so the overlay can validate what the deployed hub actually serves.
+ *
+ * Returns any failures so the caller can surface them — the validator can't
+ * tell the difference between "hub returned no `auth` namespace" and "code
+ * misspelled `auth:profile`", so silent failure here turns into hundreds of
+ * misleading `unknown-key` errors.
  */
 async function mergeRemoteTranslations(
   coreTranslations: Map<string, Map<string, TranslationData>>,
   remoteApiUrl: string
-): Promise<void> {
+): Promise<readonly string[]> {
   let remote: Awaited<ReturnType<typeof fetchRemoteTranslations>>;
   try {
     remote = await fetchRemoteTranslations(remoteApiUrl);
-  } catch {
-    return;
+  } catch (err) {
+    return [`remote scan threw: ${err instanceof Error ? err.message : String(err)}`];
   }
   for (const [locale, nsMap] of remote.translations) {
     let localeRow = coreTranslations.get(locale);
@@ -141,18 +168,19 @@ async function mergeRemoteTranslations(
       }
     }
   }
+  return remote.errors;
 }
 
 async function scanSourcesInto(
   sources: ReadonlyArray<ResolvedSource>,
-  coreTranslations: Map<string, Map<string, TranslationData>>
+  coreTranslations: LocaleNsMap
 ): Promise<void> {
   for (const source of sources) {
     const entry = await scanSourceLocales(source);
     if (!entry) {
       continue;
     }
-    for (const [locale, nsMap] of entry.locales) {
+    for (const [locale, nsMap] of entry) {
       let localeRow = coreTranslations.get(locale);
       if (!localeRow) {
         localeRow = new Map();
@@ -201,9 +229,7 @@ export async function runScan(options: OrchestratorOptions): Promise<ScanResult>
 
   await scanSourcesInto(sources, coreTranslations);
 
-  if (apiUrl) {
-    await mergeRemoteTranslations(coreTranslations, apiUrl);
-  }
+  const warnings = apiUrl ? await mergeRemoteTranslations(coreTranslations, apiUrl) : [];
 
   // Validate ONCE against the fully-merged map so coverage reflects every
   // source (local files + workspace packages + hub) under union semantics.
@@ -219,6 +245,7 @@ export async function runScan(options: OrchestratorOptions): Promise<ScanResult>
     },
     translations: allTranslations,
     coreTranslations,
+    warnings,
   };
 }
 

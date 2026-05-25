@@ -6,16 +6,13 @@
  */
 
 import { describe, expect, test } from 'bun:test';
+import { flush, waitFor } from '@brika/testing';
 import { Text } from 'ink';
 import { render } from 'ink-testing-library';
 import React from 'react';
 import { parseSprite } from './sprite';
 import { clip, type Timeline, timeline } from './timeline';
 import { type TimelineState, useTimeline } from './useTimeline';
-
-function flush(ms = 250): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 interface ProbeProps {
   readonly tl: Timeline;
@@ -63,7 +60,7 @@ describe('useTimeline', () => {
         },
       })
     );
-    await flush();
+    await waitFor(() => (latest.current?.t ?? 0) > 0);
     expect(latest.current?.t).toBeGreaterThan(0);
     unmount();
   });
@@ -81,7 +78,7 @@ describe('useTimeline', () => {
         onState: () => undefined,
       })
     );
-    await flush();
+    await waitFor(() => endCount >= 1);
     expect(endCount).toBe(1);
     unmount();
   });

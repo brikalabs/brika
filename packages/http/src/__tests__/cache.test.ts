@@ -3,6 +3,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import { waitFor } from '@brika/testing';
 import { generateCacheKey, MemoryCache } from '../cache';
 import type { RequestConfig } from '../types';
 
@@ -30,12 +31,11 @@ describe('MemoryCache', () => {
   });
 
   test('should expire entries after TTL', async () => {
-    cache.set('key1', 'value1', 100);
+    cache.set('key1', 'value1', 10);
 
     expect(cache.get('key1')).toBe('value1');
 
-    // Wait for expiration
-    await new Promise((resolve) => setTimeout(resolve, 150));
+    await waitFor(() => cache.get('key1') === null);
 
     expect(cache.get('key1')).toBe(null);
     expect(cache.has('key1')).toBe(false);
@@ -100,11 +100,10 @@ describe('MemoryCache', () => {
   });
 
   test('should cleanup expired entries', async () => {
-    cache.set('key1', 'value1', 100);
+    cache.set('key1', 'value1', 10);
     cache.set('key2', 'value2', 60_000);
 
-    // Wait for first entry to expire
-    await new Promise((resolve) => setTimeout(resolve, 150));
+    await waitFor(() => !cache.has('key1'));
 
     cache.cleanup();
 

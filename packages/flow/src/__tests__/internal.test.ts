@@ -3,6 +3,7 @@
  */
 
 import { describe, expect, mock, test } from 'bun:test';
+import { waitFor } from '@brika/testing';
 import { FlowImpl } from '../flow';
 import { combinatorFlow, ensureFlowImpl, operatorFlow, subscribeRaw } from '../internal';
 import type { Flow } from '../types';
@@ -193,7 +194,7 @@ describe('operatorFlow', () => {
 
     const derived = operatorFlow<number, number>(flow, ({ subscribe, push, setTimeout }) => {
       subscribe((v) => {
-        setTimeout(() => push(v), 30);
+        setTimeout(() => push(v), 5);
       });
     });
     derived.on(subscriber);
@@ -201,7 +202,7 @@ describe('operatorFlow', () => {
     flow.push(42);
     expect(values).toHaveLength(0);
 
-    await wait(50);
+    await waitFor(() => values.length > 0);
     expect(values).toEqual([42]);
   });
 
@@ -438,11 +439,11 @@ describe('combinatorFlow', () => {
     const flow = combinatorFlow<number>(({ push }) => {
       // Use the flow's internal setTimeout by deriving and using it
       // The setTimeout is baked into the FlowImpl created by combinatorFlow
-      setTimeout(() => push(42), 10);
+      setTimeout(() => push(42), 5);
     });
     flow.on(subscriber);
 
-    await wait(30);
+    await waitFor(() => values.length > 0);
     expect(values).toEqual([42]);
   });
 });

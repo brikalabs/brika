@@ -22,6 +22,24 @@ import { isPortListening } from './port-detect';
 import type { Listener, ServiceState, ServiceStatus, SupervisorEvent } from './types';
 
 /**
+ * Tunables for {@link Supervisor}. Every field has a production-safe
+ * default; the options bag exists so the test suite can opt out of
+ * UI-only delays (the ink render hold) that otherwise dominate the
+ * wall-clock of headless tests.
+ */
+export interface SupervisorOptions {
+  /** Project root passed to spawned services (defaults to `process.cwd()`). */
+  readonly projectRoot?: string;
+  /**
+   * How long {@link Supervisor.shutdown} holds the "all stopped" frame
+   * before emitting `shutdown`. Defaults to {@link SHUTDOWN_RENDER_HOLD_MS}
+   * so the TUI has time to paint the final ✓ tick. Tests that never
+   * mount ink should pass `0`.
+   */
+  readonly renderHoldMs?: number;
+}
+
+/**
  * Mutable variant used internally. Same fields but writable so the
  * supervisor can update state without casting away `readonly`.
  */
@@ -50,12 +68,13 @@ interface InternalService {
 export class Supervisor {
   private readonly services = new Map<string, InternalService>();
   private readonly listeners = new Set<Listener>();
+  private readonly projectRoot: string;
+  private readonly renderHoldMs: number;
   private shuttingDown = false;
 
-  constructor(
-    specs: readonly ServiceSpec[],
-    private readonly projectRoot: string = process.cwd()
-  ) {
+  constructor(specs: readonly ServiceSpec[], options: SupervisorOptions = {}) {
+    this.projectRoot = options.projectRoot ?? process.cwd();
+    this.renderHoldMs = options.renderHoldMs ?? SHUTDOWN_RENDER_HOLD_MS;
     for (const spec of specs) {
       if (this.services.has(spec.id)) {
         throw new DuplicateServiceIdError(spec.id);
@@ -260,7 +279,10 @@ export class Supervisor {
     // Hold the final "all stopped" frame so ink can paint it before
     // we unmount on the `shutdown` event. Without this hold ink exits
     // the render tree faster than its throttled re-render fires.
-    await new Promise((r) => setTimeout(r, SHUTDOWN_RENDER_HOLD_MS));
+    // Tests opt out by constructing the supervisor with `renderHoldMs: 0`.
+    if (this.renderHoldMs > 0) {
+      await new Promise((r) => setTimeout(r, this.renderHoldMs));
+    }
 
     this.emit({ kind: 'shutdown' });
   }

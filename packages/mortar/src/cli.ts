@@ -84,7 +84,7 @@ async function resolveAndLoad(explicitPath: string | undefined): Promise<Resolve
 }
 
 async function runStack(resolved: ResolvedConfig, { plain }: { plain: boolean }): Promise<void> {
-  const supervisor = new Supervisor(resolved.config.services, resolved.root);
+  const supervisor = new Supervisor(resolved.config.services, { projectRoot: resolved.root });
 
   const shutdown = (): void => {
     void supervisor.shutdown().then(() => process.exit(0));

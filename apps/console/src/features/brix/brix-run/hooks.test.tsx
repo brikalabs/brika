@@ -6,16 +6,13 @@
  */
 
 import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from 'bun:test';
+import { flush, waitFor } from '@brika/testing';
 import { Text } from 'ink';
 import { render } from 'ink-testing-library';
 import React from 'react';
 import { useGameInput, useGameLoop, useGameSounds } from './hooks';
 import { makeInitial } from './initial';
 import type { Action, GameState } from './state';
-
-function flush(ms = 250): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 interface InputProbeProps {
   readonly dispatch: (action: Action) => void;
@@ -142,11 +139,11 @@ describe('useGameLoop', () => {
   test('fires tick actions repeatedly while mounted', async () => {
     const dispatch = mock<(action: Action) => void>();
     const { unmount } = render(React.createElement(LoopProbe, { dispatch }));
-    await flush(250);
+    // 30 Hz target → ~33 ms per tick. Poll until enough ticks have landed
+    // rather than burning a fixed 250 ms.
+    await waitFor(() => dispatch.mock.calls.length >= 3);
     unmount();
 
-    // 30 Hz target → ~33 ms per tick → at least a handful of ticks
-    // inside 250 ms even on a slow CI slot.
     expect(dispatch.mock.calls.length).toBeGreaterThanOrEqual(3);
     for (const call of dispatch.mock.calls) {
       const action = call[0];
@@ -201,12 +198,12 @@ describe('useGameSounds', () => {
     const initial = makeInitial(0, WORLD_W, WORLD_H);
     const running: GameState = { ...initial, status: 'running' };
     const { rerender, unmount } = render(React.createElement(SoundsProbe, { state: running }));
-    await flush(20);
+    await flush();
     writeSpy.mockClear();
 
     const over: GameState = { ...running, status: 'over' };
     rerender(React.createElement(SoundsProbe, { state: over }));
-    await flush(20);
+    await flush();
     expect(beepFired(writeSpy)).toBe(true);
     unmount();
   });
@@ -215,7 +212,7 @@ describe('useGameSounds', () => {
     const initial = makeInitial(0, WORLD_W, WORLD_H);
     const grounded: GameState = { ...initial, status: 'running' };
     const { rerender, unmount } = render(React.createElement(SoundsProbe, { state: grounded }));
-    await flush(20);
+    await flush();
     writeSpy.mockClear();
 
     const airborne: GameState = {
@@ -223,7 +220,7 @@ describe('useGameSounds', () => {
       brix: { ...grounded.brix, grounded: false, vy: 10 },
     };
     rerender(React.createElement(SoundsProbe, { state: airborne }));
-    await flush(20);
+    await flush();
     expect(beepFired(writeSpy)).toBe(true);
     unmount();
   });
@@ -231,12 +228,12 @@ describe('useGameSounds', () => {
   test('does not beep on a plain status-change rerender (no jump, no death)', async () => {
     const initial = makeInitial(0, WORLD_W, WORLD_H);
     const { rerender, unmount } = render(React.createElement(SoundsProbe, { state: initial }));
-    await flush(20);
+    await flush();
     writeSpy.mockClear();
 
     const paused: GameState = { ...initial, status: 'paused' };
     rerender(React.createElement(SoundsProbe, { state: paused }));
-    await flush(20);
+    await flush();
     expect(beepFired(writeSpy)).toBe(false);
     unmount();
   });

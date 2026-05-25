@@ -3,6 +3,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from 'bun:test';
+import { waitFor } from '@brika/testing';
 import type { WireMessage } from '../channel';
 import { hello, ping, ready, stop } from '../contract';
 
@@ -282,8 +283,7 @@ describe('Client', () => {
           t: 'stop',
         } as WireMessage);
 
-        // Wait for async stop handlers to run
-        await new Promise((resolve) => setTimeout(resolve, 50));
+        await waitFor(() => order.length === 3);
 
         // Should be called in reverse order (3, 2, 1)
         expect(order).toEqual([3, 2, 1]);
@@ -314,7 +314,7 @@ describe('Client', () => {
         await messageHandler?.({
           t: 'stop',
         } as WireMessage);
-        await new Promise((resolve) => setTimeout(resolve, 50));
+        await waitFor(() => handler1.mock.calls.length > 0 && handler2.mock.calls.length > 0);
 
         // Both handlers should have been called despite error in handler1
         expect(handler1).toHaveBeenCalledTimes(1);

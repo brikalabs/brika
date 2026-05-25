@@ -147,7 +147,7 @@ describe('InterceptorChain', () => {
     test('handles async interceptors', async () => {
       const interceptor: RequestInterceptor = {
         onRequest: async (config) => {
-          await new Promise((r) => setTimeout(r, 10));
+          await Promise.resolve();
           return {
             ...config,
             headers: {
@@ -255,7 +255,7 @@ describe('InterceptorChain', () => {
     test('handles async interceptors', async () => {
       const interceptor: ResponseInterceptor = {
         onResponse: async (response) => {
-          await new Promise((r) => setTimeout(r, 10));
+          await Promise.resolve();
           return {
             ...response,
             data: {

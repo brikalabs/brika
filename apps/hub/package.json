@@ -19,7 +19,7 @@
     "dev": "bun --watch src/main.ts",
     "typecheck": "tsgo --project tsconfig.check.json --noEmit",
     "lint": "bun x biome check .",
-    "test": "bun test",
+    "test": "bun test --parallel",
     "lint:fix": "bun x biome check . --write"
   },
   "dependencies": {

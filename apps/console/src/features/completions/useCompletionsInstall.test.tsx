@@ -16,6 +16,7 @@ import * as os from 'node:os';
 import { join } from 'node:path';
 import type { Command } from '@brika/cli';
 import { defineCommand } from '@brika/cli';
+import { waitFor } from '@brika/testing';
 import { Text } from 'ink';
 import { render } from 'ink-testing-library';
 import React from 'react';
@@ -31,10 +32,6 @@ const completionsHookModule = await import('./useCompletionsInstall');
 const { useCompletionsInstall } = completionsHookModule;
 type Phase = ReturnType<typeof completionsHookModule.useCompletionsInstall>['phase'];
 
-function flush(ms = 250): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
 const COMMANDS: Command[] = [
   defineCommand({
     name: 'hub',
@@ -44,7 +41,12 @@ const COMMANDS: Command[] = [
 ];
 
 function Probe({ onResult }: Readonly<{ onResult: (phase: Phase) => void }>): React.ReactElement {
-  const { phase } = useCompletionsInstall(COMMANDS);
+  // Production defaults are 300/400ms; small but non-zero values keep
+  // CI runners from racing setState commits against the exit timer.
+  const { phase } = useCompletionsInstall(COMMANDS, {
+    exitDelayMs: 30,
+    exitErrorDelayMs: 30,
+  });
   onResult(phase);
   return React.createElement(Text, null, '.');
 }
@@ -86,7 +88,7 @@ describe('useCompletionsInstall', () => {
       })
     );
 
-    await flush(500);
+    await waitFor(() => exitCallback.mock.calls.length > 0);
 
     const final = phases.at(-1);
     expect(final?.kind).toBe('installed');
@@ -94,8 +96,12 @@ describe('useCompletionsInstall', () => {
       expect(final.shell).toBe('zsh');
       expect(final.file).toContain(fakeHome);
     }
-    expect(phases.some((p) => p.kind === 'detecting')).toBe(true);
-    expect(phases.some((p) => p.kind === 'installing')).toBe(true);
+    // The initial render captures 'detecting' (synchronous initial state).
+    expect(phases[0]?.kind).toBe('detecting');
+    // The 'installing' intermediate state may or may not survive React's
+    // automatic batching depending on how fast `installCompletions`
+    // resolves — don't pin it. The 'installed' final state above is the
+    // contract that matters.
     expect(exitCallback).toHaveBeenCalled();
     unmount();
   });
@@ -110,7 +116,7 @@ describe('useCompletionsInstall', () => {
         },
       })
     );
-    await flush(500);
+    await waitFor(() => exitCallback.mock.calls.length > 0);
     expect(latest.current?.kind).toBe('noShell');
     expect(exitCallback).toHaveBeenCalled();
     unmount();
@@ -135,7 +141,7 @@ describe('useCompletionsInstall', () => {
         },
       })
     );
-    await flush(500);
+    await waitFor(() => exitCallback.mock.calls.length > 0);
     expect(latest.current?.kind).toBe('error');
     if (latest.current?.kind === 'error') {
       expect(latest.current.message).toBe('disk full');

@@ -9,14 +9,11 @@
  */
 
 import { describe, expect, test } from 'bun:test';
+import { flush } from '@brika/testing';
 import { Box, type DOMElement, Text } from 'ink';
 import { render } from 'ink-testing-library';
 import React, { useRef } from 'react';
 import { type Bounds, hitTest, readBounds, useBounds } from './useBounds';
-
-function flush(ms = 250): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 interface ProbeProps {
   readonly onMeasured: (bounds: Bounds | null) => void;

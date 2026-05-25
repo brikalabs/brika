@@ -11,16 +11,12 @@
  */
 
 import { beforeEach, describe, expect, test } from 'bun:test';
-import { useBunMock } from '@brika/testing';
+import { flush, useBunMock } from '@brika/testing';
 import { TuiShellProvider } from '@brika/tui';
 import { render } from 'ink-testing-library';
 import React from 'react';
 import type { RegistrySearchResult } from '../../../../shared/cli/api/registry';
 import { RegistryDetail, RegistryReadme, RegistryStatusBadge } from './index';
-
-function flush(ms = 250): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 function withShell(tree: React.ReactNode): React.ReactElement {
   return React.createElement(TuiShellProvider, { onQuit: () => undefined }, tree);
@@ -46,7 +42,7 @@ describe('<RegistryStatusBadge>', () => {
         compatible: true,
       })
     );
-    await flush(30);
+    await flush();
     expect(lastFrame() ?? '').toContain('installed');
     unmount();
   });
@@ -59,7 +55,7 @@ describe('<RegistryStatusBadge>', () => {
         compatible: true,
       })
     );
-    await flush(30);
+    await flush();
     expect(lastFrame() ?? '').toContain('installing');
     unmount();
   });
@@ -72,7 +68,7 @@ describe('<RegistryStatusBadge>', () => {
         compatible: false,
       })
     );
-    await flush(30);
+    await flush();
     expect(lastFrame() ?? '').toContain('incompatible');
     unmount();
   });
@@ -85,7 +81,7 @@ describe('<RegistryStatusBadge>', () => {
         compatible: true,
       })
     );
-    await flush(30);
+    await flush();
     expect(lastFrame() ?? '').toContain('available');
     unmount();
   });
@@ -101,7 +97,7 @@ describe('<RegistryReadme>', () => {
         packageName: 'demo',
       })
     );
-    await flush(30);
+    await flush();
     expect(lastFrame() ?? '').toContain('loading readme');
     unmount();
   });
@@ -115,7 +111,7 @@ describe('<RegistryReadme>', () => {
         packageName: 'demo',
       })
     );
-    await flush(30);
+    await flush();
     const frame = lastFrame() ?? '';
     expect(frame).toContain('readme');
     expect(frame).toContain('boom');
@@ -131,7 +127,7 @@ describe('<RegistryReadme>', () => {
         packageName: 'demo',
       })
     );
-    await flush(30);
+    await flush();
     expect(lastFrame() ?? '').toContain('no readme');
     unmount();
   });

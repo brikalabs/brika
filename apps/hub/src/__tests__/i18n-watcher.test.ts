@@ -1,8 +1,9 @@
 /**
  * Tests for `LocaleWatcher` — covers the hub-file and package-folder
- * reload branches end-to-end against the real filesystem. Each test writes
- * fixtures into a tmp dir, lets `fs.watch` fire, and asserts the registry
- * caught up. A short debounce keeps the runtime bounded.
+ * reload branches. fs.watch is mocked (see `fs-watch-mock.ts`) so events
+ * fire deterministically — no real-clock waits for macOS scheduling jitter.
+ * The watcher's debounce is dialled down to ~20ms in tests, and assertions
+ * use `waitFor` polling that short-circuits as soon as the reload lands.
  */
 
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
@@ -11,17 +12,10 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { TranslationRegistry } from '@brika/i18n';
 import { LocaleWatcher } from '@/runtime/i18n/i18n-watcher';
+import { waitFor } from './_test-helpers';
+import { FsWatchMock } from './fs-watch-mock';
 
-// Defaults: 300ms debounce + macOS scheduling jitter. 1.2s buys enough margin
-// for two reloads (one for the initial settle, one for the assertion-triggering
-// edit) without dragging the suite out.
-const DEBOUNCE_GRACE_MS = 1200;
-
-const flushDebounce = (): Promise<void> => new Promise((r) => setTimeout(r, DEBOUNCE_GRACE_MS));
-
-// Wait for any startup-jitter event to settle before the assertion edit.
-const SETTLE_MS = 400;
-const settleInitial = (): Promise<void> => new Promise((r) => setTimeout(r, SETTLE_MS));
+const TEST_DEBOUNCE_MS = 20;
 
 const noopWarn = (): void => {};
 
@@ -29,8 +23,10 @@ describe('LocaleWatcher', () => {
   let workDir: string;
   let localesDir: string;
   let pkgDir: string;
+  let pkgLocalesDir: string;
   let registry: TranslationRegistry;
   let watcher: LocaleWatcher;
+  let fsMock: FsWatchMock;
   const installedPaths: string[] = [];
   const errors: Array<{ path: string; error: unknown }> = [];
 
@@ -38,16 +34,21 @@ describe('LocaleWatcher', () => {
     workDir = mkdtempSync(join(tmpdir(), 'brika-watcher-'));
     localesDir = join(workDir, 'locales');
     pkgDir = join(workDir, 'pkg');
+    pkgLocalesDir = join(pkgDir, 'locales');
     mkdirSync(join(localesDir, 'en'), { recursive: true });
-    mkdirSync(join(pkgDir, 'locales', 'en'), { recursive: true });
+    mkdirSync(join(pkgLocalesDir, 'en'), { recursive: true });
 
     registry = new TranslationRegistry();
     installedPaths.length = 0;
     errors.length = 0;
+
+    fsMock = new FsWatchMock();
+    fsMock.apply();
   });
 
   afterEach(() => {
     watcher?.dispose();
+    fsMock.restore();
     rmSync(workDir, { recursive: true, force: true });
   });
 
@@ -59,12 +60,13 @@ describe('LocaleWatcher', () => {
       warn: noopWarn,
       onWatcherError: (path, error) => errors.push({ path, error }),
       onWatcherInstalled: (path) => installedPaths.push(path),
+      debounceMs: TEST_DEBOUNCE_MS,
     });
 
     watcher.start();
 
     expect(installedPaths).toContain(localesDir);
-    expect(installedPaths).toContain(`${pkgDir}/locales`);
+    expect(installedPaths).toContain(pkgLocalesDir);
   });
 
   test('dispose() removes installed watchers and is idempotent', () => {
@@ -75,6 +77,7 @@ describe('LocaleWatcher', () => {
       warn: noopWarn,
       onWatcherError: () => {},
       onWatcherInstalled: (path) => installedPaths.push(path),
+      debounceMs: TEST_DEBOUNCE_MS,
     });
     watcher.start();
     expect(installedPaths).toHaveLength(1);
@@ -95,6 +98,7 @@ describe('LocaleWatcher', () => {
       warn: noopWarn,
       onWatcherError: () => {},
       onWatcherInstalled: (path) => installedPaths.push(path),
+      debounceMs: TEST_DEBOUNCE_MS,
     });
 
     watcher.start();
@@ -105,6 +109,9 @@ describe('LocaleWatcher', () => {
   });
 
   test('forwards watcher errors when the path does not exist', () => {
+    // The mock never throws on missing dirs, so we restore real fs.watch
+    // for this single test to exercise the actual error path.
+    fsMock.restore();
     watcher = new LocaleWatcher({
       registry,
       localesDir: join(workDir, 'missing-dir'),
@@ -112,6 +119,7 @@ describe('LocaleWatcher', () => {
       warn: noopWarn,
       onWatcherError: (path, error) => errors.push({ path, error }),
       onWatcherInstalled: (path) => installedPaths.push(path),
+      debounceMs: TEST_DEBOUNCE_MS,
     });
     watcher.start();
 
@@ -127,12 +135,13 @@ describe('LocaleWatcher', () => {
       warn: noopWarn,
       onWatcherError: () => {},
       onWatcherInstalled: () => {},
+      debounceMs: TEST_DEBOUNCE_MS,
     });
     watcher.start();
-    await settleInitial();
 
     writeFileSync(join(localesDir, 'en', 'common.json'), '{"hello":"world"}');
-    await flushDebounce();
+    fsMock.simulateChange(localesDir, 'en/common.json');
+    await waitFor(() => registry.getNamespaceTranslations('en', 'common') !== null);
 
     expect(registry.getNamespaceTranslations('en', 'common')).toEqual({ hello: 'world' });
   });
@@ -156,12 +165,13 @@ describe('LocaleWatcher', () => {
       warn: noopWarn,
       onWatcherError: () => {},
       onWatcherInstalled: () => {},
+      debounceMs: TEST_DEBOUNCE_MS,
     });
     watcher.start();
-    await settleInitial();
 
     rmSync(join(localesDir, 'en', 'common.json'));
-    await flushDebounce();
+    fsMock.simulateChange(localesDir, 'en/common.json');
+    await waitFor(() => registry.getNamespaceTranslations('en', 'common') === null);
 
     expect(registry.getNamespaceTranslations('en', 'common')).toBeNull();
   });
@@ -186,12 +196,13 @@ describe('LocaleWatcher', () => {
       warn: (message, ctx) => warnings.push({ message, path: ctx.path }),
       onWatcherError: () => {},
       onWatcherInstalled: () => {},
+      debounceMs: TEST_DEBOUNCE_MS,
     });
     watcher.start();
-    await settleInitial();
 
     writeFileSync(join(localesDir, 'en', 'common.json'), '"not an object"');
-    await flushDebounce();
+    fsMock.simulateChange(localesDir, 'en/common.json');
+    await waitFor(() => warnings.some((w) => w.message.includes('root is not an object')));
 
     expect(warnings.some((w) => w.message.includes('root is not an object'))).toBeTrue();
     expect(registry.getNamespaceTranslations('en', 'common')).toBeNull();
@@ -217,12 +228,13 @@ describe('LocaleWatcher', () => {
       warn: (message) => warnings.push(message),
       onWatcherError: () => {},
       onWatcherInstalled: () => {},
+      debounceMs: TEST_DEBOUNCE_MS,
     });
     watcher.start();
-    await settleInitial();
 
     writeFileSync(join(localesDir, 'en', 'common.json'), '{not json');
-    await flushDebounce();
+    fsMock.simulateChange(localesDir, 'en/common.json');
+    await waitFor(() => warnings.some((w) => w.includes('Failed to reload hub locale')));
 
     expect(warnings.some((w) => w.includes('Failed to reload hub locale'))).toBeTrue();
     expect(registry.getNamespaceTranslations('en', 'common')).toEqual({ hello: 'world' });
@@ -236,15 +248,16 @@ describe('LocaleWatcher', () => {
       warn: noopWarn,
       onWatcherError: () => {},
       onWatcherInstalled: () => {},
+      debounceMs: TEST_DEBOUNCE_MS,
     });
     watcher.start();
-    await settleInitial();
 
     writeFileSync(
       join(localesDir, 'en', 'common.json'),
       '{"__proto__":{"polluted":true},"hello":"world"}'
     );
-    await flushDebounce();
+    fsMock.simulateChange(localesDir, 'en/common.json');
+    await waitFor(() => registry.getNamespaceTranslations('en', 'common') !== null);
 
     const data = registry.getNamespaceTranslations('en', 'common');
     expect(data).toEqual({ hello: 'world' });
@@ -252,8 +265,8 @@ describe('LocaleWatcher', () => {
   });
 
   test('reloads a package locale by re-merging the entire folder', async () => {
-    writeFileSync(join(pkgDir, 'locales', 'en', 'a.json'), '{"a":"A"}');
-    writeFileSync(join(pkgDir, 'locales', 'en', 'b.json'), '{"b":"B"}');
+    writeFileSync(join(pkgLocalesDir, 'en', 'a.json'), '{"a":"A"}');
+    writeFileSync(join(pkgLocalesDir, 'en', 'b.json'), '{"b":"B"}');
 
     watcher = new LocaleWatcher({
       registry,
@@ -262,12 +275,13 @@ describe('LocaleWatcher', () => {
       warn: noopWarn,
       onWatcherError: () => {},
       onWatcherInstalled: () => {},
+      debounceMs: TEST_DEBOUNCE_MS,
     });
     watcher.start();
-    await settleInitial();
 
-    writeFileSync(join(pkgDir, 'locales', 'en', 'b.json'), '{"b":"B2","c":"C"}');
-    await flushDebounce();
+    writeFileSync(join(pkgLocalesDir, 'en', 'b.json'), '{"b":"B2","c":"C"}');
+    fsMock.simulateChange(pkgLocalesDir, 'en/b.json');
+    await waitFor(() => registry.getNamespaceTranslations('en', 'pkg')?.b === 'B2');
 
     expect(registry.getNamespaceTranslations('en', 'pkg')).toEqual({
       a: 'A',
@@ -277,7 +291,7 @@ describe('LocaleWatcher', () => {
   });
 
   test('removes a package locale when its folder is emptied', async () => {
-    writeFileSync(join(pkgDir, 'locales', 'en', 'a.json'), '{"a":"A"}');
+    writeFileSync(join(pkgLocalesDir, 'en', 'a.json'), '{"a":"A"}');
 
     watcher = new LocaleWatcher({
       registry,
@@ -286,9 +300,9 @@ describe('LocaleWatcher', () => {
       warn: noopWarn,
       onWatcherError: () => {},
       onWatcherInstalled: () => {},
+      debounceMs: TEST_DEBOUNCE_MS,
     });
     watcher.start();
-    await settleInitial();
 
     // Seed the registry — the watcher will clear it once the folder empties.
     registry.setNamespaceLocale(
@@ -301,8 +315,9 @@ describe('LocaleWatcher', () => {
       }
     );
 
-    rmSync(join(pkgDir, 'locales', 'en', 'a.json'));
-    await flushDebounce();
+    rmSync(join(pkgLocalesDir, 'en', 'a.json'));
+    fsMock.simulateChange(pkgLocalesDir, 'en/a.json');
+    await waitFor(() => registry.getNamespaceTranslations('en', 'pkg') === null);
 
     expect(registry.getNamespaceTranslations('en', 'pkg')).toBeNull();
   });
@@ -315,6 +330,7 @@ describe('LocaleWatcher', () => {
       warn: noopWarn,
       onWatcherError: () => {},
       onWatcherInstalled: () => {},
+      debounceMs: TEST_DEBOUNCE_MS,
     });
     watcher.start();
 
@@ -322,7 +338,10 @@ describe('LocaleWatcher', () => {
     // is filtered by the hub-file branch. Neither should mutate the registry.
     writeFileSync(join(localesDir, 'en', 'note.txt'), 'hello');
     writeFileSync(join(localesDir, 'top-level.json'), '{"x":1}');
-    await flushDebounce();
+    fsMock.simulateChange(localesDir, 'en/note.txt');
+    fsMock.simulateChange(localesDir, 'top-level.json');
+    // Wait one debounce window to be sure no reload was triggered.
+    await new Promise((r) => setTimeout(r, TEST_DEBOUNCE_MS * 3));
 
     expect(registry.listNamespaces()).toEqual([]);
   });

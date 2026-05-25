@@ -40,6 +40,7 @@ import { setupLifecycle } from '@/runtime/plugins/prelude/lifecycle';
 import { setupLocation } from '@/runtime/plugins/prelude/location';
 import { setupRoutes } from '@/runtime/plugins/prelude/routes';
 import { setupSparks } from '@/runtime/plugins/prelude/sparks';
+import { waitFor } from './_test-helpers';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -693,8 +694,9 @@ describe('Prelude Lifecycle', () => {
     const lateFn = mock();
     lifecycle.onInit(lateFn);
 
-    // Wait a tick for the Promise.resolve().then() to flush
-    await new Promise((r) => setTimeout(r, 10));
+    // The lifecycle schedules `lateFn` via `Promise.resolve().then(...)`,
+    // so we only need to wait until it actually fires.
+    await waitFor(() => lateFn.mock.calls.length > 0);
 
     expect(lateFn).toHaveBeenCalled();
   });

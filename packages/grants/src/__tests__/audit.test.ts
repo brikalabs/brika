@@ -172,13 +172,13 @@ describe('GrantRegistry audit log', () => {
         result: ResultSchema,
       },
       async (_ctx, args) => {
-        await new Promise((r) => setTimeout(r, 20));
+        await new Promise((r) => setTimeout(r, 10));
         return { echo: args.value, bigBlob: '' };
       }
     );
     reg.register(grant);
     await reg.dispatch('test.audit.slow', { value: 'hi' }, handlerCtx());
-    expect(entries[0]?.durationMs).toBeGreaterThanOrEqual(15);
+    expect(entries[0]?.durationMs).toBeGreaterThanOrEqual(5);
     expect(entries[0]?.durationMs).toBeLessThan(500);
   });
 

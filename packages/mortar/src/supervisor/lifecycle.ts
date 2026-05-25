@@ -105,18 +105,27 @@ export async function runHealthcheck(
  * SIGTERM the process tree, wait up to {@link SHUTDOWN_GRACE_MS} for a
  * clean exit, then SIGKILL anything left. Idempotent — calling on an
  * already-dead process is a fast no-op.
+ *
+ * We race {@link Subprocess.exited} against a timeout rather than polling
+ * `proc.exitCode`: Bun updates `exitCode` asynchronously after the child
+ * actually dies, so a polling loop on `exitCode` waits the full grace
+ * period for a child that exited within milliseconds of SIGTERM. The
+ * `exited` promise resolves the moment the child is gone.
  */
 export async function terminateService(proc: Subprocess | null): Promise<void> {
   if (proc?.exitCode !== null) {
     return;
   }
   await killTree(proc, 'SIGTERM');
-  const deadline = Date.now() + SHUTDOWN_GRACE_MS;
-  while (Date.now() < deadline) {
-    if (proc.exitCode !== null) {
-      return;
-    }
-    await new Promise((r) => setTimeout(r, 100));
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<'timeout'>((resolve) => {
+    timer = setTimeout(() => resolve('timeout'), SHUTDOWN_GRACE_MS);
+  });
+  const outcome = await Promise.race([proc.exited.then(() => 'exited' as const), timeout]);
+  if (timer) {
+    clearTimeout(timer);
   }
-  await killTree(proc, 'SIGKILL');
+  if (outcome === 'timeout') {
+    await killTree(proc, 'SIGKILL');
+  }
 }

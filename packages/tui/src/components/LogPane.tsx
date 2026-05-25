@@ -1,5 +1,6 @@
-import { Box, Text } from 'ink';
+import { Box, type DOMElement, Text } from 'ink';
 import type React from 'react';
+import type { RefObject } from 'react';
 import { useMeasure } from '../state/useMeasure';
 import { statusColor, statusLabel, summarizeCrash, type TuiStatus } from '../utils/status';
 
@@ -34,6 +35,19 @@ interface Props {
    * pull from a parallel typed buffer (e.g. `events[i]`).
    */
   readonly renderLine?: (line: string, absIdx: number) => React.ReactNode;
+  /**
+   * Highlight the pane border to signal it owns keyboard focus. The
+   * LogPane doesn't claim a focus slot itself — the caller wraps it in
+   * a focusable Box and drives this prop so the border tracks focus
+   * state without forcing a focus model on every consumer.
+   */
+  readonly focused?: boolean;
+  /**
+   * Ref to the outer bordered Box. Useful for callers that need to
+   * hit-test mouse clicks against the pane (e.g. driving the focus
+   * slot from a wrapper) without losing the pane's own layout.
+   */
+  readonly outerRef?: RefObject<DOMElement | null>;
 }
 
 /** Right pane: tail / windowed view of a log buffer. */
@@ -48,6 +62,8 @@ export function LogPane({
   currentMatchLine,
   status,
   renderLine,
+  focused = false,
+  outerRef,
 }: Readonly<Props>): React.ReactElement {
   // The body Box has `flexGrow={1}` — we measure its actual rendered
   // height and slice against THAT, so the windowed lines always
@@ -65,7 +81,14 @@ export function LogPane({
 
   const crashDetail = status?.kind === 'crashed' ? summarizeCrash(status).detail : null;
   return (
-    <Box flexDirection="column" flexGrow={1} borderStyle="single" borderColor="gray" paddingX={1}>
+    <Box
+      ref={outerRef}
+      flexDirection="column"
+      flexGrow={1}
+      borderStyle={focused ? 'bold' : 'single'}
+      borderColor={focused ? 'cyan' : 'gray'}
+      paddingX={1}
+    >
       <Box flexShrink={0}>
         <Text bold>{label}</Text>
         {status && (

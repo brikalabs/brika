@@ -3,6 +3,7 @@
  */
 
 import { beforeEach, describe, expect, mock, spyOn, test } from 'bun:test';
+import { flush, waitFor } from '@brika/testing';
 import { CleanupRegistry, createFlow, FlowImpl } from '../flow';
 import { filter, map } from '../operators';
 import { createMockEmitter, createTestFlow, createValueCollector } from './fixtures';
@@ -378,10 +379,10 @@ describe('FlowImpl', () => {
       expect.hasAssertions();
       const callback = mock(() => undefined);
 
-      flow.setTimeout(callback, 10);
+      flow.setTimeout(callback, 5);
 
       expect(callback).not.toHaveBeenCalled();
-      await new Promise((r) => setTimeout(r, 20));
+      await waitFor(() => callback.mock.calls.length > 0);
       expect(callback).toHaveBeenCalledTimes(1);
     });
 
@@ -389,10 +390,11 @@ describe('FlowImpl', () => {
       expect.hasAssertions();
       const callback = mock(() => undefined);
 
-      const cancel = flow.setTimeout(callback, 50);
+      const cancel = flow.setTimeout(callback, 10);
       cancel();
 
-      await new Promise((r) => setTimeout(r, 100));
+      // Negative assertion: wait past the timeout, then confirm cancel held.
+      await flush(20);
       expect(callback).not.toHaveBeenCalled();
     });
   });

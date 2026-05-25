@@ -7,16 +7,13 @@
  */
 
 import { describe, expect, test } from 'bun:test';
+import { flush, waitFor } from '@brika/testing';
 import { Text } from 'ink';
 import { render } from 'ink-testing-library';
 import React from 'react';
 import { sparkles } from './particleEmitters';
 import type { Sprite } from './sprite';
 import { useParticles } from './useParticles';
-
-function flush(ms = 250): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 interface ProbeProps {
   readonly emitterKey: number;
@@ -79,8 +76,11 @@ describe('useParticles', () => {
         },
       })
     );
-    await flush();
-    // Look for any opaque cell in the rasterized field.
+    // The particle simulation runs on an interval — poll until at least
+    // one opaque cell lands rather than guessing the wall-clock budget.
+    await waitFor(
+      () => latest.current?.rows.some((row) => row.some((cell) => cell !== null)) ?? false
+    );
     const hasAny = latest.current?.rows.some((row) => row.some((cell) => cell !== null));
     expect(hasAny).toBe(true);
     unmount();

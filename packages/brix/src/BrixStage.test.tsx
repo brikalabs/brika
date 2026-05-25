@@ -7,6 +7,7 @@
  */
 
 import { describe, expect, test } from 'bun:test';
+import { flush, waitFor } from '@brika/testing';
 import { render } from 'ink-testing-library';
 import React from 'react';
 import { BrixStage } from './BrixStage';
@@ -16,10 +17,6 @@ import { defineEmote } from './emotes/builder';
 import type { EmoteDef } from './emotes/types';
 import type { Mood } from './moods';
 import { floorSprite, STAGE_WIDTH } from './stageSprites';
-
-function flush(ms = 250): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 interface ApiSlot {
   current: EmoteApi | null;
@@ -192,7 +189,9 @@ describe('<BrixStage>', () => {
     await flush();
     const idleFrame = lastFrame() ?? '';
     slot.current?.play('celebrate');
-    await flush();
+    // Emote playback advances on the provider's interval — poll until
+    // the rendered frame diverges from the idle snapshot.
+    await waitFor(() => (lastFrame() ?? '') !== idleFrame);
     const celebrateFrame = lastFrame() ?? '';
     // Either the bubble line or the per-emote color/face differs; some
     // visible cell must have changed between the two snapshots.

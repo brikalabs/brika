@@ -184,7 +184,7 @@ describe('abortableSleep', () => {
 
   test('rejects when signal fires mid-sleep, well before the delay completes', async () => {
     const c = new AbortController();
-    setTimeout(() => c.abort(new Error('test')), 10);
+    queueMicrotask(() => c.abort(new Error('test')));
     const start = Date.now();
     let thrown: unknown;
     try {

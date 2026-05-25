@@ -12,6 +12,7 @@ import { Logger } from '@/runtime/logs/log-router';
 import type { Workflow } from '@/runtime/workflows/types';
 import { WorkflowEngine } from '@/runtime/workflows/workflow-engine';
 import { WorkflowLoader } from '@/runtime/workflows/workflow-loader';
+import { sleep, waitFor } from './_test-helpers';
 import { FsWatchMock } from './fs-watch-mock';
 
 useTestBed({
@@ -20,8 +21,8 @@ useTestBed({
 
 const TEST_DIR = join(import.meta.dir, '.test-workflow-loader');
 
-const mockRegister = mock();
-const mockUnregister = mock();
+const mockRegister = mock<(workflow: Workflow) => void>();
+const mockUnregister = mock<(id: string) => boolean>();
 const mockGetPluginInfo = mock();
 
 const createWorkflowYaml = (id: string, name: string, enabled = false): string => `
@@ -37,59 +38,33 @@ function waitForWorkflowRegister(workflowId: string): Promise<Workflow> {
   return waitForRegisterMatch((workflow) => workflow.id === workflowId);
 }
 
+function findRegisterMatch(match: (workflow: Workflow) => boolean): Workflow | undefined {
+  const call = mockRegister.mock.calls.find((c) => match(c[0]));
+  return call?.[0];
+}
+
 async function waitForRegisterMatch(
   match: (workflow: Workflow) => boolean,
   timeoutMs = 25_000
 ): Promise<Workflow> {
-  const start = Date.now();
-
-  while (Date.now() - start < timeoutMs) {
-    const matchingCall = mockRegister.mock.calls.find((call) => {
-      const workflow = call[0] as Workflow | undefined;
-      return workflow !== undefined && match(workflow);
-    });
-
-    if (matchingCall) {
-      return matchingCall[0] as Workflow;
-    }
-    await new Promise((resolve) => setTimeout(resolve, 25));
+  await waitFor(() => findRegisterMatch(match) !== undefined, {
+    timeoutMs,
+    intervalMs: 25,
+    message: 'Timed out waiting for workflow registration',
+  });
+  const found = findRegisterMatch(match);
+  if (!found) {
+    throw new Error('Timed out waiting for workflow registration');
   }
-
-  throw new Error('Timed out waiting for workflow registration');
+  return found;
 }
 
 async function waitForWorkflowUnregister(workflowId: string, timeoutMs = 25_000): Promise<void> {
-  const start = Date.now();
-
-  while (Date.now() - start < timeoutMs) {
-    const matchingCall = mockUnregister.mock.calls.find((call) => call[0] === workflowId);
-    if (matchingCall) {
-      return;
-    }
-    await new Promise((resolve) => setTimeout(resolve, 25));
-  }
-
-  throw new Error('Timed out waiting for workflow unregister');
-}
-
-async function _primeWatcher(label: string): Promise<void> {
-  const workflowId = `__watch-ready-${label}`;
-  const filePath = join(TEST_DIR, `${workflowId}.yaml`);
-  const content = createWorkflowYaml(workflowId, `Watch Ready ${label}`);
-
-  // Write immediately, then re-nudge every 500 ms until the watcher fires.
-  // fs.watch events can be silently dropped under heavy parallel test load.
-  const ready = waitForWorkflowRegister(workflowId);
-  await Bun.write(filePath, content);
-  const nudge = setInterval(() => Bun.write(filePath, content), 500);
-  try {
-    await ready;
-  } finally {
-    clearInterval(nudge);
-  }
-
-  await new Promise((resolve) => setTimeout(resolve, 100));
-  mockRegister.mockClear();
+  await waitFor(() => mockUnregister.mock.calls.some((call) => call[0] === workflowId), {
+    timeoutMs,
+    intervalMs: 25,
+    message: 'Timed out waiting for workflow unregister',
+  });
 }
 
 describe('WorkflowLoader - Port Parsing', () => {
@@ -147,8 +122,6 @@ blocks:
     const workflowPath = join(TEST_DIR, 'test.yaml');
     await Bun.write(workflowPath, yamlContent);
 
-    await new Promise((resolve) => setTimeout(resolve, 100));
-
     const files = await Array.fromAsync(
       new Bun.Glob('*.yaml').scan({
         cwd: TEST_DIR,
@@ -179,8 +152,6 @@ blocks:
     const workflowPath = join(TEST_DIR, 'test2.yaml');
     await Bun.write(workflowPath, yamlContent);
 
-    await new Promise((resolve) => setTimeout(resolve, 100));
-
     const files = await Array.fromAsync(
       new Bun.Glob('*.yaml').scan({
         cwd: TEST_DIR,
@@ -208,8 +179,6 @@ blocks:
 
     const workflowPath = join(TEST_DIR, 'test3.yaml');
     await Bun.write(workflowPath, yamlContent);
-
-    await new Promise((resolve) => setTimeout(resolve, 100));
 
     const files = await Array.fromAsync(
       new Bun.Glob('*.yaml').scan({
@@ -239,8 +208,6 @@ blocks:
 
     const workflowPath = join(TEST_DIR, 'test4.yaml');
     await Bun.write(workflowPath, yamlContent);
-
-    await new Promise((resolve) => setTimeout(resolve, 100));
 
     const files = await Array.fromAsync(
       new Bun.Glob('*.yaml').scan({
@@ -274,8 +241,6 @@ blocks:
     const workflowPath = join(TEST_DIR, 'test5.yaml');
     await Bun.write(workflowPath, yamlContent);
 
-    await new Promise((resolve) => setTimeout(resolve, 100));
-
     const files = await Array.fromAsync(
       new Bun.Glob('*.yaml').scan({
         cwd: TEST_DIR,
@@ -307,8 +272,6 @@ blocks:
 
     const workflowPath = join(TEST_DIR, 'test6.yaml');
     await Bun.write(workflowPath, yamlContent);
-
-    await new Promise((resolve) => setTimeout(resolve, 100));
 
     const files = await Array.fromAsync(
       new Bun.Glob('*.yaml').scan({
@@ -415,8 +378,6 @@ workspace:
 blocks: []
 `
     );
-
-    await new Promise((resolve) => setTimeout(resolve, 100));
 
     const files = await Array.fromAsync(
       new Bun.Glob('*.{yaml,yml}').scan({
@@ -887,7 +848,7 @@ blocks:
     await loader.loadDir(TEST_DIR);
 
     expect(mockRegister).toHaveBeenCalledTimes(1);
-    const registered = mockRegister.mock.calls[0][0] as Workflow;
+    const registered = mockRegister.mock.calls[0][0];
     expect(registered.id).toBe('blocks-wf');
     expect(registered.blocks).toHaveLength(2);
 
@@ -935,7 +896,7 @@ blocks:
     await loader.loadDir(TEST_DIR);
 
     expect(mockRegister).toHaveBeenCalledTimes(1);
-    const registered = mockRegister.mock.calls[0][0] as Workflow;
+    const registered = mockRegister.mock.calls[0][0];
     expect(registered.connections.length).toBeGreaterThanOrEqual(2);
 
     const tickConn = registered.connections.find(
@@ -976,7 +937,7 @@ blocks:
     await loader.loadDir(TEST_DIR);
 
     expect(mockRegister).toHaveBeenCalledTimes(1);
-    const registered = mockRegister.mock.calls[0][0] as Workflow;
+    const registered = mockRegister.mock.calls[0][0];
     expect(registered.connections.length).toBeGreaterThanOrEqual(1);
 
     const conn = registered.connections.find((c) => c.from === 'block-a' && c.to === 'block-b');
@@ -1010,7 +971,7 @@ blocks:
     await loader.loadDir(TEST_DIR);
 
     expect(mockRegister).toHaveBeenCalledTimes(1);
-    const registered = mockRegister.mock.calls[0][0] as Workflow;
+    const registered = mockRegister.mock.calls[0][0];
     // The same connection is defined in both outputs and inputs, should be deduplicated
     const matching = registered.connections.filter(
       (c) =>
@@ -1043,7 +1004,7 @@ blocks:
     await loader.loadDir(TEST_DIR);
 
     expect(mockRegister).toHaveBeenCalledTimes(1);
-    const registered = mockRegister.mock.calls[0][0] as Workflow;
+    const registered = mockRegister.mock.calls[0][0];
     // Only the valid connection should be present
     expect(registered.connections).toHaveLength(1);
     expect(registered.connections[0].fromPort).toBe('good');
@@ -1073,7 +1034,7 @@ blocks:
     await loader.loadDir(TEST_DIR);
 
     expect(mockRegister).toHaveBeenCalledTimes(1);
-    const registered = mockRegister.mock.calls[0][0] as Workflow;
+    const registered = mockRegister.mock.calls[0][0];
     // Only the valid connection should be present
     expect(registered.connections).toHaveLength(1);
     expect(registered.connections[0].toPort).toBe('good');
@@ -1100,7 +1061,7 @@ blocks:
     await loader.loadDir(TEST_DIR);
 
     expect(mockRegister).toHaveBeenCalledTimes(1);
-    const registered = mockRegister.mock.calls[0][0] as Workflow;
+    const registered = mockRegister.mock.calls[0][0];
     expect(registered.connections).toHaveLength(0);
   });
 });
@@ -1114,7 +1075,7 @@ describe('WorkflowLoader - Watch Callbacks (with FsWatchMock)', () => {
     });
     mockRegister.mockImplementation(() => undefined);
     mockRegister.mockClear();
-    mockUnregister.mockImplementation(() => undefined);
+    mockUnregister.mockImplementation(() => true);
     mockUnregister.mockClear();
     mockGetPluginInfo.mockClear();
 
@@ -1225,8 +1186,8 @@ describe('WorkflowLoader - Watch Callbacks (with FsWatchMock)', () => {
     await Bun.write(join(TEST_DIR, 'readme.txt'), 'not a workflow');
     fsWatchMock.simulateChange(TEST_DIR, 'readme.txt');
 
-    // Wait a bit and verify no registration happened
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    // Negative assertion: confirm no register triggered by the non-YAML file
+    await sleep(20);
     expect(mockRegister.mock.calls.length).toBe(registerCountBefore);
 
     // Now add a valid YAML file
@@ -1344,7 +1305,7 @@ describe('WorkflowLoader - YAML Round Trip', () => {
     await loader.saveWorkflow(workflow);
 
     // Capture what was registered
-    const registered = mockRegister.mock.calls[mockRegister.mock.calls.length - 1][0] as Workflow;
+    const registered = mockRegister.mock.calls[mockRegister.mock.calls.length - 1][0];
     expect(registered.id).toBe('round-trip');
     expect(registered.name).toBe('Round Trip');
     expect(registered.enabled).toBe(true);

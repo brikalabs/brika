@@ -20,11 +20,14 @@
   },
   "files": ["src", "README.md"],
   "scripts": {
-    "test": "bun test",
+    "test": "bun test --parallel",
     "typecheck": "tsgo --noEmit",
     "prepublishOnly": "bun run tsc"
   },
   "dependencies": {
     "@brika/serializable": "workspace:*"
+  },
+  "devDependencies": {
+    "@brika/testing": "workspace:*"
   }
 }

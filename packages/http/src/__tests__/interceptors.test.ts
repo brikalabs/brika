@@ -3,6 +3,7 @@
  */
 
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
+import { waitFor } from '@brika/testing';
 import {
   DeduplicationInterceptor,
   DeduplicationSkipError,
@@ -67,7 +68,7 @@ describe('HTTP Interceptors', () => {
     });
 
     test('aborts after timeout', async () => {
-      const interceptor = new TimeoutInterceptor(50);
+      const interceptor = new TimeoutInterceptor(10);
       const config: RequestConfig = {
         method: 'GET',
         url: 'https://example.com',
@@ -75,7 +76,7 @@ describe('HTTP Interceptors', () => {
 
       const result = interceptor.onRequest(config);
 
-      await new Promise((r) => setTimeout(r, 100));
+      await waitFor(() => result.signal?.aborted === true);
 
       expect(result.signal?.aborted).toBe(true);
     });
@@ -129,8 +130,7 @@ describe('HTTP Interceptors', () => {
       expect(interceptor.hasPendingRequest('test-key')).toBe(true);
 
       await promise;
-      // Wait for finally to run
-      await new Promise((r) => setTimeout(r, 0));
+      await waitFor(() => !interceptor.hasPendingRequest('test-key'));
 
       expect(interceptor.hasPendingRequest('test-key')).toBe(false);
     });
@@ -174,10 +174,10 @@ describe('HTTP Interceptors', () => {
         url: 'https://example.com/api',
       };
 
-      // Register a pending request with the same key
-      const pendingPromise = new Promise<HttpResponse>((resolve) => {
-        setTimeout(() => resolve({} as HttpResponse), 50);
-      });
+      // Register an already-resolved pending request — the dedup check inspects
+      // the map synchronously before `.then(cleanup)` removes the entry on the
+      // next microtask, so the assertion still observes a "pending" entry.
+      const pendingPromise = Promise.resolve({} as HttpResponse);
 
       // Generate the same key that would be used
       const { generateCacheKey } = await import('../cache');

@@ -7,6 +7,7 @@
  */
 
 import { describe, expect, mock, test } from 'bun:test';
+import { flush } from '@brika/testing';
 import { Text } from 'ink';
 import { render } from 'ink-testing-library';
 import React from 'react';
@@ -19,10 +20,6 @@ import {
 } from './EmoteProvider';
 import { defineEmote } from './emotes/builder';
 import type { EmoteDef } from './emotes/types';
-
-function flush(ms = 250): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 async function waitFor<T>(read: () => T, ok: (v: T) => boolean, timeoutMs = 1000): Promise<T> {
   const start = Date.now();

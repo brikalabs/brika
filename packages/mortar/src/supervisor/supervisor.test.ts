@@ -1,6 +1,22 @@
 import { describe, expect, test } from 'bun:test';
 import type { ServiceSpec } from '../config';
-import { type ServiceState, Supervisor, type SupervisorEvent, splitCommand } from '.';
+import {
+  type ServiceState,
+  Supervisor,
+  type SupervisorEvent,
+  type SupervisorOptions,
+  splitCommand,
+} from '.';
+
+/**
+ * Construct a Supervisor for tests with the UI render-hold disabled.
+ * The 400ms `SHUTDOWN_RENDER_HOLD_MS` exists so ink can paint the final
+ * frame before unmounting — irrelevant headless, and previously dominated
+ * the wall-clock of every `await using sup = mkSupervisor(...)`.
+ */
+function mkSupervisor(specs: readonly ServiceSpec[], options: SupervisorOptions = {}): Supervisor {
+  return new Supervisor(specs, { renderHoldMs: 0, ...options });
+}
 
 /** Wait until a predicate over the supervisor's state turns true. */
 function waitFor(
@@ -109,19 +125,19 @@ describe.concurrent('splitCommand', () => {
 
 describe.concurrent('Supervisor (introspection)', () => {
   test('starts in pending state for every service', async () => {
-    await using sup = new Supervisor([longRunning('a'), longRunning('b')]);
+    await using sup = mkSupervisor([longRunning('a'), longRunning('b')]);
     expect(sup.list().map((s) => s.spec.id)).toEqual(['a', 'b']);
     expect(sup.list().every((s) => s.status.kind === 'pending')).toBe(true);
   });
 
   test('get() returns null for unknown ids', async () => {
-    await using sup = new Supervisor([longRunning('a')]);
+    await using sup = mkSupervisor([longRunning('a')]);
     expect(sup.get('a')?.spec.id).toBe('a');
     expect(sup.get('ghost')).toBeNull();
   });
 
   test('subscribe() returns an unsubscribe function', async () => {
-    await using sup = new Supervisor([longRunning('a')]);
+    await using sup = mkSupervisor([longRunning('a')]);
     const events: SupervisorEvent[] = [];
     const off = sup.subscribe((e) => events.push(e));
     off();
@@ -136,7 +152,7 @@ describe.concurrent('Supervisor (lifecycle)', () => {
   test(
     'a service with health:none becomes healthy after spawn',
     async () => {
-      await using sup = new Supervisor([longRunning('a')]);
+      await using sup = mkSupervisor([longRunning('a')]);
       sup.start();
       await waitFor(sup, (states) => states[0]?.status.kind === 'healthy', { label: 'a healthy' });
     },
@@ -146,7 +162,7 @@ describe.concurrent('Supervisor (lifecycle)', () => {
   test(
     'captures stdout into the log ring buffer',
     async () => {
-      await using sup = new Supervisor([noisy('a', 'hello-from-a')]);
+      await using sup = mkSupervisor([noisy('a', 'hello-from-a')]);
       sup.start();
       await waitFor(
         sup,
@@ -162,7 +178,7 @@ describe.concurrent('Supervisor (lifecycle)', () => {
     async () => {
       // Vite-style banner that redraws via `\r` then ends with `\n`. The
       // expected captured line is only the FINAL frame.
-      await using sup = new Supervisor([
+      await using sup = mkSupervisor([
         {
           id: 'redraw',
           label: 'redraw',
@@ -190,7 +206,7 @@ describe.concurrent('Supervisor (lifecycle)', () => {
   test(
     'strips non-SGR ANSI control sequences (cursor moves, clear-line)',
     async () => {
-      await using sup = new Supervisor([
+      await using sup = mkSupervisor([
         {
           id: 'ctrl',
           label: 'ctrl',
@@ -216,7 +232,7 @@ describe.concurrent('Supervisor (lifecycle)', () => {
   test(
     'preserves SGR color codes (chalk-style output stays colored)',
     async () => {
-      await using sup = new Supervisor([
+      await using sup = mkSupervisor([
         {
           id: 'color',
           label: 'color',
@@ -242,7 +258,7 @@ describe.concurrent('Supervisor (lifecycle)', () => {
   test(
     'dedups consecutive identical lines (collapse redraws)',
     async () => {
-      await using sup = new Supervisor([
+      await using sup = mkSupervisor([
         {
           id: 'dup',
           label: 'dup',
@@ -273,7 +289,7 @@ describe.concurrent('Supervisor (lifecycle)', () => {
       // Print a line that LOOKS like bun --filter wrapped it ourselves,
       // so the stripper can run on the captured output without needing
       // a real workspace package to spawn.
-      await using sup = new Supervisor([
+      await using sup = mkSupervisor([
         {
           id: 'pre',
           label: 'pre',
@@ -307,7 +323,7 @@ describe.concurrent('Supervisor (lifecycle)', () => {
       // proving the supervisor doesn't buffer the whole stream. The
       // generous 400ms cadence absorbs CPU contention under concurrent
       // coverage runs without losing the "not buffered" signal.
-      await using sup = new Supervisor([
+      await using sup = mkSupervisor([
         {
           id: 'ticker',
           label: 'ticker',
@@ -343,7 +359,7 @@ describe.concurrent('Supervisor (lifecycle)', () => {
     'order of state transitions respects dependsOn',
     async () => {
       const events: Array<{ id: string; kind: string }> = [];
-      await using sup = new Supervisor([
+      await using sup = mkSupervisor([
         longRunning('coord'),
         longRunning('hub', 60_000, { dependsOn: ['coord'] }),
       ]);
@@ -375,7 +391,7 @@ describe.concurrent('Supervisor (lifecycle)', () => {
   test(
     'marks a service as crashed when it exits with non-zero',
     async () => {
-      await using sup = new Supervisor([
+      await using sup = mkSupervisor([
         {
           id: 'fail',
           label: 'fail',
@@ -404,7 +420,7 @@ describe.concurrent('Supervisor (lifecycle)', () => {
   test(
     'marks a clean early exit as crashed (long-running services should not exit 0)',
     async () => {
-      await using sup = new Supervisor([
+      await using sup = mkSupervisor([
         {
           id: 'a',
           label: 'a',
@@ -431,7 +447,7 @@ describe.concurrent('Supervisor (lifecycle)', () => {
       // Dep's healthcheck never succeeds (no listener on :1) and the
       // process exits early — the supervisor must mark it crashed and
       // never schedule the downstream.
-      await using sup = new Supervisor([
+      await using sup = mkSupervisor([
         {
           id: 'dep',
           label: 'dep',
@@ -462,7 +478,7 @@ describe.concurrent('Supervisor (restart)', () => {
   test(
     'restart() rerolls a service back to healthy',
     async () => {
-      await using sup = new Supervisor([longRunning('a')]);
+      await using sup = mkSupervisor([longRunning('a')]);
       sup.start();
       await waitFor(sup, (states) => states[0]?.status.kind === 'healthy', {
         label: 'first healthy',
@@ -476,14 +492,14 @@ describe.concurrent('Supervisor (restart)', () => {
   );
 
   test('restart() on an unknown id is a no-op', async () => {
-    await using sup = new Supervisor([longRunning('a')]);
+    await using sup = mkSupervisor([longRunning('a')]);
     await sup.restart('ghost'); // does not throw
   });
 
   test(
     'restartAll() reboots every service back to healthy',
     async () => {
-      await using sup = new Supervisor([longRunning('a'), longRunning('b')]);
+      await using sup = mkSupervisor([longRunning('a'), longRunning('b')]);
       sup.start();
       await waitFor(sup, (states) => states.every((s) => s.status.kind === 'healthy'), {
         label: 'all healthy first',
@@ -503,7 +519,7 @@ describe.concurrent('Supervisor (shutdown)', () => {
   test(
     'shutdown() terminates every live child',
     async () => {
-      await using sup = new Supervisor([longRunning('a'), longRunning('b')]);
+      await using sup = mkSupervisor([longRunning('a'), longRunning('b')]);
       sup.start();
       await waitFor(sup, (states) => states.every((s) => s.status.kind === 'healthy'), {
         label: 'all healthy',
@@ -520,7 +536,7 @@ describe.concurrent('Supervisor (shutdown)', () => {
   test(
     'shutdown() emits a single shutdown event',
     async () => {
-      await using sup = new Supervisor([longRunning('a')]);
+      await using sup = mkSupervisor([longRunning('a')]);
       sup.start();
       await waitFor(sup, (states) => states[0]?.status.kind === 'healthy', { label: 'healthy' });
       const events: SupervisorEvent[] = [];
@@ -538,7 +554,7 @@ describe.concurrent('Supervisor (bad commands)', () => {
   test(
     'an empty command marks the service as crashed (no throw out of start)',
     async () => {
-      await using sup = new Supervisor([
+      await using sup = mkSupervisor([
         {
           id: 'bad',
           label: 'bad',
@@ -565,7 +581,7 @@ describe.concurrent('Supervisor (bad commands)', () => {
   test(
     'an unclosed quote marks the service as crashed',
     async () => {
-      await using sup = new Supervisor([
+      await using sup = mkSupervisor([
         {
           id: 'bad',
           label: 'bad',
@@ -589,7 +605,7 @@ describe.concurrent('Supervisor (bad commands)', () => {
     // health: auto, and assert: the supervisor marks it healthy AND
     // records the detected port in ServiceState.
     const port = 7700 + Math.floor(Math.random() * 200);
-    await using sup = new Supervisor([
+    await using sup = mkSupervisor([
       {
         id: 'auto',
         label: 'auto',
@@ -615,7 +631,7 @@ describe.concurrent('Supervisor (bad commands)', () => {
     async () => {
       // Child reads one line from stdin and echoes it. We assert the
       // echoed line appears in the captured logs.
-      await using sup = new Supervisor([
+      await using sup = mkSupervisor([
         {
           id: 'echo',
           label: 'echo',
@@ -645,7 +661,7 @@ describe.concurrent('Supervisor (bad commands)', () => {
   );
 
   test('writeStdin returns false for unknown / dead services', async () => {
-    await using sup = new Supervisor([
+    await using sup = mkSupervisor([
       {
         id: 'a',
         label: 'a',
@@ -666,7 +682,7 @@ describe.concurrent('Supervisor (bad commands)', () => {
   test(
     'inherits env on top of spec env',
     async () => {
-      await using sup = new Supervisor([
+      await using sup = mkSupervisor([
         {
           id: 'echo',
           label: 'echo',
@@ -697,7 +713,7 @@ describe.concurrent('Supervisor (bad commands)', () => {
 
 describe.concurrent('isAlive / hasSpawned', () => {
   test('hasSpawned is false for services that never started', async () => {
-    await using sup = new Supervisor([
+    await using sup = mkSupervisor([
       // A service whose dep is `unknown-dep` would never satisfy `dependsOn`,
       // so it can never spawn. But validate() would catch that; here we
       // just construct directly to test the predicate without `start()`.
@@ -712,7 +728,7 @@ describe.concurrent('isAlive / hasSpawned', () => {
   test(
     'hasSpawned + isAlive flip true after start',
     async () => {
-      await using sup = new Supervisor([longRunning('a')]);
+      await using sup = mkSupervisor([longRunning('a')]);
       sup.start();
       await waitFor(sup, (states) => states[0]?.status.kind === 'healthy', {
         label: 'service starts',
@@ -727,7 +743,7 @@ describe.concurrent('isAlive / hasSpawned', () => {
   test(
     'isAlive flips false after shutdown',
     async () => {
-      await using sup = new Supervisor([longRunning('a')]);
+      await using sup = mkSupervisor([longRunning('a')]);
       sup.start();
       await waitFor(sup, (states) => states[0]?.status.kind === 'healthy', {
         label: 'service starts',
@@ -742,7 +758,7 @@ describe.concurrent('isAlive / hasSpawned', () => {
   );
 
   test('unknown service id → all predicates return false', async () => {
-    await using sup = new Supervisor([longRunning('a')]);
+    await using sup = mkSupervisor([longRunning('a')]);
     expect(sup.hasSpawned('ghost')).toBe(false);
     expect(sup.isAlive('ghost')).toBe(false);
   });
@@ -752,12 +768,12 @@ describe.concurrent('isAlive / hasSpawned', () => {
 
 describe.concurrent('writeStdin', () => {
   test('returns false for unknown service id', async () => {
-    await using sup = new Supervisor([longRunning('a')]);
+    await using sup = mkSupervisor([longRunning('a')]);
     expect(sup.writeStdin('ghost', 'x')).toBe(false);
   });
 
   test('returns false before the service has spawned', async () => {
-    await using sup = new Supervisor([longRunning('a')]);
+    await using sup = mkSupervisor([longRunning('a')]);
     // Don't start — proc is null.
     expect(sup.writeStdin('a', 'x')).toBe(false);
   });
@@ -766,7 +782,7 @@ describe.concurrent('writeStdin', () => {
     'returns true for a running service with a piped stdin',
     async () => {
       // Echo whatever it gets on stdin so we can confirm the write went through.
-      await using sup = new Supervisor([
+      await using sup = mkSupervisor([
         {
           id: 'echo',
           label: 'echo',
@@ -799,14 +815,14 @@ describe.concurrent('writeStdin', () => {
 
 describe.concurrent('Supervisor metadata', () => {
   test('root reflects the constructor argument', async () => {
-    await using sup = new Supervisor([longRunning('a')], '/some/where');
+    await using sup = mkSupervisor([longRunning('a')], { projectRoot: '/some/where' });
     expect(sup.root).toBe('/some/where');
   });
 
   test(
     'isShuttingDown flips after shutdown is called',
     async () => {
-      await using sup = new Supervisor([longRunning('a')]);
+      await using sup = mkSupervisor([longRunning('a')]);
       sup.start();
       expect(sup.isShuttingDown).toBe(false);
       await sup.shutdown();
@@ -816,7 +832,7 @@ describe.concurrent('Supervisor metadata', () => {
   );
 
   test('get(serviceId) returns the state, null for unknown', async () => {
-    await using sup = new Supervisor([longRunning('a')]);
+    await using sup = mkSupervisor([longRunning('a')]);
     expect(sup.get('a')).not.toBeNull();
     expect(sup.get('ghost')).toBeNull();
   });

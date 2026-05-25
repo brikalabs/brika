@@ -10,6 +10,7 @@ import { join } from 'node:path';
 import { get, provide, stub, useTestBed } from '@brika/di/testing';
 import { Logger } from '@/runtime/logs/log-router';
 import { PluginWatcher } from '@/runtime/plugins/plugin-watcher';
+import { sleep, waitFor } from './_test-helpers';
 
 useTestBed();
 
@@ -93,12 +94,10 @@ describe('PluginWatcher', () => {
     realWatcher.watch('@test/trigger', tmpRoot);
 
     // Allow FS watcher to fully register before modifying
-    await new Promise((r) => setTimeout(r, 200));
+    await sleep(100);
     await writeFile(join(srcDir, 'index.ts'), 'export const a = 2;');
 
-    // Wait for debounce (DEBOUNCE_MS = 500) + buffer
-    await new Promise((r) => setTimeout(r, 1000));
-
+    await waitFor(() => handler.mock.calls.length > 0, { timeoutMs: 3000 });
     expect(handler).toHaveBeenCalledWith('@test/trigger');
 
     realWatcher.unwatch('@test/trigger');
@@ -118,11 +117,11 @@ describe('PluginWatcher', () => {
 
     realWatcher.watch('@test/no-trigger', tmpRoot);
 
-    await new Promise((r) => setTimeout(r, 200));
+    await sleep(100);
     await writeFile(join(srcDir, 'data.json'), '{"a":1}');
 
-    await new Promise((r) => setTimeout(r, 1000));
-
+    // Negative assertion: nothing should fire within debounce window (500ms)
+    await sleep(600);
     expect(handler).not.toHaveBeenCalled();
 
     realWatcher.unwatch('@test/no-trigger');
@@ -143,16 +142,17 @@ describe('PluginWatcher', () => {
 
     realWatcher.watch('@test/debounce', tmpRoot);
 
-    await new Promise((r) => setTimeout(r, 200));
+    await sleep(100);
     // Multiple rapid writes
     await writeFile(join(srcDir, 'index.ts'), 'export const a = 2;');
-    await new Promise((r) => setTimeout(r, 50));
+    await sleep(20);
     await writeFile(join(srcDir, 'index.ts'), 'export const a = 3;');
-    await new Promise((r) => setTimeout(r, 50));
+    await sleep(20);
     await writeFile(join(srcDir, 'index.ts'), 'export const a = 4;');
 
-    // Wait for debounce
-    await new Promise((r) => setTimeout(r, 1000));
+    await waitFor(() => handler.mock.calls.length > 0, { timeoutMs: 3000 });
+    // Allow a small post-fire window to catch any debounce-violating extra fires
+    await sleep(100);
 
     // Should only fire once due to debounce
     expect(handler).toHaveBeenCalledTimes(1);
@@ -175,15 +175,15 @@ describe('PluginWatcher', () => {
 
     realWatcher.watch('@test/cancel', tmpRoot);
 
-    await new Promise((r) => setTimeout(r, 200));
+    await sleep(100);
     await writeFile(join(srcDir, 'index.ts'), 'export const a = 2;');
 
     // Unwatch before debounce fires (within 500ms window)
-    await new Promise((r) => setTimeout(r, 200));
+    await sleep(100);
     realWatcher.unwatch('@test/cancel');
 
-    // Wait past debounce period
-    await new Promise((r) => setTimeout(r, 1000));
+    // Negative assertion: nothing should fire past debounce window after cancel
+    await sleep(600);
 
     expect(handler).not.toHaveBeenCalled();
 
@@ -203,11 +203,10 @@ describe('PluginWatcher', () => {
 
     realWatcher.watch('@test/css', tmpRoot);
 
-    await new Promise((r) => setTimeout(r, 200));
+    await sleep(100);
     await writeFile(join(srcDir, 'styles.css'), 'body { color: red; }');
 
-    await new Promise((r) => setTimeout(r, 1000));
-
+    await waitFor(() => handler.mock.calls.length > 0, { timeoutMs: 3000 });
     expect(handler).toHaveBeenCalledWith('@test/css');
 
     realWatcher.unwatch('@test/css');

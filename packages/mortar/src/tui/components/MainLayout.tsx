@@ -12,12 +12,13 @@
  * of duplicated JSX between them.
  */
 
-import { effectiveScrollOffset, LogPane, MeasuredChrome } from '@brika/tui';
+import { effectiveScrollOffset, MeasuredChrome } from '@brika/tui';
 import { Box } from 'ink';
 import type React from 'react';
 import { serviceUrl } from '../../config';
 import { useMortar } from '../useMortar';
 import { Footer } from './Footer';
+import { LogPanel } from './LogPanel';
 import { ServiceList } from './ServiceList';
 
 export interface MainLayoutProps {
@@ -31,6 +32,10 @@ export interface MainLayoutProps {
 export function MainLayout({ inputModeFor }: Readonly<MainLayoutProps>): React.ReactElement {
   const { services, focus, scroll, search, toast, layout, fullscreen } = useMortar();
   const focused = focus.focused;
+  const onFocusChange = (id: string): void => {
+    focus.setFocusedId(id);
+    scroll.goLive();
+  };
   const focusedLogs = focused?.logs ?? [];
   const scrollOffset = effectiveScrollOffset(
     scroll.offset,
@@ -44,14 +49,15 @@ export function MainLayout({ inputModeFor }: Readonly<MainLayoutProps>): React.R
     <Box flexDirection="column" height={layout.rows}>
       <Box flexGrow={1}>
         {!fullscreen.enabled && (
-          <ServiceList services={services} focusedIndex={focus.focusedIndex} />
+          <ServiceList
+            services={services}
+            focusedId={focus.focusedId}
+            onFocusChange={onFocusChange}
+          />
         )}
         {focused && (
-          <LogPane
-            label={focused.spec.label}
-            lines={focused.logs}
-            revision={focused.revision}
-            status={focused.status}
+          <LogPanel
+            focused={focused}
             visible={layout.visible}
             scrollFromBottom={scrollOffset}
             maxScroll={layout.maxScroll}

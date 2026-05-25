@@ -11,35 +11,12 @@
  */
 
 import { describe, expect, mock, test } from 'bun:test';
+import { flush, waitFor } from '@brika/testing';
 import { Text } from 'ink';
 import { render } from 'ink-testing-library';
 import React from 'react';
 import { TuiShellProvider, useCaptureInput } from '../shell';
 import { List, ListItem } from './List';
-
-// Pre-computed escape sequences (kept for future tests if ink-testing-
-// library ever gains reliable CSI replay).
-
-// 250ms is well above the ~10ms ink-testing-library typically needs to
-// commit a render + cleanup, but generous enough to absorb the worst-case
-// CI slot under parallel test pressure (where 50ms was failing).
-function flush(): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, 250));
-}
-
-// Poll-based wait so the `j`/`k` test isn't racing ink-testing-library's
-// stdin tick on slow CI runners. Local runs settle in <10ms; the timeout
-// is intentionally generous to absorb the worst observed CI latency.
-async function waitForCall<T>(mockFn: { mock: { calls: T[][] } }, expected: T): Promise<void> {
-  const start = Date.now();
-  while (Date.now() - start < 2000) {
-    const last = mockFn.mock.calls.at(-1)?.[0];
-    if (last === expected) {
-      return;
-    }
-    await new Promise((r) => setTimeout(r, 10));
-  }
-}
 
 function withShell(tree: React.ReactNode): React.ReactElement {
   return React.createElement(TuiShellProvider, { onQuit: () => undefined }, tree);
@@ -71,9 +48,10 @@ describe('<List>', () => {
         )
       )
     );
-    await flush();
+    // ink's focus-manager commits asynchronously after mount; poll until
+    // the cursor `▸` has landed rather than guessing a fixed delay.
+    await waitFor(() => /▸\s*alpha/.test(lastFrame() ?? ''));
     const frame = lastFrame() ?? '';
-    // Cursor `▸` appears on alpha (first row). Other rows have no cursor.
     expect(frame).toMatch(/▸\s*alpha/);
     expect(frame).not.toMatch(/▸\s*beta/);
     unmount();
@@ -88,7 +66,7 @@ describe('<List>', () => {
 
   test('vim-style `j` and `k` move the cursor (proxies arrow-key behaviour)', async () => {
     const onValueChange = mock();
-    const { stdin, unmount } = render(
+    const { lastFrame, stdin, unmount } = render(
       withShell(
         React.createElement(
           List,
@@ -99,12 +77,14 @@ describe('<List>', () => {
         )
       )
     );
-    await flush();
+    // The List's `j`/`k` binds are gated on focus; wait until autoFocus
+    // has actually landed (cursor visible) before sending keystrokes.
+    await waitFor(() => /▸\s*alpha/.test(lastFrame() ?? ''));
     stdin.write('j');
-    await waitForCall(onValueChange, 'beta');
+    await waitFor(() => onValueChange.mock.calls.at(-1)?.[0] === 'beta');
     expect(onValueChange).toHaveBeenLastCalledWith('beta');
     stdin.write('k');
-    await waitForCall(onValueChange, 'alpha');
+    await waitFor(() => onValueChange.mock.calls.at(-1)?.[0] === 'alpha');
     expect(onValueChange).toHaveBeenLastCalledWith('alpha');
     unmount();
   });

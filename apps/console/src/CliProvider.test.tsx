@@ -24,7 +24,7 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { useBunMock } from '@brika/testing';
+import { flush, useBunMock, waitFor } from '@brika/testing';
 import { Text } from 'ink';
 import { render } from 'ink-testing-library';
 import React from 'react';
@@ -76,24 +76,6 @@ function isSpawnReturn(value: unknown): value is SpawnReturn {
   return typeof pid === 'number';
 }
 
-function flush(ms = 50): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-// Poll a predicate until it returns true or timeout expires. Use this instead of
-// fixed flush() sleeps for assertions that must see a specific state — under
-// CPU contention (e.g. `bun --filter '*' test --parallel` with many workspaces
-// in flight) the React render loop can be slow enough that a fixed sleep races.
-async function waitFor(predicate: () => boolean, timeoutMs = 2000): Promise<void> {
-  const start = Date.now();
-  while (Date.now() - start < timeoutMs) {
-    if (predicate()) {
-      return;
-    }
-    await new Promise((resolve) => setTimeout(resolve, 25));
-  }
-}
-
 interface ConsumerProps {
   readonly onResult: (cli: CliState) => void;
 }
@@ -110,7 +92,7 @@ function mount(latest: { current: CliState | null }): {
   const { unmount } = render(
     React.createElement(
       CliProvider,
-      { version: '1.2.3' },
+      { version: '1.2.3', pollIntervalMs: 10, transientMoodMs: 100 },
       React.createElement(Consumer, {
         onResult: (cli) => {
           latest.current = cli;
@@ -202,7 +184,7 @@ describe('<CliProvider>', () => {
     await clearPid();
     const latest: { current: CliState | null } = { current: null };
     const { unmount } = mount(latest);
-    await flush(150);
+    await flush(30);
     expect(latest.current?.hub.state).toBe('stopped');
     expect(latest.current?.mood).toBe('sleep');
     expect(latest.current?.statusText).toMatch(/start/);
@@ -231,7 +213,7 @@ describe('<CliProvider>', () => {
     try {
       const latest: { current: CliState | null } = { current: null };
       const { unmount } = mount(latest);
-      await flush(200);
+      await flush(50);
       expect(latest.current?.hub.state).toBe('stale');
       expect(latest.current?.mood).toBe('suspicious');
       expect(latest.current?.statusText).toMatch(/stale pid/);
@@ -245,7 +227,7 @@ describe('<CliProvider>', () => {
     await clearPid();
     const latest: { current: CliState | null } = { current: null };
     const { unmount } = mount(latest);
-    await flush(150);
+    await flush(30);
 
     // Stub Bun.spawn so the "spawned child claims the pid file" path
     // resolves quickly. Writing process.pid keeps `checkPid` happy.
@@ -255,7 +237,7 @@ describe('<CliProvider>', () => {
     });
     try {
       await latest.current?.startHub();
-      await flush(50);
+      await flush();
       expect(spawnSpy).toHaveBeenCalled();
       expect(latest.current?.mood).toBe('happy');
       // Either `pid 5555` (timeout path) or `pid <process.pid>` (settle
@@ -271,12 +253,12 @@ describe('<CliProvider>', () => {
     writePid(process.pid);
     const latest: { current: CliState | null } = { current: null };
     const { unmount } = mount(latest);
-    await flush(150);
+    await flush(30);
 
     const spawnSpy = spyOn(Bun, 'spawn');
     try {
       await latest.current?.startHub();
-      await flush(20);
+      await flush();
       expect(spawnSpy).not.toHaveBeenCalled();
       expect(latest.current?.mood).toBe('suspicious');
       expect(latest.current?.statusText).toMatch(/already running/);
@@ -290,14 +272,14 @@ describe('<CliProvider>', () => {
     await clearPid();
     const latest: { current: CliState | null } = { current: null };
     const { unmount } = mount(latest);
-    await flush(150);
+    await flush(30);
 
     const spawnSpy = spyOn(Bun, 'spawn').mockImplementation(() => {
       throw new Error('exec missing');
     });
     try {
       await latest.current?.startHub();
-      await flush(20);
+      await flush();
       expect(latest.current?.mood).toBe('error');
       expect(latest.current?.statusText).toMatch(/exec missing/);
     } finally {
@@ -310,7 +292,7 @@ describe('<CliProvider>', () => {
     writePid(process.pid);
     const latest: { current: CliState | null } = { current: null };
     const { unmount } = mount(latest);
-    await flush(150);
+    await flush(30);
 
     // `process.kill(pid, 0)` is what `checkPid` uses for liveness — let
     // it through, but observe SIGTERM separately.
@@ -326,7 +308,7 @@ describe('<CliProvider>', () => {
     );
     try {
       await latest.current?.stopHub();
-      await flush(20);
+      await flush();
       const calls = killSpy.mock.calls.filter((c) => c[1] === 'SIGTERM');
       expect(calls).toHaveLength(1);
       expect(calls[0]?.[0]).toBe(process.pid);
@@ -342,9 +324,9 @@ describe('<CliProvider>', () => {
     await clearPid();
     const latest: { current: CliState | null } = { current: null };
     const { unmount } = mount(latest);
-    await flush(150);
+    await flush(30);
     await latest.current?.stopHub();
-    await flush(20);
+    await flush();
     expect(latest.current?.mood).toBe('sleep');
     expect(latest.current?.statusText).toMatch(/not running/);
     unmount();
@@ -366,10 +348,10 @@ describe('<CliProvider>', () => {
     try {
       const latest: { current: CliState | null } = { current: null };
       const { unmount } = mount(latest);
-      await flush(200);
+      await flush(50);
       expect(latest.current?.hub.state).toBe('stale');
       await latest.current?.stopHub();
-      await flush(20);
+      await flush();
       expect(latest.current?.mood).toBe('suspicious');
       expect(latest.current?.statusText).toMatch(/cleared/);
       unmount();
@@ -385,13 +367,13 @@ describe('<CliProvider>', () => {
     bun.fetch(async (): Promise<Response> => new Response('ok', { status: 200 }));
     const latest: { current: CliState | null } = { current: null };
     const { unmount } = mount(latest);
-    await flush(150);
+    await flush(30);
     expect(latest.current?.hub.state).toBe('running');
 
     const killSpy = spyOn(process, 'kill');
     try {
       await latest.current?.stopHub();
-      await flush(20);
+      await flush();
       // SIGTERM never sent — only the signal-0 health probe runs.
       expect(killSpy.mock.calls.some((c) => c[1] === 'SIGTERM')).toBe(false);
       expect(latest.current?.mood).toBe('suspicious');
@@ -406,7 +388,7 @@ describe('<CliProvider>', () => {
     writePid(process.pid);
     const latest: { current: CliState | null } = { current: null };
     const { unmount } = mount(latest);
-    await flush(150);
+    await flush(30);
 
     const realKill = process.kill;
     const killSpy = spyOn(process, 'kill').mockImplementation(
@@ -419,7 +401,7 @@ describe('<CliProvider>', () => {
     );
     try {
       await latest.current?.restartHub();
-      await flush(20);
+      await flush();
       const calls = killSpy.mock.calls.filter((c) => c[1] === 'SIGUSR1');
       expect(calls).toHaveLength(1);
       expect(calls[0]?.[0]).toBe(process.pid);
@@ -434,9 +416,9 @@ describe('<CliProvider>', () => {
     await clearPid();
     const latest: { current: CliState | null } = { current: null };
     const { unmount } = mount(latest);
-    await flush(150);
+    await flush(30);
     await latest.current?.restartHub();
-    await flush(20);
+    await flush();
     expect(latest.current?.mood).toBe('sleep');
     expect(latest.current?.statusText).toMatch(/nothing to restart/);
     unmount();
@@ -447,10 +429,10 @@ describe('<CliProvider>', () => {
     bun.fetch(async (): Promise<Response> => new Response('ok', { status: 200 }));
     const latest: { current: CliState | null } = { current: null };
     const { unmount } = mount(latest);
-    await flush(150);
+    await waitFor(() => latest.current?.hub.state === 'running');
     expect(latest.current?.hub.state).toBe('running');
     await latest.current?.restartHub();
-    await flush(20);
+    await waitFor(() => latest.current?.mood === 'suspicious');
     expect(latest.current?.mood).toBe('suspicious');
     expect(latest.current?.statusText).toMatch(/can't restart/);
     unmount();
@@ -460,12 +442,12 @@ describe('<CliProvider>', () => {
     writePid(process.pid);
     const latest: { current: CliState | null } = { current: null };
     const { unmount } = mount(latest);
-    await flush(150);
+    await flush(30);
 
     const spawnSpy = spyOn(Bun, 'spawn').mockImplementation(() => fakeChild());
     try {
       await latest.current?.openUi();
-      await flush(20);
+      await flush();
       expect(spawnSpy).toHaveBeenCalled();
       const cmd = spawnSpy.mock.calls[0]?.[0];
       // `openBrowser` builds [browserCommand(), url] — the second arg
@@ -484,12 +466,12 @@ describe('<CliProvider>', () => {
     await clearPid();
     const latest: { current: CliState | null } = { current: null };
     const { unmount } = mount(latest);
-    await flush(150);
+    await flush(30);
 
     const spawnSpy = spyOn(Bun, 'spawn');
     try {
       await latest.current?.openUi();
-      await flush(20);
+      await flush();
       expect(spawnSpy).not.toHaveBeenCalled();
       expect(latest.current?.mood).toBe('sleep');
       expect(latest.current?.statusText).toMatch(/isn't running/);
@@ -503,16 +485,17 @@ describe('<CliProvider>', () => {
     await clearPid();
     const latest: { current: CliState | null } = { current: null };
     const { unmount } = mount(latest);
-    await flush(150);
+    await waitFor(() => latest.current?.hub.state === 'stopped');
 
     // Trigger a transient: openUi while stopped sets a distinctive caption.
     await latest.current?.openUi();
-    await flush(50);
+    await waitFor(() => /isn't running/.test(latest.current?.statusText ?? ''));
     expect(latest.current?.statusText).toMatch(/isn't running/);
 
-    // Wait past the 2.5s transient timeout — the caption should drift
-    // back to the default for the stopped hub.
-    await flush(2700);
+    // The transient caption clears after 2.5s — poll until that happens
+    // rather than blocking on the full timeout. Bump the waitFor budget
+    // to 4s so a slow CI runner still has slack past the 2.5s mark.
+    await waitFor(() => !/isn't running/.test(latest.current?.statusText ?? ''), 4000);
     expect(latest.current?.statusText).not.toMatch(/isn't running/);
     expect(latest.current?.mood).toBe('sleep');
     unmount();

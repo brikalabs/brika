@@ -51,12 +51,18 @@ function extname(filename: string): string {
 const JSON_T_REF_RE = /\$t\(([^)]+)\)/g;
 
 /**
- * Matches qualified translation key strings inside JSON values. Two namespace
+ * Matches qualified translation key strings inside JSON *values*. Two namespace
  * shapes are accepted: a plain identifier (`nav:groups.overview`) and a
  * colon-bearing prefix (`plugin:@scope/foo:stats.feelsLike`).
+ *
+ * The trailing `(?!\s*:)` lookahead excludes JSON property *keys* that happen
+ * to contain `:` (e.g. `"workflow:read": "Read workflows"` — the key would
+ * otherwise be mis-detected as a `t('workflow:read')` reference and the
+ * validator would flag it as `unknown-key` since the real path is
+ * `users:scopes.workflow:read`).
  */
 const JSON_QUALIFIED_KEY_RE =
-  /"((?:[a-zA-Z][\w@/.-]*:[a-zA-Z@][\w@/.-]*|[a-zA-Z][\w-]*):[a-zA-Z][\w.-]*)"/g;
+  /"((?:[a-zA-Z][\w@/.-]*:[a-zA-Z@][\w@/.-]*|[a-zA-Z][\w-]*):[a-zA-Z][\w.-]*)"(?!\s*:)/g;
 
 function qualify(rawKey: string, defaultNs: string | null): string {
   if (rawKey.includes(':')) {

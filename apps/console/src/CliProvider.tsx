@@ -28,6 +28,11 @@ const ACTIVITY_MAX_MS = 18_000;
 export interface CliProviderProps {
   readonly version: string;
   readonly children?: React.ReactNode;
+  /** Hub-status poll cadence. Default 1000ms; tests pass ~10ms. */
+  readonly pollIntervalMs?: number;
+  /** How long a transient caption stays before drifting back to default.
+   *  Default 2500ms; tests pass ~100ms. */
+  readonly transientMoodMs?: number;
 }
 
 function pidToHub(pid: PidStatus): HubStatus {
@@ -117,7 +122,12 @@ function defaultMoodFor(hub: HubStatus, activity: Activity | null): MoodLine {
   }
 }
 
-export function CliProvider({ version, children }: Readonly<CliProviderProps>): React.ReactElement {
+export function CliProvider({
+  version,
+  children,
+  pollIntervalMs = POLL_INTERVAL_MS,
+  transientMoodMs = 2500,
+}: Readonly<CliProviderProps>): React.ReactElement {
   const [hub, setHub] = useState<HubStatus>({ state: 'unknown' });
   const [transient, setTransient] = useState<MoodLine | null>(null);
   const [activityIndex, setActivityIndex] = useState<number | null>(null);
@@ -132,12 +142,12 @@ export function CliProvider({ version, children }: Readonly<CliProviderProps>): 
       }
     };
     void tick();
-    const t = setInterval(() => void tick(), POLL_INTERVAL_MS);
+    const t = setInterval(() => void tick(), pollIntervalMs);
     return () => {
       cancelled = true;
       clearInterval(t);
     };
-  }, []);
+  }, [pollIntervalMs]);
 
   // Transient mood lines (e.g. "starting…") auto-clear after a beat
   // so the footer drifts back to the default for the hub state.
@@ -145,9 +155,9 @@ export function CliProvider({ version, children }: Readonly<CliProviderProps>): 
     if (transient === null) {
       return;
     }
-    const t = setTimeout(() => setTransient(null), 2500);
+    const t = setTimeout(() => setTransient(null), transientMoodMs);
     return () => clearTimeout(t);
-  }, [transient]);
+  }, [transient, transientMoodMs]);
 
   // Activity rotation: while the hub is running, swap Brix's "-ing"
   // status every 10–18s. The first swap waits ACTIVITY_INITIAL_DELAY_MS

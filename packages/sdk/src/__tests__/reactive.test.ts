@@ -4,6 +4,7 @@
 
 import { describe, expect, mock, test } from 'bun:test';
 import { CleanupRegistry, isSource } from '@brika/flow';
+import { waitFor } from '@brika/testing';
 import { z } from 'zod';
 import {
   createEmitter,
@@ -135,8 +136,7 @@ describe('createFlowFromInput', () => {
 
     flow.on((v) => values.push(v));
 
-    // Wait for async push
-    await new Promise((r) => setTimeout(r, 10));
+    await waitFor(() => values.length > 0);
 
     expect(values).toEqual([42]);
     cleanup.cleanup();
@@ -163,8 +163,7 @@ describe('createFlowFromInput', () => {
     const flow = createFlowFromInput(factory, setTimeoutFn, cleanup);
     flow.on((v) => values.push(v));
 
-    // Wait for async push
-    await new Promise((r) => setTimeout(r, 20));
+    await waitFor(() => values.length >= 2);
 
     expect(values).toEqual([1, 2]);
     cleanup.cleanup();
@@ -194,8 +193,7 @@ describe('createFlowFromInput', () => {
     const flow = createFlowFromInput(source, setTimeoutFn, cleanup);
     flow.on((v) => values.push(v));
 
-    // Wait for async push
-    await new Promise((r) => setTimeout(r, 20));
+    await waitFor(() => values.length >= 2);
 
     expect(values).toEqual(['a', 'b']);
     cleanup.cleanup();

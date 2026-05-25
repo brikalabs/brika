@@ -160,7 +160,7 @@ describe('hub net.fetch handler', () => {
     const reg = buildRegistry(fetcher);
 
     const controller = new AbortController();
-    setTimeout(() => controller.abort(new Error('test abort')), 50);
+    queueMicrotask(() => controller.abort(new Error('test abort')));
     const start = Date.now();
     let thrown: unknown;
     try {
@@ -477,10 +477,19 @@ describe('hub net.fetch handler', () => {
     // 4 callers, cap 2 → 2 served immediately, 2 queue.
     let inFlight = 0;
     let observed = 0;
+    // Gate held by every in-flight fetch — released only once the
+    // semaphore admits its cap of 2 concurrent callers. Lets the test
+    // verify the cap deterministically without a wall-clock sleep.
+    const gate = Promise.withResolvers<void>();
+    let entered = 0;
     const fetcher = mockFetcher(async () => {
       inFlight += 1;
       observed = Math.max(observed, inFlight);
-      await new Promise((r) => setTimeout(r, 20));
+      entered += 1;
+      if (entered >= 2) {
+        gate.resolve();
+      }
+      await gate.promise;
       inFlight -= 1;
       return new Response('ok');
     });

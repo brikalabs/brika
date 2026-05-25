@@ -9,16 +9,13 @@
  */
 
 import { describe, expect, test } from 'bun:test';
+import { flush } from '@brika/testing';
 import { render } from 'ink-testing-library';
 import React from 'react';
 import { MarkdownStream } from './MarkdownStream';
 
 // Project-wide ink-testing flush ceiling — matches the helper in
 // `useReadme.test.tsx`.
-function flush(ms = 250): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
 function renderStream(source: string): { frame: string; unmount: () => void } {
   const { lastFrame, unmount } = render(React.createElement(MarkdownStream, { source }));
   return { frame: lastFrame() ?? '', unmount };

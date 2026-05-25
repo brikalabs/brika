@@ -9,6 +9,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import { flush } from '@brika/testing';
 import { Text } from 'ink';
 import { render } from 'ink-testing-library';
 import React from 'react';
@@ -16,10 +17,6 @@ import { debugBuffer } from './buffer';
 import { DebugProvider } from './DebugProvider';
 import type { DebugContextValue, DebugLevel } from './types';
 import { useDebug } from './useDebug';
-
-function flush(): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, 250));
-}
 
 beforeEach(() => {
   debugBuffer.uninstall();

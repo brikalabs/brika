@@ -10,6 +10,7 @@
 import { afterEach, describe, expect, test } from 'bun:test';
 import { Channel, type WireMessage } from '@brika/ipc';
 import { grantRequest, type StreamEventType, streamEvent } from '@brika/ipc/contract';
+import { flush, waitFor } from '../../../../../__tests__/_test-helpers';
 import { buildWebSocketProxy } from '../websocket-proxy';
 
 type ConnectArgs = { url: string; protocols?: string[] };
@@ -105,7 +106,13 @@ function isProxyShape(value: unknown): value is ProxyShape {
 
 describe('WebSocket proxy — construction + event lifecycle', () => {
   test('open event fires after the hub pushes a stream-open', async () => {
-    const t = loopback({ connect: () => ({ handleId: 'ws_42' }) });
+    let connected = false;
+    const t = loopback({
+      connect: () => {
+        connected = true;
+        return { handleId: 'ws_42' };
+      },
+    });
     const { Constructor } = buildWebSocketProxy({ channel: t.pluginChan });
     const ws = makeProxy(Constructor, 'wss://api.example.com/');
     let opened = false;
@@ -114,15 +121,25 @@ describe('WebSocket proxy — construction + event lifecycle', () => {
         opened = true;
       },
     });
-    // Wait one tick for the constructor's microtask to fire the connect.
-    await new Promise((r) => setTimeout(r, 5));
+    // The proxy only routes stream events to handles already registered in
+    // `proxiesByHandle`, which happens after the connect IPC resolves on
+    // the plugin side. Wait for the hub-side connect callback to land then
+    // flush one extra microtask turn before pushing.
+    await waitFor(() => connected);
+    await flush();
     t.push({ kind: 'open', handleId: 'ws_42' });
-    await new Promise((r) => setTimeout(r, 5));
+    await waitFor(() => opened);
     expect(opened).toBe(true);
   });
 
   test('message events deliver the data field', async () => {
-    const t = loopback({ connect: () => ({ handleId: 'ws_msg' }) });
+    let connected = false;
+    const t = loopback({
+      connect: () => {
+        connected = true;
+        return { handleId: 'ws_msg' };
+      },
+    });
     const { Constructor } = buildWebSocketProxy({ channel: t.pluginChan });
     const received: unknown[] = [];
     const ws = makeProxy(Constructor, 'wss://api.example.com/');
@@ -131,14 +148,21 @@ describe('WebSocket proxy — construction + event lifecycle', () => {
         received.push(e.data);
       },
     });
-    await new Promise((r) => setTimeout(r, 5));
+    await waitFor(() => connected);
+    await flush();
     t.push({ kind: 'message', handleId: 'ws_msg', data: 'hello' });
-    await new Promise((r) => setTimeout(r, 5));
+    await waitFor(() => received.length > 0);
     expect(received).toEqual(['hello']);
   });
 
   test('close event sets readyState to CLOSED', async () => {
-    const t = loopback({ connect: () => ({ handleId: 'ws_close' }) });
+    let connected = false;
+    const t = loopback({
+      connect: () => {
+        connected = true;
+        return { handleId: 'ws_close' };
+      },
+    });
     const { Constructor } = buildWebSocketProxy({ channel: t.pluginChan });
     const ws = makeProxy(Constructor, 'wss://api.example.com/');
     let closed: { code: number; reason: string } | undefined;
@@ -147,11 +171,12 @@ describe('WebSocket proxy — construction + event lifecycle', () => {
         closed = { code: e.code, reason: e.reason };
       },
     });
-    await new Promise((r) => setTimeout(r, 5));
+    await waitFor(() => connected);
+    await flush();
     t.push({ kind: 'close', handleId: 'ws_close', code: 1000, reason: 'bye' });
-    await new Promise((r) => setTimeout(r, 5));
+    await waitFor(() => closed !== undefined);
     expect(closed).toEqual({ code: 1000, reason: 'bye' });
-    expect((ws as { readyState: number }).readyState).toBe(3);
+    expect(ws.readyState).toBe(3);
   });
 
   test('send buffers frames issued before connect resolves', async () => {
@@ -166,13 +191,19 @@ describe('WebSocket proxy — construction + event lifecycle', () => {
     const { Constructor } = buildWebSocketProxy({ channel: t.pluginChan });
     const ws = makeProxy(Constructor, 'wss://api.example.com/');
     // Send IMMEDIATELY — before connect resolves.
-    (ws as { send: (d: string) => void }).send('queued');
-    await new Promise((r) => setTimeout(r, 15));
+    ws.send('queued');
+    await waitFor(() => sentFrames.length > 0);
     expect(sentFrames).toEqual(['queued']);
   });
 
   test('close before connect resolves emits a synthetic close event', async () => {
-    const t = loopback({ connect: () => ({ handleId: 'ws_early' }) });
+    let connected = false;
+    const t = loopback({
+      connect: () => {
+        connected = true;
+        return { handleId: 'ws_early' };
+      },
+    });
     const { Constructor } = buildWebSocketProxy({ channel: t.pluginChan });
     const ws = makeProxy(Constructor, 'wss://api.example.com/');
     let synthClose: { code: number; reason: string } | undefined;
@@ -187,11 +218,17 @@ describe('WebSocket proxy — construction + event lifecycle', () => {
     ws.close(1000, 'early');
     expect(synthClose).toEqual({ code: 1000, reason: 'early' });
     // Drain the connect call so the test doesn't leave a pending IPC.
-    await new Promise((r) => setTimeout(r, 10));
+    await waitFor(() => connected);
   });
 
   test('addEventListener / removeEventListener', async () => {
-    const t = loopback({ connect: () => ({ handleId: 'ws_evt' }) });
+    let connected = false;
+    const t = loopback({
+      connect: () => {
+        connected = true;
+        return { handleId: 'ws_evt' };
+      },
+    });
     const { Constructor } = buildWebSocketProxy({ channel: t.pluginChan });
     const ws = makeProxy(Constructor, 'wss://api.example.com/');
     let count = 0;
@@ -199,13 +236,16 @@ describe('WebSocket proxy — construction + event lifecycle', () => {
       count += 1;
     };
     ws.addEventListener('message', handler);
-    await new Promise((r) => setTimeout(r, 5));
+    await waitFor(() => connected);
+    await flush();
     t.push({ kind: 'message', handleId: 'ws_evt', data: 'one' });
-    await new Promise((r) => setTimeout(r, 5));
-    expect(count).toBe(1);
+    await waitFor(() => count === 1);
     ws.removeEventListener('message', handler);
     t.push({ kind: 'message', handleId: 'ws_evt', data: 'two' });
-    await new Promise((r) => setTimeout(r, 5));
+    // Negative assertion — confirm the removed listener is no longer
+    // invoked. A short window is necessary because there's no positive
+    // signal we can wait for here.
+    await flush();
     expect(count).toBe(1);
   });
 });

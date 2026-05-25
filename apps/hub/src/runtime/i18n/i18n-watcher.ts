@@ -23,6 +23,9 @@ export interface WatcherOptions {
   readonly warn: LoaderWarn;
   readonly onWatcherError: (path: string, error: unknown) => void;
   readonly onWatcherInstalled: (path: string) => void;
+  /** Forwarded to `watchLocaleSource`. Tests pass a tiny value (~20ms) to
+   *  bypass the production-tuned 300ms debounce. */
+  readonly debounceMs?: number;
 }
 
 /**
@@ -36,6 +39,7 @@ export class LocaleWatcher {
   readonly #warn: LoaderWarn;
   readonly #onWatcherError: (path: string, error: unknown) => void;
   readonly #onWatcherInstalled: (path: string) => void;
+  readonly #debounceMs: number | undefined;
   readonly #disposers: Array<() => void> = [];
 
   constructor(options: WatcherOptions) {
@@ -45,6 +49,7 @@ export class LocaleWatcher {
     this.#warn = options.warn;
     this.#onWatcherError = options.onWatcherError;
     this.#onWatcherInstalled = options.onWatcherInstalled;
+    this.#debounceMs = options.debounceMs;
   }
 
   /** Install watchers for hub + every known workspace package. */
@@ -76,6 +81,7 @@ export class LocaleWatcher {
     const dispose = watchLocaleSource({
       path,
       onReload,
+      debounceMs: this.#debounceMs,
       onError: (error) => this.#onWatcherError(path, error),
     });
     this.#disposers.push(dispose);

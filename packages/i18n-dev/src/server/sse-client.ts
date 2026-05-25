@@ -4,6 +4,11 @@
  * an HTTP edit through `/api/i18n/sources`), we receive a `data: { "kind": ... }`
  * frame and trigger `onChange()` to re-scan + re-push HMR data.
  *
+ * `onChange()` is also fired exactly once each time the stream successfully
+ * (re)connects — so if the hub came up after the initial scan, the validator
+ * picks up its bundle as soon as the subscription lands instead of waiting
+ * for an unrelated file event to trigger a rescan.
+ *
  * The subscription auto-reconnects on errors with a fixed 3-second backoff.
  * Returns an abort function the caller invokes on server shutdown.
  */
@@ -30,6 +35,10 @@ export function startHubSseClient(options: SseClientOptions): () => void {
       if (!reader) {
         return;
       }
+      // Force a rescan whenever the stream (re)connects — covers the boot-race
+      // case where the hub came up *after* the initial scan, leaving the
+      // overlay stuck on a `plugin-error` until something touched a file.
+      onChange();
       const decoder = new TextDecoder();
       while (!abort.signal.aborted) {
         const { value, done } = await reader.read();
