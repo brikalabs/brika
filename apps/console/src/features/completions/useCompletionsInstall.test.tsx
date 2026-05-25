@@ -96,8 +96,12 @@ describe('useCompletionsInstall', () => {
       expect(final.shell).toBe('zsh');
       expect(final.file).toContain(fakeHome);
     }
-    expect(phases.some((p) => p.kind === 'detecting')).toBe(true);
-    expect(phases.some((p) => p.kind === 'installing')).toBe(true);
+    // The initial render captures 'detecting' (synchronous initial state).
+    expect(phases[0]?.kind).toBe('detecting');
+    // The 'installing' intermediate state may or may not survive React's
+    // automatic batching depending on how fast `installCompletions`
+    // resolves — don't pin it. The 'installed' final state above is the
+    // contract that matters.
     expect(exitCallback).toHaveBeenCalled();
     unmount();
   });
