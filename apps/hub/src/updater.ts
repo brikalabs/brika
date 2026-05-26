@@ -24,7 +24,7 @@ import { HUB_GITHUB_RELEASES_API, HUB_GITHUB_RELEASES_LIST_API, HUB_REPO, hub } 
 import { brikaContext } from './runtime/context/brika-context';
 import { DEFAULT_CHANNEL_ID, type UpdateChannelId } from './runtime/updates/channels';
 import { GithubEtagCache } from './runtime/updates/etag-cache';
-import { verifyMinisignFile } from './runtime/updates/signature';
+import { BRIKA_SIGNING_PUBKEY_B64, verifyMinisignFile } from './runtime/updates/signature';
 import {
   commitStagedArtifacts,
   discardStagedArtifacts,
@@ -476,16 +476,17 @@ async function maybeVerifySignature(
   onProgress: ApplyUpdateOptions['onProgress']
 ): Promise<void> {
   const sigAsset = release.assets.find((a) => a.name === `${asset.name}.minisig`);
+  const pubkeyEmbedded = BRIKA_SIGNING_PUBKEY_B64.length > 0;
+
   if (!sigAsset) {
-    // No signature published yet. Defer to the verifier's "pubkey
-    // empty?" check: it will report 'skipped' and we continue, but if
-    // a pubkey IS embedded and the .minisig is missing, treat that as
-    // a failure — better to refuse than silently downgrade trust.
-    const result = await verifyMinisignFile(archivePath, '/nonexistent');
-    if (result.status === 'skipped') {
+    if (!pubkeyEmbedded) {
+      // No key ceremony yet, no .minisig in the release — pre-Phase-3
+      // shape of the release. Skip silently.
       onProgress?.('verifying', 'Signature verification skipped (no key ceremony yet)');
       return;
     }
+    // Pubkey embedded but the release didn't ship a .minisig. Refuse
+    // rather than silently downgrade trust.
     throw new Error('Signature required but no .minisig asset was published for this release');
   }
 
