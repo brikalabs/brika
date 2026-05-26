@@ -5,10 +5,13 @@
  * Used by the frontend to show update notifications and trigger upgrades.
  */
 
-import { createSSEStream, group, route } from '@brika/router';
+import { Conflict, createSSEStream, group, Locked, route } from '@brika/router';
 import { z } from 'zod';
 import { RESTART_CODE } from '@/runtime/restart-code';
-import { UpdateProvider, UpdateService } from '@/runtime/updates';
+import { UpdateService } from '@/runtime/updates';
+import { UpdateOrchestrator } from '@/runtime/updates/orchestrator';
+import { UpdateRefusedError } from '@/runtime/updates/strategies';
+import { UpdateLockHeldError } from '@/runtime/updates/update-lock';
 import type { UpdatePhase } from '@/updater';
 
 export const systemRoutes = group({
@@ -60,29 +63,48 @@ export const updateRoutes = group({
      * POST /api/system/update/apply
      * Apply the latest update. Streams progress via SSE.
      * After a successful update, the hub process exits so the process manager can restart it.
+     *
+     * Refusal codes are surfaced *before* the SSE stream opens, as a
+     * conventional JSON error response, so the client can render a
+     * proper "you can't update from here" banner instead of an
+     * orphaned error event:
+     *
+     *   - 409 Conflict  → the strategy refuses (container,
+     *     system-package, dev) — `code` + `guidance` in the body
+     *   - 423 Locked    → another caller already holds the update lock
      */
     route.post({
       path: '/apply',
       query: z.object({
         force: z.coerce.boolean().optional(),
       }),
-      handler: ({ inject, query }) => {
-        const provider = inject(UpdateProvider);
+      handler: async ({ inject, query }) => {
+        const orchestrator = inject(UpdateOrchestrator);
+
+        if (!orchestrator.canApply()) {
+          // Route refusals through the strategy's own rejection so the
+          // guidance string lives in exactly one place (the strategy).
+          // The await never resolves — refused strategies always reject —
+          // so the throw below is unreachable, but TypeScript needs it.
+          try {
+            await orchestrator.apply({ force: query.force });
+          } catch (err) {
+            if (err instanceof UpdateRefusedError) {
+              throw new Conflict(err.message, { code: err.code, guidance: err.guidance });
+            }
+            throw err;
+          }
+          throw new Conflict('Update refused');
+        }
+
         return createSSEStream((send, close) => {
           const sendProgress = (phase: UpdatePhase, message: string, error?: string) => {
-            send(
-              {
-                phase,
-                message,
-                error,
-              },
-              'progress'
-            );
+            send({ phase, message, error }, 'progress');
           };
 
           (async () => {
             try {
-              const result = await provider.apply({
+              const result = await orchestrator.apply({
                 force: query.force,
                 onProgress(phase, detail) {
                   sendProgress(phase, detail);
@@ -95,9 +117,21 @@ export const updateRoutes = group({
               );
               close();
 
-              // Give the SSE stream time to flush, then signal supervisor to restart
               setTimeout(() => process.exit(RESTART_CODE), 1000);
             } catch (error) {
+              if (error instanceof UpdateLockHeldError) {
+                sendProgress('error', error.message, error.message);
+                close();
+                throw new Locked(error.message, { heldBy: error.heldBy });
+              }
+              if (error instanceof UpdateRefusedError) {
+                sendProgress('error', error.message, error.message);
+                close();
+                throw new Conflict(error.message, {
+                  code: error.code,
+                  guidance: error.guidance,
+                });
+              }
               const message = error instanceof Error ? error.message : String(error);
               sendProgress('error', message, message);
               close();

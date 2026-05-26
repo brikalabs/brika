@@ -1,6 +1,11 @@
 import { container, inject } from '@brika/di';
 import { Logger } from '@/runtime/logs/log-router';
-import { GitHubUpdateProvider, UpdateProvider, UpdateService } from '@/runtime/updates';
+import {
+  GitHubUpdateProvider,
+  UpdateOrchestrator,
+  UpdateProvider,
+  UpdateService,
+} from '@/runtime/updates';
 import type { BootstrapPlugin } from '../plugin';
 
 /**
@@ -46,9 +51,14 @@ export function updates(): BootstrapPlugin {
         }
       }
       container.register(UpdateProvider, { useClass: GitHubUpdateProvider });
+      // Record boot attempt *and* surface "previous boot crashed"
+      // before any heavy work — instantiating the orchestrator wires
+      // up version-state and audit log.
+      inject(UpdateOrchestrator).recordBootAttempt();
     },
     onStart() {
       inject(UpdateService).start();
+      inject(UpdateOrchestrator).recordBootSuccess();
     },
     onStop() {
       inject(UpdateService).stop();
