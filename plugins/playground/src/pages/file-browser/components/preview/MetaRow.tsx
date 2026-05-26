@@ -1,6 +1,6 @@
 import { Button, Tooltip, TooltipContent, TooltipTrigger } from '@brika/sdk/ui-kit';
 import { Check, Copy } from '@brika/sdk/ui-kit/icons';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 interface MetaRowProps {
   label: string;
@@ -20,6 +20,11 @@ function CopyButton({ value, label }: Readonly<{ value: string; label: string }>
     return () => clearTimeout(t);
   }, [copied]);
 
+  const onCopy = useCallback(async () => {
+    await navigator.clipboard.writeText(value);
+    setCopied(true);
+  }, [value]);
+
   return (
     <Tooltip>
       <TooltipTrigger asChild>
@@ -27,10 +32,7 @@ function CopyButton({ value, label }: Readonly<{ value: string; label: string }>
           variant="ghost"
           size="icon-xs"
           className="size-5 shrink-0 [&_svg]:size-3"
-          onClick={async () => {
-            await navigator.clipboard.writeText(value);
-            setCopied(true);
-          }}
+          onClick={onCopy}
         >
           {copied ? <Check className="text-success" /> : <Copy />}
         </Button>
