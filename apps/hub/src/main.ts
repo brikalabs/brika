@@ -24,6 +24,7 @@ import {
 import { ApiServer } from './runtime/http/api-server';
 import { allRoutes } from './runtime/http/routes';
 import { rollbackIfPreviousBootCrashed } from './runtime/updates/boot-rollback';
+import { UpdateOrchestrator } from './runtime/updates/orchestrator';
 
 /**
  * BRIKA Hub Entry Point
@@ -54,6 +55,14 @@ export async function startHub(): Promise<void> {
   // and exits with RESTART_CODE so the supervisor restarts us on the
   // known-good version. No-op on dev / container / system-package.
   rollbackIfPreviousBootCrashed();
+
+  // Record the boot attempt **here**, not in the `updates()` plugin's
+  // `onInit`. The plugin is `.use()`'d after every loader, so its
+  // onInit runs last — a crash in any earlier loader would never reach
+  // it and the next boot's `previousBootCrashed()` would miss the
+  // signal. Doing it at the entry point covers every later failure
+  // mode.
+  inject(UpdateOrchestrator).recordBootAttempt();
 
   if (!readCliToken()) {
     writeCliToken();

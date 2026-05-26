@@ -51,10 +51,9 @@ export function updates(): BootstrapPlugin {
         }
       }
       container.register(UpdateProvider, { useClass: GitHubUpdateProvider });
-      // Record boot attempt *and* surface "previous boot crashed"
-      // before any heavy work — instantiating the orchestrator wires
-      // up version-state and audit log.
-      inject(UpdateOrchestrator).recordBootAttempt();
+      // NB: `recordBootAttempt()` is called from `startHub()` BEFORE
+      // this plugin runs — see comment there. We only do the success
+      // marker here in `onStart`.
     },
     onStart() {
       inject(UpdateService).start();
