@@ -532,6 +532,19 @@ describe('PluginProcess', () => {
         );
       });
     });
+
+    describe('resolveStreamPath', () => {
+      // The plugin in `createMockMetadata` declares no fs grants — every
+      // call must trip the permission gate, which is also the hardest-
+      // to-regress check. Tests that need a granted scope build their
+      // own process inline.
+
+      test('throws PERMISSION_DENIED when readFile grant is not in the vector', async () => {
+        await expect(process.resolveStreamPath('/data/foo.png')).rejects.toMatchObject({
+          code: 'PERMISSION_DENIED',
+        });
+      });
+    });
   });
 
   // ─── Lifecycle ────────────────────────────────────────────────────────────

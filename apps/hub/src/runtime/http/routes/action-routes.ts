@@ -99,17 +99,38 @@ async function streamResponse(
     const file = Bun.file(hostPath);
     return binaryResponse(file.stream(), stream.contentType ?? file.type, timing);
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    const name = err instanceof Error ? err.name : 'Error';
-    const code = err instanceof Error ? (err as { code?: string }).code : undefined;
+    const envelope = serialiseStreamError(err);
     return Response.json(
-      { error: { message, name, code } },
+      { error: envelope },
       {
-        status: code === 'PERMISSION_DENIED' ? 403 : 500,
+        status: envelope.code === 'PERMISSION_DENIED' ? 403 : 500,
         headers: { 'server-timing': timing },
       }
     );
   }
+}
+
+interface SerialisedError {
+  message: string;
+  name: string;
+  code?: string;
+}
+
+/**
+ * Shape an unknown thrown value into the same envelope the prelude
+ * uses for handler errors, so the page-side `ActionError` sees a
+ * uniform structure regardless of where in the chain the failure
+ * originated.
+ */
+function serialiseStreamError(err: unknown): SerialisedError {
+  if (err instanceof Error) {
+    return {
+      message: err.message,
+      name: err.name,
+      code: (err as { code?: string }).code,
+    };
+  }
+  return { message: String(err), name: 'Error' };
 }
 
 /**

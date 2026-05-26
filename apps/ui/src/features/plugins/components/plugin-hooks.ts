@@ -311,10 +311,17 @@ export function useCallAction(defaults?: UseActionOptions) {
  *
  * Plain JSON inputs go as `application/json`.
  */
-function encodeActionInput(input: unknown): { body: BodyInit | undefined; contentType?: string } {
+interface EncodedActionInput {
+  body: BodyInit | undefined;
+  contentType: string | undefined;
+}
+
+function encodeActionInput(input: unknown): EncodedActionInput {
   if (input === undefined) {
-    return { body: undefined };
+    return { body: undefined, contentType: undefined };
   }
+  // `Blob`/`File` pass through zero-copy. This is the common case
+  // (playground uploads `File`s straight from the input element).
   if (input instanceof Blob) {
     return { body: input, contentType: 'application/octet-stream' };
   }
@@ -324,11 +331,16 @@ function encodeActionInput(input: unknown): { body: BodyInit | undefined; conten
       contentType: 'application/octet-stream',
     };
   }
+  // `Uint8Array` is a rare path (programmatic byte payloads). DOM's
+  // `BlobPart` wants `Uint8Array<ArrayBuffer>` but Bun's runtime hands
+  // back `Uint8Array<ArrayBufferLike>` — bridge the variance by
+  // copying into a fresh ArrayBuffer-backed view. One copy on this
+  // path only; the common Blob/File branch above stays zero-copy.
   if (input instanceof Uint8Array) {
-    // Narrow to a fresh ArrayBuffer-backed view so BlobPart is happy.
-    const buf = input.buffer.slice(input.byteOffset, input.byteOffset + input.byteLength);
+    const buffer = new ArrayBuffer(input.byteLength);
+    new Uint8Array(buffer).set(input);
     return {
-      body: new Blob([buf as ArrayBuffer], { type: 'application/octet-stream' }),
+      body: new Blob([buffer], { type: 'application/octet-stream' }),
       contentType: 'application/octet-stream',
     };
   }

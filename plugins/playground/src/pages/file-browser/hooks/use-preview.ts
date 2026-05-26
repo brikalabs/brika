@@ -60,6 +60,15 @@ export function usePreview({ currentPath }: UsePreviewOptions): UsePreviewResult
    */
   const openPathRef = useRef<string | null>(null);
 
+  /**
+   * Monotonic request id. Each `open()` call captures the latest
+   * value; when its `callAction` resolves it checks the captured id
+   * is still current before touching state. Drops the out-of-order
+   * result you'd otherwise get from clicking file A then file B
+   * before A's fetch comes back.
+   */
+  const requestIdRef = useRef(0);
+
   const releaseBlobUrl = useCallback(() => {
     if (blobUrlRef.current) {
       URL.revokeObjectURL(blobUrlRef.current);
@@ -88,9 +97,15 @@ export function usePreview({ currentPath }: UsePreviewOptions): UsePreviewResult
         return;
       }
       const kind = previewKindFor(name);
+      const id = ++requestIdRef.current;
       setLoading(true);
       try {
         const blob = await callAction(readEntry, { path });
+        // A newer `open()` started while ours was in flight — drop
+        // this result so we don't clobber the user's latest pick.
+        if (id !== requestIdRef.current) {
+          return;
+        }
         releaseBlobUrl();
         const meta = {
           size: blob.size,
@@ -109,7 +124,9 @@ export function usePreview({ currentPath }: UsePreviewOptions): UsePreviewResult
       } catch {
         // Toast already fired.
       } finally {
-        setLoading(false);
+        if (id === requestIdRef.current) {
+          setLoading(false);
+        }
       }
     },
     [callAction, currentPath, releaseBlobUrl]

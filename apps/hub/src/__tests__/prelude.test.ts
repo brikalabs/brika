@@ -109,6 +109,31 @@ describe('Prelude', () => {
     await helper.stop();
   });
 
+  /**
+   * `setTimezone` is fire-and-forget; we have to wait for the subprocess
+   * to process it before the next `getTZ` returns the new value. A
+   * fixed sleep is flaky under CI load — poll-with-backoff up to a
+   * generous ceiling instead. The total wall time when things go well
+   * stays in single-digit ms.
+   */
+  async function waitForTimezone(
+    h: ReturnType<typeof spawnWithPrelude>,
+    expected: string | null,
+    timeoutMs = 5_000
+  ): Promise<void> {
+    const deadline = Date.now() + timeoutMs;
+    let delay = 5;
+    while (Date.now() < deadline) {
+      const tz = (await h.call('getTZ')).result as { tz: string | null };
+      if (tz.tz === expected) {
+        return;
+      }
+      await sleep(delay);
+      delay = Math.min(delay * 2, 200);
+    }
+    throw new Error(`Timed out waiting for timezone to become ${expected}`);
+  }
+
   test('setTimezone updates process.env.TZ in subprocess', async () => {
     helper = spawnWithPrelude();
 
@@ -117,14 +142,8 @@ describe('Prelude', () => {
     const parentTZ = process.env.TZ ?? null;
     expect(before.result).toEqual({ tz: parentTZ });
 
-    // Send timezone via prelude's handler
     helper.send('setTimezone', { timezone: 'Pacific/Auckland' });
-
-    // Small delay to let the prelude process the message
-    await Bun.sleep(50);
-
-    const after = await helper.call('getTZ');
-    expect(after.result).toEqual({ tz: 'Pacific/Auckland' });
+    await waitForTimezone(helper, 'Pacific/Auckland');
 
     await helper.stop();
   });
@@ -133,14 +152,10 @@ describe('Prelude', () => {
     helper = spawnWithPrelude();
 
     helper.send('setTimezone', { timezone: 'Asia/Tokyo' });
-    await Bun.sleep(50);
-    const first = await helper.call('getTZ');
-    expect(first.result).toEqual({ tz: 'Asia/Tokyo' });
+    await waitForTimezone(helper, 'Asia/Tokyo');
 
     helper.send('setTimezone', { timezone: 'America/New_York' });
-    await Bun.sleep(50);
-    const second = await helper.call('getTZ');
-    expect(second.result).toEqual({ tz: 'America/New_York' });
+    await waitForTimezone(helper, 'America/New_York');
 
     await helper.stop();
   });
@@ -149,14 +164,10 @@ describe('Prelude', () => {
     helper = spawnWithPrelude();
 
     helper.send('setTimezone', { timezone: 'Asia/Tokyo' });
-    await Bun.sleep(50);
-    const set = await helper.call('getTZ');
-    expect(set.result).toEqual({ tz: 'Asia/Tokyo' });
+    await waitForTimezone(helper, 'Asia/Tokyo');
 
     helper.send('setTimezone', { timezone: null });
-    await Bun.sleep(50);
-    const cleared = await helper.call('getTZ');
-    expect((cleared.result as { tz: string | null }).tz).toBeNull();
+    await waitForTimezone(helper, null);
 
     await helper.stop();
   });
