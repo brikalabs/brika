@@ -62,6 +62,14 @@ export class GithubEtagCache {
       // GitHub confirms the cached body is still current. No budget tick.
       return { body: existing.body as T, fromCache: true };
     }
+    // Rate-limit / forbidden responses: prefer a stale-but-existing
+    // cache entry to throwing — the hub's update check should degrade
+    // gracefully when the unauthenticated 60/hour budget runs out on
+    // shared egress. The caller still sees `fromCache: true` so they
+    // know the data is potentially stale.
+    if ((response.status === 403 || response.status === 429) && existing) {
+      return { body: existing.body as T, fromCache: true };
+    }
     if (!response.ok) {
       throw new Error(`GitHub API returned ${response.status}: ${response.statusText}`);
     }
