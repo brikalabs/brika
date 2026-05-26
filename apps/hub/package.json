@@ -13,7 +13,9 @@
     ".": {
       "types": "./src/types.d.ts",
       "default": "./src/main.ts"
-    }
+    },
+    "./updater": "./src/updater.ts",
+    "./self-check": "./src/runtime/updates/self-check.ts"
   },
   "scripts": {
     "dev": "bun --watch src/main.ts",

@@ -29,6 +29,16 @@ function extractCwd(argv: string[]): string | undefined {
   }
 }
 
+// `--self-check` is the staged-install validation probe spawned by the
+// orchestrator on the *new* binary at `brika.next`. It must short-circuit
+// before any heavy module loads so a broken sandbox / DI / DB layer in
+// the new binary can't masquerade as a passing self-check. The handler
+// in `@brika/hub/self-check` writes one JSON line to stdout and exits.
+if (process.argv.includes('--self-check')) {
+  const { runSelfCheckAndExit } = await import('@brika/hub/self-check');
+  runSelfCheckAndExit();
+}
+
 const cwd = extractCwd(process.argv);
 if (cwd) {
   process.env.BRIKA_HOME = cwd;
