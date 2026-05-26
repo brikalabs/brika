@@ -1,8 +1,8 @@
 /**
  * Browser-side helper to start a file download from a blob URL.
  *
- * The blob is built by `useCallAction` from the binary response of
- * `readEntry` — see `binaryResponse(...)` in [actions.ts](./actions.ts).
+ * The blob is built by `useCallAction` from the streaming response of
+ * `readEntry` — see `streamFile(...)` in [actions.ts](./actions.ts).
  * No base64 anywhere in the loop.
  */
 

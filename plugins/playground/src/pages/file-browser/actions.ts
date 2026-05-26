@@ -8,9 +8,14 @@
  * `PERMISSION_DENIED` if the matching `dev.brika.fs.*` grant is missing —
  * there is no ambient fs access.
  *
- * Binary I/O uses `binaryResponse(...)` (response side) and `Uint8Array`
- * inputs (request side) so bytes cross the action boundary natively.
- * No base64 in the loop.
+ * Binary I/O:
+ *  - **Read** (`readEntry`) uses `streamFile(...)` — the handler hands
+ *    the hub a virtual path and the hub pipes `Bun.file().stream()`
+ *    straight into the HTTP response. No bytes ever sit buffered.
+ *  - **Write** (`writeEntry`) accepts a `Uint8Array` over the wire
+ *    (bytes ride the raw POST body, path comes via the
+ *    `X-Brika-Action-Meta` header — see `readActionInput` in the hub's
+ *    action route). One buffer copy on the write path, no base64.
  */
 
 import { mkdir, readdir, rm, stat, writeFile } from 'node:fs/promises';

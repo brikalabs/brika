@@ -66,7 +66,7 @@ function errorResponse(result: CallResult, timing: string): Response {
  * `.json` file (Content-Type: `application/json`) would collide
  * with the JSON action protocol.
  */
-function binaryResponse(
+function binaryHttpResponse(
   body: ReadableStream<Uint8Array> | Uint8Array,
   contentType: string | undefined,
   timing: string
@@ -97,7 +97,7 @@ async function streamResponse(
   try {
     const hostPath = await process.resolveStreamPath(stream.virtualPath);
     const file = Bun.file(hostPath);
-    return binaryResponse(file.stream(), stream.contentType ?? file.type, timing);
+    return binaryHttpResponse(file.stream(), stream.contentType ?? file.type, timing);
   } catch (err) {
     const envelope = serialiseStreamError(err);
     return Response.json(
@@ -171,7 +171,7 @@ export const actionRoutes = group({
           return streamResponse(process, result.stream, timing);
         }
         if (result.bytes) {
-          return binaryResponse(result.bytes, result.contentType, timing);
+          return binaryHttpResponse(result.bytes, result.contentType, timing);
         }
         return Response.json({ data: result.data }, { headers: { 'server-timing': timing } });
       },

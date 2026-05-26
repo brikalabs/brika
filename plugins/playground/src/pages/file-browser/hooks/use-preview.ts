@@ -39,8 +39,9 @@ function previewKindFor(name: string): PreviewState['kind'] {
  * Owns preview state for the file browser.
  *
  * Calls the `readEntry` action which returns a `Blob` directly (the hub
- * forwards bytes from `binaryResponse` with the matching Content-Type —
- * no base64 anywhere). The hook tracks the blob URL it minted so it
+ * pipes `Bun.file().stream()` straight into the HTTP response via the
+ * `streamFile(...)` envelope — bytes never sit buffered in the plugin
+ * process or hub memory). The hook tracks the blob URL it minted so it
  * can `URL.revokeObjectURL` it when the preview changes or unmounts.
  *
  * The blob also carries `size` and `type`, which we capture for the
