@@ -71,20 +71,49 @@ export function checkAndRollback(input: RollbackInput): RollbackOutcome {
     rollingBackTo: versionState.snapshot.lastBootSucceededVersion,
   });
 
-  try {
-    // Best-effort: remove any prior `.broken` from an earlier rollback
-    // so a chain of failed updates doesn't leak files.
-    if (existsSync(broken)) {
+  // Best-effort: remove any prior `.broken` from an earlier rollback
+  // so a chain of failed updates doesn't leak files.
+  if (existsSync(broken)) {
+    try {
       rmSync(broken, { force: true });
+    } catch {
+      // ignore — worst case the new `.broken` rename below fails too
+      // and we hit the fallback path.
     }
+  }
+
+  // Two-step rename. If the second step fails after the first one
+  // succeeded, we'd be left with NO `brika` binary at all — the
+  // supervisor would ENOENT on restart and the user can't even run
+  // `brika update --offline` to recover. Catch that case and undo
+  // the first rename so the (crashed) live binary is at least
+  // present.
+  try {
     renameSync(live, broken);
-    renameSync(previous, live);
   } catch (err) {
-    // Rollback failed for some reason (permissions, fs race). Audit and
-    // continue booting the crashed binary — at least the user gets a
-    // chance to recover via `brika update --offline`.
     audit.append('apply.failure', {
       reason: 'rollback-failed',
+      stage: 'live-to-broken',
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return 'no-backup';
+  }
+
+  try {
+    renameSync(previous, live);
+  } catch (err) {
+    // Critical: we already moved `live` aside. Put it back so the
+    // system stays bootable even if the previous binary can't be
+    // restored.
+    try {
+      renameSync(broken, live);
+    } catch {
+      // Truly stuck — log loudly. The binary is at `${live}.broken`
+      // and the user can recover by renaming it manually.
+    }
+    audit.append('apply.failure', {
+      reason: 'rollback-failed',
+      stage: 'previous-to-live',
       error: err instanceof Error ? err.message : String(err),
     });
     return 'no-backup';
