@@ -20,7 +20,9 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { buildInfo } from './build-info';
 import { HUB_GITHUB_RELEASES_API, HUB_GITHUB_RELEASES_LIST_API, hub } from './hub';
+import { brikaContext } from './runtime/context/brika-context';
 import { DEFAULT_CHANNEL_ID, type UpdateChannelId } from './runtime/updates/channels';
+import { GithubEtagCache } from './runtime/updates/etag-cache';
 import { verifyMinisignFile } from './runtime/updates/signature';
 import {
   commitStagedArtifacts,
@@ -205,30 +207,32 @@ async function fetchReleaseMeta(release: GitHubRelease): Promise<ReleaseMeta | n
   }
 }
 
+// Module-level cache instance. Lazy-initialized so tests can avoid
+// hitting the filesystem unless they exercise this code path.
+let etagCache: GithubEtagCache | null = null;
+function getEtagCache(): GithubEtagCache {
+  etagCache ??= new GithubEtagCache(brikaContext.brikaDir);
+  return etagCache;
+}
+
 /** Fetch latest release info from GitHub API for the given channel */
 async function fetchLatestRelease(
   channel: UpdateChannelId
 ): Promise<{ release: GitHubRelease; meta: ReleaseMeta | null }> {
+  const cache = getEtagCache();
+  const headers = { Accept: 'application/vnd.github+json' };
+
   if (channel === 'stable') {
-    const response = await fetch(HUB_GITHUB_RELEASES_API, {
-      headers: { Accept: 'application/vnd.github+json' },
-    });
-    if (!response.ok) {
-      throw new Error(`GitHub API returned ${response.status}: ${response.statusText}`);
-    }
-    const release = (await response.json()) as GitHubRelease;
-    return { release, meta: await fetchReleaseMeta(release) };
+    const { body } = await cache.fetchJson<GitHubRelease>(HUB_GITHUB_RELEASES_API, { headers });
+    return { release: body, meta: await fetchReleaseMeta(body) };
   }
 
   // canary: list releases, pick the most recent pre-release
-  const response = await fetch(`${HUB_GITHUB_RELEASES_LIST_API}?per_page=10`, {
-    headers: { Accept: 'application/vnd.github+json' },
-  });
-  if (!response.ok) {
-    throw new Error(`GitHub API returned ${response.status}: ${response.statusText}`);
-  }
-  const releases = (await response.json()) as GitHubRelease[];
-  const prerelease = releases.find((r) => r.prerelease);
+  const { body } = await cache.fetchJson<GitHubRelease[]>(
+    `${HUB_GITHUB_RELEASES_LIST_API}?per_page=10`,
+    { headers }
+  );
+  const prerelease = body.find((r) => r.prerelease);
   if (!prerelease) {
     throw new Error('No canary release found');
   }

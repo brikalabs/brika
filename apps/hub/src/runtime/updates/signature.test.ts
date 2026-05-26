@@ -9,8 +9,8 @@
  */
 
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { createHash, generateKeyPairSync, sign } from 'node:crypto';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { createHash, generateKeyPairSync, type KeyObject, sign } from 'node:crypto';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { verifyMinisignFile } from './signature';
@@ -28,7 +28,7 @@ afterEach(() => {
 interface KeyPair {
   pubkeyB64: string;
   spki: Buffer;
-  privateKey: ReturnType<typeof generateKeyPairSync>['privateKey'];
+  privateKey: KeyObject;
 }
 
 function generateEd25519(): KeyPair {
@@ -48,10 +48,11 @@ function makeSigFile(
   keys: KeyPair,
   opts?: { tamperGlobal?: boolean; tamperPayload?: boolean }
 ): string {
-  const payload = require('node:fs').readFileSync(payloadPath) as Buffer;
+  const payload = readFileSync(payloadPath);
   const hashed = createHash('blake2b512').update(payload).digest();
   // Sign hashed (Ed mode); tamper if requested.
-  const sig = sign(null, opts?.tamperPayload === true ? Buffer.from('x') : hashed, keys.privateKey);
+  const payloadMessage = opts?.tamperPayload === true ? Buffer.from('x') : hashed;
+  const sig = sign(null, payloadMessage, keys.privateKey);
   // Algo prefix "Ed" + 8-byte key ID + 64-byte sig
   const algo = Buffer.from('Ed', 'ascii');
   const keyId = Buffer.alloc(8); // arbitrary; not checked
@@ -59,11 +60,8 @@ function makeSigFile(
 
   const trustedComment = 'release brika v0.6.0';
   const globalMessage = Buffer.concat([sig, Buffer.from(trustedComment, 'utf8')]);
-  const globalSig = sign(
-    null,
-    opts?.tamperGlobal === true ? Buffer.from('x') : globalMessage,
-    keys.privateKey
-  );
+  const globalMessageOrTampered = opts?.tamperGlobal === true ? Buffer.from('x') : globalMessage;
+  const globalSig = sign(null, globalMessageOrTampered, keys.privateKey);
 
   const sigFile = `untrusted comment: signed by minisign\n${sigBlob.toString('base64')}\ntrusted comment: ${trustedComment}\n${globalSig.toString('base64')}\n`;
   const sigPath = `${payloadPath}.minisig`;
