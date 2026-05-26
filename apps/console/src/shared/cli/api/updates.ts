@@ -3,7 +3,7 @@
 import { hubFetch } from '../hub-client';
 import { streamSseEvents } from '../sse';
 
-export type UpdateChannelId = 'stable' | 'canary';
+export type UpdateChannelId = 'stable' | 'beta' | 'canary' | 'pinned';
 
 export interface UpdateInfoDto {
   readonly currentVersion: string;
