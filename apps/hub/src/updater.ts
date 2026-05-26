@@ -19,6 +19,7 @@ import { createWriteStream } from 'node:fs';
 import { chmod, cp, mkdir, rename, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
+import { z } from 'zod';
 import { buildInfo } from './build-info';
 import { HUB_GITHUB_RELEASES_API, HUB_GITHUB_RELEASES_LIST_API, HUB_REPO, hub } from './hub';
 import { brikaContext } from './runtime/context/brika-context';
@@ -51,14 +52,15 @@ interface GitHubRelease {
 }
 
 /** Metadata embedded as a release asset — provides build info + per-platform checksums */
-interface ReleaseMeta {
-  version: string;
-  commit: string;
-  branch: string;
-  date: string;
-  bun: string;
-  checksums: Record<string, string>;
-}
+const ReleaseMetaSchema = z.object({
+  version: z.string(),
+  commit: z.string(),
+  branch: z.string(),
+  date: z.string(),
+  bun: z.string(),
+  checksums: z.record(z.string(), z.string()),
+});
+type ReleaseMeta = z.infer<typeof ReleaseMetaSchema>;
 
 export interface UpdateInfo {
   currentVersion: string;
@@ -123,6 +125,25 @@ function getAssetName(): string {
   const arch = process.arch;
   const ext = process.platform === 'win32' ? '.zip' : '.tar.gz';
   return `brika-${os}-${arch}${ext}`;
+}
+
+/**
+ * Strict allowlist for asset filenames. `asset.name` comes straight
+ * from the GitHub Releases API — a compromised release (CI key
+ * leak, hijacked publisher account, MITM with a forged manifest)
+ * could ship a name like `brika-linux-x64'; rm -rf $HOME; '.tar.gz`
+ * that, on Windows, would be embedded into a PowerShell
+ * `Expand-Archive -Path '...' -DestinationPath '...'` invocation
+ * and execute as command injection.
+ *
+ * The defence is upstream of every code path that *uses* the name:
+ * refuse anything that doesn't match the published artifact shape
+ * before we even download.
+ */
+const ASSET_NAME_RE = /^brika-(linux|darwin|windows)-(x64|arm64)\.(?:zip|tar\.gz)$/u;
+
+function isSafeAssetName(name: string): boolean {
+  return ASSET_NAME_RE.test(name);
 }
 
 /**
@@ -202,7 +223,11 @@ async function fetchReleaseMeta(release: GitHubRelease): Promise<ReleaseMeta | n
       return null;
     }
 
-    return (await response.json()) as ReleaseMeta;
+    // Validate against the schema rather than trusting `response.json()`
+    // — a tampered or truncated meta-file would otherwise reach the
+    // checksum-verify path typed as if it were sound.
+    const parsed = ReleaseMetaSchema.safeParse(await response.json());
+    return parsed.success ? parsed.data : null;
   } catch {
     return null;
   }
@@ -387,6 +412,15 @@ export async function applyUpdate(options?: ApplyUpdateOptions): Promise<{
   const { asset } = cmp;
   if (!asset) {
     throw new Error(`No binary available for ${process.platform}/${process.arch}`);
+  }
+  // Refuse anything that doesn't match the published artifact shape.
+  // `asset.name` flows into shell args (Windows PowerShell extract)
+  // and filesystem paths — a tampered or maliciously named release
+  // asset would otherwise reach those sinks unchecked.
+  if (!isSafeAssetName(asset.name)) {
+    throw new Error(
+      `Refusing release asset with unexpected name shape: ${JSON.stringify(asset.name)}`
+    );
   }
 
   // Deterministic tmpDir on (version, asset). Lets a retry after a
