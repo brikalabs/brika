@@ -64,9 +64,15 @@ async function streamApply(force: boolean): Promise<void> {
  * Channel switching is *not* supported offline because the channel
  * preference lives in `state.db` (which the hub owns) and we don't
  * want the CLI fighting the hub for the DB lock.
+ *
+ * **Concurrency**: acquires the same cross-process `.update.lock`
+ * the hub-driven path uses. If a running hub is mid-apply, the CLI
+ * exits with a friendly error rather than racing the binary swap.
  */
 async function offlineUpdate(opts: { check: boolean; force: boolean }): Promise<void> {
   const { checkForUpdate, applyUpdate: applyUpdateLocal } = await import('@brika/hub/updater');
+  const { UpdateLock, UpdateLockHeldError } = await import('@brika/hub/update-lock');
+  const { brikaContext } = await import('@brika/hub/brika-context');
 
   process.stdout.write(`${pc.dim('mode:')} offline (no hub required)\n`);
   const info = await checkForUpdate('stable');
@@ -80,6 +86,21 @@ async function offlineUpdate(opts: { check: boolean; force: boolean }): Promise<
       `${pc.dim('Nothing to apply — use')} ${pc.cyan('--force')} ${pc.dim('to reinstall.')}\n`
     );
     return;
+  }
+
+  const lock = new UpdateLock(brikaContext.brikaDir);
+  try {
+    lock.acquire();
+  } catch (err) {
+    if (err instanceof UpdateLockHeldError) {
+      const heldBy = err.heldBy;
+      throw new CliError(
+        heldBy
+          ? `Another update is in progress (pid ${heldBy.pid}, started ${heldBy.startedAt}). Stop the hub or wait for it to finish before retrying with --offline.`
+          : 'Another update is in progress. Stop the hub or wait before retrying with --offline.'
+      );
+    }
+    throw err;
   }
 
   const spinner = p.spinner();
@@ -96,6 +117,8 @@ async function offlineUpdate(opts: { check: boolean; force: boolean }): Promise<
   } catch (err) {
     spinner.error(err instanceof Error ? err.message : String(err));
     throw new CliError(err instanceof Error ? err.message : String(err));
+  } finally {
+    lock.release();
   }
 }
 

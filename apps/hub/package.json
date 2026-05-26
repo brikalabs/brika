@@ -15,7 +15,9 @@
       "default": "./src/main.ts"
     },
     "./updater": "./src/updater.ts",
-    "./self-check": "./src/runtime/updates/self-check.ts"
+    "./self-check": "./src/runtime/updates/self-check.ts",
+    "./update-lock": "./src/runtime/updates/update-lock.ts",
+    "./brika-context": "./src/runtime/context/brika-context.ts"
   },
   "scripts": {
     "dev": "bun --watch src/main.ts",
