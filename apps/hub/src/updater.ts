@@ -21,6 +21,7 @@ import { dirname, join } from 'node:path';
 import { buildInfo } from './build-info';
 import { HUB_GITHUB_RELEASES_API, HUB_GITHUB_RELEASES_LIST_API, hub } from './hub';
 import { DEFAULT_CHANNEL_ID, type UpdateChannelId } from './runtime/updates/channels';
+import { verifyMinisignFile } from './runtime/updates/signature';
 import {
   commitStagedArtifacts,
   discardStagedArtifacts,
@@ -369,6 +370,13 @@ export async function applyUpdate(options?: ApplyUpdateOptions): Promise<{
       onProgress?.('verifying', 'Skipping integrity check — no release metadata available');
     }
 
+    // Verify minisign signature (supply-chain trust). The asset is
+    // shipped alongside a `<asset>.minisig` file once the signing key
+    // ceremony is live; until then the verifier returns 'skipped' and
+    // we log a notice rather than blocking the apply.
+    onProgress?.('verifying', 'Verifying signature...');
+    await maybeVerifySignature(release, asset, archivePath, tmpDir, onProgress);
+
     // Extract
     onProgress?.('extracting', 'Extracting...');
     const extractDir = join(tmpDir, 'extracted');
@@ -410,6 +418,48 @@ export async function applyUpdate(options?: ApplyUpdateOptions): Promise<{
 // ─────────────────────────────────────────────────────────────────────────────
 // SHA256 verification
 // ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Download the asset's `.minisig` companion (if published) and run
+ * the local minisign verifier. Three outcomes:
+ *
+ *   - signature absent + no embedded pubkey → log "skipped", continue
+ *   - signature absent + pubkey present     → throw (refuse unsigned update)
+ *   - signature present                     → verify; throw on mismatch
+ */
+async function maybeVerifySignature(
+  release: GitHubRelease,
+  asset: GitHubRelease['assets'][number],
+  archivePath: string,
+  tmpDir: string,
+  onProgress: ApplyUpdateOptions['onProgress']
+): Promise<void> {
+  const sigAsset = release.assets.find((a) => a.name === `${asset.name}.minisig`);
+  if (!sigAsset) {
+    // No signature published yet. Defer to the verifier's "pubkey
+    // empty?" check: it will report 'skipped' and we continue, but if
+    // a pubkey IS embedded and the .minisig is missing, treat that as
+    // a failure — better to refuse than silently downgrade trust.
+    const result = await verifyMinisignFile(archivePath, '/nonexistent');
+    if (result.status === 'skipped') {
+      onProgress?.('verifying', 'Signature verification skipped (no key ceremony yet)');
+      return;
+    }
+    throw new Error('Signature required but no .minisig asset was published for this release');
+  }
+
+  const sigPath = join(tmpDir, `${asset.name}.minisig`);
+  await downloadFile(sigAsset.browser_download_url, sigPath, sigAsset.size);
+  const result = await verifyMinisignFile(archivePath, sigPath);
+  if (result.status === 'failed') {
+    throw new Error(`Signature verification failed: ${result.reason}`);
+  }
+  if (result.status === 'skipped') {
+    onProgress?.('verifying', `Signature skipped: ${result.reason}`);
+    return;
+  }
+  onProgress?.('verifying', 'Signature verified.');
+}
 
 /** Verify downloaded archive against release-meta.json checksums */
 async function verifyChecksum(
