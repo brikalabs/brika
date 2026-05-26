@@ -3,7 +3,7 @@
  *
  * Pure path-driven via `checkAndRollback`: every test points it at a
  * fresh temp `${installDir}` and a fresh `${brikaDir}` so we can
- * exercise each outcome (no-backup / cleared-backup / rolled-back)
+ * exercise each outcome (no-backup / no-rollback / rolled-back)
  * without touching the real filesystem layout.
  */
 
@@ -32,21 +32,26 @@ function writeBinary(path: string, content: string): void {
   writeFileSync(path, content);
 }
 
+/** Test double for `process.exit` — counts calls without actually exiting. */
+const noopExit: (code: number) => never = (() => undefined) as never;
+
 describe('checkAndRollback', () => {
   test("returns 'no-backup' when no .previous exists (typical case)", () => {
     writeBinary(liveBinaryPath(installDir), 'live');
     expect(checkAndRollback({ brikaDir, installDir })).toBe('no-backup');
   });
 
-  test("returns 'cleared-backup' after a clean boot — the rollback window is closed", () => {
+  test("returns 'no-rollback' after a clean previous boot — backup kept until THIS boot succeeds", () => {
     writeBinary(liveBinaryPath(installDir), 'live');
     writeBinary(previousBinaryPath(installDir), 'previous');
     const vs = new VersionStateStore(brikaDir, '0.6.0');
     vs.recordBootAttempt();
-    vs.recordBootSuccess(); // boot succeeded → no crash flag
+    vs.recordBootSuccess(); // previous boot succeeded → no crash flag
 
-    expect(checkAndRollback({ brikaDir, installDir })).toBe('cleared-backup');
-    expect(existsSync(previousBinaryPath(installDir))).toBe(false);
+    // Backup must NOT be cleared here — orchestrator.recordBootSuccess
+    // owns that cleanup, only after the current boot completes onStart.
+    expect(checkAndRollback({ brikaDir, installDir })).toBe('no-rollback');
+    expect(existsSync(previousBinaryPath(installDir))).toBe(true);
   });
 
   test("returns 'rolled-back' and swaps binaries when previous boot crashed", () => {
@@ -56,12 +61,11 @@ describe('checkAndRollback', () => {
     vs.recordBootAttempt(); // attempted but never recorded success → crash
 
     let exitCalls = 0;
-    const fakeExit = (() => {
+    const fakeExit: (code: number) => never = (() => {
       exitCalls += 1;
       // Don't actually throw — the production path exits the process,
       // but we want to inspect post-rename state.
-      return undefined as never;
-    }) as (code: number) => never;
+    }) as never;
 
     const outcome = checkAndRollback({ brikaDir, installDir, exit: fakeExit });
 
@@ -83,7 +87,7 @@ describe('checkAndRollback', () => {
     const outcome = checkAndRollback({
       brikaDir,
       installDir,
-      exit: (() => undefined as never) as (code: number) => never,
+      exit: noopExit,
     });
     expect(outcome).toBe('no-backup');
   });
@@ -97,7 +101,7 @@ describe('checkAndRollback', () => {
     checkAndRollback({
       brikaDir,
       installDir,
-      exit: (() => undefined as never) as (code: number) => never,
+      exit: noopExit,
     });
 
     const after = new VersionStateStore(brikaDir, '0.6.0');

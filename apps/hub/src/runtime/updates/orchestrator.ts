@@ -20,6 +20,7 @@ import type { UpdateInfo, UpdatePhase } from '@/updater';
 import { UpdateAuditLog } from './audit-log';
 import type { UpdateChannelId } from './channels';
 import { detectRuntimeMode, type RuntimeMode } from './runtime-mode';
+import { clearPreviousBackup } from './staged-install';
 import { strategyForMode, UpdateRefusedError, type UpdateStrategy } from './strategies';
 import { emitUpdateTelemetry } from './telemetry';
 import { UpdateLock, UpdateLockHeldError } from './update-lock';
@@ -102,10 +103,20 @@ export class UpdateOrchestrator {
     this.#audit.append('boot.attempt', { version: brikaContext.version });
   }
 
-  /** Call after bootstrap completes. Closes the rollback window for this version. */
+  /**
+   * Call after bootstrap completes. Closes the rollback window for
+   * this version — at this point the new binary has proven it can
+   * boot all the way through `onStart`, so the `brika.previous`
+   * backup is no longer load-bearing.
+   *
+   * Doing the cleanup here (rather than in `boot-rollback.ts`) means
+   * the backup stays on disk until we know the *current* boot worked,
+   * not until the *previous* boot worked.
+   */
   recordBootSuccess(): void {
     this.#versionState.recordBootSuccess();
     this.#audit.append('boot.success', { version: brikaContext.version });
+    clearPreviousBackup(brikaContext.installDir);
   }
 
   check(channel: UpdateChannelId): Promise<UpdateInfo> {

@@ -5,18 +5,15 @@
  * framework loads anything. The flow:
  *
  *   1. Read `${brikaDir}/.version-state.json`.
- *   2. If `previousBootCrashed()` is *false* and a `.previous` backup
- *      exists, the previous boot succeeded — close the rollback window
- *      by deleting the backup. (Happens here rather than at
- *      `recordBootSuccess()` because the live binary is currently the
- *      new one; we can safely delete the old `.previous` only after a
- *      *subsequent* successful boot has carried us past the crash
- *      window.)
- *   3. If `previousBootCrashed()` is *true* and a `.previous` backup
+ *   2. If `previousBootCrashed()` is *true* and a `.previous` backup
  *      exists, the running binary is the one that just crashed. Swap
  *      it for the backup and exit so the supervisor restarts us with
  *      the known-good binary.
- *   4. Audit log either outcome.
+ *   3. Otherwise return `'no-rollback'` — cleanup of the `.previous`
+ *      backup is the orchestrator's job in `recordBootSuccess()`
+ *      after THIS boot has proven itself. Deleting it here would
+ *      close the rollback window before the current boot reached
+ *      `onStart`, leaving us with no fallback if it crashes later.
  *
  * Stays deliberately small: no DI, no logger, no DB. We're running
  * before bootstrap and *cannot trust* that anything beyond the
@@ -28,12 +25,7 @@ import { BRIKA_VERSION } from '@brika/version';
 import { brikaContext } from '@/runtime/context/brika-context';
 import { RESTART_CODE } from '@/runtime/restart-code';
 import { UpdateAuditLog } from './audit-log';
-import {
-  clearPreviousBackup,
-  hasPreviousBackup,
-  liveBinaryPath,
-  previousBinaryPath,
-} from './staged-install';
+import { hasPreviousBackup, liveBinaryPath, previousBinaryPath } from './staged-install';
 import { VersionStateStore } from './version-state';
 
 interface RollbackInput {
@@ -45,7 +37,7 @@ interface RollbackInput {
   readonly exit?: (code: number) => never;
 }
 
-export type RollbackOutcome = 'no-backup' | 'cleared-backup' | 'rolled-back' | 'skipped-no-crash';
+export type RollbackOutcome = 'no-backup' | 'no-rollback' | 'rolled-back';
 
 /**
  * Executes the rollback decision and returns the outcome. On
@@ -61,13 +53,12 @@ export function checkAndRollback(input: RollbackInput): RollbackOutcome {
   }
 
   if (!versionState.previousBootCrashed()) {
-    // Previous boot succeeded — close the rollback window.
-    clearPreviousBackup(input.installDir);
-    audit.append('boot.success', {
-      version: BRIKA_VERSION,
-      action: 'cleared-previous-backup',
-    });
-    return 'cleared-backup';
+    // Previous boot succeeded, but THIS boot hasn't proven itself yet
+    // — leave `.previous` in place. The orchestrator's
+    // `recordBootSuccess()` clears it after `onStart` completes, at
+    // which point the rollback window for the *current* version
+    // closes.
+    return 'no-rollback';
   }
 
   // Previous boot crashed. Swap live ↔ previous and let the supervisor restart us.
