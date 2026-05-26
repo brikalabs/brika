@@ -110,6 +110,36 @@ describe('Prelude Actions', () => {
     expect(result).toEqual({ ok: true, data: { greeting: 'Hello World' } });
   });
 
+  test('callAction RPC forwards binaryResponse envelopes as { bytes, contentType }', async () => {
+    const { binaryResponse } = await import('@brika/sdk/actions');
+    const bytes = new Uint8Array([1, 2, 3]);
+    const actions = setupActions(channel);
+    actions.registerAction('pic', () => binaryResponse(bytes, 'image/png'));
+
+    const result = await triggerRpc(channel, sent, callAction.name, {
+      actionId: 'pic',
+      input: undefined,
+    });
+
+    expect(result).toMatchObject({ ok: true, bytes, contentType: 'image/png' });
+  });
+
+  test('callAction RPC forwards streamFile envelopes as { stream: { virtualPath, contentType } }', async () => {
+    const { streamFile } = await import('@brika/sdk/actions');
+    const actions = setupActions(channel);
+    actions.registerAction('readFile', () => streamFile('/data/x.png', 'image/png'));
+
+    const result = await triggerRpc(channel, sent, callAction.name, {
+      actionId: 'readFile',
+      input: undefined,
+    });
+
+    expect(result).toMatchObject({
+      ok: true,
+      stream: { virtualPath: '/data/x.png', contentType: 'image/png' },
+    });
+  });
+
   test('callAction RPC returns error for unknown action', async () => {
     setupActions(channel);
 
