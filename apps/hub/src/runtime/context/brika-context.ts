@@ -21,7 +21,7 @@
 import { randomBytes } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import pkg from '../../../package.json' with { type: 'json' };
+import { BRIKA_VERSION } from '@brika/version';
 import { buildInfo } from '../../build-info';
 
 const isCompiled = import.meta.path.startsWith('/$bunfs/');
@@ -105,7 +105,7 @@ export const brikaContext: BrikaContext = Object.freeze({
   instanceId,
   serviceName: `${KEYCHAIN_SERVICE_BASE}.${instanceId}`,
 
-  version: pkg.version,
+  version: BRIKA_VERSION,
   gitSha: buildInfo.commit,
   gitCommit: buildInfo.commitFull,
   buildDate: buildInfo.date,

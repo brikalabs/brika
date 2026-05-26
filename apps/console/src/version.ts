@@ -1,8 +1,9 @@
 /**
- * CLI version — read from package.json so a single bump propagates
- * everywhere (Brix header, `brika version`, brand line, etc.).
+ * CLI version — pulled from `@brika/version`, which resolves the
+ * monorepo root `package.json` at build time. Keeps the console
+ * binary and the hub on the same version with no manual sync.
  */
 
-import pkg from '../package.json' with { type: 'json' };
+import { BRIKA_VERSION } from '@brika/version';
 
-export const CLI_VERSION: string = pkg.version;
+export const CLI_VERSION: string = BRIKA_VERSION;

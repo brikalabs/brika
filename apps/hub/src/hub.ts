@@ -5,17 +5,20 @@
  * Loads package.json once at module initialization.
  */
 
+import { BRIKA_VERSION } from '@brika/version';
 import pkg from '../package.json';
 
 /**
- * Hub metadata loaded from package.json.
+ * Hub metadata loaded from package.json, with the version field
+ * overridden by the canonical `@brika/version` constant so a single
+ * `package.json` bump at the monorepo root propagates everywhere.
  */
-export const hub = pkg;
+export const hub = { ...pkg, version: BRIKA_VERSION };
 
 /**
  * Hub version string (shorthand for hub.version).
  */
-export const HUB_VERSION = hub.version;
+export { BRIKA_VERSION as HUB_VERSION } from '@brika/version';
 
 /**
  * GitHub repository slug (e.g. "brikalabs/brika"), derived from package.json.

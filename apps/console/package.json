@@ -24,6 +24,7 @@
     "@brika/cli": "workspace:*",
     "@brika/hub": "workspace:*",
     "@brika/tui": "workspace:*",
+    "@brika/version": "workspace:*",
     "ink": "^7.0.3",
     "picocolors": "^1.1.1",
     "react": "^19.2.3",

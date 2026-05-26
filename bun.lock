@@ -38,6 +38,7 @@
         "@brika/cli": "workspace:*",
         "@brika/hub": "workspace:*",
         "@brika/tui": "workspace:*",
+        "@brika/version": "workspace:*",
         "ink": "^7.0.3",
         "picocolors": "^1.1.1",
         "react": "^19.2.3",
@@ -74,6 +75,7 @@
         "@brika/sdk": "workspace:*",
         "@brika/type-system": "workspace:*",
         "@brika/ui-kit": "workspace:*",
+        "@brika/version": "workspace:*",
         "@brika/workflow": "workspace:*",
         "date-fns": "^4.3.0",
         "hono": "^4.12.22",
@@ -600,6 +602,10 @@
       "name": "@brika/ui-kit",
       "version": "0.3.1",
     },
+    "packages/version": {
+      "name": "@brika/version",
+      "version": "0.3.1",
+    },
     "packages/workflow": {
       "name": "@brika/workflow",
       "version": "0.3.1",
@@ -820,6 +826,8 @@
     "@brika/ui": ["@brika/ui@workspace:apps/ui"],
 
     "@brika/ui-kit": ["@brika/ui-kit@workspace:packages/ui-kit"],
+
+    "@brika/version": ["@brika/version@workspace:packages/version"],
 
     "@brika/workflow": ["@brika/workflow@workspace:packages/workflow"],
 

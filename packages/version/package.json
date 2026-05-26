@@ -1,0 +1,20 @@
+{
+  "name": "@brika/version",
+  "version": "0.3.1",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/brikalabs/brika.git",
+    "directory": "packages/version"
+  },
+  "keywords": ["brika", "version"],
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "bun test",
+    "typecheck": "tsgo --noEmit"
+  }
+}

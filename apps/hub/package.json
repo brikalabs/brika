@@ -43,6 +43,7 @@
     "@brika/sdk": "workspace:*",
     "@brika/type-system": "workspace:*",
     "@brika/ui-kit": "workspace:*",
+    "@brika/version": "workspace:*",
     "@brika/workflow": "workspace:*",
     "date-fns": "^4.3.0",
     "hono": "^4.12.22",
