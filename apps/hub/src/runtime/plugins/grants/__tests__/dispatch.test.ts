@@ -120,7 +120,11 @@ describe('dispatchGrantRequest', () => {
 
   test('exposes the published constants', () => {
     expect(GRANT_REQUEST_TIMEOUT_MS).toBeGreaterThan(0);
-    expect(GRANT_REQUEST_JITTER_MAX_MS).toBeGreaterThan(0);
+    // `GRANT_REQUEST_JITTER_MAX_MS` is allowed to be 0 — the dispatcher
+    // still yields the event loop via `Bun.sleep(0)`, just without
+    // adding measurable delay. Bumping this above 0 re-enables the
+    // timing-oracle defence at a per-dispatch cost.
+    expect(GRANT_REQUEST_JITTER_MAX_MS).toBeGreaterThanOrEqual(0);
     expect(GRANT_REQUEST_JITTER_MAX_MS).toBeLessThanOrEqual(20); // sanity cap
   });
 

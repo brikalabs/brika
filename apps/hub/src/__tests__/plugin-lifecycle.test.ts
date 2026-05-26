@@ -632,7 +632,7 @@ describe('PluginLifecycle', () => {
         health: 'stopped' as PluginHealth,
         lastError: null,
         updatedAt: Date.now(),
-        grantedPermissions: ['network', 'storage'],
+        grantedPermissions: ['net', 'storage'],
         metadata: {
           name: '@test/paged',
           version: '1.0.0',
@@ -640,7 +640,7 @@ describe('PluginLifecycle', () => {
           engines: { brika: '^0.1.0' },
           pages: [{ id: 'settings' }],
           bricks: [{ id: 'widget' }],
-          permissions: ['network'],
+          grants: { 'dev.brika.net.fetch': { allow: ['api.example.com'] } },
         },
       };
 
@@ -648,8 +648,9 @@ describe('PluginLifecycle', () => {
 
       expect(result.pages).toEqual([{ id: 'settings' }]);
       expect(result.bricks).toEqual([{ id: 'widget' }]);
-      expect(result.grantedPermissions).toEqual(['network', 'storage']);
-      expect(result.permissions).toEqual(['network']);
+      expect(result.grantedPermissions).toEqual(['net', 'storage']);
+      expect(result.permissions).toEqual(['net']);
+      expect(result.grants).toEqual({ 'dev.brika.net.fetch': { allow: ['api.example.com'] } });
     });
   });
 });

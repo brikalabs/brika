@@ -3,8 +3,8 @@
  * re-auth on session expiry.
  */
 
+import { log } from '@brika/sdk/lifecycle';
 import { fetchConsumption, granularityForPeriod } from '../api';
-import { log } from '../api/internals';
 import type { ConsumptionData, Period } from '../types';
 import { authenticate, clearSession, getCredentials, getSessionCookie } from './auth';
 import { patchPeriod } from './store';

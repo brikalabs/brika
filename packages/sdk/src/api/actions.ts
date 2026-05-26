@@ -96,6 +96,129 @@ export function defineAction<TInput = void, TOutput = unknown>(
   return ref;
 }
 
+// ─── Binary response envelope ────────────────────────────────────────────────
+
+/**
+ * Tag used to identify a binary action response across the IPC + HTTP
+ * boundary. Hand-rolled (not a Symbol) because the value crosses Bun's
+ * structured-clone serializer.
+ */
+export const BINARY_RESPONSE_TAG = '__brika_binary_response' as const;
+
+/**
+ * Binary action response. An action handler returns one of these to
+ * signal "respond with raw bytes" — the hub forwards the bytes to the
+ * page with the given `contentType` as the HTTP response Content-Type.
+ *
+ * Page-side, `useCallAction` detects the non-JSON response and returns
+ * a `Blob` of the matching MIME type. No base64 in the loop.
+ */
+export interface BinaryActionResponse {
+  readonly [BINARY_RESPONSE_TAG]: true;
+  readonly bytes: Uint8Array;
+  readonly contentType: string;
+}
+
+/**
+ * Build a binary response envelope from raw bytes.
+ *
+ * The runtime value is the tagged envelope; the declared return type
+ * is `Blob` because that's what the **page** receives — `defineAction`
+ * uses this type to populate the action ref's phantom output, so
+ * `await callAction(readImage, …)` resolves to `Blob` with full type
+ * safety. The hub turns the envelope into an HTTP response and
+ * `useCallAction` constructs the actual `Blob` from the body.
+ *
+ * @example
+ * ```ts
+ * import { binaryResponse, defineAction } from '@brika/sdk/actions';
+ * import { readFile } from 'node:fs/promises';
+ *
+ * export const readImage = defineAction(async ({ path }: { path: string }) => {
+ *   return binaryResponse(await readFile(path), 'image/png');
+ * });
+ * ```
+ *
+ * Page side:
+ * ```ts
+ * const blob = await callAction(readImage, { path: '/data/x.png' }); // Blob
+ * const url = URL.createObjectURL(blob);
+ * ```
+ */
+export function binaryResponse(bytes: Uint8Array, contentType = 'application/octet-stream'): Blob {
+  const envelope: BinaryActionResponse = { [BINARY_RESPONSE_TAG]: true, bytes, contentType };
+  return envelope as unknown as Blob;
+}
+
+export function isBinaryResponse(value: unknown): value is BinaryActionResponse {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    BINARY_RESPONSE_TAG in value &&
+    (value as Record<string, unknown>)[BINARY_RESPONSE_TAG] === true
+  );
+}
+
+// ─── Stream-file response ────────────────────────────────────────────────────
+
+export const STREAM_FILE_TAG = '__brika_stream_file' as const;
+
+/**
+ * Stream-file response. The handler hands the hub a virtual path; the
+ * hub resolves it through the plugin's granted fs scope, then pipes
+ * `Bun.file(hostPath).stream()` straight from disk into the HTTP
+ * response. The bytes never enter the plugin process and never sit
+ * buffered in hub memory — only Bun's internal stream chunks (~16 KB)
+ * are in flight at a time.
+ *
+ * Compared to `binaryResponse`, which is buffer-and-forward:
+ * `binaryResponse` is the right answer for synthesised payloads
+ * (e.g. a thumbnail you compute on the fly); `streamFile` is the
+ * right answer for "send a file from disk to the page".
+ */
+export interface StreamFileResponse {
+  readonly [STREAM_FILE_TAG]: true;
+  readonly virtualPath: string;
+  readonly contentType?: string;
+}
+
+/**
+ * Build a stream-file envelope. The action handler typically uses this
+ * when serving a file the operator has granted the plugin read access
+ * to:
+ *
+ * @example
+ * ```ts
+ * import { defineAction, streamFile } from '@brika/sdk/actions';
+ *
+ * export const readEntry = defineAction(async ({ path }: { path: string }) => {
+ *   // No `readFile` call — the hub streams the bytes itself.
+ *   return streamFile(path, contentTypeFor(path));
+ * });
+ * ```
+ *
+ * The return type is `Blob` for the same reason as `binaryResponse`:
+ * the page receives a `Blob` via `useCallAction`, and using the
+ * Blob phantom output keeps that contract end-to-end type-safe.
+ */
+export function streamFile(virtualPath: string, contentType?: string): Blob {
+  const envelope: StreamFileResponse = {
+    [STREAM_FILE_TAG]: true,
+    virtualPath,
+    contentType,
+  };
+  return envelope as unknown as Blob;
+}
+
+export function isStreamFileResponse(value: unknown): value is StreamFileResponse {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    STREAM_FILE_TAG in value &&
+    (value as Record<string, unknown>)[STREAM_FILE_TAG] === true
+  );
+}
+
 // ─── Build-time finalization ─────────────────────────────────────────────────
 
 /**

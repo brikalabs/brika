@@ -1,0 +1,136 @@
+{
+  "$schema": "https://schema.brika.dev/plugin.schema.json",
+  "name": "@brika/plugin-playground",
+  "displayName": "Playground",
+  "version": "0.3.1",
+  "private": true,
+  "description": "Experimental sandbox plugin — echo block, preferences showcase, and a file browser demo",
+  "author": "BRIKA Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/brikalabs/brika.git",
+    "directory": "plugins/playground"
+  },
+  "keywords": ["brika", "brika-plugin", "example", "demo", "kitchen-sink", "playground"],
+  "engines": {
+    "brika": "^0.3.0"
+  },
+  "grants": {
+    "dev.brika.fs.readFile": {
+      "read": ["/data/**"],
+      "write": []
+    },
+    "dev.brika.fs.writeFile": {
+      "read": [],
+      "write": ["/data/**"]
+    },
+    "dev.brika.fs.readdir": {
+      "read": ["/data/**"],
+      "write": []
+    },
+    "dev.brika.fs.stat": {
+      "read": ["/data/**"],
+      "write": []
+    },
+    "dev.brika.fs.mkdir": {
+      "read": [],
+      "write": ["/data/**"]
+    },
+    "dev.brika.fs.rm": {
+      "read": [],
+      "write": ["/data/**"]
+    }
+  },
+  "resources": {
+    "fs": {
+      "maxFileBytes": "512mb",
+      "quotas": {
+        "data": "5gb",
+        "cache": "1gb",
+        "tmp": "256mb"
+      }
+    }
+  },
+  "type": "module",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": ["src", "locales", "README.md"],
+  "scripts": {
+    "link": "bun link",
+    "typecheck": "tsgo --noEmit",
+    "prepublishOnly": "brika-verify-plugin"
+  },
+  "blocks": [
+    {
+      "id": "echo",
+      "name": "Echo",
+      "description": "Echoes input to output with optional prefix/suffix",
+      "category": "transform",
+      "icon": "message-circle",
+      "color": "#3b82f6"
+    }
+  ],
+  "sparks": [
+    {
+      "id": "echoed",
+      "name": "Message Echoed",
+      "description": "Emitted when a message is echoed"
+    }
+  ],
+  "pages": [
+    {
+      "id": "file-browser",
+      "icon": "folder"
+    }
+  ],
+  "preferences": [
+    {
+      "name": "apiKey",
+      "type": "password",
+      "label": "API Key",
+      "description": "Demo password field — value is stored in the OS keychain"
+    },
+    {
+      "name": "serverUrl",
+      "type": "text",
+      "label": "Server URL",
+      "description": "The base URL of the API server",
+      "default": "https://api.example.com"
+    },
+    {
+      "name": "maxRetries",
+      "type": "number",
+      "label": "Max Retries",
+      "description": "Maximum number of retry attempts (1-10)",
+      "default": 3,
+      "min": 1,
+      "max": 10
+    },
+    {
+      "name": "debugMode",
+      "type": "checkbox",
+      "label": "Debug Mode",
+      "description": "Enable verbose logging for troubleshooting",
+      "default": false
+    },
+    {
+      "name": "logLevel",
+      "type": "dropdown",
+      "label": "Log Level",
+      "description": "Minimum log level to display",
+      "default": "info",
+      "options": [
+        { "value": "debug" },
+        { "value": "info" },
+        { "value": "warn" },
+        { "value": "error" }
+      ]
+    }
+  ],
+  "dependencies": {
+    "@brika/sdk": "workspace:*"
+  }
+}

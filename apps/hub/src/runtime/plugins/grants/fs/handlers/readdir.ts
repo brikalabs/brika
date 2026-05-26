@@ -62,6 +62,15 @@ async function walk(
       isFile: stat.isFile(),
       isDirectory: stat.isDirectory(),
       isSymlink: stat.isSymbolicLink(),
+      // For directories and symlinks `stat.size` is the inode size on
+      // disk (4 KiB-ish on macOS), which is meaningless to operators
+      // browsing files — surface 0 instead so the UI can show "—" or
+      // hide the size column for non-files.
+      size: stat.isFile() ? stat.size : 0,
+      // `stat.mtimeMs` is a float (microsecond precision on Linux); the
+      // wire schema is integer ms — the extra precision is meaningless
+      // to a UI rendering relative timestamps anyway.
+      mtime: Math.floor(stat.mtimeMs),
     };
     out.push(entry);
     if (recursive && stat.isDirectory() && !stat.isSymbolicLink()) {

@@ -7,6 +7,7 @@
  */
 
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
+import { BrikaError } from '@brika/errors';
 import { Channel, type WireMessage } from '@brika/ipc';
 import {
   blockEmit,
@@ -117,7 +118,13 @@ describe('Prelude Actions', () => {
       input: undefined,
     });
 
-    expect(result).toMatchObject({ ok: false, error: expect.stringContaining('nope') });
+    expect(result).toMatchObject({
+      ok: false,
+      error: {
+        message: expect.stringContaining('nope'),
+        code: 'ACTION_NOT_FOUND',
+      },
+    });
   });
 
   test('callAction RPC catches handler errors', async () => {
@@ -131,7 +138,13 @@ describe('Prelude Actions', () => {
       input: undefined,
     });
 
-    expect(result).toMatchObject({ ok: false, error: expect.stringContaining('boom') });
+    expect(result).toMatchObject({
+      ok: false,
+      error: {
+        message: expect.stringContaining('boom'),
+        name: 'Error',
+      },
+    });
   });
 });
 
@@ -157,10 +170,17 @@ describe('Prelude Routes', () => {
 
   test('routeRequest RPC dispatches to registered handler', async () => {
     const routes = setupRoutes(channel);
-    routes.registerRoute('POST', '/data', (req) => ({
-      status: 200,
-      body: { received: req.body },
-    }));
+    routes.registerRoute('POST', '/data', (req) => {
+      // req.body is `Json | Uint8Array | undefined`; this echo test only
+      // exercises the JSON path, so narrow before returning. A binary
+      // route handler would inspect Content-Type and treat the bytes
+      // directly instead.
+      const body = req.body instanceof Uint8Array ? null : (req.body ?? null);
+      return {
+        status: 200,
+        body: { received: body },
+      };
+    });
 
     const result = await triggerRpc(channel, sent, routeRequest.name, {
       routeId: 'POST:/data',
@@ -188,7 +208,7 @@ describe('Prelude Routes', () => {
     expect(result).toMatchObject({ status: 404 });
   });
 
-  test('routeRequest returns 500 when handler throws', async () => {
+  test('routeRequest returns 500 when handler throws non-BrikaError', async () => {
     const routes = setupRoutes(channel);
     routes.registerRoute('GET', '/fail', () => {
       throw new Error('route boom');
@@ -203,6 +223,48 @@ describe('Prelude Routes', () => {
     });
 
     expect(result).toMatchObject({ status: 500 });
+  });
+
+  test('routeRequest maps BrikaError to its canonical HTTP status', async () => {
+    const routes = setupRoutes(channel);
+    routes.registerRoute('GET', '/denied', () => {
+      throw new BrikaError('PERMISSION_DENIED', 'no fs grant', {
+        data: { permission: 'dev.brika.fs.readFile' },
+      });
+    });
+
+    const result = await triggerRpc(channel, sent, routeRequest.name, {
+      routeId: 'GET:/denied',
+      method: 'GET',
+      path: '/denied',
+      query: {},
+      headers: {},
+    });
+
+    expect(result).toMatchObject({
+      status: 403,
+      body: { error: 'no fs grant', code: 'PERMISSION_DENIED' },
+    });
+  });
+
+  test('routeRequest maps NOT_FOUND BrikaError to 404', async () => {
+    const routes = setupRoutes(channel);
+    routes.registerRoute('GET', '/missing', () => {
+      throw new BrikaError('NOT_FOUND', 'no such file');
+    });
+
+    const result = await triggerRpc(channel, sent, routeRequest.name, {
+      routeId: 'GET:/missing',
+      method: 'GET',
+      path: '/missing',
+      query: {},
+      headers: {},
+    });
+
+    expect(result).toMatchObject({
+      status: 404,
+      body: { error: 'no such file', code: 'NOT_FOUND' },
+    });
   });
 });
 

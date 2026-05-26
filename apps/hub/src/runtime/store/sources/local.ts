@@ -133,6 +133,7 @@ export class LocalRegistry implements RegistrySource {
               homepage: pkg.homepage,
               license: pkg.license,
               engines: pkg.engines,
+              grants: pkg.grants,
             },
             downloadCount: 0,
             source: 'local',

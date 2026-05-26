@@ -1,6 +1,18 @@
 {
-  "name": "Demo Config",
-  "description": "Demo plugin showcasing the preferences system",
+  "name": "Playground",
+  "description": "Experimental sandbox plugin — echo block, preferences showcase, and a file browser demo",
+  "tools": {
+    "echo": {
+      "name": "Echo",
+      "description": "Echo back the provided message"
+    }
+  },
+  "fields": {
+    "message": {
+      "label": "Message",
+      "description": "The message to echo back"
+    }
+  },
   "preferences": {
     "apiKey": {
       "title": "API Key",

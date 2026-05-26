@@ -146,7 +146,7 @@ export function PluginDetailPage() {
                 <div
                   className={cn(
                     'rounded-lg border p-4',
-                    plugin.status === 'incompatible'
+                    plugin.status === 'incompatible' || plugin.status === 'awaiting-config'
                       ? 'border-amber-500/20 bg-amber-500/10 text-amber-700 dark:text-amber-400'
                       : 'border-destructive/20 bg-destructive/10 text-destructive'
                   )}

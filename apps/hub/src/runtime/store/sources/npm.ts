@@ -81,6 +81,7 @@ interface NpmApiPackageResponse {
         brika?: string;
         node?: string;
       };
+      grants?: Record<string, unknown>;
     }
   >;
   time: Record<string, string>;
@@ -167,6 +168,7 @@ export class NpmRegistry implements RegistrySource {
         homepage: v.homepage,
         license: v.license,
         engines: v.engines,
+        grants: v.grants,
         date: data.time?.[latestVersion],
       };
     } catch {

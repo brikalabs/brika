@@ -40,28 +40,43 @@ export interface NodeBuiltinShimOptions {
   readonly alsoRewriteBare?: boolean;
 }
 
-export function createNodeBuiltinShimPlugin(opts: NodeBuiltinShimOptions): BunPlugin {
+/**
+ * Pure text transform that rewrites every `import … from 'node:<module>'`
+ * (and the bare `<module>` form when `alsoRewriteBare`) to point at the
+ * given shim path. Returns the rewritten content, or the original
+ * unchanged if no occurrences were found.
+ *
+ * Exposed standalone so multiple build plugins can share the rewrite —
+ * Bun's `onLoad` only honours the first handler that returns content,
+ * so plugins that want to compose with each other have to run their
+ * transforms inside a single `onLoad`.
+ */
+export function rewriteNodeBuiltinImports(
+  content: string,
+  opts: Pick<NodeBuiltinShimOptions, 'module' | 'shimPath' | 'alsoRewriteBare'>
+): string {
+  if (!content.includes(opts.module)) {
+    return content;
+  }
   const replacement = `'${opts.shimPath}'`;
   const moduleEsc = escapeRegex(opts.module);
   const prefix = opts.alsoRewriteBare ? `(?:node:)?` : 'node:';
   const fromRegex = new RegExp(String.raw`(from\s*)(['"])${prefix}${moduleEsc}\2`, 'g');
   const sideEffectRegex = new RegExp(String.raw`(import\s*)(['"])${prefix}${moduleEsc}\2`, 'g');
-  // Cheap pre-check so we can skip files that can't possibly need a
-  // rewrite without paying the regex cost. The plain `module` name
-  // covers both `node:<module>` and the bare form.
-  const sniffString = opts.module;
+  return content
+    .replace(fromRegex, `$1${replacement}`)
+    .replace(sideEffectRegex, `$1${replacement}`);
+}
 
+export { pickLoader };
+
+export function createNodeBuiltinShimPlugin(opts: NodeBuiltinShimOptions): BunPlugin {
   return {
     name: opts.pluginName,
     setup(build) {
       build.onLoad({ filter: /\.[tj]sx?$/ }, async (args) => {
         const original = await Bun.file(args.path).text();
-        if (!original.includes(sniffString)) {
-          return undefined;
-        }
-        const rewritten = original
-          .replace(fromRegex, `$1${replacement}`)
-          .replace(sideEffectRegex, `$1${replacement}`);
+        const rewritten = rewriteNodeBuiltinImports(original, opts);
         if (rewritten === original) {
           return undefined;
         }

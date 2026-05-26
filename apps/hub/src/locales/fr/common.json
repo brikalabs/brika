@@ -41,6 +41,7 @@
     "updating": "Mise à jour",
     "crash-loop": "Boucle de plantage",
     "incompatible": "Incompatible",
+    "awaiting-config": "Configuration requise",
     "loading": "Chargement...",
     "enabled": "Activé",
     "disabled": "Désactivé",

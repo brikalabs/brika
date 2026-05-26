@@ -1,6 +1,7 @@
 import { useMutation } from '@tanstack/react-query';
 import { useEffect, useMemo } from 'react';
 import { fetcher, getStreamUrl } from '@/lib/query';
+import { subscribeSharedEvents } from '@/lib/shared-event-source';
 import { useEventsStore } from './store';
 import type { BrikaEvent } from './types';
 
@@ -54,20 +55,20 @@ export function useSparkStream() {
       });
   }, [setHistory]);
 
-  // SSE for live events
-  useEffect(() => {
-    const es = new EventSource(getStreamUrl('/api/stream/events'));
-    es.addEventListener('event', (ev: MessageEvent) => {
-      const event = JSON.parse(ev.data) as BrikaEvent;
-      if (event.type === 'spark.emit') {
-        add(event);
-      }
-    });
-    es.onerror = () => {
-      /* Connection error - auto-retry handled by EventSource */
-    };
-    return () => es.close();
-  }, [add]);
+  // SSE for live events. Shares an `EventSource` with other hooks that
+  // listen on `/api/stream/events` — one TCP connection for all of them
+  // instead of one per hook (was three; saturated the browser's HTTP/1.1
+  // 6-per-origin slot pool and stalled action calls for seconds).
+  useEffect(
+    () =>
+      subscribeSharedEvents(getStreamUrl('/api/stream/events'), (ev) => {
+        const event = JSON.parse(ev.data) as BrikaEvent;
+        if (event.type === 'spark.emit') {
+          add(event);
+        }
+      }),
+    [add]
+  );
 
   const sparkEvents = useMemo(() => {
     return events

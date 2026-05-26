@@ -79,7 +79,9 @@
     "crashed": "Le plugin a planté : {{reason}}",
     "crashLoop": "Boucle de plantage : {{reason}}",
     "restarting": "Redémarrage dans {{seconds}}s",
-    "killed": "Le plugin a été arrêté de force"
+    "killed": "Le plugin a été arrêté de force",
+    "buildFailed": "Échec de la compilation : {{errors}}",
+    "awaitingConfig": "Configuration requise : {{errors}}"
   },
   "table": {
     "name": "Nom",

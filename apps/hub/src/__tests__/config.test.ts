@@ -55,6 +55,7 @@ describe('HubConfig', () => {
           heartbeatInterval: 5000,
           heartbeatTimeout: 15000,
         },
+        logs: { retentionDays: 7, pruneIntervalMs: 3600000 },
       },
       plugins: [],
       rules: [],
@@ -78,9 +79,9 @@ describe('PluginManagerConfig', () => {
   test('has default values when ConfigLoader not available', () => {
     const config = get(PluginManagerConfig);
 
-    expect(config.callTimeoutMs).toBe(5000);
-    expect(config.heartbeatEveryMs).toBe(5000);
-    expect(config.heartbeatTimeoutMs).toBe(15000);
+    expect(config.callTimeoutMs).toBe(30_000);
+    expect(config.heartbeatEveryMs).toBe(10_000);
+    expect(config.heartbeatTimeoutMs).toBe(60_000);
     expect(config.killTimeoutMs).toBe(3000);
     expect(config.autoRestartEnabled).toBe(true);
     expect(config.restartBaseDelayMs).toBe(1000);
@@ -100,6 +101,7 @@ describe('PluginManagerConfig', () => {
           heartbeatInterval: 10000,
           heartbeatTimeout: 30000,
         },
+        logs: { retentionDays: 7, pruneIntervalMs: 3600000 },
       },
       plugins: [],
       rules: [],

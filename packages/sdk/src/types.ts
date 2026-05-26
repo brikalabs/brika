@@ -24,13 +24,23 @@ export interface RouteRequest {
   path: string;
   query: Record<string, string>;
   headers: Record<string, string>;
+  /**
+   * Parsed `Json` for `application/json` requests, or a `Uint8Array` for
+   * binary uploads (the hub forwards raw bytes verbatim). Plugin route
+   * handlers inspect `headers['content-type']` to disambiguate.
+   */
   body?: unknown;
 }
 
 export interface RouteResponse {
   status: number;
   headers?: Record<string, string>;
-  body?: Json;
+  /**
+   * `Json` is served as `application/json` by default. A `Uint8Array` is
+   * passed through verbatim to the HTTP response — set `headers['content-type']`
+   * to declare the media type (e.g. `image/png`).
+   */
+  body?: Json | Uint8Array;
 }
 
 export interface SparkEvent {

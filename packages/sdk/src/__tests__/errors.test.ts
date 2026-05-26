@@ -15,7 +15,7 @@ describe('errors.permissionDenied', () => {
     expect(err.code).toBe('PERMISSION_DENIED');
     expect(err.data?.permission).toBe('location');
     expect(err.message).toContain('location');
-    expect(err.message).toContain('permissions');
+    expect(err.message).toContain('grants');
   });
 
   test('preserves cause when provided', () => {

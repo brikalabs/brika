@@ -81,4 +81,13 @@ export const PluginErrors = {
       message: `Build failed: ${message}`,
     };
   },
+
+  awaitingConfig(errors: string[]): PluginError {
+    const message = errors.join('; ');
+    return {
+      key: 'plugins:errors.awaitingConfig',
+      params: { errors: message },
+      message: `Configuration required: ${message}`,
+    };
+  },
 } as const;

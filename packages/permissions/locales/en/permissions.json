@@ -4,5 +4,23 @@
   "location": "Location",
   "locationDesc": "Access the hub's physical location (address, coordinates, timezone)",
   "secrets": "Secret storage",
-  "secretsDesc": "Read and write per-plugin credentials in the OS keychain"
+  "secretsDesc": "Read and write per-plugin credentials in the OS keychain",
+  "net": "Network",
+  "netDesc": "Make outbound HTTP requests to the listed hosts",
+  "fs": "Filesystem",
+  "fsDesc": "Read or write files inside the plugin's virtual storage roots",
+  "ws": "WebSocket",
+  "wsDesc": "Open persistent WebSocket connections to the listed hosts",
+  "dns": "DNS",
+  "dnsDesc": "Resolve hostnames through the hub's DNS proxy",
+  "ui": "UI",
+  "uiDesc": "Open native file-picker dialogs on behalf of the user",
+  "scope": {
+    "hosts": "Hosts",
+    "paths": "Paths",
+    "fileFilters": "File filters",
+    "read": "read",
+    "readwrite": "read & write",
+    "wildcardHint": "wildcard — matches any subdomain"
+  }
 }

@@ -41,6 +41,7 @@
     "updating": "Updating",
     "crash-loop": "Crash Loop",
     "incompatible": "Incompatible",
+    "awaiting-config": "Needs configuration",
     "loading": "Loading...",
     "enabled": "Enabled",
     "disabled": "Disabled",

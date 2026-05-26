@@ -120,6 +120,12 @@ export class ApiServer {
     this.#server = Bun.serve<ProxyWsData>({
       hostname: this.#config.host,
       port: this.#config.port,
+      // Bun's default request body cap is 128 MB, which 413s the
+      // moment a plugin (e.g. the playground file-browser) tries to
+      // upload a typical photo or video. Honour the operator-tunable
+      // limit from `HubConfig` instead — see
+      // `BRIKA_MAX_REQUEST_BODY_BYTES` for the env override.
+      maxRequestBodySize: this.#config.maxRequestBodyBytes,
       fetch: (req, server) => {
         // Always use the real socket IP — don't trust client-supplied proxy headers
         // on direct connections. A reverse proxy should be the only source of these.

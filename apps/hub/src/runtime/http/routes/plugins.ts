@@ -272,10 +272,19 @@ export const pluginsRoutes = group({
           });
         }
 
-        // Send updated preferences to running plugin
-        const process = inject(PluginLifecycle).getProcess(plugin.name);
-        if (process) {
-          process.sendPreferences(await configService.getConfig(plugin.name));
+        const lifecycle = inject(PluginLifecycle);
+        const runningProcess = lifecycle.getProcess(plugin.name);
+        if (runningProcess) {
+          // Hot-reload prefs for the live plugin.
+          runningProcess.sendPreferences(await configService.getConfig(plugin.name));
+        } else if (plugin.status === 'awaiting-config') {
+          // The plugin was parked waiting for valid prefs. We just
+          // persisted a valid set, so kick it back to life — no manual
+          // reload needed from the operator.
+          const stored = inject(StateStore).get(plugin.name);
+          if (stored?.enabled) {
+            await lifecycle.load(stored.rootDirectory);
+          }
         }
 
         return {
@@ -299,6 +308,10 @@ export const pluginsRoutes = group({
         const permService = inject(PluginPermissionService);
 
         const updated = permService.setPermission(plugin.name, body.permission, body.granted);
+        // Invalidate the running process's cached grant vector so the
+        // toggle takes effect on the very next `ctx.*` call — no plugin
+        // restart needed for the hub-side check.
+        inject(PluginLifecycle).getProcess(plugin.name)?.invalidateVector();
         return {
           grantedPermissions: updated,
         };

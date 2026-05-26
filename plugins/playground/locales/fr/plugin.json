@@ -1,6 +1,18 @@
 {
-  "name": "Démo Configuration",
-  "description": "Plugin de démonstration présentant le système de préférences",
+  "name": "Playground",
+  "description": "Plugin bac à sable — bloc écho, démo des préférences et explorateur de fichiers",
+  "tools": {
+    "echo": {
+      "name": "Écho",
+      "description": "Renvoyer le message fourni en écho"
+    }
+  },
+  "fields": {
+    "message": {
+      "label": "Message",
+      "description": "Le message à renvoyer"
+    }
+  },
   "preferences": {
     "apiKey": {
       "title": "Clé API",

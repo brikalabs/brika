@@ -23,7 +23,7 @@ brika/
 ├── plugins/
 │   ├── blocks-builtin/   # Core blocks (condition, delay, log, etc.)
 │   ├── timer/            # Timer & countdown blocks
-│   └── example-echo/     # Example plugin
+│   └── playground/       # Experimental sandbox plugin
 ├── workflows/            # Workflow YAML files
 └── docs/                 # Documentation
 ```
@@ -117,9 +117,11 @@ Timer-related blocks:
 * Countdown timers
 * Interval triggers
 
-### example-echo
+### playground
 
-Example plugin demonstrating SDK usage.
+Experimental sandbox plugin — bundles an echo block, a preferences
+showcase, and a file-browser page. Useful as an SDK reference and as a
+smoke-test target for the hub's consent/permission UI.
 
 ## Key Files
 

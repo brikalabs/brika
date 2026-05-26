@@ -35,7 +35,12 @@ export type PluginHealth =
   | 'updating'
   | 'restarting'
   | 'crash-loop'
-  | 'incompatible';
+  | 'incompatible'
+  // Plugin is installed and enabled but cannot start because its
+  // preferences fail manifest validation (e.g. a required field is
+  // empty). The plugin stays in this state until valid preferences
+  // are submitted; auto-start triggers on save.
+  | 'awaiting-config';
 
 /**
  * Structured error with i18n support.
@@ -123,9 +128,11 @@ export interface Plugin {
   pages: PageManifest[];
 
   // ─── Permissions ──────────────────────────────────────────────────────────
-  /** Permissions declared by this plugin (from package.json) */
+  /** Permission families this plugin requests, derived from its grant ids */
   permissions: string[];
-  /** Permissions currently granted by the user */
+  /** Grants declared by this plugin (keyed by reverse-DNS id), with per-grant scope */
+  grants: Record<string, unknown>;
+  /** Permission families currently granted by the user */
   grantedPermissions: string[];
 
   // ─── i18n ───────────────────────────────────────────────────────────────────
