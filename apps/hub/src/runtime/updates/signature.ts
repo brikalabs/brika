@@ -132,7 +132,15 @@ interface ParsedSignatureError {
 }
 
 function parseMinisignSignature(text: string): ParsedSignature | ParsedSignatureError {
-  const lines = text.split('\n').filter((l) => l.length > 0);
+  // Normalize CRLF → LF first. A `.minisig` that traveled through a
+  // Windows editor, a misconfigured HTTP server, or a tarball with
+  // `--text` translation would otherwise leave a trailing `\r` on the
+  // trusted-comment line, breaking the global-signature verification
+  // even though the file is byte-correct from the signer's side.
+  const lines = text
+    .replaceAll('\r\n', '\n')
+    .split('\n')
+    .filter((l) => l.length > 0);
   if (lines.length < 4) {
     return { kind: 'error', reason: `expected 4 lines, got ${lines.length}` };
   }

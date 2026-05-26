@@ -75,14 +75,24 @@ function escapeForRegExp(literal: string): string {
   return literal.replace(REGEX_META_RE, String.raw`\$&`);
 }
 
+/**
+ * Refuse to build a redaction regex for paths shorter than this —
+ * `home === '/'` (root user in a minimal container) or any 1-2 char
+ * "path" would match every slash in the message and collapse the
+ * redacted string into garbage (`/etc/passwd` → `~etc~passwd`),
+ * which is both useless for forensics AND still leaks the path via
+ * partial replacement.
+ */
+const MIN_REDACT_PATH_LEN = 5;
+
 function redactPaths(message: string): string {
   let out = message;
   const home = homedir();
-  if (home.length > 0) {
+  if (home.length >= MIN_REDACT_PATH_LEN) {
     out = out.replace(new RegExp(escapeForRegExp(home), 'g'), '~');
   }
   const brikaDir = brikaContext.brikaDir;
-  if (brikaDir.length > 0) {
+  if (brikaDir.length >= MIN_REDACT_PATH_LEN) {
     out = out.replace(new RegExp(escapeForRegExp(brikaDir), 'g'), '<brikaDir>');
   }
   return out;
