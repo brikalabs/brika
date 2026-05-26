@@ -41,6 +41,7 @@ import {
 } from '@brika/ipc/contract';
 import type { BrickFamily, Plugin, PluginHealth } from '@brika/plugin';
 import type { PluginPackageSchema } from '@brika/schema';
+import { FsScopeSchema } from '@brika/sdk/grants';
 import { getProcessMetrics } from '@/runtime/metrics';
 import type { HubLocation } from '@/runtime/state/state-store';
 import { dispatchGrantRequest } from './grants/dispatch';
@@ -457,9 +458,11 @@ export class PluginProcess {
     if (!entry) {
       throw errors.permissionDenied({ permission: 'dev.brika.fs.readFile' });
     }
-    // `entry.scope` is unknown at the vector level — narrow once,
-    // then run the existing fs helpers used by the grant handler.
-    const scope = entry.scope as { read: string[]; write: string[] };
+    // `entry.scope` is `unknown` at the vector level; validate against
+    // `FsScopeSchema` once before handing it to the fs helpers. This
+    // both narrows the type and catches the (theoretical) case of a
+    // misconfigured vector slipping through to disk-touching code.
+    const scope = FsScopeSchema.parse(entry.scope);
     const resolved = resolveVirtualPath(virtualPath, this.fsDirs);
     assertAccess(resolved, scope, 'read');
     await assertWithinBackingDir(resolved, backingDirFor(resolved, this.fsDirs));
