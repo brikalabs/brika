@@ -127,10 +127,19 @@ function serialiseStreamError(err: unknown): SerialisedError {
     return {
       message: err.message,
       name: err.name,
-      code: (err as { code?: string }).code,
+      code: readErrorCode(err),
     };
   }
   return { message: String(err), name: 'Error' };
+}
+
+/** Pull a string `code` off an Error if it carries one (BrikaError + Node errno). */
+function readErrorCode(err: Error): string | undefined {
+  if (!('code' in err)) {
+    return undefined;
+  }
+  const value = (err as unknown as Record<string, unknown>).code;
+  return typeof value === 'string' ? value : undefined;
 }
 
 /**

@@ -11,7 +11,10 @@ import {
 } from '@brika/ipc/contract';
 import { isBinaryResponse, isStreamFileResponse } from '@brika/sdk/actions';
 
-type ActionHandler = (input?: Json) => unknown | Promise<unknown>;
+// `unknown` already covers `Promise<…>` and every other return shape;
+// the explicit union would just trip Sonar's S6571 without buying us
+// anything.
+type ActionHandler = (input?: Json) => unknown;
 
 interface SerializedActionError {
   message: string;
@@ -27,6 +30,18 @@ interface SerializedActionError {
  * `FS_PATH_OUTSIDE_ROOT`) so callers can branch on category instead of
  * pattern-matching the message.
  */
+function readOptionalString(value: object, key: string): string | undefined {
+  if (!(key in value)) {
+    return undefined;
+  }
+  const candidate = (value as Record<string, unknown>)[key];
+  return typeof candidate === 'string' ? candidate : undefined;
+}
+
+function readOptionalProp(value: object, key: string): unknown {
+  return key in value ? (value as Record<string, unknown>)[key] : undefined;
+}
+
 function serializeActionError(err: unknown): SerializedActionError {
   if (err instanceof Error) {
     const out: SerializedActionError = {
@@ -34,14 +49,15 @@ function serializeActionError(err: unknown): SerializedActionError {
       name: err.name,
     };
     // Node fs errors carry `code`; BrikaError stores it on the same field.
-    // Both surface as a non-enumerable own property, so cast and read.
-    const codeCandidate = (err as { code?: unknown }).code;
-    if (typeof codeCandidate === 'string') {
-      out.code = codeCandidate;
+    // Both are non-enumerable own properties, so read by name with a
+    // type guard instead of casting to an ad-hoc shape.
+    const code = readOptionalString(err, 'code');
+    if (code !== undefined) {
+      out.code = code;
     }
-    const dataCandidate = (err as { data?: unknown }).data;
-    if (dataCandidate !== undefined && isJson(dataCandidate)) {
-      out.data = dataCandidate;
+    const data = readOptionalProp(err, 'data');
+    if (data !== undefined && isJson(data)) {
+      out.data = data;
     }
     return out;
   }
