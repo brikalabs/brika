@@ -109,6 +109,11 @@ export function FileBrowser() {
         }`}
       >
         <section
+          // `region` + label gives the drop zone an accessible name and a
+          // landmark so assistive tech can describe what the drag handlers
+          // act on (drag/drop itself is inherently mouse — the Toolbar's
+          // "Upload" button is the keyboard path).
+          aria-label="File list and upload drop zone"
           className={`relative min-w-0 overflow-hidden rounded-lg border bg-card transition-colors ${
             dragOver ? 'border-primary ring-2 ring-primary/30' : 'border-border'
           }`}
