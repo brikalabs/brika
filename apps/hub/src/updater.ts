@@ -18,15 +18,15 @@
 import { chmod, cp, mkdir, rename, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { HUB_GITHUB_RELEASES_API, HUB_GITHUB_RELEASES_LIST_API, hub } from '@/hub';
-import { buildInfo } from '@/runtime/http/routes/status';
-import { DEFAULT_CHANNEL_ID, type UpdateChannelId } from '@/runtime/updates/channels';
+import { buildInfo } from './build-info';
+import { HUB_GITHUB_RELEASES_API, HUB_GITHUB_RELEASES_LIST_API, hub } from './hub';
+import { DEFAULT_CHANNEL_ID, type UpdateChannelId } from './runtime/updates/channels';
 import {
   commitStagedArtifacts,
   discardStagedArtifacts,
   runStagedSelfCheck,
   stageArtifacts,
-} from '@/runtime/updates/staged-install';
+} from './runtime/updates/staged-install';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -477,7 +477,7 @@ async function downloadFile(
     }
   }
 
-  await Bun.write(destPath, new Blob(chunks));
+  await Bun.write(destPath, Buffer.concat(chunks));
 }
 
 async function extractTarGz(archivePath: string, destDir: string): Promise<void> {

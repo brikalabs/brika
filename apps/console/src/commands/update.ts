@@ -54,6 +54,51 @@ async function streamApply(force: boolean): Promise<void> {
   }
 }
 
+/**
+ * Offline path: don't talk to the hub. Imports the updater functions
+ * directly from `@brika/hub/updater` and runs them in-process. Useful
+ * when the running hub is broken or stopped — `brika update` over
+ * HTTP requires a healthy hub, so the offline path is the only
+ * recovery channel that doesn't require re-running `install.sh`.
+ *
+ * Channel switching is *not* supported offline because the channel
+ * preference lives in `state.db` (which the hub owns) and we don't
+ * want the CLI fighting the hub for the DB lock.
+ */
+async function offlineUpdate(opts: { check: boolean; force: boolean }): Promise<void> {
+  const { checkForUpdate, applyUpdate: applyUpdateLocal } = await import('@brika/hub/updater');
+
+  process.stdout.write(`${pc.dim('mode:')} offline (no hub required)\n`);
+  const info = await checkForUpdate('stable');
+  process.stdout.write(formatStatus({ ...info, lastCheckedAt: null }));
+
+  if (opts.check) {
+    return;
+  }
+  if (!info.updateAvailable && !opts.force) {
+    process.stdout.write(
+      `${pc.dim('Nothing to apply — use')} ${pc.cyan('--force')} ${pc.dim('to reinstall.')}\n`
+    );
+    return;
+  }
+
+  const spinner = p.spinner();
+  spinner.start('Applying update');
+  try {
+    const result = await applyUpdateLocal({
+      force: opts.force,
+      channel: 'stable',
+      onProgress(phase, detail) {
+        spinner.message(`${phase}: ${detail}`);
+      },
+    });
+    spinner.stop(pc.green(`Updated v${result.previousVersion} → v${result.newVersion}`));
+  } catch (err) {
+    spinner.error(err instanceof Error ? err.message : String(err));
+    throw new CliError(err instanceof Error ? err.message : String(err));
+  }
+}
+
 export default defineCommand({
   name: 'update',
   aliases: ['upgrade'],
@@ -79,6 +124,11 @@ export default defineCommand({
       type: 'string',
       description: 'Switch update channel before checking (stable or canary)',
     },
+    offline: {
+      type: 'boolean',
+      description:
+        'Run the updater locally without talking to the hub. Use this when the hub is broken or stopped.',
+    },
   },
   examples: [
     'brika update',
@@ -86,8 +136,17 @@ export default defineCommand({
     'brika update --yes',
     'brika update --channel canary',
     'brika update --force',
+    'brika update --offline   # recovery path when the hub is unreachable',
   ],
   async handler({ values }) {
+    if (values.offline) {
+      await offlineUpdate({
+        check: values.check === true,
+        force: values.force === true,
+      });
+      return;
+    }
+
     await requireRunningHub();
 
     if (typeof values.channel === 'string') {
