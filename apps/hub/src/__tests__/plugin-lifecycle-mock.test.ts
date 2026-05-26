@@ -330,6 +330,28 @@ describe('PluginLifecycle (with mocked spawn)', () => {
       expect(mockEventHandler.onPluginReady).not.toHaveBeenCalled();
     });
 
+    test('onReady parks the plugin in awaiting-config on validation failure', async () => {
+      // Specifically asserts that the lifecycle promotes the failure
+      // to a first-class state instead of treating it as a crash.
+      mockPluginConfig.validate.mockReturnValue({
+        success: false,
+        error: {
+          issues: [{ path: ['apiKey'], message: 'required' }],
+        },
+      });
+
+      const callbacks = await loadPlugin();
+      const process = mockProcessInstance as unknown as PluginProcess;
+
+      await callbacks.onReady(process);
+
+      const setHealthCalls = mockState.setHealth.mock.calls;
+      const awaiting = setHealthCalls.find(
+        (args) => args[0] === '@test/plugin' && args[1] === 'awaiting-config'
+      );
+      expect(awaiting).toBeDefined();
+    });
+
     test('onLog callback delegates to event handler', async () => {
       const callbacks = await loadPlugin();
       callbacks.onLog('info', 'test message', {
