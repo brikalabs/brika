@@ -168,3 +168,34 @@ const PREVIEW_KIND_BY_EXT: Record<string, PreviewKind> = {
 export function previewKindFor(name: string): PreviewKind {
   return PREVIEW_KIND_BY_EXT[extOf(name)] ?? 'generic';
 }
+
+/**
+ * Map a file extension to a Shiki language identifier used by Clay's
+ * `CodeBlockContent` for syntax highlighting. Returns `null` for files
+ * Shiki can't usefully colour (txt/md fall through to plain text).
+ */
+const SHIKI_LANG_BY_EXT: Record<string, string> = {
+  ts: 'tsx',
+  tsx: 'tsx',
+  js: 'jsx',
+  jsx: 'jsx',
+  mjs: 'js',
+  cjs: 'js',
+  json: 'json',
+  yaml: 'yaml',
+  yml: 'yaml',
+  toml: 'toml',
+  xml: 'xml',
+  html: 'html',
+  css: 'css',
+  md: 'markdown',
+  sh: 'bash',
+  py: 'python',
+  rs: 'rust',
+  go: 'go',
+  csv: 'csv',
+};
+
+export function shikiLanguageFor(name: string): string | null {
+  return SHIKI_LANG_BY_EXT[extOf(name)] ?? null;
+}

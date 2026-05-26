@@ -1,4 +1,13 @@
-import { Button, Input, Kbd, KbdGroup, Spinner } from '@brika/sdk/ui-kit';
+import {
+  Button,
+  Input,
+  Kbd,
+  KbdGroup,
+  Spinner,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@brika/sdk/ui-kit';
 import { Check, FolderPlus, X } from '@brika/sdk/ui-kit/icons';
 import { type KeyboardEvent, useEffect, useRef, useState } from 'react';
 
@@ -56,24 +65,22 @@ export function NewFolderInput({ creating, onSubmit, onCancel }: Readonly<NewFol
         <Kbd>esc</Kbd>
         <span className="text-muted-foreground/70 text-xs">to cancel</span>
       </KbdGroup>
-      <Button
-        variant="default"
-        size="icon-xs"
-        onClick={submit}
-        disabled={!canSubmit}
-        title="Create folder (Enter)"
-      >
-        {creating ? <Spinner size="sm" /> : <Check className="size-3.5" />}
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon-xs"
-        onClick={onCancel}
-        disabled={creating}
-        title="Cancel (Esc)"
-      >
-        <X className="size-3.5" />
-      </Button>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button variant="default" size="icon-xs" onClick={submit} disabled={!canSubmit}>
+            {creating ? <Spinner size="sm" /> : <Check className="size-3.5" />}
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>Create folder (Enter)</TooltipContent>
+      </Tooltip>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button variant="ghost" size="icon-xs" onClick={onCancel} disabled={creating}>
+            <X className="size-3.5" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>Cancel (Esc)</TooltipContent>
+      </Tooltip>
     </div>
   );
 }

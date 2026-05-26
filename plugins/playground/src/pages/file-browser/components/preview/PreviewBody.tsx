@@ -1,5 +1,13 @@
-import { ScrollArea } from '@brika/sdk/ui-kit';
+import {
+  CodeBlock,
+  CodeBlockActions,
+  CodeBlockContent,
+  CodeBlockCopyButton,
+  CodeBlockHeader,
+  CodeBlockInfo,
+} from '@brika/sdk/ui-kit';
 import { FileQuestion, Music } from '@brika/sdk/ui-kit/icons';
+import { shikiLanguageFor } from '../../lib/file-kind';
 import type { PreviewState } from '../../types';
 
 type Rendered = Exclude<PreviewState, { kind: 'none' }>;
@@ -63,12 +71,23 @@ export function PreviewBody({ preview }: Readonly<{ preview: Rendered }>) {
   }
 
   if (preview.kind === 'text') {
+    // Clay's CodeBlock runs Shiki on the content for syntax highlighting,
+    // ships a copy button, and handles its own overflow scrolling. The
+    // header tucks the filename + line count to the side; unknown
+    // extensions (`txt`/`md`) fall through to plain mono with no colours.
+    const language = shikiLanguageFor(preview.name);
     return (
-      <ScrollArea className="h-72 rounded-md border border-border/60 bg-background">
-        <pre className="whitespace-pre-wrap break-words p-3 font-mono text-[11px] text-foreground/90 leading-relaxed">
+      <CodeBlock className="max-h-80">
+        <CodeBlockHeader>
+          <CodeBlockInfo>{({ lineCount }) => `${lineCount} lines`}</CodeBlockInfo>
+          <CodeBlockActions>
+            <CodeBlockCopyButton />
+          </CodeBlockActions>
+        </CodeBlockHeader>
+        <CodeBlockContent language={language} filename={preview.name} showLineNumbers size="sm">
           {preview.content}
-        </pre>
-      </ScrollArea>
+        </CodeBlockContent>
+      </CodeBlock>
     );
   }
 

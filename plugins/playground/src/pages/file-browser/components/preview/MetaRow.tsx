@@ -1,4 +1,4 @@
-import { CopyChip } from './CopyChip';
+import { CodeBlockCopyButton } from '@brika/sdk/ui-kit';
 
 interface MetaRowProps {
   label: string;
@@ -20,7 +20,16 @@ export function MetaRow({ label, value, mono, copy }: Readonly<MetaRowProps>) {
         >
           {value}
         </span>
-        {copy && <CopyChip value={copy} label={label.toLowerCase()} />}
+        {copy && (
+          <CodeBlockCopyButton
+            value={copy}
+            variant="ghost"
+            size="icon-xs"
+            className="size-5 shrink-0 [&_svg]:size-3"
+            copyLabel={`Copy ${label.toLowerCase()}`}
+            copiedLabel={`${label} copied`}
+          />
+        )}
       </dd>
     </div>
   );

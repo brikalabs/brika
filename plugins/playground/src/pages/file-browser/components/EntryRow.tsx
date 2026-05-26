@@ -1,3 +1,4 @@
+import { Tooltip, TooltipContent, TooltipTrigger } from '@brika/sdk/ui-kit';
 import { ChevronRight, Download, Trash2 } from '@brika/sdk/ui-kit/icons';
 import { useState } from 'react';
 import { formatRelativeTime, formatSize } from '../lib/format';
@@ -78,23 +79,31 @@ export function EntryRow({
           onClick={(e) => e.stopPropagation()}
         >
           {entry.isFile && (
-            <button
-              type="button"
-              title="Download"
-              className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-              onClick={() => onDownload(entry)}
-            >
-              <Download className="size-3.5" />
-            </button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                  onClick={() => onDownload(entry)}
+                >
+                  <Download className="size-3.5" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>Download</TooltipContent>
+            </Tooltip>
           )}
-          <button
-            type="button"
-            title="Delete"
-            className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-            onClick={() => setConfirmOpen(true)}
-          >
-            <Trash2 className="size-3.5" />
-          </button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                onClick={() => setConfirmOpen(true)}
+              >
+                <Trash2 className="size-3.5" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>Delete</TooltipContent>
+          </Tooltip>
         </div>
       </div>
 
