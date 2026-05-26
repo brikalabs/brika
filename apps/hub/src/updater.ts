@@ -21,6 +21,12 @@ import { dirname, join } from 'node:path';
 import { HUB_GITHUB_RELEASES_API, HUB_GITHUB_RELEASES_LIST_API, hub } from '@/hub';
 import { buildInfo } from '@/runtime/http/routes/status';
 import { DEFAULT_CHANNEL_ID, type UpdateChannelId } from '@/runtime/updates/channels';
+import {
+  commitStagedArtifacts,
+  discardStagedArtifacts,
+  runStagedSelfCheck,
+  stageArtifacts,
+} from '@/runtime/updates/staged-install';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -510,11 +516,32 @@ async function extractZip(archivePath: string, destDir: string): Promise<void> {
 async function replaceInstallation(extractedDir: string, installDir: string): Promise<void> {
   const sourceDir = resolveSourceDir(extractedDir);
   const isWindows = process.platform === 'win32';
-  const ext = isWindows ? '.exe' : '';
 
-  await replaceBinary(join(sourceDir, `brika${ext}`), process.execPath, isWindows);
+  if (isWindows) {
+    // Windows can't rename the running EXE in-process; fall back to the
+    // legacy `cmd /c move` + supervisor restart path until we ship a
+    // supervisor that owns the post-exit swap. Staged install on POSIX
+    // gives us the same guarantees with no supervisor cooperation.
+    await replaceBinary(join(sourceDir, 'brika.exe'), process.execPath, true);
+    await replaceDir(join(sourceDir, 'ui'), join(installDir, 'ui'));
+    return;
+  }
 
-  await replaceDir(join(sourceDir, 'ui'), join(installDir, 'ui'));
+  try {
+    // 1. Stage to `brika.next` / `ui.next` next to the live install.
+    const { stagedBinary } = await stageArtifacts({ sourceDir, installDir });
+    // 2. Probe the staged binary; throws on timeout / non-zero / bad JSON.
+    await runStagedSelfCheck(stagedBinary);
+    // 3. Atomic swap. Live `brika` becomes `brika.previous` (kept for
+    //    the rollback window — `boot-rollback.ts` consumes it if the
+    //    next boot crashes before recording success).
+    commitStagedArtifacts(installDir);
+  } catch (err) {
+    // Self-check / staging failed — wipe the staged artifacts so the
+    // next attempt starts clean. Live binary was never touched.
+    discardStagedArtifacts(installDir);
+    throw err;
+  }
 }
 
 /**

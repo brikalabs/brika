@@ -22,6 +22,7 @@ import {
 } from './runtime/bootstrap';
 import { ApiServer } from './runtime/http/api-server';
 import { allRoutes } from './runtime/http/routes';
+import { rollbackIfPreviousBootCrashed } from './runtime/updates/boot-rollback';
 
 /**
  * BRIKA Hub Entry Point
@@ -45,6 +46,14 @@ import { allRoutes } from './runtime/http/routes';
  * supervisor-issued token is left untouched.
  */
 export async function startHub(): Promise<void> {
+  // Boot-rollback FIRST — must run before anything that could itself
+  // crash (DI, DB open, plugin load). If the previous boot recorded
+  // an attempt without a matching success AND a `brika.previous`
+  // backup exists on disk, this swaps the live binary for the backup
+  // and exits with RESTART_CODE so the supervisor restarts us on the
+  // known-good version. No-op on dev / container / system-package.
+  rollbackIfPreviousBootCrashed();
+
   if (!readCliToken()) {
     writeCliToken();
   }
