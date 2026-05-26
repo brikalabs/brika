@@ -15,6 +15,7 @@
  * - Background: UpdateService checks periodically on startup
  */
 
+import { createWriteStream } from 'node:fs';
 import { chmod, cp, mkdir, rename, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
@@ -542,29 +543,43 @@ async function streamResponseToFile(
   destPath: string,
   totalBytes: number,
   startBytes: number,
-  onProgress: (pct: number) => void
+  onProgress: (pct: number) => void,
+  resumed: boolean
 ): Promise<void> {
-  const writer = Bun.file(destPath).writer();
   const reader = response.body?.getReader();
   if (!reader) {
     throw new Error('Download response has no body');
   }
+  // `Bun.file().writer()` opens at offset 0 and truncates — fine for
+  // a fresh download, fatal for a 206 resume (it would overwrite the
+  // existing partial with the *range* bytes starting at position 0).
+  // Use `fs.createWriteStream` with `flags: 'a'` so resume genuinely
+  // appends to whatever's already on disk.
+  const stream = createWriteStream(destPath, { flags: resumed ? 'a' : 'w' });
   let downloaded = startBytes;
   let lastPct = -1;
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) {
-      break;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) {
+        break;
+      }
+      // Honour backpressure — wait for `drain` if `write` returns false.
+      if (!stream.write(value)) {
+        await new Promise<void>((resolve) => stream.once('drain', resolve));
+      }
+      downloaded += value.byteLength;
+      const pct = Math.round((downloaded / totalBytes) * 100);
+      if (pct !== lastPct) {
+        lastPct = pct;
+        onProgress(pct);
+      }
     }
-    writer.write(value);
-    downloaded += value.byteLength;
-    const pct = Math.round((downloaded / totalBytes) * 100);
-    if (pct !== lastPct) {
-      lastPct = pct;
-      onProgress(pct);
-    }
+  } finally {
+    await new Promise<void>((resolve, reject) => {
+      stream.end((err: Error | null | undefined) => (err ? reject(err) : resolve()));
+    });
   }
-  await writer.end();
 }
 
 async function downloadFile(
@@ -602,7 +617,14 @@ async function downloadFile(
     await Bun.write(destPath, response);
     return;
   }
-  await streamResponseToFile(response, destPath, totalBytes, resumed ? partialSize : 0, onProgress);
+  await streamResponseToFile(
+    response,
+    destPath,
+    totalBytes,
+    resumed ? partialSize : 0,
+    onProgress,
+    resumed
+  );
 }
 
 async function extractTarGz(archivePath: string, destDir: string): Promise<void> {
