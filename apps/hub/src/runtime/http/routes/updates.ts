@@ -7,6 +7,7 @@
 
 import { Conflict, createSSEStream, group, Locked, route } from '@brika/router';
 import { z } from 'zod';
+import { MigrationStatus } from '@/runtime/bootstrap/plugins/migrations';
 import { RESTART_CODE } from '@/runtime/restart-code';
 import { UpdateService } from '@/runtime/updates';
 import { UpdateOrchestrator } from '@/runtime/updates/orchestrator';
@@ -35,6 +36,22 @@ export const systemRoutes = group({
         return {
           ok: true,
         };
+      },
+    }),
+    /**
+     * GET /api/system/migrations — last migration run report.
+     *
+     * Returns `{completedAt, reports}` once the boot-time migration
+     * pass finishes. The UI polls this on mount and renders a banner
+     * if any scope took > 500 ms or reported failures, so the user
+     * sees long migrations rather than wondering why the hub seems
+     * slow on first boot after an upgrade.
+     */
+    route.get({
+      path: '/migrations',
+      handler: ({ inject }) => {
+        const status = inject(MigrationStatus);
+        return status.snapshot;
       },
     }),
   ],

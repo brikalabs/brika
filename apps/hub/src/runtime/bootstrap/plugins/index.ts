@@ -1,5 +1,6 @@
 export { cache } from './cache';
 export { loader } from './loader';
+export { MigrationStatus, migrations } from './migrations';
 export { processGuard } from './process-guard';
 export { remoteAccess } from './remote-access';
 export { routes } from './routes';

@@ -31,6 +31,13 @@ const VersionStateSchema = z.object({
   lastBootAttemptedAt: z.string().nullable(),
   lastBootAttemptedVersion: z.string().nullable(),
   updateHistory: z.array(UpdateHistoryEntry),
+  /**
+   * Per-scope migration ledger. The key is the scope name
+   * (`plugin-data`, `secrets`, …); the value is the ordered list of
+   * migration IDs already applied. `MigrationRunner` consults + appends.
+   * Default `{}` for backwards compat with pre-Phase-2 state files.
+   */
+  scopes: z.record(z.string(), z.array(z.string())).default({}),
 });
 export type VersionState = z.infer<typeof VersionStateSchema>;
 
@@ -45,6 +52,7 @@ function emptyState(currentVersion: string): VersionState {
     lastBootAttemptedAt: null,
     lastBootAttemptedVersion: null,
     updateHistory: [],
+    scopes: {},
   };
 }
 
@@ -105,6 +113,28 @@ export class VersionStateStore {
       ...s,
       updateHistory: [...s.updateHistory, entry].slice(-HISTORY_MAX),
     }));
+  }
+
+  /** Migration IDs already applied for the given scope. */
+  getAppliedMigrations(scope: string): readonly string[] {
+    return this.#state.scopes[scope] ?? [];
+  }
+
+  /**
+   * Append a migration ID to the scope's applied list. Idempotent —
+   * re-applying the same ID is a no-op.
+   */
+  recordMigrationApplied(scope: string, migrationId: string): void {
+    this.#mutate((s) => {
+      const current = s.scopes[scope] ?? [];
+      if (current.includes(migrationId)) {
+        return s;
+      }
+      return {
+        ...s,
+        scopes: { ...s.scopes, [scope]: [...current, migrationId] },
+      };
+    });
   }
 
   /**

@@ -13,6 +13,7 @@ export type LogSource =
   | 'i18n'
   | 'state'
   | 'updates'
+  | 'migrations'
   | 'remote-access'
   | 'secrets';
 
@@ -32,6 +33,7 @@ export const LOG_SOURCES: LogSource[] = [
   'i18n',
   'state',
   'updates',
+  'migrations',
   'remote-access',
   'secrets',
 ];

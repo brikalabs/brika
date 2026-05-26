@@ -11,6 +11,7 @@ import {
   cache,
   I18nLoader,
   loader,
+  migrations,
   PluginLoader,
   processGuard,
   remoteAccess,
@@ -69,6 +70,10 @@ export async function startHub(): Promise<void> {
     )
     .use(sparks())
     .use(routes(allRoutes))
+    // Migrations run before any loader so filesystem reshapes
+    // (plugin-data prune, future secrets re-encryption) don't race
+    // with plugin loaders reading those paths.
+    .use(migrations())
     .use(loader(I18nLoader))
     .use(loader(PluginLoader))
     .use(loader(WorkflowsLoader))
