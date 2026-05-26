@@ -34,7 +34,12 @@ function extractCwd(argv: string[]): string | undefined {
 // before any heavy module loads so a broken sandbox / DI / DB layer in
 // the new binary can't masquerade as a passing self-check. The handler
 // in `@brika/hub/self-check` writes one JSON line to stdout and exits.
-if (process.argv.includes('--self-check')) {
+//
+// Matching is restricted to the FIRST positional argument (argv[2]) — using
+// `.includes()` would false-positive on legitimate args that happen to be
+// the literal `--self-check`, and the probe is only ever spawned as the
+// orchestrator's first arg anyway.
+if (process.argv[2] === '--self-check') {
   const { runSelfCheckAndExit } = await import('@brika/hub/self-check');
   runSelfCheckAndExit();
 }
