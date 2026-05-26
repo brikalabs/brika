@@ -176,7 +176,10 @@ export class UpdateOrchestrator {
   }
 
   async #runApply(options: OrchestratorApplyOptions): Promise<OrchestratorApplyResult> {
-    const startedAt = Date.now();
+    // `performance.now()` is monotonic and immune to wall-clock jumps
+    // (NTP slew, DST). Apply durations measured with `Date.now()`
+    // could go negative or jump by minutes on a clock adjustment mid-run.
+    const startedAt = performance.now();
     try {
       const result = await this.#strategy.apply({
         force: options.force,
@@ -203,7 +206,7 @@ export class UpdateOrchestrator {
         toVersion: result.newVersion,
         channel: options.channel ?? 'stable',
         outcome: 'success',
-        durationMs: Date.now() - startedAt,
+        durationMs: Math.round(performance.now() - startedAt),
       });
       return result;
     } catch (err) {
@@ -222,7 +225,7 @@ export class UpdateOrchestrator {
           toVersion: 'unknown',
           channel: options.channel ?? 'stable',
           outcome: 'failed',
-          durationMs: Date.now() - startedAt,
+          durationMs: Math.round(performance.now() - startedAt),
           reason: message,
         });
       }
