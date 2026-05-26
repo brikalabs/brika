@@ -20,6 +20,38 @@ describe('HubConfig', () => {
     delete process.env.BRIKA_PORT;
     delete process.env.BRIKA_HOME;
     delete process.env.BRIKA_STATIC_DIR;
+    delete process.env.BRIKA_MAX_REQUEST_BODY_BYTES;
+  });
+
+  describe('maxRequestBodyBytes', () => {
+    test('defaults to 1 GiB when env var is unset', () => {
+      const config = get(HubConfig);
+      expect(config.maxRequestBodyBytes).toBe(1024 * 1024 * 1024);
+    });
+
+    test('parses a positive integer from the env var', () => {
+      process.env.BRIKA_MAX_REQUEST_BODY_BYTES = '524288000';
+      const config = get(HubConfig);
+      expect(config.maxRequestBodyBytes).toBe(524_288_000);
+    });
+
+    test('treats 0 as "unlimited" (Number.MAX_SAFE_INTEGER sentinel)', () => {
+      process.env.BRIKA_MAX_REQUEST_BODY_BYTES = '0';
+      const config = get(HubConfig);
+      expect(config.maxRequestBodyBytes).toBe(Number.MAX_SAFE_INTEGER);
+    });
+
+    test.each([
+      '',
+      '   ',
+      'nope',
+      '-100',
+      'NaN',
+    ])('falls back to default on malformed env var: %j', (raw) => {
+      process.env.BRIKA_MAX_REQUEST_BODY_BYTES = raw;
+      const config = get(HubConfig);
+      expect(config.maxRequestBodyBytes).toBe(1024 * 1024 * 1024);
+    });
   });
 
   test('uses defaults when ConfigLoader not available', () => {

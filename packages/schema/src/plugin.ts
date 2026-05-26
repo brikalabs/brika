@@ -292,6 +292,15 @@ const BYTE_UNIT_MULTIPLIERS: Record<string, number> = {
   tib: 1024 ** 4,
 };
 
+/**
+ * Hard ceiling on the byte-string length we'll even attempt to parse.
+ * The longest legitimate value (`"1234567890.123456 tib"`-ish) sits
+ * well below 32 chars; anything larger is either a typo or a fuzzer.
+ * Sonar's `dos` hotspot on the regex below is a false positive — the
+ * pattern is linear, no overlapping quantifiers — but capping the
+ * input is the standard "I read the warning and addressed it" hatch.
+ */
+const BYTE_STRING_MAX_LENGTH = 32;
 const BYTE_STRING_PATTERN = /^\s*(\d+(?:\.\d+)?)\s*([a-z]*)\s*$/i;
 
 /**
@@ -299,9 +308,13 @@ const BYTE_STRING_PATTERN = /^\s*(\d+(?:\.\d+)?)\s*([a-z]*)\s*$/i;
  * `"256 mib"` / `"1024"` into a non-negative integer.
  *
  * Returns `null` for malformed input, NaN/Infinity, negative results,
- * or unknown unit suffixes — the caller turns that into a zod issue.
+ * unknown unit suffixes, or strings exceeding `BYTE_STRING_MAX_LENGTH`.
+ * The caller turns that into a zod issue.
  */
 function parseByteString(raw: string): number | null {
+  if (raw.length > BYTE_STRING_MAX_LENGTH) {
+    return null;
+  }
   const match = BYTE_STRING_PATTERN.exec(raw);
   if (!match?.[1] || match[2] === undefined) {
     return null;

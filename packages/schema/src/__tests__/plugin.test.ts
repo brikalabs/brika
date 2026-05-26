@@ -90,4 +90,13 @@ describe('PluginPackageSchema — resources.fs byte sizes', () => {
       expect(result.success).toBe(false);
     }
   });
+
+  test('rejects byte strings exceeding the 32-char length cap (ReDoS hatch)', () => {
+    // Pad with the only character that's allowed unbounded by the
+    // regex (`\s`) to confirm the length check fires before the
+    // regex engine runs.
+    const tooLong = `${' '.repeat(40)}1gb`;
+    const result = parseResources({ maxFileBytes: tooLong });
+    expect(result.success).toBe(false);
+  });
 });

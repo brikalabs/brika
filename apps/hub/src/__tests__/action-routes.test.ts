@@ -78,4 +78,44 @@ describe('action routes', () => {
 
     expect(res.status).toBe(500);
   });
+
+  test('returns 404 for ACTION_NOT_FOUND error code', async () => {
+    mockLifecycle.getProcess.mockReturnValue({
+      callPluginAction: mock().mockResolvedValue({
+        ok: false,
+        error: { message: 'no such action', code: 'ACTION_NOT_FOUND' },
+      }),
+    });
+    const res = await app.post('/api/plugins/plg-1/actions/missing', {});
+    expect(res.status).toBe(404);
+  });
+
+  test('returns binary response with X-Brika-Binary marker', async () => {
+    const bytes = new Uint8Array([0x89, 0x50, 0x4e, 0x47]);
+    mockLifecycle.getProcess.mockReturnValue({
+      callPluginAction: mock().mockResolvedValue({
+        ok: true,
+        bytes,
+        contentType: 'image/png',
+      }),
+    });
+    const res = await app.post('/api/plugins/plg-1/actions/readPng', {});
+    expect(res.status).toBe(200);
+    expect(res.headers.get('content-type')).toBe('image/png');
+    expect(res.headers.get('x-brika-binary')).toBe('1');
+  });
+
+  test('returns 403 when streamFile target fails the readFile scope', async () => {
+    const denied = Object.assign(new Error('not granted'), { code: 'PERMISSION_DENIED' });
+    mockLifecycle.getProcess.mockReturnValue({
+      callPluginAction: mock().mockResolvedValue({
+        ok: true,
+        stream: { virtualPath: '/cache/secret.txt' },
+      }),
+      resolveStreamPath: mock().mockRejectedValue(denied),
+    });
+    const res = await app.post('/api/plugins/plg-1/actions/leak', {});
+    expect(res.status).toBe(403);
+    expect((res.body as { error: { code: string } }).error.code).toBe('PERMISSION_DENIED');
+  });
 });
