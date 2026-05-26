@@ -46,9 +46,24 @@ export function runSelfCheck(): SelfCheckResult {
  * Argv handler. Emits the JSON line and exits with the appropriate
  * code. Called from `apps/console/src/main.ts` *before* anything else
  * loads — must remain dependency-free beyond `@brika/version`.
+ *
+ * Stdout is piped (the orchestrator captures it), and a piped stream
+ * may buffer past `process.exit()` on some Bun builds. Schedule the
+ * exit from the write callback so the parent always receives the
+ * JSON line before the EOF.
  */
 export function runSelfCheckAndExit(): never {
   const result = runSelfCheck();
-  process.stdout.write(`${JSON.stringify(result)}\n`);
-  process.exit(result.ok ? 0 : 1);
+  const code = result.ok ? 0 : 1;
+  process.stdout.write(`${JSON.stringify(result)}\n`, () => process.exit(code));
+  // Fallback path: if the callback never fires (extremely unlikely
+  // on a piped stdout), exit after a short tick. Without it the
+  // process would hang forever instead of letting the orchestrator
+  // observe a clean exit.
+  setTimeout(() => process.exit(code), 100).unref();
+  // The runtime can't infer that one of the two paths above will exit
+  // — block here so the function genuinely is `never`. Empty
+  // executor: the promise never resolves; one of the exits above
+  // tears the process down first.
+  return new Promise<never>(() => undefined) as never;
 }
