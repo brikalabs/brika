@@ -5,7 +5,7 @@
  * Used by the frontend to show update notifications and trigger upgrades.
  */
 
-import { Conflict, createSSEStream, group, Locked, route } from '@brika/router';
+import { Conflict, createSSEStream, group, route } from '@brika/router';
 import { z } from 'zod';
 import { MigrationStatus } from '@/runtime/bootstrap/plugins/migrations';
 import { RESTART_CODE } from '@/runtime/restart-code';
@@ -14,7 +14,6 @@ import { UpdateService } from '@/runtime/updates';
 import { CompatReportBuilder } from '@/runtime/updates/compat-report';
 import { UpdateOrchestrator } from '@/runtime/updates/orchestrator';
 import { UpdateRefusedError } from '@/runtime/updates/strategies';
-import { UpdateLockHeldError } from '@/runtime/updates/update-lock';
 import type { UpdatePhase } from '@/updater';
 
 export const systemRoutes = group({
@@ -157,19 +156,15 @@ export const updateRoutes = group({
 
               setTimeout(() => process.exit(RESTART_CODE), 1000);
             } catch (error) {
-              if (error instanceof UpdateLockHeldError) {
-                sendProgress('error', error.message, error.message);
-                close();
-                throw new Locked(error.message, { heldBy: error.heldBy });
-              }
-              if (error instanceof UpdateRefusedError) {
-                sendProgress('error', error.message, error.message);
-                close();
-                throw new Conflict(error.message, {
-                  code: error.code,
-                  guidance: error.guidance,
-                });
-              }
+              // Once `createSSEStream` has been returned to the
+              // router, the response is committed — we can't switch
+              // it to a JSON error body. Surface every failure as a
+              // structured `'error'` progress event (the client
+              // already reads `phase: 'error'` + `error` payload).
+              // Throwing after `close()` would only leak an unhandled
+              // promise rejection. Lock contention and strategy
+              // refusal both arrive here, and the typed message text
+              // is informative enough for the client to render.
               const message = error instanceof Error ? error.message : String(error);
               sendProgress('error', message, message);
               close();
