@@ -1,10 +1,43 @@
-import { CodeBlockCopyButton } from '@brika/sdk/ui-kit';
+import { Button, Tooltip, TooltipContent, TooltipTrigger } from '@brika/sdk/ui-kit';
+import { Check, Copy } from '@brika/sdk/ui-kit/icons';
+import { useEffect, useState } from 'react';
 
 interface MetaRowProps {
   label: string;
   value: string;
   mono?: boolean;
   copy?: string;
+}
+
+function CopyButton({ value, label }: Readonly<{ value: string; label: string }>) {
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (!copied) {
+      return;
+    }
+    const t = setTimeout(() => setCopied(false), 1_400);
+    return () => clearTimeout(t);
+  }, [copied]);
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon-xs"
+          className="size-5 shrink-0 [&_svg]:size-3"
+          onClick={async () => {
+            await navigator.clipboard.writeText(value);
+            setCopied(true);
+          }}
+        >
+          {copied ? <Check className="text-success" /> : <Copy />}
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>{copied ? `${label} copied` : `Copy ${label}`}</TooltipContent>
+    </Tooltip>
+  );
 }
 
 export function MetaRow({ label, value, mono, copy }: Readonly<MetaRowProps>) {
@@ -20,16 +53,7 @@ export function MetaRow({ label, value, mono, copy }: Readonly<MetaRowProps>) {
         >
           {value}
         </span>
-        {copy && (
-          <CodeBlockCopyButton
-            value={copy}
-            variant="ghost"
-            size="icon-xs"
-            className="size-5 shrink-0 [&_svg]:size-3"
-            copyLabel={`Copy ${label.toLowerCase()}`}
-            copiedLabel={`${label} copied`}
-          />
-        )}
+        {copy && <CopyButton value={copy} label={label.toLowerCase()} />}
       </dd>
     </div>
   );
