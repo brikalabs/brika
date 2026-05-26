@@ -98,4 +98,40 @@ describe('UpdateLock', () => {
     expect(lock.isHeld()).toBe(true);
     lock.release();
   });
+
+  test('release() does NOT delete a lock that was stolen by a stale-break', () => {
+    // A held the lock, then a long pause (real or simulated via clock
+    // manipulation in production) made A's lock stale. B broke it and
+    // acquired fresh. When A finally calls release(), it must NOT
+    // unlink B's lock file.
+    const a = new UpdateLock(tmp);
+    a.acquire();
+    // Simulate stale-break by overwriting the lock file with someone
+    // else's metadata while A still thinks it owns it.
+    writeFileSync(
+      join(tmp, '.update.lock'),
+      `${JSON.stringify({ pid: 99999, startedAt: '2099-01-01T00:00:00.000Z' })}\n`
+    );
+
+    a.release();
+
+    // B's lock file must still be present.
+    expect(existsSync(join(tmp, '.update.lock'))).toBe(true);
+  });
+
+  test('peekHolder() returns metadata without acquiring', () => {
+    const a = new UpdateLock(tmp);
+    a.acquire();
+    try {
+      const b = new UpdateLock(tmp);
+      const held = b.peekHolder();
+      expect(held).not.toBeNull();
+      expect(held?.pid).toBe(process.pid);
+      // peek doesn't change held state
+      expect(b.isHeld()).toBe(true);
+    } finally {
+      a.release();
+    }
+    expect(new UpdateLock(tmp).peekHolder()).toBeNull();
+  });
 });
