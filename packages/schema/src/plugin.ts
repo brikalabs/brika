@@ -293,15 +293,21 @@ const BYTE_UNIT_MULTIPLIERS: Record<string, number> = {
 };
 
 /**
- * Hard ceiling on the byte-string length we'll even attempt to parse.
- * The longest legitimate value (`"1234567890.123456 tib"`-ish) sits
- * well below 32 chars; anything larger is either a typo or a fuzzer.
- * Sonar's `dos` hotspot on the regex below is a false positive — the
- * pattern is linear, no overlapping quantifiers — but capping the
- * input is the standard "I read the warning and addressed it" hatch.
+ * Hard ceiling on the byte-string length we'll attempt to parse —
+ * the longest legitimate value (`"1234567890.123456 tib"`-ish) is
+ * well under 32 chars. Anything larger is a typo or a fuzzer.
  */
 const BYTE_STRING_MAX_LENGTH = 32;
-const BYTE_STRING_PATTERN = /^\s*(\d+(?:\.\d+)?)\s*([a-z]*)\s*$/i;
+
+/**
+ * Pattern: digits + optional `.fraction` + optional single space +
+ * unit letters, anchored. Trimmed input only — leading / trailing
+ * whitespace is stripped by the caller, which avoids the multiple
+ * `\s*` quantifiers Sonar treats as a ReDoS hotspot. The remaining
+ * character classes (`\d`, `[a-z]`) don't overlap, so the regex is
+ * strictly linear.
+ */
+const BYTE_STRING_PATTERN = /^(\d+(?:\.\d+)?) ?([a-z]*)$/i;
 
 /**
  * Parse a human-readable byte count like `"500mb"` / `"2 gb"` /
@@ -315,7 +321,8 @@ function parseByteString(raw: string): number | null {
   if (raw.length > BYTE_STRING_MAX_LENGTH) {
     return null;
   }
-  const match = BYTE_STRING_PATTERN.exec(raw);
+  const trimmed = raw.trim();
+  const match = BYTE_STRING_PATTERN.exec(trimmed);
   if (!match?.[1] || match[2] === undefined) {
     return null;
   }
