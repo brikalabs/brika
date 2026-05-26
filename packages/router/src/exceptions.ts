@@ -49,9 +49,17 @@ export class NotFound extends HttpException {
 
 /** 409 Conflict */
 export class Conflict extends HttpException {
-  constructor(message = 'Conflict') {
-    super(409, message);
+  constructor(message = 'Conflict', data?: Record<string, unknown>) {
+    super(409, message, data);
     this.name = 'Conflict';
+  }
+}
+
+/** 423 Locked — resource is held by another caller. */
+export class Locked extends HttpException {
+  constructor(message = 'Locked', data?: Record<string, unknown>) {
+    super(423, message, data);
+    this.name = 'Locked';
   }
 }
 
