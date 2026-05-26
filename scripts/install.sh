@@ -233,18 +233,24 @@ install_brika() {
 
   download "$DOWNLOAD_URL" "$TMP_DIR/$ASSET_NAME"
 
-  # Verify checksum
+  # Verify checksum — fail closed when no checksum was published.
+  # Silently skipping (the previous behaviour) opened a hole: a
+  # tampered release-meta.json that simply OMITS the asset key would
+  # bypass integrity verification entirely.
   EXPECTED=$(grep "\"${ASSET_NAME}\"" "$META_FILE" | sed 's/.*"[^"]*": *"\([a-f0-9]*\)".*/\1/')
-  if [ -n "$EXPECTED" ]; then
-    ACTUAL=$(sha256_file "$TMP_DIR/$ASSET_NAME")
-    if [ "$ACTUAL" != "$EXPECTED" ]; then
-      error "Checksum mismatch for $ASSET_NAME"
-      error "  expected: $EXPECTED"
-      error "  got:      $ACTUAL"
-      exit 1
-    fi
-    dim "  Checksum verified"
+  if [ -z "$EXPECTED" ]; then
+    error "No checksum recorded for $ASSET_NAME in release-meta.json"
+    error "  refusing to install an unverifiable artifact"
+    exit 1
   fi
+  ACTUAL=$(sha256_file "$TMP_DIR/$ASSET_NAME")
+  if [ "$ACTUAL" != "$EXPECTED" ]; then
+    error "Checksum mismatch for $ASSET_NAME"
+    error "  expected: $EXPECTED"
+    error "  got:      $ACTUAL"
+    exit 1
+  fi
+  dim "  Checksum verified"
 
   # Verify signature (when ceremony is live + minisign CLI present)
   if [ -n "$BRIKA_MINISIGN_PUBKEY" ]; then
