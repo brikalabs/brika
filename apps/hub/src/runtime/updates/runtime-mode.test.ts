@@ -122,10 +122,8 @@ describe('canSelfUpdate', () => {
     expect(canSelfUpdate('supervised')).toBe(true);
   });
 
-  test('dev can self-update (refusal is enforced by strategy, not by this flag)', () => {
-    // The flag answers "is the runtime *capable* of in-place updates";
-    // the strategy refuses dev anyway with a friendlier error.
-    expect(canSelfUpdate('dev')).toBe(true);
+  test('dev cannot self-update — matches DevStrategy.canApply()', () => {
+    expect(canSelfUpdate('dev')).toBe(false);
   });
 
   test('container cannot self-update', () => {

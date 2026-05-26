@@ -98,8 +98,10 @@ export function detectRuntimeMode(): RuntimeMode {
 /**
  * Whether the current runtime can perform an in-place update at all.
  * `container` and `system-package` modes refuse — the operator must
- * update via their package manager / image pull instead.
+ * update via their package manager / image pull instead. `dev` also
+ * refuses (there's no compiled binary to replace), matching the
+ * synchronous `canApply()` behavior of {@link DevStrategy}.
  */
 export function canSelfUpdate(mode: RuntimeMode): boolean {
-  return mode === 'standalone' || mode === 'supervised' || mode === 'dev';
+  return mode === 'standalone' || mode === 'supervised';
 }
