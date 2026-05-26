@@ -388,8 +388,10 @@ export async function applyUpdate(options?: ApplyUpdateOptions): Promise<{
     throw new Error(`No binary available for ${process.platform}/${process.arch}`);
   }
 
-  // Download
-  const tmpDir = join(tmpdir(), `brika-update-${Date.now()}`);
+  // Deterministic tmpDir on (version, asset). Lets a retry after a
+  // network drop reuse the partial archive on disk — the next download
+  // sends a Range request and resumes instead of re-fetching from byte 0.
+  const tmpDir = join(tmpdir(), 'brika-update', `${cmp.latestVersion}-${asset.name}`);
   await mkdir(tmpDir, {
     recursive: true,
   });
@@ -530,33 +532,31 @@ async function verifyChecksum(
 // File operations
 // ─────────────────────────────────────────────────────────────────────────────
 
-async function downloadFile(
-  url: string,
+async function detectPartial(destPath: string): Promise<number> {
+  const existing = Bun.file(destPath);
+  return (await existing.exists()) ? existing.size : 0;
+}
+
+async function streamResponseToFile(
+  response: Response,
   destPath: string,
   totalBytes: number,
-  onProgress?: (pct: number) => void
+  startBytes: number,
+  onProgress: (pct: number) => void
 ): Promise<void> {
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`Download failed: ${response.status} ${response.statusText}`);
+  const writer = Bun.file(destPath).writer();
+  const reader = response.body?.getReader();
+  if (!reader) {
+    throw new Error('Download response has no body');
   }
-
-  if (!onProgress || !response.body || totalBytes <= 0) {
-    await Bun.write(destPath, response);
-    return;
-  }
-
-  const chunks: Uint8Array[] = [];
-  const reader = response.body.getReader();
-  let downloaded = 0;
+  let downloaded = startBytes;
   let lastPct = -1;
-
   while (true) {
     const { done, value } = await reader.read();
     if (done) {
       break;
     }
-    chunks.push(value);
+    writer.write(value);
     downloaded += value.byteLength;
     const pct = Math.round((downloaded / totalBytes) * 100);
     if (pct !== lastPct) {
@@ -564,8 +564,45 @@ async function downloadFile(
       onProgress(pct);
     }
   }
+  await writer.end();
+}
 
-  await Bun.write(destPath, Buffer.concat(chunks));
+async function downloadFile(
+  url: string,
+  destPath: string,
+  totalBytes: number,
+  onProgress?: (pct: number) => void
+): Promise<void> {
+  const partialSize = await detectPartial(destPath);
+
+  // Partial already matches expected size — skip the network entirely.
+  // Downstream checksum verification catches any corruption.
+  if (totalBytes > 0 && partialSize === totalBytes) {
+    onProgress?.(100);
+    return;
+  }
+
+  const init: RequestInit =
+    partialSize > 0 && totalBytes > 0 && partialSize < totalBytes
+      ? { headers: { Range: `bytes=${partialSize}-` } }
+      : {};
+
+  const response = await fetch(url, init);
+  if (!response.ok && response.status !== 206) {
+    throw new Error(`Download failed: ${response.status} ${response.statusText}`);
+  }
+
+  const resumed = response.status === 206;
+  // 200 with a stale partial → truncate before writing the fresh body.
+  if (!resumed && partialSize > 0) {
+    await Bun.write(destPath, '');
+  }
+
+  if (!onProgress || !response.body || totalBytes <= 0) {
+    await Bun.write(destPath, response);
+    return;
+  }
+  await streamResponseToFile(response, destPath, totalBytes, resumed ? partialSize : 0, onProgress);
 }
 
 async function extractTarGz(archivePath: string, destDir: string): Promise<void> {
