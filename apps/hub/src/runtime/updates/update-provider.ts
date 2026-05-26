@@ -33,9 +33,14 @@ export interface ApplyResult {
   newCommit: string;
 }
 
+export interface ProviderCheckOptions {
+  pinnedVersion?: string | null;
+}
+
 export interface ProviderApplyOptions {
   force?: boolean;
   channel?: UpdateChannelId;
+  pinnedVersion?: string | null;
   onProgress?: (phase: UpdatePhase, detail: string) => void;
 }
 
@@ -54,7 +59,7 @@ export interface ProviderApplyOptions {
  * `abstract` would give us, just at runtime.
  */
 export class UpdateProvider {
-  check(_channel: UpdateChannelId): Promise<UpdateInfo> {
+  check(_channel: UpdateChannelId, _options?: ProviderCheckOptions): Promise<UpdateInfo> {
     throw new Error(
       'UpdateProvider.check is not implemented — bootstrap must register a concrete provider.'
     );
@@ -75,14 +80,15 @@ export class UpdateProvider {
  */
 @injectable()
 export class GitHubUpdateProvider extends UpdateProvider {
-  override check(channel: UpdateChannelId): Promise<UpdateInfo> {
-    return checkForUpdate(channel);
+  override check(channel: UpdateChannelId, options?: ProviderCheckOptions): Promise<UpdateInfo> {
+    return checkForUpdate(channel, options);
   }
 
   override apply(options: ProviderApplyOptions): Promise<ApplyResult> {
     const args: ApplyUpdateOptions = {
       force: options.force,
       channel: options.channel,
+      pinnedVersion: options.pinnedVersion,
       onProgress: options.onProgress,
     };
     return applyUpdate(args);

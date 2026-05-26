@@ -19,7 +19,7 @@ import { chmod, cp, mkdir, rename, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { buildInfo } from './build-info';
-import { HUB_GITHUB_RELEASES_API, HUB_GITHUB_RELEASES_LIST_API, hub } from './hub';
+import { HUB_GITHUB_RELEASES_API, HUB_GITHUB_RELEASES_LIST_API, HUB_REPO, hub } from './hub';
 import { brikaContext } from './runtime/context/brika-context';
 import { DEFAULT_CHANNEL_ID, type UpdateChannelId } from './runtime/updates/channels';
 import { GithubEtagCache } from './runtime/updates/etag-cache';
@@ -215,28 +215,54 @@ function getEtagCache(): GithubEtagCache {
   return etagCache;
 }
 
+/**
+ * Match heuristic for the beta channel — pre-release tags that look
+ * like "release candidates" (`-rc.N`, `-beta.N`). Everything else
+ * (canary, nightly, ad-hoc pre-releases) routes through the canary
+ * channel instead.
+ */
+const BETA_TAG_RE = /-(?:rc|beta)\b/;
+
 /** Fetch latest release info from GitHub API for the given channel */
 async function fetchLatestRelease(
-  channel: UpdateChannelId
+  channel: UpdateChannelId,
+  options?: { pinnedVersion?: string | null }
 ): Promise<{ release: GitHubRelease; meta: ReleaseMeta | null }> {
   const cache = getEtagCache();
   const headers = { Accept: 'application/vnd.github+json' };
+
+  if (channel === 'pinned') {
+    const version = options?.pinnedVersion;
+    if (typeof version !== 'string' || version.length === 0) {
+      throw new Error(
+        'Pinned channel selected but no version was set. Configure it in Settings → Updates.'
+      );
+    }
+    const tag = version.startsWith('v') ? version : `v${version}`;
+    const url = `https://api.github.com/repos/${HUB_REPO}/releases/tags/${encodeURIComponent(tag)}`;
+    const { body } = await cache.fetchJson<GitHubRelease>(url, { headers });
+    return { release: body, meta: await fetchReleaseMeta(body) };
+  }
 
   if (channel === 'stable') {
     const { body } = await cache.fetchJson<GitHubRelease>(HUB_GITHUB_RELEASES_API, { headers });
     return { release: body, meta: await fetchReleaseMeta(body) };
   }
 
-  // canary: list releases, pick the most recent pre-release
+  // beta + canary: list pre-releases and pick by heuristic.
   const { body } = await cache.fetchJson<GitHubRelease[]>(
     `${HUB_GITHUB_RELEASES_LIST_API}?per_page=10`,
     { headers }
   );
-  const prerelease = body.find((r) => r.prerelease);
-  if (!prerelease) {
-    throw new Error('No canary release found');
+  const prereleases = body.filter((r) => r.prerelease);
+  const pick =
+    channel === 'beta'
+      ? prereleases.find((r) => BETA_TAG_RE.test(r.tag_name))
+      : (prereleases.find((r) => !BETA_TAG_RE.test(r.tag_name)) ?? prereleases[0]);
+  if (!pick) {
+    throw new Error(`No ${channel} release found`);
   }
-  return { release: prerelease, meta: await fetchReleaseMeta(prerelease) };
+  return { release: pick, meta: await fetchReleaseMeta(pick) };
 }
 
 interface ReleaseComparison {
@@ -294,14 +320,20 @@ function compareRelease(
   };
 }
 
+export interface CheckOptions {
+  /** Required when `channel === 'pinned'`; ignored otherwise. */
+  readonly pinnedVersion?: string | null;
+}
+
 /**
  * Check for updates without applying them.
  * Safe to call from background tasks or API.
  */
 export async function checkForUpdate(
-  channel: UpdateChannelId = DEFAULT_CHANNEL_ID
+  channel: UpdateChannelId = DEFAULT_CHANNEL_ID,
+  options?: CheckOptions
 ): Promise<UpdateInfo> {
-  const { release, meta } = await fetchLatestRelease(channel);
+  const { release, meta } = await fetchLatestRelease(channel, options);
   const cmp = compareRelease(release, meta, channel);
 
   return {
@@ -324,6 +356,8 @@ export async function checkForUpdate(
 export interface ApplyUpdateOptions {
   force?: boolean;
   channel?: UpdateChannelId;
+  /** Required when `channel === 'pinned'`; ignored otherwise. */
+  pinnedVersion?: string | null;
   onProgress?: (phase: UpdatePhase, detail: string) => void;
 }
 
@@ -339,10 +373,10 @@ export async function applyUpdate(options?: ApplyUpdateOptions): Promise<{
   newVersion: string;
   newCommit: string;
 }> {
-  const { force, channel = DEFAULT_CHANNEL_ID, onProgress } = options ?? {};
+  const { force, channel = DEFAULT_CHANNEL_ID, pinnedVersion, onProgress } = options ?? {};
 
   onProgress?.('checking', 'Checking for updates...');
-  const { release, meta } = await fetchLatestRelease(channel);
+  const { release, meta } = await fetchLatestRelease(channel, { pinnedVersion });
   const cmp = compareRelease(release, meta, channel);
 
   if (!force && !cmp.versionBump && !cmp.devBuild) {

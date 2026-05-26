@@ -266,6 +266,19 @@ export class StateStore {
     this.#setSetting('updateChannel', channel);
   }
 
+  /**
+   * Version the user pinned to (only meaningful when channel === 'pinned').
+   * Stored as a separate setting so it survives toggling between channels
+   * — switching to canary and back to pinned preserves the prior pin.
+   */
+  getPinnedVersion(): string | null {
+    return this.#getSetting<string | null>('updatePinnedVersion', null);
+  }
+
+  setPinnedVersion(version: string | null): void {
+    this.#setSetting('updatePinnedVersion', version);
+  }
+
   getHubTimezone(): string | null {
     return this.#getSetting<string | null>('hubTimezone', null);
   }

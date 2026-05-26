@@ -86,7 +86,9 @@ export class UpdateService {
 
   async #doRefresh(): Promise<UpdateInfo> {
     try {
-      this.#cachedInfo = await this.#provider.check(this.#state.getUpdateChannel());
+      this.#cachedInfo = await this.#provider.check(this.#state.getUpdateChannel(), {
+        pinnedVersion: this.#state.getPinnedVersion(),
+      });
       this.#lastCheckedAt = Date.now();
 
       if (this.#cachedInfo.updateAvailable) {

@@ -27,6 +27,7 @@ import { VersionStateStore } from './version-state';
 export interface OrchestratorApplyOptions {
   force?: boolean;
   channel?: UpdateChannelId;
+  pinnedVersion?: string | null;
   onProgress?: (phase: UpdatePhase, detail: string) => void;
 }
 
@@ -167,6 +168,7 @@ export class UpdateOrchestrator {
       const result = await this.#strategy.apply({
         force: options.force,
         channel: options.channel,
+        pinnedVersion: options.pinnedVersion,
         onProgress: (phase, detail) => {
           this.#audit.append('apply.phase', { phase, detail });
           options.onProgress?.(phase, detail);

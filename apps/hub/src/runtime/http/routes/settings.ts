@@ -120,6 +120,35 @@ export const settingsRoutes = group({
       },
     }),
 
+    /** Get the pinned version (null when not on the `pinned` channel). */
+    route.get({
+      path: '/update-pinned-version',
+      handler: ({ inject }) => {
+        return { version: inject(StateStore).getPinnedVersion() };
+      },
+    }),
+
+    /**
+     * Set the pinned version. Pass an empty string or omit to clear.
+     * Validation is minimal — semver-ish, leading `v` optional, no
+     * spaces. The actual "is this a known release tag?" check happens
+     * lazily on the next `check` (GitHub returns 404 if the tag is
+     * bogus).
+     */
+    route.put({
+      path: '/update-pinned-version',
+      body: z.object({
+        version: z
+          .string()
+          .regex(/^v?\d+\.\d+\.\d+(?:[-+][\w.-]+)?$/u)
+          .nullable(),
+      }),
+      handler: ({ body, inject }) => {
+        inject(StateStore).setPinnedVersion(body.version);
+        return { version: body.version };
+      },
+    }),
+
     /** List all custom themes */
     route.get({
       path: '/custom-themes',

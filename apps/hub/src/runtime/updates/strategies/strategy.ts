@@ -45,6 +45,7 @@ export class UpdateRefusedError extends Error {
 export interface StrategyApplyOptions {
   force?: boolean;
   channel?: UpdateChannelId;
+  pinnedVersion?: string | null;
   onProgress?: (phase: UpdatePhase, detail: string) => void;
 }
 

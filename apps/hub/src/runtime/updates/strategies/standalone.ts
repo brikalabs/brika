@@ -27,6 +27,7 @@ export class StandaloneStrategy implements UpdateStrategy {
     return applyUpdate({
       force: options.force,
       channel: options.channel,
+      pinnedVersion: options.pinnedVersion,
       onProgress: options.onProgress,
     });
   }

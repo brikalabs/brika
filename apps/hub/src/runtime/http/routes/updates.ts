@@ -9,6 +9,7 @@ import { Conflict, createSSEStream, group, Locked, route } from '@brika/router';
 import { z } from 'zod';
 import { MigrationStatus } from '@/runtime/bootstrap/plugins/migrations';
 import { RESTART_CODE } from '@/runtime/restart-code';
+import { StateStore } from '@/runtime/state/state-store';
 import { UpdateService } from '@/runtime/updates';
 import { CompatReportBuilder } from '@/runtime/updates/compat-report';
 import { UpdateOrchestrator } from '@/runtime/updates/orchestrator';
@@ -138,8 +139,11 @@ export const updateRoutes = group({
 
           (async () => {
             try {
+              const state = inject(StateStore);
               const result = await orchestrator.apply({
                 force: query.force,
+                channel: state.getUpdateChannel(),
+                pinnedVersion: state.getPinnedVersion(),
                 onProgress(phase, detail) {
                   sendProgress(phase, detail);
                 },
