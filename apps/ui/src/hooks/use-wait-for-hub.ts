@@ -54,9 +54,15 @@ export function useWaitForHub(onTimeout?: () => void, options?: WaitForHubOption
               globalThis.location.reload();
               return;
             }
-            // Soft reconnect: refetch all queries against the new hub
-            // and let the caller re-establish SSE streams.
-            queryClient.invalidateQueries();
+            // Soft reconnect. Invalidate *only the active* queries so
+            // the freshly-restarted hub isn't thundering-herded by a
+            // burst of refetches for caches that no mounted component
+            // is even reading. Idle queries refresh lazily on next
+            // mount. The caller re-establishes SSE streams in
+            // `onReconnect` (the shared event-source pool auto-
+            // reconnects on its own EventSource error event, so most
+            // consumers don't need to do anything here).
+            queryClient.invalidateQueries({ type: 'active' });
             options?.onReconnect?.();
           }
         }

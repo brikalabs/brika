@@ -7,6 +7,8 @@ export function ChannelSelector() {
   const { mutate, isPending } = useSetUpdateChannel();
   const current = data?.channel ?? 'stable';
 
+  const activeChannel = UPDATE_CHANNELS.find((c) => c.id === current);
+
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap gap-2">
@@ -29,6 +31,9 @@ export function ChannelSelector() {
           );
         })}
       </div>
+      {activeChannel && (
+        <p className="text-muted-foreground text-xs">{activeChannel.description}</p>
+      )}
       {current === 'pinned' && <PinnedVersionInput />}
     </div>
   );
