@@ -9,13 +9,28 @@ import {
 } from '@brika/clay/components/dialog';
 import { ProgressDisplay } from '@brika/clay/components/progress-display';
 import { Separator } from '@brika/clay/components/separator';
-import { ArrowDownToLine, ArrowRight, ExternalLink, Loader2, RefreshCw, Tag } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import {
+  AlertTriangle,
+  ArrowDownToLine,
+  ArrowRight,
+  ExternalLink,
+  Loader2,
+  RefreshCw,
+  Tag,
+} from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Markdown } from '@/features/plugins/components/Markdown';
 import { useWaitForHub } from '@/hooks/use-wait-for-hub';
 import type { LocaleUtils } from '@/lib/use-locale';
 import { useLocale } from '@/lib/use-locale';
-import { type HubUpdateInfo, type UpdateProgress, updateApi } from './api';
+import {
+  type CompatReport,
+  type HubUpdateInfo,
+  type UpdateProgress,
+  updateApi,
+  updateKeys,
+} from './api';
 
 type DialogState = 'idle' | 'updating' | 'restarting' | 'error';
 
@@ -43,7 +58,61 @@ interface IdleContentProps {
   t: LocaleUtils['t'];
 }
 
+function pluralize(n: number, singular: string, plural: string): string {
+  return n === 1 ? singular : plural;
+}
+
+function compatHeadline(report: CompatReport): string {
+  if (report.willDisableCount > 0) {
+    return `${report.willDisableCount} ${pluralize(report.willDisableCount, 'plugin', 'plugins')} will be disabled`;
+  }
+  return `${report.missingRequirementsCount} ${pluralize(report.missingRequirementsCount, 'plugin', 'plugins')} lack a compatibility declaration`;
+}
+
+function CompatWarning({ report }: Readonly<{ report: CompatReport }>) {
+  if (report.willDisableCount === 0 && report.missingRequirementsCount === 0) {
+    return null;
+  }
+  const incompatible = report.plugins.filter((p) => !p.willBeCompatible);
+  return (
+    <div className="rounded-md border border-amber-500/30 bg-amber-500/5 px-4 py-3 text-sm">
+      <div className="flex items-center gap-2 font-medium">
+        <AlertTriangle className="size-4 text-amber-500" />
+        <span>{compatHeadline(report)}</span>
+      </div>
+      {incompatible.length > 0 && (
+        <ul className="mt-2 list-disc space-y-0.5 pl-5 text-muted-foreground text-xs">
+          {incompatible.slice(0, 5).map((p) => (
+            <li key={p.name}>
+              <span className="font-mono">{p.name}</span>
+              {p.currentRequires !== null && (
+                <span className="text-muted-foreground/70"> requires {p.currentRequires}</span>
+              )}
+            </li>
+          ))}
+          {incompatible.length > 5 && (
+            <li className="text-muted-foreground/70">…and {incompatible.length - 5} more</li>
+          )}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 function IdleContent({ updateInfo, t }: Readonly<IdleContentProps>) {
+  const { data: compat } = useQuery({
+    queryKey: updateKeys.compat,
+    queryFn: updateApi.compat,
+    enabled: updateInfo.updateAvailable,
+  });
+  return <IdleContentBody updateInfo={updateInfo} t={t} compat={compat} />;
+}
+
+function IdleContentBody({
+  updateInfo,
+  t,
+  compat,
+}: Readonly<IdleContentProps & { compat: CompatReport | undefined }>) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-center gap-6 rounded-lg border bg-muted/30 py-4">
@@ -79,6 +148,8 @@ function IdleContent({ updateInfo, t }: Readonly<IdleContentProps>) {
           )}
         </div>
       </div>
+
+      {compat !== undefined && <CompatWarning report={compat} />}
 
       {updateInfo.releaseNotes && <ReleaseNotes updateInfo={updateInfo} t={t} />}
     </div>

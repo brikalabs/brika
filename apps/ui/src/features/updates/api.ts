@@ -59,9 +59,25 @@ export interface UpdateProgress {
 // API
 // ─────────────────────────────────────────────────────────────────────────────
 
+export interface CompatPluginEntry {
+  name: string;
+  currentRequires: string | null;
+  willBeCompatible: boolean;
+}
+
+export interface CompatReport {
+  targetVersion: string;
+  plugins: readonly CompatPluginEntry[];
+  willDisableCount: number;
+  missingRequirementsCount: number;
+}
+
 export const updateApi = {
   /** Check for available hub updates */
   check: () => fetcher<HubUpdateInfo>('/api/system/update'),
+
+  /** Pre-flight compatibility against the latest available version. */
+  compat: () => fetcher<CompatReport>('/api/system/update/compat'),
 
   /** Apply update with SSE progress streaming. Pass force=true to reinstall current version. */
   applyStream: (options?: { force?: boolean }): Promise<ProgressStream<UpdateProgress>> =>
@@ -74,6 +90,7 @@ export const updateApi = {
 
 export const updateKeys = {
   check: ['system', 'update'] as const,
+  compat: ['system', 'update', 'compat'] as const,
 };
 
 export const channelKeys = {

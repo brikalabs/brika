@@ -10,6 +10,7 @@ import { z } from 'zod';
 import { MigrationStatus } from '@/runtime/bootstrap/plugins/migrations';
 import { RESTART_CODE } from '@/runtime/restart-code';
 import { UpdateService } from '@/runtime/updates';
+import { CompatReportBuilder } from '@/runtime/updates/compat-report';
 import { UpdateOrchestrator } from '@/runtime/updates/orchestrator';
 import { UpdateRefusedError } from '@/runtime/updates/strategies';
 import { UpdateLockHeldError } from '@/runtime/updates/update-lock';
@@ -73,6 +74,22 @@ export const updateRoutes = group({
           ...info,
           lastCheckedAt: updates.lastCheckedAt,
         };
+      },
+    }),
+
+    /**
+     * GET /api/system/update/compat
+     * Pre-flight compatibility report against the latest available
+     * version. Used by the UpdateDialog to surface
+     * "this update will disable N plugins" before the user commits.
+     */
+    route.get({
+      path: '/compat',
+      handler: async ({ inject }) => {
+        const updates = inject(UpdateService);
+        const builder = inject(CompatReportBuilder);
+        const info = await updates.check();
+        return builder.build(info.latestVersion);
       },
     }),
 
