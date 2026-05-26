@@ -1,7 +1,8 @@
 import { useCallAction } from '@brika/sdk/ui-kit/hooks';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { readEntry } from '../actions';
-import { isAudioFile, isImageFile, isPdfFile, isTextFile, isVideoFile, joinPath } from '../helpers';
+import { previewKindFor } from '../lib/file-kind';
+import { joinPath } from '../lib/path';
 import type { FsEntry, PreviewState } from '../types';
 
 interface UsePreviewOptions {
@@ -14,25 +15,6 @@ interface UsePreviewResult {
   open: (entry: FsEntry) => Promise<void>;
   close: () => void;
   closeIfMatches: (name: string) => void;
-}
-
-function previewKindFor(name: string): PreviewState['kind'] {
-  if (isImageFile(name)) {
-    return 'image';
-  }
-  if (isPdfFile(name)) {
-    return 'pdf';
-  }
-  if (isAudioFile(name)) {
-    return 'audio';
-  }
-  if (isVideoFile(name)) {
-    return 'video';
-  }
-  if (isTextFile(name)) {
-    return 'text';
-  }
-  return 'generic';
 }
 
 /**

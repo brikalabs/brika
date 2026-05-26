@@ -1,5 +1,5 @@
 import { useCallAction } from '@brika/sdk/ui-kit/hooks';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { listEntries } from '../actions';
 import type { FsEntry } from '../types';
 
@@ -35,18 +35,29 @@ export function useDirectory(path: string): UseDirectoryResult {
   const [entries, setEntries] = useState<FsEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Monotonic request id — when `path` flips A → B → A faster than the
+  // server can answer, the older fetch must not clobber state seeded by
+  // the newer one. Same pattern as `use-preview.ts`.
+  const requestIdRef = useRef(0);
+
   const fetchPath = useCallback(
     async (target: string) => {
+      const id = ++requestIdRef.current;
       setLoading(true);
       try {
         const data = await callAction(listEntries, { path: target });
+        if (id !== requestIdRef.current) {
+          return;
+        }
         setPermissionDenied(false);
         setEntries(data.entries);
       } catch {
         // `onError` above already handled the permission-denied case;
         // toast covers everything else.
       } finally {
-        setLoading(false);
+        if (id === requestIdRef.current) {
+          setLoading(false);
+        }
       }
     },
     [callAction]

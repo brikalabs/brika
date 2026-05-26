@@ -1,7 +1,7 @@
 import { useCallAction } from '@brika/sdk/ui-kit/hooks';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { writeEntry } from '../actions';
-import { joinPath } from '../helpers';
+import { joinPath } from '../lib/path';
 import type { UploadItem } from '../types';
 
 const CLEAR_DONE_AFTER_MS = 2_000;
@@ -39,6 +39,20 @@ export function useUploads({ onAllDone }: UseUploadsOptions): UseUploadsResult {
   const callAction = useCallAction({ toastOnError: false });
   const [queue, setQueue] = useState<UploadItem[]>([]);
 
+  // Track the pending "clear done rows" timer so unmount can cancel it;
+  // without this React warns about setState on an unmounted component
+  // when the user navigates away mid-batch.
+  const clearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(
+    () => () => {
+      if (clearTimerRef.current !== null) {
+        clearTimeout(clearTimerRef.current);
+        clearTimerRef.current = null;
+      }
+    },
+    []
+  );
+
   const upload = useCallback(
     async (files: FileList | File[], targetDir: string) => {
       const fileArray = Array.from(files);
@@ -46,8 +60,11 @@ export function useUploads({ onAllDone }: UseUploadsOptions): UseUploadsResult {
         return;
       }
 
+      // `crypto.randomUUID()` over `${Date.now()}-${file.name}` — two
+      // identical files dropped in the same millisecond would otherwise
+      // share an id and the status updates would clobber each other.
       const newItems: UploadItem[] = fileArray.map((file) => ({
-        id: `${Date.now()}-${file.name}`,
+        id: crypto.randomUUID(),
         file,
         status: 'pending',
       }));
@@ -69,7 +86,13 @@ export function useUploads({ onAllDone }: UseUploadsOptions): UseUploadsResult {
       }
 
       await onAllDone();
-      setTimeout(() => setQueue(dropDone), CLEAR_DONE_AFTER_MS);
+      if (clearTimerRef.current !== null) {
+        clearTimeout(clearTimerRef.current);
+      }
+      clearTimerRef.current = setTimeout(() => {
+        clearTimerRef.current = null;
+        setQueue(dropDone);
+      }, CLEAR_DONE_AFTER_MS);
     },
     [callAction, onAllDone]
   );

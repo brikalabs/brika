@@ -6,7 +6,7 @@ import {
   ArrowUpNarrowWide,
   Clock,
 } from '@brika/sdk/ui-kit/icons';
-import type { SortKey } from './types';
+import type { SortKey } from '../types';
 
 interface SortOption {
   value: SortKey;
@@ -23,12 +23,23 @@ const SORT_OPTIONS: SortOption[] = [
   { value: 'smallest', label: 'Smallest first', icon: <ArrowUpNarrowWide className="size-3.5" /> },
 ];
 
+function isSortKey(value: string): value is SortKey {
+  return SORT_OPTIONS.some((opt) => opt.value === value);
+}
+
 export function SortMenu({
   value,
   onChange,
 }: Readonly<{ value: SortKey; onChange: (key: SortKey) => void }>) {
   return (
-    <Select value={value} onValueChange={(v) => onChange(v as SortKey)}>
+    <Select
+      value={value}
+      onValueChange={(v) => {
+        if (isSortKey(v)) {
+          onChange(v);
+        }
+      }}
+    >
       <SelectTrigger size="sm" className="w-40 gap-1.5">
         <SelectValue />
       </SelectTrigger>

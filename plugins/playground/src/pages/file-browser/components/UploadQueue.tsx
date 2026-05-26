@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@brika/sdk/ui-kit';
 import { Loader2 } from '@brika/sdk/ui-kit/icons';
-import type { UploadItem } from './types';
+import type { UploadItem } from '../types';
 
 function StatusDot({ status }: Readonly<{ status: UploadItem['status'] }>) {
   if (status === 'uploading') {

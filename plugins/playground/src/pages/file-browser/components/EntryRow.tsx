@@ -1,42 +1,10 @@
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@brika/sdk/ui-kit';
 import { ChevronRight, Download, Trash2 } from '@brika/sdk/ui-kit/icons';
 import { useState } from 'react';
-import { describeFile } from './file-kind';
-import { extOf, formatRelativeTime, formatSize } from './helpers';
-import type { FsEntry } from './types';
-
-function EntryIcon({ entry }: Readonly<{ entry: FsEntry }>) {
-  const { Icon, fg, bg } = describeFile(entry.name, entry.isDirectory);
-  return (
-    <span
-      className={`flex size-8 shrink-0 items-center justify-center rounded-md ${bg}`}
-      aria-hidden
-    >
-      <Icon className={`size-4 ${fg}`} />
-    </span>
-  );
-}
-
-export function EntryListHeader() {
-  return (
-    <div className="flex items-center gap-3 border-border/70 border-b px-3 py-2 font-mono text-[10px] text-muted-foreground/80 uppercase tracking-[0.14em]">
-      <span className="w-8 shrink-0" aria-hidden />
-      <span className="min-w-0 flex-1">Name</span>
-      <span className="hidden w-20 shrink-0 text-right sm:block">Size</span>
-      <span className="hidden w-24 shrink-0 text-right md:block">Modified</span>
-      <span className="w-[64px] shrink-0" />
-    </div>
-  );
-}
+import { formatRelativeTime, formatSize } from '../lib/format';
+import { extOf } from '../lib/path';
+import type { FsEntry } from '../types';
+import { DeleteConfirm } from './DeleteConfirm';
+import { EntryIcon } from './EntryIcon';
 
 interface EntryRowProps {
   entry: FsEntry;
@@ -130,29 +98,12 @@ export function EntryRow({
         </div>
       </div>
 
-      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-        <AlertDialogContent size="sm">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete {entry.isDirectory ? 'folder' : 'file'}?</AlertDialogTitle>
-            <AlertDialogDescription>
-              <span className="font-mono text-foreground">{entry.name}</span> will be permanently
-              deleted.{entry.isDirectory ? ' The folder must be empty.' : ''}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              variant="destructive"
-              onClick={() => {
-                setConfirmOpen(false);
-                onDelete(entry);
-              }}
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteConfirm
+        entry={entry}
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        onConfirm={() => onDelete(entry)}
+      />
     </>
   );
 }

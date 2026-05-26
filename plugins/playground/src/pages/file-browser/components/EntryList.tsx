@@ -1,7 +1,9 @@
 import { Skeleton } from '@brika/sdk/ui-kit';
-import { FolderOpen, Upload } from '@brika/sdk/ui-kit/icons';
-import { EntryListHeader, EntryRow } from './EntryRow';
-import type { FsEntry } from './types';
+import type { FsEntry } from '../types';
+import { DropOverlay } from './DropOverlay';
+import { EmptyState } from './EmptyState';
+import { EntryListHeader } from './EntryListHeader';
+import { EntryRow } from './EntryRow';
 
 const SKELETON_KEYS = ['s0', 's1', 's2', 's3', 's4', 's5'] as const;
 
@@ -40,35 +42,11 @@ export function EntryList({
   }
 
   if (dragOver) {
-    return (
-      <div className="pointer-events-none flex flex-col items-center justify-center gap-3 py-20 text-center">
-        <div className="flex size-16 items-center justify-center rounded-full bg-primary/10 ring-2 ring-primary/30 ring-offset-4 ring-offset-card">
-          <Upload className="size-7 animate-bounce text-primary" />
-        </div>
-        <p className="font-medium text-primary text-sm">Drop to upload</p>
-      </div>
-    );
+    return <DropOverlay />;
   }
 
   if (entries.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center gap-3 px-6 py-20 text-center">
-        <div
-          aria-hidden
-          className="flex size-14 items-center justify-center rounded-full bg-muted/60"
-        >
-          <FolderOpen className="size-7 text-muted-foreground/80" />
-        </div>
-        <div className="space-y-1">
-          <p className="font-medium text-sm">This folder is empty</p>
-          <p className="text-muted-foreground text-xs">
-            Drag files here, or use the{' '}
-            <span className="rounded bg-muted px-1 py-0.5 font-mono text-[10px]">Upload</span>{' '}
-            button above.
-          </p>
-        </div>
-      </div>
-    );
+    return <EmptyState />;
   }
 
   return (

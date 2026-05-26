@@ -21,34 +21,8 @@
 import { mkdir, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import { defineAction, streamFile } from '@brika/sdk/actions';
 import { assertUnderData } from '../../paths';
-
-const CONTENT_TYPES: Record<string, string> = {
-  png: 'image/png',
-  jpg: 'image/jpeg',
-  jpeg: 'image/jpeg',
-  gif: 'image/gif',
-  webp: 'image/webp',
-  svg: 'image/svg+xml',
-  pdf: 'application/pdf',
-  json: 'application/json',
-  txt: 'text/plain; charset=utf-8',
-  md: 'text/markdown; charset=utf-8',
-  csv: 'text/csv; charset=utf-8',
-  html: 'text/html; charset=utf-8',
-};
-
-function contentTypeFor(path: string): string {
-  const ext = path.slice(path.lastIndexOf('.') + 1).toLowerCase();
-  return CONTENT_TYPES[ext] ?? 'application/octet-stream';
-}
-
-export interface FsEntry {
-  name: string;
-  isFile: boolean;
-  isDirectory: boolean;
-  size: number;
-  mtime: number;
-}
+import { contentTypeFor } from './lib/content-types';
+import type { FsEntry } from './types';
 
 export const listEntries = defineAction(
   async (input: { path: string }): Promise<{ path: string; entries: FsEntry[] }> => {
