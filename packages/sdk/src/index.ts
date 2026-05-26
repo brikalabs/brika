@@ -205,21 +205,28 @@ export type { PluginManifest, PreludeBridge } from './bridge';
 export { PRELUDE_BRAND } from './bridge';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// ctx — typed grant context (the new chokepoint for every host call)
+// Grants — schemas/specs are public; the `ctx` proxy is NOT.
 // ─────────────────────────────────────────────────────────────────────────────
 
 // Side-effect import: grant modules augment the `Ctx` interface, which
 // the bare `./grants/index` re-export wouldn't trigger on its own.
 import './grants';
 
+// `Ctx` is re-exported as a type only so the per-grant `declare module
+// '../ctx'` augmentations resolve cleanly when downstream consumers
+// build against `@brika/sdk`. The runtime `ctx` proxy stays hidden.
 export type { Ctx } from './ctx';
-// `installVector` / `readInjectedVector` / `GRANTS_BRAND` / `buildCtx`
+
+// `ctx`, `installVector`, `readInjectedVector`, `GRANTS_BRAND`, `buildCtx`
 // are intentionally NOT re-exported from the SDK barrel — they are
-// prelude-internal (the prelude imports them from `@brika/sdk/ctx`).
-// Re-exporting would let plugin code install a forged vector at module
-// load time, defeating the realm-lockdown gate. The next sandbox PR
-// will harden this further with a closure-private write-key.
-export { ctx } from './ctx';
+// prelude-internal. Plugin authors call the standard ambient APIs
+// (`fetch`, `Bun.file`, `import 'node:fs/promises'`, `new WebSocket(...)`,
+// `Bun.dns.lookup`) which the prelude proxies onto the same grant
+// runtime. The proxies enforce the manifest's `grants` map identically
+// — using the standard API is not a security downgrade.
+//
+// The internal subpath `@brika/sdk/ctx` still exposes them for the
+// prelude itself; plugin source code should never reach for that.
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Errors

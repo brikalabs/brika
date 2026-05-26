@@ -79,7 +79,9 @@
     "crashed": "Plugin crashed: {{reason}}",
     "crashLoop": "Crash loop: {{reason}}",
     "restarting": "Restarting in {{seconds}}s",
-    "killed": "Plugin was forcefully terminated"
+    "killed": "Plugin was forcefully terminated",
+    "buildFailed": "Build failed: {{errors}}",
+    "awaitingConfig": "Configuration required: {{errors}}"
   },
   "table": {
     "name": "Name",

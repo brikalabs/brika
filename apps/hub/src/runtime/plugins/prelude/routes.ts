@@ -4,6 +4,7 @@
  * Route handler registry and routeRequest RPC implementation.
  */
 
+import { BrikaError, httpStatusForCode } from '@brika/errors';
 import type { Channel } from '@brika/ipc';
 import {
   type RouteMethodType,
@@ -27,6 +28,15 @@ export function setupRoutes(channel: Channel) {
     try {
       return await handler({ method, path, query, headers, body });
     } catch (e) {
+      // Map BrikaError codes to their canonical HTTP status (e.g.
+      // PERMISSION_DENIED → 403, INVALID_INPUT → 400, NOT_FOUND → 404,
+      // TIMEOUT → 504). Unknown / non-Brika errors fall through to 500.
+      if (e instanceof BrikaError) {
+        return {
+          status: httpStatusForCode(e.code),
+          body: { error: e.message, code: e.code },
+        };
+      }
       return { status: 500, body: { error: String(e) } };
     }
   });

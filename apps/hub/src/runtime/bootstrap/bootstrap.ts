@@ -63,6 +63,7 @@ export class Bootstrap {
     }
     await this.initializer.init();
     const config = await this.configLoader.load();
+    this.logStore.startRetention(config.hub.logs.retentionDays, config.hub.logs.pruneIntervalMs);
 
     await this.runPhase('Initializing', (p) => p.onInit?.());
     await this.runPhase('Loading', (p) => p.onLoad?.(config));

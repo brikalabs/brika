@@ -88,33 +88,20 @@ const channel = new Channel({
 // runtime just dispatches.
 installFsRuntime({ channel });
 
-// ---- Sequential message queue ----
-// Channel.handle() is async, so dispatching multiple buffered messages in
-// the same tick can interleave their execution. The drain queue ensures
-// strict FIFO ordering: each message fully completes before the next starts.
-
-const messageQueue: WireMessage[] = [];
-let draining = false;
-
-async function drain(): Promise<void> {
-  if (draining) {
-    return;
-  }
-  draining = true;
-  try {
-    let msg = messageQueue.shift();
-    while (msg) {
-      await channel.handle(msg);
-      msg = messageQueue.shift();
-    }
-  } finally {
-    draining = false;
-  }
-}
+// ---- Message dispatch ----
+// `channel.handle()` is async because RPC request handlers can await — but
+// awaiting each `handle()` before the next deadlocks any handler that
+// itself awaits another IPC round-trip (e.g. a route handler that calls
+// `ctx.fs.*` — the response message would queue behind the still-running
+// route handler). Fire-and-forget keeps the JS microtask queue ordering
+// (each `channel.handle` is started in receive order) without blocking
+// the next message on the previous handler's completion. RPC RESPONSE
+// dispatch inside `handle()` is synchronous, so the pending-RPC `resolve`
+// runs immediately when the response arrives, even if a route handler is
+// concurrently `await`-ing it.
 
 safeOn('message', (msg: WireMessage) => {
-  messageQueue.push(msg);
-  drain().catch((e) => console.error('[prelude] drain error:', e));
+  channel.handle(msg).catch((e) => console.error('[prelude] handle error:', e));
 });
 
 safeOn('disconnect', () => {

@@ -1,6 +1,6 @@
 import {
   and, asc, type BrikaDatabase, count, cursorFilter, desc, endTsFilter,
-  eq, isNotNull, like, oneOrMany, startTsFilter,
+  eq, isNotNull, like, lt, oneOrMany, startTsFilter,
 } from "@brika/db";
 import { singleton } from "@brika/di";
 import type { Json } from "@/types";
@@ -44,9 +44,61 @@ export class LogStore {
   #database: BrikaDatabase<{ logs: typeof logsTable }> | null = null;
   #insertDisabled = false;
   #insertErrors = 0;
+  #pruneTimer?: Timer;
 
   init(): void {
     this.#database = logsDb.open();
+  }
+
+  /**
+   * Start a periodic background sweep that drops rows older than
+   * `retentionDays`. Safe to call once at boot; idempotent (a second
+   * call replaces the previous timer). Call `stopRetention()` on
+   * shutdown to clear it.
+   *
+   * `retentionDays = 0` disables the sweep entirely (logs grow
+   * unbounded). The sweep is `DELETE WHERE ts < cutoff` against the
+   * `idx_logs_ts` index — fast even for million-row tables.
+   */
+  startRetention(retentionDays: number, intervalMs: number): void {
+    this.stopRetention();
+    if (retentionDays <= 0 || intervalMs <= 0) {
+      return;
+    }
+    const sweep = () => {
+      const cutoff = Date.now() - retentionDays * 24 * 60 * 60 * 1000;
+      this.pruneOlderThan(cutoff);
+    };
+    // Run once at startup so a stale DB shrinks immediately rather than
+    // waiting a full interval; subsequent sweeps fire every intervalMs.
+    sweep();
+    this.#pruneTimer = setInterval(sweep, intervalMs);
+  }
+
+  stopRetention(): void {
+    if (this.#pruneTimer) {
+      clearInterval(this.#pruneTimer);
+      this.#pruneTimer = undefined;
+    }
+  }
+
+  /**
+   * Delete all log rows with `ts < cutoff`. Returns the number of rows
+   * removed. Failures are swallowed so a transient I/O error never
+   * crashes the timer that calls us.
+   */
+  pruneOlderThan(cutoff: number): number {
+    if (!this.db) { return 0; }
+    try {
+      const deleted = this.db
+        .delete(logsTable)
+        .where(lt(logsTable.ts, cutoff))
+        .returning({ id: logsTable.id })
+        .all();
+      return deleted.length;
+    } catch {
+      return 0;
+    }
   }
 
   private get db() {
@@ -165,6 +217,7 @@ export class LogStore {
   }
 
   close(): void {
+    this.stopRetention();
     this.#database?.sqlite.close();
   }
 }

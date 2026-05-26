@@ -1,0 +1,44 @@
+{
+  "name": "Playground",
+  "description": "Plugin bac à sable — bloc écho, démo des préférences et explorateur de fichiers",
+  "tools": {
+    "echo": {
+      "name": "Écho",
+      "description": "Renvoyer le message fourni en écho"
+    }
+  },
+  "fields": {
+    "message": {
+      "label": "Message",
+      "description": "Le message à renvoyer"
+    }
+  },
+  "preferences": {
+    "apiKey": {
+      "title": "Clé API",
+      "description": "Votre clé API secrète pour l'authentification"
+    },
+    "serverUrl": {
+      "title": "URL du serveur",
+      "description": "L'URL de base du serveur API"
+    },
+    "maxRetries": {
+      "title": "Tentatives max",
+      "description": "Nombre maximum de tentatives de réessai (1-10)"
+    },
+    "debugMode": {
+      "title": "Mode débogage",
+      "description": "Activer la journalisation détaillée pour le dépannage"
+    },
+    "logLevel": {
+      "title": "Niveau de journalisation",
+      "description": "Niveau minimum de journalisation à afficher",
+      "options": {
+        "debug": "Débogage",
+        "info": "Info",
+        "warn": "Avertissement",
+        "error": "Erreur"
+      }
+    }
+  }
+}

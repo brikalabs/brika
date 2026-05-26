@@ -3,8 +3,8 @@
  * concurrent pollers don't trigger parallel logins on the SIL portal.
  */
 
+import { log } from '@brika/sdk/lifecycle';
 import { silLogin } from '../api';
-import { log } from '../api/internals';
 import { setAuthed } from './store';
 
 interface Credentials {

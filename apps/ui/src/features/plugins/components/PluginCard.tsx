@@ -49,6 +49,7 @@ function getStatusStyle(status: PluginHealth): {
       };
     case 'degraded':
     case 'incompatible':
+    case 'awaiting-config':
       return {
         variant: 'outline',
         className: 'border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400',
@@ -245,7 +246,7 @@ export function PluginCard({
                   </Badge>
                 )}
               </div>
-              {p.status === 'incompatible' && p.lastError ? (
+              {(p.status === 'incompatible' || p.status === 'awaiting-config') && p.lastError ? (
                 <p className="mt-0.5 line-clamp-1 text-amber-600 text-xs dark:text-amber-400">
                   {formatPluginError(p.lastError, t)}
                 </p>
@@ -286,7 +287,7 @@ export function PluginCard({
             <div className="mt-2.5 ml-13">
               {hasCapabilities && <CapabilityBadges plugin={p} t={t} />}
 
-              {p.status !== 'incompatible' && (
+              {p.status !== 'incompatible' && p.status !== 'awaiting-config' && (
                 <PluginErrorDisplay error={p.lastError} hasCapabilities={hasCapabilities} t={t} />
               )}
             </div>

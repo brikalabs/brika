@@ -92,6 +92,7 @@
   "dependencies": {
     "@brika/sdk": "workspace:*",
     "@matter/main": "^0.17.0",
+    "@matter/nodejs": "^0.17.0",
     "@project-chip/matter.js": "^0.17.0"
   },
   "devDependencies": {

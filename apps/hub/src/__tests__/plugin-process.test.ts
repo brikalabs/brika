@@ -82,7 +82,20 @@ describe('PluginProcess', () => {
         id: 'test-brick',
       },
     ],
+    grants: {
+      'dev.brika.location.get': {},
+      'dev.brika.secrets.get': {},
+      'dev.brika.secrets.set': {},
+      'dev.brika.secrets.delete': {},
+    },
   });
+
+  const TEST_FS_DIRS = {
+    bundle: '/path/to/plugin',
+    data: '/path/to/plugin-data/data',
+    cache: '/path/to/plugin-data/cache',
+    tmp: '/path/to/plugin-data/tmp',
+  };
 
   beforeEach(() => {
     channelHandlers = new Map();
@@ -147,6 +160,7 @@ describe('PluginProcess', () => {
         version: '1.0.0',
         metadata: createMockMetadata(),
         locales: ['en', 'fr'],
+        fsDirs: TEST_FS_DIRS,
       },
       config,
       callbacks
@@ -499,7 +513,7 @@ describe('PluginProcess', () => {
         const result = await process.callPluginAction('do-stuff');
 
         expect(result.ok).toBe(false);
-        expect(result.error).toBe('Plugin stopped');
+        expect(result.error).toEqual({ message: 'Plugin stopped', code: 'PLUGIN_STOPPED' });
       });
 
       test('returns error and logs on channel failure', async () => {
@@ -508,11 +522,27 @@ describe('PluginProcess', () => {
         const result = await process.callPluginAction('do-stuff');
 
         expect(result.ok).toBe(false);
-        expect(result.error).toBe('Action call failed');
+        expect(result.error).toEqual({
+          message: 'Action call failed',
+          code: 'ACTION_CALL_FAILED',
+        });
         expect(callbacks.onLog).toHaveBeenCalledWith(
           'error',
           expect.stringContaining('Action call failed [do-stuff]')
         );
+      });
+    });
+
+    describe('resolveStreamPath', () => {
+      // The plugin in `createMockMetadata` declares no fs grants — every
+      // call must trip the permission gate, which is also the hardest-
+      // to-regress check. Tests that need a granted scope build their
+      // own process inline.
+
+      test('throws PERMISSION_DENIED when readFile grant is not in the vector', async () => {
+        await expect(process.resolveStreamPath('/data/foo.png')).rejects.toMatchObject({
+          code: 'PERMISSION_DENIED',
+        });
       });
     });
   });
@@ -616,7 +646,7 @@ describe('PluginProcess', () => {
 
     test('includes permissions and grantedPermissions', () => {
       const metaWithPerms = createMockMetadata();
-      metaWithPerms.permissions = ['location'];
+      metaWithPerms.grants = { 'dev.brika.location.get': {} };
 
       const grantedCb = mock().mockReturnValue(['location']);
       const cbsWithGrants = {
@@ -634,6 +664,7 @@ describe('PluginProcess', () => {
           version: '1.0.0',
           metadata: metaWithPerms,
           locales: [],
+          fsDirs: TEST_FS_DIRS,
         },
         config,
         cbsWithGrants
@@ -647,9 +678,14 @@ describe('PluginProcess', () => {
       pp.stop();
     });
 
-    test('returns empty arrays when no permissions declared', () => {
+    test('derives requested permissions from declared grants', () => {
       const plugin = process.toPlugin('running');
-      expect(plugin.permissions).toEqual([]);
+      // createMockMetadata declares location.get + secrets.{get,set,delete},
+      // which map to the location + secrets families via the registered specs.
+      expect(plugin.permissions.toSorted((a, b) => a.localeCompare(b))).toEqual([
+        'location',
+        'secrets',
+      ]);
       expect(plugin.grantedPermissions).toEqual([]);
     });
 
@@ -667,6 +703,7 @@ describe('PluginProcess', () => {
             version: '0.1.0',
           } as PluginPackageSchema,
           locales: [],
+          fsDirs: TEST_FS_DIRS,
         },
         config,
         callbacks
@@ -703,6 +740,7 @@ describe('PluginProcess', () => {
           version: '1.0.0',
           metadata: meta,
           locales: [],
+          fsDirs: TEST_FS_DIRS,
         },
         config,
         callbacks
@@ -741,6 +779,7 @@ describe('PluginProcess', () => {
           version: '1.0.0',
           metadata: createMockMetadata(),
           locales: [],
+          fsDirs: TEST_FS_DIRS,
         },
         shortConfig,
         callbacks
@@ -774,6 +813,7 @@ describe('PluginProcess', () => {
           version: '1.0.0',
           metadata: createMockMetadata(),
           locales: [],
+          fsDirs: TEST_FS_DIRS,
         },
         shortConfig,
         callbacks
@@ -808,6 +848,7 @@ describe('PluginProcess', () => {
           version: '1.0.0',
           metadata: createMockMetadata(),
           locales: [],
+          fsDirs: TEST_FS_DIRS,
         },
         shortConfig,
         callbacks
@@ -843,6 +884,7 @@ describe('PluginProcess', () => {
           version: '1.0.0',
           metadata: createMockMetadata(),
           locales: [],
+          fsDirs: TEST_FS_DIRS,
         },
         shortConfig,
         callbacks
@@ -880,6 +922,7 @@ describe('PluginProcess', () => {
           version: '1.0.0',
           metadata: createMockMetadata(),
           locales: [],
+          fsDirs: TEST_FS_DIRS,
         },
         shortConfig,
         cbsNoMetrics
@@ -1190,8 +1233,8 @@ describe('PluginProcess', () => {
           if (!BrikaError.is(e, 'PERMISSION_DENIED')) {
             throw new Error('expected PERMISSION_DENIED BrikaError');
           }
-          expect(e.message).toContain('location');
-          expect(e.data?.permission).toBe('location');
+          expect(e.message).toContain('dev.brika.location.get');
+          expect(e.data?.permission).toBe('dev.brika.location.get');
         }
       });
     });
@@ -1234,13 +1277,13 @@ describe('PluginProcess', () => {
     // ─────────────────────────────────────────────────────────────────────
 
     describe('plugin secrets (security boundary)', () => {
-      async function expectPermissionDenied(fn: () => unknown): Promise<void> {
+      async function expectPermissionDenied(fn: () => unknown, expectedId: string): Promise<void> {
         try {
           await fn();
         } catch (e: unknown) {
           const err = e as { code?: string; message?: string; data?: Record<string, unknown> };
           expect(err.code).toBe('PERMISSION_DENIED');
-          expect(err.data).toEqual({ permission: 'secrets' });
+          expect(err.data).toEqual({ permission: expectedId });
           return;
         }
         throw new Error('Expected handler to throw a PERMISSION_DENIED error');
@@ -1250,10 +1293,12 @@ describe('PluginProcess', () => {
         test('throws PERMISSION_DENIED when the plugin lacks the secrets grant', async () => {
           (callbacks.onGetGrantedPermissions as ReturnType<typeof mock>).mockReturnValue([]);
 
-          await expectPermissionDenied(() =>
-            triggerImplement(getPluginSecret, {
-              key: 'api-key',
-            })
+          await expectPermissionDenied(
+            () =>
+              triggerImplement(getPluginSecret, {
+                key: 'api-key',
+              }),
+            'dev.brika.secrets.get'
           );
           // Importantly, the callback is NEVER reached when permission is denied
           expect(callbacks.onGetPluginSecret).not.toHaveBeenCalled();
@@ -1264,15 +1309,17 @@ describe('PluginProcess', () => {
             'location',
           ]);
 
-          await expectPermissionDenied(() =>
-            triggerImplement(getPluginSecret, {
-              key: 'api-key',
-            })
+          await expectPermissionDenied(
+            () =>
+              triggerImplement(getPluginSecret, {
+                key: 'api-key',
+              }),
+            'dev.brika.secrets.get'
           );
           expect(callbacks.onGetPluginSecret).not.toHaveBeenCalled();
         });
 
-        test('checks permission on every call (not cached)', async () => {
+        test('revocation takes effect after invalidateVector()', async () => {
           (callbacks.onGetGrantedPermissions as ReturnType<typeof mock>).mockReturnValue([
             'secrets',
           ]);
@@ -1282,13 +1329,19 @@ describe('PluginProcess', () => {
             key: 'api-key',
           });
 
-          // Revoke between calls — the next call must observe the revocation
+          // Revoke. The cached vector still permits until invalidated —
+          // the permissions HTTP route calls `invalidateVector()` on the
+          // running process right after `setPermission()` returns, which
+          // is what unsticks the cache without a plugin restart.
           (callbacks.onGetGrantedPermissions as ReturnType<typeof mock>).mockReturnValue([]);
+          process.invalidateVector();
 
-          await expectPermissionDenied(() =>
-            triggerImplement(getPluginSecret, {
-              key: 'api-key',
-            })
+          await expectPermissionDenied(
+            () =>
+              triggerImplement(getPluginSecret, {
+                key: 'api-key',
+              }),
+            'dev.brika.secrets.get'
           );
         });
 
@@ -1346,11 +1399,13 @@ describe('PluginProcess', () => {
         test('throws PERMISSION_DENIED when permission is not granted', async () => {
           (callbacks.onGetGrantedPermissions as ReturnType<typeof mock>).mockReturnValue([]);
 
-          await expectPermissionDenied(() =>
-            triggerImplement(setPluginSecret, {
-              key: 'api-key',
-              value: 'leak-attempt',
-            })
+          await expectPermissionDenied(
+            () =>
+              triggerImplement(setPluginSecret, {
+                key: 'api-key',
+                value: 'leak-attempt',
+              }),
+            'dev.brika.secrets.set'
           );
           expect(callbacks.onSetPluginSecret).not.toHaveBeenCalled();
         });
@@ -1406,10 +1461,12 @@ describe('PluginProcess', () => {
         test('throws PERMISSION_DENIED when permission is not granted', async () => {
           (callbacks.onGetGrantedPermissions as ReturnType<typeof mock>).mockReturnValue([]);
 
-          await expectPermissionDenied(() =>
-            triggerImplement(deletePluginSecret, {
-              key: 'api-key',
-            })
+          await expectPermissionDenied(
+            () =>
+              triggerImplement(deletePluginSecret, {
+                key: 'api-key',
+              }),
+            'dev.brika.secrets.delete'
           );
           expect(callbacks.onDeletePluginSecret).not.toHaveBeenCalled();
         });
@@ -1472,6 +1529,7 @@ describe('PluginProcess', () => {
             version: '1.0.0',
             metadata: createMockMetadata(),
             locales: [],
+            fsDirs: TEST_FS_DIRS,
           },
           config,
           otherCallbacks

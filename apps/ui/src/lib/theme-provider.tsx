@@ -18,6 +18,7 @@ import {
 } from '@/features/theme-builder/storage';
 import type { ThemeConfig } from '@/features/theme-builder/types';
 import { fetcher } from '@/lib/query';
+import { subscribeSharedEvents } from '@/lib/shared-event-source';
 import { ThemeContext, type ThemeMode, type ThemeName } from './theme-context';
 import { withCircleWipe } from './view-transition';
 
@@ -207,24 +208,20 @@ export function ThemeProvider({ children }: Readonly<{ children: ReactNode }>) {
     };
   }, [mode, theme]);
 
-  useEffect(() => {
-    const source = new EventSource('/api/stream/events', { withCredentials: true });
-    const handler = (event: MessageEvent<string>) => {
-      try {
-        const parsed = JSON.parse(event.data) as { type?: string };
-        if (parsed.type?.startsWith('theme.')) {
-          void hydrateCustomThemes();
+  useEffect(
+    () =>
+      subscribeSharedEvents('/api/stream/events', (event) => {
+        try {
+          const parsed = JSON.parse(event.data) as { type?: string };
+          if (parsed.type?.startsWith('theme.')) {
+            void hydrateCustomThemes();
+          }
+        } catch {
+          /* ignore malformed frames */
         }
-      } catch {
-        /* ignore malformed frames */
-      }
-    };
-    source.addEventListener('event', handler);
-    return () => {
-      source.removeEventListener('event', handler);
-      source.close();
-    };
-  }, []);
+      }),
+    []
+  );
 
   const setTheme = useCallback(
     (newTheme: ThemeName, origin?: Element | null) => {

@@ -16,20 +16,28 @@ export const GRANT_REQUEST_TIMEOUT_MS = 60_000;
 
 /**
  * Maximum jitter (in ms) added before the grant/deny branch fires.
- * Neutralizes the application-layer timing oracle a malicious plugin
- * would use to fingerprint the vector by measuring call latency.
- * Pulled to a constant so the same value is used for the delay AND
- * the runtime random clamp.
+ * Neutralizes an application-layer timing oracle a malicious plugin
+ * could use to fingerprint the vector by measuring call latency
+ * (denial throws instantly, success runs the handler).
+ *
+ * Set to 0 — `Bun.sleep(0)` still yields to the event loop, so the
+ * deny branch still goes through one microtask boundary, but we no
+ * longer pay 0–5 ms on the hot path of every dispatch. Re-raise to a
+ * non-zero value (via plugin-process or a config flag) once the
+ * platform threat model justifies it (e.g. third-party marketplace).
  */
-export const GRANT_REQUEST_JITTER_MAX_MS = 5;
+export const GRANT_REQUEST_JITTER_MAX_MS = 0;
 
 /**
- * Random 0–`GRANT_REQUEST_JITTER_MAX_MS` ms delay. Uses
- * `crypto.getRandomValues` (the cryptographically secure RNG) — not for
- * security per se, but because Math.random can be predicted enough to
- * undermine the oracle protection in pathological cases.
+ * Yield the event loop before the grant/deny branch. When the jitter
+ * max is 0 this collapses to `Bun.sleep(0)` — still a microtask
+ * boundary, but no measurable delay. When non-zero it uses
+ * `crypto.getRandomValues` so a side channel can't predict the sample.
  */
 export function jitterDelay(): Promise<void> {
+  if (GRANT_REQUEST_JITTER_MAX_MS === 0) {
+    return Bun.sleep(0);
+  }
   const buf = new Uint16Array(1);
   crypto.getRandomValues(buf);
   const sample = buf[0] ?? 0;

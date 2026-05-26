@@ -28,6 +28,7 @@ const mockConfig: BrikaConfig = {
       heartbeatInterval: 5000,
       heartbeatTimeout: 15000,
     },
+    logs: { retentionDays: 7, pruneIntervalMs: 3600000 },
   },
   plugins: [],
   rules: [],

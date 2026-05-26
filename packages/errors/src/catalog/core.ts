@@ -64,13 +64,14 @@ export const CoreCatalog = {
     retryable: false,
     transient: false,
     i18nKey: 'errors:permission_denied',
-    developerHint: 'Add the named permission to your plugin manifest and reload the plugin.',
+    developerHint:
+      'Declare the grant id under "grants" in your plugin manifest, then have the operator approve the matching family in the consent UI.',
     data: z.object({
       permission: z.string(),
     }),
     message: (data) =>
-      `Permission "${data.permission}" is required but not granted. ` +
-      `Add "${data.permission}" to "permissions" in your plugin's package.json.`,
+      `Grant "${data.permission}" is required but not in the plugin's vector. ` +
+      `Declare it under "grants" in package.json (the family is read from the registered spec) and ensure the operator has approved that family.`,
   }),
   TIMEOUT: entry({
     title: 'Timeout',

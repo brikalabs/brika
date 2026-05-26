@@ -32,15 +32,31 @@ export interface FsQuotas {
   readonly tmp: number;
 }
 
-/** 100 MiB / 500 MiB / 100 MiB feels right for a typical desktop plugin. */
+/**
+ * Per-plugin disk quotas. `/data` is the primary user-facing store
+ * (file browser, plugin databases, generated content); `/cache` is
+ * evictable; `/tmp` is for short-lived working copies.
+ *
+ * Defaults sized for media-capable plugins on a single-tenant hub —
+ * raise or lower per-plugin via the lifecycle config when running a
+ * tighter multi-tenant deployment.
+ */
 export const DEFAULT_FS_QUOTAS: FsQuotas = {
-  data: 100 * 1024 * 1024,
-  cache: 500 * 1024 * 1024,
-  tmp: 100 * 1024 * 1024,
+  data: 2 * 1024 * 1024 * 1024,
+  cache: 2 * 1024 * 1024 * 1024,
+  tmp: 256 * 1024 * 1024,
 };
 
-/** Per-call body cap. Streamed reads land in v2; for now we buffer. */
-export const DEFAULT_MAX_FILE_BYTES = 50 * 1024 * 1024;
+/**
+ * Per-call body cap on `readFile` / `writeFile`. Streamed reads land
+ * in v2; for now we buffer the whole payload in memory, so this cap
+ * is also the practical upload size for plugin file actions. Raised
+ * from 50 MiB → 256 MiB so the playground file-browser handles
+ * routine photo/video uploads without a 413/grant-error. The
+ * `dev.brika.fs.writeFile` schema's wire-level guard sits above this
+ * (see [packages/sdk/src/grants/fs.ts](../../../../../packages/sdk/src/grants/fs.ts)).
+ */
+export const DEFAULT_MAX_FILE_BYTES = 256 * 1024 * 1024;
 
 /** Cap on the number of entries returned from a single `readdir`. */
 export const DEFAULT_MAX_DIR_ENTRIES = 10_000;

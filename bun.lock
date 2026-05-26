@@ -641,32 +641,26 @@
         "zod": "^4.3.6",
       },
     },
-    "plugins/demo-config": {
-      "name": "@brika/plugin-demo-config",
-      "version": "0.3.1",
-      "dependencies": {
-        "@brika/sdk": "workspace:*",
-      },
-    },
-    "plugins/example-echo": {
-      "name": "@brika/plugin-example-echo",
-      "version": "0.3.1",
-      "dependencies": {
-        "@brika/sdk": "workspace:*",
-      },
-    },
     "plugins/matter": {
       "name": "@brika/plugin-matter",
       "version": "0.3.1",
       "dependencies": {
         "@brika/sdk": "workspace:*",
         "@matter/main": "^0.17.0",
+        "@matter/nodejs": "^0.17.0",
         "@project-chip/matter.js": "^0.17.0",
       },
       "devDependencies": {
         "bun-types": "^1.3.5",
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",
+      },
+    },
+    "plugins/playground": {
+      "name": "@brika/plugin-playground",
+      "version": "0.3.1",
+      "dependencies": {
+        "@brika/sdk": "workspace:*",
       },
     },
     "plugins/sil-electricity": {
@@ -791,11 +785,9 @@
 
     "@brika/plugin": ["@brika/plugin@workspace:packages/plugin"],
 
-    "@brika/plugin-demo-config": ["@brika/plugin-demo-config@workspace:plugins/demo-config"],
-
-    "@brika/plugin-example-echo": ["@brika/plugin-example-echo@workspace:plugins/example-echo"],
-
     "@brika/plugin-matter": ["@brika/plugin-matter@workspace:plugins/matter"],
+
+    "@brika/plugin-playground": ["@brika/plugin-playground@workspace:plugins/playground"],
 
     "@brika/plugin-sil-electricity": ["@brika/plugin-sil-electricity@workspace:plugins/sil-electricity"],
 

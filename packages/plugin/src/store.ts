@@ -39,6 +39,8 @@ export interface StorePlugin {
     downloads: number;
     publishedAt: string;
   };
+  /** Grants declared by this plugin (keyed by reverse-DNS id), with per-grant scope */
+  grants?: Record<string, unknown>;
 }
 
 /** npm package data from registry API */
@@ -73,6 +75,8 @@ export interface PluginPackageData {
     repository?: string;
     bugs?: string;
   };
+  /** Grants declared by this plugin (keyed by reverse-DNS id), with per-grant scope */
+  grants?: Record<string, unknown>;
   score?: {
     final: number;
     detail: {

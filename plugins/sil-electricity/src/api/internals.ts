@@ -30,8 +30,3 @@ export function timedFetch(
   const signal = init.signal ? AbortSignal.any([init.signal, timeoutSignal]) : timeoutSignal;
   return fetch(input, { ...init, signal });
 }
-
-export const log = {
-  info: (msg: string) => console.log(`[sil] ${msg}`),
-  error: (msg: string) => console.error(`[sil] ${msg}`),
-};

@@ -35,7 +35,16 @@ export interface BrikaFsRuntime {
     mode: 'overwrite' | 'append' | 'create-new';
   }): Promise<{ bytesWritten: number }>;
   readdir(args: { path: string; recursive: boolean }): Promise<{
-    entries: Array<{ name: string; isFile: boolean; isDirectory: boolean; isSymlink: boolean }>;
+    entries: Array<{
+      name: string;
+      isFile: boolean;
+      isDirectory: boolean;
+      isSymlink: boolean;
+      /** File size in bytes. `0` for directories and symlinks. */
+      size: number;
+      /** Last-modified time as Unix epoch milliseconds. `0` if unknown. */
+      mtime: number;
+    }>;
   }>;
   stat(args: { path: string }): Promise<{
     size: number;

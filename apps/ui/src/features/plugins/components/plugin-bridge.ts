@@ -15,6 +15,8 @@ import {
   usePluginAction as useAction,
   useCallAction,
   usePluginLocale as useLocale,
+  usePluginRouteUrl,
+  usePluginUid,
 } from './plugin-hooks';
 
 const [icons, ui, cva, { clsx: clsxFn }] = await Promise.all([
@@ -37,7 +39,7 @@ const bridge = {
       return isStatic ? jsxRuntime.jsxs(type, props, key) : jsxRuntime.jsx(type, props, key);
     },
   },
-  hooks: { useLocale, useAction, useCallAction },
+  hooks: { useLocale, useAction, useCallAction, usePluginUid, usePluginRouteUrl },
   brickHooks: { useBrickData, useBrickConfig, useBrickSize, useCallBrickAction },
   icons,
   ui,

@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { getStreamUrl } from '@/lib/query';
+import { subscribeSharedEvents } from '@/lib/shared-event-source';
 import { updateApi, updateKeys } from './api';
 
 /**
@@ -17,25 +18,24 @@ export function useUpdateCheck() {
     queryFn: updateApi.check,
   });
 
-  // Listen for push notifications via existing /api/stream/events SSE
-  useEffect(() => {
-    const es = new EventSource(getStreamUrl('/api/stream/events'));
-    es.addEventListener('event', (ev: MessageEvent) => {
-      try {
-        const event = JSON.parse(ev.data) as {
-          type: string;
-        };
-        if (event.type === 'update.available') {
-          queryClient.invalidateQueries({
-            queryKey: updateKeys.check,
-          });
+  // Listen for push notifications via the shared SSE stream. Multiple hooks
+  // subscribe to the same `/api/stream/events` URL; the shared pool keeps
+  // one EventSource open and fans events out, instead of three separate
+  // connections eating three of the browser's six HTTP/1.1 slots.
+  useEffect(
+    () =>
+      subscribeSharedEvents(getStreamUrl('/api/stream/events'), (ev) => {
+        try {
+          const event = JSON.parse(ev.data) as { type: string };
+          if (event.type === 'update.available') {
+            queryClient.invalidateQueries({ queryKey: updateKeys.check });
+          }
+        } catch {
+          // Ignore malformed events
         }
-      } catch {
-        // Ignore malformed events
-      }
-    });
-    return () => es.close();
-  }, [queryClient]);
+      }),
+    [queryClient]
+  );
 
   return query;
 }

@@ -1,9 +1,11 @@
+import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { inject, singleton } from '@brika/di';
 import type { LogLevelType } from '@brika/ipc/contract';
 import type { Plugin, PluginHealth } from '@brika/plugin';
 import type { PluginPackageSchema } from '@brika/schema';
 import { BunRunner, PluginManagerConfig } from '@/runtime/config';
+import { BrikaInitializer } from '@/runtime/config/brika-initializer';
 import { BrickActions, PluginActions } from '@/runtime/events/actions';
 import { EventSystem } from '@/runtime/events/event-system';
 import { I18nService } from '@/runtime/i18n';
@@ -12,6 +14,8 @@ import { MetricsStore } from '@/runtime/metrics';
 import { ModuleCompiler } from '@/runtime/modules';
 import { SecretStore } from '@/runtime/secrets/secret-store';
 import { type PluginStateWithMetadata, StateStore } from '@/runtime/state/state-store';
+import { buildHubGrants } from './grants/registry-factory';
+import { familiesForManifestGrants } from './grants/vector';
 import { compileServerEntry, PluginProcess, spawnPlugin } from './lifecycle-deps';
 import { PluginConfigService } from './plugin-config';
 import { PluginErrors } from './plugin-errors';
@@ -27,13 +31,46 @@ type PluginProcessInstance = InstanceType<typeof PluginProcess>;
 const PRELUDE_PATH = join(import.meta.dir, 'prelude', 'index.ts');
 
 /**
+ * Shared registry used to derive permission families for the
+ * UI-facing `Plugin` metadata when the plugin is not currently running.
+ * Running plugins use their own process-scoped registry.
+ */
+const sharedGrantRegistry = buildHubGrants({
+  fetch: () => Promise.reject(new Error('shared registry: fetch is not wired')),
+});
+
+/**
  * Manages plugin lifecycle: loading, unloading, and restart handling.
  * Simplified by delegating to focused helper classes.
  */
+/**
+ * Allocate the four host directories that back a plugin's virtual fs roots
+ * and ensure they exist. Bundle is the install dir (read-only); data/cache/tmp
+ * live under `<brikaDir>/plugins-data/<uid>/`.
+ */
+function allocateFsDirs(
+  brikaDir: string,
+  uid: string,
+  rootDirectory: string
+): { bundle: string; data: string; cache: string; tmp: string } {
+  const base = join(brikaDir, 'plugins-data', uid);
+  const dirs = {
+    bundle: rootDirectory,
+    data: join(base, 'data'),
+    cache: join(base, 'cache'),
+    tmp: join(base, 'tmp'),
+  };
+  mkdirSync(dirs.data, { recursive: true });
+  mkdirSync(dirs.cache, { recursive: true });
+  mkdirSync(dirs.tmp, { recursive: true });
+  return dirs;
+}
+
 @singleton()
 export class PluginLifecycle {
   readonly #config = inject(PluginManagerConfig);
   readonly #bunRunner = inject(BunRunner);
+  readonly #brikaInit = inject(BrikaInitializer);
   readonly #logs = inject(Logger).withSource('plugin');
   readonly #state = inject(StateStore);
   readonly #events = inject(EventSystem);
@@ -160,7 +197,8 @@ export class PluginLifecycle {
       sparks: m.sparks ?? [],
       bricks: m.bricks ?? [],
       pages: m.pages ?? [],
-      permissions: m.permissions ?? [],
+      permissions: familiesForManifestGrants(sharedGrantRegistry, m.grants),
+      grants: m.grants ?? {},
       grantedPermissions: stored.grantedPermissions ?? [],
       locales: [],
     };
@@ -229,6 +267,11 @@ export class PluginLifecycle {
       return;
     }
 
+    // Allocate per-plugin host dirs that back `/data`, `/cache`, `/tmp`.
+    // `/bundle` is the plugin install dir, read-only. The L3 sandbox needs
+    // to know about the writable ones so it doesn't block legitimate writes.
+    const fsDirs = allocateFsDirs(this.#brikaInit.brikaDir, uid, rootDirectory);
+
     // L3 sandbox: wrap the bun command in the platform's launcher.
     // The launcher inspects the plugin's writable backing dirs and
     // emits an SBPL profile (macOS) / no-op (Linux + Windows pending
@@ -239,8 +282,8 @@ export class PluginLifecycle {
       [`--preload=${PRELUDE_PATH}`, buildResult.entryPath],
       {
         pluginUid: uid,
-        readableDirs: [rootDirectory],
-        writableDirs: [rootDirectory],
+        readableDirs: [rootDirectory, fsDirs.data, fsDirs.cache, fsDirs.tmp],
+        writableDirs: [rootDirectory, fsDirs.data, fsDirs.cache, fsDirs.tmp],
         allowNetwork: true,
       }
     );
@@ -255,16 +298,7 @@ export class PluginLifecycle {
       defaultTimeoutMs: this.#config.callTimeoutMs,
       onDisconnect: (error) => this.#handleDisconnect(pluginName, error),
       onStderr: (line) =>
-        this.#logs.error(
-          'Plugin error output received',
-          {
-            pluginName: pluginName,
-            message: line,
-          },
-          {
-            source: 'stderr',
-          }
-        ),
+        this.#eventHandler.onPluginLog(pluginName, 'error', line, { source: 'stderr' }),
     });
 
     const process = new PluginProcess(
@@ -277,6 +311,7 @@ export class PluginLifecycle {
         version: metadata.version,
         metadata,
         locales,
+        fsDirs,
       },
       {
         heartbeatIntervalMs: this.#config.heartbeatEveryMs,
@@ -284,27 +319,25 @@ export class PluginLifecycle {
       },
       {
         onReady: async (p) => {
-          // Validate preferences before sending
+          // Validate preferences before letting the plugin do real work.
+          // On failure we transition to `awaiting-config` (not `crashed`)
+          // so the UI can render a "Configure" CTA instead of a generic
+          // error. The plugin process is gracefully unloaded — when the
+          // operator submits valid preferences the lifecycle will boot
+          // it again (see #autoStartOnPreferencesSave).
           const prefs = await this.#pluginConfig.getConfig(p.name);
           const validation = this.#pluginConfig.validate(p.name, prefs);
           if (!validation.success) {
             const errors = validation.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`);
-            this.#logs.error('Plugin preferences validation failed', {
+            this.#logs.warn('Plugin awaiting valid configuration', {
               pluginName: p.name,
               errors,
             });
-            // Dispatch event so reload/enable can handle it
             this.#events.dispatch(
-              PluginActions.configInvalid.create(
-                {
-                  uid: p.uid,
-                  name: p.name,
-                  errors,
-                },
-                'hub'
-              )
+              PluginActions.configInvalid.create({ uid: p.uid, name: p.name, errors }, 'hub')
             );
-            // Gracefully stop (not crash) - won't trigger auto-restart
+            this.#state.setHealth(p.name, 'awaiting-config', PluginErrors.awaitingConfig(errors));
+            // Graceful unload, no auto-restart.
             this.unload(p.name);
             return;
           }

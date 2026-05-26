@@ -11,7 +11,15 @@ mock.module('../context', () => ({
   }),
 }));
 
-const { defineAction } = await import('../api/actions');
+const {
+  BINARY_RESPONSE_TAG,
+  STREAM_FILE_TAG,
+  binaryResponse,
+  defineAction,
+  isBinaryResponse,
+  isStreamFileResponse,
+  streamFile,
+} = await import('../api/actions');
 
 describe('defineAction', () => {
   beforeEach(() => {
@@ -102,5 +110,54 @@ describe('defineAction', () => {
     expect(ref1.__actionId).not.toBe(ref2.__actionId);
     expect(ref2.__actionId).not.toBe(ref3.__actionId);
     expect(ref1.__actionId).not.toBe(ref3.__actionId);
+  });
+});
+
+describe('binaryResponse', () => {
+  test('produces a tagged envelope carrying bytes and contentType', () => {
+    const bytes = new Uint8Array([1, 2, 3]);
+    const result = binaryResponse(bytes, 'image/png');
+    expect(isBinaryResponse(result)).toBe(true);
+    // Cast through unknown so we can inspect the runtime envelope —
+    // the public return type lies as Blob for end-to-end safety.
+    const envelope = result as unknown as Record<string, unknown>;
+    expect(envelope[BINARY_RESPONSE_TAG]).toBe(true);
+    expect(envelope.bytes).toBe(bytes);
+    expect(envelope.contentType).toBe('image/png');
+  });
+
+  test('defaults contentType to application/octet-stream', () => {
+    const result = binaryResponse(new Uint8Array());
+    const envelope = result as unknown as Record<string, unknown>;
+    expect(envelope.contentType).toBe('application/octet-stream');
+  });
+});
+
+describe('streamFile', () => {
+  test('produces a tagged envelope carrying virtualPath and contentType', () => {
+    const result = streamFile('/data/foo.png', 'image/png');
+    expect(isStreamFileResponse(result)).toBe(true);
+    const envelope = result as unknown as Record<string, unknown>;
+    expect(envelope[STREAM_FILE_TAG]).toBe(true);
+    expect(envelope.virtualPath).toBe('/data/foo.png');
+    expect(envelope.contentType).toBe('image/png');
+  });
+
+  test('omits contentType when none provided', () => {
+    const result = streamFile('/data/bin');
+    const envelope = result as unknown as Record<string, unknown>;
+    expect(envelope.contentType).toBeUndefined();
+  });
+
+  test('isStreamFileResponse rejects unrelated values', () => {
+    expect(isStreamFileResponse(null)).toBe(false);
+    expect(isStreamFileResponse('hello')).toBe(false);
+    expect(isStreamFileResponse({ [STREAM_FILE_TAG]: false })).toBe(false);
+    expect(isStreamFileResponse({ virtualPath: '/x' })).toBe(false);
+    expect(isStreamFileResponse(binaryResponse(new Uint8Array()))).toBe(false);
+  });
+
+  test('isBinaryResponse rejects stream envelopes', () => {
+    expect(isBinaryResponse(streamFile('/x'))).toBe(false);
   });
 });

@@ -1,0 +1,44 @@
+{
+  "name": "Playground",
+  "description": "Experimental sandbox plugin — echo block, preferences showcase, and a file browser demo",
+  "tools": {
+    "echo": {
+      "name": "Echo",
+      "description": "Echo back the provided message"
+    }
+  },
+  "fields": {
+    "message": {
+      "label": "Message",
+      "description": "The message to echo back"
+    }
+  },
+  "preferences": {
+    "apiKey": {
+      "title": "API Key",
+      "description": "Your secret API key for authentication"
+    },
+    "serverUrl": {
+      "title": "Server URL",
+      "description": "The base URL of the API server"
+    },
+    "maxRetries": {
+      "title": "Max Retries",
+      "description": "Maximum number of retry attempts (1-10)"
+    },
+    "debugMode": {
+      "title": "Debug Mode",
+      "description": "Enable verbose logging for troubleshooting"
+    },
+    "logLevel": {
+      "title": "Log Level",
+      "description": "Minimum log level to display",
+      "options": {
+        "debug": "Debug",
+        "info": "Info",
+        "warn": "Warning",
+        "error": "Error"
+      }
+    }
+  }
+}

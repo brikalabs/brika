@@ -10,7 +10,7 @@
 
 import { log } from '@brika/sdk/lifecycle';
 import { getDataDir } from '@brika/sdk/storage';
-import { Environment, Seconds, StorageService } from '@matter/main';
+import { Environment, Filesystem, Seconds, StorageService } from '@matter/main';
 import { BridgedDeviceBasicInformationClient } from '@matter/main/behaviors/bridged-device-basic-information';
 import { DoorLockClient } from '@matter/main/behaviors/door-lock';
 import { LevelControlClient } from '@matter/main/behaviors/level-control';
@@ -19,6 +19,7 @@ import { ThermostatClient } from '@matter/main/behaviors/thermostat';
 import { WindowCoveringClient } from '@matter/main/behaviors/window-covering';
 import { DoorLock, GeneralCommissioning, Thermostat } from '@matter/main/clusters';
 import { ManualPairingCodeCodec, NodeId, QrPairingCodeCodec, VendorId } from '@matter/main/types';
+import { NodeJsFilesystem } from '@matter/nodejs';
 import { CommissioningController, type NodeCommissioningOptions } from '@project-chip/matter.js';
 import { NodeStates, type PairedNode } from '@project-chip/matter.js/device';
 
@@ -180,10 +181,19 @@ export class MatterController {
 
     log.info('Matter controller starting...');
 
-    // Configure environment with our data dir as storage
+    // Configure environment with our data dir as storage. matter.js 0.17
+    // made `StorageService.location` a getter-only property; the previous
+    // direct assignment (`environment.get(StorageService).location = …`)
+    // throws `Attempted to assign to readonly property`. Register a
+    // `NodeJsFilesystem` rooted at our data dir instead — `StorageService`
+    // reads the path back through `environment.get(Filesystem).path`.
     const dataDir = getDataDir();
     const environment = Environment.default;
-    environment.get(StorageService).location = dataDir;
+    environment.set(Filesystem, new NodeJsFilesystem(dataDir));
+    // Touch the service so the previous `.location` access pattern stays
+    // a no-op rather than dead-import. Throws nothing now that
+    // `hasFilesystem` is true.
+    environment.get(StorageService);
 
     log.info(`Matter storage: ${dataDir}`);
 

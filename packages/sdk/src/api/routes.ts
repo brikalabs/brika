@@ -14,8 +14,11 @@ export type RouteHandler = (req: RouteRequest) => RouteResponse | Promise<RouteR
  * Register an HTTP route on the hub.
  *
  * The handler receives a `RouteRequest` and must return a `RouteResponse`.
- * Unhandled exceptions inside the handler are caught by the SDK and returned
- * as `{ status: 500, body: { error: "..." } }` to the caller.
+ * Unhandled exceptions are caught and translated: a thrown `BrikaError`
+ * resolves to its canonical HTTP status (e.g. `PERMISSION_DENIED` → 403,
+ * `INVALID_INPUT` → 400, `NOT_FOUND` → 404, `TIMEOUT` → 504) with body
+ * `{ error, code }`. Any other error falls through to `{ status: 500,
+ * body: { error: "..." } }`.
  *
  * @example
  * ```ts

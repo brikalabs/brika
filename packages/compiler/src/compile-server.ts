@@ -1,9 +1,10 @@
 import { mkdir, rm } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import { hashPluginSources } from './hash-sources';
-import { brikaServerActionsPlugin } from './plugins/actions-server';
-import { nodeFsShimPlugin } from './plugins/node-fs-shim';
-import { nodeOsShimPlugin } from './plugins/node-os-shim';
+import { brikaServerActionsTransform } from './plugins/actions-server';
+import { composeTransforms } from './plugins/compose';
+import { nodeFsShimTransform } from './plugins/node-fs-shim';
+import { nodeOsShimTransform } from './plugins/node-os-shim';
 
 export interface ServerCompileOptions {
   /** Absolute path to the plugin entry (e.g., src/index.tsx) */
@@ -54,7 +55,18 @@ export async function compileServerEntry(opts: ServerCompileOptions): Promise<Se
     splitting: opts.splitting ?? true,
     minify: true,
     external: opts.external,
-    plugins: [brikaServerActionsPlugin(opts.pluginRoot), nodeOsShimPlugin(), nodeFsShimPlugin()],
+    // Compose every build-time transform into a single Bun plugin —
+    // see `plugins/compose.ts` for why this can't be three separate
+    // plugins. Order is significant: shims rewrite import specifiers,
+    // then the actions transform scans the post-shim text and appends
+    // its finalization footer.
+    plugins: [
+      composeTransforms([
+        nodeFsShimTransform(),
+        nodeOsShimTransform(),
+        brikaServerActionsTransform(opts.pluginRoot),
+      ]),
+    ],
   });
 
   if (!result.success) {

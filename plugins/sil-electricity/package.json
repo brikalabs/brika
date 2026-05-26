@@ -16,6 +16,11 @@
   "engines": {
     "brika": "^0.3.0"
   },
+  "grants": {
+    "dev.brika.net.fetch": {
+      "allow": ["www.lausanne.ch"]
+    }
+  },
   "scripts": {
     "link": "bun link",
     "typecheck": "tsgo --noEmit"

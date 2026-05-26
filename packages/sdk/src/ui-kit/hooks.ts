@@ -60,3 +60,25 @@ export function useAction<T>(_ref: ActionRef<void, T>): ActionResult<T> {
 export function useCallAction(): <I, O>(ref: ActionRef<I, O>, input?: I) => Promise<O> {
   throw new Error('useCallAction() is only available in plugin pages/bricks');
 }
+
+// ─── Plugin identity / URL helpers ───────────────────────────────────────────
+
+/**
+ * Returns the running plugin's UID — useful for building absolute URLs to
+ * plugin routes or assets. Prefer `usePluginRouteUrl(path)` for routes.
+ */
+export function usePluginUid(): string {
+  throw new Error('usePluginUid() is only available in plugin pages/bricks');
+}
+
+/**
+ * Builds an absolute URL to one of this plugin's registered routes.
+ * Example: `usePluginRouteUrl('avatar.png')` → `/api/plugins/<uid>/routes/avatar.png`.
+ *
+ * The leading slash on `path` is optional. Use this in `<img src>`, `<a href>`,
+ * `fetch()`, etc. — the browser handles the request, the hub forwards to your
+ * `defineRoute` handler.
+ */
+export function usePluginRouteUrl(_path: string): string {
+  throw new Error('usePluginRouteUrl() is only available in plugin pages/bricks');
+}

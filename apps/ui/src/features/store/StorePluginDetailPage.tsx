@@ -1,6 +1,7 @@
 import { useParams } from '@tanstack/react-router';
 import { useDataView } from '@/components/DataView';
 import {
+  PluginGrantsPreview,
   StorePluginDetailEmpty,
   StorePluginDetailSkeleton,
   StorePluginDetailsCard,
@@ -50,6 +51,7 @@ export function StorePluginDetailPage() {
           <div className="space-y-6">
             <StorePluginHeader plugin={plugin} />
             <StorePluginDetailsCard plugin={plugin} />
+            <PluginGrantsPreview plugin={plugin} />
             {readmeData?.readme && (
               <StorePluginReadmeCard readme={readmeData.readme} filename={readmeData.filename} />
             )}

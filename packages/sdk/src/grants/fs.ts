@@ -110,13 +110,15 @@ export const fsReadFile = defineGrant(
 // ─── writeFile ──────────────────────────────────────────────────────────────
 
 /**
- * Wire-level cap on a single writeFile payload. The hub's per-call
- * `maxFileBytes` (default 50 MiB) is the security boundary; this 64
- * MiB ceiling is a defence-in-depth so a malicious plugin can't
- * force the IPC decode to allocate gigabytes before the cap check
- * runs.
+ * Wire-level cap on a single `writeFile` payload. The hub's per-call
+ * `maxFileBytes` (currently 256 MiB) is the user-facing security
+ * boundary; this 512 MiB ceiling is defence in depth so a malicious
+ * plugin can't force the IPC decoder to allocate gigabytes before
+ * the cap check runs. Always keep this strictly above
+ * `DEFAULT_MAX_FILE_BYTES` so legitimate writes never trip the
+ * outer guard first.
  */
-const MAX_WRITE_BYTES = 64 * 1024 * 1024;
+const MAX_WRITE_BYTES = 512 * 1024 * 1024;
 
 export const FsWriteFileArgsSchema = z.object({
   path: FsPathSchema,
@@ -167,6 +169,10 @@ export const FsDirEntrySchema = z.object({
   isFile: z.boolean(),
   isDirectory: z.boolean(),
   isSymlink: z.boolean(),
+  /** File size in bytes. `0` for directories and symlinks. */
+  size: z.number().int().nonnegative().default(0),
+  /** Last-modified time as a Unix epoch ms timestamp. */
+  mtime: z.number().int().nonnegative().default(0),
 });
 
 export const FsReaddirArgsSchema = z.object({

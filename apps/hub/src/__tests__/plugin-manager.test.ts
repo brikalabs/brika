@@ -333,7 +333,11 @@ describe('PluginManager', () => {
         await expect(manager.enable('unknown-uid')).rejects.toThrow('Plugin not found');
       });
 
-      test('throws on config invalid event', async () => {
+      test('resolves cleanly on config-invalid event (plugin lands in awaiting-config)', async () => {
+        // `configInvalid` is no longer a fatal failure for `enable()` —
+        // the lifecycle transitions the plugin to `awaiting-config` and
+        // the UI renders a Configure CTA. Callers learn the new state
+        // via the plugin record, not by catching a 400.
         const storedData = {
           name: '@test/plugin',
           rootDirectory: '/path',
@@ -349,7 +353,10 @@ describe('PluginManager', () => {
           },
         });
 
-        await expect(manager.enable('uid-123')).rejects.toThrow('invalid configuration');
+        // Resolves (does not throw); plugin's `awaiting-config` state
+        // is the public signal — verified separately at the lifecycle
+        // layer.
+        await manager.enable('uid-123');
       });
     });
 

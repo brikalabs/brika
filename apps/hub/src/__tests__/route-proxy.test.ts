@@ -180,7 +180,7 @@ describe('extractBody', () => {
     expect(result).toBeUndefined();
   });
 
-  test('returns undefined when content-type is not application/json', async () => {
+  test('returns raw bytes when content-type is not application/json', async () => {
     const req = new Request('https://example.com', {
       method: 'POST',
       headers: {
@@ -191,10 +191,15 @@ describe('extractBody', () => {
 
     const result = await extractBody(req);
 
-    expect(result).toBeUndefined();
+    expect(result).toBeInstanceOf(Uint8Array);
+    expect(new TextDecoder().decode(result as Uint8Array)).toBe('hello');
   });
 
-  test('returns undefined when content-type is missing', async () => {
+  test('returns raw bytes when content-type is missing (default text/plain body)', async () => {
+    // Bun's Request infers text/plain when body is a string and no
+    // content-type is provided, so the bytes still come through as a
+    // Uint8Array — exactly what a plugin route handler expects for an
+    // upload-style POST.
     const req = new Request('https://example.com', {
       method: 'POST',
       body: '{"a":1}',
@@ -202,7 +207,21 @@ describe('extractBody', () => {
 
     const result = await extractBody(req);
 
-    expect(result).toBeUndefined();
+    expect(result).toBeInstanceOf(Uint8Array);
+  });
+
+  test('returns Uint8Array for binary upload (application/octet-stream)', async () => {
+    const bytes = new Uint8Array([0x89, 0x50, 0x4e, 0x47]);
+    const req = new Request('https://example.com', {
+      method: 'POST',
+      headers: { 'content-type': 'application/octet-stream' },
+      body: bytes,
+    });
+
+    const result = await extractBody(req);
+
+    expect(result).toBeInstanceOf(Uint8Array);
+    expect(result).toEqual(bytes);
   });
 
   test('parses JSON body for POST requests', async () => {
@@ -435,6 +454,33 @@ describe('proxyToPlugin', () => {
     const res = await proxyToPlugin(proc, 'r', 'GET', '/', {}, {});
 
     expect(await res.json()).toEqual([1, 2, 3]);
+  });
+
+  test('passes Uint8Array body through verbatim with plugin-supplied content-type', async () => {
+    const png = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+    const proc = createMockProcess({
+      status: 200,
+      headers: { 'content-type': 'image/png' },
+      body: png,
+    });
+
+    const res = await proxyToPlugin(proc, 'r', 'GET', '/', {}, {});
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get('Content-Type')).toBe('image/png');
+    const buf = new Uint8Array(await res.arrayBuffer());
+    expect(buf).toEqual(png);
+  });
+
+  test('Uint8Array body defaults to application/octet-stream when no content-type provided', async () => {
+    const proc = createMockProcess({
+      status: 200,
+      body: new Uint8Array([1, 2, 3]),
+    });
+
+    const res = await proxyToPlugin(proc, 'r', 'GET', '/', {}, {});
+
+    expect(res.headers.get('Content-Type')).toBe('application/octet-stream');
   });
 
   test('drops non-allowlisted plugin-supplied headers (S6 fix)', async () => {

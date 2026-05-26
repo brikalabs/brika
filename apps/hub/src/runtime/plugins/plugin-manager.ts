@@ -117,13 +117,11 @@ export class PluginManager {
 
     await this.#lifecycle.load(stored.rootDirectory);
 
-    const result = await racePromise;
-    if (result.type === 'plugin.configInvalid') {
-      throw errors.pluginConfigInvalid(
-        { pluginId: uid },
-        { message: `Plugin ${uid} has invalid configuration: ${result.payload.errors.join(', ')}` }
-      );
-    }
+    // `configInvalid` is intentionally non-fatal here: the lifecycle
+    // has already transitioned the plugin to `awaiting-config` and the
+    // UI renders a Configure CTA. Returning a generic 400 would defeat
+    // that, so we resolve normally and let callers inspect health.
+    await racePromise;
   }
 
   async disable(uid: string): Promise<void> {
@@ -182,11 +180,12 @@ export class PluginManager {
     }
 
     const result = await racePromise;
+    // `configInvalid` is non-fatal: the lifecycle already set the
+    // plugin to `awaiting-config`. Skip the `reloaded` dispatch since
+    // the plugin is intentionally not running; the UI surfaces the
+    // state via the plugin record.
     if (result.type === 'plugin.configInvalid') {
-      throw errors.pluginConfigInvalid(
-        { pluginId: uid },
-        { message: `Plugin ${uid} has invalid configuration: ${result.payload.errors.join(', ')}` }
-      );
+      return;
     }
 
     await this.#events.dispatch(

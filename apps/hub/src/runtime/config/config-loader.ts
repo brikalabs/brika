@@ -49,6 +49,18 @@ export interface BrikaConfig {
       heartbeatInterval: number;
       heartbeatTimeout: number;
     };
+    logs: {
+      /**
+       * Drop log rows older than this many days during periodic pruning.
+       * 0 disables retention (keep everything — log file grows unbounded).
+       */
+      retentionDays: number;
+      /**
+       * How often (in milliseconds) the retention sweep runs. Defaults
+       * to 1 hour; setting too low wastes CPU, too high risks bloat.
+       */
+      pruneIntervalMs: number;
+    };
   };
   plugins: PluginEntry[];
   rules: RuleEntry[];
@@ -63,6 +75,10 @@ const DEFAULT_CONFIG: BrikaConfig = {
       installDir: './plugins/.installed',
       heartbeatInterval: 5000,
       heartbeatTimeout: 15000,
+    },
+    logs: {
+      retentionDays: 7,
+      pruneIntervalMs: 60 * 60 * 1000,
     },
   },
   plugins: [],
@@ -128,6 +144,7 @@ export class ConfigLoader {
 
       const hubParsed = (parsed.hub ?? {}) as Record<string, unknown>;
       const hubPluginsParsed = (hubParsed.plugins ?? {}) as Record<string, unknown>;
+      const hubLogsParsed = (hubParsed.logs ?? {}) as Record<string, unknown>;
 
       this.#config = {
         hub: {
@@ -142,6 +159,12 @@ export class ConfigLoader {
             heartbeatTimeout:
               (hubPluginsParsed.heartbeatTimeout as number) ??
               DEFAULT_CONFIG.hub.plugins.heartbeatTimeout,
+          },
+          logs: {
+            retentionDays:
+              (hubLogsParsed.retentionDays as number) ?? DEFAULT_CONFIG.hub.logs.retentionDays,
+            pruneIntervalMs:
+              (hubLogsParsed.pruneIntervalMs as number) ?? DEFAULT_CONFIG.hub.logs.pruneIntervalMs,
           },
         },
         plugins: this.#parsePlugins(parsed.plugins),

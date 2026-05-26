@@ -19,6 +19,7 @@ import {
   preferences,
   pushBrickData,
   pushInput,
+  type RouteRequest as RouteRequestType,
   type RouteResponseType,
   ready,
   registerAction,
@@ -38,14 +39,18 @@ import {
   updateBrickConfig,
   updatePreference,
 } from '@brika/ipc/contract';
-import type { Permission } from '@brika/permissions';
 import type { BrickFamily, Plugin, PluginHealth } from '@brika/plugin';
 import type { PluginPackageSchema } from '@brika/schema';
+import { FsScopeSchema } from '@brika/sdk/grants';
 import { getProcessMetrics } from '@/runtime/metrics';
 import type { HubLocation } from '@/runtime/state/state-store';
 import { dispatchGrantRequest } from './grants/dispatch';
+import { backingDirFor, resolveVirtualPath } from './grants/fs/paths';
+import { assertAccess } from './grants/fs/scope';
+import { assertWithinBackingDir } from './grants/fs/symlinks';
+import { DEFAULT_FS_QUOTAS } from './grants/fs/types';
 import { buildHubGrants } from './grants/registry-factory';
-import { buildVectorWithUserConsent } from './grants/vector';
+import { buildVectorWithUserConsent, familiesForManifestGrants } from './grants/vector';
 import { now } from './utils';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -117,6 +122,7 @@ export interface BrickTypeRegistration {
 export class PluginProcess {
   readonly name: string;
   readonly rootDirectory: string;
+  readonly fsDirs: { bundle: string; data: string; cache: string; tmp: string };
   readonly entryPoint: string;
   readonly uid: string;
   readonly version: string;
@@ -134,6 +140,13 @@ export class PluginProcess {
   readonly #sparkSubscriptions = new Map<string, () => void>(); // subscriptionId -> unsubscribe
   #stopped = false;
   #grants: GrantRegistry | undefined;
+  /**
+   * Cached grant vector. Rebuilt only when permissions change or the
+   * plugin restarts — every dispatch otherwise reads this directly,
+   * skipping the SQLite read + scope schema validation that the rebuild
+   * would otherwise run on the hot path of every `ctx.*` call.
+   */
+  #cachedVector: ReturnType<typeof buildVectorWithUserConsent> | undefined;
   readonly #lifetimeAbort = new AbortController();
 
   constructor(
@@ -146,6 +159,12 @@ export class PluginProcess {
       version: string;
       metadata: PluginPackageSchema;
       locales: string[];
+      /**
+       * Per-plugin host directories backing the virtual roots `/bundle`,
+       * `/data`, `/cache`, `/tmp`. Pre-allocated by the lifecycle service
+       * so `ctx.fs.*` calls land on real disk.
+       */
+      fsDirs: { bundle: string; data: string; cache: string; tmp: string };
     },
     private readonly config: PluginProcessConfig,
     private readonly callbacks: PluginProcessCallbacks
@@ -156,6 +175,7 @@ export class PluginProcess {
 
     this.name = info.name;
     this.rootDirectory = info.rootDirectory;
+    this.fsDirs = info.fsDirs;
     this.entryPoint = info.entryPoint;
     this.uid = info.uid;
     this.version = info.version;
@@ -326,7 +346,7 @@ export class PluginProcess {
     path: string,
     query: Record<string, string>,
     headers: Record<string, string>,
-    body?: Json
+    body?: RouteRequestType['body']
   ): Promise<RouteResponseType> {
     if (this.#stopped) {
       return {
@@ -379,7 +399,11 @@ export class PluginProcess {
 
   /**
    * Call a plugin-defined action via IPC.
-   * Returns `{ ok, data?, error? }`.
+   *
+   * On failure returns a structured `error` envelope (message + optional
+   * `name`/`code`/`data`) — see `packages/ipc/src/contract/actions.ts`
+   * for the contract. The HTTP route forwards the envelope verbatim
+   * so the page-side `ActionError` can branch on `.code`.
    */
   async callPluginAction(
     actionId: string,
@@ -387,12 +411,15 @@ export class PluginProcess {
   ): Promise<{
     ok: boolean;
     data?: Json;
-    error?: string;
+    bytes?: Uint8Array;
+    contentType?: string;
+    stream?: { virtualPath: string; contentType?: string };
+    error?: { message: string; name?: string; code?: string; data?: Json };
   }> {
     if (this.#stopped) {
       return {
         ok: false,
-        error: 'Plugin stopped',
+        error: { message: 'Plugin stopped', code: 'PLUGIN_STOPPED' },
       };
     }
     try {
@@ -408,9 +435,38 @@ export class PluginProcess {
       this.callbacks.onLog('error', `Action call failed [${actionId}]: ${e}`);
       return {
         ok: false,
-        error: 'Action call failed',
+        error: { message: 'Action call failed', code: 'ACTION_CALL_FAILED' },
       };
     }
+  }
+
+  /**
+   * Resolve a virtual path into a real host path, honouring the
+   * plugin's current `dev.brika.fs.readFile` scope and the standard
+   * symlink-escape guard. Used by the action HTTP route when a
+   * handler returns a `streamFile(...)` envelope — the hub then
+   * pipes `Bun.file(hostPath).stream()` straight to the response
+   * without ever buffering the bytes.
+   *
+   * The same validation pipeline as the grant handler runs here, so
+   * a plugin can only stream files inside paths the operator has
+   * approved for reading.
+   */
+  async resolveStreamPath(virtualPath: string): Promise<string> {
+    const vector = this.#buildCurrentVector();
+    const entry = vector.grants.find((g) => g.id === 'dev.brika.fs.readFile');
+    if (!entry) {
+      throw errors.permissionDenied({ permission: 'dev.brika.fs.readFile' });
+    }
+    // `entry.scope` is `unknown` at the vector level; validate against
+    // `FsScopeSchema` once before handing it to the fs helpers. This
+    // both narrows the type and catches the (theoretical) case of a
+    // misconfigured vector slipping through to disk-touching code.
+    const scope = FsScopeSchema.parse(entry.scope);
+    const resolved = resolveVirtualPath(virtualPath, this.fsDirs);
+    assertAccess(resolved, scope, 'read');
+    await assertWithinBackingDir(resolved, backingDirFor(resolved, this.fsDirs));
+    return resolved.hostPath;
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -479,7 +535,8 @@ export class PluginProcess {
       sparks: m.sparks ?? [],
       bricks: m.bricks ?? [],
       pages: m.pages ?? [],
-      permissions: m.permissions ?? [],
+      permissions: familiesForManifestGrants(this.#getGrantRegistry(), m.grants),
+      grants: m.grants ?? {},
       grantedPermissions: this.callbacks.onGetGrantedPermissions(this.name),
       locales: this.locales,
     };
@@ -575,7 +632,7 @@ export class PluginProcess {
     });
 
     this.#channel.implement(getHubLocation, () => {
-      this.#requirePermission('location');
+      this.#requireGrant('dev.brika.location.get');
       return {
         location: this.callbacks.onGetHubLocation(),
       };
@@ -588,19 +645,19 @@ export class PluginProcess {
     });
 
     this.#channel.implement(getPluginSecret, async ({ key }) => {
-      this.#requirePermission('secrets');
+      this.#requireGrant('dev.brika.secrets.get');
       const value = await this.callbacks.onGetPluginSecret(this.name, key);
       return { value };
     });
 
     this.#channel.implement(setPluginSecret, async ({ key, value }) => {
-      this.#requirePermission('secrets');
+      this.#requireGrant('dev.brika.secrets.set');
       await this.callbacks.onSetPluginSecret(this.name, key, value);
       return {};
     });
 
     this.#channel.implement(deletePluginSecret, async ({ key }) => {
-      this.#requirePermission('secrets');
+      this.#requireGrant('dev.brika.secrets.delete');
       const deleted = await this.callbacks.onDeletePluginSecret(this.name, key);
       return { deleted };
     });
@@ -639,36 +696,74 @@ export class PluginProcess {
   }
 
   /**
-   * Recompute this plugin's vector now from the structured `grants` map
-   * (preferred) or the legacy `permissions` array (fallback during the
-   * StateStore migration window).
+   * Compute this plugin's vector from the structured `grants` map and the
+   * operator-permitted family list, then cache it. Subsequent calls return
+   * the cached vector until `invalidateVector()` is called — invoked by the
+   * permission service when the operator toggles a family for this plugin.
    *
-   * Recomputed each call so a permission edit is picked up before the next
-   * dispatch — cheap because the registry itself is built once.
+   * Rebuilding on every dispatch was a measurable hot-path cost (SQLite
+   * read for granted permissions + per-grant scope schema validation);
+   * the cached vector is identical until consent changes, so caching is
+   * pure win.
    */
   #buildCurrentVector() {
-    return buildVectorWithUserConsent(
+    if (this.#cachedVector !== undefined) {
+      return this.#cachedVector;
+    }
+    this.#cachedVector = buildVectorWithUserConsent(
       this.#getGrantRegistry(),
       this.metadata.grants,
       this.callbacks.onGetGrantedPermissions(this.name),
       (id, message) => this.callbacks.onLog('warn', `grant "${id}" dropped from vector: ${message}`)
     );
+    return this.#cachedVector;
+  }
+
+  /**
+   * Clear the cached vector so the next dispatch rebuilds from the
+   * current operator-permitted family set. Call this when the StateStore
+   * has been updated (permission toggle) so the change takes effect on
+   * the very next `ctx.*` call without requiring a plugin restart.
+   */
+  invalidateVector(): void {
+    this.#cachedVector = undefined;
   }
 
   #getGrantRegistry(): GrantRegistry {
     if (this.#grants === undefined) {
-      this.#grants = buildHubGrants({
-        // net.fetch — wire to the host runtime's fetch
-        fetch: (input, init) => globalThis.fetch(input, init),
-      });
+      // Per-plugin caps from package.json `resources.fs`. Plugins
+      // that handle media (file browser, image editors) typically
+      // declare larger `maxFileBytes` / `quotas`; locked-down plugins
+      // can declare tighter values for defence in depth. Omitted
+      // fields fall back to the hub-wide defaults.
+      const fsResources = this.metadata.resources?.fs;
+      this.#grants = buildHubGrants(
+        {
+          // net.fetch — wire to the host runtime's fetch
+          fetch: (input, init) => globalThis.fetch(input, init),
+        },
+        {
+          fs: {
+            dirs: this.fsDirs,
+            maxFileBytes: fsResources?.maxFileBytes,
+            quotas: fsResources?.quotas
+              ? {
+                  data: fsResources.quotas.data ?? DEFAULT_FS_QUOTAS.data,
+                  cache: fsResources.quotas.cache ?? DEFAULT_FS_QUOTAS.cache,
+                  tmp: fsResources.quotas.tmp ?? DEFAULT_FS_QUOTAS.tmp,
+                }
+              : undefined,
+          },
+        }
+      );
     }
     return this.#grants;
   }
 
-  #requirePermission(permission: Permission): void {
-    const granted = this.callbacks.onGetGrantedPermissions(this.name);
-    if (!granted.includes(permission)) {
-      throw errors.permissionDenied({ permission });
+  #requireGrant(id: string): void {
+    const vector = this.#buildCurrentVector();
+    if (!vector.grants.some((g) => g.id === id)) {
+      throw errors.permissionDenied({ permission: id });
     }
   }
 

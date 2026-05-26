@@ -36,6 +36,7 @@ describe('plugins routes', () => {
   };
   let mockLifecycle: {
     getProcess: ReturnType<typeof mock>;
+    load?: ReturnType<typeof mock>;
   };
   let mockConfig: {
     getSchema: ReturnType<typeof mock>;
@@ -271,6 +272,48 @@ describe('plugins routes', () => {
 
     expect(res.status).toBe(200);
     expect(sendPrefs).toHaveBeenCalled();
+  });
+
+  test('PUT /api/plugins/:uid/config auto-loads a plugin parked in awaiting-config', async () => {
+    // Plugin lands in `awaiting-config` after rejecting empty required
+    // prefs; the config save with a valid value should auto-start it.
+    mockManager.get.mockReturnValue({
+      uid: 'plg-1',
+      name: '@brika/plugin-timer',
+      status: 'awaiting-config',
+    });
+    mockLifecycle.getProcess.mockReturnValue(null);
+    const load = mock().mockResolvedValue(undefined);
+    mockLifecycle.load = load;
+    stub(StateStore, {
+      get: mock().mockReturnValue({ enabled: true, rootDirectory: '/plug' }),
+      remove: mock().mockResolvedValue(undefined),
+    });
+
+    const res = await app.put('/api/plugins/plg-1/config', { apiKey: 'x' });
+
+    expect(res.status).toBe(200);
+    expect(load).toHaveBeenCalledWith('/plug');
+  });
+
+  test('PUT /api/plugins/:uid/config does NOT auto-load if the plugin is disabled', async () => {
+    mockManager.get.mockReturnValue({
+      uid: 'plg-1',
+      name: '@brika/plugin-timer',
+      status: 'awaiting-config',
+    });
+    mockLifecycle.getProcess.mockReturnValue(null);
+    const load = mock().mockResolvedValue(undefined);
+    mockLifecycle.load = load;
+    stub(StateStore, {
+      get: mock().mockReturnValue({ enabled: false, rootDirectory: '/plug' }),
+      remove: mock().mockResolvedValue(undefined),
+    });
+
+    const res = await app.put('/api/plugins/plg-1/config', { apiKey: 'x' });
+
+    expect(res.status).toBe(200);
+    expect(load).not.toHaveBeenCalled();
   });
 
   test('PUT /api/plugins/:uid/config returns 422 on validation error', async () => {

@@ -69,7 +69,7 @@ This starts both the Hub and UI in watch mode.
 * `plugins/weather/` — Weather bricks (compact, current, forecast)
 * `plugins/spotify/` — Spotify player brick
 * `plugins/matter/` — Matter/smart home device bricks
-* `plugins/example-echo/` — Example plugin
+* `plugins/playground/` — Experimental sandbox plugin (echo block, preferences demo, file browser)
 
 ## Adding Features
 

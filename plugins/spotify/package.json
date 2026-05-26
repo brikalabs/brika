@@ -21,6 +21,11 @@
   "engines": {
     "brika": "^0.3.0"
   },
+  "grants": {
+    "dev.brika.net.fetch": {
+      "allow": ["accounts.spotify.com", "api.spotify.com"]
+    }
+  },
   "scripts": {
     "link": "bun link",
     "typecheck": "tsgo --noEmit",

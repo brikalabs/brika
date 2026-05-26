@@ -83,8 +83,41 @@ export {
   fsWriteFile,
   VIRTUAL_ROOTS,
 } from './fs';
+export type {
+  LocationGetArgs,
+  LocationGetResult,
+  LocationScope,
+} from './location';
+export {
+  LocationGetArgsSchema,
+  LocationGetResultSchema,
+  LocationScopeSchema,
+  locationGet,
+} from './location';
 export type { FetchArgs, FetchResult, NetScope } from './net';
 export { FetchArgsSchema, FetchResultSchema, NetScopeSchema, netFetch } from './net';
+export type {
+  SecretsDeleteArgs,
+  SecretsDeleteResult,
+  SecretsGetArgs,
+  SecretsGetResult,
+  SecretsScope,
+  SecretsSetArgs,
+  SecretsSetResult,
+} from './secrets';
+export {
+  SecretKeySchema,
+  SecretsDeleteArgsSchema,
+  SecretsDeleteResultSchema,
+  SecretsGetArgsSchema,
+  SecretsGetResultSchema,
+  SecretsScopeSchema,
+  SecretsSetArgsSchema,
+  SecretsSetResultSchema,
+  secretsDelete,
+  secretsGet,
+  secretsSet,
+} from './secrets';
 export type { UiPickFileArgs, UiPickFileResult, UiScope } from './ui';
 export { UiPickFileArgsSchema, UiPickFileResultSchema, UiScopeSchema, uiPickFile } from './ui';
 export type {

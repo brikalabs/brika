@@ -4,5 +4,23 @@
   "location": "Localisation",
   "locationDesc": "Accéder à la localisation physique du hub (adresse, coordonnées, fuseau horaire)",
   "secrets": "Stockage sécurisé",
-  "secretsDesc": "Lire et écrire les identifiants du plugin dans le trousseau du système"
+  "secretsDesc": "Lire et écrire les identifiants du plugin dans le trousseau du système",
+  "net": "Réseau",
+  "netDesc": "Effectuer des requêtes HTTP sortantes vers les hôtes listés",
+  "fs": "Système de fichiers",
+  "fsDesc": "Lire ou écrire des fichiers dans les racines de stockage virtuelles du plugin",
+  "ws": "WebSocket",
+  "wsDesc": "Ouvrir des connexions WebSocket persistantes vers les hôtes listés",
+  "dns": "DNS",
+  "dnsDesc": "Résoudre des noms d'hôtes via le proxy DNS du hub",
+  "ui": "Interface",
+  "uiDesc": "Ouvrir des boîtes de dialogue de sélection de fichiers au nom de l'utilisateur",
+  "scope": {
+    "hosts": "Hôtes",
+    "paths": "Chemins",
+    "fileFilters": "Filtres de fichiers",
+    "read": "lecture",
+    "readwrite": "lecture & écriture",
+    "wildcardHint": "joker — correspond à n'importe quel sous-domaine"
+  }
 }
