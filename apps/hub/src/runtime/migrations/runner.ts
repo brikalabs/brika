@@ -12,7 +12,13 @@
 import type { UpdateAuditLog } from '@/runtime/updates/audit-log';
 import type { VersionStateStore } from '@/runtime/updates/version-state';
 import type { Json } from '@/types';
-import type { Migration, MigrationContext, MigrationReport, MigrationScope } from './types';
+import {
+  type Migration,
+  type MigrationContext,
+  MigrationDeferred,
+  type MigrationReport,
+  type MigrationScope,
+} from './types';
 
 export interface RunnerOptions {
   readonly brikaDir: string;
@@ -76,6 +82,18 @@ export class MigrationRunner {
         this.#opts.versionState.recordMigrationApplied(scope.name, migration.id);
         applied.push(migration.id);
       } catch (err) {
+        if (err instanceof MigrationDeferred) {
+          // Preconditions not met yet (e.g. DB doesn't exist on first
+          // install). Skip *without* recording — the migration runs
+          // again next boot, after the prerequisite has had a chance
+          // to land. This is what keeps `prune-orphans` honest on a
+          // fresh install.
+          this.#log('info', `migration ${scope.name}/${migration.id} deferred`, {
+            reason: err.message,
+          });
+          skipped.push(migration.id);
+          continue;
+        }
         const error = err instanceof Error ? err.message : String(err);
         this.#log('error', `migration ${scope.name}/${migration.id} failed`, { error });
         this.#opts.audit?.append('apply.failure', {

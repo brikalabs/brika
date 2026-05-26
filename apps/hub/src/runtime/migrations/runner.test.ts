@@ -9,7 +9,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { VersionStateStore } from '@/runtime/updates/version-state';
 import { MigrationRunner } from './runner';
-import type { Migration, MigrationScope } from './types';
+import { type Migration, MigrationDeferred, type MigrationScope } from './types';
 
 let brikaDir: string;
 
@@ -107,6 +107,41 @@ describe('MigrationRunner', () => {
 
     await new MigrationRunner([scope], { brikaDir, currentVersion: '0.6.0', versionState }).run();
     expect(versionState.getAppliedMigrations('test')).toEqual([]);
+  });
+
+  test('deferred migrations are skipped without being recorded — retried on next run', async () => {
+    let attempts = 0;
+    const flaky: Migration = {
+      id: '001-flaky',
+      description: 'fails the first time, passes the second',
+      run() {
+        attempts += 1;
+        if (attempts === 1) {
+          return Promise.reject(new MigrationDeferred('not ready'));
+        }
+        return Promise.resolve();
+      },
+    };
+    const scope: MigrationScope = { name: 'test', migrations: [flaky] };
+    const versionState = new VersionStateStore(brikaDir, '0.6.0');
+
+    const reports1 = await new MigrationRunner([scope], {
+      brikaDir,
+      currentVersion: '0.6.0',
+      versionState,
+    }).run();
+    expect(reports1[0]?.applied).toEqual([]);
+    expect(reports1[0]?.skipped).toEqual(['001-flaky']);
+    expect(reports1[0]?.failed).toEqual([]);
+    expect(versionState.getAppliedMigrations('test')).toEqual([]);
+
+    const reports2 = await new MigrationRunner([scope], {
+      brikaDir,
+      currentVersion: '0.6.0',
+      versionState,
+    }).run();
+    expect(reports2[0]?.applied).toEqual(['001-flaky']);
+    expect(attempts).toBe(2);
   });
 
   test('report durations are non-negative integers', async () => {

@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { MigrationDeferred } from '../types';
 import { pluginDataScope } from './plugin-data';
 
 let brikaDir: string;
@@ -73,31 +74,35 @@ describe('plugin-data prune-orphans migration', () => {
     ).resolves.toBeUndefined();
   });
 
-  test('keeps all dirs when state.db is missing (avoids wiping fresh installs)', async () => {
+  test('defers (throws MigrationDeferred) when state.db is missing — never wipes a fresh install', async () => {
     seedDir('would-be-orphan');
-    // No DB.
+    // No DB at all.
 
-    await pluginDataScope.migrations[0]?.run({
-      brikaDir,
-      toVersion: '0.6.0',
-      fromVersion: null,
-    });
+    await expect(
+      pluginDataScope.migrations[0]?.run({
+        brikaDir,
+        toVersion: '0.6.0',
+        fromVersion: null,
+      })
+    ).rejects.toBeInstanceOf(MigrationDeferred);
 
+    // Defer == migration ran, but did nothing. Dir untouched.
     expect(existsSync(join(dataRoot, 'would-be-orphan'))).toBe(true);
   });
 
-  test('keeps all dirs when state.db has no plugins table yet', async () => {
+  test('defers when state.db exists but has no plugins table yet', async () => {
     const db = new Database(dbPath);
     db.exec('CREATE TABLE other (x INTEGER)');
     db.close();
     seedDir('would-be-orphan');
 
-    await pluginDataScope.migrations[0]?.run({
-      brikaDir,
-      toVersion: '0.6.0',
-      fromVersion: null,
-    });
-
+    await expect(
+      pluginDataScope.migrations[0]?.run({
+        brikaDir,
+        toVersion: '0.6.0',
+        fromVersion: null,
+      })
+    ).rejects.toBeInstanceOf(MigrationDeferred);
     expect(existsSync(join(dataRoot, 'would-be-orphan'))).toBe(true);
   });
 });

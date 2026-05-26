@@ -16,7 +16,12 @@
 import { Database } from 'bun:sqlite';
 import { existsSync, readdirSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
-import type { Migration, MigrationContext, MigrationScope } from '../types';
+import {
+  type Migration,
+  type MigrationContext,
+  MigrationDeferred,
+  type MigrationScope,
+} from '../types';
 
 const PLUGIN_DATA_DIRNAME = 'plugins-data';
 const STATE_DB_FILENAME = 'state.db';
@@ -43,10 +48,12 @@ const pruneOrphans: Migration = {
     const knownUids = readKnownUids(dbPath);
     if (knownUids === null) {
       // Couldn't trust the DB (missing, locked, no `plugins` table).
-      // Skip pruning — an empty trust set would wipe every dir on a
-      // fresh install. Retry on the next boot once the hub has had a
-      // chance to provision the schema.
-      return Promise.resolve();
+      // Throw `MigrationDeferred` so the runner *doesn't* mark this
+      // migration applied — otherwise on a fresh install the ledger
+      // would lock the prune in as "done" and subsequent uninstalls
+      // would leak orphan dirs forever. Deferred migrations are
+      // retried on every boot until preconditions are met.
+      return Promise.reject(new MigrationDeferred('state.db missing or has no plugins table'));
     }
 
     for (const entry of readdirSync(dataRoot, { withFileTypes: true })) {

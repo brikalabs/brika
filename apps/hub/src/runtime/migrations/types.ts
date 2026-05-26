@@ -43,8 +43,27 @@ export interface Migration {
    * Apply the migration. Must be idempotent — the runner skips
    * applied IDs, but the migration itself might run twice if the
    * ledger write races with a crash.
+   *
+   * Throw {@link MigrationDeferred} to signal "preconditions not met
+   * yet, retry on next boot". The runner treats it as a no-op (not a
+   * failure) and does **not** mark the migration applied, so the
+   * migration runs again next boot when preconditions are likely met.
    */
   run(ctx: MigrationContext): Promise<void>;
+}
+
+/**
+ * Sentinel thrown from `Migration.run` when the migration can't do
+ * its work right now but isn't actually broken — e.g. the DB it would
+ * inspect doesn't exist yet on a fresh install. The runner catches
+ * this, logs it, and skips marking the migration applied so a later
+ * boot retries.
+ */
+export class MigrationDeferred extends Error {
+  constructor(reason: string) {
+    super(reason);
+    this.name = 'MigrationDeferred';
+  }
 }
 
 export interface MigrationScope {
