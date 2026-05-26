@@ -150,13 +150,25 @@ export function binaryResponse(bytes: Uint8Array, contentType = 'application/oct
   return envelope as unknown as Blob;
 }
 
+/**
+ * Shared guard for "object literal with a `tag: true` marker on it".
+ * Both binary + stream envelopes are structurally identical at the
+ * tag-check level — keeping the logic in one place dedupes the
+ * typeof / null / in / value check chain and the one type assertion
+ * involved in indexing a tagged record.
+ */
+function hasEnvelopeTag(value: unknown, tag: string): boolean {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+  if (!(tag in value)) {
+    return false;
+  }
+  return (value as Record<string, unknown>)[tag] === true;
+}
+
 export function isBinaryResponse(value: unknown): value is BinaryActionResponse {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    BINARY_RESPONSE_TAG in value &&
-    (value as Record<string, unknown>)[BINARY_RESPONSE_TAG] === true
-  );
+  return hasEnvelopeTag(value, BINARY_RESPONSE_TAG);
 }
 
 // ─── Stream-file response ────────────────────────────────────────────────────
@@ -211,12 +223,7 @@ export function streamFile(virtualPath: string, contentType?: string): Blob {
 }
 
 export function isStreamFileResponse(value: unknown): value is StreamFileResponse {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    STREAM_FILE_TAG in value &&
-    (value as Record<string, unknown>)[STREAM_FILE_TAG] === true
-  );
+  return hasEnvelopeTag(value, STREAM_FILE_TAG);
 }
 
 // ─── Build-time finalization ─────────────────────────────────────────────────
