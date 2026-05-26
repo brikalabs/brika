@@ -3,6 +3,7 @@ import { inject, singleton } from '@brika/di';
 import { ThemeConfig } from '@brika/ipc/contract';
 import type { PluginError, PluginHealth } from '@brika/plugin';
 import { PluginPackageSchema } from '@brika/schema';
+import { z } from 'zod';
 import { Logger } from '@/runtime/logs/log-router';
 import {
   DEFAULT_CHANNEL_ID,
@@ -15,6 +16,8 @@ import {
   plugins as pluginsTable,
   settings as settingsTable,
 } from './schema';
+
+const UpdateChannelSchema = z.enum(UPDATE_CHANNEL_IDS);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -257,9 +260,11 @@ export class StateStore {
 
   getUpdateChannel(): UpdateChannelId {
     const raw = this.#getSetting<string>('updateChannel', DEFAULT_CHANNEL_ID);
-    return UPDATE_CHANNEL_IDS.includes(raw as UpdateChannelId)
-      ? (raw as UpdateChannelId)
-      : DEFAULT_CHANNEL_ID;
+    // zod parse swallows unknown channel ids and falls back to the
+    // default — same outcome as the previous `as` cast but without
+    // the type-system handwave.
+    const parsed = UpdateChannelSchema.safeParse(raw);
+    return parsed.success ? parsed.data : DEFAULT_CHANNEL_ID;
   }
 
   setUpdateChannel(channel: UpdateChannelId): void {
