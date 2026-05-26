@@ -5,9 +5,11 @@ import 'reflect-metadata';
 import { describe, expect, mock, test } from 'bun:test';
 import { container } from '@brika/di';
 import { stub, useTestBed } from '@brika/di/testing';
+import { combineRoutes } from '@brika/router';
 import { TestApp } from '@brika/router/testing';
 import { useBunMock } from '@brika/testing';
-import { updateRoutes } from '@/runtime/http/routes/updates';
+import { updateAdminRoutes, updateReadRoutes } from '@/runtime/http/routes/updates';
+import { UpdateOrchestrator } from '@/runtime/updates/orchestrator';
 import { GitHubUpdateProvider, UpdateProvider } from '@/runtime/updates/update-provider';
 import { UpdateService } from '@/runtime/updates/update-service';
 
@@ -45,7 +47,28 @@ describe('update routes', () => {
     // GitHub implementation so the bun.fetch mock below drives behaviour
     // (mirrors how the route runs in production).
     container.register(UpdateProvider, { useClass: GitHubUpdateProvider });
-    app = TestApp.create(updateRoutes);
+
+    // Auto-stubbed DI classes return `{}` from every method, which
+    // would make `orchestrator.canApply()` truthy AND
+    // `peekLockHolder()` non-null — short-circuiting the route's
+    // refusal + lock-held branches and producing 423 in dev. Pin both
+    // to the values the production code would return for a fresh
+    // standalone install so the test exercises the SSE happy path.
+    stub(UpdateOrchestrator, {
+      canApply: () => true,
+      peekLockHolder: () => null,
+      apply: mock().mockImplementation(
+        async (options: { onProgress?: (p: string, d: string) => void }) => {
+          options.onProgress?.('checking', 'Checking for updates...');
+          throw new Error('Network unavailable in tests');
+        }
+      ),
+    });
+
+    // Combine read + admin groups so the test app exposes the full
+    // `/api/system/update` surface — the production scope gating
+    // lives in `routes/index.ts` and isn't part of this unit test.
+    app = TestApp.create(combineRoutes(updateReadRoutes, updateAdminRoutes));
   });
 
   // ─── GET /api/system/update ───────────────────────────────────────────────

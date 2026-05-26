@@ -82,6 +82,16 @@ export class UpdateOrchestrator {
   }
 
   /**
+   * Non-blocking peek at the lock's current holder. Returns `null`
+   * when the lock isn't held. Used by the HTTP layer to surface a
+   * proper 423 *before* opening the SSE stream — otherwise lock
+   * contention disappears into a generic 'error' progress event.
+   */
+  peekLockHolder(): { pid: number; startedAt: string } | null {
+    return this.#lock.peekHolder();
+  }
+
+  /**
    * Call early in bootstrap. Detects a previous crashed boot (the
    * previous attempt never recorded success) and records the current
    * attempt so a future boot can do the same detection on us.

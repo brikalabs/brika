@@ -3,9 +3,17 @@
  *
  * Endpoints for checking and applying Brika hub updates.
  * Used by the frontend to show update notifications and trigger upgrades.
+ *
+ * **Authorization**: the read endpoints are exposed to any authenticated
+ * session (so the UI's update badge works for non-admin viewers), but
+ * the dangerous write endpoints — apply, restart, stop — and the
+ * plugin-enumerating compat report sit behind `Scope.ADMIN_ALL`. The
+ * gating is composed in `routes/index.ts`; the route exports below are
+ * split into `*ReadRoutes` (authed) and `*AdminRoutes` (admin) groups
+ * so the index can wrap each appropriately.
  */
 
-import { Conflict, createSSEStream, group, route } from '@brika/router';
+import { Conflict, createSSEStream, group, Locked, route } from '@brika/router';
 import { z } from 'zod';
 import { MigrationStatus } from '@/runtime/bootstrap/plugins/migrations';
 import { RESTART_CODE } from '@/runtime/restart-code';
@@ -16,37 +24,16 @@ import { UpdateOrchestrator } from '@/runtime/updates/orchestrator';
 import { UpdateRefusedError } from '@/runtime/updates/strategies';
 import type { UpdatePhase } from '@/updater';
 
-export const systemRoutes = group({
+// ─── Public-ish (authed) read endpoints ──────────────────────────────────────
+
+export const systemReadRoutes = group({
   prefix: '/api/system',
   routes: [
-    /** POST /api/system/restart — signal supervisor to restart the hub */
-    route.post({
-      path: '/restart',
-      handler: () => {
-        setTimeout(() => process.exit(RESTART_CODE), 100);
-        return {
-          ok: true,
-        };
-      },
-    }),
-    /** POST /api/system/stop — shut down the hub and supervisor */
-    route.post({
-      path: '/stop',
-      handler: () => {
-        setTimeout(() => process.exit(0), 100);
-        return {
-          ok: true,
-        };
-      },
-    }),
     /**
      * GET /api/system/migrations — last migration run report.
      *
-     * Returns `{completedAt, reports}` once the boot-time migration
-     * pass finishes. The UI polls this on mount and renders a banner
-     * if any scope took > 500 ms or reported failures, so the user
-     * sees long migrations rather than wondering why the hub seems
-     * slow on first boot after an upgrade.
+     * Migration IDs are operator-facing info, not secrets — leaving this
+     * authed (not admin) so the UI banner works for everyone.
      */
     route.get({
       path: '/migrations',
@@ -58,12 +45,13 @@ export const systemRoutes = group({
   ],
 });
 
-export const updateRoutes = group({
+export const updateReadRoutes = group({
   prefix: '/api/system/update',
   routes: [
     /**
      * GET /api/system/update
-     * Check for available updates (uses cached result if recent, otherwise checks now)
+     * Check for available updates (uses cached result if recent, otherwise checks now).
+     * Authed (not admin) — the UI shows an update badge to every user.
      */
     route.get({
       path: '/',
@@ -76,12 +64,41 @@ export const updateRoutes = group({
         };
       },
     }),
+  ],
+});
 
+// ─── Admin-only write endpoints ──────────────────────────────────────────────
+
+export const systemAdminRoutes = group({
+  prefix: '/api/system',
+  routes: [
+    /** POST /api/system/restart — signal supervisor to restart the hub */
+    route.post({
+      path: '/restart',
+      handler: () => {
+        setTimeout(() => process.exit(RESTART_CODE), 100);
+        return { ok: true };
+      },
+    }),
+    /** POST /api/system/stop — shut down the hub and supervisor */
+    route.post({
+      path: '/stop',
+      handler: () => {
+        setTimeout(() => process.exit(0), 100);
+        return { ok: true };
+      },
+    }),
+  ],
+});
+
+export const updateAdminRoutes = group({
+  prefix: '/api/system/update',
+  routes: [
     /**
      * GET /api/system/update/compat
-     * Pre-flight compatibility report against the latest available
-     * version. Used by the UpdateDialog to surface
-     * "this update will disable N plugins" before the user commits.
+     * Pre-flight compatibility report. Admin-only — enumerating every
+     * installed plugin name on a multi-user hub is a low-grade info
+     * disclosure even if the names themselves aren't secret.
      */
     route.get({
       path: '/compat',
@@ -94,18 +111,18 @@ export const updateRoutes = group({
     }),
 
     /**
-     * POST /api/system/update/apply
-     * Apply the latest update. Streams progress via SSE.
-     * After a successful update, the hub process exits so the process manager can restart it.
+     * POST /api/system/update/apply — admin-only.
+     * Streams progress via SSE. After a successful update the hub
+     * process exits and the supervisor restarts it.
      *
-     * Refusal codes are surfaced *before* the SSE stream opens, as a
-     * conventional JSON error response, so the client can render a
-     * proper "you can't update from here" banner instead of an
-     * orphaned error event:
+     * Pre-stream error responses:
+     *   - 409 Conflict — strategy refuses (container, system-package,
+     *     dev); body carries `code` + `guidance`.
+     *   - 423 Locked   — another caller holds the update lock; body
+     *     carries `heldBy` for diagnostics.
      *
-     *   - 409 Conflict  → the strategy refuses (container,
-     *     system-package, dev) — `code` + `guidance` in the body
-     *   - 423 Locked    → another caller already holds the update lock
+     * Errors during the stream go out as `phase: 'error'` events;
+     * throwing after `close()` would only leak an unhandled rejection.
      */
     route.post({
       path: '/apply',
@@ -117,9 +134,7 @@ export const updateRoutes = group({
 
         if (!orchestrator.canApply()) {
           // Route refusals through the strategy's own rejection so the
-          // guidance string lives in exactly one place (the strategy).
-          // The await never resolves — refused strategies always reject —
-          // so the throw below is unreachable, but TypeScript needs it.
+          // guidance string lives in one place (the strategy).
           try {
             await orchestrator.apply({ force: query.force });
           } catch (err) {
@@ -129,6 +144,16 @@ export const updateRoutes = group({
             throw err;
           }
           throw new Conflict('Update refused');
+        }
+
+        // Pre-stream lock check: if someone else has the lock, we want
+        // a real 423 response (with `heldBy`) BEFORE opening the SSE
+        // stream — otherwise lock contention surfaces as a generic
+        // `phase: 'error'` event with no distinct status code, and
+        // clients can't tell it apart from a download failure.
+        const heldBy = orchestrator.peekLockHolder();
+        if (heldBy !== null) {
+          throw new Locked('Update already in progress', { heldBy });
         }
 
         return createSSEStream((send, close) => {
@@ -156,15 +181,9 @@ export const updateRoutes = group({
 
               setTimeout(() => process.exit(RESTART_CODE), 1000);
             } catch (error) {
-              // Once `createSSEStream` has been returned to the
-              // router, the response is committed — we can't switch
-              // it to a JSON error body. Surface every failure as a
-              // structured `'error'` progress event (the client
-              // already reads `phase: 'error'` + `error` payload).
-              // Throwing after `close()` would only leak an unhandled
-              // promise rejection. Lock contention and strategy
-              // refusal both arrive here, and the typed message text
-              // is informative enough for the client to render.
+              // Once the SSE response is committed we can't switch it
+              // to a JSON error body. Surface every failure as a
+              // structured `'error'` progress event.
               const message = error instanceof Error ? error.message : String(error);
               sendProgress('error', message, message);
               close();
@@ -175,3 +194,9 @@ export const updateRoutes = group({
     }),
   ],
 });
+
+// ─── Back-compat aliases (existing imports) ──────────────────────────────────
+// Some callers may still import `systemRoutes` / `updateRoutes`; route them
+// to the admin-only groups so they remain protected when used as-is.
+export const systemRoutes = systemAdminRoutes;
+export const updateRoutes = updateAdminRoutes;

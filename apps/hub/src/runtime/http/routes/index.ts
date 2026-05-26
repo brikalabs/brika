@@ -13,12 +13,17 @@ import { pluginRoutesHandler } from './plugin-routes';
 import { pluginsRoutes } from './plugins';
 import { registryRoutes } from './registry';
 import { remoteAccessRoutes } from './remote-access';
-import { settingsRoutes } from './settings';
+import { settingsAdminRoutes, settingsRoutes } from './settings';
 import { hubSetupProtectedRoutes, hubSetupPublicRoutes } from './setup';
 import { sparksRoutes } from './sparks';
 import { healthRoute, systemRoute } from './status';
 import { streamsRoutes } from './streams';
-import { systemRoutes, updateRoutes } from './updates';
+import {
+  systemAdminRoutes,
+  systemReadRoutes,
+  updateAdminRoutes,
+  updateReadRoutes,
+} from './updates';
 import { usersRoutes } from './users';
 import { workflowsRoutes } from './workflows';
 
@@ -28,13 +33,24 @@ import { workflowsRoutes } from './workflows';
  * Public: health + i18n reads (bundles, namespaces, SSE event stream) +
  * the hub setup endpoints needed to bootstrap an unconfigured install.
  *
- * Authenticated: everything else.
+ * Authenticated: most read endpoints — including the update-status
+ * check (`GET /api/system/update`) and the migration banner feed
+ * (`GET /api/system/migrations`) — so a non-admin viewer still sees
+ * the update badge.
  *
- * Admin-only: the i18n write surface (`GET /api/i18n/sources`,
- * `POST /api/i18n/sources/:ns/:locale`). Source-file disclosure and
- * translation edits are gated by `Scope.ADMIN_ALL` so a low-privilege
- * account on a multi-user hub can't read filesystem paths or mutate
- * JSON files; auth alone isn't enough.
+ * Admin-only (`Scope.ADMIN_ALL`):
+ *   - i18n write surface (existing).
+ *   - The compat report (`GET /api/system/update/compat`) — enumerates
+ *     every installed plugin name, which is low-grade info disclosure
+ *     on a multi-user hub.
+ *   - Every action that mutates the hub binary or lifecycle:
+ *     `POST /api/system/update/apply`, `POST /api/system/restart`,
+ *     `POST /api/system/stop`.
+ *
+ * `settingsRoutes` stays under the authenticated group because most of
+ * its endpoints (themes, hub location, timezone) are user-facing; the
+ * update-channel + pinned-version PUTs inside it should be admin-only
+ * but the file isn't split yet — tracked as a follow-up.
  */
 export const allRoutes = combineRoutes(
   healthRoute,
@@ -51,7 +67,7 @@ export const allRoutes = combineRoutes(
       boardsRoutes,
       group({
         middleware: [requireScope(Scope.ADMIN_ALL)],
-        routes: [i18nWriteRoutes],
+        routes: [i18nWriteRoutes, updateAdminRoutes, systemAdminRoutes, settingsAdminRoutes],
       }),
       oauthRoutes,
       pageRoutes,
@@ -64,8 +80,8 @@ export const allRoutes = combineRoutes(
       streamsRoutes,
       registryRoutes,
       settingsRoutes,
-      updateRoutes,
-      systemRoutes,
+      updateReadRoutes,
+      systemReadRoutes,
       usersRoutes,
     ],
   })

@@ -17,6 +17,58 @@ import { PluginManager } from '@/runtime/plugins/plugin-manager';
 import { StateStore } from '@/runtime/state/state-store';
 import { UPDATE_CHANNEL_IDS } from '@/runtime/updates/channels';
 
+/**
+ * Settings writes that touch the update channel or pinned version live
+ * here. They're admin-only — a low-privilege user shouldn't be able to
+ * pin the hub to an arbitrary tag or flip everyone onto canary.
+ *
+ * Wired into the admin scope in `routes/index.ts`.
+ */
+export const settingsAdminRoutes = group({
+  prefix: '/api/settings',
+  routes: [
+    /**
+     * Set the update channel. Rejects pinned without a prior version
+     * — the orchestrator would otherwise throw on every subsequent
+     * `check` ("Pinned channel selected but no version was set").
+     */
+    route.put({
+      path: '/update-channel',
+      body: z.object({ channel: z.enum(UPDATE_CHANNEL_IDS) }),
+      handler: ({ body, inject }) => {
+        const state = inject(StateStore);
+        if (body.channel === 'pinned' && state.getPinnedVersion() === null) {
+          throw new BadRequest(
+            'Cannot switch to pinned channel: set a pinned version first via PUT /api/settings/update-pinned-version.'
+          );
+        }
+        state.setUpdateChannel(body.channel);
+        return { channel: body.channel };
+      },
+    }),
+
+    /**
+     * Set the pinned version. Pass `null` to clear. Validation is
+     * minimal — semver-ish, leading `v` optional, no spaces. The
+     * "is this a real release tag?" check happens lazily on the
+     * next `check` (GitHub returns 404 if the tag is bogus).
+     */
+    route.put({
+      path: '/update-pinned-version',
+      body: z.object({
+        version: z
+          .string()
+          .regex(/^v?\d+\.\d+\.\d+(?:[-+][\w.-]+)?$/u)
+          .nullable(),
+      }),
+      handler: ({ body, inject }) => {
+        inject(StateStore).setPinnedVersion(body.version);
+        return { version: body.version };
+      },
+    }),
+  ],
+});
+
 export const settingsRoutes = group({
   prefix: '/api/settings',
   routes: [
@@ -110,42 +162,11 @@ export const settingsRoutes = group({
       },
     }),
 
-    /** Set the update channel */
-    route.put({
-      path: '/update-channel',
-      body: z.object({ channel: z.enum(UPDATE_CHANNEL_IDS) }),
-      handler: ({ body, inject }) => {
-        inject(StateStore).setUpdateChannel(body.channel);
-        return { channel: body.channel };
-      },
-    }),
-
     /** Get the pinned version (null when not on the `pinned` channel). */
     route.get({
       path: '/update-pinned-version',
       handler: ({ inject }) => {
         return { version: inject(StateStore).getPinnedVersion() };
-      },
-    }),
-
-    /**
-     * Set the pinned version. Pass an empty string or omit to clear.
-     * Validation is minimal — semver-ish, leading `v` optional, no
-     * spaces. The actual "is this a known release tag?" check happens
-     * lazily on the next `check` (GitHub returns 404 if the tag is
-     * bogus).
-     */
-    route.put({
-      path: '/update-pinned-version',
-      body: z.object({
-        version: z
-          .string()
-          .regex(/^v?\d+\.\d+\.\d+(?:[-+][\w.-]+)?$/u)
-          .nullable(),
-      }),
-      handler: ({ body, inject }) => {
-        inject(StateStore).setPinnedVersion(body.version);
-        return { version: body.version };
       },
     }),
 

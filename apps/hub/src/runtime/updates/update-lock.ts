@@ -16,15 +16,17 @@
 
 import { closeSync, existsSync, openSync, readFileSync, rmSync, writeSync } from 'node:fs';
 import { join } from 'node:path';
+import { z } from 'zod';
 
 const LOCK_FILE = '.update.lock';
 /** A lock older than this is considered stale (orphaned by a crashed process). */
 const STALE_AFTER_MS = 30 * 60 * 1000; // 30 min
 
-interface LockMetadata {
-  pid: number;
-  startedAt: string;
-}
+const LockMetadataSchema = z.object({
+  pid: z.number().int(),
+  startedAt: z.string(),
+});
+type LockMetadata = z.infer<typeof LockMetadataSchema>;
 
 export class UpdateLockHeldError extends Error {
   readonly heldBy: LockMetadata | null;
@@ -43,6 +45,8 @@ export class UpdateLockHeldError extends Error {
 export class UpdateLock {
   readonly #path: string;
   #fd: number | null = null;
+  /** Identity of the lock we wrote — used to refuse unlinking someone else's lock at release time. */
+  #ownStartedAt: string | null = null;
 
   constructor(brikaDir: string) {
     this.#path = join(brikaDir, LOCK_FILE);
@@ -63,6 +67,7 @@ export class UpdateLock {
         startedAt: new Date().toISOString(),
       };
       writeSync(this.#fd, `${JSON.stringify(meta)}\n`);
+      this.#ownStartedAt = meta.startedAt;
     } catch (err) {
       if (isEEXIST(err)) {
         throw new UpdateLockHeldError(this.#readMetadata());
@@ -80,28 +85,53 @@ export class UpdateLock {
       }
       this.#fd = null;
     }
-    try {
-      rmSync(this.#path, { force: true });
-    } catch {
-      // ignore
+    // Symmetric release: only unlink the lock if the on-disk metadata
+    // STILL identifies *us* as the holder. Otherwise the file was
+    // stolen by a stale-break of our own lock (we exceeded
+    // STALE_AFTER_MS without releasing, another process broke in),
+    // and we mustn't delete their fresh lock.
+    const current = this.#readMetadata();
+    if (
+      current !== null &&
+      this.#ownStartedAt !== null &&
+      current.pid === process.pid &&
+      current.startedAt === this.#ownStartedAt
+    ) {
+      try {
+        rmSync(this.#path, { force: true });
+      } catch {
+        // ignore
+      }
     }
+    this.#ownStartedAt = null;
   }
 
   isHeld(): boolean {
     return existsSync(this.#path);
   }
 
+  /**
+   * Non-blocking snapshot of the current holder's metadata, or `null`
+   * when the lock isn't held. The route layer calls this *before*
+   * opening the SSE stream so a lock contention can be returned as a
+   * real HTTP 423 instead of an opaque progress-event error.
+   */
+  peekHolder(): LockMetadata | null {
+    if (!existsSync(this.#path)) {
+      return null;
+    }
+    return this.#readMetadata();
+  }
+
   #readMetadata(): LockMetadata | null {
     try {
       const raw = readFileSync(this.#path, 'utf8').trim();
-      const parsed = JSON.parse(raw) as Partial<LockMetadata>;
-      if (typeof parsed.pid === 'number' && typeof parsed.startedAt === 'string') {
-        return { pid: parsed.pid, startedAt: parsed.startedAt };
-      }
+      const parsed = LockMetadataSchema.safeParse(JSON.parse(raw));
+      return parsed.success ? parsed.data : null;
     } catch {
       // Lock file present but unreadable — treat as held with no metadata.
+      return null;
     }
-    return null;
   }
 
   #breakIfStale(): void {
