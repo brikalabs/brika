@@ -1,10 +1,9 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@brika/sdk/ui-kit';
-import { Loader2 } from '@brika/sdk/ui-kit/icons';
+import { Card, CardContent, CardHeader, CardTitle, Spinner } from '@brika/sdk/ui-kit';
 import type { UploadItem } from '../types';
 
 function StatusDot({ status }: Readonly<{ status: UploadItem['status'] }>) {
   if (status === 'uploading') {
-    return <Loader2 className="size-3 shrink-0 animate-spin text-primary" />;
+    return <Spinner size="sm" className="shrink-0 text-primary" aria-label="Uploading" />;
   }
   if (status === 'done') {
     return <span className="size-3 shrink-0 rounded-full bg-success" />;

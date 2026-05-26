@@ -1,6 +1,6 @@
-import { Button } from '@brika/sdk/ui-kit';
-import { Check, FolderPlus, Loader2, X } from '@brika/sdk/ui-kit/icons';
-import { type ChangeEvent, type KeyboardEvent, useEffect, useRef, useState } from 'react';
+import { Button, Input, Kbd, KbdGroup, Spinner } from '@brika/sdk/ui-kit';
+import { Check, FolderPlus, X } from '@brika/sdk/ui-kit/icons';
+import { type KeyboardEvent, useEffect, useRef, useState } from 'react';
 
 interface NewFolderInputProps {
   creating: boolean;
@@ -41,19 +41,21 @@ export function NewFolderInput({ creating, onSubmit, onCancel }: Readonly<NewFol
       >
         <FolderPlus className="size-4 text-primary" />
       </span>
-      <input
+      <Input
         ref={inputRef}
-        type="text"
         value={name}
-        onChange={(e: ChangeEvent<HTMLInputElement>) => setName(e.target.value)}
+        onChange={(e) => setName(e.target.value)}
         onKeyDown={handleKeyDown}
         placeholder="folder name"
         disabled={creating}
-        className="min-w-0 flex-1 bg-transparent font-medium text-sm outline-none placeholder:font-normal placeholder:text-muted-foreground disabled:opacity-50"
+        className="min-w-0 flex-1 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
       />
-      <kbd className="hidden font-mono text-[10px] text-muted-foreground/70 sm:inline">
-        ↵ to create · esc to cancel
-      </kbd>
+      <KbdGroup className="hidden sm:inline-flex" aria-label="Keyboard shortcuts">
+        <Kbd>↵</Kbd>
+        <span className="text-muted-foreground/70 text-xs">to create</span>
+        <Kbd>esc</Kbd>
+        <span className="text-muted-foreground/70 text-xs">to cancel</span>
+      </KbdGroup>
       <Button
         variant="default"
         size="icon-xs"
@@ -61,7 +63,7 @@ export function NewFolderInput({ creating, onSubmit, onCancel }: Readonly<NewFol
         disabled={!canSubmit}
         title="Create folder (Enter)"
       >
-        {creating ? <Loader2 className="size-3.5 animate-spin" /> : <Check className="size-3.5" />}
+        {creating ? <Spinner size="sm" /> : <Check className="size-3.5" />}
       </Button>
       <Button
         variant="ghost"
