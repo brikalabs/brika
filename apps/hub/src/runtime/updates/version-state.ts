@@ -167,7 +167,20 @@ export class VersionStateStore {
     return emptyState(this.#currentVersion);
   }
 
+  /**
+   * Apply a mutation and persist atomically. **Always reads from disk
+   * first** so that independent `VersionStateStore` instances pointing
+   * at the same brikaDir (orchestrator, boot-rollback, migrations
+   * plugin each construct their own) don't clobber each other's
+   * writes by holding stale `#state` snapshots in memory.
+   *
+   * The cost is one extra `readFileSync` per mutation — mutations are
+   * rare (boot start/end, occasional update history append, migration
+   * ledger update) so the latency is irrelevant. The correctness win
+   * is preventing silent migration-ledger loss on every restart.
+   */
   #mutate(fn: (s: VersionState) => VersionState): void {
+    this.#state = this.#load();
     this.#state = fn(this.#state);
     this.#persist();
   }
