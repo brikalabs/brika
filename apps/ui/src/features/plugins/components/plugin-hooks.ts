@@ -24,6 +24,9 @@ export function usePluginLocale() {
 
 // ── Action errors ────────────────────────────────────────────────────────────
 
+const APPLICATION_JSON = 'application/json';
+const OCTET_STREAM = 'application/octet-stream';
+
 interface ActionRef {
   readonly __actionId: string;
 }
@@ -267,7 +270,7 @@ export function useCallAction(defaults?: UseActionOptions) {
       // Attach JSON metadata only when sending a binary body —
       // sending it alongside a JSON body would be redundant since
       // the caller can just include the field in the JSON object.
-      if (opts?.meta && body && contentType !== 'application/json') {
+      if (opts?.meta && body && contentType !== APPLICATION_JSON) {
         headers[ACTION_META_HEADER] = JSON.stringify(opts.meta);
       }
       const res = await fetch(`/api/plugins/${uid}/actions/${ref.__actionId}`, {
@@ -323,12 +326,12 @@ function encodeActionInput(input: unknown): EncodedActionInput {
   // `Blob`/`File` pass through zero-copy. This is the common case
   // (playground uploads `File`s straight from the input element).
   if (input instanceof Blob) {
-    return { body: input, contentType: 'application/octet-stream' };
+    return { body: input, contentType: OCTET_STREAM };
   }
   if (input instanceof ArrayBuffer) {
     return {
-      body: new Blob([input], { type: 'application/octet-stream' }),
-      contentType: 'application/octet-stream',
+      body: new Blob([input], { type: OCTET_STREAM }),
+      contentType: OCTET_STREAM,
     };
   }
   // `Uint8Array` is a rare path (programmatic byte payloads). DOM's
@@ -340,9 +343,9 @@ function encodeActionInput(input: unknown): EncodedActionInput {
     const buffer = new ArrayBuffer(input.byteLength);
     new Uint8Array(buffer).set(input);
     return {
-      body: new Blob([buffer], { type: 'application/octet-stream' }),
-      contentType: 'application/octet-stream',
+      body: new Blob([buffer], { type: OCTET_STREAM }),
+      contentType: OCTET_STREAM,
     };
   }
-  return { body: JSON.stringify(input), contentType: 'application/json' };
+  return { body: JSON.stringify(input), contentType: APPLICATION_JSON };
 }
