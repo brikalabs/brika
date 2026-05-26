@@ -21,6 +21,7 @@ import { UpdateAuditLog } from './audit-log';
 import type { UpdateChannelId } from './channels';
 import { detectRuntimeMode, type RuntimeMode } from './runtime-mode';
 import { strategyForMode, UpdateRefusedError, type UpdateStrategy } from './strategies';
+import { emitUpdateTelemetry } from './telemetry';
 import { UpdateLock, UpdateLockHeldError } from './update-lock';
 import { VersionStateStore } from './version-state';
 
@@ -164,6 +165,7 @@ export class UpdateOrchestrator {
   }
 
   async #runApply(options: OrchestratorApplyOptions): Promise<OrchestratorApplyResult> {
+    const startedAt = Date.now();
     try {
       const result = await this.#strategy.apply({
         force: options.force,
@@ -184,6 +186,14 @@ export class UpdateOrchestrator {
         at: new Date().toISOString(),
         status: 'ok',
       });
+      // Fire-and-forget telemetry; opt-in + no-op if env not set.
+      void emitUpdateTelemetry({
+        fromVersion: result.previousVersion,
+        toVersion: result.newVersion,
+        channel: options.channel ?? 'stable',
+        outcome: 'success',
+        durationMs: Date.now() - startedAt,
+      });
       return result;
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
@@ -193,6 +203,18 @@ export class UpdateOrchestrator {
         code: refused ? err.code : undefined,
       });
       this.#logs.error('Update apply failed', {}, { error: err });
+      // Don't emit telemetry on refusal — it's not really a failure of
+      // the update itself, just "this runtime can't self-apply".
+      if (!refused) {
+        void emitUpdateTelemetry({
+          fromVersion: brikaContext.version,
+          toVersion: 'unknown',
+          channel: options.channel ?? 'stable',
+          outcome: 'failed',
+          durationMs: Date.now() - startedAt,
+          reason: message,
+        });
+      }
       throw err;
     }
   }
