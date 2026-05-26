@@ -6,7 +6,7 @@ import { fetchProgressStream, type ProgressStream } from '@/lib/sse-stream';
 // ─────────────────────────────────────────────────────────────────────────────
 
 // Mirrors apps/hub/src/runtime/updates/channels.ts — extend both when adding channels
-export type UpdateChannelId = 'stable' | 'canary';
+export type UpdateChannelId = 'stable' | 'beta' | 'canary' | 'pinned';
 
 export interface UpdateChannel {
   readonly id: UpdateChannelId;
@@ -16,7 +16,17 @@ export interface UpdateChannel {
 
 export const UPDATE_CHANNELS: readonly UpdateChannel[] = [
   { id: 'stable', label: 'Stable', description: 'Tested releases, recommended for most users.' },
+  {
+    id: 'beta',
+    label: 'Beta',
+    description: 'Release candidates — feature-complete, stabilising for the next stable.',
+  },
   { id: 'canary', label: 'Canary', description: 'Latest pre-releases. May be unstable.' },
+  {
+    id: 'pinned',
+    label: 'Pinned',
+    description: 'Stay on a specific version; auto-update is disabled.',
+  },
 ] as const;
 
 export interface HubUpdateInfo {
@@ -104,4 +114,15 @@ export const channelApi = {
       method: 'PUT',
       body: JSON.stringify({ channel }),
     }),
+  getPinnedVersion: () =>
+    fetcher<{ version: string | null }>('/api/settings/update-pinned-version'),
+  setPinnedVersion: (version: string | null) =>
+    fetcher<{ version: string | null }>('/api/settings/update-pinned-version', {
+      method: 'PUT',
+      body: JSON.stringify({ version }),
+    }),
+};
+
+export const pinnedVersionKeys = {
+  all: ['settings', 'update-pinned-version'] as const,
 };
