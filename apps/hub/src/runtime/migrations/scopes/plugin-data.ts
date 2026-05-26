@@ -78,8 +78,16 @@ function readKnownUids(dbPath: string): Set<string> | null {
   }
   const db = new Database(dbPath, { readonly: true });
   try {
-    const rows = db.query('SELECT uid FROM plugins').all() as Array<{ uid: string }>;
-    return new Set(rows.map((r) => r.uid));
+    // `.all()` returns `unknown[]` — narrow each row with an explicit
+    // type guard so we don't lean on `as` casts to satisfy the
+    // workspace's no-`as` rule.
+    const uids = new Set<string>();
+    for (const row of db.query('SELECT uid FROM plugins').all()) {
+      if (typeof row === 'object' && row !== null && 'uid' in row && typeof row.uid === 'string') {
+        uids.add(row.uid);
+      }
+    }
+    return uids;
   } catch {
     // Schema not present (pre-init) or DB busy. Treat as "unknown".
     return null;
