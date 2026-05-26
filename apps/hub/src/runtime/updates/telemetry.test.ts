@@ -64,8 +64,16 @@ describe('emitUpdateTelemetry', () => {
   test('POSTs JSON when enabled', async () => {
     const captured: { url?: string; body?: string } = {};
     bun.fetch((url, init) => {
-      captured.url = String(url);
-      captured.body = init?.body?.toString() ?? '';
+      // `emitUpdateTelemetry` always passes a string URL — narrow
+      // explicitly rather than relying on Object.toString.
+      let urlStr = '';
+      if (typeof url === 'string') {
+        urlStr = url;
+      } else if (url instanceof URL) {
+        urlStr = url.href;
+      }
+      captured.url = urlStr;
+      captured.body = typeof init?.body === 'string' ? init.body : '';
       return Promise.resolve(new Response('{}'));
     });
     await emitUpdateTelemetry(
@@ -83,6 +91,29 @@ describe('emitUpdateTelemetry', () => {
     expect(parsed.outcome).toBe('success');
     expect(parsed.channel).toBe('canary');
     expect(typeof parsed.instanceId).toBe('string');
+  });
+
+  test('redacts the OS home directory from the reason field', async () => {
+    const captured: { body?: string } = {};
+    bun.fetch((_url, init) => {
+      captured.body = typeof init?.body === 'string' ? init.body : '';
+      return Promise.resolve(new Response('{}'));
+    });
+    const home = require('node:os').homedir() as string;
+    await emitUpdateTelemetry(
+      {
+        fromVersion: '0.5.0',
+        toVersion: '0.6.0',
+        channel: 'stable',
+        outcome: 'failed',
+        durationMs: 0,
+        reason: `ENOENT: open '${home}/.brika/secrets.db.enc'`,
+      },
+      { BRIKA_TELEMETRY_UPDATES: '1', BRIKA_TELEMETRY_URL: 'https://x.test/telemetry' }
+    );
+    const parsed = JSON.parse(captured.body ?? '{}');
+    expect(parsed.reason).not.toContain(home);
+    expect(parsed.reason).toContain('~');
   });
 
   test('swallows network errors without throwing', async () => {

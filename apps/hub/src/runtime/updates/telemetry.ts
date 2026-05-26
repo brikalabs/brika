@@ -24,6 +24,7 @@
  * axis.
  */
 
+import { homedir } from 'node:os';
 import { BRIKA_VERSION } from '@brika/version';
 import { brikaContext } from '@/runtime/context/brika-context';
 
@@ -61,6 +62,33 @@ export function isTelemetryEnabled(
 }
 
 /**
+ * Strip the OS home directory + the Brika data dir from a string,
+ * replacing them with `~` / `<brikaDir>` placeholders. fs errors from
+ * `node:fs` typically include the absolute path that failed —
+ * `ENOENT: no such file or directory, open '/home/<user>/.brika/...'`
+ * leaks the OS username. This sanitiser is a thin defence; the real
+ * privacy guard is that telemetry is off by default.
+ */
+/** Escape every regex metacharacter so a path can be spliced into a RegExp safely. */
+const REGEX_META_RE = /[.*+?^${}()|[\]\\]/g;
+function escapeForRegExp(literal: string): string {
+  return literal.replace(REGEX_META_RE, String.raw`\$&`);
+}
+
+function redactPaths(message: string): string {
+  let out = message;
+  const home = homedir();
+  if (home.length > 0) {
+    out = out.replace(new RegExp(escapeForRegExp(home), 'g'), '~');
+  }
+  const brikaDir = brikaContext.brikaDir;
+  if (brikaDir.length > 0) {
+    out = out.replace(new RegExp(escapeForRegExp(brikaDir), 'g'), '<brikaDir>');
+  }
+  return out;
+}
+
+/**
  * Fire-and-forget POST. Errors are swallowed — telemetry must never
  * affect the success/failure path of an apply.
  */
@@ -79,6 +107,7 @@ export async function emitUpdateTelemetry(
   const payload: UpdateTelemetryEvent = {
     instanceId: brikaContext.instanceId,
     ...event,
+    reason: event.reason === undefined ? undefined : redactPaths(event.reason),
   };
 
   try {
