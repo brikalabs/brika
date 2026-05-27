@@ -156,19 +156,25 @@ export async function runStagedSelfCheck(stagedBinary: string): Promise<{ versio
 /**
  * Atomic swap: rename live → previous, staged → live. POSIX only —
  * Windows runs the legacy path (caller passes `skipStaging: true`).
+ *
+ * Ordering matters. We commit the UI bundle FIRST, then the binary:
+ *
+ *   - If the UI swap fails, the new binary was never installed, so
+ *     the supervisor restarts on the old binary + old UI. Consistent.
+ *   - If the UI swap succeeds and the binary swap fails, we have new
+ *     UI + old binary. Slightly mismatched, but the system is still
+ *     bootable — the old binary serves the new UI (which is forward-
+ *     compatible since UIs accompany binaries and the JSON API
+ *     contract is the binary's responsibility).
+ *   - Binary-first ordering had the opposite hazard: new binary + old
+ *     UI was a worse failure mode because the UI's client-side code
+ *     might call API endpoints the new binary doesn't have.
+ *
+ * Power-loss between the two renames leaves a bootable system
+ * either way; the next boot reconciles via `recordBootSuccess`
+ * cleanup of `.previous`.
  */
 export function commitStagedArtifacts(installDir: string): void {
-  const live = liveBinaryPath(installDir);
-  const previous = previousBinaryPath(installDir);
-  const next = nextBinaryPath(installDir);
-
-  // Clear any stale `.previous` from an earlier upgrade that already
-  // closed its rollback window. We're about to write a fresh one.
-  rmSync(previous, { force: true });
-  renameSync(live, previous);
-  renameSync(next, live);
-
-  // Same dance for the UI bundle (if staged).
   const stagedUi = nextUiDir(installDir);
   if (existsSync(stagedUi)) {
     const liveUi = liveUiDir(installDir);
@@ -179,6 +185,15 @@ export function commitStagedArtifacts(installDir: string): void {
     }
     renameSync(stagedUi, liveUi);
   }
+
+  const live = liveBinaryPath(installDir);
+  const previous = previousBinaryPath(installDir);
+  const next = nextBinaryPath(installDir);
+  // Clear any stale `.previous` from an earlier upgrade that already
+  // closed its rollback window. We're about to write a fresh one.
+  rmSync(previous, { force: true });
+  renameSync(live, previous);
+  renameSync(next, live);
 }
 
 /**
