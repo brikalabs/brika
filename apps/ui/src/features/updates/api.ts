@@ -1,33 +1,15 @@
+import type { UpdateChannelId } from '@brika/ipc/contract';
 import { fetcher } from '@/lib/query';
 import { fetchProgressStream, type ProgressStream } from '@/lib/sse-stream';
+
+// Channel catalogue is owned by `@brika/ipc/contract`. Re-export so
+// consumers can keep `from '@/features/updates/api'` for the
+// full-surface import without reaching into the contract package.
+export { UPDATE_CHANNELS, type UpdateChannel, type UpdateChannelId } from '@brika/ipc/contract';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
 // ─────────────────────────────────────────────────────────────────────────────
-
-// Mirrors apps/hub/src/runtime/updates/channels.ts — extend both when adding channels
-export type UpdateChannelId = 'stable' | 'beta' | 'canary' | 'pinned';
-
-export interface UpdateChannel {
-  readonly id: UpdateChannelId;
-  readonly label: string;
-  readonly description: string;
-}
-
-export const UPDATE_CHANNELS: readonly UpdateChannel[] = [
-  { id: 'stable', label: 'Stable', description: 'Tested releases, recommended for most users.' },
-  {
-    id: 'beta',
-    label: 'Beta',
-    description: 'Release candidates — feature-complete, stabilising for the next stable.',
-  },
-  { id: 'canary', label: 'Canary', description: 'Latest pre-releases. May be unstable.' },
-  {
-    id: 'pinned',
-    label: 'Pinned',
-    description: 'Stay on a specific version; auto-update is disabled.',
-  },
-] as const;
 
 export interface HubUpdateInfo {
   currentVersion: string;
