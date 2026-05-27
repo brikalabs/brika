@@ -21,6 +21,7 @@
 
 import { type Command, createCli, generateHelp } from '@brika/cli';
 import pc from 'picocolors';
+import supervisor from './commands/__supervisor';
 import brix from './commands/brix';
 import completions from './commands/completions';
 import dashboard from './commands/dashboard';
@@ -70,6 +71,10 @@ export const cli = createCli({ name: 'brika', defaultCommand: 'dashboard', helpF
   .addCommand(version)
   .addCommand(update)
   .addCommand(completions)
+  // Hidden internal command — `brika start` re-invokes it to act as
+  // the standalone-install supervisor (respawns the hub on exit-code
+  // 42). Hidden from help.
+  .addCommand(supervisor)
   // Hidden easter eggs — registered last so the explicit `brika help` /
   // `brika --help` lists keep the same shape as before. Resolvable by
   // direct name only (`brika brix`), absent from the global listing
