@@ -43,11 +43,14 @@ export interface OrchestratorApplyResult {
 @singleton()
 export class UpdateOrchestrator {
   readonly #logs = inject(Logger).withSource('updates');
-  readonly #mode: RuntimeMode;
-  readonly #strategy: UpdateStrategy;
-  readonly #lock: UpdateLock;
-  readonly #audit: UpdateAuditLog;
-  readonly #versionState: VersionStateStore;
+  #mode: RuntimeMode = detectRuntimeMode();
+  #strategy: UpdateStrategy = strategyForMode(this.#mode);
+  #lock: UpdateLock = new UpdateLock(brikaContext.brikaDir);
+  #audit: UpdateAuditLog = new UpdateAuditLog(brikaContext.brikaDir);
+  #versionState: VersionStateStore = new VersionStateStore(
+    brikaContext.brikaDir,
+    brikaContext.version
+  );
 
   #inflight: Promise<OrchestratorApplyResult> | null = null;
   /**
@@ -58,21 +61,48 @@ export class UpdateOrchestrator {
    */
   #restartPending = false;
 
-  constructor(
-    overrides?: Readonly<{
+  /**
+   * Parameter-less constructor. tsyringe's `@singleton()` resolves
+   * this by `new()`-ing with zero args; an `overrides?` parameter
+   * would emit `Object` metadata that tsyringe can't satisfy. Tests
+   * that need custom collaborators use {@link forTesting} below.
+   */
+
+  /**
+   * Build an orchestrator with handpicked collaborators. Production
+   * code MUST use `inject(UpdateOrchestrator)` instead — this is the
+   * test seam.
+   */
+  static forTesting(
+    overrides: Readonly<{
       mode?: RuntimeMode;
       strategy?: UpdateStrategy;
       lock?: UpdateLock;
       audit?: UpdateAuditLog;
       versionState?: VersionStateStore;
     }>
-  ) {
-    this.#mode = overrides?.mode ?? detectRuntimeMode();
-    this.#strategy = overrides?.strategy ?? strategyForMode(this.#mode);
-    this.#lock = overrides?.lock ?? new UpdateLock(brikaContext.brikaDir);
-    this.#audit = overrides?.audit ?? new UpdateAuditLog(brikaContext.brikaDir);
-    this.#versionState =
-      overrides?.versionState ?? new VersionStateStore(brikaContext.brikaDir, brikaContext.version);
+  ): UpdateOrchestrator {
+    const o = new UpdateOrchestrator();
+    if (overrides.mode !== undefined) {
+      o.#mode = overrides.mode;
+    }
+    if (overrides.strategy !== undefined) {
+      o.#strategy = overrides.strategy;
+    } else if (overrides.mode !== undefined) {
+      // Reconcile strategy with the overridden mode unless the test
+      // pinned both explicitly.
+      o.#strategy = strategyForMode(overrides.mode);
+    }
+    if (overrides.lock !== undefined) {
+      o.#lock = overrides.lock;
+    }
+    if (overrides.audit !== undefined) {
+      o.#audit = overrides.audit;
+    }
+    if (overrides.versionState !== undefined) {
+      o.#versionState = overrides.versionState;
+    }
+    return o;
   }
 
   get mode(): RuntimeMode {

@@ -65,7 +65,7 @@ afterEach(() => {
 });
 
 function makeOrchestrator(strategy: UpdateStrategy): UpdateOrchestrator {
-  return new UpdateOrchestrator({
+  return UpdateOrchestrator.forTesting({
     mode: 'standalone',
     strategy,
     lock: new UpdateLock(tmp),
@@ -107,7 +107,7 @@ describe('UpdateOrchestrator', () => {
     const strategyA = new FakeStrategy();
     strategyA.delay = 50;
     const lock = new UpdateLock(tmp);
-    const orchA = new UpdateOrchestrator({
+    const orchA = UpdateOrchestrator.forTesting({
       mode: 'standalone',
       strategy: strategyA,
       lock,
@@ -122,7 +122,7 @@ describe('UpdateOrchestrator', () => {
     // Give the first apply a tick to acquire.
     await new Promise((r) => setTimeout(r, 5));
 
-    const orchB = new UpdateOrchestrator({
+    const orchB = UpdateOrchestrator.forTesting({
       mode: 'standalone',
       strategy: new FakeStrategy(),
       lock: new UpdateLock(tmp),

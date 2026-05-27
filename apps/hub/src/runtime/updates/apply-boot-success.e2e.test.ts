@@ -88,7 +88,7 @@ describe('apply → next-boot-success → backup cleared (happy path)', () => {
     versionState.recordBootSuccess(); // this boot was successful
 
     const strategy = new FakeStagedStrategy(installDir);
-    const orchestrator = new UpdateOrchestrator({
+    const orchestrator = UpdateOrchestrator.forTesting({
       mode: 'standalone',
       strategy,
       lock: new UpdateLock(brikaDir),
@@ -123,7 +123,7 @@ describe('apply → next-boot-success → backup cleared (happy path)', () => {
     nextVersionState.recordBootAttempt();
 
     // Step 4 — bootstrap done, orchestrator records success.
-    const nextOrchestrator = new UpdateOrchestrator({
+    const nextOrchestrator = UpdateOrchestrator.forTesting({
       mode: 'standalone',
       strategy: new FakeStagedStrategy(installDir),
       lock: new UpdateLock(brikaDir),
