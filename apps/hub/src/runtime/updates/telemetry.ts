@@ -25,7 +25,6 @@
  */
 
 import { homedir } from 'node:os';
-import { BRIKA_VERSION } from '@brika/version';
 import { brikaContext } from '@/runtime/context/brika-context';
 
 const TELEMETRY_URL_ENV = 'BRIKA_TELEMETRY_URL';
@@ -125,7 +124,7 @@ export async function emitUpdateTelemetry(
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'User-Agent': `brika/${BRIKA_VERSION}`,
+        'User-Agent': `brika/${brikaContext.version}`,
       },
       body: JSON.stringify(payload),
       // Short timeout — never block apply progress on a slow endpoint.

@@ -15,10 +15,17 @@
  * Deliberately *does not* boot the hub: too much surface area for
  * false negatives (DB locked by the running hub, port already bound,
  * filesystem permissions, …). The only signal we care about is "the
- * binary starts and the @brika/version constant is the one we expect".
+ * binary starts and the version baked into it is the one we expect".
+ *
+ * Reads the hub's package.json directly so the probe has no dependency
+ * beyond a single JSON import — adding `@/hub` here would pull in the
+ * GitHub URL constants and any future hub-level metadata, none of
+ * which the probe needs.
  */
 
-import { BRIKA_VERSION } from '@brika/version';
+import pkg from '../../../package.json' with { type: 'json' };
+
+const BRIKA_VERSION: string = pkg.version;
 
 export interface SelfCheckResult {
   ok: boolean;

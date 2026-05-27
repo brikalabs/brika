@@ -21,7 +21,6 @@
  */
 
 import { existsSync, renameSync, rmSync } from 'node:fs';
-import { BRIKA_VERSION } from '@brika/version';
 import { brikaContext } from '@/runtime/context/brika-context';
 import { RESTART_CODE } from '@/runtime/restart-code';
 import { UpdateAuditLog } from './audit-log';
@@ -46,7 +45,7 @@ export type RollbackOutcome = 'no-backup' | 'no-rollback' | 'rolled-back';
  */
 export function checkAndRollback(input: RollbackInput): RollbackOutcome {
   const audit = new UpdateAuditLog(input.brikaDir);
-  const versionState = new VersionStateStore(input.brikaDir, BRIKA_VERSION);
+  const versionState = new VersionStateStore(input.brikaDir, brikaContext.version);
 
   if (!hasPreviousBackup(input.installDir)) {
     return 'no-backup';

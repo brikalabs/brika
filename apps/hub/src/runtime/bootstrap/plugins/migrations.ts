@@ -10,7 +10,6 @@
  */
 
 import { inject, singleton } from '@brika/di';
-import { BRIKA_VERSION } from '@brika/version';
 import { brikaContext } from '@/runtime/context/brika-context';
 import { Logger } from '@/runtime/logs/log-router';
 import { allScopes, type MigrationReport, MigrationRunner } from '@/runtime/migrations';
@@ -44,8 +43,8 @@ export function migrations(): BootstrapPlugin {
       const status = inject(MigrationStatus);
       const runner = new MigrationRunner(allScopes, {
         brikaDir: brikaContext.brikaDir,
-        currentVersion: BRIKA_VERSION,
-        versionState: new VersionStateStore(brikaContext.brikaDir, BRIKA_VERSION),
+        currentVersion: brikaContext.version,
+        versionState: new VersionStateStore(brikaContext.brikaDir, brikaContext.version),
         audit: new UpdateAuditLog(brikaContext.brikaDir),
         log: (level, message, data) => {
           if (level === 'info') {
