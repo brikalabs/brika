@@ -23,6 +23,14 @@ import { dirname, join } from 'node:path';
 const LOG_FILE = 'updates.log';
 const ROTATED_SUFFIX = '.1';
 const MAX_BYTES = 1024 * 1024; // 1 MB
+/**
+ * Cap on the JSON-stringified `data` field per event. A strategy
+ * that emits a multi-MB progress detail (broken pipe output, a
+ * runaway error trace, etc.) shouldn't be able to flip the log
+ * past its rotation threshold in one write — that just rotates
+ * out useful prior context.
+ */
+const MAX_DATA_BYTES = 4096;
 
 export type AuditEventKind =
   | 'check.start'
@@ -63,7 +71,7 @@ export class UpdateAuditLog {
     const event: AuditEvent = {
       ts: new Date().toISOString(),
       kind,
-      data,
+      data: this.#capData(data),
     };
     try {
       this.#rotateIfNeeded();
@@ -74,6 +82,24 @@ export class UpdateAuditLog {
       // write is annoying but not actionable, and we don't want it to
       // mask the actual update failure being recorded.
     }
+  }
+
+  /**
+   * Truncate `data` to fit within {@link MAX_DATA_BYTES} bytes once
+   * serialised. Replaces the offending field with a marker rather
+   * than dropping silently so a post-mortem can tell something was
+   * truncated.
+   */
+  #capData(data: Record<string, unknown>): Record<string, unknown> {
+    const serialised = JSON.stringify(data);
+    if (serialised.length <= MAX_DATA_BYTES) {
+      return data;
+    }
+    return {
+      _truncated: true,
+      _originalBytes: serialised.length,
+      preview: serialised.slice(0, MAX_DATA_BYTES),
+    };
   }
 
   #rotateIfNeeded(): void {
