@@ -58,18 +58,14 @@ interface IdleContentProps {
   t: LocaleUtils['t'];
 }
 
-function pluralize(n: number, singular: string, plural: string): string {
-  return n === 1 ? singular : plural;
-}
-
-function compatHeadline(report: CompatReport): string {
+function compatHeadline(report: CompatReport, t: LocaleUtils['t']): string {
   if (report.willDisableCount > 0) {
-    return `${report.willDisableCount} ${pluralize(report.willDisableCount, 'plugin', 'plugins')} will be disabled`;
+    return t('common:updates.compatHeadlineDisabled', { count: report.willDisableCount });
   }
-  return `${report.missingRequirementsCount} ${pluralize(report.missingRequirementsCount, 'plugin', 'plugins')} lack a compatibility declaration`;
+  return t('common:updates.compatHeadlineMissing', { count: report.missingRequirementsCount });
 }
 
-function CompatWarning({ report }: Readonly<{ report: CompatReport }>) {
+function CompatWarning({ report, t }: Readonly<{ report: CompatReport; t: LocaleUtils['t'] }>) {
   if (report.willDisableCount === 0 && report.missingRequirementsCount === 0) {
     return null;
   }
@@ -78,7 +74,7 @@ function CompatWarning({ report }: Readonly<{ report: CompatReport }>) {
     <div className="rounded-md border border-amber-500/30 bg-amber-500/5 px-4 py-3 text-sm">
       <div className="flex items-center gap-2 font-medium">
         <AlertTriangle className="size-4 text-amber-500" />
-        <span>{compatHeadline(report)}</span>
+        <span>{compatHeadline(report, t)}</span>
       </div>
       {incompatible.length > 0 && (
         <ul className="mt-2 list-disc space-y-0.5 pl-5 text-muted-foreground text-xs">
@@ -86,12 +82,16 @@ function CompatWarning({ report }: Readonly<{ report: CompatReport }>) {
             <li key={p.name}>
               <span className="font-mono">{p.name}</span>
               {p.currentRequires !== null && (
-                <span className="text-muted-foreground/70"> requires {p.currentRequires}</span>
+                <span className="text-muted-foreground/70">
+                  {t('common:updates.compatPluginRequires', { range: p.currentRequires })}
+                </span>
               )}
             </li>
           ))}
           {incompatible.length > 5 && (
-            <li className="text-muted-foreground/70">…and {incompatible.length - 5} more</li>
+            <li className="text-muted-foreground/70">
+              {t('common:updates.compatAndMore', { count: incompatible.length - 5 })}
+            </li>
           )}
         </ul>
       )}
@@ -149,7 +149,7 @@ function IdleContentBody({
         </div>
       </div>
 
-      {compat !== undefined && <CompatWarning report={compat} />}
+      {compat !== undefined && <CompatWarning report={compat} t={t} />}
 
       {updateInfo.releaseNotes && <ReleaseNotes updateInfo={updateInfo} t={t} />}
     </div>
@@ -210,9 +210,17 @@ interface UpdateFooterProps {
   t: LocaleUtils['t'];
   onClose: () => void;
   onUpdate: () => void;
+  onRetry: () => void;
 }
 
-function UpdateFooter({ state, force, t, onClose, onUpdate }: Readonly<UpdateFooterProps>) {
+function UpdateFooter({
+  state,
+  force,
+  t,
+  onClose,
+  onUpdate,
+  onRetry,
+}: Readonly<UpdateFooterProps>) {
   if (state === 'idle') {
     return (
       <div className="flex w-full justify-end gap-2">
@@ -238,9 +246,15 @@ function UpdateFooter({ state, force, t, onClose, onUpdate }: Readonly<UpdateFoo
 
   if (state === 'error') {
     return (
-      <Button variant="outline" onClick={onClose}>
-        {t('common:actions.close')}
-      </Button>
+      <div className="flex w-full justify-end gap-2">
+        <Button variant="outline" onClick={onClose}>
+          {t('common:actions.close')}
+        </Button>
+        <Button onClick={onRetry}>
+          <ArrowDownToLine />
+          {t('common:actions.retry')}
+        </Button>
+      </div>
     );
   }
 
@@ -248,6 +262,16 @@ function UpdateFooter({ state, force, t, onClose, onUpdate }: Readonly<UpdateFoo
 }
 
 // ─── Main component ──────────────────────────────────────────────────────────
+
+/**
+ * Hard ceiling on the time we sit in `state: 'updating'` without
+ * receiving a terminal `phase: 'restarting' | 'complete' | 'error'`
+ * event. The download + verify + extract chain on a slow connection
+ * comfortably fits in this window for a typical 50 MB artifact; if
+ * the SSE stream goes silent past 5 min something has gone wrong on
+ * the hub side and the user needs an escape hatch.
+ */
+const UPDATING_HARD_TIMEOUT_MS = 5 * 60 * 1000;
 
 export function UpdateDialog({
   open,
@@ -261,6 +285,7 @@ export function UpdateDialog({
   const [logs, setLogs] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
+  const updatingTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const hubPoller = useWaitForHub(
     useCallback(() => {
@@ -268,6 +293,27 @@ export function UpdateDialog({
       setState('error');
     }, [t])
   );
+
+  // Hard timeout on the `updating` state. Clears whenever we leave
+  // it via terminal phase OR explicit user action.
+  useEffect(() => {
+    if (state !== 'updating') {
+      if (updatingTimerRef.current !== undefined) {
+        clearTimeout(updatingTimerRef.current);
+        updatingTimerRef.current = undefined;
+      }
+      return;
+    }
+    updatingTimerRef.current = setTimeout(() => {
+      setError(t('common:updates.timeoutMessage'));
+      setState('error');
+    }, UPDATING_HARD_TIMEOUT_MS);
+    return () => {
+      if (updatingTimerRef.current !== undefined) {
+        clearTimeout(updatingTimerRef.current);
+      }
+    };
+  }, [state, t]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -369,6 +415,7 @@ export function UpdateDialog({
             t={t}
             onClose={handleClose}
             onUpdate={handleUpdate}
+            onRetry={handleUpdate}
           />
         </DialogFooter>
       </DialogContent>

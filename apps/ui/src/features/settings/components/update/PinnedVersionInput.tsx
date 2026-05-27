@@ -8,11 +8,13 @@
 import { Button } from '@brika/clay/components/button';
 import { Input } from '@brika/clay/components/input';
 import { useEffect, useState } from 'react';
+import { useLocale } from '@/lib/use-locale';
 import { usePinnedVersion, useSetPinnedVersion } from './channel-hooks';
 
 const VERSION_RE = /^v?\d+\.\d+\.\d+(?:[-+][\w.-]+)?$/u;
 
 export function PinnedVersionInput() {
+  const { t } = useLocale();
   const { data, isLoading } = usePinnedVersion();
   const { mutate, isPending } = useSetPinnedVersion();
   const [draft, setDraft] = useState<string>('');
@@ -29,13 +31,15 @@ export function PinnedVersionInput() {
   return (
     <div className="flex flex-col gap-2">
       <label className="text-muted-foreground text-xs" htmlFor="pinned-version">
-        Pinned version (e.g. <span className="font-mono">0.5.2</span>)
+        {t('common:updates.pinnedVersionLabel', { example: '0.5.2' })}
       </label>
       <div className="flex gap-2">
         <Input
           id="pinned-version"
           value={draft}
-          placeholder={isLoading ? 'Loading…' : '0.5.2'}
+          placeholder={
+            isLoading ? t('common:status.loading') : t('common:updates.pinnedVersionPlaceholder')
+          }
           onChange={(e) => setDraft(e.target.value)}
           aria-invalid={!isValid}
           className="max-w-xs font-mono"
@@ -45,7 +49,7 @@ export function PinnedVersionInput() {
           disabled={!isValid || !hasChanges || isPending}
           onClick={() => mutate(draft.length === 0 ? null : draft)}
         >
-          {isPending ? 'Saving…' : 'Save'}
+          {isPending ? t('common:actions.saving') : t('common:actions.save')}
         </Button>
         {data?.version !== null && data?.version !== undefined && (
           <Button
@@ -57,14 +61,13 @@ export function PinnedVersionInput() {
               mutate(null);
             }}
           >
-            Clear
+            {t('common:actions.clear')}
           </Button>
         )}
       </div>
       {!isValid && (
         <p className="text-destructive text-xs">
-          Must look like <span className="font-mono">0.5.2</span> or{' '}
-          <span className="font-mono">v0.5.2-rc.1</span>
+          {t('common:updates.pinnedVersionInvalid', { example1: '0.5.2', example2: 'v0.5.2-rc.1' })}
         </p>
       )}
     </div>

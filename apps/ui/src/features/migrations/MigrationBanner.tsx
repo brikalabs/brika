@@ -15,11 +15,13 @@ import { Button } from '@brika/clay/components/button';
 import { useQuery } from '@tanstack/react-query';
 import { AlertTriangle, Sparkles, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { useLocale } from '@/lib/use-locale';
 import { hasNoteworthyMigrations, migrationApi, migrationKeys } from './api';
 
 const DISMISS_STORAGE_KEY = 'brika.migration.dismissedAt';
 
 export function MigrationBanner() {
+  const { t } = useLocale();
   const { data: status } = useQuery({
     queryKey: migrationKeys.status,
     queryFn: migrationApi.status,
@@ -62,11 +64,10 @@ export function MigrationBanner() {
   };
 
   return (
-    <div
+    <output
       className={`pointer-events-auto fixed top-3 right-3 z-50 flex items-start gap-3 rounded-lg border bg-card px-4 py-3 shadow-md ${
         failed.length > 0 ? 'border-destructive/40' : ''
       }`}
-      role="status"
     >
       {failed.length > 0 ? (
         <AlertTriangle className="mt-0.5 size-4 text-destructive" />
@@ -75,11 +76,15 @@ export function MigrationBanner() {
       )}
       <div className="text-sm">
         <p className="font-medium">
-          {failed.length > 0 ? 'Migrations partially applied' : 'On-disk state updated'}
+          {failed.length > 0
+            ? t('common:updates.migrationFailedHeadline')
+            : t('common:updates.migrationAppliedHeadline')}
         </p>
         <p className="text-muted-foreground text-xs">
-          {applied} {applied === 1 ? 'migration' : 'migrations'} applied
-          {failed.length > 0 ? ` · ${failed.length} failed` : ''}
+          {t('common:updates.migrationApplied', { count: applied })}
+          {failed.length > 0
+            ? ` · ${t('common:updates.migrationFailedCount', { count: failed.length })}`
+            : ''}
         </p>
         {failed.length > 0 && (
           <ul className="mt-1 list-disc pl-4 text-destructive text-xs">
@@ -96,10 +101,10 @@ export function MigrationBanner() {
         size="icon"
         className="-mt-1 -mr-1 size-6"
         onClick={handleDismiss}
-        aria-label="Dismiss"
+        aria-label={t('common:actions.close')}
       >
         <X className="size-3.5" />
       </Button>
-    </div>
+    </output>
   );
 }
