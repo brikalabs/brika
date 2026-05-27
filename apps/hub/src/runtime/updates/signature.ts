@@ -39,25 +39,41 @@
  *     L3: "trusted comment: <comment>"  (comment after the colon-space)
  *     L4: base64( ed25519_sig over (sig_from_L2[10..74] || trusted_comment) )
  *
- *   algo prefix:
- *     "Ed" (0x45 0x64) → hashed: signed message = blake2b-512(file)
- *     "ED" (0x45 0x44) → legacy: signed message = file bytes (we reject)
+ *   algo prefix (matches `SIGALG` / `SIGALG_HASHED` in minisign 0.12):
+ *     "ED" (0x45 0x44) → hashed: signed message = blake2b-512(file)   [default since 0.10]
+ *     "Ed" (0x45 0x64) → legacy: signed message = file bytes          [requires `-l` to sign]
+ *
+ * Both modes use Ed25519 over a 64-byte message and are equally secure;
+ * hashed mode just lets very large artifacts be verified without
+ * holding the whole file in memory. For our ~30MB binaries the
+ * operational difference is negligible. Accepting both keeps the
+ * verifier interoperable across minisign versions and homebrew/apt
+ * builds, none of which expose a CLI flag to pin the algorithm.
  */
 
 import { createHash, createPublicKey, verify } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 
 /**
- * Base64-encoded raw 32-byte Ed25519 public key. **Empty until the
- * key ceremony lands.** When empty, signature verification is
- * skipped (with a warning); when populated, missing or invalid
- * signatures abort the update.
+ * Base64-encoded raw 32-byte Ed25519 public key, extracted from the
+ * minisign pubkey (the full minisign blob is 42 bytes: 2-byte algo +
+ * 8-byte key ID + 32-byte ed25519 key; this constant is just the
+ * trailing 32 bytes).
+ *
+ * Generated on 2026-05-27. Corresponding minisign pubkey for human
+ * verification (`minisign -Vm <file> -P …`):
+ *   RWTPl251YqDI9vc1KoMBGt6CrU5dSYguOIWChJj761kd9joxDesfwo8g
+ *
+ * Rotating this constant invalidates every existing `.minisig` —
+ * after rotation, push a forced release so users on the old key have
+ * a signed update path to the new one.
  */
-export const BRIKA_SIGNING_PUBKEY_B64 = '';
+export const BRIKA_SIGNING_PUBKEY_B64 = '9zUqgwEa3oKtTl1JiC44hYKEmPvrWR32OjEN6x/CjyA=';
 
 const ED25519_SIG_LEN = 64;
 const KEY_ID_LEN = 8;
-const ALGO_HASHED = 'Ed';
+const ALGO_HASHED = 'ED';
+const ALGO_LEGACY = 'Ed';
 
 export type SignatureVerificationOutcome =
   | { status: 'verified' }
@@ -108,11 +124,12 @@ export async function verifyMinisignFile(
     return { status: 'failed', reason: 'global signature did not verify' };
   }
 
-  // 2. Verify the payload signature. `Ed` = hashed mode; signed
-  //    message is blake2b-512(file).
+  // 2. Verify the payload signature. The signed message depends on mode:
+  //    hashed → blake2b-512(file); legacy → raw file bytes.
   const payload = await readFile(payloadPath);
-  const hashed = createHash('blake2b512').update(payload).digest();
-  if (!verifyEd25519(pubkey, hashed, parsed.signature)) {
+  const message =
+    parsed.mode === 'hashed' ? createHash('blake2b512').update(payload).digest() : payload;
+  if (!verifyEd25519(pubkey, message, parsed.signature)) {
     return { status: 'failed', reason: 'payload signature did not verify' };
   }
 
@@ -124,6 +141,8 @@ interface ParsedSignature {
   readonly signature: Buffer;
   readonly globalSignature: Buffer;
   readonly trustedComment: string;
+  /** `'hashed'` → signed message = blake2b-512(file); `'legacy'` → file bytes. */
+  readonly mode: 'hashed' | 'legacy';
 }
 
 interface ParsedSignatureError {
@@ -150,10 +169,15 @@ function parseMinisignSignature(text: string): ParsedSignature | ParsedSignature
     return { kind: 'error', reason: `signature line wrong length (${sigBytes.length})` };
   }
   const algo = sigBytes.subarray(0, 2).toString('ascii');
-  if (algo !== ALGO_HASHED) {
+  let mode: 'hashed' | 'legacy';
+  if (algo === ALGO_HASHED) {
+    mode = 'hashed';
+  } else if (algo === ALGO_LEGACY) {
+    mode = 'legacy';
+  } else {
     return {
       kind: 'error',
-      reason: `unsupported minisign algorithm "${algo}" (only "Ed" hashed mode is accepted)`,
+      reason: `unsupported minisign algorithm "${algo}" (expected "Ed" or "ED")`,
     };
   }
   const signature = sigBytes.subarray(2 + KEY_ID_LEN);
@@ -173,7 +197,7 @@ function parseMinisignSignature(text: string): ParsedSignature | ParsedSignature
     };
   }
 
-  return { kind: 'ok', signature, globalSignature, trustedComment };
+  return { kind: 'ok', signature, globalSignature, trustedComment, mode };
 }
 
 function decodeBase64(s: string): Buffer {

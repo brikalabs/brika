@@ -3,15 +3,14 @@
  * between `verifyChecksum` and archive extraction in `applyUpdate`.
  *
  * Three observable outcomes:
- *   - no .minisig + no embedded pubkey → silent skip
- *   - no .minisig + embedded pubkey    → throw (refuse unsigned)
+ *   - no .minisig + no embedded pubkey → silent skip   (pre-ceremony builds only)
+ *   - no .minisig + embedded pubkey    → throw         (refuse unsigned)
  *   - .minisig present                 → download + verify; throw on mismatch
  *
- * The embedded-pubkey constant lives in `signature.ts` and is empty
- * in this build, so we can only verify branch (1) and a "no pubkey →
- * sig present but skipped" outcome here. Branch (2) is sketched as
- * a constant-flip TODO so future contributors notice if they ever
- * populate the key.
+ * The embedded-pubkey constant in `signature.ts` is populated in this
+ * build, so we exercise the "refuse unsigned" and "verify fails on
+ * gibberish sig" branches here. The "no embedded pubkey" branch is
+ * covered by `signature.test.ts` against the verifier directly.
  */
 
 import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
@@ -46,31 +45,29 @@ function makeRelease(extra: Partial<GitHubRelease> = {}): GitHubRelease {
 }
 
 describe('maybeVerifySignature', () => {
-  test('silently skips when no .minisig asset and no embedded pubkey', async () => {
+  test('refuses an unsigned update when the pubkey is embedded', async () => {
+    // Release ships only the binary, no .minisig. With a real pubkey
+    // baked in, accepting this would silently downgrade trust — the
+    // updater throws instead.
     const release = makeRelease({
       assets: [{ name: 'brika-linux-x64.tar.gz', browser_download_url: 'https://x/a', size: 1 }],
     });
     const archive = join(dir, 'archive.tar.gz');
     writeFileSync(archive, 'whatever');
 
-    const progress: Array<[string, string]> = [];
     const [firstAsset] = release.assets;
     if (!firstAsset) {
       throw new Error('test fixture missing primary asset');
     }
     await expect(
-      maybeVerifySignature(release, firstAsset, archive, dir, (phase, detail) =>
-        progress.push([phase, detail])
-      )
-    ).resolves.toBeUndefined();
-
-    expect(progress.some(([, msg]) => /skipped/i.test(msg))).toBe(true);
+      maybeVerifySignature(release, firstAsset, archive, dir, () => undefined)
+    ).rejects.toThrow(/no .minisig asset was published/);
   });
 
-  test('downloads + reports skipped when a .minisig is published but no pubkey is embedded', async () => {
-    // Pubkey is empty in this build → verifier returns `'skipped'`
-    // even with a valid-looking sig file. The path still exercises
-    // the download branch.
+  test('downloads the .minisig and throws when verification fails', async () => {
+    // Release ships both archive + .minisig but the sig is gibberish
+    // — the parser rejects the line lengths and the helper turns the
+    // verifier's "failed" result into a thrown error.
     const release = makeRelease({
       assets: [
         { name: 'brika-linux-x64.tar.gz', browser_download_url: 'https://x/a', size: 1 },
@@ -84,7 +81,6 @@ describe('maybeVerifySignature', () => {
     const archive = join(dir, 'archive.tar.gz');
     writeFileSync(archive, 'whatever');
 
-    // Mock fetch to serve a placeholder sig body.
     const mockFetch: ReturnType<typeof mock> = mock<typeof fetch>();
     mockFetch.mockImplementation(() =>
       Promise.resolve(
@@ -93,18 +89,14 @@ describe('maybeVerifySignature', () => {
     );
     globalThis.fetch = mockFetch as unknown as typeof fetch;
 
-    const progress: Array<[string, string]> = [];
     const [firstAsset] = release.assets;
     if (!firstAsset) {
       throw new Error('test fixture missing primary asset');
     }
     await expect(
-      maybeVerifySignature(release, firstAsset, archive, dir, (phase, detail) =>
-        progress.push([phase, detail])
-      )
-    ).resolves.toBeUndefined();
+      maybeVerifySignature(release, firstAsset, archive, dir, () => undefined)
+    ).rejects.toThrow(/Signature verification failed/);
 
     expect(mockFetch).toHaveBeenCalledTimes(1);
-    expect(progress.some(([, msg]) => /skipped/i.test(msg))).toBe(true);
   });
 });

@@ -46,15 +46,17 @@ function generateEd25519(): KeyPair {
 function makeSigFile(
   payloadPath: string,
   keys: KeyPair,
-  opts?: { tamperGlobal?: boolean; tamperPayload?: boolean }
+  opts?: { tamperGlobal?: boolean; tamperPayload?: boolean; mode?: 'hashed' | 'legacy' }
 ): string {
   const payload = readFileSync(payloadPath);
-  const hashed = createHash('blake2b512').update(payload).digest();
-  // Sign hashed (Ed mode); tamper if requested.
-  const payloadMessage = opts?.tamperPayload === true ? Buffer.from('x') : hashed;
+  const mode = opts?.mode ?? 'hashed';
+  const signedMessage =
+    mode === 'hashed' ? createHash('blake2b512').update(payload).digest() : payload;
+  // Tamper if requested — replace the signed message with garbage.
+  const payloadMessage = opts?.tamperPayload === true ? Buffer.from('x') : signedMessage;
   const sig = sign(null, payloadMessage, keys.privateKey);
-  // Algo prefix "Ed" + 8-byte key ID + 64-byte sig
-  const algo = Buffer.from('Ed', 'ascii');
+  // Algo prefix: "ED" = hashed (minisign default since 0.10), "Ed" = legacy.
+  const algo = Buffer.from(mode === 'hashed' ? 'ED' : 'Ed', 'ascii');
   const keyId = Buffer.alloc(8); // arbitrary; not checked
   const sigBlob = Buffer.concat([algo, keyId, sig]);
 
@@ -181,18 +183,30 @@ describe('verifyMinisignFile', () => {
     }
   });
 
-  test('rejects an unsupported (legacy "ED") minisign algorithm', async () => {
+  test('accepts a legacy "Ed" minisign signature (signs raw file bytes)', async () => {
+    // `minisign -S -l` opts into legacy mode; we still accept it
+    // because both modes use Ed25519 over a 64-byte message and are
+    // equally secure — see signature.ts header comment.
+    const payload = join(dir, 'payload');
+    writeFileSync(payload, 'legacy mode payload');
+    const keys = generateEd25519();
+    const sigPath = makeSigFile(payload, keys, { mode: 'legacy' });
+    const result = await verifyMinisignFile(payload, sigPath, keys.pubkeyB64);
+    expect(result.status).toBe('verified');
+  });
+
+  test('rejects an unknown algorithm prefix', async () => {
     const payload = join(dir, 'payload');
     writeFileSync(payload, 'bytes');
     const sigPath = join(dir, 's.minisig');
-    const legacyBlob = Buffer.concat([
-      Buffer.from('ED', 'ascii'), // legacy mode (no blake2 prehash)
+    const unknownBlob = Buffer.concat([
+      Buffer.from('XX', 'ascii'), // neither "ED" (hashed) nor "Ed" (legacy)
       Buffer.alloc(8),
       Buffer.alloc(64),
     ]);
     writeFileSync(
       sigPath,
-      `untrusted comment: x\n${legacyBlob.toString('base64')}\ntrusted comment: y\n${Buffer.alloc(64).toString('base64')}\n`
+      `untrusted comment: x\n${unknownBlob.toString('base64')}\ntrusted comment: y\n${Buffer.alloc(64).toString('base64')}\n`
     );
     const keys = generateEd25519();
     const result = await verifyMinisignFile(payload, sigPath, keys.pubkeyB64);
@@ -207,7 +221,7 @@ describe('verifyMinisignFile', () => {
     writeFileSync(payload, 'bytes');
     const sigPath = join(dir, 's.minisig');
     const validBlob = Buffer.concat([
-      Buffer.from('Ed', 'ascii'),
+      Buffer.from('ED', 'ascii'), // hashed mode marker
       Buffer.alloc(8),
       Buffer.alloc(64),
     ]);
@@ -228,7 +242,7 @@ describe('verifyMinisignFile', () => {
     writeFileSync(payload, 'bytes');
     const sigPath = join(dir, 's.minisig');
     const validBlob = Buffer.concat([
-      Buffer.from('Ed', 'ascii'),
+      Buffer.from('ED', 'ascii'), // hashed mode marker
       Buffer.alloc(8),
       Buffer.alloc(64),
     ]);

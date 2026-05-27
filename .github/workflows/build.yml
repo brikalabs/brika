@@ -36,6 +36,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.meta.outputs.version }}
+      binary_version: ${{ steps.meta.outputs.binary_version }}
       is_release: ${{ steps.meta.outputs.is_release }}
       docker_tags: ${{ steps.meta.outputs.docker_tags }}
       bun_version: ${{ steps.meta.outputs.bun_version }}
@@ -46,16 +47,26 @@ jobs:
         id: meta
         run: |
           BUN_VERSION=$(jq -r '.engines.bun' package.json)
+          PKG_VERSION=$(jq -r '.version' apps/hub/package.json)
           IMAGE="${IMAGE_NAME,,}"
+          SHORT_SHA="${GITHUB_SHA:0:7}"
 
           if [[ "${{ github.ref_type }}" == "tag" ]]; then
             VERSION="${GITHUB_REF_NAME#v}"
+            BINARY_VERSION="$VERSION"
             IS_RELEASE=true
           elif [[ -n "${{ inputs.version }}" ]]; then
             VERSION="${{ inputs.version }}"
+            BINARY_VERSION="$VERSION"
             IS_RELEASE=true
           else
+            # Sortable canary: <pkg-base>-canary.<unix>.<sha>. Stays
+            # semver-comparable so the updater's existing comparator
+            # ranks newer canaries above older ones. When stable cuts
+            # vX.Y.Z, bump apps/hub/package.json so subsequent canaries
+            # advance past it.
             VERSION="canary"
+            BINARY_VERSION="${PKG_VERSION}-canary.$(date -u +%s).${SHORT_SHA}"
             IS_RELEASE=false
           fi
 
@@ -67,6 +78,7 @@ jobs:
 
           {
             echo "version=$VERSION"
+            echo "binary_version=$BINARY_VERSION"
             echo "is_release=$IS_RELEASE"
             echo "docker_tags=$DOCKER_TAGS"
             echo "bun_version=$BUN_VERSION"
@@ -77,6 +89,7 @@ jobs:
             echo "| Key | Value |"
             echo "|-----|-------|"
             echo "| Version | \`$VERSION\` |"
+            echo "| Binary version | \`$BINARY_VERSION\` |"
             echo "| Release | $IS_RELEASE |"
             echo "| Docker | \`$DOCKER_TAGS\` |"
           } >> "$GITHUB_STEP_SUMMARY"
@@ -155,6 +168,8 @@ jobs:
 
       - name: Compile binary
         working-directory: apps/build
+        env:
+          BRIKA_VERSION: ${{ needs.setup.outputs.binary_version }}
         run: bun run build --compile --platform=${{ matrix.target }}
 
       - name: Package archive
@@ -176,6 +191,81 @@ jobs:
           name: ${{ matrix.artifact }}
           path: /tmp/${{ matrix.artifact }}.${{ matrix.ext }}
           retention-days: 1
+
+  # ───────────────────────────────────────────────────────────────────────
+  # Sign every archive with minisign. Runs in a GitHub Environment so
+  # secrets can be branch/tag-restricted and (for stable tags) gated on
+  # manual approval — see `canary-release` / `production-release` envs.
+  #
+  # The signing job is isolated from the build matrix because (a) it
+  # only needs minisign + the produced archives, not Bun or the source
+  # tree, and (b) one job touching the key is easier to audit than five.
+  # ───────────────────────────────────────────────────────────────────────
+  sign:
+    needs: [setup, binaries]
+    runs-on: ubuntu-latest
+    environment: ${{ needs.setup.outputs.is_release == 'true' && 'production-release' || 'canary-release' }}
+    steps:
+      - uses: actions/download-artifact@v5
+        with:
+          pattern: brika-*
+          path: artifacts/
+          merge-multiple: true
+
+      - name: Install minisign + expect
+        run: sudo apt-get update && sudo apt-get install -y minisign expect
+
+      - name: Sign each archive
+        env:
+          BRIKA_SIGN_KEY: ${{ secrets.BRIKA_SIGN_KEY }}
+          BRIKA_SIGN_PASSWORD: ${{ secrets.BRIKA_SIGN_PASSWORD }}
+          BINARY_VERSION: ${{ needs.setup.outputs.binary_version }}
+        run: |
+          # Stage the private key + passphrase with 0600. Lives only
+          # for the lifetime of this job; the runner is ephemeral.
+          umask 077
+          printf '%s' "$BRIKA_SIGN_KEY" > brika.sec
+          printf '%s' "$BRIKA_SIGN_PASSWORD" > .pp
+
+          # minisign reads the passphrase from /dev/tty and ignores
+          # stdin/env, so we drive it through a pty via `expect`. The
+          # wrapper reads the passphrase from the file we just wrote.
+          cat > sign.exp <<'EOF'
+          #!/usr/bin/expect -f
+          set timeout 30
+          set fp [open ".pp" r]
+          set passphrase [read $fp]
+          close $fp
+          set asset [lindex $argv 0]
+          set trust [lindex $argv 1]
+          spawn minisign -S -s brika.sec -t $trust -c "brika release artifact" -m $asset
+          expect {
+            "Password:" { send "$passphrase\r"; exp_continue }
+            eof
+          }
+          catch wait result
+          exit [lindex $result 3]
+          EOF
+          chmod +x sign.exp
+
+          cd artifacts
+          for f in brika-*; do
+            # `-t` (trusted comment) is signed alongside the file
+            # digest. Embedding {version,filename} stops a signature
+            # from being silently re-pointed at a different release.
+            ../sign.exp "$f" "brika ${BINARY_VERSION} ${f}"
+            echo "signed: ${f}.minisig"
+          done
+          cd ..
+
+          shred -u brika.sec .pp 2>/dev/null || rm -f brika.sec .pp
+
+      - uses: actions/upload-artifact@v5
+        with:
+          name: signatures
+          path: artifacts/*.minisig
+          retention-days: 1
+          if-no-files-found: error
 
   # ───────────────────────────────────────────────────────────────────────
   # Container image per arch on native runners (no QEMU). The Dockerfile
@@ -307,7 +397,7 @@ jobs:
   # the PRs merged since the previous release.
   # ───────────────────────────────────────────────────────────────────────
   release:
-    needs: [setup, docker-manifest, binaries]
+    needs: [setup, docker-manifest, binaries, sign]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -322,9 +412,15 @@ jobs:
           path: artifacts/
           merge-multiple: true
 
+      - uses: actions/download-artifact@v5
+        with:
+          name: signatures
+          path: artifacts/
+
       - name: Generate release-meta.json
         env:
           VERSION: ${{ needs.setup.outputs.version }}
+          BINARY_VERSION: ${{ needs.setup.outputs.binary_version }}
           BUN_VERSION: ${{ needs.setup.outputs.bun_version }}
         run: |
           cd artifacts
@@ -332,14 +428,19 @@ jobs:
             printf '%s %s\n' "$(sha256sum "$f" | cut -d' ' -f1)" "$f"
           done | jq -Rn '[inputs | split(" ") | {(.[1]): .[0]}] | add')
 
+          # `version` is the binary's actual reported version — the same
+          # value baked in via BRIKA_VERSION at compile time. The updater
+          # uses this for semver comparison; the GitHub tag name is just
+          # a label. Keeping `name` for human-friendly grouping.
           jq -n \
-            --arg version "$VERSION" \
+            --arg version "$BINARY_VERSION" \
+            --arg name "$VERSION" \
             --arg commit "$(git rev-parse HEAD)" \
             --arg branch "$(git rev-parse --abbrev-ref HEAD)" \
             --arg date "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
             --arg bun "$BUN_VERSION" \
             --argjson checksums "$CHECKSUMS" \
-            '{version: $version, commit: $commit, branch: $branch, date: $date, bun: $bun, checksums: $checksums}' \
+            '{version: $version, name: $name, commit: $commit, branch: $branch, date: $date, bun: $bun, checksums: $checksums}' \
             > release-meta.json
           cat release-meta.json
 
@@ -413,18 +514,51 @@ jobs:
             --latest \
             artifacts/*
 
-      - name: Update canary release
+      - name: Publish dated canary release
         if: needs.setup.outputs.is_release == 'false'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           BODY: ${{ steps.notes.outputs.body }}
         run: |
-          gh release delete canary --yes --cleanup-tag 2>/dev/null || true
-
+          # Each canary push gets its own immutable tag so a user can
+          # always reproduce, roll back to, or audit a specific build.
+          # Tag format keeps releases sorted chronologically in the
+          # GitHub UI. The retention job below trims old ones.
           SHORT_SHA="${GITHUB_SHA:0:7}"
-          gh release create canary \
-            --title "Brika canary (${SHORT_SHA})" \
+          STAMP=$(date -u +%Y%m%d-%H%M%S)
+          TAG="canary-${STAMP}-${SHORT_SHA}"
+
+          gh release create "$TAG" \
+            --title "Brika canary ${STAMP} (${SHORT_SHA})" \
             --notes "$BODY" \
             --prerelease \
             --target main \
             artifacts/*
+
+      - name: Prune old canary releases
+        if: needs.setup.outputs.is_release == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Keep the N most recent canary releases. Older ones are
+          # deleted with their tag so the GitHub UI stays scannable
+          # and zero-byte release assets don't pile up indefinitely.
+          KEEP: "20"
+        run: |
+          # `gh release list` returns newest first, so `tail -n +K`
+          # gives us "everything beyond the first K-1" to delete.
+          mapfile -t STALE < <(
+            gh release list --limit 200 --json tagName,isPrerelease \
+              --jq '.[] | select(.isPrerelease) | select(.tagName | startswith("canary-")) | .tagName' \
+              | tail -n +$((KEEP + 1))
+          )
+
+          if [[ ${#STALE[@]} -eq 0 ]]; then
+            echo "No stale canary releases to prune (keeping ${KEEP})."
+            exit 0
+          fi
+
+          echo "Pruning ${#STALE[@]} stale canary release(s):"
+          for tag in "${STALE[@]}"; do
+            echo "  - ${tag}"
+            gh release delete "$tag" --yes --cleanup-tag
+          done

@@ -66,6 +66,10 @@ const GitHubReleaseListSchema = z.array(GitHubReleaseSchema);
 /** Metadata embedded as a release asset — provides build info + per-platform checksums */
 const ReleaseMetaSchema = z.object({
   version: z.string(),
+  /** Human-friendly release label ("canary" or "0.5.0"). The semver
+   *  comparison uses `version`; this is for display only. Optional so
+   *  older release-meta.json files (pre-canary-retention) still parse. */
+  name: z.string().optional(),
   commit: z.string(),
   branch: z.string(),
   date: z.string(),
@@ -331,7 +335,13 @@ function compareRelease(
 ): ReleaseComparison {
   const currentVersion = hub.version;
   const currentCommit = buildInfo.commitFull;
-  const latestVersion = release.tag_name.replace(/^v/, '');
+  // Prefer the meta's `version` (the binary's actual reported version,
+  // injected via BRIKA_VERSION at build time) over the tag name. With
+  // dated canary tags like `canary-20260527-193245-abc1234`, the tag
+  // isn't valid semver but the meta still carries the proper
+  // `0.3.1-canary.<ts>.<sha>`. Stable releases (`v0.5.0`) keep the
+  // existing behaviour via the tag-name fallback.
+  const latestVersion = meta?.version ?? release.tag_name.replace(/^v/, '');
   const releaseCommit = meta?.commit ?? '';
   const assetName = getAssetName();
 
