@@ -29,7 +29,12 @@ function useStopHub() {
 
 export function useHubControl() {
   const [state, setState] = useState<ControlState>('idle');
-  const hubPoller = useWaitForHub(() => setState('idle'));
+  // Same callback on both paths: the user wants the "restarting…"
+  // indicator to clear when the hub is back, whether the poll
+  // succeeded or hit its 60s timeout. Without an explicit
+  // `onReconnect` the poller would invalidate queries silently and
+  // the indicator would hang until the timeout fired.
+  const hubPoller = useWaitForHub(() => setState('idle'), { onReconnect: () => setState('idle') });
 
   const restartMutation = useRestartHub();
   const stopMutation = useStopHub();
