@@ -50,14 +50,23 @@ export const updateReadRoutes = group({
   routes: [
     /**
      * GET /api/system/update
-     * Check for available updates (uses cached result if recent, otherwise checks now).
+     * Check for available updates.
+     *
+     * - default: serves cached info if within TTL + channel matches
+     * - `?refresh=true`: force a remote fetch (the UI's "Check now"
+     *   button passes this so the user gets a real network round-trip
+     *   instead of a 6-hour-stale cache hit)
+     *
      * Authed (not admin) — the UI shows an update badge to every user.
      */
     route.get({
       path: '/',
-      handler: async ({ inject }) => {
+      query: z.object({
+        refresh: z.coerce.boolean().optional(),
+      }),
+      handler: async ({ inject, query }) => {
         const updates = inject(UpdateService);
-        const info = await updates.check();
+        const info = query.refresh ? await updates.refresh() : await updates.check();
         return {
           ...info,
           lastCheckedAt: updates.lastCheckedAt,

@@ -15,6 +15,7 @@ import { ThemeActions } from '@/runtime/events/actions';
 import { EventSystem } from '@/runtime/events/event-system';
 import { PluginManager } from '@/runtime/plugins/plugin-manager';
 import { StateStore } from '@/runtime/state/state-store';
+import { UpdateService } from '@/runtime/updates';
 import { UPDATE_CHANNEL_IDS } from '@/runtime/updates/channels';
 
 /**
@@ -43,6 +44,11 @@ export const settingsAdminRoutes = group({
           );
         }
         state.setUpdateChannel(body.channel);
+        // Drop the cached UpdateInfo so the next `GET /api/system/update`
+        // re-fetches against the new channel. Without this the UI would
+        // see stale info for up to 6 hours (the TTL on the background
+        // checker) — the bug a user hit on the Settings → Hub page.
+        inject(UpdateService).invalidate();
         return { channel: body.channel };
       },
     }),
@@ -63,6 +69,9 @@ export const settingsAdminRoutes = group({
       }),
       handler: ({ body, inject }) => {
         inject(StateStore).setPinnedVersion(body.version);
+        // Same reason as update-channel: drop the cache so the next
+        // `check()` fetches against the newly-pinned tag.
+        inject(UpdateService).invalidate();
         return { version: body.version };
       },
     }),

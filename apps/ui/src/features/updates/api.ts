@@ -83,8 +83,16 @@ export interface CompatReport {
 }
 
 export const updateApi = {
-  /** Check for available hub updates */
+  /** Check for available hub updates (uses the hub's TTL-cached result). */
   check: () => fetcher<HubUpdateInfo>('/api/system/update'),
+
+  /**
+   * Force a fresh remote check that bypasses the hub's TTL cache.
+   * Used by the "Check now" button so the user gets a real network
+   * round-trip — without it, the response is whatever the background
+   * checker has held for up to 6 hours.
+   */
+  checkRefresh: () => fetcher<HubUpdateInfo>('/api/system/update?refresh=true'),
 
   /** Pre-flight compatibility against the latest available version. */
   compat: () => fetcher<CompatReport>('/api/system/update/compat'),
