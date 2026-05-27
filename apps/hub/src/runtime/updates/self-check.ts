@@ -17,15 +17,15 @@
  * filesystem permissions, …). The only signal we care about is "the
  * binary starts and the version baked into it is the one we expect".
  *
- * Reads the hub's package.json directly so the probe has no dependency
- * beyond a single JSON import — adding `@/hub` here would pull in the
+ * Reads `buildInfo.version` so the probe has no dependency beyond the
+ * inlined build-info constants — adding `@/hub` here would pull in the
  * GitHub URL constants and any future hub-level metadata, none of
  * which the probe needs.
  */
 
-import pkg from '../../../package.json' with { type: 'json' };
+import { buildInfo } from '../../build-info';
 
-const BRIKA_VERSION: string = pkg.version;
+const BRIKA_VERSION: string = buildInfo.version;
 
 export interface SelfCheckResult {
   ok: boolean;
@@ -52,7 +52,7 @@ export function runSelfCheck(): SelfCheckResult {
 /**
  * Argv handler. Emits the JSON line and exits with the appropriate
  * code. Called from `apps/console/src/main.ts` *before* anything else
- * loads — must remain dependency-free beyond `@brika/version`.
+ * loads — must remain dependency-free beyond `buildInfo`.
  *
  * Stdout is piped (the orchestrator captures it), and a piped stream
  * may buffer past `process.exit()` on some Bun builds. Schedule the

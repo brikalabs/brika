@@ -42,6 +42,7 @@
         "picocolors": "^1.1.1",
         "react": "^19.2.3",
         "reflect-metadata": "^0.2.2",
+        "zod": "^4.4.3",
       },
       "devDependencies": {
         "@brika/testing": "workspace:*",

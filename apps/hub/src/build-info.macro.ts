@@ -5,6 +5,12 @@
  * The return values are inlined directly into the bundle.
  */
 
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { z } from 'zod';
+
+const PackageJsonSchema = z.object({ version: z.string().min(1) });
+
 export function getGitCommit(): string {
   try {
     const { stdout, exitCode } = Bun.spawnSync({
@@ -44,4 +50,19 @@ export function getGitBranch(): string {
 
 export function getBuildDate(): string {
   return new Date().toISOString();
+}
+
+/**
+ * Build-time version string. CI sets `BRIKA_VERSION` from the git tag
+ * (`v1.2.3` → `1.2.3`) or a canary recipe (`<base>-canary.<ts>.<sha>`).
+ * Local dev falls back to `apps/hub/package.json` so `bun dev` and tests
+ * keep working without the env var.
+ */
+export function getBrikaVersion(): string {
+  const fromEnv = process.env.BRIKA_VERSION?.trim();
+  if (fromEnv) {
+    return fromEnv;
+  }
+  const raw = readFileSync(join(import.meta.dir, '../package.json'), 'utf8');
+  return PackageJsonSchema.parse(JSON.parse(raw)).version;
 }

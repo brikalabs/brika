@@ -21,7 +21,6 @@
 import { randomBytes } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import pkg from '../../../package.json' with { type: 'json' };
 import { buildInfo } from '../../build-info';
 
 const isCompiled = import.meta.path.startsWith('/$bunfs/');
@@ -80,7 +79,7 @@ export interface BrikaContext {
   readonly serviceName: string;
 
   // ─── Build ───────────────────────────────────────────────────────
-  /** `apps/hub/package.json` version. */
+  /** Build-time version. CI sets `BRIKA_VERSION`; dev falls back to `apps/hub/package.json`. */
   readonly version: string;
   /** Git short SHA at build time (empty string in untagged sources). */
   readonly gitSha: string;
@@ -105,7 +104,7 @@ export const brikaContext: BrikaContext = Object.freeze({
   instanceId,
   serviceName: `${KEYCHAIN_SERVICE_BASE}.${instanceId}`,
 
-  version: pkg.version,
+  version: buildInfo.version,
   gitSha: buildInfo.commit,
   gitCommit: buildInfo.commitFull,
   buildDate: buildInfo.date,
