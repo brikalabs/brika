@@ -134,4 +134,128 @@ describe('verifyMinisignFile', () => {
       expect(result.reason).toMatch(/unreadable/);
     }
   });
+
+  test('rejects when the pubkey is the wrong length', async () => {
+    const payload = join(dir, 'payload');
+    writeFileSync(payload, 'bytes');
+    const keys = generateEd25519();
+    // Valid-shape signature so we get past the parser and reach the
+    // pubkey-length check.
+    const sigPath = makeSigFile(payload, keys);
+    // 16-byte (truncated) base64 pubkey
+    const shortPubkey = Buffer.alloc(16, 1).toString('base64');
+    const result = await verifyMinisignFile(payload, sigPath, shortPubkey);
+    expect(result.status).toBe('failed');
+    if (result.status === 'failed') {
+      expect(result.reason).toMatch(/pubkey must be 32 bytes/);
+    }
+  });
+
+  test('rejects when the signature file has fewer than 4 lines', async () => {
+    const payload = join(dir, 'payload');
+    writeFileSync(payload, 'bytes');
+    const sigPath = join(dir, 's.minisig');
+    writeFileSync(sigPath, 'untrusted comment: only\nAAAA\n');
+    const keys = generateEd25519();
+    const result = await verifyMinisignFile(payload, sigPath, keys.pubkeyB64);
+    expect(result.status).toBe('failed');
+    if (result.status === 'failed') {
+      expect(result.reason).toMatch(/expected 4 lines/);
+    }
+  });
+
+  test('rejects when the signature-line length is wrong', async () => {
+    const payload = join(dir, 'payload');
+    writeFileSync(payload, 'bytes');
+    const sigPath = join(dir, 's.minisig');
+    // Second line decodes to <74 bytes (right shape would be 2+8+64).
+    writeFileSync(
+      sigPath,
+      `untrusted comment: x\n${Buffer.alloc(10).toString('base64')}\ntrusted comment: y\n${Buffer.alloc(64).toString('base64')}\n`
+    );
+    const keys = generateEd25519();
+    const result = await verifyMinisignFile(payload, sigPath, keys.pubkeyB64);
+    expect(result.status).toBe('failed');
+    if (result.status === 'failed') {
+      expect(result.reason).toMatch(/signature line wrong length/);
+    }
+  });
+
+  test('rejects an unsupported (legacy "ED") minisign algorithm', async () => {
+    const payload = join(dir, 'payload');
+    writeFileSync(payload, 'bytes');
+    const sigPath = join(dir, 's.minisig');
+    const legacyBlob = Buffer.concat([
+      Buffer.from('ED', 'ascii'), // legacy mode (no blake2 prehash)
+      Buffer.alloc(8),
+      Buffer.alloc(64),
+    ]);
+    writeFileSync(
+      sigPath,
+      `untrusted comment: x\n${legacyBlob.toString('base64')}\ntrusted comment: y\n${Buffer.alloc(64).toString('base64')}\n`
+    );
+    const keys = generateEd25519();
+    const result = await verifyMinisignFile(payload, sigPath, keys.pubkeyB64);
+    expect(result.status).toBe('failed');
+    if (result.status === 'failed') {
+      expect(result.reason).toMatch(/unsupported minisign algorithm/);
+    }
+  });
+
+  test('rejects when the trusted-comment line is missing', async () => {
+    const payload = join(dir, 'payload');
+    writeFileSync(payload, 'bytes');
+    const sigPath = join(dir, 's.minisig');
+    const validBlob = Buffer.concat([
+      Buffer.from('Ed', 'ascii'),
+      Buffer.alloc(8),
+      Buffer.alloc(64),
+    ]);
+    writeFileSync(
+      sigPath,
+      `untrusted comment: x\n${validBlob.toString('base64')}\nNOT THE PREFIX: y\n${Buffer.alloc(64).toString('base64')}\n`
+    );
+    const keys = generateEd25519();
+    const result = await verifyMinisignFile(payload, sigPath, keys.pubkeyB64);
+    expect(result.status).toBe('failed');
+    if (result.status === 'failed') {
+      expect(result.reason).toMatch(/missing "trusted comment:" line/);
+    }
+  });
+
+  test('rejects when the global signature has the wrong length', async () => {
+    const payload = join(dir, 'payload');
+    writeFileSync(payload, 'bytes');
+    const sigPath = join(dir, 's.minisig');
+    const validBlob = Buffer.concat([
+      Buffer.from('Ed', 'ascii'),
+      Buffer.alloc(8),
+      Buffer.alloc(64),
+    ]);
+    // Global sig truncated.
+    writeFileSync(
+      sigPath,
+      `untrusted comment: x\n${validBlob.toString('base64')}\ntrusted comment: y\n${Buffer.alloc(16).toString('base64')}\n`
+    );
+    const keys = generateEd25519();
+    const result = await verifyMinisignFile(payload, sigPath, keys.pubkeyB64);
+    expect(result.status).toBe('failed');
+    if (result.status === 'failed') {
+      expect(result.reason).toMatch(/global signature wrong length/);
+    }
+  });
+
+  test('normalises CRLF in the signature file', async () => {
+    // A signature file that traveled through a Windows editor or a
+    // misconfigured HTTP server with `--text` translation should
+    // still verify — we strip the trailing `\r` before parsing.
+    const payload = join(dir, 'payload');
+    writeFileSync(payload, 'crlf-test');
+    const keys = generateEd25519();
+    const sigPath = makeSigFile(payload, keys);
+    const crlfContent = readFileSync(sigPath, 'utf8').replaceAll('\n', '\r\n');
+    writeFileSync(sigPath, crlfContent);
+    const result = await verifyMinisignFile(payload, sigPath, keys.pubkeyB64);
+    expect(result.status).toBe('verified');
+  });
 });

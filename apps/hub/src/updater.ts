@@ -59,7 +59,7 @@ const GitHubReleaseSchema = z.object({
   prerelease: z.boolean().default(false),
   assets: z.array(GitHubReleaseAssetSchema),
 });
-type GitHubRelease = z.infer<typeof GitHubReleaseSchema>;
+export type GitHubRelease = z.infer<typeof GitHubReleaseSchema>;
 
 const GitHubReleaseListSchema = z.array(GitHubReleaseSchema);
 
@@ -154,7 +154,8 @@ function getAssetName(): string {
  */
 const ASSET_NAME_RE = /^brika-(linux|darwin|windows)-(x64|arm64)\.(?:zip|tar\.gz)$/u;
 
-function isSafeAssetName(name: string): boolean {
+/** Exported for unit testing — the regex itself is the contract. */
+export function isSafeAssetName(name: string): boolean {
   return ASSET_NAME_RE.test(name);
 }
 
@@ -521,7 +522,10 @@ export async function applyUpdate(options?: ApplyUpdateOptions): Promise<{
  *   - signature absent + pubkey present     → throw (refuse unsigned update)
  *   - signature present                     → verify; throw on mismatch
  */
-async function maybeVerifySignature(
+/** Exported for direct unit testing — the integration path (via
+ * `applyUpdate`) is hard to exercise without standing up real
+ * archive + supervisor plumbing. */
+export async function maybeVerifySignature(
   release: GitHubRelease,
   asset: GitHubRelease['assets'][number],
   archivePath: string,
@@ -556,8 +560,13 @@ async function maybeVerifySignature(
   onProgress?.('verifying', 'Signature verified.');
 }
 
-/** Verify downloaded archive against release-meta.json checksums */
-async function verifyChecksum(
+/**
+ * Verify a downloaded archive against the `release-meta.json`
+ * checksums. Exported for direct unit testing — the integration path
+ * (via `applyUpdate`) is hard to exercise without real `Bun.spawn`
+ * extraction.
+ */
+export async function verifyChecksum(
   meta: ReleaseMeta | null,
   assetName: string,
   archivePath: string
@@ -636,7 +645,10 @@ async function streamResponseToFile(
   }
 }
 
-async function downloadFile(
+/** Exported for direct unit testing — exercises resume, no-progress,
+ * stale-partial truncation, and stream-with-progress branches without
+ * standing up the whole `applyUpdate` flow. */
+export async function downloadFile(
   url: string,
   destPath: string,
   totalBytes: number,
