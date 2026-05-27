@@ -1,19 +1,25 @@
 /**
  * Hub Metadata
  *
- * Centralized module for hub identity and metadata.
- * Loads package.json once at module initialization.
+ * Centralized module for hub identity and metadata. The version field
+ * is overridden with the build-time `BRIKA_VERSION` (via `buildInfo`)
+ * so the updater's comparator, the startup log, and the plugin
+ * compatibility check all see the same value the binary actually
+ * reports through `--self-check` — not the stale `apps/hub/package.json`
+ * version that may have drifted from the tag the binary was built for.
  */
 
 import pkg from '../package.json';
+import { buildInfo } from './build-info';
 
 /**
- * Hub metadata loaded from package.json. The `bun run bump` script
- * keeps every package's version field in sync at release time, so
- * `hub.version` is the same number you'd read from the root
- * `package.json`.
+ * Hub metadata. Repository + name come from package.json; version comes
+ * from `buildInfo.version` (injected at compile time, falls back to
+ * `pkg.version` in dev). `bun run bump` keeps pkg.version in sync
+ * across the workspace for local convenience, but it is no longer
+ * authoritative for the running binary.
  */
-export const hub = pkg;
+export const hub = { ...pkg, version: buildInfo.version };
 
 /**
  * Hub version string (shorthand for hub.version).
