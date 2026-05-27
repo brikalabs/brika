@@ -17,7 +17,6 @@
 
 import { createWriteStream } from 'node:fs';
 import { chmod, cp, mkdir, rename, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { z } from 'zod';
 import { buildInfo } from './build-info';
@@ -37,19 +36,32 @@ import {
 // Types
 // ─────────────────────────────────────────────────────────────────────────────
 
-interface GitHubRelease {
-  tag_name: string;
-  target_commitish: string;
-  published_at: string;
-  html_url: string;
-  body: string;
-  prerelease: boolean;
-  assets: Array<{
-    name: string;
-    browser_download_url: string;
-    size: number;
-  }>;
-}
+const GitHubReleaseAssetSchema = z.object({
+  name: z.string(),
+  browser_download_url: z.string(),
+  size: z.number(),
+});
+
+const GitHubReleaseSchema = z.object({
+  tag_name: z.string(),
+  // GitHub always includes these but we accept missing fields with
+  // safe defaults so older / hand-rolled fixtures (in tests, in
+  // user-curated mirrors) don't fail at the parse boundary. The
+  // `body` field is also explicitly nullable — GitHub returns
+  // `null` for releases authored without notes.
+  target_commitish: z.string().default(''),
+  published_at: z.string().default(''),
+  html_url: z.string().default(''),
+  body: z
+    .union([z.string(), z.null()])
+    .default('')
+    .transform((v) => v ?? ''),
+  prerelease: z.boolean().default(false),
+  assets: z.array(GitHubReleaseAssetSchema),
+});
+type GitHubRelease = z.infer<typeof GitHubReleaseSchema>;
+
+const GitHubReleaseListSchema = z.array(GitHubReleaseSchema);
 
 /** Metadata embedded as a release asset — provides build info + per-platform checksums */
 const ReleaseMetaSchema = z.object({
@@ -266,18 +278,21 @@ async function fetchLatestRelease(
     }
     const tag = version.startsWith('v') ? version : `v${version}`;
     const url = `https://api.github.com/repos/${HUB_REPO}/releases/tags/${encodeURIComponent(tag)}`;
-    const { body } = await cache.fetchJson<GitHubRelease>(url, { headers });
+    const { body } = await cache.fetchJson(url, GitHubReleaseSchema, { headers });
     return { release: body, meta: await fetchReleaseMeta(body) };
   }
 
   if (channel === 'stable') {
-    const { body } = await cache.fetchJson<GitHubRelease>(HUB_GITHUB_RELEASES_API, { headers });
+    const { body } = await cache.fetchJson(HUB_GITHUB_RELEASES_API, GitHubReleaseSchema, {
+      headers,
+    });
     return { release: body, meta: await fetchReleaseMeta(body) };
   }
 
   // beta + canary: list pre-releases and pick by heuristic.
-  const { body } = await cache.fetchJson<GitHubRelease[]>(
+  const { body } = await cache.fetchJson(
     `${HUB_GITHUB_RELEASES_LIST_API}?per_page=10`,
+    GitHubReleaseListSchema,
     { headers }
   );
   const prereleases = body.filter((r) => r.prerelease);
@@ -423,10 +438,14 @@ export async function applyUpdate(options?: ApplyUpdateOptions): Promise<{
     );
   }
 
-  // Deterministic tmpDir on (version, asset). Lets a retry after a
-  // network drop reuse the partial archive on disk — the next download
-  // sends a Range request and resumes instead of re-fetching from byte 0.
-  const tmpDir = join(tmpdir(), 'brika-update', `${cmp.latestVersion}-${asset.name}`);
+  // Stage inside the user-owned brikaDir rather than the shared
+  // `os.tmpdir()` — predictable paths under `/tmp` are a symlink-TOCTOU
+  // primitive on shared hosts (pre-create the path as a symlink to
+  // someone else's file, the hub then writes through the symlink).
+  // The brikaDir is created with the hub user's permissions and not
+  // writable by other users; resume semantics are preserved because
+  // the (version, asset) tuple still uniquely identifies the partial.
+  const tmpDir = join(brikaContext.brikaDir, '.update-cache', `${cmp.latestVersion}-${asset.name}`);
   await mkdir(tmpDir, {
     recursive: true,
   });

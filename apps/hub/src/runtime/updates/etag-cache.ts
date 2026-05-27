@@ -47,10 +47,17 @@ export class GithubEtagCache {
 
   /**
    * Fetch `url` with `If-None-Match` set when we have a cached etag.
-   * Returns the JSON body — either freshly parsed or replayed from
-   * cache on 304.
+   * The caller passes a zod `schema` so both the fresh response and
+   * the replayed cached body are validated before they cross the
+   * boundary — without it, the cache would hand back values typed as
+   * the caller's `T` that are actually unvalidated JSON (persisted
+   * bodies can outlive a schema change).
    */
-  async fetchJson<T>(url: string, init?: RequestInit): Promise<FetchWithEtagResult<T>> {
+  async fetchJson<T>(
+    url: string,
+    schema: z.ZodType<T>,
+    init?: RequestInit
+  ): Promise<FetchWithEtagResult<T>> {
     const existing = this.#data[url];
     const headers = new Headers(init?.headers);
     if (existing) {
@@ -60,7 +67,7 @@ export class GithubEtagCache {
     const response = await fetch(url, { ...init, headers });
     if (response.status === 304 && existing) {
       // GitHub confirms the cached body is still current. No budget tick.
-      return { body: existing.body as T, fromCache: true };
+      return { body: this.#replayCached(schema, existing), fromCache: true };
     }
     // Rate-limit / forbidden responses: prefer a stale-but-existing
     // cache entry to throwing — the hub's update check should degrade
@@ -68,22 +75,44 @@ export class GithubEtagCache {
     // shared egress. The caller still sees `fromCache: true` so they
     // know the data is potentially stale.
     if ((response.status === 403 || response.status === 429) && existing) {
-      return { body: existing.body as T, fromCache: true };
+      return { body: this.#replayCached(schema, existing), fromCache: true };
     }
     if (!response.ok) {
       throw new Error(`GitHub API returned ${response.status}: ${response.statusText}`);
     }
 
-    const body = (await response.json()) as T;
+    const parsed = schema.safeParse(await response.json());
+    if (!parsed.success) {
+      throw new Error(`GitHub response failed schema validation: ${parsed.error.message}`);
+    }
     const newEtag = response.headers.get('etag');
     if (newEtag !== null) {
       this.#data = {
         ...this.#data,
-        [url]: { etag: newEtag, lastFetched: Date.now(), body },
+        [url]: { etag: newEtag, lastFetched: Date.now(), body: parsed.data },
       };
       this.#persist();
     }
-    return { body, fromCache: false };
+    return { body: parsed.data, fromCache: false };
+  }
+
+  /**
+   * Validate a cached body against the current schema. A schema change
+   * that lands while a cache entry from the old shape is on disk
+   * shouldn't poison the hot path — drop the entry and force a fresh
+   * fetch by throwing, which lets the caller retry without the etag.
+   */
+  #replayCached<T>(schema: z.ZodType<T>, entry: CacheEntry): T {
+    const parsed = schema.safeParse(entry.body);
+    if (parsed.success) {
+      return parsed.data;
+    }
+    // Invalidate this entry so the caller's retry hits a 200 path.
+    const { [Object.keys(this.#data).find((k) => this.#data[k] === entry) ?? '']: _, ...rest } =
+      this.#data;
+    this.#data = rest;
+    this.#persist();
+    throw new Error(`Cached response is stale-shape (schema mismatch): ${parsed.error.message}`);
   }
 
   #load(): Record<string, CacheEntry> {
