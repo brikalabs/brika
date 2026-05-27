@@ -1,12 +1,19 @@
 /**
- * Spawn `brika hub` as a detached child for the TUI's start action.
- * The TUI doesn't supervise the hub once it's up — the PID file does
- * the cross-process bookkeeping, and the TUI polls it. If the user
- * quits the TUI, the hub keeps running until they hit `x` to stop or
- * exit it through some other channel.
+ * Spawn the standalone supervisor as a detached child for the TUI's
+ * start action. The supervisor (see `hub-supervisor-loop.ts`) keeps
+ * the hub alive across exit-code-42 restarts — the signal the orches-
+ * trator's `markRestartPending()` and `POST /api/system/restart` use
+ * to ask for a respawn. Without it, `brika update` + the UI restart
+ * button would kill the hub permanently on `brika start` installs.
+ *
+ * The hub child (one level deeper than the supervisor) still owns the
+ * pid file, so `brika status` and `brika stop` paths are unchanged.
+ * `brika stop` kills the hub → exit code 0 → supervisor exits cleanly
+ * too. The supervisor pid is what we return here; if the operator
+ * `kill`s that pid directly, signals are forwarded to the hub child.
  *
  * Race handling: if multiple TUIs hit "start" simultaneously, only
- * one supervisor wins `claimPidFile()` — the rest exit non-zero
+ * one wins `claimPidFile()` inside the hub — the rest exit non-zero
  * almost immediately. `spawnHubDetached` waits briefly to see which
  * happened and returns the *winner's* PID either way, so every
  * caller converges on the same "hub running, pid N" story without
@@ -38,19 +45,19 @@ const IS_COMPILED = import.meta.path.startsWith('/$bunfs/');
  * (`/$bunfs/...`) has no on-disk ancestor, which is why the walk fails
  * there and we need the explicit branch.
  */
-function resolveSelfSpawnArgs(): string[] {
+export function resolveSelfSpawnArgs(extraArgs: string[] = ['hub']): string[] {
   if (IS_COMPILED) {
-    return [process.execPath, 'hub'];
+    return [process.execPath, ...extraArgs];
   }
   let dir = dirname(fileURLToPath(import.meta.url));
   while (dir !== dirname(dir)) {
     const candidate = join(dir, 'main.ts');
     if (existsSync(candidate)) {
-      return [process.execPath, candidate, 'hub'];
+      return [process.execPath, candidate, ...extraArgs];
     }
     const consoleCandidate = join(dir, 'apps', 'console', 'src', 'main.ts');
     if (existsSync(consoleCandidate)) {
-      return [process.execPath, consoleCandidate, 'hub'];
+      return [process.execPath, consoleCandidate, ...extraArgs];
     }
     dir = dirname(dir);
   }
@@ -80,7 +87,10 @@ export async function spawnHubDetached(): Promise<number | null> {
   // empirically against Bun 1.3.13 (docs claim otherwise). We have to
   // forward it explicitly so the child sees BRIKA_HOME, BRIKA_PORT,
   // BRIKA_HOST and anything else the caller staged before spawning.
-  const child = Bun.spawn(resolveSelfSpawnArgs(), {
+  //
+  // We spawn `__supervisor` (not `hub`) so the hub respawns on
+  // exit-code-42 — see the file header for the full rationale.
+  const child = Bun.spawn(resolveSelfSpawnArgs(['__supervisor']), {
     env: process.env as Record<string, string>,
     stdin: 'ignore',
     stdout: 'ignore',
