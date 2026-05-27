@@ -287,7 +287,12 @@ describe('useRegistrySearch', () => {
       downloadCount: 0,
       source: 'registry',
     });
-    await flush();
+    // The install drives an async generator (fetch → SSE iteration →
+    // setProgress per event → installed.refresh() on 'complete' →
+    // another /api/plugins fetch). A single `flush()` is not enough
+    // under CI load — wait until the terminal phase + the refetch
+    // are both visible before asserting.
+    await waitFor(() => latest.current?.progress?.phase === 'complete' && pluginsCalls === 2);
 
     expect(installBody).not.toBeNull();
     expect(JSON.parse(installBody ?? '{}')).toEqual({
