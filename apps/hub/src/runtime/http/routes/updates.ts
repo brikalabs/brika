@@ -147,13 +147,16 @@ export const updateAdminRoutes = group({
         }
 
         // Pre-stream lock check: if someone else has the lock, we want
-        // a real 423 response (with `heldBy`) BEFORE opening the SSE
-        // stream — otherwise lock contention surfaces as a generic
-        // `phase: 'error'` event with no distinct status code, and
-        // clients can't tell it apart from a download failure.
+        // a real 423 response BEFORE opening the SSE stream so the
+        // client can render a "wait for the other apply" panel
+        // instead of an opaque error event.
+        //
+        // The full holder metadata (pid + startedAt) goes to the audit
+        // log; the response body carries only `since` so we don't leak
+        // the running process's pid to every authenticated client.
         const heldBy = orchestrator.peekLockHolder();
         if (heldBy !== null) {
-          throw new Locked('Update already in progress', { heldBy });
+          throw new Locked('Update already in progress', { since: heldBy.startedAt });
         }
 
         return createSSEStream((send, close) => {
@@ -179,6 +182,11 @@ export const updateAdminRoutes = group({
               );
               close();
 
+              // Latch the orchestrator so any apply request landing in
+              // the 1 s window before the actual exit is refused
+              // rather than starting a second download that the exit
+              // signal would kill mid-flight.
+              orchestrator.markRestartPending();
               setTimeout(() => process.exit(RESTART_CODE), 1000);
             } catch (error) {
               // Once the SSE response is committed we can't switch it

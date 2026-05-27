@@ -50,6 +50,13 @@ export class UpdateOrchestrator {
   readonly #versionState: VersionStateStore;
 
   #inflight: Promise<OrchestratorApplyResult> | null = null;
+  /**
+   * `true` once a successful apply has scheduled the restart-via-exit
+   * dance. Subsequent `apply` calls in the (≤1 s) window before the
+   * process actually exits get refused instead of starting a second
+   * download that would be torn down by the imminent exit signal.
+   */
+  #restartPending = false;
 
   constructor(
     overrides?: Readonly<{
@@ -143,6 +150,19 @@ export class UpdateOrchestrator {
    * acquired — that's the contract the HTTP layer relies on to turn
    * a refusal into a 409 with structured guidance.
    */
+  /**
+   * Signal that an apply has completed successfully and the supervisor
+   * restart is imminent. Called by the HTTP layer right after it
+   * schedules `setTimeout(process.exit, 1000)`. The orchestrator
+   * refuses any further apply attempts in that window — without this
+   * flag, a second `/apply` request arriving in the 1 s gap would
+   * find `#inflight === null` AND the lock released, start a fresh
+   * download, then get killed by the exit signal half-way through.
+   */
+  markRestartPending(): void {
+    this.#restartPending = true;
+  }
+
   apply(options: OrchestratorApplyOptions): Promise<OrchestratorApplyResult> {
     if (!this.#strategy.canApply()) {
       // Force the strategy to throw its own UpdateRefusedError so the
@@ -152,6 +172,20 @@ export class UpdateOrchestrator {
         strategy: this.#strategy.name,
       });
       return this.#strategy.apply({}); // will reject
+    }
+
+    if (this.#restartPending) {
+      // The successful apply has already scheduled the restart — any
+      // new caller is racing the imminent exit. Refuse with a typed
+      // error the route can render as "an update just succeeded,
+      // wait for the hub to come back".
+      this.#audit.append('apply.refused', { reason: 'restart-pending' });
+      return Promise.reject(
+        new UpdateLockHeldError({
+          pid: process.pid,
+          startedAt: 'restart-pending',
+        })
+      );
     }
 
     if (this.#inflight !== null) {
