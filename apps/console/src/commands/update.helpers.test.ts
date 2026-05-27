@@ -33,17 +33,19 @@ function makeInfo(over: Partial<UpdateInfoDto> = {}): UpdateInfoDto {
 describe('isChannel', () => {
   test('accepts valid channel ids', () => {
     expect(isChannel('stable')).toBe(true);
+    expect(isChannel('beta')).toBe(true);
     expect(isChannel('canary')).toBe(true);
+    expect(isChannel('pinned')).toBe(true);
   });
 
   test('rejects everything else', () => {
-    expect(isChannel('beta')).toBe(false);
+    expect(isChannel('rogue')).toBe(false);
     expect(isChannel('')).toBe(false);
     expect(isChannel('STABLE')).toBe(false);
   });
 
   test('VALID_CHANNELS exposes the source of truth', () => {
-    expect([...VALID_CHANNELS]).toEqual(['stable', 'canary']);
+    expect([...VALID_CHANNELS]).toEqual(['stable', 'beta', 'canary', 'pinned']);
   });
 });
 

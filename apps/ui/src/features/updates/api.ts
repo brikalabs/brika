@@ -1,23 +1,15 @@
+import type { UpdateChannelId } from '@brika/ipc/contract';
 import { fetcher } from '@/lib/query';
 import { fetchProgressStream, type ProgressStream } from '@/lib/sse-stream';
+
+// Channel catalogue is owned by `@brika/ipc/contract`. Re-export so
+// consumers can keep `from '@/features/updates/api'` for the
+// full-surface import without reaching into the contract package.
+export { UPDATE_CHANNELS, type UpdateChannel, type UpdateChannelId } from '@brika/ipc/contract';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
 // ─────────────────────────────────────────────────────────────────────────────
-
-// Mirrors apps/hub/src/runtime/updates/channels.ts — extend both when adding channels
-export type UpdateChannelId = 'stable' | 'canary';
-
-export interface UpdateChannel {
-  readonly id: UpdateChannelId;
-  readonly label: string;
-  readonly description: string;
-}
-
-export const UPDATE_CHANNELS: readonly UpdateChannel[] = [
-  { id: 'stable', label: 'Stable', description: 'Tested releases, recommended for most users.' },
-  { id: 'canary', label: 'Canary', description: 'Latest pre-releases. May be unstable.' },
-] as const;
 
 export interface HubUpdateInfo {
   currentVersion: string;
@@ -59,9 +51,33 @@ export interface UpdateProgress {
 // API
 // ─────────────────────────────────────────────────────────────────────────────
 
+export interface CompatPluginEntry {
+  name: string;
+  currentRequires: string | null;
+  willBeCompatible: boolean;
+}
+
+export interface CompatReport {
+  targetVersion: string;
+  plugins: readonly CompatPluginEntry[];
+  willDisableCount: number;
+  missingRequirementsCount: number;
+}
+
 export const updateApi = {
-  /** Check for available hub updates */
+  /** Check for available hub updates (uses the hub's TTL-cached result). */
   check: () => fetcher<HubUpdateInfo>('/api/system/update'),
+
+  /**
+   * Force a fresh remote check that bypasses the hub's TTL cache.
+   * Used by the "Check now" button so the user gets a real network
+   * round-trip — without it, the response is whatever the background
+   * checker has held for up to 6 hours.
+   */
+  checkRefresh: () => fetcher<HubUpdateInfo>('/api/system/update?refresh=true'),
+
+  /** Pre-flight compatibility against the latest available version. */
+  compat: () => fetcher<CompatReport>('/api/system/update/compat'),
 
   /** Apply update with SSE progress streaming. Pass force=true to reinstall current version. */
   applyStream: (options?: { force?: boolean }): Promise<ProgressStream<UpdateProgress>> =>
@@ -74,6 +90,7 @@ export const updateApi = {
 
 export const updateKeys = {
   check: ['system', 'update'] as const,
+  compat: ['system', 'update', 'compat'] as const,
 };
 
 export const channelKeys = {
@@ -87,4 +104,15 @@ export const channelApi = {
       method: 'PUT',
       body: JSON.stringify({ channel }),
     }),
+  getPinnedVersion: () =>
+    fetcher<{ version: string | null }>('/api/settings/update-pinned-version'),
+  setPinnedVersion: (version: string | null) =>
+    fetcher<{ version: string | null }>('/api/settings/update-pinned-version', {
+      method: 'PUT',
+      body: JSON.stringify({ version }),
+    }),
+};
+
+export const pinnedVersionKeys = {
+  all: ['settings', 'update-pinned-version'] as const,
 };

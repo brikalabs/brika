@@ -46,6 +46,7 @@ import {
 import { UserAvatar } from '@/components/user-avatar';
 import { LoginPage } from '@/features/auth';
 import { useHealth } from '@/features/dashboard/hooks';
+import { MigrationBanner } from '@/features/migrations';
 import { UpdateNotification, useUpdateCheck } from '@/features/updates';
 import { useAuthInterceptor } from '@/hooks/use-auth-interceptor';
 import { ThemeProvider } from '@/lib/theme-provider';
@@ -378,6 +379,7 @@ export function RootLayout() {
         {/* Mounted only on the authenticated chrome — setup routes get the
             dedicated UpdateStep, login/loading screens don't surface toasts. */}
         <UpdateNotification />
+        <MigrationBanner />
       </SidebarProvider>
     </ThemeProvider>
   );

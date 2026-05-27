@@ -1,6 +1,11 @@
 import { container, inject } from '@brika/di';
 import { Logger } from '@/runtime/logs/log-router';
-import { GitHubUpdateProvider, UpdateProvider, UpdateService } from '@/runtime/updates';
+import {
+  GitHubUpdateProvider,
+  UpdateOrchestrator,
+  UpdateProvider,
+  UpdateService,
+} from '@/runtime/updates';
 import type { BootstrapPlugin } from '../plugin';
 
 /**
@@ -46,9 +51,13 @@ export function updates(): BootstrapPlugin {
         }
       }
       container.register(UpdateProvider, { useClass: GitHubUpdateProvider });
+      // NB: `recordBootAttempt()` is called from `startHub()` BEFORE
+      // this plugin runs — see comment there. We only do the success
+      // marker here in `onStart`.
     },
     onStart() {
       inject(UpdateService).start();
+      inject(UpdateOrchestrator).recordBootSuccess();
     },
     onStop() {
       inject(UpdateService).stop();

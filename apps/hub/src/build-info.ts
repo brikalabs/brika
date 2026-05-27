@@ -7,6 +7,7 @@
  */
 
 import {
+  getBrikaVersion,
   getBuildDate,
   getGitBranch,
   getGitCommit,
@@ -14,6 +15,7 @@ import {
 } from './build-info.macro' with { type: 'macro' };
 
 export const buildInfo = {
+  version: getBrikaVersion(),
   commit: getGitCommit(),
   commitFull: getGitCommitFull(),
   branch: getGitBranch(),

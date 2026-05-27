@@ -10,6 +10,12 @@
  * macros across package boundaries.
  */
 
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { z } from 'zod';
+
+const PackageJsonSchema = z.object({ version: z.string().min(1) });
+
 export function getGitCommitShort(): string {
   try {
     const { stdout, exitCode } = Bun.spawnSync({
@@ -63,4 +69,20 @@ export function getGitCommitDate(): string {
   } catch {
     return '';
   }
+}
+
+/**
+ * Build-time version string. CI sets `BRIKA_VERSION` (same env var the
+ * hub macro reads) so both the CLI display and the hub update-checker
+ * resolve to the *same* value at compile time. Local dev falls back to
+ * `apps/console/package.json`, which `bun run bump` keeps in lockstep
+ * with the rest of the workspace.
+ */
+export function getBrikaVersion(): string {
+  const fromEnv = process.env.BRIKA_VERSION?.trim();
+  if (fromEnv) {
+    return fromEnv;
+  }
+  const raw = readFileSync(join(import.meta.dir, '../../../package.json'), 'utf8');
+  return PackageJsonSchema.parse(JSON.parse(raw)).version;
 }

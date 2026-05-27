@@ -29,7 +29,8 @@
     "done": "Done",
     "saving": "Saving...",
     "add": "Add",
-    "remove": "Remove"
+    "remove": "Remove",
+    "retry": "Retry"
   },
   "status": {
     "running": "Running",
@@ -168,6 +169,21 @@
     "latestVersion": "Latest version",
     "neverChecked": "Never checked",
     "devBuild": "Dev build",
-    "canaryBuild": "Canary build"
+    "canaryBuild": "Canary build",
+    "timeoutMessage": "Update stalled — no progress received for several minutes. Close this dialog and try again, or check the hub logs.",
+    "compatHeadlineDisabled": "{{count}} plugin will be disabled",
+    "compatHeadlineDisabled_other": "{{count}} plugins will be disabled",
+    "compatHeadlineMissing": "{{count}} plugin lacks a compatibility declaration",
+    "compatHeadlineMissing_other": "{{count}} plugins lack a compatibility declaration",
+    "compatPluginRequires": " requires {{range}}",
+    "compatAndMore": "…and {{count}} more",
+    "pinnedVersionLabel": "Pinned version (e.g. {{example}})",
+    "pinnedVersionPlaceholder": "0.5.2",
+    "pinnedVersionInvalid": "Must look like {{example1}} or {{example2}}",
+    "migrationAppliedHeadline": "On-disk state updated",
+    "migrationFailedHeadline": "Migrations partially applied",
+    "migrationApplied": "{{count}} migration applied",
+    "migrationApplied_other": "{{count}} migrations applied",
+    "migrationFailedCount": "{{count}} failed"
   }
 }

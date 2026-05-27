@@ -8,7 +8,10 @@
 import pkg from '../package.json';
 
 /**
- * Hub metadata loaded from package.json.
+ * Hub metadata loaded from package.json. The `bun run bump` script
+ * keeps every package's version field in sync at release time, so
+ * `hub.version` is the same number you'd read from the root
+ * `package.json`.
  */
 export const hub = pkg;
 

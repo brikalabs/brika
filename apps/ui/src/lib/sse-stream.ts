@@ -37,14 +37,29 @@ export function createProgressStream<
   const reader = response.body?.getReader();
   const decoder = new TextDecoder();
   let progressCallback: ((data: T) => void) | null = null;
+  /**
+   * Track completion state so `.onComplete()` can resolve
+   * immediately when registered after the stream has already
+   * finished. Previously `completeResolve` was set only by the
+   * `.onComplete()` call, and a short SSE response (or a non-2xx
+   * error response, which still carries a body that gets read to
+   * `done` before the caller awaits) would lose the resolve signal
+   * and hang forever.
+   */
+  let done = false;
   let completeResolve: (() => void) | null = null;
   let closed = false;
   let lineBuffer = '';
 
+  const resolveComplete = () => {
+    done = true;
+    completeResolve?.();
+  };
+
   const handleData = (data: T) => {
     progressCallback?.(data);
     if (data.phase === 'complete' || data.phase === 'error' || data.phase === 'restarting') {
-      completeResolve?.();
+      resolveComplete();
     }
   };
 
@@ -72,15 +87,16 @@ export function createProgressStream<
 
   const read = async () => {
     if (!reader || closed) {
+      resolveComplete();
       return;
     }
 
     try {
       while (true) {
-        const { value, done } = await reader.read();
-        if (done || closed) {
+        const { value, done: streamDone } = await reader.read();
+        if (streamDone || closed) {
           flushBuffer();
-          completeResolve?.();
+          resolveComplete();
           break;
         }
         processText(
@@ -90,7 +106,7 @@ export function createProgressStream<
         );
       }
     } catch {
-      completeResolve?.();
+      resolveComplete();
     }
   };
 
@@ -102,7 +118,11 @@ export function createProgressStream<
     },
     onComplete: () =>
       new Promise<void>((resolve) => {
-        completeResolve = resolve;
+        if (done) {
+          resolve();
+        } else {
+          completeResolve = resolve;
+        }
       }),
     close: () => {
       closed = true;
@@ -117,8 +137,80 @@ export interface FetchProgressStreamOptions extends RequestInit {
 }
 
 /**
+ * Structured error raised when `fetchProgressStream` gets a non-2xx
+ * response. Carries the status code + parsed JSON body so the caller
+ * can render channel-specific messages (e.g. the 409 from the update
+ * refusal path includes `{code, guidance}`).
+ */
+export class ProgressStreamHttpError extends Error {
+  readonly status: number;
+  readonly body: unknown;
+
+  constructor(status: number, body: unknown, message: string) {
+    super(message);
+    this.name = 'ProgressStreamHttpError';
+    this.status = status;
+    this.body = body;
+  }
+}
+
+function describeError(status: number, body: unknown): string {
+  if (body !== null && typeof body === 'object' && 'error' in body) {
+    const errField = body.error;
+    if (typeof errField === 'string' && errField.length > 0) {
+      return errField;
+    }
+  }
+  if (typeof body === 'string' && body.length > 0) {
+    return body;
+  }
+  return `HTTP ${status}`;
+}
+
+/** Read a non-2xx response body as JSON, falling back to text, then null. */
+async function readErrorBody(response: Response): Promise<unknown> {
+  try {
+    return await response.json();
+  } catch {
+    // ignore — try text
+  }
+  try {
+    return await response.text();
+  } catch {
+    return null;
+  }
+}
+
+function buildQueryUrl(
+  url: string,
+  query: Record<string, string | boolean | number | undefined> | undefined
+): string {
+  if (!query) {
+    return url;
+  }
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(query)) {
+    if (value !== undefined) {
+      params.set(key, String(value));
+    }
+  }
+  const qs = params.toString();
+  if (!qs) {
+    return url;
+  }
+  return `${url}${url.includes('?') ? '&' : '?'}${qs}`;
+}
+
+/**
  * Fetch an endpoint and return a typed progress stream.
  * Defaults to POST with JSON body, but accepts any RequestInit.
+ *
+ * Non-2xx responses throw {@link ProgressStreamHttpError} *before*
+ * any SSE parsing — without this, a 4xx JSON body (e.g. our
+ * 409 Conflict refusal path on `/api/system/update/apply`) flows
+ * through the SSE reader, produces zero `data:` lines, and the
+ * caller's UI gets stuck waiting for progress events that never
+ * arrive.
  */
 export async function fetchProgressStream<
   T extends {
@@ -126,27 +218,16 @@ export async function fetchProgressStream<
   },
 >(url: string, options?: FetchProgressStreamOptions): Promise<ProgressStream<T>> {
   const { query, ...init } = options ?? {};
-
-  let finalUrl = url;
-  if (query) {
-    const params = new URLSearchParams();
-    for (const [key, value] of Object.entries(query)) {
-      if (value !== undefined) {
-        params.set(key, String(value));
-      }
-    }
-    const qs = params.toString();
-    if (qs) {
-      finalUrl += `${url.includes('?') ? '&' : '?'}${qs}`;
-    }
-  }
-
-  const response = await fetch(finalUrl, {
+  const response = await fetch(buildQueryUrl(url, query), {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers: { 'Content-Type': 'application/json' },
     ...init,
   });
+
+  if (!response.ok) {
+    const body = await readErrorBody(response);
+    throw new ProgressStreamHttpError(response.status, body, describeError(response.status, body));
+  }
+
   return createProgressStream<T>(response);
 }

@@ -14,6 +14,7 @@ export {
   Forbidden,
   HttpException,
   InternalServerError,
+  Locked,
   NotFound,
   Unauthorized,
   UnprocessableEntity,

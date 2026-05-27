@@ -10,7 +10,12 @@
 import pc from 'picocolors';
 import type { UpdateChannelId, UpdateInfoDto } from '../shared/cli/api/updates';
 
-export const VALID_CHANNELS: ReadonlyArray<UpdateChannelId> = ['stable', 'canary'];
+export const VALID_CHANNELS: ReadonlyArray<UpdateChannelId> = [
+  'stable',
+  'beta',
+  'canary',
+  'pinned',
+];
 
 export function isChannel(value: string): value is UpdateChannelId {
   return (VALID_CHANNELS as ReadonlyArray<string>).includes(value);

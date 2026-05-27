@@ -144,3 +144,11 @@ export {
   ToolInputSchemaProperty,
   ToolResult,
 } from './tools';
+// ─── Update channels ───
+export {
+  DEFAULT_CHANNEL_ID,
+  UPDATE_CHANNEL_IDS,
+  UPDATE_CHANNELS,
+  type UpdateChannel,
+  type UpdateChannelId,
+} from './update-channels';

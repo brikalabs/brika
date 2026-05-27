@@ -1,7 +1,8 @@
 import { Button } from '@brika/clay';
+import { useQueryClient } from '@tanstack/react-query';
 import { ArrowDownToLine, RefreshCw } from 'lucide-react';
 import { useCallback, useState } from 'react';
-import { UpdateDialog, useUpdateCheck } from '@/features/updates';
+import { UpdateDialog, updateApi, updateKeys, useUpdateCheck } from '@/features/updates';
 import { useDelayedLoading } from '@/hooks/use-delayed-loading';
 import { useLocale } from '@/lib/use-locale';
 import { ChannelSelector } from './ChannelSelector';
@@ -10,8 +11,10 @@ import { UpdateBadge } from './UpdateBadge';
 
 export function UpdateSection() {
   const { t } = useLocale();
-  const { data, isFetching, refetch } = useUpdateCheck();
-  const showLoading = useDelayedLoading(isFetching, {
+  const queryClient = useQueryClient();
+  const { data, isFetching } = useUpdateCheck();
+  const [forcing, setForcing] = useState(false);
+  const showLoading = useDelayedLoading(isFetching || forcing, {
     delay: 0,
     minDuration: 600,
   });
@@ -20,10 +23,22 @@ export function UpdateSection() {
   const [checkedAt, setCheckedAt] = useState<number | undefined>(undefined);
   const lastChecked = useLastCheckedLabel(checkedAt ?? data?.lastCheckedAt);
 
+  /**
+   * "Check now" hits the refresh endpoint that bypasses the hub's
+   * TTL cache — a plain `refetch()` would just re-read the cached
+   * result, which could be up to 6 hours stale or from a previous
+   * channel selection.
+   */
   const handleCheck = useCallback(async () => {
-    await refetch();
-    setCheckedAt(Date.now());
-  }, [refetch]);
+    setForcing(true);
+    try {
+      const fresh = await updateApi.checkRefresh();
+      queryClient.setQueryData(updateKeys.check, fresh);
+      setCheckedAt(Date.now());
+    } finally {
+      setForcing(false);
+    }
+  }, [queryClient]);
 
   const openDialog = (force: boolean) => {
     setForceReinstall(force);

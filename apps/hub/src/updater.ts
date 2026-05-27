@@ -15,40 +15,68 @@
  * - Background: UpdateService checks periodically on startup
  */
 
+import { createWriteStream } from 'node:fs';
 import { chmod, cp, mkdir, rename, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { HUB_GITHUB_RELEASES_API, HUB_GITHUB_RELEASES_LIST_API, hub } from '@/hub';
-import { buildInfo } from '@/runtime/http/routes/status';
-import { DEFAULT_CHANNEL_ID, type UpdateChannelId } from '@/runtime/updates/channels';
+import { z } from 'zod';
+import { buildInfo } from './build-info';
+import { HUB_GITHUB_RELEASES_API, HUB_GITHUB_RELEASES_LIST_API, HUB_REPO, hub } from './hub';
+import { brikaContext } from './runtime/context/brika-context';
+import { DEFAULT_CHANNEL_ID, type UpdateChannelId } from './runtime/updates/channels';
+import { GithubEtagCache } from './runtime/updates/etag-cache';
+import { BRIKA_SIGNING_PUBKEY_B64, verifyMinisignFile } from './runtime/updates/signature';
+import {
+  commitStagedArtifacts,
+  discardStagedArtifacts,
+  runStagedSelfCheck,
+  stageArtifacts,
+} from './runtime/updates/staged-install';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
 // ─────────────────────────────────────────────────────────────────────────────
 
-interface GitHubRelease {
-  tag_name: string;
-  target_commitish: string;
-  published_at: string;
-  html_url: string;
-  body: string;
-  prerelease: boolean;
-  assets: Array<{
-    name: string;
-    browser_download_url: string;
-    size: number;
-  }>;
-}
+const GitHubReleaseAssetSchema = z.object({
+  name: z.string(),
+  browser_download_url: z.string(),
+  size: z.number(),
+});
+
+const GitHubReleaseSchema = z.object({
+  tag_name: z.string(),
+  // GitHub always includes these but we accept missing fields with
+  // safe defaults so older / hand-rolled fixtures (in tests, in
+  // user-curated mirrors) don't fail at the parse boundary. The
+  // `body` field is also explicitly nullable — GitHub returns
+  // `null` for releases authored without notes.
+  target_commitish: z.string().default(''),
+  published_at: z.string().default(''),
+  html_url: z.string().default(''),
+  body: z
+    .union([z.string(), z.null()])
+    .default('')
+    .transform((v) => v ?? ''),
+  prerelease: z.boolean().default(false),
+  assets: z.array(GitHubReleaseAssetSchema),
+});
+export type GitHubRelease = z.infer<typeof GitHubReleaseSchema>;
+
+const GitHubReleaseListSchema = z.array(GitHubReleaseSchema);
 
 /** Metadata embedded as a release asset — provides build info + per-platform checksums */
-interface ReleaseMeta {
-  version: string;
-  commit: string;
-  branch: string;
-  date: string;
-  bun: string;
-  checksums: Record<string, string>;
-}
+const ReleaseMetaSchema = z.object({
+  version: z.string(),
+  /** Human-friendly release label ("canary" or "0.5.0"). The semver
+   *  comparison uses `version`; this is for display only. Optional so
+   *  older release-meta.json files (pre-canary-retention) still parse. */
+  name: z.string().optional(),
+  commit: z.string(),
+  branch: z.string(),
+  date: z.string(),
+  bun: z.string(),
+  checksums: z.record(z.string(), z.string()),
+});
+type ReleaseMeta = z.infer<typeof ReleaseMetaSchema>;
 
 export interface UpdateInfo {
   currentVersion: string;
@@ -113,6 +141,26 @@ function getAssetName(): string {
   const arch = process.arch;
   const ext = process.platform === 'win32' ? '.zip' : '.tar.gz';
   return `brika-${os}-${arch}${ext}`;
+}
+
+/**
+ * Strict allowlist for asset filenames. `asset.name` comes straight
+ * from the GitHub Releases API — a compromised release (CI key
+ * leak, hijacked publisher account, MITM with a forged manifest)
+ * could ship a name like `brika-linux-x64'; rm -rf $HOME; '.tar.gz`
+ * that, on Windows, would be embedded into a PowerShell
+ * `Expand-Archive -Path '...' -DestinationPath '...'` invocation
+ * and execute as command injection.
+ *
+ * The defence is upstream of every code path that *uses* the name:
+ * refuse anything that doesn't match the published artifact shape
+ * before we even download.
+ */
+const ASSET_NAME_RE = /^brika-(linux|darwin|windows)-(x64|arm64)\.(?:zip|tar\.gz)$/u;
+
+/** Exported for unit testing — the regex itself is the contract. */
+export function isSafeAssetName(name: string): boolean {
+  return ASSET_NAME_RE.test(name);
 }
 
 /**
@@ -192,40 +240,75 @@ async function fetchReleaseMeta(release: GitHubRelease): Promise<ReleaseMeta | n
       return null;
     }
 
-    return (await response.json()) as ReleaseMeta;
+    // Validate against the schema rather than trusting `response.json()`
+    // — a tampered or truncated meta-file would otherwise reach the
+    // checksum-verify path typed as if it were sound.
+    const parsed = ReleaseMetaSchema.safeParse(await response.json());
+    return parsed.success ? parsed.data : null;
   } catch {
     return null;
   }
 }
 
+// Module-level cache instance. Lazy-initialized so tests can avoid
+// hitting the filesystem unless they exercise this code path.
+let etagCache: GithubEtagCache | null = null;
+function getEtagCache(): GithubEtagCache {
+  etagCache ??= new GithubEtagCache(brikaContext.brikaDir);
+  return etagCache;
+}
+
+/**
+ * Match heuristic for the beta channel — pre-release tags that look
+ * like "release candidates" (`-rc.N`, `-beta.N`). Everything else
+ * (canary, nightly, ad-hoc pre-releases) routes through the canary
+ * channel instead.
+ */
+const BETA_TAG_RE = /-(?:rc|beta)\b/;
+
 /** Fetch latest release info from GitHub API for the given channel */
 async function fetchLatestRelease(
-  channel: UpdateChannelId
+  channel: UpdateChannelId,
+  options?: { pinnedVersion?: string | null }
 ): Promise<{ release: GitHubRelease; meta: ReleaseMeta | null }> {
-  if (channel === 'stable') {
-    const response = await fetch(HUB_GITHUB_RELEASES_API, {
-      headers: { Accept: 'application/vnd.github+json' },
-    });
-    if (!response.ok) {
-      throw new Error(`GitHub API returned ${response.status}: ${response.statusText}`);
+  const cache = getEtagCache();
+  const headers = { Accept: 'application/vnd.github+json' };
+
+  if (channel === 'pinned') {
+    const version = options?.pinnedVersion;
+    if (typeof version !== 'string' || version.length === 0) {
+      throw new Error(
+        'Pinned channel selected but no version was set. Configure it in Settings → Updates.'
+      );
     }
-    const release = (await response.json()) as GitHubRelease;
-    return { release, meta: await fetchReleaseMeta(release) };
+    const tag = version.startsWith('v') ? version : `v${version}`;
+    const url = `https://api.github.com/repos/${HUB_REPO}/releases/tags/${encodeURIComponent(tag)}`;
+    const { body } = await cache.fetchJson(url, GitHubReleaseSchema, { headers });
+    return { release: body, meta: await fetchReleaseMeta(body) };
   }
 
-  // canary: list releases, pick the most recent pre-release
-  const response = await fetch(`${HUB_GITHUB_RELEASES_LIST_API}?per_page=10`, {
-    headers: { Accept: 'application/vnd.github+json' },
-  });
-  if (!response.ok) {
-    throw new Error(`GitHub API returned ${response.status}: ${response.statusText}`);
+  if (channel === 'stable') {
+    const { body } = await cache.fetchJson(HUB_GITHUB_RELEASES_API, GitHubReleaseSchema, {
+      headers,
+    });
+    return { release: body, meta: await fetchReleaseMeta(body) };
   }
-  const releases = (await response.json()) as GitHubRelease[];
-  const prerelease = releases.find((r) => r.prerelease);
-  if (!prerelease) {
-    throw new Error('No canary release found');
+
+  // beta + canary: list pre-releases and pick by heuristic.
+  const { body } = await cache.fetchJson(
+    `${HUB_GITHUB_RELEASES_LIST_API}?per_page=10`,
+    GitHubReleaseListSchema,
+    { headers }
+  );
+  const prereleases = body.filter((r) => r.prerelease);
+  const pick =
+    channel === 'beta'
+      ? prereleases.find((r) => BETA_TAG_RE.test(r.tag_name))
+      : (prereleases.find((r) => !BETA_TAG_RE.test(r.tag_name)) ?? prereleases[0]);
+  if (!pick) {
+    throw new Error(`No ${channel} release found`);
   }
-  return { release: prerelease, meta: await fetchReleaseMeta(prerelease) };
+  return { release: pick, meta: await fetchReleaseMeta(pick) };
 }
 
 interface ReleaseComparison {
@@ -252,7 +335,13 @@ function compareRelease(
 ): ReleaseComparison {
   const currentVersion = hub.version;
   const currentCommit = buildInfo.commitFull;
-  const latestVersion = release.tag_name.replace(/^v/, '');
+  // Prefer the meta's `version` (the binary's actual reported version,
+  // injected via BRIKA_VERSION at build time) over the tag name. With
+  // dated canary tags like `canary-20260527-193245-abc1234`, the tag
+  // isn't valid semver but the meta still carries the proper
+  // `0.3.1-canary.<ts>.<sha>`. Stable releases (`v0.5.0`) keep the
+  // existing behaviour via the tag-name fallback.
+  const latestVersion = meta?.version ?? release.tag_name.replace(/^v/, '');
   const releaseCommit = meta?.commit ?? '';
   const assetName = getAssetName();
 
@@ -283,14 +372,20 @@ function compareRelease(
   };
 }
 
+export interface CheckOptions {
+  /** Required when `channel === 'pinned'`; ignored otherwise. */
+  readonly pinnedVersion?: string | null;
+}
+
 /**
  * Check for updates without applying them.
  * Safe to call from background tasks or API.
  */
 export async function checkForUpdate(
-  channel: UpdateChannelId = DEFAULT_CHANNEL_ID
+  channel: UpdateChannelId = DEFAULT_CHANNEL_ID,
+  options?: CheckOptions
 ): Promise<UpdateInfo> {
-  const { release, meta } = await fetchLatestRelease(channel);
+  const { release, meta } = await fetchLatestRelease(channel, options);
   const cmp = compareRelease(release, meta, channel);
 
   return {
@@ -313,6 +408,8 @@ export async function checkForUpdate(
 export interface ApplyUpdateOptions {
   force?: boolean;
   channel?: UpdateChannelId;
+  /** Required when `channel === 'pinned'`; ignored otherwise. */
+  pinnedVersion?: string | null;
   onProgress?: (phase: UpdatePhase, detail: string) => void;
 }
 
@@ -328,10 +425,10 @@ export async function applyUpdate(options?: ApplyUpdateOptions): Promise<{
   newVersion: string;
   newCommit: string;
 }> {
-  const { force, channel = DEFAULT_CHANNEL_ID, onProgress } = options ?? {};
+  const { force, channel = DEFAULT_CHANNEL_ID, pinnedVersion, onProgress } = options ?? {};
 
   onProgress?.('checking', 'Checking for updates...');
-  const { release, meta } = await fetchLatestRelease(channel);
+  const { release, meta } = await fetchLatestRelease(channel, { pinnedVersion });
   const cmp = compareRelease(release, meta, channel);
 
   if (!force && !cmp.versionBump && !cmp.devBuild) {
@@ -342,9 +439,24 @@ export async function applyUpdate(options?: ApplyUpdateOptions): Promise<{
   if (!asset) {
     throw new Error(`No binary available for ${process.platform}/${process.arch}`);
   }
+  // Refuse anything that doesn't match the published artifact shape.
+  // `asset.name` flows into shell args (Windows PowerShell extract)
+  // and filesystem paths — a tampered or maliciously named release
+  // asset would otherwise reach those sinks unchecked.
+  if (!isSafeAssetName(asset.name)) {
+    throw new Error(
+      `Refusing release asset with unexpected name shape: ${JSON.stringify(asset.name)}`
+    );
+  }
 
-  // Download
-  const tmpDir = join(tmpdir(), `brika-update-${Date.now()}`);
+  // Stage inside the user-owned brikaDir rather than the shared
+  // `os.tmpdir()` — predictable paths under `/tmp` are a symlink-TOCTOU
+  // primitive on shared hosts (pre-create the path as a symlink to
+  // someone else's file, the hub then writes through the symlink).
+  // The brikaDir is created with the hub user's permissions and not
+  // writable by other users; resume semantics are preserved because
+  // the (version, asset) tuple still uniquely identifies the partial.
+  const tmpDir = join(brikaContext.brikaDir, '.update-cache', `${cmp.latestVersion}-${asset.name}`);
   await mkdir(tmpDir, {
     recursive: true,
   });
@@ -362,6 +474,13 @@ export async function applyUpdate(options?: ApplyUpdateOptions): Promise<{
     } else {
       onProgress?.('verifying', 'Skipping integrity check — no release metadata available');
     }
+
+    // Verify minisign signature (supply-chain trust). The asset is
+    // shipped alongside a `<asset>.minisig` file once the signing key
+    // ceremony is live; until then the verifier returns 'skipped' and
+    // we log a notice rather than blocking the apply.
+    onProgress?.('verifying', 'Verifying signature...');
+    await maybeVerifySignature(release, asset, archivePath, tmpDir, onProgress);
 
     // Extract
     onProgress?.('extracting', 'Extracting...');
@@ -405,8 +524,59 @@ export async function applyUpdate(options?: ApplyUpdateOptions): Promise<{
 // SHA256 verification
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** Verify downloaded archive against release-meta.json checksums */
-async function verifyChecksum(
+/**
+ * Download the asset's `.minisig` companion (if published) and run
+ * the local minisign verifier. Three outcomes:
+ *
+ *   - signature absent + no embedded pubkey → log "skipped", continue
+ *   - signature absent + pubkey present     → throw (refuse unsigned update)
+ *   - signature present                     → verify; throw on mismatch
+ */
+/** Exported for direct unit testing — the integration path (via
+ * `applyUpdate`) is hard to exercise without standing up real
+ * archive + supervisor plumbing. */
+export async function maybeVerifySignature(
+  release: GitHubRelease,
+  asset: GitHubRelease['assets'][number],
+  archivePath: string,
+  tmpDir: string,
+  onProgress: ApplyUpdateOptions['onProgress']
+): Promise<void> {
+  const sigAsset = release.assets.find((a) => a.name === `${asset.name}.minisig`);
+  const pubkeyEmbedded = BRIKA_SIGNING_PUBKEY_B64.length > 0;
+
+  if (!sigAsset) {
+    if (!pubkeyEmbedded) {
+      // No key ceremony yet, no .minisig in the release — pre-Phase-3
+      // shape of the release. Skip silently.
+      onProgress?.('verifying', 'Signature verification skipped (no key ceremony yet)');
+      return;
+    }
+    // Pubkey embedded but the release didn't ship a .minisig. Refuse
+    // rather than silently downgrade trust.
+    throw new Error('Signature required but no .minisig asset was published for this release');
+  }
+
+  const sigPath = join(tmpDir, `${asset.name}.minisig`);
+  await downloadFile(sigAsset.browser_download_url, sigPath, sigAsset.size);
+  const result = await verifyMinisignFile(archivePath, sigPath);
+  if (result.status === 'failed') {
+    throw new Error(`Signature verification failed: ${result.reason}`);
+  }
+  if (result.status === 'skipped') {
+    onProgress?.('verifying', `Signature skipped: ${result.reason}`);
+    return;
+  }
+  onProgress?.('verifying', 'Signature verified.');
+}
+
+/**
+ * Verify a downloaded archive against the `release-meta.json`
+ * checksums. Exported for direct unit testing — the integration path
+ * (via `applyUpdate`) is hard to exercise without real `Bun.spawn`
+ * extraction.
+ */
+export async function verifyChecksum(
   meta: ReleaseMeta | null,
   assetName: string,
   archivePath: string
@@ -436,42 +606,101 @@ async function verifyChecksum(
 // File operations
 // ─────────────────────────────────────────────────────────────────────────────
 
-async function downloadFile(
+async function detectPartial(destPath: string): Promise<number> {
+  const existing = Bun.file(destPath);
+  return (await existing.exists()) ? existing.size : 0;
+}
+
+async function streamResponseToFile(
+  response: Response,
+  destPath: string,
+  totalBytes: number,
+  startBytes: number,
+  onProgress: (pct: number) => void,
+  resumed: boolean
+): Promise<void> {
+  const reader = response.body?.getReader();
+  if (!reader) {
+    throw new Error('Download response has no body');
+  }
+  // `Bun.file().writer()` opens at offset 0 and truncates — fine for
+  // a fresh download, fatal for a 206 resume (it would overwrite the
+  // existing partial with the *range* bytes starting at position 0).
+  // Use `fs.createWriteStream` with `flags: 'a'` so resume genuinely
+  // appends to whatever's already on disk.
+  const stream = createWriteStream(destPath, { flags: resumed ? 'a' : 'w' });
+  let downloaded = startBytes;
+  let lastPct = -1;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) {
+        break;
+      }
+      // Honour backpressure — wait for `drain` if `write` returns false.
+      if (!stream.write(value)) {
+        await new Promise<void>((resolve) => stream.once('drain', resolve));
+      }
+      downloaded += value.byteLength;
+      const pct = Math.round((downloaded / totalBytes) * 100);
+      if (pct !== lastPct) {
+        lastPct = pct;
+        onProgress(pct);
+      }
+    }
+  } finally {
+    await new Promise<void>((resolve, reject) => {
+      stream.end((err: Error | null | undefined) => (err ? reject(err) : resolve()));
+    });
+  }
+}
+
+/** Exported for direct unit testing — exercises resume, no-progress,
+ * stale-partial truncation, and stream-with-progress branches without
+ * standing up the whole `applyUpdate` flow. */
+export async function downloadFile(
   url: string,
   destPath: string,
   totalBytes: number,
   onProgress?: (pct: number) => void
 ): Promise<void> {
-  const response = await fetch(url);
-  if (!response.ok) {
+  const partialSize = await detectPartial(destPath);
+
+  // Partial already matches expected size — skip the network entirely.
+  // Downstream checksum verification catches any corruption.
+  if (totalBytes > 0 && partialSize === totalBytes) {
+    onProgress?.(100);
+    return;
+  }
+
+  const init: RequestInit =
+    partialSize > 0 && totalBytes > 0 && partialSize < totalBytes
+      ? { headers: { Range: `bytes=${partialSize}-` } }
+      : {};
+
+  const response = await fetch(url, init);
+  if (!response.ok && response.status !== 206) {
     throw new Error(`Download failed: ${response.status} ${response.statusText}`);
+  }
+
+  const resumed = response.status === 206;
+  // 200 with a stale partial → truncate before writing the fresh body.
+  if (!resumed && partialSize > 0) {
+    await Bun.write(destPath, '');
   }
 
   if (!onProgress || !response.body || totalBytes <= 0) {
     await Bun.write(destPath, response);
     return;
   }
-
-  const chunks: Uint8Array[] = [];
-  const reader = response.body.getReader();
-  let downloaded = 0;
-  let lastPct = -1;
-
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) {
-      break;
-    }
-    chunks.push(value);
-    downloaded += value.byteLength;
-    const pct = Math.round((downloaded / totalBytes) * 100);
-    if (pct !== lastPct) {
-      lastPct = pct;
-      onProgress(pct);
-    }
-  }
-
-  await Bun.write(destPath, new Blob(chunks));
+  await streamResponseToFile(
+    response,
+    destPath,
+    totalBytes,
+    resumed ? partialSize : 0,
+    onProgress,
+    resumed
+  );
 }
 
 async function extractTarGz(archivePath: string, destDir: string): Promise<void> {
@@ -510,11 +739,32 @@ async function extractZip(archivePath: string, destDir: string): Promise<void> {
 async function replaceInstallation(extractedDir: string, installDir: string): Promise<void> {
   const sourceDir = resolveSourceDir(extractedDir);
   const isWindows = process.platform === 'win32';
-  const ext = isWindows ? '.exe' : '';
 
-  await replaceBinary(join(sourceDir, `brika${ext}`), process.execPath, isWindows);
+  if (isWindows) {
+    // Windows can't rename the running EXE in-process; fall back to the
+    // legacy `cmd /c move` + supervisor restart path until we ship a
+    // supervisor that owns the post-exit swap. Staged install on POSIX
+    // gives us the same guarantees with no supervisor cooperation.
+    await replaceBinary(join(sourceDir, 'brika.exe'), process.execPath, true);
+    await replaceDir(join(sourceDir, 'ui'), join(installDir, 'ui'));
+    return;
+  }
 
-  await replaceDir(join(sourceDir, 'ui'), join(installDir, 'ui'));
+  try {
+    // 1. Stage to `brika.next` / `ui.next` next to the live install.
+    const { stagedBinary } = await stageArtifacts({ sourceDir, installDir });
+    // 2. Probe the staged binary; throws on timeout / non-zero / bad JSON.
+    await runStagedSelfCheck(stagedBinary);
+    // 3. Atomic swap. Live `brika` becomes `brika.previous` (kept for
+    //    the rollback window — `boot-rollback.ts` consumes it if the
+    //    next boot crashes before recording success).
+    commitStagedArtifacts(installDir);
+  } catch (err) {
+    // Self-check / staging failed — wipe the staged artifacts so the
+    // next attempt starts clean. Live binary was never touched.
+    discardStagedArtifacts(installDir);
+    throw err;
+  }
 }
 
 /**

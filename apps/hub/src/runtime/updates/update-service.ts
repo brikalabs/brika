@@ -24,6 +24,8 @@ export class UpdateService {
   readonly #provider = inject(UpdateProvider);
   #cachedInfo: UpdateInfo | null = null;
   #lastCheckedAt: number = 0;
+  /** Pinned version baked into the cached info (only meaningful when `cachedInfo.channel === 'pinned'`). */
+  #cachedPinnedVersion: string | null = null;
   #inflight: Promise<UpdateInfo> | null = null;
   #timer: Timer | null = null;
 
@@ -55,15 +57,42 @@ export class UpdateService {
   }
 
   /**
-   * Return cached update info if it's still within the interval, otherwise
-   * do a fresh remote check. Cheap to call from request handlers — multiple
-   * concurrent UI consumers won't fan out to the upstream provider.
+   * Return cached update info if it's still within the interval AND
+   * the cached entry was fetched against the currently-configured
+   * channel + pinned version. Otherwise refresh.
+   *
+   * Channel-awareness matters: a user who checks on `stable`, switches
+   * to `canary` via `PUT /api/settings/update-channel`, then opens
+   * Settings → Hub would otherwise see the stale stable-channel info
+   * for up to 6 hours because the TTL alone doesn't know the channel
+   * preference changed.
    */
   check(): Promise<UpdateInfo> {
-    if (this.#cachedInfo && Date.now() - this.#lastCheckedAt < CHECK_INTERVAL_MS) {
+    const currentChannel = this.#state.getUpdateChannel();
+    const currentPinned = this.#state.getPinnedVersion();
+    if (
+      this.#cachedInfo &&
+      Date.now() - this.#lastCheckedAt < CHECK_INTERVAL_MS &&
+      this.#cachedInfo.channel === currentChannel &&
+      // For non-pinned channels the cached pinnedVersion isn't part
+      // of the result, so we only compare it when the channel is
+      // `pinned` — switching pinned 0.5.2 → 0.5.3 should refresh.
+      (currentChannel !== 'pinned' || this.#cachedPinnedVersion === currentPinned)
+    ) {
       return Promise.resolve(this.#cachedInfo);
     }
     return this.refresh();
+  }
+
+  /**
+   * Drop the cached info so the next `check()` forces a remote fetch.
+   * Channel-setter routes call this so the UI sees the new channel's
+   * info immediately rather than waiting for the 6-hour TTL.
+   */
+  invalidate(): void {
+    this.#cachedInfo = null;
+    this.#lastCheckedAt = 0;
+    this.#cachedPinnedVersion = null;
   }
 
   /**
@@ -86,8 +115,11 @@ export class UpdateService {
 
   async #doRefresh(): Promise<UpdateInfo> {
     try {
-      this.#cachedInfo = await this.#provider.check(this.#state.getUpdateChannel());
+      const channel = this.#state.getUpdateChannel();
+      const pinnedVersion = this.#state.getPinnedVersion();
+      this.#cachedInfo = await this.#provider.check(channel, { pinnedVersion });
       this.#lastCheckedAt = Date.now();
+      this.#cachedPinnedVersion = pinnedVersion;
 
       if (this.#cachedInfo.updateAvailable) {
         this.#logs.info('New version available', {

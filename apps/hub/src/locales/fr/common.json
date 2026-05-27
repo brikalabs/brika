@@ -29,7 +29,8 @@
     "done": "Terminé",
     "saving": "Enregistrement…",
     "add": "Ajouter",
-    "remove": "Supprimer"
+    "remove": "Supprimer",
+    "retry": "Réessayer"
   },
   "status": {
     "running": "En cours",
@@ -168,6 +169,21 @@
     "latestVersion": "Dernière version",
     "neverChecked": "Jamais vérifié",
     "devBuild": "Build dev",
-    "canaryBuild": "Canary"
+    "canaryBuild": "Canary",
+    "timeoutMessage": "Mise à jour bloquée — aucun progrès reçu depuis plusieurs minutes. Fermez ce dialogue et réessayez, ou consultez les journaux du hub.",
+    "compatHeadlineDisabled": "{{count}} plugin sera désactivé",
+    "compatHeadlineDisabled_other": "{{count}} plugins seront désactivés",
+    "compatHeadlineMissing": "{{count}} plugin ne déclare pas sa compatibilité",
+    "compatHeadlineMissing_other": "{{count}} plugins ne déclarent pas leur compatibilité",
+    "compatPluginRequires": " requiert {{range}}",
+    "compatAndMore": "…et {{count}} autre(s)",
+    "pinnedVersionLabel": "Version épinglée (ex. {{example}})",
+    "pinnedVersionPlaceholder": "0.5.2",
+    "pinnedVersionInvalid": "Doit ressembler à {{example1}} ou {{example2}}",
+    "migrationAppliedHeadline": "État disque mis à jour",
+    "migrationFailedHeadline": "Migrations partiellement appliquées",
+    "migrationApplied": "{{count}} migration appliquée",
+    "migrationApplied_other": "{{count}} migrations appliquées",
+    "migrationFailedCount": "{{count}} échouée(s)"
   }
 }

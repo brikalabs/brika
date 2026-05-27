@@ -11,6 +11,7 @@ import {
   cache,
   I18nLoader,
   loader,
+  migrations,
   PluginLoader,
   processGuard,
   remoteAccess,
@@ -22,6 +23,8 @@ import {
 } from './runtime/bootstrap';
 import { ApiServer } from './runtime/http/api-server';
 import { allRoutes } from './runtime/http/routes';
+import { rollbackIfPreviousBootCrashed } from './runtime/updates/boot-rollback';
+import { UpdateOrchestrator } from './runtime/updates/orchestrator';
 
 /**
  * BRIKA Hub Entry Point
@@ -45,6 +48,22 @@ import { allRoutes } from './runtime/http/routes';
  * supervisor-issued token is left untouched.
  */
 export async function startHub(): Promise<void> {
+  // Boot-rollback FIRST — must run before anything that could itself
+  // crash (DI, DB open, plugin load). If the previous boot recorded
+  // an attempt without a matching success AND a `brika.previous`
+  // backup exists on disk, this swaps the live binary for the backup
+  // and exits with RESTART_CODE so the supervisor restarts us on the
+  // known-good version. No-op on dev / container / system-package.
+  rollbackIfPreviousBootCrashed();
+
+  // Record the boot attempt **here**, not in the `updates()` plugin's
+  // `onInit`. The plugin is `.use()`'d after every loader, so its
+  // onInit runs last — a crash in any earlier loader would never reach
+  // it and the next boot's `previousBootCrashed()` would miss the
+  // signal. Doing it at the entry point covers every later failure
+  // mode.
+  inject(UpdateOrchestrator).recordBootAttempt();
+
   if (!readCliToken()) {
     writeCliToken();
   }
@@ -60,6 +79,10 @@ export async function startHub(): Promise<void> {
     )
     .use(sparks())
     .use(routes(allRoutes))
+    // Migrations run before any loader so filesystem reshapes
+    // (plugin-data prune, future secrets re-encryption) don't race
+    // with plugin loaders reading those paths.
+    .use(migrations())
     .use(loader(I18nLoader))
     .use(loader(PluginLoader))
     .use(loader(WorkflowsLoader))

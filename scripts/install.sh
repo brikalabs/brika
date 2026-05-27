@@ -101,6 +101,55 @@ sha256_file() {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Minisign signature verification (optional)
+#
+# Brika releases publish a `<asset>.minisig` alongside each binary
+# archive once the signing key ceremony is live. When `minisign` is
+# installed locally AND a public key is embedded below, install.sh
+# refuses unsigned or invalid releases. When the pubkey is empty (the
+# pre-ceremony state, today's default), signature verification is
+# skipped silently.
+#
+# To enable: replace the empty BRIKA_MINISIGN_PUBKEY below with the
+# *full* second-line of `brika.pub` (the minisign-format base64
+# blob — NOT the raw 32-byte key, since the `minisign -V` CLI parses
+# a public key file in the minisign format). Example:
+#   BRIKA_MINISIGN_PUBKEY="RWQf6LRCGA…"
+# ─────────────────────────────────────────────────────────────────────────────
+
+BRIKA_MINISIGN_PUBKEY=""
+
+verify_signature() {
+  _asset="$1"
+  _sig="$2"
+  if [ -z "$BRIKA_MINISIGN_PUBKEY" ]; then
+    # No pubkey embedded — signature ceremony not live yet. Skip silently.
+    return 0
+  fi
+  if ! command -v minisign >/dev/null 2>&1; then
+    error "Brika releases are signed but \`minisign\` CLI is not installed."
+    error "Install it (https://jedisct1.github.io/minisign/) or set BRIKA_INSECURE=1 to skip."
+    if [ "${BRIKA_INSECURE:-}" = "1" ]; then
+      dim "  BRIKA_INSECURE=1 set, skipping signature verification (NOT recommended)"
+      return 0
+    fi
+    exit 1
+  fi
+  if [ ! -f "$_sig" ]; then
+    error "Signature file missing: $_sig"
+    exit 1
+  fi
+  # Write pubkey to a temp file in minisign's expected format.
+  _pubfile="$TMP_DIR/brika.pub"
+  printf 'untrusted comment: brika signing key\n%s\n' "$BRIKA_MINISIGN_PUBKEY" > "$_pubfile"
+  if ! minisign -V -p "$_pubfile" -m "$_asset" >/dev/null 2>&1; then
+    error "Signature verification failed for $(basename "$_asset")"
+    exit 1
+  fi
+  dim "  Signature verified"
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Resolve version and fetch release metadata
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -184,17 +233,30 @@ install_brika() {
 
   download "$DOWNLOAD_URL" "$TMP_DIR/$ASSET_NAME"
 
-  # Verify checksum
+  # Verify checksum — fail closed when no checksum was published.
+  # Silently skipping (the previous behaviour) opened a hole: a
+  # tampered release-meta.json that simply OMITS the asset key would
+  # bypass integrity verification entirely.
   EXPECTED=$(grep "\"${ASSET_NAME}\"" "$META_FILE" | sed 's/.*"[^"]*": *"\([a-f0-9]*\)".*/\1/')
-  if [ -n "$EXPECTED" ]; then
-    ACTUAL=$(sha256_file "$TMP_DIR/$ASSET_NAME")
-    if [ "$ACTUAL" != "$EXPECTED" ]; then
-      error "Checksum mismatch for $ASSET_NAME"
-      error "  expected: $EXPECTED"
-      error "  got:      $ACTUAL"
-      exit 1
-    fi
-    dim "  Checksum verified"
+  if [ -z "$EXPECTED" ]; then
+    error "No checksum recorded for $ASSET_NAME in release-meta.json"
+    error "  refusing to install an unverifiable artifact"
+    exit 1
+  fi
+  ACTUAL=$(sha256_file "$TMP_DIR/$ASSET_NAME")
+  if [ "$ACTUAL" != "$EXPECTED" ]; then
+    error "Checksum mismatch for $ASSET_NAME"
+    error "  expected: $EXPECTED"
+    error "  got:      $ACTUAL"
+    exit 1
+  fi
+  dim "  Checksum verified"
+
+  # Verify signature (when ceremony is live + minisign CLI present)
+  if [ -n "$BRIKA_MINISIGN_PUBKEY" ]; then
+    SIG_URL="${DOWNLOAD_URL}.minisig"
+    download "$SIG_URL" "$TMP_DIR/${ASSET_NAME}.minisig" || true
+    verify_signature "$TMP_DIR/$ASSET_NAME" "$TMP_DIR/${ASSET_NAME}.minisig"
   fi
 
   # Create install directory
