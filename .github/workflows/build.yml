@@ -221,24 +221,26 @@ jobs:
           BRIKA_SIGN_PASSWORD: ${{ secrets.BRIKA_SIGN_PASSWORD }}
           BINARY_VERSION: ${{ needs.setup.outputs.binary_version }}
         run: |
-          # Stage the private key + passphrase with 0600. Lives only
-          # for the lifetime of this job; the runner is ephemeral.
+          # Stage the private key with 0600 in $RUNNER_TEMP (absolute
+          # path, ephemeral, isolated from the workspace). The runner
+          # is single-use so file lifetime is the job's lifetime.
           umask 077
-          printf '%s' "$BRIKA_SIGN_KEY" > brika.sec
-          printf '%s' "$BRIKA_SIGN_PASSWORD" > .pp
+          KEY_PATH="$RUNNER_TEMP/brika.sec"
+          SIGN_SH="$RUNNER_TEMP/sign.exp"
+          printf '%s' "$BRIKA_SIGN_KEY" > "$KEY_PATH"
 
           # minisign reads the passphrase from /dev/tty and ignores
           # stdin/env, so we drive it through a pty via `expect`. The
-          # wrapper reads the passphrase from the file we just wrote.
-          cat > sign.exp <<'EOF'
+          # wrapper inherits BRIKA_SIGN_PASSWORD via expect's $env(...)
+          # so no passphrase ever hits disk.
+          cat > "$SIGN_SH" <<'EOF'
           #!/usr/bin/expect -f
           set timeout 30
-          set fp [open ".pp" r]
-          set passphrase [read $fp]
-          close $fp
-          set asset [lindex $argv 0]
-          set trust [lindex $argv 1]
-          spawn minisign -S -s brika.sec -t $trust -c "brika release artifact" -m $asset
+          set passphrase $env(BRIKA_SIGN_PASSWORD)
+          set keyfile [lindex $argv 0]
+          set asset [lindex $argv 1]
+          set trust [lindex $argv 2]
+          spawn minisign -S -s $keyfile -t $trust -c "brika release artifact" -m $asset
           expect {
             "Password:" { send "$passphrase\r"; exp_continue }
             eof
@@ -246,19 +248,18 @@ jobs:
           catch wait result
           exit [lindex $result 3]
           EOF
-          chmod +x sign.exp
+          chmod +x "$SIGN_SH"
 
           cd artifacts
           for f in brika-*; do
             # `-t` (trusted comment) is signed alongside the file
             # digest. Embedding {version,filename} stops a signature
             # from being silently re-pointed at a different release.
-            ../sign.exp "$f" "brika ${BINARY_VERSION} ${f}"
+            "$SIGN_SH" "$KEY_PATH" "$f" "brika ${BINARY_VERSION} ${f}"
             echo "signed: ${f}.minisig"
           done
-          cd ..
 
-          shred -u brika.sec .pp 2>/dev/null || rm -f brika.sec .pp
+          shred -u "$KEY_PATH" 2>/dev/null || rm -f "$KEY_PATH"
 
       - uses: actions/upload-artifact@v5
         with:
