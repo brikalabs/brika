@@ -318,7 +318,17 @@ export function UpdateDialog({
     useCallback(() => {
       setError(`${t('common:updates.waitingForHub')} — timeout`);
       setState('error');
-    }, [t])
+    }, [t]),
+    {
+      // Hub came back. Close the dialog so the user sees the freshly-
+      // refetched UI (which now reports the new version). Without this
+      // the dialog would sit on "En attente du redémarrage du hub…"
+      // until the 60s timeout fired even though the hub was healthy.
+      onReconnect: useCallback(() => {
+        setState('idle');
+        onOpenChange(false);
+      }, [onOpenChange]),
+    }
   );
 
   // Hard timeout on the `updating` state. Clears whenever we leave

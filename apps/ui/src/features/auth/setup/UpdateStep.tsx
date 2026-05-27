@@ -110,7 +110,14 @@ export function UpdateStep() {
     useCallback(() => {
       setError(t('update.restartTimeout'));
       setState('error');
-    }, [t])
+    }, [t]),
+    {
+      // Hub came back. Drop back to `loading` so the natural state
+      // machine re-derives where to land (up-to-date now, on the
+      // freshly-installed version). Without this the spinner would
+      // hang on "restarting" until the 60s timeout.
+      onReconnect: useCallback(() => setState('loading'), []),
+    }
   );
 
   // Drive the transition out of `loading`. We wait for both the query to
