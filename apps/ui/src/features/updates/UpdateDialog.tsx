@@ -273,6 +273,33 @@ function UpdateFooter({
  */
 const UPDATING_HARD_TIMEOUT_MS = 5 * 60 * 1000;
 
+/**
+ * Render a user-facing message from any error thrown by `applyStream`.
+ * The 409 refusal path on `/api/system/update/apply` carries a
+ * `{code, guidance}` body via `ProgressStreamHttpError.body` — prefer
+ * the `guidance` string when present (it's the strategy-authored,
+ * human-readable explanation: "running in a container, pull a new
+ * image", "dev mode, no binary to swap", etc.).
+ */
+function extractErrorMessage(err: unknown): string {
+  if (
+    err !== null &&
+    typeof err === 'object' &&
+    'body' in err &&
+    err.body !== null &&
+    typeof err.body === 'object' &&
+    'guidance' in err.body &&
+    typeof err.body.guidance === 'string' &&
+    err.body.guidance.length > 0
+  ) {
+    return err.body.guidance;
+  }
+  if (err instanceof Error) {
+    return err.message;
+  }
+  return String(err);
+}
+
 export function UpdateDialog({
   open,
   onOpenChange,
@@ -355,7 +382,7 @@ export function UpdateDialog({
 
       await stream.onComplete();
     } catch (err) {
-      setError(String(err));
+      setError(extractErrorMessage(err));
       setState('error');
     }
   }, [hubPoller, force]);
