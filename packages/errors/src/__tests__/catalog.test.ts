@@ -10,7 +10,7 @@
  */
 
 import { describe, expect, it } from 'bun:test';
-import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import enLocale from '../../locales/en/errors.json' with { type: 'json' };
 import frLocale from '../../locales/fr/errors.json' with { type: 'json' };
@@ -18,8 +18,6 @@ import { ERROR_CATEGORIES, ERROR_SEVERITIES, ErrorCatalog, lookupCatalogEntry } 
 
 const REPO_ROOT = join(import.meta.dir, '..', '..', '..', '..');
 const SEARCH_DIRS = ['packages', 'apps'];
-const SEARCH_EXTS = ['.ts', '.tsx'];
-const SKIP_DIRS = new Set(['node_modules', 'dist', '__tests__', '__benchmarks__', '.bun']);
 
 describe('ErrorCatalog shape', () => {
   it('every entry has a well-formed shape', () => {
@@ -190,10 +188,27 @@ function readObjectShapeKeys(schema: unknown): Set<string> {
 }
 
 describe('Source code coverage', () => {
-  it("every `new BrikaError('CODE', ...)` literal in src is in the catalog", () => {
+  it("every `new BrikaError('CODE', ...)` literal in src is in the catalog", async () => {
+    // Bun.Glob walks the tree natively and matches in a single C++ pass —
+    // ~hundreds of ms even under heavy parallel test load. The previous
+    // recursive `readdirSync` + `statSync` walk pulled 12-17 s during the
+    // parallel pre-push hook because every worker process serialised its
+    // own syscall-per-entry traversal through the same disk.
+    //
+    // The directory-skip filter lives in JS (not in the glob pattern):
+    // extglob negation in Bun.Glob doesn't reliably exclude intermediate
+    // path segments, so we let the glob match wide and gate on path
+    // components in the loop. Cheap — the filter just checks a Set per
+    // path component.
+    const SKIP_SEGMENTS = new Set(['node_modules', 'dist', '__tests__', '__benchmarks__', '.bun']);
+    const glob = new Bun.Glob(`{${SEARCH_DIRS.join(',')}}/**/*.{ts,tsx}`);
     const codes = new Set<string>();
-    for (const dir of SEARCH_DIRS) {
-      collectCodes(join(REPO_ROOT, dir), codes);
+    for await (const relPath of glob.scan({ cwd: REPO_ROOT, onlyFiles: true })) {
+      const segments = relPath.split('/');
+      if (segments.some((s) => SKIP_SEGMENTS.has(s) || s.startsWith('.'))) {
+        continue;
+      }
+      extractCodesFromFile(join(REPO_ROOT, relPath), codes);
     }
 
     const missing = [...codes].filter((c) => lookupCatalogEntry(c) === undefined);
@@ -205,32 +220,6 @@ describe('Source code coverage', () => {
     expect(unexpected).toEqual([]);
   });
 });
-
-function collectCodes(root: string, codes: Set<string>): void {
-  let entries: string[];
-  try {
-    entries = readdirSync(root);
-  } catch {
-    return;
-  }
-  for (const name of entries) {
-    if (SKIP_DIRS.has(name) || name.startsWith('.')) {
-      continue;
-    }
-    const path = join(root, name);
-    let st;
-    try {
-      st = statSync(path);
-    } catch {
-      continue;
-    }
-    if (st.isDirectory()) {
-      collectCodes(path, codes);
-    } else if (SEARCH_EXTS.some((ext) => name.endsWith(ext))) {
-      extractCodesFromFile(path, codes);
-    }
-  }
-}
 
 const LITERAL_RE = /new\s+BrikaError\s*\(\s*['"]([A-Z][A-Z0-9_]*)['"]/g;
 
