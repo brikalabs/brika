@@ -32,9 +32,14 @@ Thank you for your interest in contributing to Brika! This guide will help you g
 
 Brika is a monorepo with the following workspaces:
 
-- `apps/` — Application entrypoints (hub, ui, website)
-- `packages/` — Shared libraries and utilities
-- `plugins/` — Plugin implementations
+- `apps/` — Application entrypoints (`hub`, `ui`, `console`, `signaling`, `build`, `docs`)
+- `packages/` — Shared libraries and utilities (SDK, compiler, IPC, flow, schema, …)
+- `plugins/` — Plugin implementations (`blocks-builtin`, `timer`, `spotify`, …)
+
+> Some apps that used to live here have been extracted into their own repositories
+> in the `brikalabs` org: [`registry`](https://github.com/brikalabs/registry),
+> [`schema-cdn`](https://github.com/brikalabs/schema-cdn), [`website`](https://github.com/brikalabs/website),
+> and [`clay`](https://github.com/brikalabs/clay) (design system).
 
 ### Scripts
 
