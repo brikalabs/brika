@@ -3,8 +3,7 @@
   "compilerOptions": {
     // TODO(typecheck): existing tests don't satisfy `noUncheckedIndexedAccess`.
     // Flip back to `true` once the index-access patterns in
-    // `__tests__/actions-client.test.ts` and `__tests__/validate.test.ts`
-    // are tightened.
+    // `actions-client.test.ts` and `validate.test.ts` are tightened.
     "noUncheckedIndexedAccess": false
   },
   "include": ["src"]

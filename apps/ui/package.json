@@ -11,7 +11,7 @@
   "scripts": {
     "dev": "bunx --bun vite --configLoader runner",
     "build": "bunx --bun vite build --configLoader runner",
-    "test": "bun test src/lib/__tests__",
+    "test": "bun test src/lib src/features/plugins/components",
     "typecheck": "tsgo --project tsconfig.check.json --noEmit --skipLibCheck",
     "lint": "bunx --bun biome check .",
     "check:arch": "archunit"
