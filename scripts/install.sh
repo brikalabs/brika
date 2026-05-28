@@ -157,6 +157,34 @@ TMP_DIR=""
 META_FILE=""
 COMMIT_SHORT=""
 
+# Find the newest `canary-*` prerelease tag via the GitHub releases API.
+# Canary tags are stamped `canary-YYYYMMDD-HHMMSS-<sha>` and lexical
+# sort matches chronological order, so the first match in the API's
+# `created_at desc` response is what we want.
+#
+# Prints the tag to stdout on success, prints nothing on failure (the
+# caller checks for an empty string). The grep+sed pipeline keeps this
+# POSIX (no jq dependency on a fresh box).
+#
+# Anonymous GitHub API: 60 requests/hour per IP. One per install is
+# fine; if you run a CI runner that installs dozens of canaries an
+# hour, set BRIKA_VERSION=<exact-tag> instead to bypass.
+resolve_latest_canary_tag() {
+  _api_url="https://api.github.com/repos/$GITHUB_REPO/releases?per_page=20"
+  _body=""
+  if command -v curl >/dev/null 2>&1; then
+    _body=$(curl -fsSL -H 'Accept: application/vnd.github+json' "$_api_url" 2>/dev/null) || return 1
+  elif command -v wget >/dev/null 2>&1; then
+    _body=$(wget -q -O - --header='Accept: application/vnd.github+json' "$_api_url" 2>/dev/null) || return 1
+  else
+    return 1
+  fi
+  printf '%s' "$_body" \
+    | grep -o '"tag_name":[[:space:]]*"canary-[^"]*"' \
+    | sed -n 's/.*"\(canary-[^"]*\)"/\1/p' \
+    | head -n 1
+}
+
 resolve_version() {
   TMP_DIR=$(mktemp -d)
   trap 'rm -rf "$TMP_DIR"' EXIT
@@ -165,8 +193,13 @@ resolve_version() {
 
   if [ "$VERSION" = "canary" ]; then
     info "Using canary (development) channel..."
-    RELEASE_TAG="canary"
-    META_URL="https://github.com/$GITHUB_REPO/releases/download/canary/release-meta.json"
+    RELEASE_TAG=$(resolve_latest_canary_tag)
+    if [ -z "$RELEASE_TAG" ]; then
+      error "No canary release found. The build pipeline may not have published one yet."
+      exit 1
+    fi
+    info "Latest canary: ${RELEASE_TAG}"
+    META_URL="https://github.com/$GITHUB_REPO/releases/download/${RELEASE_TAG}/release-meta.json"
   elif [ -n "$VERSION" ]; then
     RELEASE_TAG="v${VERSION}"
     META_URL="https://github.com/$GITHUB_REPO/releases/download/v${VERSION}/release-meta.json"

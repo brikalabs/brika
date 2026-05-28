@@ -54,8 +54,19 @@ try {
     $Version = if ($env:BRIKA_VERSION) { $env:BRIKA_VERSION } elseif ($args.Count -gt 0) { $args[0] } else { $null }
     if ($Version -eq "canary") {
         Write-Info "Using canary (development) channel..."
-        $ReleaseTag = "canary"
-        $MetaUrl = "https://github.com/$GitHubRepo/releases/download/canary/release-meta.json"
+        # Canary releases are stamped `canary-YYYYMMDD-HHMMSS-<sha>`, so
+        # the GitHub API's `created_at desc` ordering puts the newest
+        # one first. Anonymous limit is 60/hour per IP — fine for one
+        # install; set $env:BRIKA_VERSION to an exact tag to bypass.
+        $Releases = Invoke-RestMethod -Uri "https://api.github.com/repos/$GitHubRepo/releases?per_page=20" -UseBasicParsing
+        $LatestCanary = $Releases | Where-Object { $_.tag_name -like "canary-*" } | Select-Object -First 1
+        if (-not $LatestCanary) {
+            Write-Err "No canary release found. The build pipeline may not have published one yet."
+            exit 1
+        }
+        $ReleaseTag = $LatestCanary.tag_name
+        Write-Info "Latest canary: $ReleaseTag"
+        $MetaUrl = "https://github.com/$GitHubRepo/releases/download/$ReleaseTag/release-meta.json"
     } elseif ($Version) {
         $ReleaseTag = "v$Version"
         $MetaUrl = "https://github.com/$GitHubRepo/releases/download/v$Version/release-meta.json"
