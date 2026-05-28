@@ -193,22 +193,19 @@ resolve_version() {
 
 detect_existing() {
   EXISTING_VERSION=""
-  if [ -x "$BIN_DIR/brika" ]; then
-    # Try JSON format first (new binary), fall back to human-readable (old binary)
-    _json=$("$BIN_DIR/brika" version --json 2>/dev/null || echo "")
-    _v=$(printf '%s' "$_json" | sed 's/.*"version":"\([^"]*\)".*/\1/')
-    _c=$(printf '%s' "$_json" | sed 's/.*"commit":"\([^"]*\)".*/\1/')
-    if [ -n "$_v" ] && [ "$_v" != "$_json" ]; then
-      EXISTING_VERSION="v${_v} (${_c})"
-    else
-      # Old binary: "brika v0.3.0 (abc1234)"
-      _out=$("$BIN_DIR/brika" --version 2>/dev/null || echo "")
-      _v=$(printf '%s' "$_out" | head -1 | sed 's/.*brika v\([^ ]*\).*/\1/')
-      _c=$(printf '%s' "$_out" | head -1 | sed 's/.*(\([^)]*\)).*/\1/')
-      if [ -n "$_v" ] && [ "$_v" != "$_out" ]; then
-        EXISTING_VERSION="v${_v} (${_c})"
-      fi
-    fi
+  [ -x "$BIN_DIR/brika" ] || return 0
+
+  # `brika version --json` lands a single-line JSON payload. Use `sed -n …p` so
+  # a non-match prints nothing — the prior `sed s/…/\1/` left the whole input
+  # in place on a no-op, which made `[ -n "$_v" ]` always true and produced
+  # garbled "Upgrading vBrika Console …" banners against any binary that
+  # didn't actually implement --json (which was every binary prior to this
+  # change, since the flag was documented in the comment but never shipped).
+  _json=$("$BIN_DIR/brika" version --json 2>/dev/null || echo "")
+  _v=$(printf '%s' "$_json" | sed -n 's/.*"version":"\([^"]*\)".*/\1/p')
+  _c=$(printf '%s' "$_json" | sed -n 's/.*"commit":"\([^"]*\)".*/\1/p' | cut -c1-7)
+  if [ -n "$_v" ]; then
+    EXISTING_VERSION="v${_v}${_c:+ ($_c)}"
   fi
 }
 

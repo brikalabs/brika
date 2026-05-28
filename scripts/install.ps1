@@ -83,15 +83,21 @@ try {
 
     $ExistingVersion = ""
     if (Test-Path $BinaryPath) {
-        # Try JSON format first (new binary)
+        # `brika version --json` lands a single-line JSON payload. The prior
+        # human-readable fallback regex (`brika v0.3.0 (abc1234)`) never
+        # matched the actual binary output (`Brika Console v0.3.0`) and
+        # quietly left every upgrade rendering as a fresh install.
         try {
             $Json = & $BinaryPath version --json 2>$null | ConvertFrom-Json
-            if ($Json.version -and $Json.commit) {
-                $ExistingVersion = "v$($Json.version) ($($Json.commit.Substring(0, [Math]::Min(7, $Json.commit.Length))))"
+            if ($Json.version) {
+                $ExistingVersion = "v$($Json.version)"
+                if ($Json.commit) {
+                    $Short = $Json.commit.Substring(0, [Math]::Min(7, $Json.commit.Length))
+                    $ExistingVersion = "$ExistingVersion ($Short)"
+                }
             }
         } catch {}
 
-        # Fall back to human-readable: "brika v0.3.0 (abc1234)"
         if (-not $ExistingVersion) {
             try {
                 $Out = (& $BinaryPath --version 2>$null | Select-Object -First 1).Trim()

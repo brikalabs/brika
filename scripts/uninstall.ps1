@@ -39,12 +39,23 @@ if (-not (Test-Path $InstallDir)) {
     exit 1
 }
 
-# Show installed version
+# Show installed version. `brika --version` now emits a multi-line block
+# ("Brika Console v0.X.Y\n  branch …"), so blindly prefixing it with `v`
+# used to print garbled output. Read the structured JSON instead;
+# degrade silently against any legacy binary that doesn't implement
+# `version --json`.
 $BinaryPath = Join-Path $InstallDir "brika.exe"
 if (Test-Path $BinaryPath) {
     try {
-        $CurrentVersion = (& $BinaryPath --version 2>$null).Trim()
-        if ($CurrentVersion) { Write-Dim "  Installed version: v$CurrentVersion" }
+        $Json = & $BinaryPath version --json 2>$null | ConvertFrom-Json
+        if ($Json.version) {
+            $Label = "v$($Json.version)"
+            if ($Json.commit) {
+                $Short = $Json.commit.Substring(0, [Math]::Min(7, $Json.commit.Length))
+                $Label = "$Label ($Short)"
+            }
+            Write-Dim "  Installed version: $Label"
+        }
     } catch {}
 }
 
