@@ -51,11 +51,17 @@ main() {
     exit 1
   fi
 
-  # Show installed version
+  # Show installed version. `brika --version` now emits a multi-line block
+  # ("Brika Console v0.X.Y\n  branch …"), so blindly prefixing it with `v`
+  # used to print 6 lines of garbled output. Read the structured JSON
+  # instead; degrade silently against the legacy binary that doesn't
+  # implement `version --json`.
   if [ -x "$BIN_DIR/brika" ]; then
-    CURRENT_VERSION=$("$BIN_DIR/brika" --version 2>/dev/null || echo "")
-    if [ -n "$CURRENT_VERSION" ]; then
-      dim "  Installed version: v${CURRENT_VERSION}"
+    _json=$("$BIN_DIR/brika" version --json 2>/dev/null || echo "")
+    _v=$(printf '%s' "$_json" | sed -n 's/.*"version":"\([^"]*\)".*/\1/p')
+    _c=$(printf '%s' "$_json" | sed -n 's/.*"commit":"\([^"]*\)".*/\1/p' | cut -c1-7)
+    if [ -n "$_v" ]; then
+      dim "  Installed version: v${_v}${_c:+ ($_c)}"
     fi
   fi
 
