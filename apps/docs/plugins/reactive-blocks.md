@@ -1,258 +1,220 @@
 # Reactive Blocks
 
-Blocks are the building blocks of workflows. Each block has typed inputs, outputs, and configuration.
+A block is a reactive workflow node. You define one with `defineReactiveBlock`, providing:
 
-## Block Anatomy
+* Inputs and outputs as **Zod-typed ports**.
+* A **config schema** the user fills in when they place the block on a workflow.
+* A **setup function** that wires inputs to outputs using stream operators.
 
-```typescript
-import { defineReactiveBlock, input, output, z } from "@brika/sdk";
+The runtime calls the setup function once per block instance (per workflow). Subscriptions inside it are tracked and auto-cleaned when the workflow stops or the plugin restarts.
 
-export const myBlock = defineReactiveBlock(
+## Anatomy
+
+```ts
+import { defineReactiveBlock, input, output, z } from '@brika/sdk';
+
+export const greet = defineReactiveBlock(
   {
-    // Unique ID (matches package.json blocks[].id)
-    id: "my-block",
-
-    // Input ports
+    id: 'greet',
     inputs: {
-      trigger: input(z.generic(), { name: "Trigger" }),
-      data: input(z.number(), { name: "Data" }),
+      trigger: input(z.generic(), { name: 'Trigger' }),
     },
-
-    // Output ports
     outputs: {
-      result: output(z.string(), { name: "Result" }),
-      error: output(z.string(), { name: "Error" }),
+      message: output(z.string(), { name: 'Message' }),
     },
-
-    // Configuration schema
     config: z.object({
-      multiplier: z.number().default(1),
+      name: z.string().default('World'),
     }),
   },
-  // Executor function
-  ({ inputs, outputs, config, log, start }) => {
-    inputs.data.on((value) => {
-      const result = value * config.multiplier;
-      outputs.result.emit(`Result: ${result}`);
+  ({ inputs, outputs, config }) => {
+    inputs.trigger.on(() => {
+      outputs.message.emit(`Hello, ${config.name}!`);
     });
   }
 );
 ```
 
-## Port Types
+`defineReactiveBlock` returns a `CompiledReactiveBlock`. Export it from the plugin's main module. The hub will reach it via IPC when the workflow runtime needs an instance.
 
-### Generic Ports
+## Ports
 
-Accept any type, inferred at connection time:
+`input(schema, meta)` and `output(schema, meta)` build typed port definitions. Both take:
 
-```typescript
-inputs: {
-  in: input(z.generic(), { name: "Input" }),
+| Argument | Description |
+|---|---|
+| `schema` | A Zod schema (`z.string()`, `z.object(...)`, …) or one of the BRIKA special types: `z.generic()`, `z.passthrough(srcPortId)`, `z.resolved(source, configField)` |
+| `meta` | `{ name, description? }` — display info for the workflow editor |
+
+Output emitters validate every emission against the schema. **Invalid values are dropped with a console warning**, not propagated downstream. This protects connected blocks from type mismatches at the cost of silent failures — keep an eye on the logs while developing.
+
+See [Schema Types](schema-types.md) for the full set of port schemas (including `z.duration`, `z.color`, `z.expression`, …).
+
+## The setup function
+
+The second argument is the **setup function**. It receives a `BlockContext`:
+
+```ts
+({
+  blockId,        // string — this instance's ID
+  workflowId,     // string — owning workflow's ID
+  inputs,         // typed Flow per input port
+  outputs,        // typed Emitter per output port
+  config,         // z.infer<typeof yourConfigSchema>
+  start,          // helper to lift a value/source/factory into a Flow
+  context,        // self-reference, for ergonomics
+}) => { … }
+```
+
+The function runs once when the workflow starts the block. **Any reactive wiring belongs here.** Use `inputs.X.on(fn)`, `inputs.X.pipe(...).to(outputs.Y)`, or `start(source).pipe(...).to(outputs.Y)` — every subscription is registered with a cleanup registry that fires on stop.
+
+Returning a cleanup function (`() => void`) is optional but recommended if you create resources `setup` itself owns (timers, sockets, subscriptions outside the flow graph):
+
+```ts
+({ inputs, outputs, config }) => {
+  let id: ReturnType<typeof setInterval> | null = null;
+
+  inputs.trigger.on(() => {
+    if (id) clearInterval(id);
+    id = setInterval(() => outputs.tick.emit(Date.now()), config.intervalMs);
+  });
+
+  return () => {
+    if (id) clearInterval(id);
+  };
 }
 ```
 
-Generic ports are useful for passthrough blocks or when the type doesn't matter.
+The cleanup function runs when the workflow stops or the block is removed.
 
-### Typed Ports
+## Block categories
 
-Explicit Zod schema for type safety:
+The `category` field in the [manifest](manifest.md) drives where the block shows up in the workflow sidebar. The conventions:
 
-```typescript
-inputs: {
-  temperature: input(z.number(), { name: "Temperature °C" }),
-  settings: input(z.object({
-    min: z.number(),
-    max: z.number(),
-  }), { name: "Settings" }),
-}
+| Category | Use for |
+|---|---|
+| `trigger` | Things that emit without an input — clocks, webhooks, motion sensors |
+| `action` | Things that consume input and have side effects — HTTP calls, notifications, device commands |
+| `flow` | Branching / merging — `condition`, `switch`, `delay`, `end` |
+| `transform` | Pure data transforms — `map`, `filter`, `format` |
+
+The category is metadata; the runtime treats every block the same way.
+
+## Config
+
+The `config` field of the spec is a Zod **object** schema. The hub:
+
+1. Reads the schema, generates a JSON Schema, and uses it to render the block's config UI.
+2. Validates the user's values when the workflow is saved.
+3. Passes the validated config to your setup function — fully typed via `z.infer`.
+
+```ts
+config: z.object({
+  url: z.string().url(),
+  method: z.enum(['GET', 'POST', 'PUT', 'DELETE']).default('GET'),
+  retries: z.number().int().min(0).max(10).default(3),
+});
 ```
 
-### Passthrough Ports
+In the setup function, `config.method` is typed as `'GET' | 'POST' | 'PUT' | 'DELETE'`, etc.
 
-Output inherits type from an input:
+For BRIKA-specific config fields (durations, colours, expressions, code editors), use the [custom z module](schema-types.md):
 
-```typescript
-inputs: {
-  in: input(z.number(), { name: "Input" }),
-},
-outputs: {
-  out: output(z.passthrough("in"), { name: "Output" }),
-}
+```ts
+config: z.object({
+  duration: z.duration(undefined, 'How long to wait'),
+  colour: z.color(),
+  expr: z.expression(),
+});
 ```
 
-## Reactive Operators
+## Multiple inputs
 
-Transform and combine data streams using operators:
+Multiple inputs become multiple `Flow`s on `inputs`. Combine them with the combinators from [Reactive Streams](reactive-streams.md):
 
-### map
+```ts
+import { defineReactiveBlock, input, output, combine, map, z } from '@brika/sdk';
 
-Transform values:
-
-```typescript
-inputs.temperature
-  .pipe(map((celsius) => celsius * 1.8 + 32))
-  .to(outputs.fahrenheit);
-```
-
-### filter
-
-Filter values based on a condition:
-
-```typescript
-inputs.motion
-  .pipe(filter((m) => m.confidence > 0.8))
-  .to(outputs.detected);
-```
-
-### delay
-
-Delay emission:
-
-```typescript
-inputs.trigger
-  .pipe(delay(1000)) // 1 second
-  .to(outputs.delayed);
-```
-
-### debounce
-
-Debounce rapid inputs:
-
-```typescript
-inputs.search
-  .pipe(debounce(300)) // 300ms
-  .to(outputs.query);
-```
-
-### throttle
-
-Throttle high-frequency data:
-
-```typescript
-inputs.sensor
-  .pipe(throttle(100)) // Max once per 100ms
-  .to(outputs.sampled);
-```
-
-### combine
-
-Wait for all inputs before emitting:
-
-```typescript
-combine(inputs.a, inputs.b)
-  .pipe(map(([a, b]) => a + b))
-  .to(outputs.sum);
-```
-
-### merge
-
-Emit when any input fires:
-
-```typescript
-merge(inputs.button1, inputs.button2)
-  .to(outputs.anyButton);
-```
-
-## Source Blocks
-
-Source blocks generate data without inputs. Use `start()`:
-
-```typescript
-import { interval } from "@brika/sdk";
-
-export const clock = defineReactiveBlock(
+export const comfort = defineReactiveBlock(
   {
-    id: "clock",
-    inputs: {},
-    outputs: {
-      tick: output(z.object({ count: z.number(), ts: z.number() }), { name: "Tick" }),
+    id: 'comfort',
+    inputs: {
+      temperature: input(z.number(), { name: 'Temperature' }),
+      humidity: input(z.number(), { name: 'Humidity' }),
     },
-    config: z.object({
-      interval: z.duration(undefined, "Tick interval"),
-    }),
+    outputs: {
+      score: output(z.number(), { name: 'Score' }),
+    },
+    config: z.object({}),
   },
-  ({ outputs, config, start }) => {
-    start(interval(config.interval))
-      .pipe(map((count) => ({ count: count + 1, ts: Date.now() })))
-      .to(outputs.tick);
+  ({ inputs, outputs }) => {
+    combine(inputs.temperature, inputs.humidity)
+      .pipe(map(([t, h]) => 100 - Math.abs(22 - t) * 2 - Math.abs(50 - h) * 0.5))
+      .to(outputs.score);
   }
 );
 ```
 
-## Configuration Schema
+`combine` emits whenever **any** input fires, using the latest value from each. `zip` emits only when **every** input has fired in lockstep. `all` waits for each to fire at least once and then behaves like `combine`. See [Reactive Streams](reactive-streams.md) for all the variants.
 
-Use Zod for type-safe configuration:
+## Triggers — blocks with no inputs
 
-```typescript
-config: z.object({
-  // Basic types
-  name: z.string().default("default"),
-  count: z.number().min(1).max(100).default(10),
-  enabled: z.boolean().default(true),
+Triggers are blocks that emit on their own — clocks, schedules, file watchers, webhook listeners. Use a `Source` plus `start()`:
 
-  // Enums
-  mode: z.enum(["fast", "slow", "auto"]).default("auto"),
+```ts
+import { defineReactiveBlock, output, interval, z } from '@brika/sdk';
 
-  // Optional
-  description: z.string().optional(),
-
-  // Custom UI types (see Schema Types)
-  delay: z.duration(undefined, "Wait duration"),
-  color: z.color("LED color"),
-  script: z.code("javascript", "Script to run"),
-  apiKey: z.secret("API key"),
-})
+export const clock = defineReactiveBlock(
+  {
+    id: 'clock',
+    inputs: {},
+    outputs: {
+      tick: output(z.number(), { name: 'Tick' }),
+    },
+    config: z.object({
+      intervalMs: z.duration(1000, 'Interval'),
+    }),
+  },
+  ({ outputs, config, start }) => {
+    start(interval(config.intervalMs)).to(outputs.tick);
+  }
+);
 ```
 
-## Connecting to Outputs
+`start(value)`, `start(source)`, and `start(factory)` all lift a value or producer into a `Flow` whose subscription is tracked by the cleanup registry — when the workflow stops, the underlying timer/socket/subscription is torn down automatically.
 
-There are two ways to emit to outputs:
+## Async work
 
-### Direct Emission
+Setup is not async. If you need to do async work, call it from inside a subscription handler:
 
-```typescript
-inputs.trigger.on(() => {
-  outputs.result.emit("Hello!");
+```ts
+inputs.trigger.on(async () => {
+  const res = await fetch(config.url);
+  outputs.body.emit(await res.text());
 });
 ```
 
-### Using .to()
+Awaits inside `.on()` are fire-and-forget. There is no backpressure — if the upstream emits faster than your handler can process, every event is still delivered. Use `throttle`, `debounce`, or `switchMap` to control that — see [Reactive Streams](reactive-streams.md).
 
-```typescript
-inputs.trigger
-  .pipe(map(() => "Hello!"))
-  .to(outputs.result);
-```
+## Validation errors
 
-## Error Handling
+When `outputs.X.emit(value)` is called with a value that does not match the output's schema, the emission is silently dropped and a warning is logged. Reasons:
 
-Handle errors gracefully:
+* The whole purpose of typed ports is to keep type mismatches from leaking into downstream blocks. A connected block that expects `{ temp: number }` should never receive a string.
+* The plugin can keep running even when one emission is malformed — better than crashing the whole process.
 
-```typescript
-({ inputs, outputs, log }) => {
-  inputs.data.on((value) => {
-    try {
-      const result = processData(value);
-      outputs.success.emit(result);
-    } catch (err) {
-      log.error('Processing failed', { error: err });
-      outputs.error.emit(String(err));
-    }
-  });
-}
-```
+If you see the warning, fix the producing block; the schema is the source of truth.
 
-## Best Practices
+## What you can return
 
-1. **Keep blocks focused** — One block, one responsibility
-2. **Use typed ports** — Avoid generic ports when possible
-3. **Validate configuration** — Use Zod constraints (min, max, regex)
-4. **Handle errors** — Always catch and emit errors
-5. **Log appropriately** — Use `log.info()`, `log.debug()`, `log.warn()`, `log.error()`
-6. **Clean up resources** — Return a cleanup function from setup or use `onStop`
+The block setup function can return:
 
-## Next Steps
+* `void` (or nothing) — no cleanup needed.
+* `() => void` — a cleanup function called when the block is stopped.
+* `Promise<void>` — the runtime awaits it. Don't do this; do async work from inside subscriptions instead.
 
-* [Lifecycle Hooks](lifecycle-hooks.md) — Handle plugin events
-* [Reactive Operators](../api-reference/operators.md) — Full operator reference
-* [Schema Types](../api-reference/schema-types.md) — Custom UI types
+## See also
+
+* **[Reactive Streams](reactive-streams.md)** — operators, combinators, sources.
+* **[Schema Types](schema-types.md)** — `z.generic`, `z.passthrough`, `z.resolved`, `z.duration`, …
+* **[Sparks](sparks.md)** — broadcast typed events across plugins.
+* **[Architecture — Reactive Engine](../architecture/reactive-engine.md)** — how the stream scheduler actually works.

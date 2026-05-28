@@ -1,313 +1,110 @@
 # Coding Standards
 
-BRIKA follows consistent coding standards across the codebase.
+Brika code is opinionated. Most of these aren't novel — they're things every TypeScript codebase eventually settles on — but they're enforced here.
 
 ## TypeScript
 
-### Strict Mode
+### Strict mode
 
-All TypeScript uses strict mode:
+`strict: true` everywhere. `noUncheckedIndexedAccess: true`. No exceptions. If you're tempted to relax a flag, it's a code smell — narrow types instead.
 
-```json
-{
-  "compilerOptions": {
-    "strict": true
-  }
-}
-```
+### No `as` casts and no `any`
 
-### Type Annotations
+* **No `as` type casts.** Use proper typing, type narrowing, imports, and conditional checks instead.
+* **No `any`.** If you're reaching for it, you probably want `unknown` with a narrowing check, or a typed union.
 
-Always type public APIs:
+There are rare, justified exceptions (Bun's older type defs, some Zod internals); these are flagged with `@ts-expect-error` comments explaining why. Don't add new ones without a good reason.
 
-```typescript
-// ✅ Good
-export function processData(input: string): ProcessedData {
-  return { result: input.trim() };
-}
+### Prefer zod over typeof guards
 
-// ❌ Bad
-export function processData(input) {
-  return { result: input.trim() };
-}
-```
+When you need to validate that a value matches a shape at runtime, **use zod**, not a hand-rolled `typeof` + `in` chain. Zod is already a workspace dependency. The schema lives next to the type, the typing is automatic, and validation errors are structured.
 
-### Avoid `any`
-
-Use `unknown` and narrow with type guards:
-
-```typescript
-// ✅ Good
-function handleInput(value: unknown): string {
-  if (typeof value === "string") {
-    return value;
-  }
-  throw new Error("Expected string");
+```ts
+// ✗ avoid
+function isWeather(x: unknown): x is Weather {
+  return typeof x === 'object' && x !== null && 'tempC' in x && typeof (x as Weather).tempC === 'number';
 }
 
-// ❌ Bad
-function handleInput(value: any): string {
-  return value;
-}
+// ✓ prefer
+const Weather = z.object({ tempC: z.number(), city: z.string() });
+const result = Weather.safeParse(x);
+if (!result.success) { … }
 ```
 
-If `any` is unavoidable, add a biome-ignore comment:
+### Readonly props
 
-```typescript
-// biome-ignore lint/suspicious/noExplicitAny: External API returns any
-const result: any = externalApi.call();
+React component props must be `Readonly<>`. SonarQube rule S6759 enforces it — don't strip it as "cosmetic".
+
+```ts
+function StatCard({ label, value }: Readonly<{ label: string; value: number }>) { … }
 ```
 
-## Naming Conventions
+### No legacy code or defensive type-narrowing
 
-| Type | Convention | Example |
-|------|------------|---------|
-| Classes | PascalCase | `PluginManager` |
-| Interfaces | PascalCase | `BlockDefinition` |
-| Functions | camelCase | `registerTool` |
-| Constants | SCREAMING_SNAKE | `DEFAULT_TIMEOUT` |
-| Private members | # prefix | `#privateField` |
-| Files | kebab-case | `plugin-manager.ts` |
+Reject legacy/migration paths and runtime `typeof` defensive checks. Trust the schema. If a transitional code path is needed, surface it as a separate concern — not buried inside the consumer.
 
-## Code Organization
+The schema is the source of truth. By the time data reaches the consumer, it's been validated.
 
-Order code in files consistently:
+## React
 
-```typescript
-// 1. Imports (external, then internal)
-import { z } from "zod";
-import { inject, singleton } from "@brika/di";
+### No shared Tailwind class constants
 
-// 2. Types/Interfaces
-interface MyConfig {
-  timeout: number;
-}
+Don't extract Tailwind class strings into shared constants. Keep duplicated class strings inline per component. The cost of duplication is paid once when you read the diff; the cost of indirection is paid every time you debug.
 
-// 3. Constants
-const DEFAULT_TIMEOUT = 30000;
+### Bricks and pages — plain React
 
-// 4. Main export (class/function)
-@singleton()
-export class MyService {
-  // ...
-}
+Use the standard React API. Don't import from `@brika/sdk/jsx-runtime` (no such subpath). The compiler rewrites `react/jsx-runtime` to the bridge for you. `tsconfig.json` must have `"jsxImportSource": "react"`.
 
-// 5. Helper functions (private)
-function helperFunction(): void {
-  // ...
-}
+## Comments
+
+* Default to writing no comments.
+* Add a comment only when the **why** is non-obvious — a hidden constraint, a subtle invariant, a workaround for a specific bug, behaviour that would surprise a reader.
+* Don't explain **what** the code does — well-named identifiers do that.
+* Don't reference the current task, fix, or callers ("used by X", "added for Y", "handles the case from #123"). PR descriptions own that history; comments rot.
+
+## Imports
+
+* Always use the workspace's exported entry points (`@brika/sdk`, not `../../packages/sdk/src/...`).
+* Sort imports by Biome's default (groups by source: node, npm, project).
+
+## Tests
+
+* Integration tests must hit a real database, not mocks. We had a prior incident where mock/prod divergence masked a broken migration.
+* Test files use `*.test.ts` adjacent to the source. Shared test utilities use the `_` prefix convention (e.g., `_use-bun-mock.ts`).
+* Run `bun test` before pushing.
+
+See [Testing](testing.md) for the full patterns.
+
+## Errors
+
+* Use `BrikaError` for typed errors that cross IPC or HTTP. Plain `Error` for internal, throwaway exceptions.
+* Don't swallow errors silently. If you catch and ignore, leave a comment with the rationale.
+
+## Logging
+
+* `log.{debug,info,warn,error}` from `@brika/sdk` in plugins; the hub's `Logger` service elsewhere.
+* Don't log secrets, even at debug level. Use the redaction options when in doubt.
+
+## Pre-push
+
+Before every `git push`:
+
+```sh
+bun run lint
+bun run typecheck
+bun test
 ```
 
-## Error Handling
+The trio. Lint catches the most surprises, typecheck the second most, tests the rest.
 
-### Return Structured Results
+## Commits
 
-For IPC communication, always return structured results:
+* Use Conventional Commits (`fix:`, `feat:`, `chore:`, etc.).
+* SSH-signed commits are required by the repo's ruleset.
+* Never `--no-verify` or `--no-gpg-sign` unless explicitly required.
 
-```typescript
-// ✅ Good
-return { ok: true, content: "Success" };
-return { ok: false, content: "Error: invalid input" };
+## See also
 
-// ❌ Bad - throws across IPC
-throw new Error("Invalid input");
-```
-
-### Catch at Boundaries
-
-Log errors at system boundaries:
-
-```typescript
-// ✅ Good
-try {
-  await operation();
-} catch (e) {
-  logs.error("operation.failed", { error: String(e) });
-  return { ok: false, content: String(e) };
-}
-```
-
-## Architecture Rules
-
-### Hard Boundaries
-
-Never cross these boundaries:
-
-```typescript
-// ❌ Hub NEVER imports plugin code
-import { myTool } from "../../plugins/my-plugin";
-
-// ❌ Plugins ONLY depend on SDK and shared
-import { SomeHubClass } from "@brika/hub"; // Not allowed
-
-// ❌ UI ONLY imports from shared
-import { PluginManager } from "@brika/sdk"; // Not allowed
-```
-
-### Dependency Injection
-
-Use the DI system for services:
-
-```typescript
-import { singleton, inject } from "@brika/di";
-
-@singleton()
-export class MyService {
-  private readonly logger = inject(Logger);
-  private readonly events = inject(EventBus);
-
-  async doWork() {
-    this.logger.info("Working...");
-  }
-}
-```
-
-### Private Members
-
-Use `#` for private class members:
-
-```typescript
-@singleton()
-export class MyService {
-  #config: Config;
-  #cache = new Map<string, Data>();
-
-  #processData(input: string): Data {
-    return { result: input };
-  }
-}
-```
-
-## Plugin Development
-
-### Plugin Entry Point
-
-```typescript
-// src/index.tsx — server-side (runs in Bun)
-import { defineReactiveBlock, input, output, log, onStop, z } from "@brika/sdk";
-import { setBrickData, onInit, onBrickConfigChange } from "@brika/sdk";
-
-// Define blocks (for workflows)
-export const myBlock = defineReactiveBlock(
-  { /* spec */ },
-  ({ inputs, outputs, config }) => { /* executor */ }
-);
-
-// Push data to client-rendered bricks
-onInit(() => {
-  setBrickData('my-brick', { value: 42 });
-});
-
-// Lifecycle hooks
-onStop(() => log.info('Plugin stopping'));
-log.info('Plugin loaded');
-```
-
-### Block Definition
-
-```typescript
-export const myBlock = defineReactiveBlock(
-  {
-    id: "my-block",  // Local ID only, not full path
-    inputs: {
-      trigger: input(z.generic(), { name: "Trigger" }),
-    },
-    outputs: {
-      result: output(z.string(), { name: "Result" }),
-    },
-    config: z.object({
-      value: z.string().default("default"),
-    }),
-  },
-  ({ inputs, outputs, config }) => {
-    inputs.trigger.on(() => {
-      log.info('Block triggered');
-      outputs.result.emit(config.value);
-    });
-  }
-);
-```
-
-### Brick Component
-
-```tsx
-// src/bricks/my-brick.tsx — client-side (runs in browser)
-import { useBrickData, useBrickConfig, useBrickSize } from '@brika/sdk/brick-views';
-
-interface MyData { value: number; }
-
-export default function MyBrick() {
-  const data = useBrickData<MyData>();
-  const config = useBrickConfig();
-  const { width } = useBrickSize();
-
-  if (!data) return <div className="p-4 text-muted-foreground">Loading...</div>;
-  return <div className="p-4 text-2xl font-bold">{data.value}</div>;
-}
-```
-
-### Actions
-
-```typescript
-// src/actions.ts — server-side functions callable from browser
-import { defineAction } from '@brika/sdk/actions';
-
-export const refresh = defineAction(async () => {
-  return fetchLatestData();
-});
-```
-
-## UI Components
-
-### Component Pattern
-
-```tsx
-import { useQuery } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button";
-import { fetchData } from "./api";
-
-export function MyComponent() {
-  const { data, isLoading } = useQuery({
-    queryKey: ["my-data"],
-    queryFn: fetchData,
-  });
-
-  if (isLoading) return <div>Loading...</div>;
-
-  return (
-    <div>
-      <h1>{data.title}</h1>
-      <Button onClick={() => {}}>Action</Button>
-    </div>
-  );
-}
-```
-
-### Feature Module Pattern
-
-```
-features/myfeature/
-├── index.ts           # Exports
-├── MyPage.tsx         # Main component
-├── api.ts             # API functions
-└── hooks.ts           # React Query hooks
-```
-
-## Don't
-
-* Don't use `console.log` in plugins (breaks IPC)
-* Don't use `any` without biome-ignore comment
-* Don't create abstractions for one-time operations
-* Don't add features beyond what's requested
-* Don't import hub code in plugins or vice versa
-* Don't add backward compatibility shims — just change the code
-
-## Versioning
-
-BRIKA prioritizes clean code over backward compatibility:
-
-* **Do** use semantic versioning
-* **Do** delete old code completely
-* **Do** bump major version for breaking changes
-* **Don't** add deprecated functions
-* **Don't** add feature flags for old behavior
+* **[Development Setup](development.md)** — running the trio locally.
+* **[Testing](testing.md)** — test patterns.
+* **[Release Process](release.md)** — what happens after the trio passes.

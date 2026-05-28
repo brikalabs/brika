@@ -1,125 +1,82 @@
-# BRIKA
+# Brika
 
-A Bun-first home automation runtime. Write type-safe plugins, wire them into visual workflows, and build live dashboards — all from a single codebase.
+**Build. Run. Integrate. Keep Automating.**
 
-## Why BRIKA?
+Brika is a self-hosted automation hub that runs on your own hardware. It is a single binary that ships with a Bun runtime, supervises plugin processes, serves a React-based dashboard, and gives you a visual editor for wiring sensors, services, and actions into reactive workflows.
 
-Most home automation platforms force you to choose between power and simplicity. BRIKA gives you both: a visual block editor for automations and a full React-based brick system for dashboards, backed by an SDK that handles IPC, compilation, and hot reload so you can focus on your logic.
+This documentation covers everything from installing Brika on a Raspberry Pi to writing custom plugins, understanding the binary IPC protocol that links the hub to its child processes, and consuming the REST/SSE API from external tools.
 
-**Blocks** power workflows — reactive, type-safe data pipelines that connect triggers to actions.
-**Bricks** power dashboards — real React components rendered in the browser, fed by your plugin process.
+## What you can build
 
-## At a Glance
+* **Smart-home automation** — schedule lights, react to motion sensors, glue together Matter, Zigbee, and HTTP-only devices.
+* **Live dashboards** — pin React-rendered cards (we call them *bricks*) to boards that update in real time as data arrives from your plugins.
+* **Personal integrations** — call Spotify, fetch weather, scrape a page on a cron, post to Slack — all in type-safe TypeScript plugins.
+* **Anything reactive** — every workflow node is a typed stream; pipe, debounce, throttle, switch, combine.
 
-```tsx
-// Plugin process (Bun) — fetch data, push to dashboard
-import { setBrickData, onInit, defineSharedStore } from '@brika/sdk';
+## The 60-second tour
 
-const weather = defineSharedStore<WeatherData | null>(null);
-
-onInit(async () => {
-  weather.set(await fetchWeather('Zurich'));
-});
-
-weather.subscribe(() => {
-  const data = weather.get();
-  if (data) setBrickData('current', data);
-});
+```sh
+curl -fsSL https://brika.dev/install.sh | bash
+brika start --open
 ```
 
-```tsx
-// Browser component — renders on the dashboard
-import { useBrickData } from '@brika/sdk/brick-views';
+You now have a hub listening on `127.0.0.1:3001` with a web UI in your browser. Open **Plugins → Registry** and install `@brika/plugin-weather`.
 
-export default function CurrentWeather() {
-  const data = useBrickData<WeatherData>();
-  if (!data) return <div className="p-4 text-muted-foreground">Loading...</div>;
+Then open the **Workflows** page, drag the `weather.current` block onto the canvas, connect its `temperature` output to a `condition` block, and wire the *true* branch into a `notify` action. Save. Done — the workflow runs whenever the weather block emits.
 
-  return (
-    <div className="p-4" style={{ background: data.gradient }}>
-      <span className="text-3xl font-bold text-white">{data.temperature}°C</span>
-    </div>
-  );
-}
+Want to see live data? Open the **Boards** page, create a board, drop a `weather.current` brick onto the grid. The brick is a React component running in your browser, fed by the weather plugin process over a shared SSE channel.
+
+## Two primitives
+
+Every plugin contributes some combination of these:
+
+| Primitive | Where it runs | What it does |
+|---|---|---|
+| **Block** | Plugin process (Bun) | A typed node in a reactive workflow — inputs, outputs, config, side effects |
+| **Brick** | Your browser (React) | A dashboard component fed live data from the plugin process |
+| **Action** | Plugin process | An RPC the UI can call — read-only fetch or mutation |
+| **Spark** | Anywhere | A typed event published to a global bus |
+| **Page** | Your browser (React) | A full-screen UI route the plugin owns |
+
+Together they cover triggers, transforms, side effects, dashboards, and admin UIs. The [Core Concepts](basics/concepts.md) page maps each one to the underlying machinery.
+
+## How the documentation is organised
+
+* **[Basics](basics/getting-started.md)** — install Brika, start the hub, learn the vocabulary.
+* **[CLI & TUI](cli/overview.md)** — every `brika` command, every TUI screen, every environment variable.
+* **[Tutorials](tutorials/first-plugin.md)** — build a real plugin from `bun create brika` to a running brick on a board.
+* **[Plugin Development](plugins/overview.md)** — the `@brika/sdk` reference: blocks, bricks, lifecycle, sparks, stores, schema types.
+* **[Architecture](architecture/overview.md)** — how the hub, the compiler, the IPC channel, the reactive engine, and the brick host actually work. Read this if you are contributing.
+* **[HTTP API](api/overview.md)** — every REST endpoint and SSE stream exposed by the hub.
+* **[Contributing](contributing/development.md)** — develop, test, and release Brika itself.
+
+## Project layout
+
+Brika lives in a single monorepo under [github.com/brikalabs/brika](https://github.com/brikalabs/brika):
+
 ```
-
-## Key Features
-
-| Feature | Description |
-|---------|-------------|
-| **Reactive Blocks** | Type-safe workflow nodes with Zod schemas and composable stream operators |
-| **Client-Rendered Bricks** | Dashboard components written as real React, compiled to browser ESM with scoped Tailwind |
-| **Plugin Isolation** | Each plugin runs in a separate Bun process — crash one, the rest keep running |
-| **Visual Editor** | Drag-and-drop workflow builder powered by React Flow |
-| **Build-Time Compilation** | `@brika/compiler` handles externals, action IDs, and content-hashed caching |
-| **Typed Actions** | Define server-side functions, call them from the browser — IDs auto-generated at build time |
-
-## Quick Start
-
-```bash
-# Clone and install
-git clone https://github.com/brikalabs/brika.git
-cd brika
-bun install
-
-# Start development
-bun run dev
+apps/
+  hub/         Bun server — REST/SSE API, plugin supervisor, workflow runtime
+  ui/          React frontend — TanStack Router, brick rendering host
+  console/     The `brika` CLI + Brix-based TUI dashboard
+  build/       Binary build orchestration (Bun.build → compile)
+  signaling/   Cloudflare Worker for remote access (peer brokering)
+  docs/        These docs (GitBook)
+packages/
+  sdk/         The @brika/sdk plugin authors consume
+  compiler/    Build-time transforms (externals rewrite, action IDs, Tailwind)
+  flow/        Reactive stream engine
+  ipc/         Binary IPC protocol
+  schema/      Zod → JSON Schema
+  …            See contributing/repo-structure.md for the full list
+plugins/
+  blocks-builtin/   Core blocks: condition, delay, log, …
+  timer/ weather/ matter/ spotify/ …  First-party plugins
 ```
-
-* **UI**: http://localhost:5173
-* **API**: http://localhost:3001/api/health
-
-### Create a Plugin
-
-```bash
-bun create brika my-plugin
-```
-
-Interactive CLI scaffolds a complete plugin with TypeScript config, block/brick templates, and i18n.
-
-### Docker
-
-```bash
-docker run -d \
-  --pull=always \
-  --name brika \
-  -p 3001:3001 \
-  -v ./config:/app/.brika \
-  ghcr.io/brikalabs/brika:latest
-```
-
-UI and API available at http://localhost:3001.
-
-## Platform
-
-| Component | Role |
-|-----------|------|
-| **Hub** | Bun runtime — manages plugins, workflows, and the REST/SSE API |
-| **UI** | React frontend — visual editor, dashboard, plugin management |
-| **SDK** | Plugin development kit — blocks, bricks, actions, stores, lifecycle |
-| **Compiler** | Build-time tooling — compiles brick modules, injects action IDs, validates manifests |
-| **Plugins** | Isolated Bun processes that provide blocks and bricks |
-
-## Tech Stack
-
-| Layer | Stack |
-|-------|-------|
-| Runtime | Bun, TypeScript, Zod v4 |
-| Frontend | React, Vite, TanStack Router/Query |
-| UI | shadcn/ui, Tailwind CSS v4, React Flow |
-| Compiler | @brika/compiler (Bun.build) |
-| IPC | Custom binary protocol |
-
-## What's Next
-
-* [Getting Started](basics/getting-started.md) — Set up your development environment
-* [Create Your First Plugin](plugins/create-plugin.md) — Build a reactive block
-* [Bricks](plugins/bricks.md) — Build client-rendered dashboard components
-* [SDK Reference](api-reference/sdk.md) — Explore the full API
-* [Architecture](architecture/overview.md) — Understand the system design
 
 ## Links
 
-* [Documentation](https://docs.brika.dev)
-* [GitHub](https://github.com/brikalabs/brika)
-* [Docker Image](https://github.com/brikalabs/brika/pkgs/container/brika)
+* **Source** — [github.com/brikalabs/brika](https://github.com/brikalabs/brika)
+* **Docker image** — `ghcr.io/brikalabs/brika`
+* **Registry** — install plugins from the **Plugins → Registry** tab in the web UI or TUI
+* **License** — [MIT](https://github.com/brikalabs/brika/blob/main/LICENSE)
