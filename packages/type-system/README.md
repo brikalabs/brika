@@ -30,3 +30,9 @@ isAssignableTo(b, a); // false — going the other way would lose units
 - **Nominal where it matters, structural where it helps.** Semantic primitives are nominal (you can't pass watts to a port expecting volts), but composite shapes are structural.
 - **Forward-compatible.** Unknown type kinds round-trip unchanged so a newer plugin can declare a port type the hub doesn't recognize yet without breaking the manifest.
 - **One source of truth.** Every consumer — the hub, the workflow editor, the plugin SDK — re-exports from this package.
+
+## Related
+
+- [`@brika/plugin`](../plugin/) — uses `arePortTypesCompatible` for manifest validation.
+- [`@brika/sdk`](../sdk/) — re-exports the `PortType` vocabulary for plugin authors.
+- [Schema types reference](https://docs.brika.dev/api-reference/schema-types) — exhaustive list of built-in semantic primitives.
