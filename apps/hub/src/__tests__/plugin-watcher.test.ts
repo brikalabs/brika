@@ -10,7 +10,7 @@ import { join } from 'node:path';
 import { get, provide, stub, useTestBed } from '@brika/di/testing';
 import { Logger } from '@/runtime/logs/log-router';
 import { PluginWatcher } from '@/runtime/plugins/plugin-watcher';
-import { sleep, waitFor } from './_test-helpers';
+import { sleep, waitFor } from '@brika/testing';
 
 useTestBed();
 

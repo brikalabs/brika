@@ -5,7 +5,7 @@ import { HubConfig } from '@/runtime/config';
 import { PluginActions, SparkActions } from '@/runtime/events/actions';
 import { EventSystem } from '@/runtime/events/event-system';
 import { Logger } from '@/runtime/logs/log-router';
-import { waitFor } from './_test-helpers';
+import { waitFor } from '@brika/testing';
 
 useTestBed({
   autoStub: false,

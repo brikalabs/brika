@@ -23,7 +23,7 @@ import { PluginResolver } from '@/runtime/plugins/plugin-resolver';
 import { SecretStore } from '@/runtime/secrets/secret-store';
 import { StateStore } from '@/runtime/state/state-store';
 import { type BunSecretsMock, installBunSecretsMock } from './_bun-secrets-mock';
-import { sleep, waitFor } from './_test-helpers';
+import { sleep, waitFor } from '@brika/testing';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Capture variables for mock.module callbacks

@@ -33,7 +33,7 @@ import {
   type PluginProcessCallbacks,
   type PluginProcessConfig,
 } from '@/runtime/plugins/plugin-process';
-import { sleep, waitFor } from './_test-helpers';
+import { sleep, waitFor } from '@brika/testing';
 
 describe('PluginProcess', () => {
   let process: PluginProcess;

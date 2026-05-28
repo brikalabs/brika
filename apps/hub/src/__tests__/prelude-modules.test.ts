@@ -41,7 +41,7 @@ import { setupLifecycle } from '@/runtime/plugins/prelude/lifecycle';
 import { setupLocation } from '@/runtime/plugins/prelude/location';
 import { setupRoutes } from '@/runtime/plugins/prelude/routes';
 import { setupSparks } from '@/runtime/plugins/prelude/sparks';
-import { waitFor } from './_test-helpers';
+import { waitFor } from '@brika/testing';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 

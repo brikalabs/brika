@@ -12,7 +12,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { TranslationRegistry } from '@brika/i18n';
 import { LocaleWatcher } from '@/runtime/i18n/i18n-watcher';
-import { waitFor } from './_test-helpers';
+import { waitFor } from '@brika/testing';
 import { FsWatchMock } from './fs-watch-mock';
 
 const TEST_DEBOUNCE_MS = 20;

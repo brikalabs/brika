@@ -12,7 +12,7 @@ import { Logger } from '@/runtime/logs/log-router';
 import type { Workflow } from '@/runtime/workflows/types';
 import { WorkflowEngine } from '@/runtime/workflows/workflow-engine';
 import { WorkflowLoader } from '@/runtime/workflows/workflow-loader';
-import { sleep, waitFor } from './_test-helpers';
+import { sleep, waitFor } from '@brika/testing';
 import { FsWatchMock } from './fs-watch-mock';
 
 useTestBed({

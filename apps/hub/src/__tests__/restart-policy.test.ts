@@ -4,7 +4,7 @@
 
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { RestartPolicy } from '@/runtime/plugins/restart-policy';
-import { sleep, waitFor } from './_test-helpers';
+import { sleep, waitFor } from '@brika/testing';
 
 describe('RestartPolicy', () => {
   let policy: RestartPolicy;

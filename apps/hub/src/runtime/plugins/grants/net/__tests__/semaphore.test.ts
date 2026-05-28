@@ -5,7 +5,7 @@
  */
 
 import { describe, expect, test } from 'bun:test';
-import { sleep } from '../../../../../__tests__/_test-helpers';
+import { sleep } from '@brika/testing';
 import { ConcurrencyLimiter } from '../semaphore';
 
 describe('ConcurrencyLimiter', () => {

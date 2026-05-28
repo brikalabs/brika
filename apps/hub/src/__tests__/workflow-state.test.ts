@@ -14,7 +14,7 @@ import { PluginManager } from '@/runtime/plugins/plugin-manager';
 import type { Workflow } from '@/runtime/workflows/types';
 import { WorkflowEngine } from '@/runtime/workflows/workflow-engine';
 import type { ExecutionEvent } from '@/runtime/workflows/workflow-executor';
-import { waitFor } from './_test-helpers';
+import { waitFor } from '@brika/testing';
 
 useTestBed({
   autoStub: false,

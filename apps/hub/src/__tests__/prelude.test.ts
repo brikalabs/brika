@@ -11,7 +11,7 @@ import { afterEach, describe, expect, setDefaultTimeout, test } from 'bun:test';
 setDefaultTimeout(30_000);
 
 import { join } from 'node:path';
-import { sleep } from './_test-helpers';
+import { sleep } from '@brika/testing';
 
 const BUN = process.execPath;
 const PRELUDE = join(import.meta.dir, '../runtime/plugins/prelude/index.ts');

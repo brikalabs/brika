@@ -32,7 +32,7 @@ import { Logger } from '@/runtime/logs/log-router';
 import type { Workflow } from '@/runtime/workflows/types';
 import { WorkflowEngine } from '@/runtime/workflows/workflow-engine';
 import { WorkflowLoader } from '@/runtime/workflows/workflow-loader';
-import { sleep } from './_test-helpers';
+import { sleep } from '@brika/testing';
 
 useTestBed({
   autoStub: false,

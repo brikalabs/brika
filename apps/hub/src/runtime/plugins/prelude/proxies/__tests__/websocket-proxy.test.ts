@@ -10,7 +10,7 @@
 import { afterEach, describe, expect, test } from 'bun:test';
 import { Channel, type WireMessage } from '@brika/ipc';
 import { grantRequest, type StreamEventType, streamEvent } from '@brika/ipc/contract';
-import { flush, waitFor } from '../../../../../__tests__/_test-helpers';
+import { flush, waitFor } from '@brika/testing';
 import { buildWebSocketProxy } from '../websocket-proxy';
 
 type ConnectArgs = { url: string; protocols?: string[] };
