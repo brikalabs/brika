@@ -10,3 +10,7 @@ coverageSkipSourceFiles = [
   "**/node_modules/**/*",
   "**/*.d.ts"
 ]
+# Floor enforced in CI. Lift gradually as packages add coverage —
+# see TESTING.md for the policy and the list of packages exempted
+# from the global gate (apps/ui, apps/docs).
+coverageThreshold = 0.70
