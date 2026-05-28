@@ -4,10 +4,10 @@
 
 import { describe, expect, mock, test } from 'bun:test';
 import { waitFor } from '@brika/testing';
+import { createTestFlow, createValueCollector, wait } from './fixtures';
 import { FlowImpl } from './flow';
 import { combinatorFlow, ensureFlowImpl, operatorFlow, subscribeRaw } from './internal';
 import type { Flow } from './types';
-import { createTestFlow, createValueCollector, wait } from './fixtures';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ensureFlowImpl Tests

@@ -6,6 +6,7 @@ import 'reflect-metadata';
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { get, provide, reset, stub, useTestBed } from '@brika/di/testing';
 import type { BlockDefinition } from '@brika/sdk';
+import { waitFor } from '@brika/testing';
 import { BlockRegistry } from '@/runtime/blocks/block-registry';
 import { EventSystem } from '@/runtime/events/event-system';
 import { Logger } from '@/runtime/logs/log-router';
@@ -14,7 +15,6 @@ import { PluginManager } from '@/runtime/plugins/plugin-manager';
 import type { Workflow } from '@/runtime/workflows/types';
 import { WorkflowEngine } from '@/runtime/workflows/workflow-engine';
 import type { ExecutionEvent } from '@/runtime/workflows/workflow-executor';
-import { waitFor } from '@brika/testing';
 
 useTestBed({
   autoStub: false,

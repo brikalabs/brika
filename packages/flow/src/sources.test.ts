@@ -3,8 +3,8 @@
  */
 
 import { describe, expect, test } from 'bun:test';
-import { interval, isSource, timer } from './sources';
 import { wait } from './fixtures';
+import { interval, isSource, timer } from './sources';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // isSource Tests

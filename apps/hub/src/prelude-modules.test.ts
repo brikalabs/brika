@@ -34,6 +34,7 @@ import {
   updateBrickConfig,
   updatePreference,
 } from '@brika/ipc/contract';
+import { waitFor } from '@brika/testing';
 import { setupActions } from '@/runtime/plugins/prelude/actions';
 import { type RegisterBlockSpec, setupBlocks } from '@/runtime/plugins/prelude/blocks';
 import { setupBricks } from '@/runtime/plugins/prelude/bricks';
@@ -41,7 +42,6 @@ import { setupLifecycle } from '@/runtime/plugins/prelude/lifecycle';
 import { setupLocation } from '@/runtime/plugins/prelude/location';
 import { setupRoutes } from '@/runtime/plugins/prelude/routes';
 import { setupSparks } from '@/runtime/plugins/prelude/sparks';
-import { waitFor } from '@brika/testing';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 

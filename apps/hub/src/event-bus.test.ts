@@ -1,11 +1,11 @@
 import 'reflect-metadata';
 import { beforeEach, describe, expect, it, mock } from 'bun:test';
 import { get, provide, stub, useTestBed } from '@brika/di/testing';
+import { waitFor } from '@brika/testing';
 import { HubConfig } from '@/runtime/config';
 import { PluginActions, SparkActions } from '@/runtime/events/actions';
 import { EventSystem } from '@/runtime/events/event-system';
 import { Logger } from '@/runtime/logs/log-router';
-import { waitFor } from '@brika/testing';
 
 useTestBed({
   autoStub: false,

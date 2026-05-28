@@ -4,9 +4,9 @@
 
 import { beforeEach, describe, expect, mock, spyOn, test } from 'bun:test';
 import { flush, waitFor } from '@brika/testing';
+import { createMockEmitter, createTestFlow, createValueCollector } from './fixtures';
 import { CleanupRegistry, createFlow, FlowImpl } from './flow';
 import { filter, map } from './operators';
-import { createMockEmitter, createTestFlow, createValueCollector } from './fixtures';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CleanupRegistry Tests

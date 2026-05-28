@@ -28,12 +28,12 @@ import {
 } from '@brika/ipc/contract';
 import type { PluginHealth } from '@brika/plugin';
 import type { PluginPackageSchema } from '@brika/schema';
+import { sleep, waitFor } from '@brika/testing';
 import {
   PluginProcess,
   type PluginProcessCallbacks,
   type PluginProcessConfig,
 } from '@/runtime/plugins/plugin-process';
-import { sleep, waitFor } from '@brika/testing';
 
 describe('PluginProcess', () => {
   let process: PluginProcess;

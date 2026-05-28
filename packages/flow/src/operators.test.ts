@@ -3,6 +3,7 @@
  */
 
 import { describe, expect, mock, test } from 'bun:test';
+import { createTestFlow, createValueCollector, wait } from './fixtures';
 import {
   buffer,
   debounce,
@@ -19,7 +20,6 @@ import {
   tap,
   throttle,
 } from './operators';
-import { createTestFlow, createValueCollector, wait } from './fixtures';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Transform Operators

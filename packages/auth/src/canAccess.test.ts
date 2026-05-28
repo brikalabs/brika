@@ -3,12 +3,7 @@
  */
 
 import { describe, expect, it } from 'bun:test';
-import {
-  canAccess,
-  canAccessAll,
-  createPermissionChecker,
-  Features,
-} from './middleware/canAccess';
+import { canAccess, canAccessAll, createPermissionChecker, Features } from './middleware/canAccess';
 import { Role, Scope } from './types';
 
 describe('canAccess', () => {

@@ -2,8 +2,8 @@ import { describe, expect, test } from 'bun:test';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { isRecord, readDependencyVersion, verifyPlugin } from './verify-plugin';
 import { runCli } from './helpers/run-cli';
+import { isRecord, readDependencyVersion, verifyPlugin } from './verify-plugin';
 
 const VERIFY_SCRIPT = join(import.meta.dir, 'verify.ts');
 // SDK version read from its own package.json — keep in sync

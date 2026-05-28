@@ -9,6 +9,7 @@
 import 'reflect-metadata';
 import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from 'bun:test';
 import { get, provide, stub, useTestBed } from '@brika/di/testing';
+import { sleep, waitFor } from '@brika/testing';
 import { PluginManagerConfig } from '@/runtime/config';
 import { brikaContext } from '@/runtime/context/brika-context';
 import { EventSystem } from '@/runtime/events/event-system';
@@ -23,7 +24,6 @@ import { PluginResolver } from '@/runtime/plugins/plugin-resolver';
 import { SecretStore } from '@/runtime/secrets/secret-store';
 import { StateStore } from '@/runtime/state/state-store';
 import { type BunSecretsMock, installBunSecretsMock } from './_bun-secrets-mock';
-import { sleep, waitFor } from '@brika/testing';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Capture variables for mock.module callbacks

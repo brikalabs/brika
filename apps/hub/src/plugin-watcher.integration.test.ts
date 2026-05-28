@@ -8,9 +8,9 @@ import { mkdir, mkdtemp, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { get, provide, stub, useTestBed } from '@brika/di/testing';
+import { sleep, waitFor } from '@brika/testing';
 import { Logger } from '@/runtime/logs/log-router';
 import { PluginWatcher } from '@/runtime/plugins/plugin-watcher';
-import { sleep, waitFor } from '@brika/testing';
 
 useTestBed();
 

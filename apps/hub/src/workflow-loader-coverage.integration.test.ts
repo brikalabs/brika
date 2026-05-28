@@ -27,12 +27,12 @@ import { afterEach, beforeEach, describe, expect, it, mock } from 'bun:test';
 import { rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { get, provide, reset, stub, useTestBed } from '@brika/di/testing';
+import { sleep } from '@brika/testing';
 import { BlockRegistry } from '@/runtime/blocks/block-registry';
 import { Logger } from '@/runtime/logs/log-router';
 import type { Workflow } from '@/runtime/workflows/types';
 import { WorkflowEngine } from '@/runtime/workflows/workflow-engine';
 import { WorkflowLoader } from '@/runtime/workflows/workflow-loader';
-import { sleep } from '@brika/testing';
 
 useTestBed({
   autoStub: false,
