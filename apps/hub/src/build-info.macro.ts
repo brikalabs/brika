@@ -11,6 +11,28 @@ import { z } from 'zod';
 
 const PackageJsonSchema = z.object({ version: z.string().min(1) });
 
+const REF_PREFIX = 'ref: ';
+const REFS_HEADS_PREFIX = 'refs/heads/';
+const SHA_LENGTH = 40;
+
+/**
+ * True if `s` is a 40-char lowercase hex string.
+ *
+ * Exported for unit tests — internal callers don't import it.
+ */
+export function isFullSha(s: string): boolean {
+  if (s.length !== SHA_LENGTH) {
+    return false;
+  }
+  for (let i = 0; i < SHA_LENGTH; i++) {
+    const c = s.codePointAt(i);
+    if (c === undefined || !((c >= 48 && c <= 57) || (c >= 97 && c <= 102))) {
+      return false;
+    }
+  }
+  return true;
+}
+
 /**
  * Resolve git HEAD by reading `.git/HEAD` directly — no `git` subprocess,
  * no `.git/index.lock` contention. Spawning git from inside a Bun macro
@@ -30,28 +52,47 @@ const PackageJsonSchema = z.object({ version: z.string().min(1) });
  *   - anything else: 'unknown'
  */
 function resolveHead(): { branch: string; commit: string } {
+  const gitDir = findGitDir();
+  if (!gitDir) {
+    return { branch: 'unknown', commit: 'unknown' };
+  }
+  return resolveHeadAt(gitDir);
+}
+
+/**
+ * Read HEAD from the given git directory and resolve it to a
+ * `{ branch, commit }` pair. Pure I/O on a single directory — separated
+ * from `resolveHead()` (which goes through `findGitDir()`) so unit tests
+ * can point it at a temp `.git` layout.
+ *
+ * Uses a string-prefix check (`startsWith('ref: ')`) instead of a regex
+ * to sidestep SonarCloud's ReDoS hotspot: git always writes the ref
+ * separator as a single space (`write-ref.c::write_ref_to_lockfile`),
+ * and branch names cannot contain whitespace (`refs.c`), so the strict
+ * slice is correct.
+ */
+export function resolveHeadAt(gitDir: string): { branch: string; commit: string } {
   try {
-    const gitDir = findGitDir();
-    if (!gitDir) {
-      return { branch: 'unknown', commit: 'unknown' };
-    }
     const head = readFileSync(join(gitDir, 'HEAD'), 'utf8').trim();
-    const refMatch = /^ref:\s+(.+)$/.exec(head);
-    if (!refMatch?.[1]) {
-      return /^[0-9a-f]{40}$/i.test(head)
-        ? { branch: 'HEAD', commit: head }
-        : { branch: 'unknown', commit: 'unknown' };
+    if (head.startsWith(REF_PREFIX)) {
+      const ref = head.slice(REF_PREFIX.length);
+      const branch = ref.startsWith(REFS_HEADS_PREFIX) ? ref.slice(REFS_HEADS_PREFIX.length) : ref;
+      return { branch, commit: resolveRef(gitDir, ref) };
     }
-    const ref = refMatch[1];
-    const branch = ref.replace(/^refs\/heads\//, '');
-    return { branch, commit: resolveRef(gitDir, ref) };
+    if (isFullSha(head)) {
+      return { branch: 'HEAD', commit: head };
+    }
+    return { branch: 'unknown', commit: 'unknown' };
   } catch {
     return { branch: 'unknown', commit: 'unknown' };
   }
 }
 
-/** Resolve a ref name to a SHA via loose file → packed-refs fallback. */
-function resolveRef(gitDir: string, ref: string): string {
+/**
+ * Resolve a ref name to a SHA via loose file → packed-refs fallback.
+ * Exported for unit tests.
+ */
+export function resolveRef(gitDir: string, ref: string): string {
   const loose = join(gitDir, ref);
   if (existsSync(loose)) {
     return readFileSync(loose, 'utf8').trim();

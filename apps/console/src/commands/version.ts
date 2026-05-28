@@ -42,12 +42,26 @@ function writePlain(): void {
   process.stdout.write(`${plainLines().join('\n')}\n`);
 }
 
-function writeJson(): void {
+/**
+ * Single-line payload emitted by `brika version --json`. Consumed by the
+ * installer/uninstaller scripts to detect an existing install before
+ * upgrading. Kept tight: `commit` is the 7-char short SHA; callers that
+ * want the full SHA can invoke the build-info accessor directly.
+ *
+ * Exported so the contract is unit-testable without spawning the CLI.
+ */
+export function getVersionJsonPayload(): {
+  version: string;
+  commit: string | null;
+  commitDate: string | null;
+  branch: string | null;
+  buildTime: string | null;
+  bun: string;
+  platform: string;
+  arch: string;
+} {
   const b = readBuildInfo();
-  // Keep the JSON shape tight — only fields actual consumers read. `commit` is
-  // the 7-char short SHA; callers that want the full SHA can call `git
-  // rev-parse` against the matching tag or invoke the build-info accessor.
-  const payload = {
+  return {
     version: CLI_VERSION,
     commit: b.commit,
     commitDate: b.commitDate,
@@ -57,7 +71,10 @@ function writeJson(): void {
     platform: process.platform,
     arch: process.arch,
   };
-  process.stdout.write(`${JSON.stringify(payload)}\n`);
+}
+
+function writeJson(): void {
+  process.stdout.write(`${JSON.stringify(getVersionJsonPayload())}\n`);
 }
 
 export default defineCommand({
