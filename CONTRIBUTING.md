@@ -113,12 +113,16 @@ fix(ui): correct dashboard layout overflow
 
 ### Tests
 
-- Write tests alongside your changes
-- Place test files next to the source (`*.test.ts`)
-- Run tests with:
-  ```bash
-  bun test
-  ```
+See [TESTING.md](TESTING.md) for the full guide — runner, file placement,
+suffix conventions (`.test.ts` vs `.integration.test.ts`), shared helpers
+in `@brika/testing`, and the coverage gate.
+
+Short version:
+
+- Write tests alongside the source (colocated, `*.test.ts`).
+- Use `*.integration.test.ts` for tests that hit real fs / IPC / sqlite / subprocess.
+- Reach for [`@brika/testing`](packages/testing) before hand-rolling mocks.
+- Run `bun test` locally before pushing.
 
 ## Reporting Issues
 
