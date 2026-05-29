@@ -157,12 +157,13 @@ describe('ctx (lazy proxy)', () => {
  */
 describe('installVector (in-process, terminal — locks the slot)', () => {
   test('rejects non-vector inputs with a clear TypeError', () => {
-    // `installVector`'s parameter is structurally compatible with `unknown`
-    // (any object satisfies `GrantVector` at the type level until Zod parse),
-    // so we can pass deliberately invalid shapes through it directly.
-    const installLoose: (v: unknown) => void = installVector;
-    expect(() => installLoose(null)).toThrow(/installVector: expected/);
-    expect(() => installLoose({ grants: 'no' })).toThrow(/installVector: expected/);
+    // We deliberately pass invalid shapes to exercise the runtime guard —
+    // the static signature wants a GrantVector, but the test is here to
+    // prove the runtime check fires before the type assumption matters.
+    // @ts-expect-error — null is not a valid GrantVector
+    expect(() => installVector(null)).toThrow(/installVector: expected/);
+    // @ts-expect-error — `grants: 'no'` violates GrantVector
+    expect(() => installVector({ grants: 'no' })).toThrow(/installVector: expected/);
   });
 
   test('a valid vector becomes branded + readable; a second install throws', () => {
