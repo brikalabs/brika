@@ -40,6 +40,17 @@ describe('ScopeService', () => {
       const result = service.validateScopes(['not-a-scope', 'also-invalid']);
       expect(result).toEqual([]);
     });
+
+    it('should return empty array when the input is not an array', () => {
+      // The service accepts `unknown[]` at the type level, but callers can
+      // pass non-array values (e.g. when DB JSON parsing yields a string).
+      // We narrow that case to `[]` rather than throwing. We reach the
+      // non-array branch by going through @ts-expect-error rather than a
+      // type cast — see MEMORY.md (no `as` / `any`).
+      // @ts-expect-error -- exercising the runtime guard for non-array input
+      const result = service.validateScopes('oops');
+      expect(result).toEqual([]);
+    });
   });
 
   describe('getScopesForRole', () => {
