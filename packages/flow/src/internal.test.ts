@@ -446,4 +446,56 @@ describe('combinatorFlow', () => {
     await waitFor(() => values.length > 0);
     expect(values).toEqual([42]);
   });
+
+  test('combinatorFlow result exposes a working internal setTimeoutFn', async () => {
+    // The combinator-created FlowImpl carries an internal setTimeout closure.
+    // Reach it by piping through operatorFlow, which calls the underlying
+    // FlowImpl's setTimeout — the only way to exercise that closure from the
+    // outside.
+    const { values, subscriber } = createValueCollector<number>();
+    const { flow: trigger } = createTestFlow<number>();
+
+    const combined = combinatorFlow<number>(({ push }) => {
+      trigger.on((v) => push(v));
+    });
+
+    const delayed = operatorFlow<number, number>(combined, ({ subscribe, push, setTimeout }) => {
+      subscribe((v) => {
+        setTimeout(() => push(v), 5);
+      });
+    });
+    delayed.on(subscriber);
+
+    trigger.push(7);
+
+    await waitFor(() => values.length > 0);
+    expect(values).toEqual([7]);
+  });
+
+  test('combinatorFlow internal setTimeoutFn returns a cancel handle', async () => {
+    // Same path as above, but cancel before the timer fires to exercise the
+    // returned `() => clearTimeout(timerId)` arm of the closure.
+    const { values, subscriber } = createValueCollector<number>();
+    const { flow: trigger } = createTestFlow<number>();
+
+    const combined = combinatorFlow<number>(({ push }) => {
+      trigger.on((v) => push(v));
+    });
+
+    const cancels: Array<() => void> = [];
+    const delayed = operatorFlow<number, number>(combined, ({ subscribe, push, setTimeout }) => {
+      subscribe((v) => {
+        cancels.push(setTimeout(() => push(v), 30));
+      });
+    });
+    delayed.on(subscriber);
+
+    trigger.push(99);
+    for (const cancel of cancels) {
+      cancel();
+    }
+
+    await wait(60);
+    expect(values).toEqual([]);
+  });
 });
