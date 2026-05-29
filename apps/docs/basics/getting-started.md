@@ -1,108 +1,78 @@
 # Getting Started
 
-This guide will help you set up BRIKA for local development.
+Brika is a self-hosted automation hub. You install it once, point it at the integrations you care about (smart-home devices, web APIs, your own services), and then build reactive workflows and live dashboards that wire those integrations together.
 
-## Prerequisites
+This page walks you through the three things you need to be productive: installing the hub, starting it, and getting a feel for what each piece of the UI does. If you already have a Brika installation, skip to [Core Concepts](concepts.md).
 
-* [Bun](https://bun.sh/) 1.0 or later
-* [Node.js](https://nodejs.org/) 18+ (for some tooling)
-* Git
+## 1. Install Brika
 
-## Installation
+The fastest way is the installer. It downloads a single statically-linked binary into `~/.brika/bin/` (or `%LOCALAPPDATA%\brika\bin\` on Windows) and bundles Bun, so you do not need Node.js or Bun installed separately.
 
-### Clone the Repository
+```sh
+# macOS / Linux
+curl -fsSL https://brika.dev/install.sh | bash
 
-```bash
-git clone https://github.com/brikalabs/brika.git
-cd brika
+# Windows (PowerShell)
+iwr -useb https://brika.dev/install.ps1 | iex
 ```
 
-### Install Dependencies
+If you would rather run Brika in Docker, pull the image directly:
 
-```bash
-bun install
-```
-
-This installs all dependencies for the monorepo, including apps, packages, and plugins.
-
-### Start Development
-
-```bash
-bun run dev
-```
-
-This starts both the Hub (API server) and UI (frontend) in development mode:
-
-* **UI**: http://localhost:5173
-* **API**: http://localhost:3001
-
-### Run Individual Apps
-
-```bash
-# Hub only
-bun run dev:hub
-
-# UI only
-bun run dev:ui
-```
-
-## Docker Setup
-
-For production or quick testing, use Docker:
-
-```bash
-docker run -d \
-  --pull=always \
-  --name brika \
-  -p 3001:3001 \
+```sh
+docker run -d --pull=always -p 3001:3001 \
   -v ./config:/app/.brika \
-  ghcr.io/brikalabs/brika:latest
+  --name brika ghcr.io/brikalabs/brika
 ```
 
-### Docker Compose
+[Installation](installation.md) covers every option (package managers, building from source, signed releases, version pinning).
 
-```yaml
-services:
-  brika:
-    image: ghcr.io/brikalabs/brika:latest
-    pull_policy: always
-    container_name: brika
-    restart: unless-stopped
-    ports:
-      - "3001:3001"
-    volumes:
-      - ./config:/app/.brika
+## 2. Start the hub
+
+```sh
+brika start --open
 ```
 
-```bash
-docker compose up -d
+This starts the hub in the background and opens the web UI in your default browser. The hub listens on `127.0.0.1:3001` by default. The first time you start Brika in a directory it creates a `.brika/` folder containing your configuration, installed plugins, log files, and persistent state — see [The .brika Directory](data-directory.md).
+
+To stop the hub:
+
+```sh
+brika stop
 ```
 
-## Running Tests
+To check whether it is running:
 
-```bash
-# Run all tests
-bun test
-
-# Watch mode
-bun test --watch
-
-# Specific directory
-bun test apps/hub
+```sh
+brika status
 ```
 
-## Create Your First Plugin
+Behind the scenes `brika start` claims a PID lockfile (`.brika/brika.pid`). Trying to start a second hub in the same directory is rejected with a clear error — see [Plugin Supervisor](../architecture/plugin-supervisor.md) for the full lifecycle.
 
-The fastest way to create a new plugin:
+## 3. Tour the UI
 
-```bash
-bun create brika my-plugin
-```
+When the UI loads the first time it walks you through a setup flow (create an admin user, pick a timezone and approximate location). After that the sidebar shows you everything Brika can do:
 
-This interactive CLI scaffolds a complete plugin with TypeScript configuration, block definitions, and i18n support.
+| Section | What lives there |
+|---|---|
+| **Dashboard** | Overview: hub health, running plugins, recent activity |
+| **Boards** | Drag-and-drop grids of *bricks* — your live dashboard |
+| **Workflows** | Visual editor for reactive workflows built from *blocks* |
+| **Plugins** | Installed plugins, plus the registry for installing more |
+| **Sparks** | Typed event bus — emit and subscribe to events across plugins |
+| **Logs** | Live log stream, filterable by plugin, level, and source |
+| **Settings** | Auth users, themes, location, remote access |
 
-## Next Steps
+## 4. Install your first plugin
 
-* [Quick Setup](quick-setup.md) — Fast-track checklist
-* [Project Structure](project-structure.md) — Understand the codebase
-* [Create a Plugin](../plugins/create-plugin.md) — Build your first plugin
+The hub ships with built-in blocks (condition, delay, log, …) but most useful integrations live in plugins published to the registry. Open the **Plugins → Registry** tab in the UI and install one — for example `@brika/plugin-timer`.
+
+Then open **Workflows**, drag a `timer` block onto the canvas, give it an interval of 5 seconds, connect its output to a `log` block, and click *Enable*. Watch the **Logs** page to see the timer fire.
+
+Plugins can also contribute **bricks** — dashboard cards. Open **Boards**, create a board, click *Add brick*, and pick one from a plugin that contributes them (the `weather` plugin is a good first taste).
+
+## What to read next
+
+* **[Core Concepts](concepts.md)** — the vocabulary you will see everywhere: blocks vs bricks, workflows vs boards, sparks, actions, pages.
+* **[The .brika Directory](data-directory.md)** — what is in `.brika/`, what is safe to back up, what regenerates.
+* **[Build Your First Plugin](../tutorials/first-plugin.md)** — end-to-end tutorial to scaffold, write, and install a real plugin.
+* **[Architecture Overview](../architecture/overview.md)** — if you want to understand how the hub actually works under the hood.

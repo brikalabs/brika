@@ -1,200 +1,124 @@
 # System Overview
 
-BRIKA is a Bun-first home automation runtime with reactive block-based visual workflows.
+Brika is a self-hosted hub plus a web UI plus N plugin processes, with a small set of well-defined protocols between them. This page walks the whole picture; the rest of the architecture chapter drills into each subsystem.
 
-## High-Level Architecture
-
-```mermaid
-flowchart TB
-    subgraph UI [UI - React]
-        Dashboard
-        PluginsUI[Plugins]
-        WorkflowEditor[Workflow Editor]
-    end
-
-    subgraph Hub [Hub - Bun]
-        APIServer[API Server]
-        EventBus[Event Bus]
-        WorkflowExecutor[Workflow Executor]
-        PluginManager[Plugin Manager]
-    end
-
-    subgraph Plugins [Plugins - Isolated Processes]
-        Timer[Timer Plugin]
-        Builtin[Builtin Blocks]
-        Custom[Custom Plugin]
-    end
-
-    UI -->|HTTP/SSE| Hub
-    Hub -->|Binary IPC| Plugins
-```
-
-## Core Components
-
-### Hub
-
-The central runtime that orchestrates everything:
-
-* **API Server** — REST API and SSE for real-time updates
-* **Event Bus** — Pub/sub messaging with glob patterns
-* **Workflow Executor** — Runs block-based automations
-* **Plugin Manager** — Loads and manages plugin processes
-
-**Key files:**
-
-* `apps/hub/src/main.ts` — Entry point
-* `apps/hub/src/runtime/http/api-server.ts` — API endpoints
-* `apps/hub/src/runtime/plugins/plugin-manager.ts` — Plugin loading
-* `apps/hub/src/runtime/workflows/workflow-executor.ts` — Workflow execution
-
-### UI
-
-React-based frontend with:
-
-* **Dashboard** — Overview and statistics
-* **Plugin Manager** — Browse and configure plugins
-* **Workflow Editor** — Visual block-based editor (React Flow)
-* **Logs Viewer** — Real-time log streaming
-
-**Key files:**
-
-* `apps/ui/src/main.tsx` — Entry point
-* `apps/ui/src/features/` — Feature modules
-
-### Plugins
-
-Isolated processes that provide blocks and bricks:
-
-* Run in separate Bun processes
-* Communicate via binary IPC
-* Define reactive blocks for workflows
-* Provide client-rendered bricks for dashboards
-* Access event bus for messaging
-
-**Key files:**
-
-* `packages/sdk/src/index.ts` — SDK exports
-* `packages/compiler/src/index.ts` — Build-time compilation
-* `plugins/*/src/index.tsx` — Plugin entry points
-* `plugins/*/src/bricks/*.tsx` — Client-rendered brick components
-
-## Data Flow
-
-### 1. Plugin Loading
-
-```mermaid
-flowchart TD
-    A[Hub starts] --> B[Plugin Manager reads brika.yml]
-    B --> C[For each plugin]
-    C --> D[Spawn Bun process]
-    C --> E[Establish IPC channel]
-    C --> F[Register blocks]
-    D & E & F --> G[Plugins ready]
-```
-
-### 2. Workflow Execution
-
-```mermaid
-flowchart TD
-    A[User creates workflow in UI] --> B[Workflow saved to workflows/*.yml]
-    B --> C[Workflow Executor loads workflow]
-    C --> D[Trigger: event, schedule, or manual]
-    D --> E[Instantiate blocks]
-    D --> F[Connect inputs/outputs]
-    D --> G[Execute reactive flow]
-    E & F & G --> H[Blocks process data]
-    H --> I[Results emitted to outputs]
-```
-
-### 3. Event Flow
-
-```mermaid
-flowchart TD
-    A[Plugin emits event] --> B[IPC message to Hub]
-    B --> C[Event Bus receives event]
-    C --> D[Match against subscriptions]
-    D --> E[Forward to matching subscribers]
-    E --> F[Subscribers handle event]
-```
-
-### 4. Brick Rendering
-
-Bricks are client-rendered — plugin processes push data, and the browser renders React components.
-
-```mermaid
-flowchart TD
-    A[Plugin process] -->|setBrickData| B[Hub BrickDataStore]
-    B -->|SSE push| C[Browser]
-    C --> D[ClientBrickView loads ESM module]
-    D --> E[useBrickData reads pushed data]
-    E --> F[React renders brick component]
-    G[User edits config] --> H[Hub notifies plugin]
-    H -->|onBrickConfigChange| A
-```
-
-**Build pipeline:**
-
-```mermaid
-flowchart LR
-    A[src/bricks/*.tsx] -->|Bun.build| B[ESM module]
-    B -->|externals plugin| C[Shared deps via globalThis.__brika]
-    B -->|actions plugin| D[Action stubs with __actionId]
-    C & D --> E[/api/bricks/id/module.js?hash=...]
-```
-
-## Communication Protocols
-
-### HTTP API
-
-RESTful API for CRUD operations:
+## Process model
 
 ```
-GET  /api/plugins        # List plugins
-GET  /api/workflows      # List workflows
-POST /api/workflows      # Create workflow
-GET  /api/health         # Health check
+┌──────────────────────────────────────────────────────────────────────┐
+│  Operator's machine                                                   │
+│                                                                       │
+│  ┌──────────────────────────────────────────────────────────────────┐ │
+│  │  Hub process (Bun, single process)                               │ │
+│  │                                                                  │ │
+│  │  HTTP/SSE server  ───  REST API  ───  Routes per resource        │ │
+│  │       │                                                          │ │
+│  │       │           ┌─ Workflow runtime  ─ block instances         │ │
+│  │       └─ Services ┼─ Board service     ─ brick instance configs  │ │
+│  │                   ├─ Plugin supervisor ─ spawn/heartbeat/restart │ │
+│  │                   ├─ Event bus         ─ sparks, system events   │ │
+│  │                   ├─ Module compiler   ─ brick/page bundles      │ │
+│  │                   ├─ Auth + scopes     ─ users, CLI tokens       │ │
+│  │                   ├─ Secret store      ─ keychain / encrypted    │ │
+│  │                   └─ State store       ─ Drizzle/SQLite + JSON   │ │
+│  └────────────────┬────────────────┬────────────────┬───────────────┘ │
+│                   │ IPC            │ IPC            │ IPC             │
+│              ┌────┴─────┐    ┌────┴─────┐    ┌────┴─────┐             │
+│              │  Plugin  │    │  Plugin  │    │  Plugin  │ …           │
+│              │  process │    │  process │    │  process │             │
+│              └──────────┘    └──────────┘    └──────────┘             │
+└──────────────────────────────────────────────────────────────────────┘
+              ▲ HTTP + SSE
+              │
+       ┌──────┴──────┐
+       │   Browser   │  React app — boards, workflows, plugin admin
+       └─────────────┘
 ```
 
-### SSE (Server-Sent Events)
+* **One hub process** owns the HTTP server, the workflow runtime, the supervisor, persistence, and authentication.
+* **One Bun subprocess per plugin** runs the plugin's blocks, sparks, actions, lifecycle hooks. The hub talks to each via Bun's structured-clone IPC channel.
+* **One browser-side React app** renders boards and the workflow editor. Bricks and pages are bundled per-plugin by the [compiler](compiler.md) and dynamically imported by the host UI on demand.
 
-Real-time streaming for:
+There is no daemon manager, no separate orchestrator. The hub is the only long-running Brika process; it spawns and reaps everything else.
 
-* Log entries
-* Plugin status
-* Workflow execution events
+## Communication
 
-### Binary IPC
+| Path | Protocol |
+|---|---|
+| Hub ↔ Browser | HTTP for REST, SSE for live streams (`/api/stream/*`) |
+| Hub ↔ Plugin | Bun's `ipc.send`/`ipc.on` with `serialization: 'advanced'` — native binary, Date, Map, Set |
+| Plugin ↔ Plugin | Always via the hub. Plugins never talk to each other directly |
+| Hub ↔ Coordinator (optional) | WebSocket to `wss://hub.brika.dev/v1/hub` for remote-access signaling |
+| Browser ↔ Hub (remote) | WebRTC data channel brokered by the coordinator |
 
-Efficient communication between hub and plugins:
+The hub-to-plugin protocol is a small typed message contract — every message and RPC is defined as a Zod schema in [`@brika/ipc/contract`](ipc-protocol.md). Plugins never see the wire format; the SDK wraps it.
 
-* Message passing (not shared memory)
-* Structured binary protocol
-* Low latency, high throughput
+## Lifecycle of a request
 
-## Technology Stack
+Concrete example: the user opens the dashboard and a brick on a board renders the current temperature.
 
-| Layer | Technology |
-|-------|------------|
-| Runtime | Bun, TypeScript |
-| Validation | Zod |
-| Frontend | React, Vite, TanStack |
-| UI Components | shadcn/ui, Tailwind CSS |
-| Workflow Editor | React Flow |
-| Brick Compiler | @brika/compiler (Bun.build) |
-| IPC | Custom binary protocol |
+1. **Browser → Hub**: `GET /` returns the static UI shell.
+2. **Browser → Hub**: `GET /api/boards/<id>` returns the board's layout (brick types and per-instance configs).
+3. **Browser → Hub**: `GET /api/bricks/modules/<plugin-uid>/<brick-id>.<hash>.js` — fetches the compiled brick module. The hub looks in the disk cache; on miss, the [compiler](compiler.md) runs `Bun.build` over `src/bricks/<brick-id>.tsx` with the [externals plugin](externals-rewrite.md) rewriting bridge imports, produces a hashed file, writes it to `.brika/cache/bricks/`, serves it with `Cache-Control: immutable`.
+4. **Browser**: the [plugin bridge](externals-rewrite.md) has already populated `globalThis.__brika.*`. The dynamic `import(url)` resolves successfully because the brick's `react`, `lucide-react`, etc. imports all map to the bridge.
+5. **Browser**: the brick renders. `useBrickData<T>()` registers a subscription on the [shared SSE pool](sse-pool.md); the hub starts sending `brickData` events for this brick type.
+6. **Hub → Plugin** (already running): the plugin process has been pushing data via `setBrickData('current-weather', payload)` every 30s. The hub fans the data out to every connected browser.
+7. **Browser**: every push re-renders the brick.
 
-## Scalability
+Each of these steps lives in a deeper page in this chapter.
 
-### Current Design
+## Subsystems
 
-* Single hub process
-* Multiple plugin processes
-* In-memory event bus
-* File-based workflow storage
+| Subsystem | Page |
+|---|---|
+| HTTP server, REST routes, SSE | [Hub Server](hub.md) |
+| Plugin spawning, heartbeat, restart policy, PID locking | [Plugin Supervisor](plugin-supervisor.md) |
+| Binary IPC: message format, RPC, contracts | [IPC Protocol](ipc-protocol.md) |
+| Brick/page bundling, action ID generation, Tailwind scoping | [Compiler](compiler.md) |
+| `globalThis.__brika.*` bridge between host UI and bricks | [Externals Rewrite](externals-rewrite.md) |
+| How bricks load and render | [Brick Rendering](brick-rendering.md) |
+| Shared `EventSource` pool — Chrome 6-conn limit | [Shared SSE Pool](sse-pool.md) |
+| `Flow`/`Source`/`Emitter` scheduling, cleanup registry | [Reactive Engine](reactive-engine.md) |
+| Zod → TypeDescriptor → JSON over IPC | [Type System](type-system.md) |
+| `@brika/schema` → schema.brika.dev publishing | [Schema Generation](schema-generation.md) |
+| Permission vector, grant dispatch, audit redaction | [Permissions & Grants](permissions-grants.md) |
+| Drizzle/SQLite + JSON state, hash-based migrations | [State Store](state-store.md) |
+| Keychain / encrypted file backends | [Secret Store](secret-store.md) |
+| Ring buffer, SSE stream, retention sweep | [Logs](logs.md) |
+| CLI tokens, user sessions, scopes, host allowlist | [Authentication](auth.md) |
+| Coordinator claim flow, WebRTC SDP/ICE | [Remote Access](remote-access.md) |
+| macOS sandbox-exec wrapping | [Sandbox](sandbox.md) |
+| i18n-dev Vite plugin, call-site injection | [i18n Pipeline](i18n-pipeline.md) |
+| `apps/build` targets, cross-compile | [Build Pipeline](build-pipeline.md) |
+| install.sh / install.ps1 version resolution, minisign | [Install Scripts](install-scripts.md) |
 
-### Future Considerations
+## Code map
 
-* Distributed hub (multiple instances)
-* Persistent event store
-* Database-backed workflows
-* Remote plugin execution
+| Path | Owns |
+|---|---|
+| `apps/hub/` | The hub server |
+| `apps/ui/` | The React frontend |
+| `apps/console/` | The `brika` CLI + Brix TUI |
+| `apps/build/` | Binary build orchestration |
+| `apps/signaling/` | Cloudflare Worker for remote-access coordinator |
+| `packages/sdk/` | `@brika/sdk` — the plugin API |
+| `packages/flow/` | `@brika/flow` — reactive streams |
+| `packages/compiler/` | Build-time transforms (externals, action IDs, Tailwind) |
+| `packages/ipc/` | Binary IPC protocol |
+| `packages/schema/` | Plugin manifest Zod schemas + JSON Schema generation |
+| `packages/router/` | Hono-based HTTP routing primitives |
+| `packages/di/` | tsyringe-based DI container |
+| `packages/type-system/` | TypeDescriptor (Zod → JSON for port compatibility) |
+| `packages/errors/` | Typed error model + RFC 9457 envelope |
+| `packages/db/` | Drizzle ORM + Bun SQLite wrapper |
+| `packages/i18n/` + `i18n-dev/` | Runtime + build-time i18n |
+| `packages/auth/` | Auth services |
+| `packages/permissions/` + `grants/` | Permission model + grant dispatch |
+| `packages/serializable/` | Custom (de)serialiser with Blob/Date/Uint8Array support |
+| `packages/events/` | Event bus with glob subscriptions |
+| `packages/cli/`, `tui/`, `brix/` | CLI framework, TUI primitives, Brix animations |
+
+## See also
+
+* **[Repository Structure](../contributing/repo-structure.md)** — what every package and app actually does.
+* **[Plugin Supervisor](plugin-supervisor.md)** — the next layer down.

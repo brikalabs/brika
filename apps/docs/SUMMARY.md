@@ -5,37 +5,84 @@
 ## Basics
 
 * [Getting Started](basics/getting-started.md)
-* [Quick Setup](basics/quick-setup.md)
-* [Project Structure](basics/project-structure.md)
-* [Configuration](basics/configuration.md)
+* [Installation](basics/installation.md)
+* [First Run](basics/first-run.md)
+* [Core Concepts](basics/concepts.md)
+* [The .brika Directory](basics/data-directory.md)
 
-## Plugins
+## CLI & TUI
 
-* [Overview](plugins/overview.md)
-* [Create a Plugin](plugins/create-plugin.md)
+* [Overview](cli/overview.md)
+* [Commands](cli/commands.md)
+* [TUI Dashboard](cli/tui.md)
+* [Environment Variables](cli/environment.md)
+* [Configuration File](cli/configuration.md)
+
+## Tutorials
+
+* [Build Your First Plugin](tutorials/first-plugin.md)
+
+## Plugin Development
+
+* [Plugin Overview](plugins/overview.md)
+* [Manifest Reference](plugins/manifest.md)
 * [Reactive Blocks](plugins/reactive-blocks.md)
+* [Reactive Streams](plugins/reactive-streams.md)
 * [Bricks](plugins/bricks.md)
-* [Lifecycle Hooks](plugins/lifecycle-hooks.md)
-
-## API Reference
-
-* [CLI](api-reference/cli.md)
-* [SDK](api-reference/sdk.md)
-* [Reactive Operators](api-reference/operators.md)
-* [Schema Types](api-reference/schema-types.md)
-* [Sparks](api-reference/sparks.md)
-* [Lifecycle](api-reference/lifecycle.md)
-* [Preferences](api-reference/preferences.md)
-* [Errors](api-reference/errors.md)
+* [Pages](plugins/pages.md)
+* [Actions](plugins/actions.md)
+* [Lifecycle](plugins/lifecycle.md)
+* [Preferences](plugins/preferences.md)
+* [Sparks](plugins/sparks.md)
+* [Shared Stores](plugins/shared-stores.md)
+* [HTTP Routes](plugins/routes.md)
+* [Storage](plugins/storage.md)
+* [Secrets](plugins/secrets.md)
+* [Location](plugins/location.md)
+* [OAuth](plugins/oauth.md)
+* [Logging](plugins/logging.md)
+* [Schema Types](plugins/schema-types.md)
+* [Permissions](plugins/permissions.md)
+* [Internationalization](plugins/i18n.md)
+* [Testing](plugins/testing.md)
+* [Publishing](plugins/publishing.md)
 
 ## Architecture
 
 * [System Overview](architecture/overview.md)
-* [Plugin Isolation](architecture/plugin-isolation.md)
-* [Authentication](architecture/authentication.md)
-* [Internationalization](architecture/i18n.md)
+* [Hub Server](architecture/hub.md)
+* [Plugin Supervisor](architecture/plugin-supervisor.md)
+* [IPC Protocol](architecture/ipc-protocol.md)
+* [Compiler](architecture/compiler.md)
+* [Externals Rewrite](architecture/externals-rewrite.md)
+* [Brick Rendering](architecture/brick-rendering.md)
+* [Shared SSE Pool](architecture/sse-pool.md)
+* [Reactive Engine](architecture/reactive-engine.md)
+* [Type System](architecture/type-system.md)
+* [Schema Generation](architecture/schema-generation.md)
+* [Permissions & Grants](architecture/permissions-grants.md)
+* [State Store](architecture/state-store.md)
+* [Secret Store](architecture/secret-store.md)
+* [Logs](architecture/logs.md)
+* [Authentication](architecture/auth.md)
+* [Remote Access](architecture/remote-access.md)
+* [Sandbox](architecture/sandbox.md)
+* [i18n Pipeline](architecture/i18n-pipeline.md)
+* [Build Pipeline](architecture/build-pipeline.md)
+* [Install Scripts](architecture/install-scripts.md)
+
+## HTTP API
+
+* [API Overview](api/overview.md)
+* [Authentication](api/authentication.md)
+* [REST Reference](api/rest-reference.md)
+* [SSE Streams](api/sse-streams.md)
+* [Errors](api/errors.md)
 
 ## Contributing
 
-* [Development Guide](contributing/development.md)
+* [Development Setup](contributing/development.md)
+* [Repository Structure](contributing/repo-structure.md)
 * [Coding Standards](contributing/coding-standards.md)
+* [Testing](contributing/testing.md)
+* [Release Process](contributing/release.md)

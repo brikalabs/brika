@@ -1,234 +1,127 @@
-# Development Guide
+# Development Setup
 
-This guide covers contributing to BRIKA.
+Brika is a Bun monorepo. One install command, then everything is hot-reloadable.
 
 ## Prerequisites
 
-* [Bun](https://bun.sh/) 1.0 or later
-* [Node.js](https://nodejs.org/) 18+ (for some tooling)
-* Git
-* A code editor (VS Code recommended)
+* [Bun](https://bun.sh) ≥ 1.2.
+* Git.
+* A C compiler (rarely — only if a native dep needs to build, which is unusual with Bun).
 
-## Setup
+That's it. No Node.js, no separate package manager.
 
-### Clone the Repository
+## Clone and install
 
-```bash
+```sh
 git clone https://github.com/brikalabs/brika.git
 cd brika
-```
-
-### Install Dependencies
-
-```bash
 bun install
 ```
 
-### Start Development
+`bun install` resolves every workspace package and installs node_modules at the root.
 
-```bash
+## Run in dev mode
+
+```sh
 bun run dev
 ```
 
-This starts both the Hub and UI in watch mode.
+This starts both the hub (port 3001) and the Vite UI dev server (port 5173) with hot reload. The hub is configured to proxy non-`/api/*` requests to Vite, so the UI is always live.
 
-## Development Commands
+* **UI**: <http://localhost:5173> (Vite) — or <http://127.0.0.1:3001> (hub-proxied)
+* **API**: <http://127.0.0.1:3001/api/health>
 
-| Command | Description |
-|---------|-------------|
-| `bun run dev` | Start Hub and UI |
-| `bun run dev:hub` | Start Hub only |
-| `bun run dev:ui` | Start UI only |
-| `bun test` | Run all tests |
-| `bun run tsc` | Type check all packages |
-| `bun run lint` | Run Biome linter |
-| `bun run lint:fix` | Fix lint errors |
+## Run one target
 
-## Project Layout
+`bun run dev` runs everything. To run just one app:
 
-### Apps
-
-* `apps/hub/` — Bun runtime (API, plugins, workflows)
-* `apps/ui/` — React frontend (TanStack, React Flow)
-* `apps/registry/` — Plugin registry (Cloudflare Worker)
-* `apps/schema-cdn/` — Schema CDN (Cloudflare Worker)
-
-### Packages
-
-* `packages/sdk/` — Plugin SDK
-* `packages/compiler/` — Build-time brick/action compilation
-* `packages/flow/` — Reactive streams
-* `packages/events/` — Event system
-* `packages/ipc/` — Binary IPC protocol
-* `packages/shared/` — Shared types and DI
-
-### Plugins
-
-* `plugins/blocks-builtin/` — Core workflow blocks
-* `plugins/timer/` — Timer blocks + camera/photo bricks
-* `plugins/weather/` — Weather bricks (compact, current, forecast)
-* `plugins/spotify/` — Spotify player brick
-* `plugins/matter/` — Matter/smart home device bricks
-* `plugins/playground/` — Experimental sandbox plugin (echo block, preferences demo, file browser)
-
-## Adding Features
-
-### New Hub Service
-
-1. Create file: `apps/hub/src/runtime/<service>/<service>.ts`
-2. Use `@singleton()` decorator
-3. Inject dependencies with `inject()`
-4. Initialize in bootstrap
-
-```typescript
-import { singleton, inject } from "@brika/di";
-import { Logger } from "../logs/logger";
-
-@singleton()
-export class MyService {
-  private readonly logs = inject(Logger);
-
-  async doSomething() {
-    this.logs.info("Doing something");
-  }
-}
+```sh
+bun --filter @brika/hub dev    # hub only
+bun --filter @brika/ui dev     # UI only
 ```
 
-### New API Endpoint
+## Build
 
-Edit `apps/hub/src/runtime/http/api-server.ts`:
-
-```typescript
-if (p === "/api/myendpoint" && m === "GET") {
-  return json(await this.myService.list());
-}
-
-if (p === "/api/myendpoint" && m === "POST") {
-  const body = await req.json();
-  return json(await this.myService.create(body));
-}
+```sh
+bun run build       # all workspace packages
 ```
 
-### New UI Feature
+For a compiled binary, see [Build Pipeline](../architecture/build-pipeline.md):
 
-Create feature directory: `apps/ui/src/features/myfeature/`
-
-```
-myfeature/
-├── index.ts           # export { MyPage } from "./MyPage"
-├── MyPage.tsx         # React component
-├── api.ts             # API functions
-└── hooks.ts           # React Query hooks
+```sh
+bun run compile             # full binary, current platform
+bun run compile:headless    # headless hub binary
 ```
 
-Add route in `apps/ui/src/main.tsx`:
+## Test
 
-```typescript
-import { MyPage } from "./features/myfeature";
-
-// In router configuration
-{
-  path: "/myfeature",
-  element: <MyPage />,
-}
+```sh
+bun test                                # everything
+bun --filter @brika/sdk test            # one package
+bun --filter @brika/hub test            # the hub
 ```
 
-### New Plugin
+Bun's built-in test runner. Test files: `*.test.ts` adjacent to the source.
 
-See [Create a Plugin](../plugins/create-plugin.md).
+## Typecheck
 
-### New Block
-
-1. Create block in plugin: `plugins/<name>/src/blocks/my-block.ts`
-2. Export from plugin entry point
-3. Add to `package.json` blocks array
-
-### New Brick
-
-1. Declare in plugin `package.json` `"bricks"` array
-2. Create `src/bricks/<id>.tsx` — client-rendered React component
-3. Push data from entry point via `setBrickData()`
-4. The compiler validates that each declared brick has a matching `.tsx` file
-
-## Testing
-
-### Run Tests
-
-```bash
-# All tests
-bun test
-
-# Watch mode
-bun test --watch
-
-# Specific directory
-bun test apps/hub
+```sh
+bun run typecheck                       # everything
+bun --filter @brika/hub typecheck       # one package
 ```
 
-### Write Tests
+Uses [`tsgo`](https://github.com/microsoft/typescript-go) — a faster TypeScript front-end. `--noEmit` everywhere.
 
-```typescript
-import { describe, test, expect } from "bun:test";
+## Lint
 
-describe("MyService", () => {
-  test("should do something", () => {
-    const result = myFunction();
-    expect(result).toBe(expected);
-  });
-
-  test("should handle errors", async () => {
-    await expect(failingFunction()).rejects.toThrow();
-  });
-});
+```sh
+bun run lint
 ```
 
-### Test Locations
+Uses Biome. Configured in `biome.json` at the repo root. The pre-push convention is **always run lint before pushing** (and typecheck and tests too — but lint is the one that catches the most surprises).
 
-* Hub tests: `apps/hub/src/__tests__/`
-* SDK tests: `packages/sdk/src/__tests__/`
-* Package tests: `packages/<name>/src/__tests__/`
+## Working on a plugin
+
+If you're authoring a plugin against this repo's SDK:
+
+```sh
+cd plugins/my-plugin
+bun link                  # exposes the plugin as a workspace dep
+```
+
+In the hub's `.brika/brika.yml`:
+
+```yaml
+plugins:
+  "@scope/my-plugin":
+    version: "workspace:./plugins/my-plugin"
+```
+
+Restart the hub. The plugin loads from source; changes to `src/` rebuild on next reload.
+
+## Scaffolding a new plugin
+
+```sh
+bun create brika
+```
+
+Walks you through the prompts. Lands a new directory under `plugins/` ready to go.
+
+## Hot reload caveats
+
+* **Plugin code** — reloads the plugin process on each save.
+* **Hub code** — restart the hub. There's no in-process reload for the supervisor itself.
+* **UI code** — Vite HMR handles it.
 
 ## Debugging
 
-### Hub Debugging
+* `BRIKA_INSPECT=1` enables the Bun inspector on plugin processes.
+* `LOG_LEVEL=debug` increases hub log verbosity.
+* `BRIKA_SANDBOX_MODE=noop` disables the L3 sandbox for plugin processes (useful when a system call you expect to work is being blocked).
 
-```bash
-# With debug output
-DEBUG=brika:* bun run dev:hub
-```
+## See also
 
-### UI Debugging
-
-Use React DevTools and browser developer tools.
-
-### Plugin Debugging
-
-Plugins write to the hub's log stream:
-
-```typescript
-log.debug('Debug information');
-```
-
-View logs at http://localhost:5173/logs
-
-## Pull Request Guidelines
-
-1. **One feature per PR** — Keep PRs focused
-2. **Update docs** — If adding new features
-3. **Add tests** — For new functionality
-4. **Follow conventions** — Match existing code style
-5. **No console.log** — Remove debug statements
-6. **Run lint** — `bun run lint:fix`
-
-## Commit Messages
-
-Use conventional commits:
-
-```
-feat: add timer cancel functionality
-fix: resolve block execution timeout
-docs: update plugin development guide
-refactor: simplify workflow executor
-test: add event bus tests
-chore: update dependencies
-```
+* **[Repository Structure](repo-structure.md)** — what every app and package owns.
+* **[Coding Standards](coding-standards.md)** — conventions we enforce.
+* **[Testing](testing.md)** — patterns for writing tests.
+* **[Release Process](release.md)** — how releases are cut.
