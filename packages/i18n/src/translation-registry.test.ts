@@ -212,6 +212,241 @@ describe('TranslationRegistry — stats', () => {
   });
 });
 
+describe('TranslationRegistry — removeNamespaceLocale', () => {
+  test('drops a single locale entry without affecting the rest of the namespace', () => {
+    const reg = new TranslationRegistry();
+    reg.setNamespaceLocale('common', 'en', { en: '1' }, { merge: true });
+    reg.setNamespaceLocale('common', 'fr', { fr: '1' }, { merge: true });
+
+    expect(reg.removeNamespaceLocale('common', 'fr')).toBe(true);
+    expect(reg.getNamespaceTranslations('en', 'common')).toEqual({ en: '1' });
+    // `fr` falls through to `en` via the fallback chain — the `fr-only` key
+    // is gone, but `en` strings are still served under the `fr` locale.
+    expect(reg.getNamespaceTranslations('fr', 'common')).toEqual({ en: '1' });
+  });
+
+  test('drops the namespace itself when the last locale is removed', () => {
+    const reg = new TranslationRegistry();
+    reg.setNamespaceLocale('common', 'en', { a: '1' }, { merge: true, source: 'hub' });
+
+    expect(reg.removeNamespaceLocale('common', 'en')).toBe(true);
+    expect(reg.listNamespaces()).toEqual([]);
+    // After namespace removal, re-adding with a different source must not
+    // trip collision detection — the source tag was dropped.
+    const onCollision = mock();
+    reg.onCollision = onCollision;
+    reg.setNamespaceLocale('common', 'en', { b: '2' }, { merge: true, source: 'package' });
+    expect(onCollision).not.toHaveBeenCalled();
+  });
+
+  test('returns false for a missing namespace', () => {
+    const reg = new TranslationRegistry();
+    expect(reg.removeNamespaceLocale('missing', 'en')).toBe(false);
+  });
+
+  test('returns false for an existing namespace that lacks the requested locale', () => {
+    const reg = new TranslationRegistry();
+    reg.setNamespaceLocale('common', 'en', { a: '1' }, { merge: true });
+    expect(reg.removeNamespaceLocale('common', 'fr')).toBe(false);
+  });
+
+  test('rebuilds availableLocales after dropping a locale', () => {
+    const reg = new TranslationRegistry();
+    reg.setNamespaceLocale('common', 'en', { a: '1' }, { merge: true });
+    reg.setNamespaceLocale('common', 'fr', { a: '1' }, { merge: true });
+
+    expect(reg.listLocales()).toEqual(['en', 'fr']);
+    reg.removeNamespaceLocale('common', 'fr');
+    expect(reg.listLocales()).toEqual(['en']);
+  });
+
+  test('fires a set-shaped change event for the locale drop', () => {
+    const reg = new TranslationRegistry();
+    reg.setNamespaceLocale('common', 'en', { a: '1' }, { merge: true });
+    const listener = mock();
+    reg.onChange(listener);
+
+    reg.removeNamespaceLocale('common', 'en');
+
+    expect(listener).toHaveBeenCalledTimes(1);
+    expect(listener.mock.calls[0]?.[0]).toMatchObject({
+      kind: 'set',
+      namespace: 'common',
+      locale: 'en',
+    });
+  });
+});
+
+describe('TranslationRegistry — transaction', () => {
+  test('buffers change events until the outermost transaction commits', () => {
+    const reg = new TranslationRegistry();
+    const listener = mock();
+    reg.onChange(listener);
+
+    reg.transaction(() => {
+      reg.setNamespaceLocale('a', 'en', { x: '1' }, { merge: true });
+      reg.setNamespaceLocale('b', 'en', { y: '2' }, { merge: true });
+      expect(listener).not.toHaveBeenCalled();
+    });
+
+    expect(listener).toHaveBeenCalledTimes(2);
+  });
+
+  test('returns the synchronous callback result', () => {
+    const reg = new TranslationRegistry();
+    const result = reg.transaction(() => 42);
+    expect(result).toBe(42);
+  });
+
+  test('awaits async callbacks and commits once the promise settles', async () => {
+    const reg = new TranslationRegistry();
+    const listener = mock();
+    reg.onChange(listener);
+
+    const work = async (): Promise<string> => {
+      reg.setNamespaceLocale('a', 'en', { x: '1' }, { merge: true });
+      await Promise.resolve();
+      reg.setNamespaceLocale('b', 'en', { y: '2' }, { merge: true });
+      return 'ok';
+    };
+    const pending: Promise<string> = reg.transaction(work);
+    const result = await pending;
+
+    expect(result).toBe('ok');
+    expect(listener).toHaveBeenCalledTimes(2);
+  });
+
+  test('clears the resolved-locale cache only once across many mutations', () => {
+    const reg = new TranslationRegistry();
+    reg.setNamespaceLocale('a', 'en', { x: '1' }, { merge: true });
+    // Prime the cache.
+    reg.getAllTranslations('en');
+
+    reg.transaction(() => {
+      reg.setNamespaceLocale('a', 'en', { x: '2' }, { merge: false });
+      reg.setNamespaceLocale('b', 'en', { y: '1' }, { merge: true });
+    });
+
+    // After commit the cache is stale — the next read sees the new data.
+    expect(reg.getAllTranslations('en')).toEqual({
+      a: { x: '2' },
+      b: { y: '1' },
+    });
+  });
+
+  test('nested transactions only commit at the outermost level', () => {
+    const reg = new TranslationRegistry();
+    const listener = mock();
+    reg.onChange(listener);
+
+    reg.transaction(() => {
+      reg.setNamespaceLocale('a', 'en', { x: '1' }, { merge: true });
+      reg.transaction(() => {
+        reg.setNamespaceLocale('b', 'en', { y: '2' }, { merge: true });
+        expect(listener).not.toHaveBeenCalled();
+      });
+      // Inner commit didn't flush — still buffered until the outer commit.
+      expect(listener).not.toHaveBeenCalled();
+    });
+
+    expect(listener).toHaveBeenCalledTimes(2);
+  });
+
+  test('synchronous callback exceptions still commit (and rethrow)', () => {
+    const reg = new TranslationRegistry();
+    const listener = mock();
+    reg.onChange(listener);
+
+    expect(() =>
+      reg.transaction(() => {
+        reg.setNamespaceLocale('a', 'en', { x: '1' }, { merge: true });
+        throw new Error('boom');
+      })
+    ).toThrow('boom');
+
+    // The mutation that ran before the throw still flushes — caller observed
+    // it and the listener must see the matching event.
+    expect(listener).toHaveBeenCalledTimes(1);
+  });
+
+  test('async-callback rejection commits buffered events via finally', async () => {
+    const reg = new TranslationRegistry();
+    const listener = mock();
+    reg.onChange(listener);
+
+    const work = async (): Promise<void> => {
+      reg.setNamespaceLocale('a', 'en', { x: '1' }, { merge: true });
+      await Promise.resolve();
+      throw new Error('boom');
+    };
+    const pending: Promise<void> = reg.transaction(work);
+    await expect(pending).rejects.toThrow('boom');
+
+    expect(listener).toHaveBeenCalledTimes(1);
+  });
+
+  test('empty transaction is a no-op (no listener fire, no cache clear)', () => {
+    const reg = new TranslationRegistry();
+    reg.setNamespaceLocale('a', 'en', { x: '1' }, { merge: true });
+    reg.getAllTranslations('en');
+    const listener = mock();
+    reg.onChange(listener);
+
+    reg.transaction(() => undefined);
+
+    expect(listener).not.toHaveBeenCalled();
+  });
+});
+
+describe('TranslationRegistry — getBundleJson', () => {
+  test('returns a stable etag and JSON body for a locale', () => {
+    const reg = new TranslationRegistry();
+    reg.setNamespaceLocale('common', 'en', { hello: 'Hello' }, { merge: true });
+
+    const a = reg.getBundleJson('en');
+    const b = reg.getBundleJson('en');
+
+    expect(JSON.parse(a.body)).toEqual({ common: { hello: 'Hello' } });
+    expect(b.etag).toBe(a.etag);
+  });
+
+  test('returns a fresh body+etag after a mutation invalidates the cache', () => {
+    const reg = new TranslationRegistry();
+    reg.setNamespaceLocale('common', 'en', { hello: 'Hello' }, { merge: true });
+    const before = reg.getBundleJson('en');
+
+    reg.setNamespaceLocale('common', 'en', { hello: 'Bonjour' }, { merge: false });
+
+    const after = reg.getBundleJson('en');
+    expect(after.etag).not.toBe(before.etag);
+    expect(JSON.parse(after.body)).toEqual({ common: { hello: 'Bonjour' } });
+  });
+
+  test('evicts LRU resolved locales beyond the configured cap', () => {
+    const reg = new TranslationRegistry({ maxResolvedLocales: 2 });
+    reg.setNamespaceLocale('common', 'en', { hello: 'Hello' }, { merge: true });
+    reg.setNamespaceLocale('common', 'fr', { hello: 'Bonjour' }, { merge: true });
+    reg.setNamespaceLocale('common', 'de', { hello: 'Hallo' }, { merge: true });
+
+    const en1 = reg.getBundleJson('en');
+    const fr1 = reg.getBundleJson('fr');
+    // Touching `en` again refreshes it as most-recently-used, so reading
+    // `de` afterwards must evict `fr`, not `en`.
+    reg.getBundleJson('en');
+    reg.getBundleJson('de');
+
+    // `en` survived the eviction → same Map identity → same cached body+etag.
+    const en2 = reg.getBundleJson('en');
+    expect(en2.etag).toBe(en1.etag);
+    expect(en2.body).toBe(en1.body);
+
+    // `fr` was evicted → resolved-locale Map is rebuilt → content-derived
+    // etag still matches by hash.
+    const fr2 = reg.getBundleJson('fr');
+    expect(fr2.etag).toBe(fr1.etag);
+  });
+});
+
 describe('TranslationRegistry — t()', () => {
   test('resolves a simple key with namespace prefix', () => {
     const reg = new TranslationRegistry();

@@ -82,6 +82,26 @@ describe('translate — context', () => {
       'You have 3 formal replies'
     );
   });
+
+  test('falls through to bare context (no plural) when count+context combo has no suffix', () => {
+    // No `*_formal_one|other` keys → the count+context branch returns null.
+    // Then the context-only branch picks `greet_formal` even though count is
+    // also set. This exercises the second `if (context)` block in resolveKey.
+    const tree = { greet: 'Hi', greet_formal: 'Greetings' };
+    expect(translate(tree, 'greet', { context: 'formal', count: 3 })).toBe('Greetings');
+  });
+
+  test('returns the value at the context-suffixed key when present (no count provided)', () => {
+    const tree = { error_validation: 'Validation failed', error: 'Generic error' };
+    expect(translate(tree, 'error', { context: 'validation' })).toBe('Validation failed');
+  });
+
+  test('falls through to the bare key when no context-suffixed variant exists', () => {
+    // `error_unknown` is absent → context-suffixed lookup returns undefined,
+    // and resolveKey falls through to the bare `error` key.
+    const tree = { error: 'Generic error' };
+    expect(translate(tree, 'error', { context: 'unknown' })).toBe('Generic error');
+  });
 });
 
 describe('translate — arrays', () => {

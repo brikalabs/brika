@@ -1,6 +1,12 @@
 import { describe, expect, mock, test } from 'bun:test';
 import { useBunMock } from '@brika/testing';
-import { detectFileIndent, loadLocaleFolder, loadMergedLocaleFolder } from './loaders';
+import {
+  detectFileIndent,
+  detectIndentFromContent,
+  loadLocaleFolder,
+  loadMergedLocaleFolder,
+  pickPrimaryLocaleFile,
+} from './loaders';
 
 const bun = useBunMock();
 
@@ -166,5 +172,70 @@ describe('detectFileIndent', () => {
     bun.fs({}).apply();
 
     expect(await detectFileIndent('/missing.json')).toBe(2);
+  });
+});
+
+describe('detectIndentFromContent', () => {
+  test('detects tab indentation directly from string content', () => {
+    expect(detectIndentFromContent('{\n\t"k": "v"\n}')).toBe('\t');
+  });
+
+  test('detects two-space indentation', () => {
+    expect(detectIndentFromContent('{\n  "k": "v"\n}')).toBe(2);
+  });
+
+  test('detects four-space indentation', () => {
+    expect(detectIndentFromContent('{\n    "k": "v"\n}')).toBe(4);
+  });
+
+  test('falls back to 2 spaces for content with no line break', () => {
+    expect(detectIndentFromContent('{"a":"b"}')).toBe(2);
+  });
+
+  test('falls back to 2 spaces when the newline is the very last character', () => {
+    expect(detectIndentFromContent('{"a":"b"}\n')).toBe(2);
+  });
+
+  test('falls back to 2 spaces when the line after a newline is not whitespace-indented', () => {
+    // The next character after `\n` is `"` — neither tab nor space, so the
+    // detector returns the 2-space fallback rather than guessing.
+    expect(detectIndentFromContent('{\n"k": "v"\n}')).toBe(2);
+  });
+});
+
+describe('pickPrimaryLocaleFile', () => {
+  test('returns the preferred basename when it exists', async () => {
+    bun
+      .fs({
+        '/locales/en/common.json': { hello: 'Hello' },
+        '/locales/en/other.json': { x: 'y' },
+      })
+      .apply();
+
+    expect(await pickPrimaryLocaleFile('/locales/en', 'common')).toBe('/locales/en/common.json');
+  });
+
+  test('falls back to the alphabetically-first file when the preferred one is missing', async () => {
+    bun
+      .fs({
+        '/locales/en/zeta.json': { z: '1' },
+        '/locales/en/alpha.json': { a: '1' },
+        '/locales/en/beta.json': { b: '1' },
+      })
+      .apply();
+
+    expect(await pickPrimaryLocaleFile('/locales/en', 'common')).toBe('/locales/en/alpha.json');
+  });
+
+  test('returns null when no JSON files exist in the folder', async () => {
+    bun.fs({ '/locales/en/.keep': '' }).apply();
+
+    expect(await pickPrimaryLocaleFile('/locales/en', 'common')).toBeNull();
+  });
+
+  test('returns null for a missing folder', async () => {
+    bun.fs({}).apply();
+
+    expect(await pickPrimaryLocaleFile('/does/not/exist', 'common')).toBeNull();
   });
 });
