@@ -474,7 +474,6 @@ describe('useBunMock', () => {
   });
 });
 
-
 describe('BunMock - supplemental', () => {
   let bun: BunMock;
 
