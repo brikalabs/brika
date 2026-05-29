@@ -148,7 +148,11 @@ describe('wait', () => {
   });
 
   test('resolves immediately for 0 ms', async () => {
+    const start = Date.now();
     await wait(0);
-    expect(true).toBe(true);
+    // The timer fires on the next tick; we just need the awaited promise to
+    // settle quickly without hanging. A generous upper bound keeps the test
+    // from flaking on a loaded CI runner while still asserting "fast".
+    expect(Date.now() - start).toBeLessThan(50);
   });
 });
