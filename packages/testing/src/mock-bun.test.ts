@@ -473,3 +473,126 @@ describe('useBunMock', () => {
     expect(Bun.resolveSync('@test/pkg', '/')).toBe('/node_modules/@test/pkg/index.js');
   });
 });
+
+
+describe('BunMock - supplemental', () => {
+  let bun: BunMock;
+
+  beforeEach(() => {
+    bun = mockBun();
+  });
+
+  afterEach(() => {
+    bun.restore();
+  });
+
+  describe('Glob.scanSync', () => {
+    test('iterates entries synchronously', () => {
+      bun.directory('/src', ['a.ts', 'b.ts', 'README.md']).apply();
+
+      const found = [...new Bun.Glob('*.ts').scanSync({ cwd: '/src' })];
+      expect(found).toEqual(['a.ts', 'b.ts']);
+    });
+
+    test('returns empty iterator for unknown cwd', () => {
+      bun.apply();
+      const found = [...new Bun.Glob('*').scanSync({ cwd: '/nowhere' })];
+      expect(found).toEqual([]);
+    });
+  });
+
+  describe('Glob.match', () => {
+    test('matches "*/" pattern against trailing slash', () => {
+      bun.apply();
+      const glob = new Bun.Glob('*/');
+      expect(glob.match('en/')).toBe(true);
+      expect(glob.match('en')).toBe(false);
+    });
+
+    test('matches "*.ext" against suffix', () => {
+      bun.apply();
+      const glob = new Bun.Glob('*.ts');
+      expect(glob.match('index.ts')).toBe(true);
+      expect(glob.match('index.tsx')).toBe(false);
+      expect(glob.match('README.md')).toBe(false);
+    });
+
+    test('matches embedded "*" wildcard via substring contains', () => {
+      bun.apply();
+      // Pattern "foo*bar" collapses to substring "foobar".
+      const glob = new Bun.Glob('foo*bar');
+      expect(glob.match('xfoobarx')).toBe(true);
+      expect(glob.match('barfoo')).toBe(false);
+    });
+
+    test('matches an exact non-wildcard pattern', () => {
+      bun.apply();
+      const glob = new Bun.Glob('exact.txt');
+      expect(glob.match('exact.txt')).toBe(true);
+      expect(glob.match('other.txt')).toBe(false);
+    });
+  });
+
+  describe('fetch() — re-install branch', () => {
+    test('swaps implementation without reinstalling the spy', async () => {
+      bun.fetch(() => Promise.resolve(new Response('one'))).apply();
+      expect(await (await fetch('https://x')).text()).toBe('one');
+
+      // Calling .fetch() again replaces the impl but the spy is already installed.
+      bun.fetch(() => Promise.resolve(new Response('two')));
+      expect(await (await fetch('https://x')).text()).toBe('two');
+    });
+
+    test('records the requesting URL through the dispatcher', async () => {
+      const seen: string[] = [];
+      bun
+        .fetch((input) => {
+          seen.push(typeof input === 'string' ? input : input.toString());
+          return Promise.resolve(new Response('ok'));
+        })
+        .apply();
+
+      await fetch('https://example.test/one');
+      await fetch('https://example.test/two');
+      expect(seen).toEqual(['https://example.test/one', 'https://example.test/two']);
+    });
+  });
+
+  describe('apply() idempotency', () => {
+    test('re-applying without a fetch impl skips the fetch spy install', async () => {
+      bun.file('/a.json', { ok: true }).apply();
+      // apply() a second time should not blow up and not install a fetch spy.
+      bun.apply();
+      expect(await Bun.file('/a.json').json()).toEqual({ ok: true });
+    });
+  });
+
+  describe('Bun.write — non-JSON content', () => {
+    test('stores plain text content as-is when not JSON-parseable', async () => {
+      bun.apply();
+      await Bun.write('/notes.txt', 'just a string');
+      expect(bun.getFile<string>('/notes.txt')).toBe('just a string');
+      expect(await Bun.file('/notes.txt').text()).toBe('just a string');
+    });
+
+    test('parses JSON-serialised input back into an object', async () => {
+      bun.apply();
+      await Bun.write('/data.json', JSON.stringify({ id: 7 }));
+      expect(bun.getFile<{ id: number }>('/data.json')).toEqual({ id: 7 });
+    });
+  });
+
+  describe('spawn — stdout & default stderr', () => {
+    test('stdout stream is empty by default', async () => {
+      bun.spawn({ exitCode: 0 }).apply();
+      const proc = Bun.spawn(['cmd']);
+      expect(await new Response(proc.stdout).text()).toBe('');
+    });
+
+    test('stdout stream surfaces configured content', async () => {
+      bun.spawn({ stdout: 'hello' }).apply();
+      const proc = Bun.spawn(['cmd']);
+      expect(await new Response(proc.stdout).text()).toBe('hello');
+    });
+  });
+});
