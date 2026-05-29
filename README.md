@@ -352,26 +352,34 @@ apps/
   ui/               Web UI (React, Vite)
   console/          `brika` CLI surface + Brix TUI dashboard
   build/            Binary build orchestration (Bun.build + compile-time plugins)
+  signaling/        Cloudflare Workers coordinator + bootstrap SPA for remote access
+  docs/             GitBook source for docs.brika.dev
 packages/
   sdk/              Plugin SDK (blocks, bricks, actions, stores)
   compiler/         Build-time tooling (brick ESM, action IDs, Tailwind)
-  di/               Dependency injection
-  router/           HTTP router
-  events/           Event system
+  flow/             Reactive streams
   ipc/              Binary IPC protocol
-  shared/           Shared types
+  schema/           JSON Schema generation
+  …                 See [`packages/`](packages/) for the full list
 plugins/
   blocks-builtin/   Core blocks (condition, delay, log, …)
   timer/            Timer & countdown blocks
   weather/          Weather dashboard bricks
   matter/           Matter/Thread smart home
   spotify/          Spotify integration
+  …                 See [`plugins/`](plugins/) for the full list
 scripts/
   install.sh        Linux/macOS installer
   install.ps1       Windows installer
   uninstall.sh      Linux/macOS uninstaller
   uninstall.ps1     Windows uninstaller
 ```
+
+> Other parts of the platform live in their own repositories under the
+> [`brikalabs`](https://github.com/brikalabs) org: [`registry`](https://github.com/brikalabs/registry)
+> (plugin registry Worker), [`schema-cdn`](https://github.com/brikalabs/schema-cdn)
+> (JSON Schema CDN Worker), [`website`](https://github.com/brikalabs/website)
+> (marketing site), and [`clay`](https://github.com/brikalabs/clay) (React design system).
 
 ---
 
@@ -391,4 +399,4 @@ Full docs at **[docs.brika.dev](https://docs.brika.dev)** — architecture, SDK 
 
 ## License
 
-MIT
+[MIT](LICENSE)

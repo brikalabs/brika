@@ -2,11 +2,23 @@
 # https://bun.sh/docs/runtime/bunfig
 
 [test]
-# Exclude frontend and other non-testable code from coverage
+# Exclude frontend / orchestrator / binary-build code from coverage.
+# Surfaces here are either pending a test-framework decision (apps/ui),
+# pure content (apps/docs), thin CLI wrappers (apps/console, apps/build),
+# or rendering primitives without a harness yet (packages/tui).
+# Keep in sync with scripts/check-coverage.ts DEFAULT_EXEMPT.
 coverageSkipSourceFiles = [
   "apps/ui/**/*",
   "apps/docs/**/*",
   "apps/schema-cdn/**/*",
+  "apps/build/**/*",
+  "apps/console/**/*",
+  "packages/tui/**/*",
   "**/node_modules/**/*",
   "**/*.d.ts"
 ]
+# Bun 1.3.14 reads this value but does not yet enforce it in the runner.
+# `scripts/check-coverage.ts` is the actual CI gate (see TESTING.md).
+# The threshold here documents intent and will be honoured once Bun
+# implements the check.
+coverageThreshold = 0.80

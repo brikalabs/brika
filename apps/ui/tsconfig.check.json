@@ -3,5 +3,5 @@
   "compilerOptions": {
     "baseUrl": null
   },
-  "exclude": ["src/**/__tests__/**"]
+  "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx"]
 }
