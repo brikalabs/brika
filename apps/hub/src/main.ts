@@ -9,6 +9,7 @@ import {
   BoardsLoader,
   bootstrap,
   cache,
+  crashHandlers,
   I18nLoader,
   loader,
   migrations,
@@ -69,6 +70,10 @@ export async function startHub(): Promise<void> {
   }
 
   await bootstrap()
+    // Crash handlers first: a top-level uncaughtException /
+    // unhandledRejection anywhere in the boot lifecycle should be logged
+    // and turned into a clean RESTART_CODE exit, not a wedged process.
+    .use(crashHandlers())
     .use(processGuard())
     .use(cache())
     .use(

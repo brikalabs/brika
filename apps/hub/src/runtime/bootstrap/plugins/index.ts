@@ -1,4 +1,5 @@
 export { cache } from './cache';
+export { crashHandlers } from './crash-handlers';
 export { loader } from './loader';
 export { MigrationStatus, migrations } from './migrations';
 export { processGuard } from './process-guard';
