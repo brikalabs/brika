@@ -41,6 +41,34 @@ export function isBrikaSubdomainOrigin(origin: string): boolean {
 }
 
 /**
+ * Build an exact-match CORS predicate from an operator-configured allowlist.
+ * Origins are compared against their canonical `URL().origin` form so a
+ * pinned `https://app.example.com` matches the browser's `Origin` header
+ * regardless of an incidental trailing slash, and never via prefix/substring
+ * (which would let look-alike hosts slip through). Unparseable incoming
+ * origins are rejected. An empty allowlist matches nothing, leaving the
+ * built-in LAN/dev predicates fully in charge.
+ */
+export function createConfiguredOriginMatcher(
+  allowlist: readonly string[]
+): (origin: string) => boolean {
+  const pinned = new Set(allowlist);
+  return (origin: string): boolean => {
+    if (pinned.size === 0) {
+      return false;
+    }
+    if (pinned.has(origin)) {
+      return true;
+    }
+    try {
+      return pinned.has(new URL(origin).origin);
+    } catch {
+      return false;
+    }
+  };
+}
+
+/**
  * CORS check for loopback + RFC1918 + link-local + mDNS origins. Covers
  * everything a developer or LAN device would legitimately use to reach
  * the hub.
@@ -243,14 +271,20 @@ export class ApiServer {
   }
 
   /**
-   * CORS origin allowlist. Allows: any `*.brika.dev` subdomain (the static
-   * UI shell when accessed remotely), the LAN HTTP origin, and any
-   * loopback/private-network origin (covering Vite dev, mDNS, and other LAN
-   * access). External origins are blocked to prevent cross-site credential
-   * theft.
+   * CORS origin allowlist. Allows: any exact origin pinned via
+   * `hub.corsAllowlist` / `BRIKA_CORS_ALLOWLIST` (production origins an
+   * operator opts into), the canonical `hub.brika.dev` shell, the LAN HTTP
+   * origin, and any loopback/private-network origin (covering Vite dev, mDNS,
+   * and other LAN access). External origins are blocked to prevent cross-site
+   * credential theft. The configured matcher is additive — when the allowlist
+   * is empty it matches nothing, so local/dev behaviour is unchanged.
    */
   #corsAllowlist(): CorsOriginMatcher {
-    return [isBrikaSubdomainOrigin, isPrivateNetworkOrigin];
+    return [
+      createConfiguredOriginMatcher(this.#config.corsAllowlist),
+      isBrikaSubdomainOrigin,
+      isPrivateNetworkOrigin,
+    ];
   }
 
   #setupStaticFiles(): void {

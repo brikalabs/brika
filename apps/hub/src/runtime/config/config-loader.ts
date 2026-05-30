@@ -71,10 +71,61 @@ const ShutdownConfigSchema = z.object({
 
 export type ShutdownConfig = z.infer<typeof ShutdownConfigSchema>;
 
+/**
+ * Validates a single CORS allowlist entry: it must be a well-formed
+ * absolute `http(s)` origin with no path/query/fragment, normalised to its
+ * `URL().origin` form so matching is exact (e.g. `https://app.example.com`).
+ * Anything malformed is rejected so a typo can't silently widen the policy.
+ */
+const corsOriginSchema = z
+  .string()
+  .trim()
+  .refine(
+    (value) => {
+      try {
+        const url = new URL(value);
+        if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+          return false;
+        }
+        // Reject entries carrying a path/query/fragment — an origin is
+        // scheme + host + port only, and the matcher compares against
+        // `Origin` headers which never include a path.
+        return url.origin === value.replace(/\/$/, '');
+      } catch {
+        return false;
+      }
+    },
+    { message: 'must be an absolute http(s) origin, e.g. https://app.example.com' }
+  )
+  .transform((value) => new URL(value).origin);
+
+const corsAllowlistSchema = z.array(corsOriginSchema).default([]);
+
+/**
+ * Validate and normalise an arbitrary CORS allowlist value with zod. Returns
+ * the canonical `URL().origin` form of each valid entry, or `null` when the
+ * value is malformed so callers can log and fall back. Shared by the config
+ * loader and the `BRIKA_CORS_ALLOWLIST` env override path.
+ */
+export function safeParseCorsAllowlist(raw: unknown): { origins: string[] } | { issues: string[] } {
+  const result = corsAllowlistSchema.safeParse(raw ?? []);
+  if (result.success) {
+    return { origins: result.data };
+  }
+  return { issues: result.error.issues.map((issue) => issue.message) };
+}
+
 export interface BrikaConfig {
   hub: {
     port: number;
     host: string;
+    /**
+     * Explicit production CORS allowlist. Exact origins pinned here are
+     * always permitted in addition to the built-in LAN/dev defaults
+     * (loopback, RFC1918, `*.local`, `hub.brika.dev`). Empty by default,
+     * which preserves the LAN-only behaviour for local/dev setups.
+     */
+    corsAllowlist: string[];
     plugins: {
       installDir: string;
       heartbeatInterval: number;
@@ -111,6 +162,7 @@ const DEFAULT_CONFIG: BrikaConfig = {
   hub: {
     port: 3001,
     host: '0.0.0.0',
+    corsAllowlist: [],
     plugins: {
       installDir: './plugins/.installed',
       heartbeatInterval: 5000,
@@ -198,6 +250,7 @@ export class ConfigLoader {
         hub: {
           port: (hubParsed.port as number) ?? DEFAULT_CONFIG.hub.port,
           host: (hubParsed.host as string) ?? DEFAULT_CONFIG.hub.host,
+          corsAllowlist: this.#parseCorsAllowlist(hubParsed.corsAllowlist),
           plugins: {
             installDir:
               (hubPluginsParsed.installDir as string) ?? DEFAULT_CONFIG.hub.plugins.installDir,
@@ -414,6 +467,24 @@ export class ConfigLoader {
   // ─────────────────────────────────────────────────────────────────────────────
   // Private
   // ─────────────────────────────────────────────────────────────────────────────
+
+  /**
+   * Validate the `hub.corsAllowlist` field with zod. Invalid entries (bad
+   * scheme, path-bearing values, non-arrays) are rejected and the allowlist
+   * falls back to empty — a malformed entry must never silently widen CORS.
+   * Valid entries are normalised to their canonical `URL().origin` form.
+   */
+  #parseCorsAllowlist(raw: unknown): string[] {
+    const result = safeParseCorsAllowlist(raw);
+    if ('origins' in result) {
+      return result.origins;
+    }
+    this.#logger.warn('Invalid hub.corsAllowlist in config — ignoring it', {
+      configPath: this.configPath,
+      issues: result.issues,
+    });
+    return [];
+  }
 
   #parsePlugins(plugins: unknown): PluginEntry[] {
     if (!plugins || typeof plugins !== 'object' || Array.isArray(plugins)) {

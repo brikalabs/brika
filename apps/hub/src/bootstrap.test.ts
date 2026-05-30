@@ -24,6 +24,7 @@ const mockConfig: BrikaConfig = {
   hub: {
     host: '0.0.0.0',
     port: 3001,
+    corsAllowlist: [],
     plugins: {
       installDir: '/tmp',
       heartbeatInterval: 5000,

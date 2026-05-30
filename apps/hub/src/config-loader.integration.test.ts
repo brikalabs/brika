@@ -222,6 +222,7 @@ schedules: []
         hub: {
           port: 9000,
           host: '127.0.0.1',
+          corsAllowlist: [],
           plugins: {
             installDir: './plugins',
             heartbeatInterval: 5000,
