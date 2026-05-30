@@ -10,10 +10,19 @@ export {
   type SendBinaryChunk,
 } from './bridge';
 export {
+  type ClaimRow,
+  type ClaimStore,
+  type ClaimsExecutor,
+  createClaimStore,
+  ctEqHex,
+} from './claim-store';
+export {
   type Claim,
   ClaimError,
   type ClaimErrorCode,
   generateToken,
+  hashToken,
+  type MintedCredentials,
   RESERVED_NAMES,
   validateName,
 } from './claims-validation';
@@ -27,6 +36,12 @@ export {
   encodeRpc,
   encodeSignaling,
 } from './codec';
+export {
+  CloudflareIceServerProvider,
+  type IceServerProvider,
+  NoneIceServerProvider,
+  StaticIceServerProvider,
+} from './ice-provider';
 export {
   type ClientContext,
   type ClientInbound,
@@ -50,6 +65,13 @@ export {
   type RpcMessage,
   type RpcMessageKind,
 } from './rpc';
+export {
+  type AttachmentStore,
+  type HubSessionAttachment,
+  HubSessionState,
+  type HubSessionStateOptions,
+  type WsLike,
+} from './session-state';
 export {
   type ClientAbortMessage,
   type ClientIceMessage,

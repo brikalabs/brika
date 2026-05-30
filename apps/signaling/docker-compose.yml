@@ -1,0 +1,32 @@
+# Example compose stack for self-hosting brika-signaling on SQLite.
+#
+# Quick start (from repo root):
+#   TICKET_SECRET=$(openssl rand -hex 32) \
+#     docker compose -f apps/signaling/docker-compose.yml up --build
+#
+# Then visit http://localhost:8787/v1/health — it reports claim count 0.
+# Claims persist in the `signaling-data` volume across restarts.
+
+services:
+  signaling:
+    build:
+      context: ../..
+      dockerfile: apps/signaling/Dockerfile
+    environment:
+      BRIKA_SIGNALING_PORT: 8787
+      BRIKA_SIGNALING_HOST: 0.0.0.0
+      BRIKA_SIGNALING_SQLITE_PATH: /data/brika-signaling.db
+      BRIKA_SIGNALING_TURN: static
+      # Replace with a real 32+-byte secret in production. The container exits
+      # on boot if TICKET_SECRET is unset or under 16 chars.
+      TICKET_SECRET: ${TICKET_SECRET:?set TICKET_SECRET (e.g. openssl rand -hex 32)}
+      # Add domains here for cross-origin clients; localhost is always allowed.
+      # ALLOWED_ORIGINS: https://my.example
+    volumes:
+      - signaling-data:/data
+    ports:
+      - "8787:8787"
+    restart: unless-stopped
+
+volumes:
+  signaling-data:
