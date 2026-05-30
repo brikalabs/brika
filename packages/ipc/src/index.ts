@@ -43,8 +43,14 @@
  */
 
 // ─── Channel ───
-export type { ChannelOptions, MessageHandler, RpcHandler, WireMessage } from './channel';
-export { Channel } from './channel';
+export type {
+  ChannelOptions,
+  MessageHandler,
+  PayloadLimitDirection,
+  RpcHandler,
+  WireMessage,
+} from './channel';
+export { Channel, DEFAULT_MAX_PAYLOAD_BYTES } from './channel';
 export type { ChannelDelegateMethods } from './channel-delegate';
 
 // ─── Client ───

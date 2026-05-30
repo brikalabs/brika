@@ -6,6 +6,17 @@
 
 import { BrikaError, errors, isBrikaErrorWire } from '@brika/errors';
 import type { InputOf, MessageDef, OutputOf, PayloadOf, RpcDef } from './define';
+import { measurePayloadBytes } from './payload-size';
+
+/**
+ * Default per-message payload cap (16 MiB). Deliberately generous so LAN/dev
+ * workloads and reasonable binary blobs pass untouched; it exists to stop a
+ * runaway/hostile plugin from OOMing the host, not to police normal traffic.
+ */
+export const DEFAULT_MAX_PAYLOAD_BYTES = 16 * 1024 * 1024;
+
+/** Direction a payload-limit violation was detected in. */
+export type PayloadLimitDirection = 'send' | 'handle';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -76,6 +87,21 @@ export interface ChannelOptions {
   defaultTimeoutMs?: number;
   /** Called when channel closes */
   onClose?: () => void;
+  /**
+   * Per-message payload cap in bytes, enforced on both outbound `send` and
+   * inbound `handle`. Defaults to {@link DEFAULT_MAX_PAYLOAD_BYTES}. The size
+   * is an approximation of the structured-clone wire size (see
+   * `measurePayloadBytes`) — exact byte counts aren't recoverable cheaply
+   * under Bun's `serialization: 'advanced'`.
+   */
+  maxPayloadBytes?: number;
+  /**
+   * Called when a message is rejected for exceeding `maxPayloadBytes`. Receives
+   * the typed {@link BrikaError} (`IPC_PAYLOAD_TOO_LARGE`) so callers can log,
+   * surface, or tear down the connection instead of the message being silently
+   * dropped.
+   */
+  onPayloadLimitExceeded?: (error: BrikaError, direction: PayloadLimitDirection) => void;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -107,9 +133,11 @@ export interface ChannelOptions {
  * ```
  */
 export class Channel {
-  readonly #send: SendFn;
+  readonly #rawSend: SendFn;
   readonly #timeoutMs: number;
   readonly #onClose?: () => void;
+  readonly #maxPayloadBytes: number;
+  readonly #onPayloadLimitExceeded?: (error: BrikaError, direction: PayloadLimitDirection) => void;
 
   readonly #messageHandlers = new Map<string, Set<(payload: unknown) => void | Promise<void>>>();
   readonly #messageSchemas = new Map<string, ParseableSchema>();
@@ -121,9 +149,34 @@ export class Channel {
   #closed = false;
 
   constructor(options: ChannelOptions) {
-    this.#send = options.send;
+    this.#rawSend = options.send;
     this.#timeoutMs = options.defaultTimeoutMs ?? 30_000;
     this.#onClose = options.onClose;
+    this.#maxPayloadBytes = options.maxPayloadBytes ?? DEFAULT_MAX_PAYLOAD_BYTES;
+    this.#onPayloadLimitExceeded = options.onPayloadLimitExceeded;
+  }
+
+  /**
+   * Outbound size guard. Measures the structured payload and drops oversized
+   * messages instead of forwarding them, surfacing a typed error. Returns
+   * `true` when the message was forwarded, `false` when it was rejected.
+   */
+  #send(msg: WireMessage): boolean {
+    const size = measurePayloadBytes(msg, this.#maxPayloadBytes);
+    if (size > this.#maxPayloadBytes) {
+      this.#onPayloadLimitExceeded?.(
+        errors.ipcPayloadTooLarge({
+          limit: this.#maxPayloadBytes,
+          size: Number.isFinite(size) ? size : this.#maxPayloadBytes,
+          direction: 'send',
+          messageType: msg.t,
+        }),
+        'send'
+      );
+      return false;
+    }
+    this.#rawSend(msg);
+    return true;
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -229,11 +282,23 @@ export class Channel {
         timer,
       });
 
-      this.#send({
+      const forwarded = this.#send({
         t: def.name,
         _id: id,
         ...(input as object),
       });
+      if (!forwarded) {
+        clearTimeout(timer);
+        this.#pending.delete(id);
+        reject(
+          errors.ipcPayloadTooLarge({
+            limit: this.#maxPayloadBytes,
+            size: this.#maxPayloadBytes,
+            direction: 'send',
+            messageType: def.name,
+          })
+        );
+      }
     });
   }
 
@@ -242,6 +307,20 @@ export class Channel {
    */
   async handle(raw: WireMessage): Promise<void> {
     if (this.#closed) {
+      return;
+    }
+
+    const size = measurePayloadBytes(raw, this.#maxPayloadBytes);
+    if (size > this.#maxPayloadBytes) {
+      this.#onPayloadLimitExceeded?.(
+        errors.ipcPayloadTooLarge({
+          limit: this.#maxPayloadBytes,
+          size: Number.isFinite(size) ? size : this.#maxPayloadBytes,
+          direction: 'handle',
+          messageType: raw.t,
+        }),
+        'handle'
+      );
       return;
     }
 

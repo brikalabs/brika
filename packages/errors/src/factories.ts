@@ -160,6 +160,10 @@ export const errors = {
 
   wsFrameTooLarge: (data: DataForCode<'WS_FRAME_TOO_LARGE'>, opts?: FactoryOpts) =>
     buildError<'WS_FRAME_TOO_LARGE'>('WS_FRAME_TOO_LARGE', data, opts),
+
+  // ─── ipc ─────────────────────────────────────────────────────────────
+  ipcPayloadTooLarge: (data: DataForCode<'IPC_PAYLOAD_TOO_LARGE'>, opts?: FactoryOpts) =>
+    buildError<'IPC_PAYLOAD_TOO_LARGE'>('IPC_PAYLOAD_TOO_LARGE', data, opts),
 } as const;
 
 // ─── Catalog completeness guard ────────────────────────────────────────────

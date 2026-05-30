@@ -40,6 +40,14 @@ describe('errors.* factories', () => {
     produced.add(errors.wsOpenLimitExceeded({ limit: 8 }).code);
     produced.add(errors.wsHandleNotFound({ handleId: 'ws_x' }).code);
     produced.add(errors.wsFrameTooLarge({ limit: 10, requested: 11 }).code);
+    produced.add(
+      errors.ipcPayloadTooLarge({
+        limit: 10,
+        size: 11,
+        direction: 'send',
+        messageType: 'blob',
+      }).code
+    );
 
     for (const code of expected) {
       expect(produced.has(code)).toBe(true);
