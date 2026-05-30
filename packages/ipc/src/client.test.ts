@@ -2,7 +2,17 @@
  * Tests for IPC Client
  */
 
-import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from 'bun:test';
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  mock,
+  spyOn,
+  test,
+} from 'bun:test';
 import { waitFor } from '@brika/testing';
 import type { WireMessage } from './channel';
 import { hello, ping, ready, stop } from './contract';
@@ -11,6 +21,20 @@ import { hello, ping, ready, stop } from './contract';
 const originalSend = process.send;
 const originalOn = process.on;
 const originalRemoveAllListeners = process.removeAllListeners;
+
+// The Client's stop handler calls process.exit(0) asynchronously (after awaiting
+// its stop handlers). If that fires after an individual test restores the real
+// process.exit, it terminates the bun runner mid-file — which silently aborts the
+// rest of the ipc suite and drops coverage for every later test file. Guard the
+// real process.exit for the whole file so a late async exit can never escape.
+let realProcessExit: typeof process.exit;
+beforeAll(() => {
+  realProcessExit = process.exit;
+  (process as unknown as Record<string, unknown>).exit = mock(() => undefined);
+});
+afterAll(() => {
+  (process as unknown as Record<string, unknown>).exit = realProcessExit;
+});
 
 describe('Client', () => {
   let sentMessages: WireMessage[];
