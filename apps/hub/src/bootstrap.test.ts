@@ -7,6 +7,7 @@ import { get, stub, useTestBed } from '@brika/di/testing';
 import { Bootstrap, bootstrap } from '@/runtime/bootstrap/bootstrap';
 import type { BrikaConfig } from '@/runtime/config';
 import { BrikaInitializer, ConfigLoader } from '@/runtime/config';
+import { ApiServer } from '@/runtime/http/api-server';
 import { Logger } from '@/runtime/logs/log-router';
 import { LogStore } from '@/runtime/logs/log-store';
 
@@ -29,6 +30,7 @@ const mockConfig: BrikaConfig = {
       heartbeatTimeout: 15000,
     },
     logs: { retentionDays: 7, pruneIntervalMs: 3600000 },
+    shutdown: { gracePeriodMs: 10000 },
   },
   plugins: [],
   rules: [],
@@ -52,6 +54,7 @@ describe('Bootstrap', () => {
     clearHotReload();
     stub(Logger);
     stub(LogStore);
+    stub(ApiServer);
     stub(BrikaInitializer);
     stub(ConfigLoader, {
       getRootDir: () => '/tmp/bootstrap-test',
@@ -182,6 +185,47 @@ describe('Bootstrap', () => {
     await b.stop();
 
     expect(order).toEqual(['p2', 'p1']);
+  });
+
+  describe('shutdown', () => {
+    test('drains cleanly within the grace period and flushes logs', async () => {
+      const close = mock();
+      stub(LogStore, { close });
+      const forceStop = mock(() => Promise.resolve());
+      stub(ApiServer, { stop: forceStop });
+
+      const b = get(Bootstrap);
+      const stopped = mock(() => Promise.resolve());
+      b.use({ name: 'fast', onStop: stopped });
+
+      const result = await b.shutdown(1000);
+
+      expect(result).toBe('drained');
+      expect(stopped).toHaveBeenCalled();
+      // No hard force-close needed on the clean path.
+      expect(forceStop).not.toHaveBeenCalledWith(true);
+      // Logs flushed before exit.
+      expect(close).toHaveBeenCalled();
+    });
+
+    test('forces exit on timeout, force-closes the server, still flushes logs', async () => {
+      const close = mock();
+      stub(LogStore, { close });
+      const forceStop = mock(() => Promise.resolve());
+      stub(ApiServer, { stop: forceStop });
+
+      const b = get(Bootstrap);
+      // A wedged onStop that never resolves must not hang shutdown forever.
+      b.use({ name: 'wedged', onStop: () => new Promise<void>(() => {}) });
+
+      const result = await b.shutdown(20);
+
+      expect(result).toBe('timeout');
+      // Hard-timeout fallback force-closes lingering connections.
+      expect(forceStop).toHaveBeenCalledWith(true);
+      // Log buffer is flushed even when stop() never completed.
+      expect(close).toHaveBeenCalled();
+    });
   });
 
   test('handles plugins without optional hooks', async () => {

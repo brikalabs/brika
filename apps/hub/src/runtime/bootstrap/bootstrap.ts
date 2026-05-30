@@ -3,6 +3,7 @@ import { configureDatabases } from '@brika/db';
 import { inject } from '@brika/di';
 import { hub } from '@/hub';
 import { BrikaInitializer, ConfigLoader } from '@/runtime/config';
+import { ApiServer } from '@/runtime/http/api-server';
 import { Logger } from '@/runtime/logs/log-router';
 import { LogStore } from '@/runtime/logs/log-store';
 import { setHubReady, setHubStopping } from '@/runtime/readiness';
@@ -13,6 +14,11 @@ const HOT_STARTED = Symbol.for('brika.hub.started');
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
+
+/** Outcome of a graceful-shutdown attempt. */
+export type ShutdownResult = 'drained' | 'timeout';
+
+const TIMEOUT = Symbol('shutdown-timeout');
 
 /**
  * Declarative bootstrap builder for the BRIKA hub.
@@ -31,6 +37,7 @@ export class Bootstrap {
   private readonly logStore = inject(LogStore);
   private readonly initializer = inject(BrikaInitializer);
   private readonly configLoader = inject(ConfigLoader);
+  private readonly apiServer = inject(ApiServer);
   private readonly plugins: BootstrapPlugin[] = [];
 
   use(plugin: BootstrapPlugin): this {
@@ -82,6 +89,48 @@ export class Bootstrap {
     await this.runPhase('Stopping', (p) => p.onStop?.(), this.plugins.toReversed());
     this.logs.info('Brika Hub stopped successfully');
     this.logStore.close();
+  }
+
+  /**
+   * Graceful shutdown bounded by `gracePeriodMs`.
+   *
+   * Runs the normal {@link stop} sequence — which stops accepting new HTTP
+   * connections and drains in-flight requests via `ApiServer.stop()` — but
+   * races it against a hard timeout so a wedged `onStop` can never hang the
+   * process forever. On timeout we force-close any lingering connections and
+   * always flush/close the {@link LogStore} so no buffered log line is lost,
+   * even on the timeout path where `stop()` never reached its own close.
+   *
+   * @returns `'drained'` if everything stopped cleanly within the grace
+   *   period, `'timeout'` if the hard-timeout fallback had to fire.
+   */
+  async shutdown(gracePeriodMs: number): Promise<ShutdownResult> {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const deadline = new Promise<typeof TIMEOUT>((resolve) => {
+      timer = setTimeout(() => resolve(TIMEOUT), gracePeriodMs);
+    });
+
+    try {
+      const outcome = await Promise.race([this.stop(), deadline]);
+      if (outcome === TIMEOUT) {
+        this.logs.warn('Graceful shutdown exceeded grace period, forcing exit', {
+          gracePeriodMs,
+        });
+        // Force-close any connections still draining so they can't keep
+        // the event loop alive past the deadline.
+        await this.apiServer.stop(true);
+        return 'timeout';
+      }
+      return 'drained';
+    } finally {
+      if (timer) {
+        clearTimeout(timer);
+      }
+      // Guarantee the log buffer is flushed before exit. On the clean path
+      // stop() already closed it; close() is idempotent so this is a no-op
+      // there and the safety net on the timeout path.
+      this.logStore.close();
+    }
   }
 
   private async runPhase(

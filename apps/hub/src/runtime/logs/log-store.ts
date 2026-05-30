@@ -216,9 +216,18 @@ export class LogStore {
       .get()?.value ?? 0;
   }
 
+  /**
+   * Flush and close the underlying SQLite database. Idempotent: the
+   * graceful-shutdown path may call this both on the clean stop and again
+   * from the hard-timeout fallback, so a second call must be a harmless
+   * no-op rather than throwing on an already-closed handle.
+   */
   close(): void {
     this.stopRetention();
-    this.#database?.sqlite.close();
+    if (this.#database) {
+      this.#database.sqlite.close();
+      this.#database = null;
+    }
   }
 }
 

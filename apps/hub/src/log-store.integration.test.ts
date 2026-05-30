@@ -577,4 +577,35 @@ describe('LogStore', () => {
       expect(uninitStore.count()).toBe(0);
     });
   });
+
+  describe('close', () => {
+    test('is idempotent — a second close after the handle is gone is a no-op', () => {
+      const isolated = new LogStore();
+      isolated.init();
+
+      // First close drops the live SQLite handle.
+      expect(() => isolated.close()).not.toThrow();
+      // The graceful-shutdown timeout fallback may call close() again after
+      // the clean stop already closed it; the second call must not throw on
+      // the already-released handle.
+      expect(() => isolated.close()).not.toThrow();
+    });
+
+    test('reads return empty/zero after close releases the handle', () => {
+      const isolated = new LogStore();
+      isolated.init();
+      isolated.insert(createLogEvent({}));
+      isolated.close();
+
+      // After close the underlying db is null, so queries degrade gracefully
+      // instead of throwing on a closed handle.
+      expect(isolated.query().logs).toEqual([]);
+      expect(isolated.count()).toBe(0);
+    });
+
+    test('close before init is a harmless no-op', () => {
+      const uninitStore = new LogStore();
+      expect(() => uninitStore.close()).not.toThrow();
+    });
+  });
 });
