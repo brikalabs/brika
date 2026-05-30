@@ -1,0 +1,43 @@
+# Snyk (https://snyk.io) policy file.
+# Controls how `snyk test` / `snyk monitor` treat known issues.
+version: v1.25.0
+
+# --- ip@2.0.1 SSRF (not reachable in this codebase) ---------------------------
+# `ip` is a transitive dep of werift (WebRTC), our only consumer. werift calls
+# `ip` solely in nodeIpAddress() to filter the HOST's own interfaces from
+# os.networkInterfaces() when gathering ICE candidates:
+#
+#   interfaces[nic].filter(d => ... && !nodeIp.isLoopback(d.address) && ...)
+#   (werift/lib/ice/src/utils.js)
+#
+# The argument is always a local NIC address — never attacker-controlled input.
+# The CVEs describe an SSRF allowlist bypass when ip.isPublic()/isPrivate() gate
+# an attacker-supplied host; that pattern does not exist anywhere in this repo
+# (werift doesn't even call isPublic/isPrivate). There is also no upstream fix:
+# `ip` is archived and werift 0.23.0 still pins ip@^2.0.1.
+#
+# Re-evaluate if: we add code that passes user input to ip.*, or werift ships a
+# release that drops/replaces the ip dependency.
+ignore:
+  SNYK-JS-IP-12704893:
+    - '*':
+        reason: >-
+          Not reachable — werift uses ip only to classify the host's own
+          os.networkInterfaces() addresses (ICE candidate gathering); no
+          attacker-controlled input reaches it. No upstream fix exists.
+        expires: 2026-11-30T00:00:00.000Z
+  SNYK-JS-IP-12761655:
+    - '*':
+        reason: >-
+          Not reachable — werift uses ip only to classify the host's own
+          os.networkInterfaces() addresses (ICE candidate gathering); no
+          attacker-controlled input reaches it. No upstream fix exists.
+        expires: 2026-11-30T00:00:00.000Z
+  SNYK-JS-IP-7148531:
+    - '*':
+        reason: >-
+          Not reachable — werift uses ip only to classify the host's own
+          os.networkInterfaces() addresses (ICE candidate gathering); no
+          attacker-controlled input reaches it. No upstream fix exists.
+        expires: 2026-11-30T00:00:00.000Z
+patch: {}
