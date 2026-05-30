@@ -148,6 +148,8 @@ describe('PluginProcess', () => {
     config = {
       heartbeatIntervalMs: 100000, // Long interval to prevent auto-heartbeat during tests
       heartbeatTimeoutMs: 5000,
+      rssSoftLimitBytes: 0,
+      rssBreachSamples: 3,
     };
 
     process = new PluginProcess(
@@ -767,6 +769,8 @@ describe('PluginProcess', () => {
       const shortConfig: PluginProcessConfig = {
         heartbeatIntervalMs: 50,
         heartbeatTimeoutMs: 1000,
+        rssSoftLimitBytes: 0,
+        rssBreachSamples: 3,
       };
 
       const pp = new PluginProcess(
@@ -801,6 +805,8 @@ describe('PluginProcess', () => {
       const shortConfig: PluginProcessConfig = {
         heartbeatIntervalMs: 50,
         heartbeatTimeoutMs: 100,
+        rssSoftLimitBytes: 0,
+        rssBreachSamples: 3,
       };
 
       const pp = new PluginProcess(
@@ -836,6 +842,8 @@ describe('PluginProcess', () => {
       const shortConfig: PluginProcessConfig = {
         heartbeatIntervalMs: 50,
         heartbeatTimeoutMs: 1000,
+        rssSoftLimitBytes: 0,
+        rssBreachSamples: 3,
       };
 
       const pp = new PluginProcess(
@@ -872,6 +880,8 @@ describe('PluginProcess', () => {
       const shortConfig: PluginProcessConfig = {
         heartbeatIntervalMs: 50,
         heartbeatTimeoutMs: 1000,
+        rssSoftLimitBytes: 0,
+        rssBreachSamples: 3,
       };
 
       const pp = new PluginProcess(
@@ -905,6 +915,8 @@ describe('PluginProcess', () => {
       const shortConfig: PluginProcessConfig = {
         heartbeatIntervalMs: 50,
         heartbeatTimeoutMs: 1000,
+        rssSoftLimitBytes: 0,
+        rssBreachSamples: 3,
       };
 
       const cbsNoMetrics = {

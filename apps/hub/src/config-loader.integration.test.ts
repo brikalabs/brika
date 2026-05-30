@@ -148,6 +148,62 @@ schedules: []
       expect(config.hub.shutdown.gracePeriodMs).toBe(10_000);
     });
 
+    test('defaults rssSoftLimitBytes to 512 MiB when file is absent', async () => {
+      const config = await loader.load();
+      expect(config.hub.plugins.rssSoftLimitBytes).toBe(512 * 1024 * 1024);
+    });
+
+    test('parses a custom rssSoftLimitBytes from YAML', async () => {
+      await Bun.write(
+        join(BRIKA_DIR, 'brika.yml'),
+        `
+hub:
+  plugins:
+    rssSoftLimitBytes: 268435456
+plugins: {}
+rules: []
+schedules: []
+`
+      );
+
+      const config = await loader.load();
+      expect(config.hub.plugins.rssSoftLimitBytes).toBe(268435456);
+    });
+
+    test('honours rssSoftLimitBytes: 0 (disabled) without falling back to default', async () => {
+      await Bun.write(
+        join(BRIKA_DIR, 'brika.yml'),
+        `
+hub:
+  plugins:
+    rssSoftLimitBytes: 0
+plugins: {}
+rules: []
+schedules: []
+`
+      );
+
+      const config = await loader.load();
+      expect(config.hub.plugins.rssSoftLimitBytes).toBe(0);
+    });
+
+    test('falls back to the default for an invalid (negative) rssSoftLimitBytes', async () => {
+      await Bun.write(
+        join(BRIKA_DIR, 'brika.yml'),
+        `
+hub:
+  plugins:
+    rssSoftLimitBytes: -100
+plugins: {}
+rules: []
+schedules: []
+`
+      );
+
+      const config = await loader.load();
+      expect(config.hub.plugins.rssSoftLimitBytes).toBe(512 * 1024 * 1024);
+    });
+
     test('caches loaded config', async () => {
       await Bun.write(
         join(BRIKA_DIR, 'brika.yml'),
@@ -226,6 +282,7 @@ schedules: []
             installDir: './plugins',
             heartbeatInterval: 5000,
             heartbeatTimeout: 15000,
+            rssSoftLimitBytes: 0,
           },
           logs: { retentionDays: 7, pruneIntervalMs: 3600000 },
           shutdown: { gracePeriodMs: 10000 },

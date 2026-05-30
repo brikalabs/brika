@@ -169,6 +169,19 @@ export class PluginManagerConfig {
   readonly heartbeatTimeoutMs: number;
   readonly killTimeoutMs = 3000;
 
+  /**
+   * Per-plugin RSS soft-limit (bytes). When a plugin's resident set size
+   * stays above this for {@link rssBreachSamples} consecutive metric samples
+   * the hub triggers a graceful restart via the RestartPolicy. `0` disables.
+   */
+  readonly rssSoftLimitBytes: number;
+  /**
+   * Consecutive over-limit RSS samples required before a graceful restart is
+   * triggered. Requiring a sustained breach (not a single spike) avoids
+   * flapping on transient allocation peaks.
+   */
+  readonly rssBreachSamples = 3;
+
   // Auto-restart configuration
   readonly autoRestartEnabled = true;
   readonly restartBaseDelayMs = 1000;
@@ -183,6 +196,7 @@ export class PluginManagerConfig {
       const config = loader.get();
       this.heartbeatEveryMs = config.hub.plugins.heartbeatInterval;
       this.heartbeatTimeoutMs = config.hub.plugins.heartbeatTimeout;
+      this.rssSoftLimitBytes = config.hub.plugins.rssSoftLimitBytes;
     } catch {
       // Defaults: ping every 10s, declare dead after 60s without a pong.
       // A 15s timeout was too tight — under any non-trivial IPC load
@@ -192,6 +206,8 @@ export class PluginManagerConfig {
       // any in-flight requests fail with "Killed".
       this.heartbeatEveryMs = 10_000;
       this.heartbeatTimeoutMs = 60_000;
+      // 512 MiB — mirrors ConfigLoader's DEFAULT_RSS_SOFT_LIMIT_BYTES.
+      this.rssSoftLimitBytes = 512 * 1024 * 1024;
     }
   }
 }

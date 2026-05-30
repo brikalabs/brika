@@ -45,6 +45,19 @@ export const PluginErrors = {
     };
   },
 
+  rssSoftLimit(rssBytes: number, limitBytes: number): PluginError {
+    const rssMb = String(Math.round(rssBytes / (1024 * 1024)));
+    const limitMb = String(Math.round(limitBytes / (1024 * 1024)));
+    return {
+      key: 'plugins:errors.rssSoftLimit',
+      params: {
+        rssMb,
+        limitMb,
+      },
+      message: `RSS soft-limit exceeded (${rssMb} MiB > ${limitMb} MiB), restarting`,
+    };
+  },
+
   crashLoop(reason: string): PluginError {
     return {
       key: 'plugins:errors.crashLoop',

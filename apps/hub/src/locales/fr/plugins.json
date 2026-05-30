@@ -78,6 +78,7 @@
     "heartbeatTimeout": "Le plugin ne répond plus",
     "crashed": "Le plugin a planté : {{reason}}",
     "crashLoop": "Boucle de plantage : {{reason}}",
+    "rssSoftLimit": "Limite mémoire dépassée ({{rssMb}} Mio > {{limitMb}} Mio), redémarrage",
     "restarting": "Redémarrage dans {{seconds}}s",
     "killed": "Le plugin a été arrêté de force",
     "buildFailed": "Échec de la compilation : {{errors}}",

@@ -86,6 +86,7 @@ describe('HubConfig', () => {
           installDir: '',
           heartbeatInterval: 5000,
           heartbeatTimeout: 15000,
+          rssSoftLimitBytes: 0,
         },
         logs: { retentionDays: 7, pruneIntervalMs: 3600000 },
         shutdown: { gracePeriodMs: 10000 },
@@ -122,6 +123,8 @@ describe('PluginManagerConfig', () => {
     expect(config.restartMaxCrashes).toBe(5);
     expect(config.restartCrashWindowMs).toBe(60000);
     expect(config.restartStabilityMs).toBe(30000);
+    expect(config.rssSoftLimitBytes).toBe(512 * 1024 * 1024);
+    expect(config.rssBreachSamples).toBe(3);
   });
 
   test('uses ConfigLoader values when available', () => {
@@ -133,6 +136,7 @@ describe('PluginManagerConfig', () => {
           installDir: '',
           heartbeatInterval: 10000,
           heartbeatTimeout: 30000,
+          rssSoftLimitBytes: 256 * 1024 * 1024,
         },
         logs: { retentionDays: 7, pruneIntervalMs: 3600000 },
         shutdown: { gracePeriodMs: 10000 },
@@ -150,5 +154,6 @@ describe('PluginManagerConfig', () => {
 
     expect(config.heartbeatEveryMs).toBe(10000);
     expect(config.heartbeatTimeoutMs).toBe(30000);
+    expect(config.rssSoftLimitBytes).toBe(256 * 1024 * 1024);
   });
 });
