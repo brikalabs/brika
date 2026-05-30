@@ -72,6 +72,48 @@ describe('measurePayloadBytes', () => {
     expect(measurePayloadBytes({ map }, Number.POSITIVE_INFINITY)).toBeGreaterThanOrEqual(300);
     expect(measurePayloadBytes({ set }, Number.POSITIVE_INFINITY)).toBeGreaterThanOrEqual(300);
   });
+
+  test('measures array members', () => {
+    const arr = ['a'.repeat(200), 'b'.repeat(200)];
+    expect(measurePayloadBytes({ arr }, Number.POSITIVE_INFINITY)).toBeGreaterThanOrEqual(400);
+  });
+
+  test('short-circuits inside an oversized array without walking all members', () => {
+    const arr = Array.from({ length: 50 }, () => 'x'.repeat(1000));
+    const size = measurePayloadBytes(arr, 100);
+    expect(size).toBe(Number.POSITIVE_INFINITY);
+  });
+
+  test('counts null and undefined as fixed-overhead nodes', () => {
+    const withNullish = measurePayloadBytes({ a: null, b: undefined }, Number.POSITIVE_INFINITY);
+    const empty = measurePayloadBytes({}, Number.POSITIVE_INFINITY);
+    expect(withNullish).toBeGreaterThan(empty);
+  });
+
+  test('counts bigint by its decimal-string length', () => {
+    const small = measurePayloadBytes({ n: 1n }, Number.POSITIVE_INFINITY);
+    const large = measurePayloadBytes(
+      { n: 123_456_789_012_345_678_901_234_567_890n },
+      Number.POSITIVE_INFINITY
+    );
+    expect(large).toBeGreaterThan(small);
+  });
+
+  test('counts primitive scalars (boolean/number) as fixed overhead', () => {
+    const withScalars = measurePayloadBytes({ a: true, b: 42 }, Number.POSITIVE_INFINITY);
+    const empty = measurePayloadBytes({}, Number.POSITIVE_INFINITY);
+    expect(withScalars).toBeGreaterThan(empty);
+  });
+
+  test('Date is measured as a tagged fixed-size value', () => {
+    const size = measurePayloadBytes({ at: new Date(0) }, Number.POSITIVE_INFINITY);
+    expect(size).toBeGreaterThan(0);
+  });
+
+  test('over-limit Map short-circuits', () => {
+    const map = new Map([['k', 'v'.repeat(10_000)]]);
+    expect(measurePayloadBytes(map, 100)).toBe(Number.POSITIVE_INFINITY);
+  });
 });
 
 describe('Channel payload guard — outbound send', () => {
@@ -119,6 +161,47 @@ describe('Channel payload guard — outbound send', () => {
     channel.send(blob, { data: payload });
     expect(captured.sent).toHaveLength(1);
     expect(captured.sent[0]?.data).toBe(payload);
+  });
+
+  test('a message exactly at the limit is forwarded (boundary)', () => {
+    // Measure a known payload, then set the cap to exactly its size.
+    const msg = { t: 'blob', data: 'x'.repeat(200) };
+    const exact = measurePayloadBytes(msg, Number.POSITIVE_INFINITY);
+    const { channel, captured } = makeChannel(exact);
+    channel.send(blob, { data: 'x'.repeat(200) });
+    expect(captured.sent).toHaveLength(1);
+    expect(captured.rejections).toHaveLength(0);
+  });
+
+  test('one byte over the limit is rejected (boundary)', () => {
+    const msg = { t: 'blob', data: 'x'.repeat(200) };
+    const exact = measurePayloadBytes(msg, Number.POSITIVE_INFINITY);
+    const { channel, captured } = makeChannel(exact - 1);
+    channel.send(blob, { data: 'x'.repeat(200) });
+    expect(captured.sent).toHaveLength(0);
+    expect(captured.rejections).toHaveLength(1);
+  });
+
+  test('send on a closed channel is a no-op (not measured/forwarded)', () => {
+    const { channel, captured } = makeChannel(10_000);
+    channel.close();
+    channel.send(blob, { data: 'small' });
+    expect(captured.sent).toHaveLength(0);
+    expect(captured.rejections).toHaveLength(0);
+  });
+
+  test('default cap (no maxPayloadBytes) leaves normal traffic untouched', () => {
+    const captured: WireMessage[] = [];
+    const channel = new Channel({ send: (msg) => captured.push(msg) });
+    channel.send(blob, { data: 'x'.repeat(1000) });
+    expect(captured).toHaveLength(1);
+  });
+
+  test('over-limit send without an onPayloadLimitExceeded callback still drops the message', () => {
+    const sent: WireMessage[] = [];
+    const channel = new Channel({ send: (msg) => sent.push(msg), maxPayloadBytes: 100 });
+    expect(() => channel.send(blob, { data: 'x'.repeat(10_000) })).not.toThrow();
+    expect(sent).toHaveLength(0);
   });
 });
 
