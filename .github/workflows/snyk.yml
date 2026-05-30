@@ -110,6 +110,7 @@ jobs:
           --detection-depth=7
           --severity-threshold=high
           --org=brika-labs
+          --policy-path=.snyk
 
       - name: Snyk monitor (snapshot to dashboard)
         # Only push the snapshot from main so PR branches don't churn the project list.
@@ -121,6 +122,7 @@ jobs:
           --all-projects
           --detection-depth=7
           --org=brika-labs
+          --policy-path=.snyk
 
   code:
     name: Snyk Code (SAST)
