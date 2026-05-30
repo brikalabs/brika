@@ -1,0 +1,27 @@
+# Snyk (https://snyk.io) policy file.
+# Per-project policy: `snyk test --all-projects` resolves each workspace's
+# ignores from the project's own dir, not the repo root — so the ip ignore must
+# live alongside each manifest that pulls werift (here, and apps/build, apps/console).
+version: v1.25.0
+
+# --- ip@2.0.1 SSRF (not reachable) -------------------------------------------
+# Transitive via werift (WebRTC). werift calls `ip` only in nodeIpAddress() to
+# filter the HOST's own os.networkInterfaces() addresses during ICE candidate
+# gathering — never attacker-controlled input. werift does not even call the
+# vulnerable isPublic/isPrivate allowlist functions. No upstream fix exists
+# (`ip` is archived; werift 0.23.0 pins ip@^2.0.1). Re-evaluate if user input
+# ever reaches ip.* or werift drops the dependency.
+ignore:
+  SNYK-JS-IP-12704893:
+    - '*':
+        reason: Not reachable — werift uses ip only to classify the host's own network interfaces; no attacker input. No upstream fix.
+        expires: 2026-11-30T00:00:00.000Z
+  SNYK-JS-IP-12761655:
+    - '*':
+        reason: Not reachable — werift uses ip only to classify the host's own network interfaces; no attacker input. No upstream fix.
+        expires: 2026-11-30T00:00:00.000Z
+  SNYK-JS-IP-7148531:
+    - '*':
+        reason: Not reachable — werift uses ip only to classify the host's own network interfaces; no attacker input. No upstream fix.
+        expires: 2026-11-30T00:00:00.000Z
+patch: {}
