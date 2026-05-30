@@ -463,6 +463,22 @@ describe('PluginEventHandler', () => {
     });
   });
 
+  describe('onRssSoftLimitBreached', () => {
+    test('dispatches a structured rssSoftLimitBreached event with the breach details', () => {
+      const MB = 1024 * 1024;
+      handler.onRssSoftLimitBreached('uid-123', '@test/plugin', 600 * MB, 512 * MB);
+
+      expect(mockEventSystem.dispatch).toHaveBeenCalledTimes(1);
+      const dispatched = mockEventSystem.dispatch.mock.calls[0][0];
+      expect(dispatched.payload).toMatchObject({
+        uid: 'uid-123',
+        name: '@test/plugin',
+        rssBytes: 600 * MB,
+        limitBytes: 512 * MB,
+      });
+    });
+  });
+
   describe('pushBrickData', () => {
     test('dispatches dataUpdated event', () => {
       handler.pushBrickData('@test/plugin', 'my-brick', { temp: 22 });

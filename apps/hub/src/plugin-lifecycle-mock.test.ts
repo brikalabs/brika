@@ -211,6 +211,7 @@ describe('PluginLifecycle (with mocked spawn)', () => {
       registerBrickType: mock(),
       registerRoute: mock(),
       onPluginDisconnected: mock(),
+      onRssSoftLimitBreached: mock(),
     };
     mockPluginConfig = {
       getConfig: mock().mockResolvedValue({}),
@@ -726,6 +727,76 @@ describe('PluginLifecycle (with mocked spawn)', () => {
       const crashLoopCalls = healthCalls.filter((c: unknown[]) => c[1] === 'crash-loop');
       expect(crashLoopCalls.length).toBeGreaterThanOrEqual(1);
     }, 10_000);
+  });
+
+  describe('#handleRssSoftLimitBreached', () => {
+    const MB = 1024 * 1024;
+
+    test('emits the breach event and marks the plugin crashed', async () => {
+      const callbacks = await loadPlugin();
+      const process = mockProcessInstance as unknown as PluginProcess;
+
+      callbacks.onRssSoftLimitBreached?.(process, 600 * MB, 512 * MB);
+
+      // Operators get a structured resource-governance signal.
+      expect(mockEventHandler.onRssSoftLimitBreached).toHaveBeenCalledWith(
+        process.uid,
+        '@test/plugin',
+        600 * MB,
+        512 * MB
+      );
+      // The breach is recorded as a crash carrying the rssSoftLimit error.
+      expect(mockState.setHealth).toHaveBeenCalledWith(
+        '@test/plugin',
+        'crashed',
+        expect.objectContaining({
+          key: 'plugins:errors.rssSoftLimit',
+          params: { rssMb: '600', limitMb: '512' },
+        })
+      );
+    });
+
+    test('swallows a rejected post-breach unload without crashing', async () => {
+      // Force unload() to reject — it calls metrics.clear(name) internally.
+      // The breach handler must catch it (log + continue) rather than throw
+      // an unhandled rejection.
+      mockMetrics.clear.mockImplementation(() => {
+        throw new Error('clear failed');
+      });
+
+      const callbacks = await loadPlugin();
+      const process = mockProcessInstance as unknown as PluginProcess;
+
+      callbacks.onRssSoftLimitBreached?.(process, 700 * MB, 512 * MB);
+
+      // The breach was still recorded as a crash, and the rejected unload is
+      // handled by the .catch (proven by clear being invoked + no throw).
+      await waitFor(() => mockMetrics.clear.mock.calls.length > 0);
+      expect(mockEventHandler.onRssSoftLimitBreached).toHaveBeenCalled();
+      // Settle the rejected promise's .catch handler.
+      await sleep(10);
+    });
+
+    test('funnels through the auto-restart path so the breach is treated like a crash', async () => {
+      mockState.get.mockReturnValue({ enabled: true });
+
+      const callbacks = await loadPlugin();
+      const process = mockProcessInstance as unknown as PluginProcess;
+
+      callbacks.onRssSoftLimitBreached?.(process, 700 * MB, 512 * MB);
+
+      // After the graceful unload, the RestartPolicy schedules a restart —
+      // a leaking plugin that keeps tripping the limit is handled like a crash.
+      await waitFor(() =>
+        mockState.setHealth.mock.calls.some(
+          (c: unknown[]) =>
+            c[0] === '@test/plugin' &&
+            c[1] === 'restarting' &&
+            typeof c[2] === 'object' &&
+            (c[2] as Record<string, unknown>).key === 'plugins:errors.restarting'
+        )
+      );
+    });
   });
 
   describe('#checkCompatibility', () => {

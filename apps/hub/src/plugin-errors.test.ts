@@ -67,6 +67,26 @@ describe('PluginErrors', () => {
     });
   });
 
+  describe('rssSoftLimit', () => {
+    test('rounds RSS and limit bytes to whole MiB', () => {
+      const MB = 1024 * 1024;
+      const error = PluginErrors.rssSoftLimit(600 * MB, 512 * MB);
+
+      expect(error.key).toBe('plugins:errors.rssSoftLimit');
+      expect(error.params).toEqual({ rssMb: '600', limitMb: '512' });
+      expect(error.message).toBe('RSS soft-limit exceeded (600 MiB > 512 MiB), restarting');
+    });
+
+    test('rounds fractional MiB to the nearest whole MiB', () => {
+      const MB = 1024 * 1024;
+      // 1.5 MiB rounds to 2, 0.4 MiB rounds to 0.
+      const error = PluginErrors.rssSoftLimit(1.5 * MB, 0.4 * MB);
+
+      expect(error.params).toEqual({ rssMb: '2', limitMb: '0' });
+      expect(error.message).toBe('RSS soft-limit exceeded (2 MiB > 0 MiB), restarting');
+    });
+  });
+
   describe('crashLoop', () => {
     test('returns error with reason param and prefixed message', () => {
       const error = PluginErrors.crashLoop('too many restarts');
