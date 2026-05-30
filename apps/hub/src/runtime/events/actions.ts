@@ -27,6 +27,14 @@ export const PluginActions = defineActions('plugin', {
     name: z.string(),
     error: z.string(),
   }),
+  rssSoftLimitBreached: z.object({
+    uid: z.string(),
+    name: z.string(),
+    /** Resident set size (bytes) at the moment the breach was confirmed. */
+    rssBytes: z.number(),
+    /** Configured soft-limit (bytes) that was exceeded. */
+    limitBytes: z.number(),
+  }),
 });
 
 // Spark actions for typed events

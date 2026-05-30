@@ -288,6 +288,23 @@ export class PluginEventHandler {
   }
 
   /**
+   * Signal that a plugin breached its RSS soft-limit and is being gracefully
+   * restarted. Emits a structured event so operators (and the UI) get a clear
+   * resource-governance signal distinct from a crash.
+   */
+  onRssSoftLimitBreached(uid: string, name: string, rssBytes: number, limitBytes: number): void {
+    this.#logs.warn('Plugin exceeded RSS soft-limit, scheduling graceful restart', {
+      pluginName: name,
+      uid,
+      rssBytes,
+      limitBytes,
+    });
+    this.#events.dispatch(
+      PluginActions.rssSoftLimitBreached.create({ uid, name, rssBytes, limitBytes }, 'hub')
+    );
+  }
+
+  /**
    * Called when a plugin is uninstalled (`PluginManager.remove`). Drops
    * cached brick data so a fresh install of the same plugin doesn't
    * inherit stale state.

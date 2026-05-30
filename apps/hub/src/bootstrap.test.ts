@@ -28,6 +28,7 @@ const mockConfig: BrikaConfig = {
       installDir: '/tmp',
       heartbeatInterval: 5000,
       heartbeatTimeout: 15000,
+      rssSoftLimitBytes: 0,
     },
     logs: { retentionDays: 7, pruneIntervalMs: 3600000 },
     shutdown: { gracePeriodMs: 10000 },

@@ -79,6 +79,13 @@ export interface BrikaConfig {
       installDir: string;
       heartbeatInterval: number;
       heartbeatTimeout: number;
+      /**
+       * Per-plugin RSS soft-limit in bytes. When a plugin's resident set size
+       * stays above this for a sustained period the hub triggers a graceful
+       * restart (through the existing RestartPolicy backoff) rather than
+       * killing it abruptly. `0` disables the limit (no RSS-based restarts).
+       */
+      rssSoftLimitBytes: number;
     };
     logs: {
       /**
@@ -100,6 +107,13 @@ export interface BrikaConfig {
 }
 
 /**
+ * Default per-plugin RSS soft-limit: 512 MiB. Generous enough for media
+ * plugins under normal load, low enough to catch a runaway leak before it
+ * starves the host. Operators tune this per deployment; `0` disables it.
+ */
+const DEFAULT_RSS_SOFT_LIMIT_BYTES = 512 * 1024 * 1024;
+
+/**
  * Default config *template*. Never assign this object (or its nested
  * arrays) to `this.#config` directly — mutating methods like `addPlugin`
  * push into `config.plugins`, which would corrupt this module-level
@@ -115,6 +129,7 @@ const DEFAULT_CONFIG: BrikaConfig = {
       installDir: './plugins/.installed',
       heartbeatInterval: 5000,
       heartbeatTimeout: 15000,
+      rssSoftLimitBytes: DEFAULT_RSS_SOFT_LIMIT_BYTES,
     },
     logs: {
       retentionDays: 7,
@@ -133,6 +148,17 @@ const DEFAULT_CONFIG: BrikaConfig = {
 function defaultConfig(): BrikaConfig {
   return structuredClone(DEFAULT_CONFIG);
 }
+
+/**
+ * Schema for the RSS soft-limit field. A non-negative integer (bytes);
+ * `0` disables the limit. Invalid or missing values fall back to the
+ * documented default rather than failing the whole config load.
+ */
+const RssSoftLimitSchema = z.coerce
+  .number()
+  .int()
+  .nonnegative()
+  .catch(DEFAULT_RSS_SOFT_LIMIT_BYTES);
 
 const SECRET_PREFIX = '__secret_';
 
@@ -207,6 +233,10 @@ export class ConfigLoader {
             heartbeatTimeout:
               (hubPluginsParsed.heartbeatTimeout as number) ??
               DEFAULT_CONFIG.hub.plugins.heartbeatTimeout,
+            rssSoftLimitBytes:
+              hubPluginsParsed.rssSoftLimitBytes === undefined
+                ? DEFAULT_CONFIG.hub.plugins.rssSoftLimitBytes
+                : RssSoftLimitSchema.parse(hubPluginsParsed.rssSoftLimitBytes),
           },
           logs: {
             retentionDays:

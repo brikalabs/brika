@@ -42,7 +42,7 @@ import {
 import type { BrickFamily, Plugin, PluginHealth } from '@brika/plugin';
 import type { PluginPackageSchema } from '@brika/schema';
 import { FsScopeSchema } from '@brika/sdk/grants';
-import { getProcessMetrics } from '@/runtime/metrics';
+import { getProcessMetrics, RssSoftLimitMonitor } from '@/runtime/metrics';
 import type { HubLocation } from '@/runtime/state/state-store';
 import { dispatchGrantRequest } from './grants/dispatch';
 import { backingDirFor, resolveVirtualPath } from './grants/fs/paths';
@@ -60,6 +60,10 @@ import { now } from './utils';
 export interface PluginProcessConfig {
   heartbeatIntervalMs: number;
   heartbeatTimeoutMs: number;
+  /** Per-plugin RSS soft-limit in bytes; `0` disables the check. */
+  rssSoftLimitBytes: number;
+  /** Consecutive over-limit RSS samples required before a breach is reported. */
+  rssBreachSamples: number;
 }
 
 export interface SparkRegistration {
@@ -94,6 +98,12 @@ export interface PluginProcessCallbacks {
   onHeartbeatFailed: (process: PluginProcess, silentMs: number) => void;
   onDisconnect: (process: PluginProcess, error?: Error) => void;
   onMetrics?: (process: PluginProcess, cpu: number, memory: number) => void;
+  /**
+   * Fired exactly once when the plugin's RSS stays above the configured
+   * soft-limit for the required number of consecutive samples. The lifecycle
+   * service responds with a graceful restart through the RestartPolicy.
+   */
+  onRssSoftLimitBreached?: (process: PluginProcess, rssBytes: number, limitBytes: number) => void;
 }
 
 export interface BlockRegistration {
@@ -148,6 +158,12 @@ export class PluginProcess {
    */
   #cachedVector: ReturnType<typeof buildVectorWithUserConsent> | undefined;
   readonly #lifetimeAbort = new AbortController();
+  /**
+   * Tracks sustained RSS breaches across heartbeat metric samples. Reports a
+   * breach only once (the process is then restarted), so a single sustained
+   * breach maps to exactly one restart request.
+   */
+  readonly #rssMonitor: RssSoftLimitMonitor;
 
   constructor(
     channel: PluginChannel,
@@ -181,6 +197,11 @@ export class PluginProcess {
     this.version = info.version;
     this.metadata = info.metadata;
     this.locales = info.locales;
+
+    this.#rssMonitor = new RssSoftLimitMonitor(
+      this.config.rssSoftLimitBytes,
+      this.config.rssBreachSamples
+    );
 
     this.#setupHandlers();
     this.#startHeartbeat();
@@ -779,10 +800,21 @@ export class PluginProcess {
         this.#lastPong = now();
 
         // Collect metrics on successful heartbeat
-        if (this.callbacks.onMetrics) {
+        if (this.callbacks.onMetrics || this.#rssMonitor.enabled) {
           const metrics = await getProcessMetrics(this.pid);
           if (metrics) {
-            this.callbacks.onMetrics(this, metrics.cpu, metrics.memory);
+            this.callbacks.onMetrics?.(this, metrics.cpu, metrics.memory);
+
+            // Compare RSS against the soft-limit. A sustained breach
+            // (N consecutive over-limit samples) reports once; the
+            // lifecycle then schedules a graceful restart.
+            if (this.#rssMonitor.record(metrics.memory)) {
+              this.callbacks.onRssSoftLimitBreached?.(
+                this,
+                metrics.memory,
+                this.config.rssSoftLimitBytes
+              );
+            }
           }
         }
       } catch {

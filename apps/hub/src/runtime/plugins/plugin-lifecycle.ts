@@ -316,6 +316,8 @@ export class PluginLifecycle {
       {
         heartbeatIntervalMs: this.#config.heartbeatEveryMs,
         heartbeatTimeoutMs: this.#config.heartbeatTimeoutMs,
+        rssSoftLimitBytes: this.#config.rssSoftLimitBytes,
+        rssBreachSamples: this.#config.rssBreachSamples,
       },
       {
         onReady: async (p) => {
@@ -397,6 +399,8 @@ export class PluginLifecycle {
             memory,
           });
         },
+        onRssSoftLimitBreached: (p, rssBytes, limitBytes) =>
+          this.#handleRssSoftLimitBreached(p, rssBytes, limitBytes),
       }
     );
 
@@ -589,6 +593,34 @@ export class PluginLifecycle {
       .catch((e) =>
         this.#logs.error(
           'Failed to unload after heartbeat timeout',
+          { pluginName: process.name },
+          { error: e }
+        )
+      );
+  }
+
+  /**
+   * A plugin's RSS stayed above its soft-limit for the required number of
+   * consecutive samples. Emit a log + plugin event, then funnel through the
+   * normal crash path so the graceful restart respects RestartPolicy backoff
+   * and crash-loop counting (a leaking plugin that keeps tripping the limit
+   * is treated like a crash loop and eventually parked).
+   */
+  #handleRssSoftLimitBreached(
+    process: PluginProcessInstance,
+    rssBytes: number,
+    limitBytes: number
+  ): void {
+    this.#eventHandler.onRssSoftLimitBreached(process.uid, process.name, rssBytes, limitBytes);
+
+    this.#state.setHealth(process.name, 'crashed', PluginErrors.rssSoftLimit(rssBytes, limitBytes));
+
+    const reason = `RSS soft-limit exceeded (${rssBytes} > ${limitBytes} bytes)`;
+    this.unload(process.name, true)
+      .then(() => this.#attemptAutoRestart(process.name, reason))
+      .catch((e) =>
+        this.#logs.error(
+          'Failed to unload after RSS soft-limit breach',
           { pluginName: process.name },
           { error: e }
         )

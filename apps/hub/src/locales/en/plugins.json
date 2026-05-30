@@ -78,6 +78,7 @@
     "heartbeatTimeout": "Plugin stopped responding",
     "crashed": "Plugin crashed: {{reason}}",
     "crashLoop": "Crash loop: {{reason}}",
+    "rssSoftLimit": "Memory limit exceeded ({{rssMb}} MiB > {{limitMb}} MiB), restarting",
     "restarting": "Restarting in {{seconds}}s",
     "killed": "Plugin was forcefully terminated",
     "buildFailed": "Build failed: {{errors}}",
