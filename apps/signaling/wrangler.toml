@@ -81,7 +81,10 @@ new_sqlite_classes = ["HubSession"]
 binding = "DB"
 database_name = "brika-signaling"
 database_id = "5778b6af-da1b-4b0e-8a69-9ee7d5fb5512"
-migrations_dir = "migrations"
+# SQLite migrations are shared with the standalone server (D1 is SQLite under
+# the hood). `0002_hashed_tokens.sql` recreates the claims table with the
+# hashed-token schema — see that file's header for the migration trade-off.
+migrations_dir = "migrations/sqlite"
 
 # Secret bindings — set with `wrangler secret put <NAME>`.
 # Listed here so they're discoverable; values live in Cloudflare's secret store.

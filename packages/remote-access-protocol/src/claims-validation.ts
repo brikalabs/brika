@@ -20,14 +20,35 @@ const NAME_ALNUM_CHAR = /^[a-z0-9]$/;
 
 const TOKEN_BYTES = 32;
 
-/** Hub-name shape: subdomain-safe and human-friendly. */
+/**
+ * Stored claim record. The bearer token is deliberately NOT part of this type:
+ * tokens (and recovery codes) are persisted only as SHA-256 hashes, so the
+ * plaintext exists exactly once — in the {@link MintedCredentials} handed back
+ * to the caller at mint time, and on the wire in the WebSocket subprotocol
+ * auth. A successful `findByToken(plaintext)` lookup returns this shape, not
+ * the token itself.
+ */
 export interface Claim {
   /** Unique hub name (subdomain), lowercase, validated. */
   readonly name: string;
-  /** Opaque bearer token the hub uses on the signaling WebSocket. */
-  readonly token: string;
   /** Unix epoch (ms) the claim was first issued. */
   readonly createdAt: number;
+}
+
+/**
+ * Freshly-minted credentials returned by `claim` / `rotateToken` / `recover`.
+ * The plaintext `token` and `recoveryCode` are shown to the caller exactly
+ * once; the store keeps only their SHA-256 hashes.
+ */
+export interface MintedCredentials extends Claim {
+  /** Plaintext bearer token — return to the caller, then discard server-side. */
+  readonly token: string;
+  /**
+   * Plaintext recovery code — let the user back this up; allows minting a
+   * fresh token if the bearer is lost. Omitted by `rotateToken`, which
+   * preserves the existing recovery code.
+   */
+  readonly recoveryCode?: string;
 }
 
 /** Names we'll never let a user claim — covers core subdomains and brand terms. */
@@ -113,4 +134,21 @@ export function generateToken(): string {
     end -= 1;
   }
   return end === encoded.length ? encoded : encoded.slice(0, end);
+}
+
+/**
+ * Hash a token (or recovery code) for at-rest storage. Plain SHA-256 is
+ * sufficient here because tokens are 32 bytes of cryptographic randomness —
+ * the search space is 2^256, so pre-image and rainbow-table attacks are
+ * infeasible. No per-row salt or server-side HMAC key is needed for this
+ * input shape (unlike low-entropy passwords). Returns a lowercase hex digest.
+ */
+export async function hashToken(plaintext: string): Promise<string> {
+  const bytes = new TextEncoder().encode(plaintext);
+  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  let hex = '';
+  for (const b of new Uint8Array(digest)) {
+    hex += b.toString(16).padStart(2, '0');
+  }
+  return hex;
 }

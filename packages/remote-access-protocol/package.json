@@ -10,7 +10,8 @@
   },
   "keywords": ["brika", "remote-access", "webrtc", "protocol"],
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./testing": "./src/testing.ts"
   },
   "scripts": {
     "test": "bun test",
