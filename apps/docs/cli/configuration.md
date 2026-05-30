@@ -15,6 +15,8 @@ hub:
   logs:
     retentionDays: 7          # delete log rows older than this; 0 = keep forever
     pruneIntervalMs: 3600000  # how often the retention sweep runs
+  shutdown:
+    gracePeriodMs: 10000      # max time to drain requests + tear down before forcing exit
 
 plugins:
   "@brika/plugin-timer":
@@ -40,6 +42,7 @@ schedules: []    # reserved for future use
 | `hub.plugins.heartbeatTimeout` | `15000` ms | Mark a plugin unresponsive (then kill + restart) after this many ms without a pong |
 | `hub.logs.retentionDays` | `7` | Drop log rows older than this. `0` disables retention (file grows forever) |
 | `hub.logs.pruneIntervalMs` | `3600000` (1 h) | How often the retention sweep runs |
+| `hub.shutdown.gracePeriodMs` | `10000` ms | On SIGINT/SIGTERM/SIGHUP, drain in-flight HTTP requests and tear down subsystems within this budget. A hard timeout then force-closes connections, flushes logs, and exits so shutdown can't hang. Must be a positive integer; invalid values fall back to the default |
 
 The hub also has internal defaults for IPC call timeout (`30 s`), kill grace period (`3 s`), and the restart policy (`5 crashes / 60 s` = crash loop, `30 s` of stability resets backoff, `1 s` base / `60 s` max delay). These are not configurable from `brika.yml` today — see [`PluginManagerConfig`](../architecture/plugin-supervisor.md).
 

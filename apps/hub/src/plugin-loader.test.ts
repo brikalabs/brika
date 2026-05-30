@@ -30,6 +30,7 @@ const createMockConfig = (plugins: BrikaConfig['plugins'] = []): BrikaConfig => 
       heartbeatTimeout: 15000,
     },
     logs: { retentionDays: 7, pruneIntervalMs: 3600000 },
+    shutdown: { gracePeriodMs: 10000 },
   },
   plugins,
   rules: [],

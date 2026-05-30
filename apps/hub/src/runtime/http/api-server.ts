@@ -151,8 +151,17 @@ export class ApiServer {
     });
   }
 
-  stop(): void {
-    this.#server?.stop();
+  /**
+   * Stop accepting new connections and drain in-flight requests.
+   *
+   * Bun's `server.stop()` immediately stops listening on the socket so no
+   * new connections are accepted, then resolves once every active request
+   * has finished. Passing `force` calls `server.stop(true)`, which closes
+   * active connections right away — used by the shutdown timeout fallback
+   * so a stuck request can't keep the process alive past the grace period.
+   */
+  async stop(force = false): Promise<void> {
+    await this.#server?.stop(force);
   }
 
   /**

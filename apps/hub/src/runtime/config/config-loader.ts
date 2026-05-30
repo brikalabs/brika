@@ -6,6 +6,7 @@
 
 import { inject, singleton } from '@brika/di';
 import YAML from 'yaml';
+import { z } from 'zod';
 import { Logger } from '../logs/log-router';
 import { BrikaInitializer } from './brika-initializer';
 
@@ -40,6 +41,36 @@ export interface ScheduleEntry {
   enabled: boolean;
 }
 
+/**
+ * Default time the hub waits for in-flight requests to drain and for
+ * subsystems to stop cleanly before a hard-timeout forces exit. Tuned
+ * to comfortably cover a slow request finishing without leaving an
+ * operator staring at a hung process — long enough to drain, short
+ * enough that a wedged shutdown still terminates promptly.
+ */
+const DEFAULT_SHUTDOWN_GRACE_PERIOD_MS = 10_000;
+
+/**
+ * Graceful-shutdown settings, validated at load time. A non-positive or
+ * non-finite value would defeat the hard-timeout fallback (the process
+ * could hang forever), so zod coerces and clamps it to a sane minimum.
+ */
+const ShutdownConfigSchema = z.object({
+  /**
+   * Upper bound, in milliseconds, on the whole shutdown sequence:
+   * request draining plus subsystem teardown. When exceeded, the hub
+   * force-closes connections, flushes logs, and exits.
+   */
+  gracePeriodMs: z.coerce
+    .number()
+    .int()
+    .positive()
+    .catch(DEFAULT_SHUTDOWN_GRACE_PERIOD_MS)
+    .default(DEFAULT_SHUTDOWN_GRACE_PERIOD_MS),
+});
+
+export type ShutdownConfig = z.infer<typeof ShutdownConfigSchema>;
+
 export interface BrikaConfig {
   hub: {
     port: number;
@@ -61,6 +92,7 @@ export interface BrikaConfig {
        */
       pruneIntervalMs: number;
     };
+    shutdown: ShutdownConfig;
   };
   plugins: PluginEntry[];
   rules: RuleEntry[];
@@ -79,6 +111,9 @@ const DEFAULT_CONFIG: BrikaConfig = {
     logs: {
       retentionDays: 7,
       pruneIntervalMs: 60 * 60 * 1000,
+    },
+    shutdown: {
+      gracePeriodMs: DEFAULT_SHUTDOWN_GRACE_PERIOD_MS,
     },
   },
   plugins: [],
@@ -166,6 +201,7 @@ export class ConfigLoader {
             pruneIntervalMs:
               (hubLogsParsed.pruneIntervalMs as number) ?? DEFAULT_CONFIG.hub.logs.pruneIntervalMs,
           },
+          shutdown: ShutdownConfigSchema.parse(hubParsed.shutdown ?? {}),
         },
         plugins: this.#parsePlugins(parsed.plugins),
         rules: (parsed.rules as RuleEntry[]) ?? [],

@@ -13,6 +13,8 @@ export function routes(definitions: RouteDefinition[]): BootstrapPlugin {
   return {
     name: 'routes',
     onStart: () => server.start(),
+    // Drain in-flight requests: server.stop() stops accepting new
+    // connections immediately and resolves once active requests finish.
     onStop: () => server.stop(),
   };
 }

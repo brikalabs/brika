@@ -103,6 +103,51 @@ schedules: []
       expect(config.plugins[0].version).toBe('1.0.0');
     });
 
+    test('defaults shutdown grace period when omitted', async () => {
+      const config = await loader.load();
+
+      expect(config.hub.shutdown.gracePeriodMs).toBe(10_000);
+    });
+
+    test('loads shutdown grace period from YAML', async () => {
+      await Bun.write(
+        join(BRIKA_DIR, 'brika.yml'),
+        `
+hub:
+  shutdown:
+    gracePeriodMs: 25000
+plugins: {}
+rules: []
+schedules: []
+`
+      );
+
+      const config = await loader.load();
+
+      expect(config.hub.shutdown.gracePeriodMs).toBe(25_000);
+    });
+
+    test('falls back to default for an invalid shutdown grace period', async () => {
+      await Bun.write(
+        join(BRIKA_DIR, 'brika.yml'),
+        `
+hub:
+  shutdown:
+    gracePeriodMs: -5
+plugins: {}
+rules: []
+schedules: []
+`
+      );
+
+      const config = await loader.load();
+
+      // zod rejects the non-positive value and the schema's .catch()
+      // restores the documented default instead of leaving the hard
+      // timeout unable to fire.
+      expect(config.hub.shutdown.gracePeriodMs).toBe(10_000);
+    });
+
     test('caches loaded config', async () => {
       await Bun.write(
         join(BRIKA_DIR, 'brika.yml'),
@@ -183,6 +228,7 @@ schedules: []
             heartbeatTimeout: 15000,
           },
           logs: { retentionDays: 7, pruneIntervalMs: 3600000 },
+          shutdown: { gracePeriodMs: 10000 },
         },
         plugins: [
           {
