@@ -16,6 +16,33 @@ import { checkForUpdate, isNewer, isPrerelease, noUpdateInfo } from '@/updater';
 // Helpers
 // ─────────────────────────────────────────────────────────────────────────────
 
+/**
+ * A controlled, known-good 40-char commit SHA for the *running* build.
+ *
+ * `buildInfo.commitFull` is inlined at transpile time from `.git/HEAD`.
+ * In a git worktree (or any checkout where the macro can't resolve HEAD)
+ * it collapses to `'unknown'`, which makes the updater's
+ * `sameVersionDifferentCommit` heuristic short-circuit to `false` and
+ * breaks dev-build detection tests. Pin it explicitly so the
+ * same-version/different-commit assertions test the comparator logic
+ * against controlled inputs rather than the ambient checkout's commit.
+ */
+const CURRENT_BUILD_COMMIT = '1111111111111111111111111111111111111111';
+
+/**
+ * Run `body` with `buildInfo.commitFull` pinned to a deterministic SHA,
+ * restoring the real value afterwards regardless of outcome.
+ */
+async function withBuildCommit(commit: string, body: () => Promise<void>): Promise<void> {
+  const original = buildInfo.commitFull;
+  buildInfo.commitFull = commit;
+  try {
+    await body();
+  } finally {
+    buildInfo.commitFull = original;
+  }
+}
+
 /** Expected asset name for the current platform (mirrors getAssetName logic) */
 function expectedAssetName(): string {
   const os = process.platform === 'win32' ? 'windows' : process.platform;
@@ -619,10 +646,12 @@ describe('compareRelease (indirect)', () => {
       })
     );
 
-    const info = await checkForUpdate();
+    await withBuildCommit(CURRENT_BUILD_COMMIT, async () => {
+      const info = await checkForUpdate();
 
-    expect(info.updateAvailable).toBe(false);
-    expect(info.devBuild).toBe(true);
+      expect(info.updateAvailable).toBe(false);
+      expect(info.devBuild).toBe(true);
+    });
   });
 
   test('devBuild is false when same version, no release-meta', async () => {
@@ -943,10 +972,12 @@ describe('checkForUpdate', () => {
       })
     );
 
-    const info = await checkForUpdate();
+    await withBuildCommit(CURRENT_BUILD_COMMIT, async () => {
+      const info = await checkForUpdate();
 
-    expect(info.updateAvailable).toBe(false);
-    expect(info.devBuild).toBe(true);
+      expect(info.updateAvailable).toBe(false);
+      expect(info.devBuild).toBe(true);
+    });
   });
 
   test('populates releaseCommit from release-meta.json', async () => {
