@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'bun:test';
-import { isBrikaSubdomainOrigin, isPrivateNetworkOrigin } from './api-server';
+import { safeParseCorsAllowlist } from '@/runtime/config/config-loader';
+import {
+  createConfiguredOriginMatcher,
+  isBrikaSubdomainOrigin,
+  isPrivateNetworkOrigin,
+} from './api-server';
 
 describe('isBrikaSubdomainOrigin', () => {
   it('accepts the canonical https://hub.brika.dev shell', () => {
@@ -81,5 +86,88 @@ describe('isPrivateNetworkOrigin', () => {
   it('rejects malformed origin strings without throwing', () => {
     expect(isPrivateNetworkOrigin('not a url')).toBe(false);
     expect(isPrivateNetworkOrigin('')).toBe(false);
+  });
+});
+
+describe('createConfiguredOriginMatcher', () => {
+  it('allows a pinned production origin exactly', () => {
+    const matcher = createConfiguredOriginMatcher(['https://app.example.com']);
+    expect(matcher('https://app.example.com')).toBe(true);
+  });
+
+  it('matches regardless of an incidental trailing slash on the incoming origin', () => {
+    const matcher = createConfiguredOriginMatcher(['https://app.example.com']);
+    // URL().origin strips the trailing slash, so both forms canonicalise.
+    expect(matcher('https://app.example.com/')).toBe(true);
+  });
+
+  it('blocks origins not present in the allowlist', () => {
+    const matcher = createConfiguredOriginMatcher(['https://app.example.com']);
+    expect(matcher('https://attacker.example.com')).toBe(false);
+    expect(matcher('http://app.example.com')).toBe(false);
+    expect(matcher('https://app.example.com.evil.com')).toBe(false);
+  });
+
+  it('never matches via prefix or substring of a pinned origin', () => {
+    const matcher = createConfiguredOriginMatcher(['https://app.example.com']);
+    expect(matcher('https://app.example.co')).toBe(false);
+    expect(matcher('https://evil-app.example.com')).toBe(false);
+  });
+
+  it('matches any of several pinned origins', () => {
+    const matcher = createConfiguredOriginMatcher([
+      'https://app.example.com',
+      'https://admin.example.com',
+    ]);
+    expect(matcher('https://app.example.com')).toBe(true);
+    expect(matcher('https://admin.example.com')).toBe(true);
+    expect(matcher('https://other.example.com')).toBe(false);
+  });
+
+  it('matches nothing when the allowlist is empty (LAN/dev defaults stay in charge)', () => {
+    const matcher = createConfiguredOriginMatcher([]);
+    expect(matcher('https://app.example.com')).toBe(false);
+    expect(matcher('http://localhost:5173')).toBe(false);
+  });
+
+  it('rejects malformed incoming origins without throwing', () => {
+    const matcher = createConfiguredOriginMatcher(['https://app.example.com']);
+    expect(matcher('not a url')).toBe(false);
+    expect(matcher('')).toBe(false);
+  });
+
+  it('honours allowlist entries as produced by config validation', () => {
+    // A trailing slash in config is normalised to the canonical origin, so
+    // the resulting matcher still allows the pinned origin and blocks others.
+    const parsed = safeParseCorsAllowlist(['https://app.example.com/']);
+    if (!('origins' in parsed)) {
+      throw new Error('expected the allowlist to parse');
+    }
+    const matcher = createConfiguredOriginMatcher(parsed.origins);
+    expect(matcher('https://app.example.com')).toBe(true);
+    expect(matcher('https://attacker.example.com')).toBe(false);
+  });
+});
+
+describe('safeParseCorsAllowlist (config validation)', () => {
+  it('normalises valid origins and drops a trailing slash', () => {
+    expect(safeParseCorsAllowlist(['https://app.example.com/'])).toEqual({
+      origins: ['https://app.example.com'],
+    });
+    expect(safeParseCorsAllowlist(['http://app.example.com:8080'])).toEqual({
+      origins: ['http://app.example.com:8080'],
+    });
+  });
+
+  it('treats missing/empty config as an empty allowlist (falls back to LAN/dev)', () => {
+    expect(safeParseCorsAllowlist(undefined)).toEqual({ origins: [] });
+    expect(safeParseCorsAllowlist([])).toEqual({ origins: [] });
+  });
+
+  it('rejects malformed allowlist values (bad scheme, path-bearing, non-array)', () => {
+    expect('issues' in safeParseCorsAllowlist(['ftp://app.example.com'])).toBe(true);
+    expect('issues' in safeParseCorsAllowlist(['https://app.example.com/admin'])).toBe(true);
+    expect('issues' in safeParseCorsAllowlist(['not a url'])).toBe(true);
+    expect('issues' in safeParseCorsAllowlist('https://app.example.com')).toBe(true);
   });
 });

@@ -82,6 +82,7 @@ describe('HubConfig', () => {
       hub: {
         host: '192.168.1.1',
         port: 4000,
+        corsAllowlist: [],
         plugins: {
           installDir: '',
           heartbeatInterval: 5000,
@@ -132,6 +133,7 @@ describe('PluginManagerConfig', () => {
       hub: {
         host: '127.0.0.1',
         port: 3001,
+        corsAllowlist: [],
         plugins: {
           installDir: '',
           heartbeatInterval: 10000,

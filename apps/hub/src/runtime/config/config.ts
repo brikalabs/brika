@@ -1,6 +1,6 @@
 import { inject, singleton } from '@brika/di';
 import { brikaContext } from '../context/brika-context';
-import { ConfigLoader } from './config-loader';
+import { ConfigLoader, safeParseCorsAllowlist } from './config-loader';
 
 /** Canonical host. One Worker serves both /v1/* (API) and /<name>/... (UI). */
 const CANONICAL_HOST = 'hub.brika.dev';
@@ -102,10 +102,19 @@ export class HubConfig {
   readonly devUiProxy: string;
   /** Max request body the HTTP server accepts before returning 413. */
   readonly maxRequestBodyBytes: number;
+  /**
+   * Explicit CORS allowlist of exact production origins (e.g.
+   * `https://app.example.com`). Always allowed in addition to the built-in
+   * LAN/dev defaults. Sourced from `hub.corsAllowlist` in `brika.yml`, with
+   * `BRIKA_CORS_ALLOWLIST` (comma-separated) taking precedence. Empty by
+   * default — local/dev keep their LAN-only behaviour.
+   */
+  readonly corsAllowlist: readonly string[];
   /** Remote-access (P2P) configuration. */
   readonly remoteAccess: RemoteAccessConfig;
 
   constructor() {
+    let configuredCorsAllowlist: readonly string[] = [];
     // Try to get values from ConfigLoader if already loaded, else use env/defaults
     try {
       const loader = inject(ConfigLoader);
@@ -114,12 +123,17 @@ export class HubConfig {
       this.port = Number(process.env.BRIKA_PORT ?? config.hub.port);
       // Use .brika directory from config loader
       this.homeDir = process.env.BRIKA_HOME ?? loader.getBrikaDir();
+      configuredCorsAllowlist = config.hub.corsAllowlist;
     } catch {
       // Config not loaded yet, use env/defaults
       this.host = process.env.BRIKA_HOST ?? '127.0.0.1';
       this.port = Number(process.env.BRIKA_PORT ?? '3001');
       this.homeDir = process.env.BRIKA_HOME ?? brikaContext.brikaDir;
     }
+    this.corsAllowlist = resolveCorsAllowlist(
+      process.env.BRIKA_CORS_ALLOWLIST,
+      configuredCorsAllowlist
+    );
     // Static file serving directory (empty = disabled, used in production Docker)
     this.staticDir = process.env.BRIKA_STATIC_DIR ?? '';
     // Dev-only UI proxy. Set to Vite's dev server (typically
@@ -138,6 +152,28 @@ export class HubConfig {
       signalingUrl: deriveSignalingUrl(coordinatorOrigin),
     };
   }
+}
+
+/**
+ * Resolve the effective CORS allowlist. `BRIKA_CORS_ALLOWLIST` (a
+ * comma-separated list of origins) wins over the validated `hub.corsAllowlist`
+ * config value when set. Both paths run through the same zod validation; a
+ * malformed env value falls back to the config-sourced allowlist so a typo
+ * can't silently widen — or wipe — the policy.
+ */
+function resolveCorsAllowlist(
+  rawEnv: string | undefined,
+  configured: readonly string[]
+): readonly string[] {
+  if (rawEnv === undefined || rawEnv.trim() === '') {
+    return configured;
+  }
+  const entries = rawEnv
+    .split(',')
+    .map((entry) => entry.trim())
+    .filter((entry) => entry.length > 0);
+  const result = safeParseCorsAllowlist(entries);
+  return 'origins' in result ? result.origins : configured;
 }
 
 /**

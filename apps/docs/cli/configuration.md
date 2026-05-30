@@ -8,6 +8,7 @@ The hub reads its configuration from `${BRIKA_HOME}/brika.yml` (default: `.brika
 hub:
   port: 3001
   host: 127.0.0.1
+  corsAllowlist: []           # exact production origins to allow (see below); empty keeps LAN/dev defaults
   plugins:
     installDir: ./plugins/.installed
     heartbeatInterval: 5000   # ms between ping → pong
@@ -37,6 +38,7 @@ schedules: []    # reserved for future use
 |---|---|---|
 | `hub.port` | `3001` | TCP port to listen on |
 | `hub.host` | `127.0.0.1` | Bind address. Use `0.0.0.0` for LAN/Docker (plus a firewall rule!) |
+| `hub.corsAllowlist` | `[]` | Exact production origins the API accepts credentialed CORS requests from. Empty keeps the built-in LAN/dev defaults. See [CORS Allowlist](../architecture/cors.md) |
 | `hub.plugins.installDir` | `./plugins/.installed` | Where the registry installs plugins, relative to `.brika/` |
 | `hub.plugins.heartbeatInterval` | `5000` ms | Ping interval; the supervisor sends a ping RPC this often |
 | `hub.plugins.heartbeatTimeout` | `15000` ms | Mark a plugin unresponsive (then kill + restart) after this many ms without a pong |
@@ -47,6 +49,21 @@ schedules: []    # reserved for future use
 The hub also has internal defaults for IPC call timeout (`30 s`), kill grace period (`3 s`), and the restart policy (`5 crashes / 60 s` = crash loop, `30 s` of stability resets backoff, `1 s` base / `60 s` max delay). These are not configurable from `brika.yml` today — see [`PluginManagerConfig`](../architecture/plugin-supervisor.md).
 
 > Environment variables override config values. `BRIKA_PORT=8080 brika start` wins over `hub.port: 3001`.
+
+### `hub.corsAllowlist`
+
+A list of **exact** production origins the HTTP API will accept credentialed cross-origin (CORS) requests from. Pin the public origin(s) you serve the UI from:
+
+```yaml
+hub:
+  corsAllowlist:
+    - https://app.example.com
+    - https://admin.example.com
+```
+
+Each entry must be an absolute `http(s)` origin (scheme + host + optional port, no path) and is validated when the config loads — a malformed entry is rejected and the list falls back to empty. Matching is exact (never prefix/substring), so `https://app.example.com` will not match a look-alike like `https://app.example.com.evil.com`.
+
+The list is **additive**: when it is empty (the default), the hub still allows the built-in LAN/dev origins (loopback, RFC1918, `*.local`, `hub.brika.dev`), so local development needs no configuration. `BRIKA_CORS_ALLOWLIST` (comma-separated) overrides this field. See [CORS Allowlist](../architecture/cors.md) for the full security rationale.
 
 ## `plugins`
 

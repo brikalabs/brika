@@ -65,6 +65,7 @@
 * [Secret Store](architecture/secret-store.md)
 * [Logs](architecture/logs.md)
 * [Authentication](architecture/auth.md)
+* [CORS Allowlist](architecture/cors.md)
 * [Remote Access](architecture/remote-access.md)
 * [Sandbox](architecture/sandbox.md)
 * [i18n Pipeline](architecture/i18n-pipeline.md)
