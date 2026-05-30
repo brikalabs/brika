@@ -7,12 +7,7 @@
  * per pre-check.
  */
 
-import {
-  type Claim,
-  ClaimError,
-  type ClaimStore,
-  constantTimeEqual,
-} from '@brika/remote-access-protocol';
+import { type Claim, ClaimError, type ClaimStore } from '@brika/remote-access-protocol';
 import type { Context, MiddlewareHandler } from 'hono';
 import type { RateBucket } from './rate-limit';
 
@@ -119,7 +114,10 @@ export function requireOwnerOf(
     const token = bearerFromAuthHeader(c.req.raw);
     const target = (c.req.param(paramName) ?? '').toLowerCase();
     const owner = await claims.findByToken(token);
-    if (!owner || !constantTimeEqual(owner.name, target)) {
+    // The secret is the token (already verified by the indexed hash lookup in
+    // findByToken). The hub name is public — it's in the URL — so a plain
+    // comparison is correct here; constant-time would protect nothing.
+    if (owner === null || owner.name !== target) {
       return c.json({ error: 'Unauthorized' }, 401);
     }
     c.set('owner', owner);

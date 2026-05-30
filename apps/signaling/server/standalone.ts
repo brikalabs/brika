@@ -27,7 +27,7 @@ import { type AppDeps, buildApp } from './app';
 import { openSqliteClaimStore } from './claims-sqlite';
 import { parseStandaloneEnv, type StandaloneEnv } from './env';
 import { applyPendingMigrations } from './migrations';
-import { InMemoryRateLimiter } from './rate-limit';
+import { clientIpFromRequest, InMemoryRateLimiter } from './rate-limit';
 import { createFilesystemAssets } from './standalone-assets';
 
 interface SocketData {
@@ -107,6 +107,12 @@ export async function startStandalone(
   function upgrade(req: Request, data: SocketData): Response {
     if (!server) {
       return new Response('not ready', { status: 503 });
+    }
+    // Enforce the hub cap here, before accepting the socket — so an over-limit
+    // connection gets a clean 503 rather than a 101 followed by a throw in the
+    // `open` handler (which would leave the client with a silently-dead socket).
+    if (!sessions.has(data.name.toLowerCase()) && sessions.size >= env.maxHubs) {
+      return new Response('coordinator at capacity', { status: 503 });
     }
     return server.upgrade(req, { data })
       ? new Response(null, { status: 101 })
@@ -207,17 +213,6 @@ function toFrame(message: string | Buffer | ArrayBuffer | Uint8Array): string | 
   const out = new ArrayBuffer(view.byteLength);
   new Uint8Array(out).set(view);
   return out;
-}
-
-function clientIpFromRequest(req: Request): string | undefined {
-  const xff = req.headers.get('x-forwarded-for');
-  if (xff) {
-    const first = xff.split(',')[0]?.trim();
-    if (first) {
-      return first;
-    }
-  }
-  return req.headers.get('x-real-ip') ?? undefined;
 }
 
 async function main(): Promise<void> {

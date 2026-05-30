@@ -298,6 +298,21 @@ describe('buildApp — rate limit hook', () => {
     const res = await jsonPost(app, '/v1/hubs/claim', { name: 'myhub' });
     expect(res.status).toBe(429);
   });
+
+  it('rate-limits the /v1/hub WS upgrade via the connect bucket', async () => {
+    const deps = newDeps({
+      rateLimit: (_req, bucket) =>
+        bucket === 'connect' ? new Response('limited', { status: 429 }) : null,
+    });
+    const minted = await deps.claims.claim('myhub');
+    const app = buildApp(deps);
+    const res = await app.fetch(
+      new Request('https://hub.brika.dev/v1/hub', {
+        headers: { 'Sec-WebSocket-Protocol': `brika.v1, bearer.${minted.token}` },
+      })
+    );
+    expect(res.status).toBe(429);
+  });
 });
 
 describe('buildApp — SPA fallback', () => {

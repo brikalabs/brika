@@ -11,7 +11,7 @@
  * for a background timer that complicates Workers + tests.
  */
 
-export type RateBucket = 'claim' | 'rotate' | 'recover' | 'ticket';
+export type RateBucket = 'claim' | 'rotate' | 'recover' | 'ticket' | 'connect';
 
 interface BucketCfg {
   /** Max requests per window. */
@@ -31,6 +31,12 @@ const POLICY: Readonly<Record<RateBucket, BucketCfg>> = {
   recover: { limit: 5, windowMs: 60_000 },
   // Ticket mints happen at the start of every browser session; allow more.
   ticket: { limit: 60, windowMs: 60_000 },
+  // WebSocket upgrades (`/v1/hub` + `/v1/client`). Each upgrade does an
+  // unauthenticated-until-checked SHA-256 + indexed DB lookup (hub) or an HMAC
+  // ticket verify (client), so cap per-IP to blunt connection-flood / token-
+  // guessing DB load. Generous enough to absorb a hub's reconnect storm on a
+  // flaky link and many browser sessions behind one NAT.
+  connect: { limit: 60, windowMs: 60_000 },
 };
 
 interface Counter {
@@ -86,11 +92,13 @@ export class InMemoryRateLimiter {
 }
 
 /**
- * Best-available client IP from a Request. Cloudflare's `cf-connecting-ip`
- * is canonical; behind a reverse proxy (or in dev) we fall back to
- * `x-forwarded-for` then `x-real-ip`.
+ * Best-available client IP from a Request, shared by every transport (rate
+ * limiter, CF DO, Bun standalone). Cloudflare's `cf-connecting-ip` is
+ * canonical; behind a reverse proxy (or in dev) we fall back to
+ * `x-forwarded-for` then `x-real-ip`. On Bun `cf-connecting-ip` is simply
+ * absent, so the fallbacks apply — no behavioural divergence.
  */
-function clientIpFromRequest(req: Request): string | undefined {
+export function clientIpFromRequest(req: Request): string | undefined {
   const cf = req.headers.get('cf-connecting-ip');
   if (cf) {
     return cf;

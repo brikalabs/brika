@@ -251,4 +251,118 @@ describe('standalone server E2E (Bun.serve + real WS)', () => {
     });
     expect(res.status).toBe(401);
   });
+
+  it('client connecting to a claimed-but-offline hub gets session.error{hub-offline}', async () => {
+    // Claim a name but never open the hub WS — the session has no hub.
+    const claimRes = await fetch(`${baseHttp}/v1/hubs/claim`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'offlinehub' }),
+    });
+    expect(claimRes.status).toBe(200);
+    const ticketRes = await fetch(`${baseHttp}/v1/tickets`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ hubName: 'offlinehub' }),
+    });
+    const { ticket } = (await ticketRes.json()) as { ticket: string };
+
+    const clientWs = new WebSocket(
+      `${baseWs}/v1/client?hub=offlinehub&ticket=${encodeURIComponent(ticket)}`
+    );
+    await waitOpen(clientWs);
+    try {
+      const frame = await nextFrame(clientWs);
+      expect(frame.kind).toBe('session.error');
+      expect(frame.code).toBe('hub-offline');
+    } finally {
+      clientWs.close();
+    }
+  });
+
+  it('routes answers per-session — two clients on one hub never cross', async () => {
+    const claimRes = await fetch(`${baseHttp}/v1/hubs/claim`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'multihub' }),
+    });
+    const { token } = (await claimRes.json()) as { token: string };
+    const hubWs = new WebSocket(`${baseWs}/v1/hub`, ['brika.v1', `bearer.${token}`]);
+    await waitOpen(hubWs);
+
+    async function openClient(): Promise<WebSocket> {
+      const tr = await fetch(`${baseHttp}/v1/tickets`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hubName: 'multihub' }),
+      });
+      const { ticket } = (await tr.json()) as { ticket: string };
+      const ws = new WebSocket(
+        `${baseWs}/v1/client?hub=multihub&ticket=${encodeURIComponent(ticket)}`
+      );
+      await waitOpen(ws);
+      await nextFrame(ws); // drain session.iceServers
+      return ws;
+    }
+
+    const clientA = await openClient();
+    const clientB = await openClient();
+    try {
+      // Each client offers; the hub sees two distinct sessionIds.
+      clientA.send(
+        JSON.stringify({
+          v: PROTOCOL_VERSION,
+          kind: 'client.offer',
+          hubName: 'multihub',
+          sdp: 'offer-A',
+          ticket: 'x',
+        })
+      );
+      const offer1 = await nextFrame(hubWs);
+      clientB.send(
+        JSON.stringify({
+          v: PROTOCOL_VERSION,
+          kind: 'client.offer',
+          hubName: 'multihub',
+          sdp: 'offer-B',
+          ticket: 'x',
+        })
+      );
+      const offer2 = await nextFrame(hubWs);
+      const sessBySdp = new Map<string, string>([
+        [offer1.sdp as string, offer1.sessionId as string],
+        [offer2.sdp as string, offer2.sessionId as string],
+      ]);
+      const sessA = sessBySdp.get('offer-A');
+      if (!sessA) {
+        throw new Error('hub never received client A offer');
+      }
+      expect(sessBySdp.get('offer-B')).not.toBe(sessA);
+
+      // Hub answers only client A's session → only client A receives it.
+      hubWs.send(
+        JSON.stringify({
+          v: PROTOCOL_VERSION,
+          kind: 'hub.answer',
+          sessionId: sessA,
+          sdp: 'answer-A',
+        })
+      );
+      const aFrame = await nextFrame(clientA);
+      expect(aFrame).toMatchObject({ kind: 'session.answer', sdp: 'answer-A' });
+      // Client B must NOT receive A's answer — expect a read timeout instead.
+      let bReceived = false;
+      try {
+        await nextFrame(clientB, 300);
+        bReceived = true;
+      } catch {
+        // expected: no frame arrives for B within the window
+      }
+      expect(bReceived).toBe(false);
+    } finally {
+      clientA.close();
+      clientB.close();
+      hubWs.close();
+    }
+  });
 });

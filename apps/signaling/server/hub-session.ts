@@ -19,6 +19,7 @@ import {
   type WsLike,
 } from '@brika/remote-access-protocol';
 import type { Env } from './env';
+import { clientIpFromRequest } from './rate-limit';
 
 export class HubSession {
   readonly #state: DurableObjectState;
@@ -73,9 +74,13 @@ export class HubSession {
     this.#sessionState().handleClose(ws as WsLike);
   }
 
-  webSocketError(_ws: WebSocket, _error: unknown): void {
-    // Treated the same as a close — the runtime will deliver `webSocketClose`
-    // for the same socket immediately after.
+  webSocketError(ws: WebSocket, _error: unknown): void {
+    // Treat an error like a close. CF normally also delivers `webSocketClose`
+    // for the same socket, but we don't rely on that: `handleClose` is
+    // idempotent (it deletes the attachment, so a follow-up close finds none
+    // and no-ops), and tearing down here guarantees a hub's clients are
+    // released even if the close event never arrives.
+    this.#sessionState().handleClose(ws as WsLike);
   }
 
   // ─── Internals ──────────────────────────────────────────────────────────
@@ -84,6 +89,12 @@ export class HubSession {
    * Lazily build the per-hub state machine. After a hibernation wake the DO
    * loses its in-memory state, so we re-hydrate from `getWebSockets()` — each
    * socket's `serializeAttachment` survived hibernation and tells us its role.
+   *
+   * NOTE: this rebuild-on-wake path (and the `serializeAttachment` /
+   * `deserializeAttachment` bridge in `#attachmentStore`) cannot be unit-tested
+   * without the Cloudflare runtime (miniflare). `HubSessionState` itself is
+   * covered against a fake `AttachmentStore` in the protocol package; verify
+   * the real hibernation cycle with a staging `wrangler deploy` smoke test.
    */
   #sessionState(): HubSessionState {
     if (this.#session) {
@@ -148,6 +159,16 @@ export class HubSession {
       return new Response('name required', { status: 400 });
     }
     const { client, server } = newPair();
+    // The socket must be accepted before `attachClient` can use it: the
+    // hub-offline path intentionally delivers a structured
+    // `session.error{hub-offline}` frame + a clean `4003` close (rather than a
+    // bare handshake failure), which requires an accepted socket. In that case
+    // `attachClient` returns `null` having already closed the socket — CF then
+    // drops the closed socket from the DO's tracked set, and the `!attachment`
+    // guard in `HubSessionState.handleMessage` covers the narrow accept→close
+    // window. So the 101 below is correct for both the online and offline
+    // paths; the browser observes either a live channel or the error+close.
+    // The standalone transport (`open` handler) behaves identically.
     this.#state.acceptWebSocket(server, ['client']);
     await this.#sessionState().attachClient(server as WsLike, {
       name: hubName,
@@ -184,24 +205,4 @@ function upgradeResponse(client: WebSocket, protocol: string | undefined): Respo
     headers.set('Sec-WebSocket-Protocol', protocol);
   }
   return new Response(null, { status: 101, webSocket: client, headers });
-}
-
-/**
- * Best-available client IP from a WebSocket upgrade request. Cloudflare's
- * `cf-connecting-ip` is canonical; behind a reverse proxy (or in dev) we fall
- * back to `x-forwarded-for` then `x-real-ip`.
- */
-function clientIpFromRequest(req: Request): string | undefined {
-  const cf = req.headers.get('cf-connecting-ip');
-  if (cf) {
-    return cf;
-  }
-  const xff = req.headers.get('x-forwarded-for');
-  if (xff) {
-    const first = xff.split(',')[0]?.trim();
-    if (first) {
-      return first;
-    }
-  }
-  return req.headers.get('x-real-ip') ?? undefined;
 }

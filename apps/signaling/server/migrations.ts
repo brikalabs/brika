@@ -104,11 +104,22 @@ function sqliteHandleRunner(db: SqliteHandle): MigrationRunner {
       return Promise.resolve(new Set(rows.map((r) => r.version)));
     },
     apply(version: string, sql: string): Promise<void> {
-      db.exec(sql);
-      db.prepare('INSERT INTO _brika_migrations (version, applied_at) VALUES (?, ?)').run(
-        version,
-        Date.now()
-      );
+      // Run the migration body + its tracker row in one transaction (SQLite
+      // supports transactional DDL), so a crash mid-apply can't leave the
+      // schema changed but the version unrecorded. The migration files must
+      // not contain their own BEGIN/COMMIT.
+      db.exec('BEGIN');
+      try {
+        db.exec(sql);
+        db.prepare('INSERT INTO _brika_migrations (version, applied_at) VALUES (?, ?)').run(
+          version,
+          Date.now()
+        );
+        db.exec('COMMIT');
+      } catch (err) {
+        db.exec('ROLLBACK');
+        throw err;
+      }
       return Promise.resolve();
     },
     close(): Promise<void> {

@@ -137,7 +137,7 @@ export function buildApp(deps: AppDeps): Hono<{ Variables: AppVariables }> {
 
   // ─── WebSocket upgrade routes ───────────────────────────────────────────
 
-  app.all('/v1/hub', async (c) => {
+  app.all('/v1/hub', rateLimit('connect'), async (c) => {
     const subs = parseSubprotocols(c.req.header('sec-websocket-protocol') ?? null);
     if (!subs.proto?.startsWith('brika.v')) {
       return new Response('Unsupported protocol', { status: 400 });
@@ -153,7 +153,7 @@ export function buildApp(deps: AppDeps): Hono<{ Variables: AppVariables }> {
     return await deps.hubUpgrade(owner.name, c.req.raw);
   });
 
-  app.all('/v1/client', origin, async (c) => {
+  app.all('/v1/client', origin, rateLimit('connect'), async (c) => {
     const hubName = c.req.query('hub');
     const ticket = c.req.query('ticket');
     if (!hubName || !ticket) {

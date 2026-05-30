@@ -138,6 +138,11 @@ export function createClaimStore(executor: ClaimsExecutor): ClaimStore {
     },
 
     async findByToken(token) {
+      // Skip the digest + DB round-trip for an empty bearer — no claim hashes
+      // to it, so the lookup can only ever miss.
+      if (!token) {
+        return null;
+      }
       const row = await executor.selectByTokenHash(await hashToken(token));
       return row ? toClaim(row) : null;
     },
