@@ -1,0 +1,23 @@
+# Snyk (https://snyk.io) policy file.
+# Controls how `snyk test` / `snyk monitor` treat findings.
+version: v1.25.0
+
+# NOTE: there are no dependency (Open Source) ignores. The former ip@2.0.1 SSRF
+# CVEs were FIXED at the root by overriding the transitive `ip` dependency to the
+# maintained, CVE-free fork `neoip` (see `overrides` in the root package.json) —
+# `ip@2.0.1` no longer resolves in the tree, so there is nothing to ignore.
+
+# --- Snyk Code (SAST) path excludes ------------------------------------------
+# `snyk ignore` cannot mark Code findings (the CLI: "Ignoring ... using the
+# .snyk file is not supported for Snyk Code") — but Snyk Code honors
+# `exclude.code` path globs. Every finding in these paths is a false positive
+# and none ship in the product:
+#   - **/*.test.ts(x)    : fake credentials in test fixtures
+#   - apps/ui/vite/**     : dev-only Vite proxy (build tooling, not shipped)
+#   - packages/i18n-dev/**: local i18n dev tooling (not a production endpoint)
+exclude:
+  code:
+    - "**/*.test.ts"
+    - "**/*.test.tsx"
+    - "apps/ui/vite/**"
+    - "packages/i18n-dev/**"

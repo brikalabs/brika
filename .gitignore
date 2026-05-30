@@ -75,3 +75,7 @@ apps/signaling-worker/public/
 # archunit DSL tests create/destroy `.test-fixtures/` per-test (see
 # packages/archunit/src/__tests__/dsl.test.ts). The dir should not be tracked.
 **/__tests__/.test-fixtures/
+
+# Snyk reads yarn.lock (it can't parse bun.lock). CI's snyk workflow
+# generates it via 'bun install --yarn'; never commit it alongside bun.lock.
+yarn.lock

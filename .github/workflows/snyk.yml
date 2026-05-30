@@ -1,0 +1,149 @@
+name: Snyk Security
+
+on:
+  # The Open Source (SCA) scan uses `--all-projects`, and each of the ~54
+  # manifests counts as one "test" against the org's monthly quota (200 on the
+  # current plan). So gate the dependency scan on dependency-file changes only —
+  # scanning on every push/PR would exhaust the quota in a handful of runs.
+  # Snyk Code (SAST) does NOT count against the test quota and runs on every
+  # push/PR via its own job-level filter below.
+  push:
+    branches: [main]
+  pull_request:
+  # Monthly re-scan to surface newly-disclosed CVEs without a dependency change.
+  # Day 1 at 06:00 UTC — 12 SCA runs/year, negligible against the quota.
+  schedule:
+    - cron: "0 6 1 * *"
+  # On-demand full scan (Actions tab → Run workflow). Always runs the SCA job.
+  workflow_dispatch:
+
+concurrency:
+  group: snyk-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  security-events: write # upload SARIF to the Code scanning tab
+
+jobs:
+  # Decide whether dependencies changed. On a PR we diff against the base; on a
+  # push we diff the pushed range; on schedule/manual we always run. The SCA job
+  # (quota-bearing) only runs when this says deps changed.
+  changes:
+    name: Detect dependency changes
+    runs-on: ubuntu-latest
+    outputs:
+      deps: ${{ steps.filter.outputs.deps }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Filter dependency manifests
+        id: filter
+        run: |
+          if [ "${{ github.event_name }}" != "pull_request" ] && [ "${{ github.event_name }}" != "push" ]; then
+            echo "deps=true" >> "$GITHUB_OUTPUT"   # schedule / manual → always scan
+            exit 0
+          fi
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            base="origin/${{ github.base_ref }}"
+            git fetch --depth=1 origin "${{ github.base_ref }}" >/dev/null 2>&1 || true
+            range="$base...HEAD"
+          else
+            before="${{ github.event.before }}"
+            # First push of a branch (or post-force-push) has an all-zero "before"
+            # SHA — diffing against it errors and would silently skip the scan.
+            # Fall back to scanning so dependency changes can't sneak through.
+            if [ -z "$before" ] || [ "$before" = "0000000000000000000000000000000000000000" ]; then
+              echo "deps=true" >> "$GITHUB_OUTPUT"
+              echo "New branch / no base commit — scanning to be safe."
+              exit 0
+            fi
+            range="$before..${{ github.sha }}"
+          fi
+          if git diff --name-only "$range" 2>/dev/null | grep -Eq '(^|/)(package\.json|bun\.lock)$'; then
+            echo "deps=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "deps=false" >> "$GITHUB_OUTPUT"
+            echo "No dependency-manifest changes — skipping Snyk Open Source scan to conserve quota."
+          fi
+
+  open-source:
+    name: Snyk Open Source (dependencies)
+    needs: changes
+    if: needs.changes.outputs.deps == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      # Snyk can't parse bun.lock, but it reads yarn.lock natively.
+      # Bun emits a Yarn-v1 lockfile from the same resolution.
+      - name: Generate yarn.lock for Snyk
+        run: bun install --yarn --frozen-lockfile
+
+      - name: Setup Snyk CLI
+        # Pinned to a commit SHA (snyk/actions@master) — a moving ref would let
+        # an upstream compromise run in a job holding SNYK_TOKEN. Bump deliberately.
+        uses: snyk/actions/setup@8e119fbb6c251787721d34ba683ed48eba792766 # master @ 2026-05-30
+
+      - name: Snyk test (report high/critical)
+        # Report-only for now: the one outstanding finding is ip@2.0.1 (SSRF,
+        # transitive via werift), which has NO upstream fix and no patched
+        # release. Drop continue-on-error to make this a hard gate once the
+        # werift/ip dependency is resolved, so it blocks *new* high/critical.
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        run: >
+          snyk test
+          --all-projects
+          --detection-depth=7
+          --severity-threshold=high
+          --org=brika-labs
+          --policy-path=.snyk
+
+      - name: Snyk monitor (snapshot to dashboard)
+        # Only push the snapshot from main so PR branches don't churn the project list.
+        if: github.ref == 'refs/heads/main'
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        run: >
+          snyk monitor
+          --all-projects
+          --detection-depth=7
+          --org=brika-labs
+          --policy-path=.snyk
+
+  code:
+    name: Snyk Code (SAST)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Snyk CLI
+        uses: snyk/actions/setup@8e119fbb6c251787721d34ba683ed48eba792766 # master @ 2026-05-30
+
+      - name: Snyk Code test
+        continue-on-error: true # report findings without blocking; gate via Code scanning
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        run: >
+          snyk code test
+          --sarif-file-output=snyk-code.sarif
+          --org=brika-labs
+
+      - name: Upload SARIF to Code scanning
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: snyk-code.sarif
