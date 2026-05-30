@@ -28,6 +28,7 @@ describe('ApiServer.stop', () => {
       port: 0,
       devUiProxy: '',
       maxRequestBodyBytes: 1024,
+      corsAllowlist: [],
     });
 
     serverStop = mock((_force?: boolean) => Promise.resolve());
