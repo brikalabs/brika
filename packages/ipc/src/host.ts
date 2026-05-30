@@ -11,7 +11,8 @@
  * @see https://bun.sh/docs/runtime/child-process#inter-process-communication-ipc
  */
 
-import { Channel, type WireMessage } from './channel';
+import type { BrikaError } from '@brika/errors';
+import { Channel, type PayloadLimitDirection, type WireMessage } from './channel';
 import { applyChannelDelegate, type ChannelDelegateMethods } from './channel-delegate';
 import { ping, stop } from './contract';
 
@@ -29,6 +30,16 @@ export interface PluginChannelOptions {
   onDisconnect?: (error?: Error) => void;
   /** Called when stderr data is received */
   onStderr?: (line: string) => void;
+  /**
+   * Per-message payload cap in bytes, enforced on both outbound `send` and
+   * inbound `handle`. Defaults to the channel's `DEFAULT_MAX_PAYLOAD_BYTES`.
+   */
+  maxPayloadBytes?: number;
+  /**
+   * Called when a message is rejected for exceeding `maxPayloadBytes`. Receives
+   * the typed `IPC_PAYLOAD_TOO_LARGE` error and the direction it was caught in.
+   */
+  onPayloadLimitExceeded?: (error: BrikaError, direction: PayloadLimitDirection) => void;
 }
 
 /**
@@ -87,6 +98,8 @@ export class PluginChannel {
       },
       defaultTimeoutMs: options.defaultTimeoutMs,
       onClose: () => this.#handleDisconnect(),
+      maxPayloadBytes: options.maxPayloadBytes,
+      onPayloadLimitExceeded: options.onPayloadLimitExceeded,
     });
 
     // Pipe stderr
@@ -255,6 +268,16 @@ export interface SpawnPluginOptions {
   defaultTimeoutMs?: number;
   onDisconnect?: (error?: Error) => void;
   onStderr?: (line: string) => void;
+  /**
+   * Per-message payload cap in bytes, enforced on both outbound `send` and
+   * inbound `handle`. Defaults to the channel's `DEFAULT_MAX_PAYLOAD_BYTES`.
+   */
+  maxPayloadBytes?: number;
+  /**
+   * Called when a message is rejected for exceeding `maxPayloadBytes`. Receives
+   * the typed `IPC_PAYLOAD_TOO_LARGE` error and the direction it was caught in.
+   */
+  onPayloadLimitExceeded?: (error: BrikaError, direction: PayloadLimitDirection) => void;
 }
 
 /**
@@ -289,6 +312,8 @@ export function spawnPlugin(
     defaultTimeoutMs: options.defaultTimeoutMs,
     onDisconnect: options.onDisconnect,
     onStderr: options.onStderr,
+    maxPayloadBytes: options.maxPayloadBytes,
+    onPayloadLimitExceeded: options.onPayloadLimitExceeded,
   });
 
   return channel;

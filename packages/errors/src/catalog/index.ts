@@ -28,6 +28,7 @@ import type { DataSchema, ErrorCategory, ErrorSeverity } from './_entry';
 import { CoreCatalog } from './core';
 import { FsCatalog } from './fs';
 import { GrantsCatalog } from './grants';
+import { IpcCatalog } from './ipc';
 import { ManifestCatalog } from './manifest';
 import { NetCatalog } from './net';
 import { WorkflowCatalog } from './workflow';
@@ -45,6 +46,7 @@ export const ErrorCatalog = {
   ...ManifestCatalog,
   ...WorkflowCatalog,
   ...GrantsCatalog,
+  ...IpcCatalog,
   ...NetCatalog,
   ...FsCatalog,
   ...WsCatalog,
