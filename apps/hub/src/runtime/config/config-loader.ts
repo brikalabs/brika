@@ -67,6 +67,14 @@ export interface BrikaConfig {
   schedules: ScheduleEntry[];
 }
 
+/**
+ * Default config *template*. Never assign this object (or its nested
+ * arrays) to `this.#config` directly — mutating methods like `addPlugin`
+ * push into `config.plugins`, which would corrupt this module-level
+ * constant for every other loader instance (and every other test file
+ * that imports this module). Always go through {@link defaultConfig} to
+ * get a fresh, independently-mutable copy.
+ */
 const DEFAULT_CONFIG: BrikaConfig = {
   hub: {
     port: 3001,
@@ -85,6 +93,11 @@ const DEFAULT_CONFIG: BrikaConfig = {
   rules: [],
   schedules: [],
 };
+
+/** Fresh, independently-mutable copy of {@link DEFAULT_CONFIG}. */
+function defaultConfig(): BrikaConfig {
+  return structuredClone(DEFAULT_CONFIG);
+}
 
 const SECRET_PREFIX = '__secret_';
 
@@ -135,7 +148,7 @@ export class ConfigLoader {
         this.#logger.info('Configuration file not found, using default configuration', {
           configPath: this.configPath,
         });
-        this.#config = DEFAULT_CONFIG;
+        this.#config = defaultConfig();
         return this.#config;
       }
 
@@ -185,7 +198,7 @@ export class ConfigLoader {
         { configPath: this.configPath },
         { error: err }
       );
-      this.#config = DEFAULT_CONFIG;
+      this.#config = defaultConfig();
       return this.#config;
     }
   }
