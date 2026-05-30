@@ -72,6 +72,29 @@ jobs:
       - run: bun install --frozen-lockfile
       - run: bun run lint
 
+  version-gate:
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          # Full history + tags so the gate can compare against the latest
+          # released tag (actions/checkout does not fetch tags by default).
+          fetch-depth: 0
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ needs.setup.outputs.bun_version }}
+      - uses: actions/cache@v5
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: bun-${{ runner.os }}-
+      - run: bun install --frozen-lockfile
+      - name: Unit-test the version-gate logic
+        run: bun test scripts/check-version-monotonic.test.ts
+      - name: Fail PR if release version regresses below latest tag
+        run: bun scripts/check-version-monotonic.ts
+
   test:
     needs: setup
     runs-on: ubuntu-latest
