@@ -40,4 +40,23 @@ ignore:
           os.networkInterfaces() addresses (ICE candidate gathering); no
           attacker-controlled input reaches it. No upstream fix exists.
         expires: 2026-11-30T00:00:00.000Z
+
+# --- Snyk Code (SAST) path excludes ------------------------------------------
+# `snyk ignore` cannot mark Code findings (the CLI: "Ignoring ... using the
+# .snyk file is not supported for Snyk Code") — but Snyk Code honors
+# `exclude.code` path globs. Every finding in these paths is a false positive
+# and none ship in the product:
+#   - **/*.test.ts(x)    : fake credentials in test fixtures
+#                          (HardcodedSecret/Credentials/Passwords/test, HttpToHttps/test)
+#   - apps/ui/vite/**     : dev-only Vite proxy (hub-proxy.ts) — build tooling,
+#                          not in the shipped UI bundle (XSS/ServerLeak FPs)
+#   - packages/i18n-dev/**: local i18n dev tooling (open-in-editor.ts) — not a
+#                          production endpoint (rate-limit FP)
+exclude:
+  code:
+    - "**/*.test.ts"
+    - "**/*.test.tsx"
+    - "apps/ui/vite/**"
+    - "packages/i18n-dev/**"
+
 patch: {}
