@@ -244,6 +244,10 @@ async function primeEntryUrls(
   onProgress?: ProgressListener
 ): Promise<void> {
   const cache = await caches.open(ASSET_CACHE);
+  console.log('[brika-bootstrap] entry prime start', {
+    cacheName: ASSET_CACHE,
+    urls: initial,
+  });
   const startedAt = performance.now();
   let fetched = 0;
   const errors: Array<{ url: string; err: unknown }> = [];

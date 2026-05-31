@@ -22,6 +22,29 @@ import type { Context, MiddlewareHandler, Next } from 'hono';
  */
 type LogWarn = (msg: string, ctx: Record<string, string | number | boolean | null>) => void;
 
+/**
+ * Bun's fetch wraps the underlying socket error in a generic "fetch failed"
+ * Error whose `.cause` carries the real signal (ECONNRESET, ETIMEDOUT,
+ * ENOTFOUND, etc.). Pull that through cleanly so the log line in mortar
+ * names the actual failure mode instead of just "fetch failed".
+ */
+function extractCauseMessage(err: unknown): string | null {
+  if (!(err instanceof Error)) {
+    return null;
+  }
+  const { cause } = err;
+  if (cause === null || cause === undefined) {
+    return null;
+  }
+  if (cause instanceof Error) {
+    return cause.message;
+  }
+  if (typeof cause === 'string') {
+    return cause;
+  }
+  return null;
+}
+
 export interface ProxyWsData {
   outbound: WebSocket;
 }
@@ -42,32 +65,47 @@ export function devUiProxyMiddleware(target: string, logWarn: LogWarn): Middlewa
     const outHeaders = new Headers(c.req.raw.headers);
     outHeaders.delete('host');
     outHeaders.delete('connection');
-    try {
-      const upstream = await fetch(upstreamUrl, {
-        method: c.req.method,
-        headers: outHeaders,
-        body:
-          c.req.method === 'GET' || c.req.method === 'HEAD'
-            ? undefined
-            : await c.req.raw.arrayBuffer(),
-        redirect: 'manual',
-      });
-      return new Response(upstream.body, {
-        status: upstream.status,
-        statusText: upstream.statusText,
-        headers: upstream.headers,
-      });
-    } catch (err) {
-      logWarn('Dev UI proxy failed', {
-        target,
-        path: c.req.path,
-        error: err instanceof Error ? err.message : String(err),
-      });
-      return c.text(
-        `Dev UI proxy could not reach ${target}. Is your UI dev server running?\n\n${err instanceof Error ? err.message : String(err)}`,
-        502
-      );
+    // Buffer the body once so a retry can re-send it. fetch() consumes
+    // the stream on the first attempt — a second call against the raw
+    // body throws "stream already locked".
+    const reqBody =
+      c.req.method === 'GET' || c.req.method === 'HEAD' ? undefined : await c.req.raw.arrayBuffer();
+    // Single retry covers Bun's known concurrent-fetch-to-localhost
+    // failure mode: under a burst of ~10+ in-flight upstream fetches,
+    // a fraction reject with ECONNRESET / "fetch failed" while the TCP
+    // listen backlog drains. The retry fires ~50 ms later when the
+    // queue has caught up; happy-path attempts pay nothing.
+    let lastErr: unknown;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const upstream = await fetch(upstreamUrl, {
+          method: c.req.method,
+          headers: outHeaders,
+          body: reqBody,
+          redirect: 'manual',
+        });
+        return new Response(upstream.body, {
+          status: upstream.status,
+          statusText: upstream.statusText,
+          headers: upstream.headers,
+        });
+      } catch (err) {
+        lastErr = err;
+        if (attempt === 0) {
+          await new Promise((r) => setTimeout(r, 50));
+        }
+      }
     }
+    logWarn('Dev UI proxy failed', {
+      target,
+      path: c.req.path,
+      error: lastErr instanceof Error ? lastErr.message : String(lastErr),
+      cause: extractCauseMessage(lastErr),
+    });
+    return c.text(
+      `Dev UI proxy could not reach ${target}. Is your UI dev server running?\n\n${lastErr instanceof Error ? lastErr.message : String(lastErr)}`,
+      502
+    );
   };
 }
 
