@@ -4,6 +4,7 @@ export {
   RemoteAccessClaimError,
   RemoteAccessService,
   type RemoteAccessStatus,
+  SIGNALING_IDENTITY_SECRET_KEY,
   SIGNALING_NAME_SECRET_KEY,
   SIGNALING_TOKEN_SECRET_KEY,
 } from './remote-access-service';

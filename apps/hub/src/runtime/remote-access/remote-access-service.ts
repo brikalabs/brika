@@ -32,6 +32,7 @@ import {
   PROTOCOL_VERSION,
   type SignalingMessage,
 } from '@brika/remote-access-protocol';
+import { z } from 'zod';
 import { hub } from '@/hub';
 import { derivePublicOrigin, deriveSignalingUrl, HubConfig } from '@/runtime/config';
 import { ApiServer } from '@/runtime/http/api-server';
@@ -41,10 +42,32 @@ import { PeerSession } from './peer-session';
 import { RpcServer } from './rpc-server';
 import { SignalingClient, type SignalingState } from './signaling-client';
 
-/** Secret key used to persist the signaling bearer token in the OS keychain. */
+/**
+ * Combined name+token, stored as one JSON keychain item so the boot path
+ * issues a single OS prompt instead of two. On macOS each keychain item has
+ * its own ACL; reading two items used to cost the user two prompts back-to-
+ * back every time the compiled binary's signature changed (i.e. on every
+ * rebuild).
+ */
+export const SIGNALING_IDENTITY_SECRET_KEY = 'remote_access.signaling_identity';
+/**
+ * Legacy keys — kept for one-way migration only. Existing installs have
+ * their identity split across these; on first boot under the new code we
+ * read both, write the combined item, and leave the legacy entries behind
+ * (deleting them would trigger more prompts; they're idle until the user
+ * manually prunes them).
+ *
+ * @deprecated Use {@link SIGNALING_IDENTITY_SECRET_KEY}.
+ */
 export const SIGNALING_TOKEN_SECRET_KEY = 'remote_access.signaling_token';
-/** Secret key used to persist the claimed hub name. */
+/** @deprecated Use {@link SIGNALING_IDENTITY_SECRET_KEY}. */
 export const SIGNALING_NAME_SECRET_KEY = 'remote_access.hub_name';
+
+const SignalingIdentitySchema = z.object({
+  name: z.string().min(1),
+  token: z.string().min(1),
+});
+type SignalingIdentity = z.infer<typeof SignalingIdentitySchema>;
 /**
  * Secret-store key for the coordinator HTTP origin. Persisted here (rather
  * than in HubConfig) so the operator can change it from the UI without
@@ -117,6 +140,35 @@ export class RemoteAccessService {
   #state: SignalingState = 'idle';
 
   /**
+   * Read the persisted (name, token) — combined keychain item first, with a
+   * one-time migration that promotes the legacy two-item layout into the
+   * combined item on first successful read. Returns null if neither layout
+   * has both halves.
+   */
+  async #readIdentity(): Promise<SignalingIdentity | null> {
+    const combined = await this.#secrets.getHubSecret(SIGNALING_IDENTITY_SECRET_KEY);
+    if (combined) {
+      const parsed = SignalingIdentitySchema.safeParse(JSON.parse(combined));
+      if (parsed.success) {
+        return parsed.data;
+      }
+      this.#log.warn('signaling identity payload was malformed; falling back to legacy keys');
+    }
+    const name = await this.#secrets.getHubSecret(SIGNALING_NAME_SECRET_KEY);
+    const token = await this.#secrets.getHubSecret(SIGNALING_TOKEN_SECRET_KEY);
+    if (!name || !token) {
+      return null;
+    }
+    // Migrate so the next boot only needs the single combined item.
+    await this.#writeIdentity({ name, token });
+    return { name, token };
+  }
+
+  async #writeIdentity(identity: SignalingIdentity): Promise<void> {
+    await this.#secrets.setHubSecret(SIGNALING_IDENTITY_SECRET_KEY, JSON.stringify(identity));
+  }
+
+  /**
    * Resolve the active coordinator URL with precedence:
    *   1. SecretStore (set from the UI).
    *   2. `BRIKA_COORDINATOR_URL` env var (config default).
@@ -174,12 +226,11 @@ export class RemoteAccessService {
   }
 
   async status(): Promise<RemoteAccessStatus> {
-    const storedName = await this.#secrets.getHubSecret(SIGNALING_NAME_SECRET_KEY);
-    const token = await this.#secrets.getHubSecret(SIGNALING_TOKEN_SECRET_KEY);
-    const name = storedName ?? '';
+    const identity = await this.#readIdentity();
+    const name = identity?.name ?? '';
     const coordinatorOrigin = await this.coordinatorOrigin();
     return {
-      claimed: Boolean(name && token),
+      claimed: Boolean(identity),
       name,
       publicOrigin: derivePublicOrigin(name, coordinatorOrigin),
       state: this.#state,
@@ -194,9 +245,9 @@ export class RemoteAccessService {
     // hatch that boots the hub against a known coordinator without the
     // keychain round-trip — useful where the OS keychain isn't available.
     const envClaim = parseRemoteClaim(process.env.BRIKA_REMOTE_CLAIM);
-    let name =
-      envClaim?.name ?? (await this.#secrets.getHubSecret(SIGNALING_NAME_SECRET_KEY)) ?? '';
-    let token = envClaim?.token ?? (await this.#secrets.getHubSecret(SIGNALING_TOKEN_SECRET_KEY));
+    const stored = envClaim ? null : await this.#readIdentity();
+    let name = envClaim?.name ?? stored?.name ?? '';
+    let token: string | null = envClaim?.token ?? stored?.token ?? null;
 
     // Dev-mode auto-claim: if BRIKA_DEV_AUTOCLAIM is set and we don't have a
     // claim yet, claim the requested name against the coordinator and
@@ -236,8 +287,7 @@ export class RemoteAccessService {
           '/v1/hubs/claim',
           { name: requested }
         );
-        await this.#secrets.setHubSecret(SIGNALING_NAME_SECRET_KEY, body.name);
-        await this.#secrets.setHubSecret(SIGNALING_TOKEN_SECRET_KEY, body.token);
+        await this.#writeIdentity(body);
         this.#log.info('auto-claimed dev hub name', { name: body.name });
         return body;
       } catch (err) {
@@ -299,8 +349,7 @@ export class RemoteAccessService {
       '/v1/hubs/claim',
       { name: trimmed }
     );
-    await this.#secrets.setHubSecret(SIGNALING_NAME_SECRET_KEY, body.name);
-    await this.#secrets.setHubSecret(SIGNALING_TOKEN_SECRET_KEY, body.token);
+    await this.#writeIdentity(body);
 
     this.stop();
     await this.start();
@@ -318,33 +367,38 @@ export class RemoteAccessService {
    * stale entry on the coordinator is harmless and can be cleaned up later.
    */
   async forget(): Promise<{ removed: boolean; coordinatorReleased: boolean }> {
-    const name = await this.#secrets.getHubSecret(SIGNALING_NAME_SECRET_KEY);
-    const token = await this.#secrets.getHubSecret(SIGNALING_TOKEN_SECRET_KEY);
+    const identity = await this.#readIdentity();
 
     let coordinatorReleased = false;
-    if (name && token) {
+    if (identity) {
       try {
         await this.#coordinatorRequest(
           'DELETE',
-          `/v1/hubs/${encodeURIComponent(name)}`,
+          `/v1/hubs/${encodeURIComponent(identity.name)}`,
           undefined,
-          token
+          identity.token
         );
         coordinatorReleased = true;
       } catch (err) {
         this.#log.warn('coordinator release failed; clearing local state anyway', {
-          name,
+          name: identity.name,
           error: err instanceof Error ? err.message : String(err),
         });
       }
     }
 
     this.stop();
-    const a = await this.#secrets.deleteHubSecret(SIGNALING_TOKEN_SECRET_KEY);
-    const b = await this.#secrets.deleteHubSecret(SIGNALING_NAME_SECRET_KEY);
+    // Wipe both the combined item and any legacy halves still lying around
+    // from before the consolidation.
+    const removedCombined = await this.#secrets.deleteHubSecret(SIGNALING_IDENTITY_SECRET_KEY);
+    const removedToken = await this.#secrets.deleteHubSecret(SIGNALING_TOKEN_SECRET_KEY);
+    const removedName = await this.#secrets.deleteHubSecret(SIGNALING_NAME_SECRET_KEY);
     this.#activeName = '';
 
-    return { removed: a || b, coordinatorReleased };
+    return {
+      removed: removedCombined || removedToken || removedName,
+      coordinatorReleased,
+    };
   }
 
   /**

@@ -14,7 +14,7 @@
     "dev": "wrangler d1 migrations apply brika-signaling --local && bunx vite",
     "build": "bunx vite build",
     "preview": "bunx vite preview",
-    "deploy": "bunx vite build && wrangler deploy",
+    "deploy": "bunx vite build && wrangler d1 migrations apply brika-signaling --remote && wrangler deploy",
     "tail": "wrangler tail",
     "test": "bun test",
     "typecheck": "tsgo --build",

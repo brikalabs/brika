@@ -2,10 +2,15 @@
 @import "@brika/clay/styles";
 @import "@brika/components/styles";
 
-/* Make sure Tailwind scans the bootstrap's own source for utility classes. */
-@source "../index.html";
-@source "../src/**/*.{ts,tsx}";
-@source "../../../packages/components/src/**/*.{ts,tsx}";
+/* Make sure Tailwind scans the bootstrap's own source for utility classes.
+   Paths resolve from THIS file at apps/signaling/src/_boot/index.css. The
+   previous paths were off-by-one and silently scanned nothing, which is
+   why arbitrary utilities used only in @brika/components (e.g. the
+   BrikaMark wrapper's `rounded-[26px]`) never made it into the bundle and
+   the boot screen rendered a square icon. */
+@source "../../index.html";
+@source "../**/*.{ts,tsx}";
+@source "../../../../packages/components/src/**/*.{ts,tsx}";
 
 /*
  * Reset + page-level styling for the bootstrap shell. Clay handles every
