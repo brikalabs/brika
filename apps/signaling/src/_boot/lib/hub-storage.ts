@@ -20,6 +20,7 @@ import { isValidHubName } from './hub-name';
 
 const STORAGE_KEY = 'brika.bootstrap.hubName';
 const QUERY_PARAM = 'hub';
+const META_NAME = 'brika:hub';
 
 function readStorage(): string | null {
   try {
@@ -45,14 +46,24 @@ function writeStorage(value: string | null): void {
 /**
  * Resolve the hub the bootstrap should connect to. Priority order:
  *
- *   1. `?hub=<name>` URL override (one-shot, also persisted so future
- *      reloads on the same browser stick).
- *   2. localStorage value.
- *   3. `null` — the bootstrap shows the landing screen.
+ *   1. `<meta name="brika:hub" content=...>` stamped by the coordinator
+ *      Worker — present whenever the URL resolves server-side to a hub
+ *      (the canonical production path form `hub.brika.dev/<name>` and
+ *      the dev `localhost:5174/<name>` shape both end up here). MUST
+ *      win over localStorage so navigating to a different hub via the
+ *      URL bar isn't silently rewritten to whatever the user last
+ *      opened.
+ *   2. `?hub=<name>` URL override.
+ *   3. localStorage value (the persisted "default" hub for this browser).
+ *   4. `null` — the bootstrap shows the landing screen.
  *
  * Pure read — does NOT persist.
  */
 export function loadHubName(): string | null {
+  const fromMeta = readMetaHub();
+  if (fromMeta) {
+    return fromMeta;
+  }
   const fromQuery = readQueryHub();
   if (fromQuery) {
     return fromQuery;
@@ -129,4 +140,20 @@ function readQueryHub(): string | null {
   } catch {
     return null;
   }
+}
+
+/**
+ * Read the coordinator-stamped meta tag. The Worker writes
+ * `<meta name="brika:hub" content=...>` for every URL it recognises
+ * as a hub address (path-based `/<name>`, query-based `/?hub=<name>`),
+ * so trusting this tag is equivalent to trusting the Worker's
+ * authoritative URL→hub resolution — which is the only place that
+ * can authoritatively say "this URL means hub X".
+ */
+function readMetaHub(): string | null {
+  if (typeof document === 'undefined') {
+    return null;
+  }
+  const value = document.querySelector(`meta[name="${META_NAME}"]`)?.getAttribute('content');
+  return value && isValidHubName(value) ? value : null;
 }
