@@ -31,19 +31,23 @@ import type { PeerHandle } from './peer';
 // load throws ReferenceError and the bootstrap dies).
 const ASSET_CACHE = `brika-assets-${typeof __BRIKA_BUILD_ID__ === 'undefined' ? 'dev' : __BRIKA_BUILD_ID__}`;
 /**
- * BFS concurrency. 16 was empirically too aggressive against a freshly-
- * booted dev hub: Vite's dep optimizer is single-threaded, so 16 cold
- * deps all hit it at once, the optimizer serializes them, the tail of
- * the queue blows the 90-second per-request budget, and those URLs end
- * up "prime skipped" with an empty cache. When the browser then fetches
- * the same URLs via `<script type="module">`, the SW has nothing cached
- * → falls through to network → Vite is *still* optimizing → 504s rain.
- * 4 keeps the optimizer's queue short enough that every cold request
- * completes well under timeout; the total wall-clock for cold-starting
- * the whole hub UI's dep tree barely changes since it was Vite-bound,
- * not network-bound, in the first place.
+ * BFS concurrency. Tuned for the hub UI's ~100-module dev graph:
+ *
+ * - Most files are Vite-dev source transforms (`/src/...`, `/@fs/...`,
+ *   `/@react-refresh`) which are tiny and effectively concurrent on
+ *   the server side; high fan-out is pure win.
+ * - The `/node_modules/.vite/deps/*` paths route through Vite's
+ *   single-threaded optimizer, which queues them. Hitting 16 at once
+ *   bursts the queue, but the optimizer batches incoming requests so
+ *   the total wall-clock is roughly the cold-bundle cost, not 16x.
+ *
+ * The combination of `ignoreSearch` cache matching (defeats Vite's
+ * `?v=hash` rotation during a cold burst) and per-request retry on
+ * 504/timeout (covers the tail of the burst) means a too-aggressive
+ * value no longer punishes us with a 504 wall — bumping back from 4
+ * to 16 wins multi-second wall-clock without the previous cliff.
  */
-const PRIME_PARALLELISM = 4;
+const PRIME_PARALLELISM = 16;
 
 // Module specifiers: static + side-effect + dynamic imports. The
 // side-effect form needs `\s*` (not `\s+`) — Vite's minifier emits
@@ -126,23 +130,41 @@ function guessMime(url: string): string | undefined {
   return undefined;
 }
 
+/**
+ * Once-on-failure retry covering the two cold-start failure modes:
+ *   - **504 Gateway Timeout**: Vite's hub-side proxy hit its read
+ *     deadline while the optimizer was still bundling. By the time
+ *     control returns here, the optimizer has usually emitted the
+ *     batch and a re-fetch is sub-100 ms.
+ *   - **WebRTC RPC timeout** (PeerHandle rejects with a plain Error
+ *     whose `code === 'timeout'`): the request never came back at
+ *     all in the per-request budget. Same idea — try once more.
+ *
+ * The retry never runs in the happy path (no extra latency) and at
+ * most doubles the worst-case fetch time on a true upstream failure.
+ */
 async function fetchThroughPeer(
   peer: PeerHandle,
   url: string
 ): Promise<{ response: Response; text: string | null; contentType: string }> {
-  let res = await peer.request('GET', url);
-  // Single retry on 504. Vite's dep optimizer returns 504 when it can't
-  // finish optimizing a transitive dep before the hub's proxy timeout —
-  // very common on a cold-start when many requests hit the optimizer at
-  // once. By the time we get back here, the optimizer has usually
-  // finished (parallelism is bounded above), so the second try lands on
-  // a warm cache and returns in ms. Without this, transitive deps that
-  // lost the cold-start race go to "prime skipped", the cache stays
-  // empty for them, and post-`done` script-tag fetches 504 against the
-  // same warm Vite — but the boot has already moved on.
-  if (res.status === 504) {
-    await new Promise((r) => setTimeout(r, 250));
-    res = await peer.request('GET', url);
+  const requestOnce = async (): Promise<Response | 'timeout'> => {
+    try {
+      return await peer.request('GET', url);
+    } catch (err) {
+      if (err instanceof Error && /timeout/i.test(err.message)) {
+        return 'timeout';
+      }
+      throw err;
+    }
+  };
+  let res = await requestOnce();
+  if (res === 'timeout' || res.status === 504) {
+    await new Promise((r) => setTimeout(r, 150));
+    const second = await requestOnce();
+    if (second === 'timeout') {
+      throw new HubUpstreamError(url, 504);
+    }
+    res = second;
   }
   if (!res.ok) {
     throw new HubUpstreamError(url, res.status);
