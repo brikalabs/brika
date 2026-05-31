@@ -207,7 +207,7 @@ function ClaimForm({ coordinatorOrigin }: Readonly<{ coordinatorOrigin: string }
             onChange={(e) => setName(e.target.value)}
             className="min-w-60 flex-1 font-mono text-[12.5px]"
             autoComplete="off"
-            pattern="[a-z][a-z0-9-]{2,30}[a-z0-9]"
+            pattern="[a-z][a-z0-9\-]{2,30}[a-z0-9]"
             maxLength={32}
           />
           <Button type="submit" size="sm" disabled={claim.isPending || name.trim().length < 4}>

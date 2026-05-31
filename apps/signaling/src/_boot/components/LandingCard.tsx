@@ -53,11 +53,11 @@ export function LandingCard(): ReactElement {
   };
 
   return (
-    <Card className="w-full max-w-[420px] overflow-hidden border-border/60 shadow-foreground/5 shadow-xl">
+    <Card className="w-full max-w-105 overflow-hidden border-border/60 shadow-foreground/5 shadow-xl">
       <CardContent className="space-y-6 px-7 pt-9 pb-7">
         <div className="flex flex-col items-center text-center">
           <CardTitle className="text-[17px] tracking-tight">Open a hub remotely</CardTitle>
-          <CardDescription className="mt-1.5 max-w-[300px] text-[13px] leading-relaxed">
+          <CardDescription className="mt-1.5 max-w-75 text-[13px] leading-relaxed">
             Type the name your hub claimed and we'll connect over a direct, end-to-end-encrypted
             channel.
           </CardDescription>
@@ -87,7 +87,7 @@ export function LandingCard(): ReactElement {
                 autoCapitalize="off"
                 spellCheck={false}
                 autoFocus
-                pattern="[a-z][a-z0-9-]{2,30}[a-z0-9]"
+                pattern="[a-z][a-z0-9\-]{2,30}[a-z0-9]"
                 maxLength={32}
                 className="font-mono text-[13.5px]"
                 aria-label="Hub name"
