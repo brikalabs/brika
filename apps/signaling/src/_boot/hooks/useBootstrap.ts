@@ -6,14 +6,29 @@ import { resolveCoordinator } from '@/lib/hub-name';
 import { storeHubName } from '@/lib/hub-storage';
 import { mintTicket, openPeer, type PeerHandle } from '@/lib/peer';
 import { ensureServiceWorker } from '@/lib/service-worker';
+import { installBootstrapSwProxy } from '@/lib/sw-proxy-bridge';
 
 export type BootstrapPhase = 'landing' | 'connecting' | 'fetching' | 'loading' | 'error' | 'done';
+
+/** BFS progress snapshot for the loading bar. `null` outside the fetching phase. */
+export interface BootstrapProgress {
+  /** Modules fetched + cached so far. */
+  fetched: number;
+  /**
+   * Modules discovered so far. Climbs as BFS uncovers transitive
+   * imports — callers should clamp `fetched / total` for the bar to
+   * avoid backward jumps when the denominator grows mid-flight.
+   */
+  total: number;
+}
 
 export interface BootstrapState {
   phase: BootstrapPhase;
   status: string;
   /** Free-form technical detail (last fetched URL, count, …). */
   detail: string | null;
+  /** BFS module-count progress while priming the cache. */
+  progress: BootstrapProgress | null;
   error: ErrorClassification | null;
   retry: () => void;
 }
@@ -22,6 +37,7 @@ interface AttemptCallbacks {
   setPhase: (phase: BootstrapPhase) => void;
   setStatus: (status: string) => void;
   setDetail: (detail: string | null) => void;
+  setProgress: (progress: BootstrapProgress | null) => void;
 }
 
 const OVERALL_TIMEOUT_MS = 45_000;
@@ -34,6 +50,7 @@ export function useBootstrap(hubName: string | null): BootstrapState {
   const [phase, setPhase] = useState<BootstrapPhase>(hubName ? 'connecting' : 'landing');
   const [status, setStatus] = useState(hubName ? `Connecting to ${hubName}…` : 'Choose a hub');
   const [detail, setDetail] = useState<string | null>(null);
+  const [progress, setProgress] = useState<BootstrapProgress | null>(null);
   const [error, setError] = useState<ErrorClassification | null>(null);
   const [attemptNonce, setAttemptNonce] = useState(0);
 
@@ -42,6 +59,7 @@ export function useBootstrap(hubName: string | null): BootstrapState {
       setPhase('landing');
       setStatus('Choose a hub');
       setDetail(null);
+      setProgress(null);
       setError(null);
       return;
     }
@@ -57,6 +75,7 @@ export function useBootstrap(hubName: string | null): BootstrapState {
     setPhase('connecting');
     setStatus(`Connecting to ${hubName}…`);
     setDetail(null);
+    setProgress(null);
     setError(null);
 
     // Wall-clock watchdog: WebRTC can sit in "checking" forever on bad NATs.
@@ -71,7 +90,7 @@ export function useBootstrap(hubName: string | null): BootstrapState {
       setPhase('error');
     }, OVERALL_TIMEOUT_MS);
 
-    void runAttempt(hubName, ac.signal, peerRef, { setPhase, setStatus, setDetail })
+    void runAttempt(hubName, ac.signal, peerRef, { setPhase, setStatus, setDetail, setProgress })
       .then(() => clearTimeout(watchdog))
       .catch((err: unknown) => {
         clearTimeout(watchdog);
@@ -106,6 +125,7 @@ export function useBootstrap(hubName: string | null): BootstrapState {
     phase,
     status,
     detail,
+    progress,
     error,
     retry: () => setAttemptNonce((n) => n + 1),
   };
@@ -164,9 +184,11 @@ async function runAttempt(
 
   log('building asset graph');
   const graph = await buildAssetGraph(peerRef.current, hubName, hasServiceWorker, (event) => {
-    if (!signal.aborted) {
-      cb.setDetail(`${event.fetched} modules · ${shortenUrl(event.url)}`);
+    if (signal.aborted) {
+      return;
     }
+    cb.setDetail(prettyModuleLabel(event.url));
+    cb.setProgress({ fetched: event.fetched, total: event.total });
   });
   if (signal.aborted) {
     log('aborted after buildAssetGraph');
@@ -176,6 +198,16 @@ async function runAttempt(
     scripts: graph.scripts.length,
     cssLinks: graph.cssLinks.length,
   });
+
+  // Install the bootstrap-side SW-proxy bridge BEFORE injecting the
+  // hub UI's scripts. The moment the browser starts executing the
+  // injected `<script type="module">`, it walks the dep tree and
+  // emits a fetch for every transitive import — the SW intercepts,
+  // misses cache (we only primed the entry set), and falls through
+  // to whichever client has registered as proxy-ready. Without this
+  // call there's no such client and the SW falls through to network,
+  // which dead-ends at signaling-Vite returning SPA fallback HTML.
+  installBootstrapSwProxy(peerRef.current);
 
   cb.setPhase('loading');
   cb.setStatus('Starting app…');
@@ -221,11 +253,46 @@ function stripHubPrefixFromUrl(hubName: string): void {
  * (which is the part a human cares about — file name + query) and elides
  * the middle if the whole thing wouldn't fit.
  */
-const MAX_URL_LENGTH = 56;
-function shortenUrl(url: string): string {
-  if (url.length <= MAX_URL_LENGTH) {
-    return url;
+const MAX_LABEL_LENGTH = 48;
+
+/**
+ * Turn a Vite-dev URL into something a human would recognise:
+ *
+ *   /node_modules/.vite/deps/@brika_clay.js?v=2f6dbe94  →  @brika/clay
+ *   /node_modules/.vite/deps/react.js?v=2f6dbe94        →  react
+ *   /node_modules/.vite/deps/dot-qdjE6ESa.js            →  dot
+ *   /src/features/auth/LoginPage.tsx                    →  features/auth/LoginPage.tsx
+ *   /@fs/Users/x/projects/brika/packages/i18n/src/...   →  packages/i18n/src/...
+ *
+ * The bar already shows the ratio, so this just needs to give the eye
+ * a moving signal: "still working, currently on `react`" — not a 200-
+ * char Vite cache key.
+ */
+function prettyModuleLabel(url: string): string {
+  let label = url.split('?')[0] ?? url;
+  // /node_modules/.vite/deps/X.js → strip prefix and .js, then peel
+  // off any trailing -HASH (Vite optimizer chunk id, 8+ alphanum
+  // chars). Split into two non-backtracking regexes to avoid Sonar
+  // S5852 (super-linear regex via lazy + optional group).
+  const depsName = /^\/node_modules\/\.vite\/deps\/([^/]+)\.js$/.exec(label)?.[1];
+  if (depsName) {
+    // `@brika_clay` → `@brika/clay`, `lucide-react` → `lucide-react`.
+    // Bound the upper limit (Vite chunk hashes are ~8 chars; 64 is a
+    // generous cap) so Sonar S5852 doesn't flag the unbounded `{8,}`.
+    const stripped = depsName.replace(/-[A-Za-z0-9_-]{8,64}$/, '');
+    label = stripped.replaceAll('_', '/');
+  } else if (label.startsWith('/@fs/')) {
+    // Pop the long absolute prefix; show only the project-relative tail.
+    const tail = label.slice('/@fs/'.length);
+    const projectRoot = tail.indexOf('/packages/');
+    const appsRoot = tail.indexOf('/apps/');
+    const cut = Math.max(projectRoot, appsRoot);
+    label = cut >= 0 ? tail.slice(cut + 1) : tail;
+  } else if (label.startsWith('/')) {
+    label = label.slice(1);
   }
-  const tailLen = MAX_URL_LENGTH - 4;
-  return `…${url.slice(-tailLen)}`;
+  if (label.length > MAX_LABEL_LENGTH) {
+    label = `…${label.slice(-(MAX_LABEL_LENGTH - 1))}`;
+  }
+  return label;
 }

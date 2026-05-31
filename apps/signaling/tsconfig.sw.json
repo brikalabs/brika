@@ -9,5 +9,5 @@
     "noEmit": true,
     "types": []
   },
-  "include": ["sw/**/*"]
+  "include": ["sw/**/*", "build-id.d.ts"]
 }

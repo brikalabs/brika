@@ -1,10 +1,11 @@
 /**
  * Brika bootstrap Service Worker — intercepts same-origin GETs and serves
- * from the `brika-assets-v5` Cache. The page-side bootstrap pre-populates
- * this cache via WebRTC BEFORE injecting the hub's `<script>` / `<link>`
- * tags, so every browser fetch hits the cache locally. On miss we fall
- * through to the network — keeps the SW transparent for resources the
- * bootstrap didn't pre-cache (its own assets, /sw.js itself, etc.).
+ * from the per-build `brika-assets-<BUILD_ID>` Cache. The page-side
+ * bootstrap pre-populates this cache via WebRTC BEFORE injecting the
+ * hub's `<script>` / `<link>` tags, so every browser fetch hits the cache
+ * locally. On miss we fall through to the network — keeps the SW
+ * transparent for resources the bootstrap didn't pre-cache (its own
+ * assets, /sw.js itself, etc.).
  *
  * This must intercept every path (not just `/assets/`) because Vite dev
  * HTML pulls modules from `/src/`, `/@fs/`, `/@vite/`, and
@@ -12,9 +13,11 @@
  * Intercepting everything is safe because the cache key is the full
  * Request — anything we didn't `cache.put()` is a miss and falls through.
  *
- * Bump the cache name (v1 → v2 → …) whenever the cached-shape semantics
- * change. The activate handler deletes every prior `brika-assets-*`
- * cache so users carrying a stale one get a clean slate automatically.
+ * Cache rotation is automatic — the cache name embeds the build ID
+ * injected by vite.config.ts (Git short SHA), so every deploy rotates
+ * the name. The `activate` handler below deletes every prior
+ * `brika-assets-*` cache, so users on the old build land on a clean
+ * slate on the first visit after deploy — no manual bumping anywhere.
  */
 
 /// <reference lib="webworker" />
@@ -26,7 +29,18 @@
 // the global itself collides with the lib's existing declaration.
 const sw = globalThis as unknown as ServiceWorkerGlobalScope;
 
-const ASSET_CACHE = 'brika-assets-v6';
+// Cache name auto-rotates per build — `__BRIKA_BUILD_ID__` is injected by
+// the esbuild `define` in apps/signaling/vite.config.ts (Git short SHA, or
+// a unix-timestamp fallback when git isn't available). The `activate`
+// handler below wipes every prior `brika-assets-*` cache, so users on the
+// old bootstrap auto-heal to a clean slate on the first visit after a
+// deploy without any manual version bumping.
+//
+// `typeof` guard so a dev session that booted before the `define` was
+// added still loads — the esbuild plugin runs on the next configResolved
+// (server restart), and until then this falls back to a stable "dev"
+// bucket instead of throwing ReferenceError at module load.
+const ASSET_CACHE = `brika-assets-${typeof __BRIKA_BUILD_ID__ === 'undefined' ? 'dev' : __BRIKA_BUILD_ID__}`;
 
 // Visible in the SW's own DevTools console (Application → Service Workers →
 // click the SW link). Pairs with the page-side `[brika-sw]` logs so a failed
@@ -147,8 +161,24 @@ sw.addEventListener('fetch', (event: FetchEvent) => {
   event.respondWith(
     (async () => {
       const cache = await caches.open(ASSET_CACHE);
-      const cached = await cache.match(req);
+      // Cache match policy:
+      //  - For Vite dep-optimizer URLs (`?v=<hash>`) match EXACTLY on
+      //    the hash. Same hash = same module bytes; serving a stale
+      //    `?v=OLD` body for a `?v=NEW` request would register the
+      //    OLD body under the NEW URL key in the browser module
+      //    registry, and the BYTES inside reference `?v=OLD` imports
+      //    — those resolve to a SECOND module instance. With React
+      //    that surfaces as "Invalid hook call ... more than one
+      //    copy of React in the same app" → useState throws null
+      //    dispatcher. Hash rotation = forced re-fetch through the
+      //    bridge; that's correct, not a perf regression to undo.
+      //  - For everything else use `ignoreSearch: true` so non-hash
+      //    query strings (timestamps, HMR tokens) still hit cache.
+      const shortUrl = url.pathname + (url.search.length > 24 ? '?…' : url.search);
+      const matchOpts = url.searchParams.has('v') ? undefined : { ignoreSearch: true };
+      const cached = await cache.match(req, matchOpts);
       if (cached) {
+        log('serve from cache', { url: shortUrl, status: cached.status });
         return cached;
       }
       // Cache miss. Two distinct callers reach here:
@@ -163,16 +193,28 @@ sw.addEventListener('fetch', (event: FetchEvent) => {
       // hub-UI document has explicitly registered; the bootstrap hasn't.
       const client = await resolveProxyClient(event.clientId);
       if (client) {
+        log('cache miss → proxy through client', { url: shortUrl });
         const res = await proxyThroughClient(req, client);
         if (res.ok) {
           const cacheable = res.clone();
           event.waitUntil(cache.put(req, cacheable).catch(() => {}));
+          log('proxied + cached', { url: shortUrl, status: res.status });
+        } else {
+          log('proxied (NOT cached, !ok)', { url: shortUrl, status: res.status });
         }
         return res;
       }
+      log('cache miss → network fallback', { url: shortUrl });
       try {
-        return await fetch(req);
+        const res = await fetch(req);
+        log('network served', {
+          url: shortUrl,
+          status: res.status,
+          contentType: res.headers.get('content-type'),
+        });
+        return res;
       } catch (err) {
+        log('network FAILED', { url: shortUrl, err: String(err) });
         return new Response(`SW network fallback failed: ${err}`, {
           status: 502,
           headers: { 'content-type': 'text/plain' },
@@ -275,6 +317,20 @@ async function proxyThroughClient(req: Request, client: Client): Promise<Respons
   return new Promise<Response>((resolve) => {
     const { readable, writable } = new TransformStream<Uint8Array, Uint8Array>();
     const writer = writable.getWriter();
+    // Track writer liveness so post-cancel write/close/abort doesn't surface
+    // as "Uncaught (in promise) TypeError: Cannot write to a CLOSED writable
+    // stream" when the downstream Response is dropped (HMR, navigation, dedupe).
+    // writer.closed fulfils on normal close and rejects on abort/downstream
+    // cancel — both flip the flag.
+    let writerClosed = false;
+    const markClosed = (): void => {
+      writerClosed = true;
+    };
+    // Any settlement of writer.closed (normal close or downstream cancel
+    // reject) flips the flag. The `.catch(() => {})` is the only
+    // suppression — it consumes the well-defined cancel rejection so it
+    // doesn't surface as an unhandled promise rejection.
+    writer.closed.catch(() => {}).finally(markClosed);
     let headSeen = false;
     const headTimer = setTimeout(() => {
       if (!headSeen) {
@@ -300,11 +356,13 @@ async function proxyThroughClient(req: Request, client: Client): Promise<Respons
         return;
       }
       if (msg.kind === 'chunk' && msg.bytes) {
-        void writer.write(new Uint8Array(msg.bytes));
+        if (writerClosed) return;
+        writer.write(new Uint8Array(msg.bytes)).catch(markClosed);
         return;
       }
       if (msg.kind === 'end') {
-        void writer.close();
+        if (writerClosed) return;
+        writer.close().catch(markClosed);
         return;
       }
       if (msg.kind === 'error') {
@@ -322,7 +380,9 @@ async function proxyThroughClient(req: Request, client: Client): Promise<Respons
           );
           return;
         }
-        void writer.abort(new Error(msg.message ?? 'bridge error'));
+        if (!writerClosed) {
+          writer.abort(new Error(msg.message ?? 'bridge error')).catch(markClosed);
+        }
       }
     };
   });

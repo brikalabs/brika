@@ -13,7 +13,7 @@ import { loadHubName } from '@/lib/hub-storage';
  */
 export function LoaderScreen(): React.ReactElement {
   const hubName = loadHubName();
-  const { phase, status, detail, error, retry } = useBootstrap(hubName);
+  const { phase, status, detail, progress, error, retry } = useBootstrap(hubName);
   const busy = phase === 'connecting' || phase === 'fetching' || phase === 'loading';
 
   return (
@@ -21,7 +21,7 @@ export function LoaderScreen(): React.ReactElement {
       <div className="flex flex-col items-center">
         <Mark phase={phase} />
         {phase === 'landing' && <LandingCard />}
-        {busy && <ConnectingCard status={status} detail={detail} />}
+        {busy && <ConnectingCard status={status} detail={detail} progress={progress} />}
         {phase === 'error' && error && <ErrorCard error={error} onRetry={retry} />}
       </div>
     </main>

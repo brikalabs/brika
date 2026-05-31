@@ -40,6 +40,17 @@ export function installSwProxyListener(transport: Transport): void {
     return;
   }
   installed = true;
+  // Hand off from the bootstrap's primordial listener BEFORE we add our
+  // own. Both listeners on the same `navigator.serviceWorker` would
+  // fire for every SW message and race to post to the same MessagePort
+  // — first frame wins, the loser writes to a closed writable and
+  // surfaces as random "Cannot write to a CLOSED writable stream" plus
+  // truncated/corrupted responses. The bootstrap publishes
+  // `__brikaBootProxyUninstall` on globalThis; calling it removes its
+  // message + controllerchange listeners. Once gone, only ours answers.
+  const bootUninstall = (globalThis as { __brikaBootProxyUninstall?: () => void })
+    .__brikaBootProxyUninstall;
+  bootUninstall?.();
   navigator.serviceWorker.addEventListener('message', (event) => {
     const data = event.data as ProxyRequest | undefined;
     if (data?.type !== 'brika:sw-proxy') {

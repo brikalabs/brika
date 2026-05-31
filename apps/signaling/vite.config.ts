@@ -1,8 +1,34 @@
+import { execSync } from 'node:child_process';
 import { cloudflare } from '@cloudflare/vite-plugin';
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import { build as esbuild } from 'esbuild';
 import { defineConfig, type Plugin } from 'vite';
+
+/**
+ * Build-time identifier baked into the bootstrap SPA AND the service worker
+ * so the SW Cache name (`brika-assets-${BUILD_ID}`) auto-rotates on every
+ * deploy. Old caches are wiped by the SW's `activate` handler — no manual
+ * cache-version bump in two files anymore.
+ *
+ * Falls back to a UTC timestamp when git isn't available (tarball builds,
+ * non-repo CI). The fallback still rotates per build; it just isn't tied
+ * to a reviewable commit.
+ */
+function buildId(): string {
+  try {
+    // Build-time invocation of git; PATH is the developer/CI environment,
+    // not attacker-controlled input. Same shape as apps/console's
+    // buildInfo.macro.ts, which has the same triage in Sonar.
+    return execSync('git rev-parse --short=12 HEAD', { stdio: ['ignore', 'pipe', 'ignore'] }) // NOSONAR S4036
+      .toString()
+      .trim();
+  } catch {
+    return `nogit-${Math.floor(Date.now() / 1000).toString(36)}`;
+  }
+}
+const BUILD_ID = buildId();
+const BUILD_ID_DEFINE = { __BRIKA_BUILD_ID__: JSON.stringify(BUILD_ID) };
 
 /**
  * One dev server for both halves of the signaling package:
@@ -40,6 +66,7 @@ function brikaSwPlugin(): Plugin {
         target: 'es2022',
         platform: 'browser',
         logLevel: 'silent',
+        define: BUILD_ID_DEFINE,
       });
     } catch (err) {
       console.error('[brika-sw] build failed', err);
@@ -53,8 +80,18 @@ function brikaSwPlugin(): Plugin {
     },
     configureServer(server) {
       server.watcher.add(entry);
+      // Also recompile on vite.config.ts changes — when the developer edits
+      // the `define` block (e.g. bumping the BUILD_ID source), Vite normally
+      // restarts itself which re-fires configResolved. But if they're
+      // iterating *without* a restart (e.g. tweaking the define value during
+      // a debugging session), the SW would otherwise stay pinned to the
+      // BUILD_ID captured at startup, ending up with a cache name the
+      // bootstrap (which IS HMR'd) no longer matches — silent script-tag
+      // fetches then 200-text/html through the SPA fallback.
+      const configFile = new URL('./vite.config.ts', import.meta.url).pathname;
+      server.watcher.add(configFile);
       server.watcher.on('change', (path) => {
-        if (path === entry) {
+        if (path === entry || path === configFile) {
           void compile();
         }
       });
@@ -63,6 +100,7 @@ function brikaSwPlugin(): Plugin {
 }
 
 export default defineConfig({
+  define: BUILD_ID_DEFINE,
   plugins: [brikaSwPlugin(), cloudflare(), react(), tailwindcss()],
   resolve: {
     alias: {

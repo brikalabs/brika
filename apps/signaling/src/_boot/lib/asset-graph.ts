@@ -20,15 +20,28 @@ import type { PeerHandle } from './peer';
 // Must match `apps/signaling/sw/sw.ts`. Bump together when the cached-shape
 // contract changes OR when a deploy has poisoned client caches and needs a
 // forced wipe (the SW's `activate` deletes prior `brika-assets-*` entries).
-const ASSET_CACHE = 'brika-assets-v6';
-const PRIME_PARALLELISM = 16;
-
+// Auto-rotates per build via Vite's `define` injection — see
+// apps/signaling/vite.config.ts. Must match the SW's ASSET_CACHE in
+// sw/sw.ts (both pull from the same `__BRIKA_BUILD_ID__` constant, so
+// they always agree within a single build).
+//
+// `typeof` guard so a dev session where Vite was started BEFORE the
+// `define` block was added still boots (a server restart is needed to
+// pick up vite.config.ts changes; without this guard, every module
+// load throws ReferenceError and the bootstrap dies).
+const ASSET_CACHE = `brika-assets-${typeof __BRIKA_BUILD_ID__ === 'undefined' ? 'dev' : __BRIKA_BUILD_ID__}`;
 // Module specifiers: static + side-effect + dynamic imports. The
 // side-effect form needs `\s*` (not `\s+`) — Vite's minifier emits
 // `import"./foo.js"` with zero whitespace, and `\s+` would miss those.
-const IMPORT_RE = /\b(?:import\s*\(|(?:import|export)[^'"]*?from\s*|import\s*)['"]([^'"]+)['"]/g;
-// Asset URLs referenced from CSS (`url(...)`). Bounded quantifiers keep matching linear.
-const CSS_URL_RE = /url\(\s{0,8}['"]?([^\s)'"]{1,2048})['"]?\s{0,8}\)/g;
+// Backticks must be in the quote class: Rolldown/Vite emit dynamic
+// imports as `import(\`./chunk.js\`)` (template literal, no
+// interpolation). Missing them means the BFS sees zero dynamic-import
+// chunks — every code-split route (sw-proxy, users, auth, blocks, …)
+// stays uncached, the SW falls through to the CF Worker, the SPA
+// fallback returns HTML for the JS URL, and `<script type="module">`
+// dies with `Failed to load module script: … text/html`.
+const IMPORT_RE =
+  /\b(?:import\s*\(|(?:import|export)[^'"`]*?from\s*|import\s*)['"`]([^'"`]+)['"`]/g;
 
 const VITE_HMR_PATHS = new Set(['/@vite/client', '/@vite/env']);
 
@@ -73,7 +86,16 @@ export interface AssetGraph {
 }
 
 export interface AssetGraphProgress {
+  /** Number of modules successfully primed into cache so far. */
   fetched: number;
+  /**
+   * Total modules discovered so far — initial entry set plus every
+   * transitive import the BFS has uncovered. Grows as the BFS walks
+   * deeper, so the fetched/total ratio can move backwards briefly
+   * when a freshly-fetched module reveals many new imports.
+   */
+  total: number;
+  /** URL of the most recent fetch (for the "currently loading" line). */
   url: string;
 }
 
@@ -82,8 +104,6 @@ export type ProgressListener = (event: AssetGraphProgress) => void;
 const pathOf = (url: string) => url.split('?')[0] ?? url;
 const isAbsolutePath = (s: string) => s.startsWith('/') && !s.startsWith('//');
 const isViteHmr = (url: string) => VITE_HMR_PATHS.has(pathOf(url));
-const isJS = (ct: string) => /\b(?:javascript|ecmascript)\b/i.test(ct);
-const isCSS = (ct: string) => /\bcss\b/i.test(ct);
 
 function guessMime(url: string): string | undefined {
   const p = pathOf(url);
@@ -96,11 +116,42 @@ function guessMime(url: string): string | undefined {
   return undefined;
 }
 
+/**
+ * Once-on-failure retry covering the two cold-start failure modes:
+ *   - **504 Gateway Timeout**: Vite's hub-side proxy hit its read
+ *     deadline while the optimizer was still bundling. By the time
+ *     control returns here, the optimizer has usually emitted the
+ *     batch and a re-fetch is sub-100 ms.
+ *   - **WebRTC RPC timeout** (PeerHandle rejects with a plain Error
+ *     whose `code === 'timeout'`): the request never came back at
+ *     all in the per-request budget. Same idea — try once more.
+ *
+ * The retry never runs in the happy path (no extra latency) and at
+ * most doubles the worst-case fetch time on a true upstream failure.
+ */
 async function fetchThroughPeer(
   peer: PeerHandle,
   url: string
 ): Promise<{ response: Response; text: string | null; contentType: string }> {
-  const res = await peer.request('GET', url);
+  const requestOnce = async (): Promise<Response | 'timeout'> => {
+    try {
+      return await peer.request('GET', url);
+    } catch (err) {
+      if (err instanceof Error && /timeout/i.test(err.message)) {
+        return 'timeout';
+      }
+      throw err;
+    }
+  };
+  let res = await requestOnce();
+  if (res === 'timeout' || res.status === 504) {
+    await new Promise((r) => setTimeout(r, 150));
+    const second = await requestOnce();
+    if (second === 'timeout') {
+      throw new HubUpstreamError(url, 504);
+    }
+    res = second;
+  }
   if (!res.ok) {
     throw new HubUpstreamError(url, res.status);
   }
@@ -133,6 +184,22 @@ function resolveSamePath(raw: string | undefined, baseUrl: string): string | nul
   if (!raw || /^(?:data:|https?:|\/\/)/i.test(raw)) {
     return null;
   }
+  // Reject bare specifiers (`react`, `MyComponent`, `date-fns/locale/eo`).
+  // The IMPORT_RE picks them up when minified bundles embed examples in
+  // JSDoc strings or stringified module paths, but joining a bare name
+  // against the base URL produces a sibling path (`/parent/react`) that
+  // the hub then 404s — pure noise. Built bundles only ever import via
+  // concrete paths (`./chunk-XYZ.js`, `/assets/foo.js`); Vite-dev cases
+  // that legitimately use bare specifiers resolve through the dev
+  // server's own resolver, not our BFS.
+  if (!/^(?:\.{1,2}\/|\/)/.test(raw)) {
+    return null;
+  }
+  // Template-literal placeholders that survived the regex match — we
+  // can't statically resolve `${X}` to a real path, so don't queue it.
+  if (raw.includes('${')) {
+    return null;
+  }
   try {
     const url = new URL(raw, `${location.origin}${baseUrl}`);
     return url.origin === location.origin && isAbsolutePath(url.pathname) ? url.pathname : null;
@@ -152,127 +219,49 @@ function scanJSImports(text: string, baseUrl: string): string[] {
   return out;
 }
 
-function scanCSSUrls(text: string, baseUrl: string): string[] {
-  const out: string[] = [];
-  for (const m of text.matchAll(CSS_URL_RE)) {
-    const resolved = resolveSamePath(m[1], baseUrl);
-    if (resolved) {
-      out.push(resolved);
-    }
-  }
-  return out;
-}
-
-function nextRefs(text: string | null, contentType: string, url: string): string[] {
-  if (!text) {
-    return [];
-  }
-  if (isJS(contentType)) {
-    return scanJSImports(text, url);
-  }
-  if (isCSS(contentType)) {
-    return scanCSSUrls(text, url);
-  }
-  return [];
-}
-
-async function primeCache(
+/**
+ * Cache the entry scripts + CSS the hub's index.html directly references —
+ * NOT the transitive dep tree. Everything beyond the entry set is left for
+ * the browser's natural module loader to fetch on demand, where the SW
+ * (`apps/signaling/sw/sw.ts`) intercepts and routes the request through
+ * the bootstrap's `installBootstrapSwProxy` bridge — same WebRTC peer,
+ * just paid per-import instead of eagerly walking ~1900 modules upfront.
+ *
+ * This used to do a 16-wide BFS over the full graph, which was the wrong
+ * cost shape for dev: Vite's optimizer is single-threaded, the BFS would
+ * saturate it, the tail of the burst would time out, and the bootstrap
+ * would sit at "Loading…" for 30+ s before either succeeding or 504-walling
+ * post-`done`. Letting the browser drive the dep walk turns that into a
+ * ~1 s entry prime + render-as-soon-as-React-can-mount, with transitive
+ * deps streaming in alongside the initial render.
+ *
+ * Entry-set failures still propagate: if `/src/main.tsx` won't fetch,
+ * there's no UI to render, so we fail loud.
+ */
+async function primeEntryUrls(
   peer: PeerHandle,
   initial: readonly string[],
   onProgress?: ProgressListener
 ): Promise<void> {
   const cache = await caches.open(ASSET_CACHE);
-  const visited = new Set<string>(initial);
-  const essential = new Set<string>(initial);
-  const queue = [...initial];
-  const inflight = new Set<Promise<void>>();
-  let stopErr: Error | null = null;
+  console.log('[brika-bootstrap] entry prime start', {
+    cacheName: ASSET_CACHE,
+    urls: initial,
+  });
+  const startedAt = performance.now();
   let fetched = 0;
-
-  const recordFetched = (url: string): void => {
-    fetched++;
-    onProgress?.({ fetched, url });
-  };
-
-  const enqueueRefs = (refs: readonly string[]): void => {
-    for (const ref of refs) {
-      if (!visited.has(ref)) {
-        visited.add(ref);
-        queue.push(ref);
-      }
-    }
-  };
-
-  // A stale cache entry can mask a broken deploy: if a prior session
-  // cached the hub UI's entry under a content-type the browser then
-  // rejects (or with HTML bytes JS parsing chokes on), every subsequent
-  // boot short-circuits and the user sees the same MIME error forever.
-  // Log essential cache hits so the next debug session can see what's
-  // actually being served.
-  const noteCacheHit = (url: string, existing: Response): void => {
-    if (!essential.has(url)) {
-      return;
-    }
-    console.log('[brika-bootstrap] prime cache hit', {
-      url,
-      status: existing.status,
-      contentType: existing.headers.get('content-type'),
-    });
-  };
-
-  // Initial URLs are the entry scripts + CSS the hub's index.html
-  // directly references — non-optional. Silently dropping them lets
-  // the bootstrap reach "done" with an empty cache, and the browser
-  // then hits the SPA-origin fallback with a misleading text/html
-  // MIME error. Propagate ANY error here (not just BootstrapError —
-  // `peer.request` rejects with a plain `Error` on timeout / channel
-  // close / mid-stream abort, which would otherwise slip past).
-  // Transitive refs can legitimately 404 (a stale asset URL in CSS,
-  // a removed dynamic import) — log but don't abort.
-  const recordFetchError = (url: string, err: unknown): void => {
-    if (err instanceof HubDevProxyError) {
-      stopErr = err;
-      return;
-    }
-    if (essential.has(url)) {
-      stopErr = err instanceof Error ? err : new Error(String(err));
-      return;
-    }
-    console.warn('[brika-bootstrap] prime skipped', {
-      url,
-      err: err instanceof Error ? `${err.name}: ${err.message}` : String(err),
-    });
-  };
-
-  // Re-scan a cache-hit body for transitive refs. Without this, a prior
-  // session that primed the entry but failed mid-BFS (a vendor chunk
-  // 404'd, an RPC timed out) leaves the cache in a state where every
-  // subsequent boot short-circuits on the entry without ever queueing
-  // its imports — the user is stuck on a partial prime forever. Reading
-  // the body costs one cache-roundtrip per cached node, cheap compared
-  // to the WebRTC round-trip we'd otherwise pay to refetch.
-  const rescanCached = async (url: string, existing: Response): Promise<void> => {
-    const ct = existing.headers.get('content-type') ?? '';
-    if (!isJS(ct) && !isCSS(ct)) {
-      return;
-    }
-    let text: string;
-    try {
-      text = await existing.text();
-    } catch {
-      return;
-    }
-    enqueueRefs(nextRefs(text, ct, url));
-  };
+  const errors: Array<{ url: string; err: unknown }> = [];
 
   const processOne = async (url: string): Promise<void> => {
-    if (stopErr) {
-      return;
-    }
-    const existing = await cache.match(url);
+    const existing = await cache.match(url, { ignoreSearch: true });
     if (existing) {
-      noteCacheHit(url, existing);
-      await rescanCached(url, existing);
+      fetched++;
+      console.log('[brika-bootstrap] entry cache hit', {
+        url,
+        status: existing.status,
+        contentType: existing.headers.get('content-type'),
+      });
+      onProgress?.({ fetched, total: initial.length, url });
       return;
     }
     if (isViteHmr(url)) {
@@ -280,40 +269,34 @@ async function primeCache(
         url,
         new Response(VITE_CLIENT_STUB, { headers: { 'content-type': 'text/javascript' } })
       );
-      recordFetched(url);
+      fetched++;
+      onProgress?.({ fetched, total: initial.length, url });
       return;
     }
-    let result: Awaited<ReturnType<typeof fetchThroughPeer>>;
     try {
-      result = await fetchThroughPeer(peer, url);
+      const result = await fetchThroughPeer(peer, url);
+      await cache.put(url, result.response);
+      fetched++;
+      onProgress?.({ fetched, total: initial.length, url });
     } catch (err) {
-      recordFetchError(url, err);
-      return;
+      errors.push({ url, err });
     }
-    await cache.put(url, result.response);
-    recordFetched(url);
-    enqueueRefs(nextRefs(result.text, result.contentType, url));
   };
 
-  // Worker-pool BFS: PRIME_PARALLELISM fetches in flight at once, refilled from
-  // the queue as each completes. Sequential would be 30s+ on Vite's ~3000-module graph.
-  while (queue.length > 0 || inflight.size > 0) {
-    while (queue.length > 0 && inflight.size < PRIME_PARALLELISM && !stopErr) {
-      const url = queue.shift();
-      if (!url) {
-        break;
-      }
-      const task = processOne(url).finally(() => inflight.delete(task));
-      inflight.add(task);
-    }
-    if (inflight.size === 0) {
-      break;
-    }
-    await Promise.race(inflight);
-  }
-  await Promise.all(inflight);
-  if (stopErr) {
-    throw stopErr;
+  await Promise.all(initial.map(processOne));
+  console.log('[brika-bootstrap] entry prime done', {
+    fetched,
+    total: initial.length,
+    failed: errors.length,
+    durationMs: Math.round(performance.now() - startedAt),
+  });
+  // If every entry failed something is fundamentally broken (peer dead,
+  // hub never started). Surface the first error so classifyError has
+  // something to work with. A partial prime is fine — the SW + bridge
+  // will handle the missing entries on the browser's natural fetch.
+  if (errors.length === initial.length && errors.length > 0) {
+    const first = errors[0]?.err;
+    throw first instanceof Error ? first : new Error(String(first));
   }
 }
 
@@ -386,7 +369,7 @@ export async function buildAssetGraph(
     .filter((href): href is string => href !== null);
 
   const initial = collectInitialUrls(scripts, cssLinks);
-  await primeCache(peer, Array.from(initial), onProgress);
+  await primeEntryUrls(peer, Array.from(initial), onProgress);
   return { scripts, cssLinks, title: doc.title, hubName };
 }
 
@@ -410,6 +393,9 @@ export async function injectGraph(graph: AssetGraph, rootId: string): Promise<vo
   meta.setAttribute('name', 'brika:hub');
   meta.setAttribute('content', graph.hubName);
   document.head.appendChild(meta);
+  // Canonical handoff signal — bootstrap.tsx reads this on HMR
+  // re-eval to refuse a second mount on the hub UI's #root.
+  globalThis.__brikaHandoffDone = true;
   console.log('[brika-bootstrap] meta stamped', {
     hubName: graph.hubName,
     readBack: document.querySelector('meta[name="brika:hub"]')?.getAttribute('content') ?? null,

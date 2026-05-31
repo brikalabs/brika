@@ -43,8 +43,18 @@ export interface PeerHandle {
 
 const TEXT_DECODER = new TextDecoder();
 
-/** Per-request inflight timeout. Bounds slot lifetime even if a hub goes silent. */
-const REQUEST_TIMEOUT_MS = 30_000;
+/**
+ * Per-request inflight timeout. Bounds slot lifetime even if a hub goes
+ * silent. Generous enough to absorb a Vite-dev cold start: when the BFS
+ * fires its 16 parallel chunk requests at a freshly-booted dev hub, the
+ * Vite optimizer prebundles deps one at a time, and the tail of the
+ * queue can sit a long while before its turn. 30 s was empirically too
+ * short for workspace packages (`@brika/clay`, etc.) — requests timed
+ * out into the skip pile, the cache stayed empty, and the post-graph
+ * script-tag fetches then 504'd against Vite trying to do the same
+ * optimization a second time.
+ */
+const REQUEST_TIMEOUT_MS = 90_000;
 
 export async function mintTicket(
   hubName: string,
