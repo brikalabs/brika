@@ -18,7 +18,7 @@ interface ErrorCardProps {
   readonly onRetry: () => void;
 }
 
-const HELP_HREF = 'https://brika.dev/docs/remote-access';
+const HELP_HREF = 'https://docs.brika.dev/architecture/remote-access';
 
 export function ErrorCard({ error, onRetry }: ErrorCardProps): React.ReactElement {
   // `change-name` doesn't auto-retry; the user has to pick a different name.

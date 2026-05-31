@@ -41,18 +41,29 @@ function resolveBrikaDir(): string {
 
 function readOrGenerateInstanceId(brikaDir: string): string {
   const path = join(brikaDir, INSTANCE_ID_FILE);
+  let staleId: string | null = null;
   if (existsSync(path)) {
     const raw = readFileSync(path, 'utf8').trim();
     if (INSTANCE_ID_RE.test(raw)) {
       return raw;
     }
-    // Corrupt contents — fall through to regenerate. Old Keychain
-    // entries become orphaned but are harmless until the user cleans
-    // them manually.
+    // Corrupt contents — fall through to regenerate.
+    staleId = raw || null;
   }
   const fresh = randomBytes(INSTANCE_ID_BYTES).toString('hex');
   mkdirSync(brikaDir, { recursive: true });
   writeFileSync(path, fresh, { encoding: 'utf8', mode: 0o600 });
+  // The structured Logger isn't wired yet at module load — and this is the
+  // module that gives the logger its serviceName — so warn via console. The
+  // user is otherwise blind to the fact that they just orphaned a whole
+  // keychain namespace.
+  const stalePart = staleId ? ` (previous file held "${staleId}")` : ' (no previous instance.id)';
+  console.warn(
+    `[brika] Generated a fresh instance.id "${fresh}" in ${brikaDir}${stalePart}. ` +
+      `Any keychain entries under "${KEYCHAIN_SERVICE_BASE}.<previous>" are now orphaned ` +
+      `and won't be read by this hub — clean them up via Keychain Access or ` +
+      `\`security delete-generic-password -s ${KEYCHAIN_SERVICE_BASE}.<previous>\`.`
+  );
   return fresh;
 }
 
