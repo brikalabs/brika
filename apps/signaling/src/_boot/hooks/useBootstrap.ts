@@ -6,6 +6,7 @@ import { resolveCoordinator } from '@/lib/hub-name';
 import { storeHubName } from '@/lib/hub-storage';
 import { mintTicket, openPeer, type PeerHandle } from '@/lib/peer';
 import { ensureServiceWorker } from '@/lib/service-worker';
+import { installBootstrapSwProxy } from '@/lib/sw-proxy-bridge';
 
 export type BootstrapPhase = 'landing' | 'connecting' | 'fetching' | 'loading' | 'error' | 'done';
 
@@ -197,6 +198,16 @@ async function runAttempt(
     scripts: graph.scripts.length,
     cssLinks: graph.cssLinks.length,
   });
+
+  // Install the bootstrap-side SW-proxy bridge BEFORE injecting the
+  // hub UI's scripts. The moment the browser starts executing the
+  // injected `<script type="module">`, it walks the dep tree and
+  // emits a fetch for every transitive import — the SW intercepts,
+  // misses cache (we only primed the entry set), and falls through
+  // to whichever client has registered as proxy-ready. Without this
+  // call there's no such client and the SW falls through to network,
+  // which dead-ends at signaling-Vite returning SPA fallback HTML.
+  installBootstrapSwProxy(peerRef.current);
 
   cb.setPhase('loading');
   cb.setStatus('Starting app…');
