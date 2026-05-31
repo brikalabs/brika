@@ -186,7 +186,7 @@ async function runAttempt(
     if (signal.aborted) {
       return;
     }
-    cb.setDetail(`${event.fetched} / ${event.total} · ${shortenUrl(event.url)}`);
+    cb.setDetail(prettyModuleLabel(event.url));
     cb.setProgress({ fetched: event.fetched, total: event.total });
   });
   if (signal.aborted) {
@@ -242,11 +242,41 @@ function stripHubPrefixFromUrl(hubName: string): void {
  * (which is the part a human cares about — file name + query) and elides
  * the middle if the whole thing wouldn't fit.
  */
-const MAX_URL_LENGTH = 56;
-function shortenUrl(url: string): string {
-  if (url.length <= MAX_URL_LENGTH) {
-    return url;
+const MAX_LABEL_LENGTH = 48;
+
+/**
+ * Turn a Vite-dev URL into something a human would recognise:
+ *
+ *   /node_modules/.vite/deps/@brika_clay.js?v=2f6dbe94  →  @brika/clay
+ *   /node_modules/.vite/deps/react.js?v=2f6dbe94        →  react
+ *   /node_modules/.vite/deps/dot-qdjE6ESa.js            →  dot
+ *   /src/features/auth/LoginPage.tsx                    →  features/auth/LoginPage.tsx
+ *   /@fs/Users/x/projects/brika/packages/i18n/src/...   →  packages/i18n/src/...
+ *
+ * The bar already shows the ratio, so this just needs to give the eye
+ * a moving signal: "still working, currently on `react`" — not a 200-
+ * char Vite cache key.
+ */
+function prettyModuleLabel(url: string): string {
+  let label = url.split('?')[0] ?? url;
+  // /node_modules/.vite/deps/X.js → strip prefix, .js suffix, and any
+  // 8-char hash dangling on the filename (Vite's optimizer chunk id).
+  const depsMatch = /^\/node_modules\/\.vite\/deps\/(.+?)(?:-[A-Za-z0-9_-]{8,})?\.js$/.exec(label);
+  if (depsMatch?.[1]) {
+    // `@brika_clay` → `@brika/clay`, `lucide-react` → `lucide-react`.
+    label = depsMatch[1].replaceAll('_', '/');
+  } else if (label.startsWith('/@fs/')) {
+    // Pop the long absolute prefix; show only the project-relative tail.
+    const tail = label.slice('/@fs/'.length);
+    const projectRoot = tail.indexOf('/packages/');
+    const appsRoot = tail.indexOf('/apps/');
+    const cut = Math.max(projectRoot, appsRoot);
+    label = cut >= 0 ? tail.slice(cut + 1) : tail;
+  } else if (label.startsWith('/')) {
+    label = label.slice(1);
   }
-  const tailLen = MAX_URL_LENGTH - 4;
-  return `…${url.slice(-tailLen)}`;
+  if (label.length > MAX_LABEL_LENGTH) {
+    label = `…${label.slice(-(MAX_LABEL_LENGTH - 1))}`;
+  }
+  return label;
 }
