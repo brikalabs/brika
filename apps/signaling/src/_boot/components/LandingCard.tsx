@@ -87,7 +87,7 @@ export function LandingCard(): ReactElement {
                 autoCapitalize="off"
                 spellCheck={false}
                 autoFocus
-                pattern="[a-z][a-z0-9-]{2,30}[a-z0-9]"
+                pattern="[a-z][-a-z0-9]{2,30}[a-z0-9]"
                 maxLength={32}
                 className="font-mono text-[13.5px]"
                 aria-label="Hub name"
