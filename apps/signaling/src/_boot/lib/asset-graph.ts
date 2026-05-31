@@ -24,7 +24,12 @@ import type { PeerHandle } from './peer';
 // apps/signaling/vite.config.ts. Must match the SW's ASSET_CACHE in
 // sw/sw.ts (both pull from the same `__BRIKA_BUILD_ID__` constant, so
 // they always agree within a single build).
-const ASSET_CACHE = `brika-assets-${__BRIKA_BUILD_ID__}`;
+//
+// `typeof` guard so a dev session where Vite was started BEFORE the
+// `define` block was added still boots (a server restart is needed to
+// pick up vite.config.ts changes; without this guard, every module
+// load throws ReferenceError and the bootstrap dies).
+const ASSET_CACHE = `brika-assets-${typeof __BRIKA_BUILD_ID__ === 'undefined' ? 'dev' : __BRIKA_BUILD_ID__}`;
 const PRIME_PARALLELISM = 16;
 
 // Module specifiers: static + side-effect + dynamic imports. The

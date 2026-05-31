@@ -35,7 +35,12 @@ const sw = globalThis as unknown as ServiceWorkerGlobalScope;
 // handler below wipes every prior `brika-assets-*` cache, so users on the
 // old bootstrap auto-heal to a clean slate on the first visit after a
 // deploy without any manual version bumping.
-const ASSET_CACHE = `brika-assets-${__BRIKA_BUILD_ID__}`;
+//
+// `typeof` guard so a dev session that booted before the `define` was
+// added still loads — the esbuild plugin runs on the next configResolved
+// (server restart), and until then this falls back to a stable "dev"
+// bucket instead of throwing ReferenceError at module load.
+const ASSET_CACHE = `brika-assets-${typeof __BRIKA_BUILD_ID__ === 'undefined' ? 'dev' : __BRIKA_BUILD_ID__}`;
 
 // Visible in the SW's own DevTools console (Application → Service Workers →
 // click the SW link). Pairs with the page-side `[brika-sw]` logs so a failed
