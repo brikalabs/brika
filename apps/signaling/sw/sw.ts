@@ -1,10 +1,11 @@
 /**
  * Brika bootstrap Service Worker — intercepts same-origin GETs and serves
- * from the `brika-assets-v5` Cache. The page-side bootstrap pre-populates
- * this cache via WebRTC BEFORE injecting the hub's `<script>` / `<link>`
- * tags, so every browser fetch hits the cache locally. On miss we fall
- * through to the network — keeps the SW transparent for resources the
- * bootstrap didn't pre-cache (its own assets, /sw.js itself, etc.).
+ * from the per-build `brika-assets-<BUILD_ID>` Cache. The page-side
+ * bootstrap pre-populates this cache via WebRTC BEFORE injecting the
+ * hub's `<script>` / `<link>` tags, so every browser fetch hits the cache
+ * locally. On miss we fall through to the network — keeps the SW
+ * transparent for resources the bootstrap didn't pre-cache (its own
+ * assets, /sw.js itself, etc.).
  *
  * This must intercept every path (not just `/assets/`) because Vite dev
  * HTML pulls modules from `/src/`, `/@fs/`, `/@vite/`, and
@@ -12,9 +13,11 @@
  * Intercepting everything is safe because the cache key is the full
  * Request — anything we didn't `cache.put()` is a miss and falls through.
  *
- * Bump the cache name (v1 → v2 → …) whenever the cached-shape semantics
- * change. The activate handler deletes every prior `brika-assets-*`
- * cache so users carrying a stale one get a clean slate automatically.
+ * Cache rotation is automatic — the cache name embeds the build ID
+ * injected by vite.config.ts (Git short SHA), so every deploy rotates
+ * the name. The `activate` handler below deletes every prior
+ * `brika-assets-*` cache, so users on the old build land on a clean
+ * slate on the first visit after deploy — no manual bumping anywhere.
  */
 
 /// <reference lib="webworker" />
@@ -26,7 +29,13 @@
 // the global itself collides with the lib's existing declaration.
 const sw = globalThis as unknown as ServiceWorkerGlobalScope;
 
-const ASSET_CACHE = 'brika-assets-v6';
+// Cache name auto-rotates per build — `__BRIKA_BUILD_ID__` is injected by
+// the esbuild `define` in apps/signaling/vite.config.ts (Git short SHA, or
+// a unix-timestamp fallback when git isn't available). The `activate`
+// handler below wipes every prior `brika-assets-*` cache, so users on the
+// old bootstrap auto-heal to a clean slate on the first visit after a
+// deploy without any manual version bumping.
+const ASSET_CACHE = `brika-assets-${__BRIKA_BUILD_ID__}`;
 
 // Visible in the SW's own DevTools console (Application → Service Workers →
 // click the SW link). Pairs with the page-side `[brika-sw]` logs so a failed

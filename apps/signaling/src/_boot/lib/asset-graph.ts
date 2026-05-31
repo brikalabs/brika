@@ -20,13 +20,25 @@ import type { PeerHandle } from './peer';
 // Must match `apps/signaling/sw/sw.ts`. Bump together when the cached-shape
 // contract changes OR when a deploy has poisoned client caches and needs a
 // forced wipe (the SW's `activate` deletes prior `brika-assets-*` entries).
-const ASSET_CACHE = 'brika-assets-v6';
+// Auto-rotates per build via Vite's `define` injection — see
+// apps/signaling/vite.config.ts. Must match the SW's ASSET_CACHE in
+// sw/sw.ts (both pull from the same `__BRIKA_BUILD_ID__` constant, so
+// they always agree within a single build).
+const ASSET_CACHE = `brika-assets-${__BRIKA_BUILD_ID__}`;
 const PRIME_PARALLELISM = 16;
 
 // Module specifiers: static + side-effect + dynamic imports. The
 // side-effect form needs `\s*` (not `\s+`) — Vite's minifier emits
 // `import"./foo.js"` with zero whitespace, and `\s+` would miss those.
-const IMPORT_RE = /\b(?:import\s*\(|(?:import|export)[^'"]*?from\s*|import\s*)['"]([^'"]+)['"]/g;
+// Backticks must be in the quote class: Rolldown/Vite emit dynamic
+// imports as `import(\`./chunk.js\`)` (template literal, no
+// interpolation). Missing them means the BFS sees zero dynamic-import
+// chunks — every code-split route (sw-proxy, users, auth, blocks, …)
+// stays uncached, the SW falls through to the CF Worker, the SPA
+// fallback returns HTML for the JS URL, and `<script type="module">`
+// dies with `Failed to load module script: … text/html`.
+const IMPORT_RE =
+  /\b(?:import\s*\(|(?:import|export)[^'"`]*?from\s*|import\s*)['"`]([^'"`]+)['"`]/g;
 // Asset URLs referenced from CSS (`url(...)`). Bounded quantifiers keep matching linear.
 const CSS_URL_RE = /url\(\s{0,8}['"]?([^\s)'"]{1,2048})['"]?\s{0,8}\)/g;
 
