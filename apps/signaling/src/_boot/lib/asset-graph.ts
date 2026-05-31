@@ -257,8 +257,17 @@ async function primeCache(
   // close / mid-stream abort, which would otherwise slip past).
   // Transitive refs can legitimately 404 (a stale asset URL in CSS,
   // a removed dynamic import) — log but don't abort.
+  //
+  // HubDevProxyError on a transitive ref is *not* a sign the dev proxy
+  // is broken: Vite's SPA fallback returns 200 + text/html for any URL
+  // it doesn't recognise, so an over-reach by IMPORT_RE (a string
+  // literal that looks like an import but isn't a real chunk) silently
+  // turns into "HTML where JS was expected" the moment the BFS asks
+  // for it. Only treat HubDevProxyError as fatal when it hits an
+  // *essential* URL (one of the entry scripts) — at that point Vite
+  // really is misconfigured and we should fail loudly. Otherwise skip.
   const recordFetchError = (url: string, err: unknown): void => {
-    if (err instanceof HubDevProxyError) {
+    if (err instanceof HubDevProxyError && essential.has(url)) {
       stopErr = err;
       return;
     }
