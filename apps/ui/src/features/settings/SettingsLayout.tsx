@@ -12,6 +12,7 @@ import {
   Palette,
   Server,
 } from 'lucide-react';
+import { Suspense } from 'react';
 import { useLocale } from '@/lib/use-locale';
 import { paths } from '@/routes/paths';
 
@@ -147,10 +148,14 @@ export function SettingsLayout() {
         </div>
       </aside>
 
-      {/* Page content */}
+      {/* Page content — scoped Suspense keeps the sidebar mounted while a
+          lazy sub-page resolves, so switching tabs no longer flashes the
+          whole viewport through the root "Loading…" fallback. */}
       <main className="overflow-auto">
-        <div className="w-full px-10 py-10">
-          <Outlet />
+        <div className="w-full max-w-5xl px-10 py-10">
+          <Suspense fallback={null}>
+            <Outlet />
+          </Suspense>
         </div>
       </main>
     </div>
