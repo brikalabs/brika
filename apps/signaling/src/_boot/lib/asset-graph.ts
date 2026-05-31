@@ -393,6 +393,9 @@ export async function injectGraph(graph: AssetGraph, rootId: string): Promise<vo
   meta.setAttribute('name', 'brika:hub');
   meta.setAttribute('content', graph.hubName);
   document.head.appendChild(meta);
+  // Canonical handoff signal — bootstrap.tsx reads this on HMR
+  // re-eval to refuse a second mount on the hub UI's #root.
+  globalThis.__brikaHandoffDone = true;
   console.log('[brika-bootstrap] meta stamped', {
     hubName: graph.hubName,
     readBack: document.querySelector('meta[name="brika:hub"]')?.getAttribute('content') ?? null,

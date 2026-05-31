@@ -161,20 +161,22 @@ sw.addEventListener('fetch', (event: FetchEvent) => {
   event.respondWith(
     (async () => {
       const cache = await caches.open(ASSET_CACHE);
-      // `ignoreSearch: true` so Vite's dep-optimizer cache-buster
-      // (`?v=ABCDEF` on every `/node_modules/.vite/deps/*.js`) doesn't
-      // turn every BFS-warmed cache entry into a miss. The hash is a
-      // function of Vite's *current* dep-graph state, which shifts as
-      // each new dep gets optimized in parallel — the BFS that primed
-      // /react.js?v=ABC for a flat-cold optimizer sees its entry
-      // looked up by the browser as /react.js?v=DEF moments later
-      // after `@brika/clay` finished optimizing and rotated Vite's
-      // global hash. The CONTENT is the same npm package version;
-      // only Vite's bookkeeping changed. Without ignoreSearch the
-      // browser falls through to network, slams Vite a second time,
-      // and 504s on the still-warming optimizer.
+      // Cache match policy:
+      //  - For Vite dep-optimizer URLs (`?v=<hash>`) match EXACTLY on
+      //    the hash. Same hash = same module bytes; serving a stale
+      //    `?v=OLD` body for a `?v=NEW` request would register the
+      //    OLD body under the NEW URL key in the browser module
+      //    registry, and the BYTES inside reference `?v=OLD` imports
+      //    — those resolve to a SECOND module instance. With React
+      //    that surfaces as "Invalid hook call ... more than one
+      //    copy of React in the same app" → useState throws null
+      //    dispatcher. Hash rotation = forced re-fetch through the
+      //    bridge; that's correct, not a perf regression to undo.
+      //  - For everything else use `ignoreSearch: true` so non-hash
+      //    query strings (timestamps, HMR tokens) still hit cache.
       const shortUrl = url.pathname + (url.search.length > 24 ? '?…' : url.search);
-      const cached = await cache.match(req, { ignoreSearch: true });
+      const matchOpts = url.searchParams.has('v') ? undefined : { ignoreSearch: true };
+      const cached = await cache.match(req, matchOpts);
       if (cached) {
         log('serve from cache', { url: shortUrl, status: cached.status });
         return cached;
@@ -315,6 +317,17 @@ async function proxyThroughClient(req: Request, client: Client): Promise<Respons
   return new Promise<Response>((resolve) => {
     const { readable, writable } = new TransformStream<Uint8Array, Uint8Array>();
     const writer = writable.getWriter();
+    // Track writer liveness so post-cancel write/close/abort doesn't surface
+    // as "Uncaught (in promise) TypeError: Cannot write to a CLOSED writable
+    // stream" when the downstream Response is dropped (HMR, navigation, dedupe).
+    // writer.closed fulfils on normal close and rejects on abort/downstream
+    // cancel — both flip the flag.
+    let writerClosed = false;
+    writer.closed
+      .catch(() => {})
+      .finally(() => {
+        writerClosed = true;
+      });
     let headSeen = false;
     const headTimer = setTimeout(() => {
       if (!headSeen) {
@@ -340,11 +353,17 @@ async function proxyThroughClient(req: Request, client: Client): Promise<Respons
         return;
       }
       if (msg.kind === 'chunk' && msg.bytes) {
-        void writer.write(new Uint8Array(msg.bytes));
+        if (writerClosed) return;
+        writer.write(new Uint8Array(msg.bytes)).catch(() => {
+          writerClosed = true;
+        });
         return;
       }
       if (msg.kind === 'end') {
-        void writer.close();
+        if (writerClosed) return;
+        writer.close().catch(() => {
+          writerClosed = true;
+        });
         return;
       }
       if (msg.kind === 'error') {
@@ -362,7 +381,11 @@ async function proxyThroughClient(req: Request, client: Client): Promise<Respons
           );
           return;
         }
-        void writer.abort(new Error(msg.message ?? 'bridge error'));
+        if (!writerClosed) {
+          writer.abort(new Error(msg.message ?? 'bridge error')).catch(() => {
+            writerClosed = true;
+          });
+        }
       }
     };
   });
