@@ -30,7 +30,20 @@ import type { PeerHandle } from './peer';
 // pick up vite.config.ts changes; without this guard, every module
 // load throws ReferenceError and the bootstrap dies).
 const ASSET_CACHE = `brika-assets-${typeof __BRIKA_BUILD_ID__ === 'undefined' ? 'dev' : __BRIKA_BUILD_ID__}`;
-const PRIME_PARALLELISM = 16;
+/**
+ * BFS concurrency. 16 was empirically too aggressive against a freshly-
+ * booted dev hub: Vite's dep optimizer is single-threaded, so 16 cold
+ * deps all hit it at once, the optimizer serializes them, the tail of
+ * the queue blows the 90-second per-request budget, and those URLs end
+ * up "prime skipped" with an empty cache. When the browser then fetches
+ * the same URLs via `<script type="module">`, the SW has nothing cached
+ * → falls through to network → Vite is *still* optimizing → 504s rain.
+ * 4 keeps the optimizer's queue short enough that every cold request
+ * completes well under timeout; the total wall-clock for cold-starting
+ * the whole hub UI's dep tree barely changes since it was Vite-bound,
+ * not network-bound, in the first place.
+ */
+const PRIME_PARALLELISM = 4;
 
 // Module specifiers: static + side-effect + dynamic imports. The
 // side-effect form needs `\s*` (not `\s+`) — Vite's minifier emits
@@ -117,7 +130,20 @@ async function fetchThroughPeer(
   peer: PeerHandle,
   url: string
 ): Promise<{ response: Response; text: string | null; contentType: string }> {
-  const res = await peer.request('GET', url);
+  let res = await peer.request('GET', url);
+  // Single retry on 504. Vite's dep optimizer returns 504 when it can't
+  // finish optimizing a transitive dep before the hub's proxy timeout —
+  // very common on a cold-start when many requests hit the optimizer at
+  // once. By the time we get back here, the optimizer has usually
+  // finished (parallelism is bounded above), so the second try lands on
+  // a warm cache and returns in ms. Without this, transitive deps that
+  // lost the cold-start race go to "prime skipped", the cache stays
+  // empty for them, and post-`done` script-tag fetches 504 against the
+  // same warm Vite — but the boot has already moved on.
+  if (res.status === 504) {
+    await new Promise((r) => setTimeout(r, 250));
+    res = await peer.request('GET', url);
+  }
   if (!res.ok) {
     throw new HubUpstreamError(url, res.status);
   }
