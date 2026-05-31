@@ -145,6 +145,22 @@ function resolveSamePath(raw: string | undefined, baseUrl: string): string | nul
   if (!raw || /^(?:data:|https?:|\/\/)/i.test(raw)) {
     return null;
   }
+  // Reject bare specifiers (`react`, `MyComponent`, `date-fns/locale/eo`).
+  // The IMPORT_RE picks them up when minified bundles embed examples in
+  // JSDoc strings or stringified module paths, but joining a bare name
+  // against the base URL produces a sibling path (`/parent/react`) that
+  // the hub then 404s — pure noise. Built bundles only ever import via
+  // concrete paths (`./chunk-XYZ.js`, `/assets/foo.js`); Vite-dev cases
+  // that legitimately use bare specifiers resolve through the dev
+  // server's own resolver, not our BFS.
+  if (!/^(?:\.{1,2}\/|\/)/.test(raw)) {
+    return null;
+  }
+  // Template-literal placeholders that survived the regex match — we
+  // can't statically resolve `${X}` to a real path, so don't queue it.
+  if (raw.includes('${')) {
+    return null;
+  }
   try {
     const url = new URL(raw, `${location.origin}${baseUrl}`);
     return url.origin === location.origin && isAbsolutePath(url.pathname) ? url.pathname : null;
