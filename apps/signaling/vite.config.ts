@@ -17,7 +17,10 @@ import { defineConfig, type Plugin } from 'vite';
  */
 function buildId(): string {
   try {
-    return execSync('git rev-parse --short=12 HEAD', { stdio: ['ignore', 'pipe', 'ignore'] })
+    // Build-time invocation of git; PATH is the developer/CI environment,
+    // not attacker-controlled input. Same shape as apps/console's
+    // buildInfo.macro.ts, which has the same triage in Sonar.
+    return execSync('git rev-parse --short=12 HEAD', { stdio: ['ignore', 'pipe', 'ignore'] }) // NOSONAR S4036
       .toString()
       .trim();
   } catch {
