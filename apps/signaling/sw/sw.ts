@@ -173,8 +173,10 @@ sw.addEventListener('fetch', (event: FetchEvent) => {
       // only Vite's bookkeeping changed. Without ignoreSearch the
       // browser falls through to network, slams Vite a second time,
       // and 504s on the still-warming optimizer.
+      const shortUrl = url.pathname + (url.search.length > 24 ? '?…' : url.search);
       const cached = await cache.match(req, { ignoreSearch: true });
       if (cached) {
+        log('serve from cache', { url: shortUrl, status: cached.status });
         return cached;
       }
       // Cache miss. Two distinct callers reach here:
@@ -189,16 +191,28 @@ sw.addEventListener('fetch', (event: FetchEvent) => {
       // hub-UI document has explicitly registered; the bootstrap hasn't.
       const client = await resolveProxyClient(event.clientId);
       if (client) {
+        log('cache miss → proxy through client', { url: shortUrl });
         const res = await proxyThroughClient(req, client);
         if (res.ok) {
           const cacheable = res.clone();
           event.waitUntil(cache.put(req, cacheable).catch(() => {}));
+          log('proxied + cached', { url: shortUrl, status: res.status });
+        } else {
+          log('proxied (NOT cached, !ok)', { url: shortUrl, status: res.status });
         }
         return res;
       }
+      log('cache miss → network fallback', { url: shortUrl });
       try {
-        return await fetch(req);
+        const res = await fetch(req);
+        log('network served', {
+          url: shortUrl,
+          status: res.status,
+          contentType: res.headers.get('content-type'),
+        });
+        return res;
       } catch (err) {
+        log('network FAILED', { url: shortUrl, err: String(err) });
         return new Response(`SW network fallback failed: ${err}`, {
           status: 502,
           headers: { 'content-type': 'text/plain' },

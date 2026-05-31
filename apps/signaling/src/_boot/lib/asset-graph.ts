@@ -398,6 +398,12 @@ async function primeCache(
     enqueueRefs(nextRefs(result.text, result.contentType, url));
   };
 
+  const startedAt = performance.now();
+  let skipped = 0;
+  // We can't observe recordFetchError directly, but it differentiates from
+  // recordFetched by the lack of a fetched++. Tracking is simpler: count
+  // visited-but-not-fetched at the end.
+
   // Worker-pool BFS: PRIME_PARALLELISM fetches in flight at once, refilled from
   // the queue as each completes. Sequential would be 30s+ on Vite's ~3000-module graph.
   while (queue.length > 0 || inflight.size > 0) {
@@ -415,6 +421,13 @@ async function primeCache(
     await Promise.race(inflight);
   }
   await Promise.all(inflight);
+  skipped = visited.size - fetched;
+  console.log('[brika-bootstrap] prime summary', {
+    discovered: visited.size,
+    fetched,
+    skipped,
+    durationMs: Math.round(performance.now() - startedAt),
+  });
   if (stopErr) {
     throw stopErr;
   }
