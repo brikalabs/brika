@@ -80,8 +80,18 @@ function brikaSwPlugin(): Plugin {
     },
     configureServer(server) {
       server.watcher.add(entry);
+      // Also recompile on vite.config.ts changes — when the developer edits
+      // the `define` block (e.g. bumping the BUILD_ID source), Vite normally
+      // restarts itself which re-fires configResolved. But if they're
+      // iterating *without* a restart (e.g. tweaking the define value during
+      // a debugging session), the SW would otherwise stay pinned to the
+      // BUILD_ID captured at startup, ending up with a cache name the
+      // bootstrap (which IS HMR'd) no longer matches — silent script-tag
+      // fetches then 200-text/html through the SPA fallback.
+      const configFile = new URL('./vite.config.ts', import.meta.url).pathname;
+      server.watcher.add(configFile);
       server.watcher.on('change', (path) => {
-        if (path === entry) {
+        if (path === entry || path === configFile) {
           void compile();
         }
       });
