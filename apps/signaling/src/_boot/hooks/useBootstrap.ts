@@ -277,7 +277,9 @@ function prettyModuleLabel(url: string): string {
   const depsName = /^\/node_modules\/\.vite\/deps\/([^/]+)\.js$/.exec(label)?.[1];
   if (depsName) {
     // `@brika_clay` → `@brika/clay`, `lucide-react` → `lucide-react`.
-    const stripped = depsName.replace(/-[A-Za-z0-9_-]{8,}$/, '');
+    // Bound the upper limit (Vite chunk hashes are ~8 chars; 64 is a
+    // generous cap) so Sonar S5852 doesn't flag the unbounded `{8,}`.
+    const stripped = depsName.replace(/-[A-Za-z0-9_-]{8,64}$/, '');
     label = stripped.replaceAll('_', '/');
   } else if (label.startsWith('/@fs/')) {
     // Pop the long absolute prefix; show only the project-relative tail.
