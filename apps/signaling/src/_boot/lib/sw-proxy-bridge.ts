@@ -152,9 +152,15 @@ function notifyReady(trigger: string): void {
  * The hash is a Vite-side optimisation marker; content doesn't depend on
  * it. Production hubs don't use `?v=`, so step 2 is a no-op there.
  */
+// Placeholder base for `new URL(...)` when the caller already passed a
+// path-relative URL. The origin is discarded by the return statement,
+// so the scheme is purely a parser hint; `https` keeps Sonar's
+// hard-coded-http rule (S5332) quiet without changing behaviour.
+const URL_PARSER_BASE = 'https://placeholder.invalid';
+
 function toForwardedPath(url: string): string {
   try {
-    const u = new URL(url, 'http://x');
+    const u = new URL(url, URL_PARSER_BASE);
     u.searchParams.delete('v');
     return u.pathname + (u.search.length > 0 ? u.search : '');
   } catch {

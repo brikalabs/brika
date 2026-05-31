@@ -323,11 +323,14 @@ async function proxyThroughClient(req: Request, client: Client): Promise<Respons
     // writer.closed fulfils on normal close and rejects on abort/downstream
     // cancel — both flip the flag.
     let writerClosed = false;
-    writer.closed
-      .catch(() => {})
-      .finally(() => {
-        writerClosed = true;
-      });
+    const markClosed = (): void => {
+      writerClosed = true;
+    };
+    // Any settlement of writer.closed (normal close or downstream cancel
+    // reject) flips the flag. The `.catch(() => {})` is the only
+    // suppression — it consumes the well-defined cancel rejection so it
+    // doesn't surface as an unhandled promise rejection.
+    writer.closed.catch(() => {}).finally(markClosed);
     let headSeen = false;
     const headTimer = setTimeout(() => {
       if (!headSeen) {
@@ -354,16 +357,12 @@ async function proxyThroughClient(req: Request, client: Client): Promise<Respons
       }
       if (msg.kind === 'chunk' && msg.bytes) {
         if (writerClosed) return;
-        writer.write(new Uint8Array(msg.bytes)).catch(() => {
-          writerClosed = true;
-        });
+        writer.write(new Uint8Array(msg.bytes)).catch(markClosed);
         return;
       }
       if (msg.kind === 'end') {
         if (writerClosed) return;
-        writer.close().catch(() => {
-          writerClosed = true;
-        });
+        writer.close().catch(markClosed);
         return;
       }
       if (msg.kind === 'error') {
@@ -382,9 +381,7 @@ async function proxyThroughClient(req: Request, client: Client): Promise<Respons
           return;
         }
         if (!writerClosed) {
-          writer.abort(new Error(msg.message ?? 'bridge error')).catch(() => {
-            writerClosed = true;
-          });
+          writer.abort(new Error(msg.message ?? 'bridge error')).catch(markClosed);
         }
       }
     };

@@ -270,12 +270,15 @@ const MAX_LABEL_LENGTH = 48;
  */
 function prettyModuleLabel(url: string): string {
   let label = url.split('?')[0] ?? url;
-  // /node_modules/.vite/deps/X.js → strip prefix, .js suffix, and any
-  // 8-char hash dangling on the filename (Vite's optimizer chunk id).
-  const depsMatch = /^\/node_modules\/\.vite\/deps\/(.+?)(?:-[A-Za-z0-9_-]{8,})?\.js$/.exec(label);
-  if (depsMatch?.[1]) {
+  // /node_modules/.vite/deps/X.js → strip prefix and .js, then peel
+  // off any trailing -HASH (Vite optimizer chunk id, 8+ alphanum
+  // chars). Split into two non-backtracking regexes to avoid Sonar
+  // S5852 (super-linear regex via lazy + optional group).
+  const depsName = /^\/node_modules\/\.vite\/deps\/([^/]+)\.js$/.exec(label)?.[1];
+  if (depsName) {
     // `@brika_clay` → `@brika/clay`, `lucide-react` → `lucide-react`.
-    label = depsMatch[1].replaceAll('_', '/');
+    const stripped = depsName.replace(/-[A-Za-z0-9_-]{8,}$/, '');
+    label = stripped.replaceAll('_', '/');
   } else if (label.startsWith('/@fs/')) {
     // Pop the long absolute prefix; show only the project-relative tail.
     const tail = label.slice('/@fs/'.length);
