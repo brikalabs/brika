@@ -71,7 +71,7 @@ export function AvatarStep() {
             onClick={() => fileInputRef.current?.click()}
             disabled={uploading}
           >
-            <Avatar className="size-28 text-3xl">
+            <Avatar className="text-3xl [--avatar-size:7rem]">
               <AvatarImage
                 src={previewUrl ?? (user ? client.avatarUrl(user, { size: 256 }) : undefined)}
                 alt={user?.name ?? 'Preview'}
