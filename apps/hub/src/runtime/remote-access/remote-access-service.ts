@@ -51,16 +51,14 @@ import { SignalingClient, type SignalingState } from './signaling-client';
  */
 export const SIGNALING_IDENTITY_KEY = 'remote_access.signaling_identity';
 /**
- * Legacy keys — kept for one-way migration only. Existing installs have
- * their identity split across these; on first boot under the new code we
- * read both, write the combined item, and leave the legacy entries behind
- * (deleting them would trigger more prompts; they're idle until the user
- * manually prunes them).
- *
- * @deprecated Use {@link SIGNALING_IDENTITY_KEY}.
+ * Pre-consolidation two-item layout. Still read by {@link
+ * RemoteAccessService} on first boot to migrate existing installs into
+ * {@link SIGNALING_IDENTITY_KEY}, and still deleted by `forget()` so a
+ * cleanup wipes both schemas. New code should write the combined item
+ * via {@link SIGNALING_IDENTITY_KEY} only.
  */
 export const SIGNALING_TOKEN_KEY = 'remote_access.signaling_token';
-/** @deprecated Use {@link SIGNALING_IDENTITY_KEY}. */
+/** See {@link SIGNALING_TOKEN_KEY}. */
 export const SIGNALING_NAME_KEY = 'remote_access.hub_name';
 
 const SignalingIdentitySchema = z.object({
