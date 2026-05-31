@@ -161,7 +161,19 @@ sw.addEventListener('fetch', (event: FetchEvent) => {
   event.respondWith(
     (async () => {
       const cache = await caches.open(ASSET_CACHE);
-      const cached = await cache.match(req);
+      // `ignoreSearch: true` so Vite's dep-optimizer cache-buster
+      // (`?v=ABCDEF` on every `/node_modules/.vite/deps/*.js`) doesn't
+      // turn every BFS-warmed cache entry into a miss. The hash is a
+      // function of Vite's *current* dep-graph state, which shifts as
+      // each new dep gets optimized in parallel — the BFS that primed
+      // /react.js?v=ABC for a flat-cold optimizer sees its entry
+      // looked up by the browser as /react.js?v=DEF moments later
+      // after `@brika/clay` finished optimizing and rotated Vite's
+      // global hash. The CONTENT is the same npm package version;
+      // only Vite's bookkeeping changed. Without ignoreSearch the
+      // browser falls through to network, slams Vite a second time,
+      // and 504s on the still-warming optimizer.
+      const cached = await cache.match(req, { ignoreSearch: true });
       if (cached) {
         return cached;
       }

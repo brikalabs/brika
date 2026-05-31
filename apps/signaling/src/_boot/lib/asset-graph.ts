@@ -337,7 +337,11 @@ async function primeCache(
     if (stopErr) {
       return;
     }
-    const existing = await cache.match(url);
+    // Match SW behaviour: ignore the `?v=` Vite cache-buster so a re-BFS
+    // (e.g. across reloads or hub-name changes) re-uses what was primed
+    // under an earlier optimizer-state hash. See sw.ts for the full
+    // reasoning.
+    const existing = await cache.match(url, { ignoreSearch: true });
     if (existing) {
       noteCacheHit(url, existing);
       await rescanCached(url, existing);
