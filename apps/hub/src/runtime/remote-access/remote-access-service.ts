@@ -49,7 +49,7 @@ import { SignalingClient, type SignalingState } from './signaling-client';
  * back every time the compiled binary's signature changed (i.e. on every
  * rebuild).
  */
-export const SIGNALING_IDENTITY_SECRET_KEY = 'remote_access.signaling_identity';
+export const SIGNALING_IDENTITY_KEY = 'remote_access.signaling_identity';
 /**
  * Legacy keys — kept for one-way migration only. Existing installs have
  * their identity split across these; on first boot under the new code we
@@ -57,11 +57,11 @@ export const SIGNALING_IDENTITY_SECRET_KEY = 'remote_access.signaling_identity';
  * (deleting them would trigger more prompts; they're idle until the user
  * manually prunes them).
  *
- * @deprecated Use {@link SIGNALING_IDENTITY_SECRET_KEY}.
+ * @deprecated Use {@link SIGNALING_IDENTITY_KEY}.
  */
-export const SIGNALING_TOKEN_SECRET_KEY = 'remote_access.signaling_token';
-/** @deprecated Use {@link SIGNALING_IDENTITY_SECRET_KEY}. */
-export const SIGNALING_NAME_SECRET_KEY = 'remote_access.hub_name';
+export const SIGNALING_TOKEN_KEY = 'remote_access.signaling_token';
+/** @deprecated Use {@link SIGNALING_IDENTITY_KEY}. */
+export const SIGNALING_NAME_KEY = 'remote_access.hub_name';
 
 const SignalingIdentitySchema = z.object({
   name: z.string().min(1),
@@ -73,7 +73,7 @@ type SignalingIdentity = z.infer<typeof SignalingIdentitySchema>;
  * than in HubConfig) so the operator can change it from the UI without
  * editing env vars or restarting the hub.
  */
-export const COORDINATOR_ORIGIN_SECRET_KEY = 'remote_access.coordinator_origin';
+export const COORDINATOR_ORIGIN_KEY = 'remote_access.coordinator_origin';
 
 export interface RemoteAccessStatus {
   /** A claim (name + token) is persisted; the service is or wants to be online. */
@@ -146,7 +146,7 @@ export class RemoteAccessService {
    * has both halves.
    */
   async #readIdentity(): Promise<SignalingIdentity | null> {
-    const combined = await this.#secrets.getHubSecret(SIGNALING_IDENTITY_SECRET_KEY);
+    const combined = await this.#secrets.getHubSecret(SIGNALING_IDENTITY_KEY);
     if (combined) {
       const parsed = SignalingIdentitySchema.safeParse(JSON.parse(combined));
       if (parsed.success) {
@@ -154,8 +154,8 @@ export class RemoteAccessService {
       }
       this.#log.warn('signaling identity payload was malformed; falling back to legacy keys');
     }
-    const name = await this.#secrets.getHubSecret(SIGNALING_NAME_SECRET_KEY);
-    const token = await this.#secrets.getHubSecret(SIGNALING_TOKEN_SECRET_KEY);
+    const name = await this.#secrets.getHubSecret(SIGNALING_NAME_KEY);
+    const token = await this.#secrets.getHubSecret(SIGNALING_TOKEN_KEY);
     if (!name || !token) {
       return null;
     }
@@ -165,7 +165,7 @@ export class RemoteAccessService {
   }
 
   async #writeIdentity(identity: SignalingIdentity): Promise<void> {
-    await this.#secrets.setHubSecret(SIGNALING_IDENTITY_SECRET_KEY, JSON.stringify(identity));
+    await this.#secrets.setHubSecret(SIGNALING_IDENTITY_KEY, JSON.stringify(identity));
   }
 
   /**
@@ -176,7 +176,7 @@ export class RemoteAccessService {
    * Both are validated as URLs at write time, so we trust the stored value.
    */
   async coordinatorOrigin(): Promise<string> {
-    const stored = await this.#secrets.getHubSecret(COORDINATOR_ORIGIN_SECRET_KEY);
+    const stored = await this.#secrets.getHubSecret(COORDINATOR_ORIGIN_KEY);
     return stored?.trim() || this.#config.remoteAccess.coordinatorOrigin;
   }
 
@@ -191,7 +191,7 @@ export class RemoteAccessService {
     } catch {
       throw new RemoteAccessClaimError(400, 'invalid-url', `"${origin}" is not a valid URL`);
     }
-    await this.#secrets.setHubSecret(COORDINATOR_ORIGIN_SECRET_KEY, normalized);
+    await this.#secrets.setHubSecret(COORDINATOR_ORIGIN_KEY, normalized);
     // Bounce so any active signaling client picks up the new URL.
     this.stop();
     await this.start();
@@ -390,9 +390,9 @@ export class RemoteAccessService {
     this.stop();
     // Wipe both the combined item and any legacy halves still lying around
     // from before the consolidation.
-    const removedCombined = await this.#secrets.deleteHubSecret(SIGNALING_IDENTITY_SECRET_KEY);
-    const removedToken = await this.#secrets.deleteHubSecret(SIGNALING_TOKEN_SECRET_KEY);
-    const removedName = await this.#secrets.deleteHubSecret(SIGNALING_NAME_SECRET_KEY);
+    const removedCombined = await this.#secrets.deleteHubSecret(SIGNALING_IDENTITY_KEY);
+    const removedToken = await this.#secrets.deleteHubSecret(SIGNALING_TOKEN_KEY);
+    const removedName = await this.#secrets.deleteHubSecret(SIGNALING_NAME_KEY);
     this.#activeName = '';
 
     return {
