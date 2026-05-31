@@ -85,6 +85,33 @@ function notifyReady(trigger: string): void {
   controller?.postMessage({ type: 'BRIKA_PROXY_READY' });
 }
 
+/**
+ * Strip Vite's optimizer cache-buster (`?v=<hash>`) before forwarding
+ * upstream. Vite rotates this hash whenever its dep graph changes; once
+ * rotated, requests with the OLD hash return **504 Outdated Optimize
+ * Dep** from Vite, not 404 — so a cached entry script that references
+ * `react.js?v=OLD` would have every transitive import 504 forever, even
+ * though `react.js` (no query) still serves fine.
+ *
+ * The hash is purely a Vite-side optimization marker — file content
+ * doesn't depend on it. Stripping makes the bridge robust against the
+ * common dev-server-restart-while-bootstrap-is-cached scenario.
+ *
+ * Production hubs don't use `?v=` for assets, so this is a no-op there.
+ */
+function stripViteHashQuery(url: string): string {
+  if (!url.includes('?v=')) {
+    return url;
+  }
+  try {
+    const u = new URL(url, 'http://x');
+    u.searchParams.delete('v');
+    return u.pathname + (u.search.length > 0 ? u.search : '');
+  } catch {
+    return url;
+  }
+}
+
 async function handleProxiedRequest(
   peer: PeerHandle,
   data: ProxyRequest,
@@ -95,7 +122,8 @@ async function handleProxiedRequest(
     // That's fine for static-asset fetches the browser issues for
     // ES-module loading and CSS — they're all GETs with default
     // request headers the hub's Vite proxy generates itself.
-    const res = await peer.request(data.method, data.url);
+    const forwardUrl = stripViteHashQuery(data.url);
+    const res = await peer.request(data.method, forwardUrl);
     const respHeaders: Array<[string, string]> = [];
     res.headers.forEach((v, k) => respHeaders.push([k, v]));
     port.postMessage({ kind: 'head', status: res.status, headers: respHeaders });
