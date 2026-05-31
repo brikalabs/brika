@@ -9,11 +9,25 @@ import { ensureServiceWorker } from '@/lib/service-worker';
 
 export type BootstrapPhase = 'landing' | 'connecting' | 'fetching' | 'loading' | 'error' | 'done';
 
+/** BFS progress snapshot for the loading bar. `null` outside the fetching phase. */
+export interface BootstrapProgress {
+  /** Modules fetched + cached so far. */
+  fetched: number;
+  /**
+   * Modules discovered so far. Climbs as BFS uncovers transitive
+   * imports — callers should clamp `fetched / total` for the bar to
+   * avoid backward jumps when the denominator grows mid-flight.
+   */
+  total: number;
+}
+
 export interface BootstrapState {
   phase: BootstrapPhase;
   status: string;
   /** Free-form technical detail (last fetched URL, count, …). */
   detail: string | null;
+  /** BFS module-count progress while priming the cache. */
+  progress: BootstrapProgress | null;
   error: ErrorClassification | null;
   retry: () => void;
 }
@@ -22,6 +36,7 @@ interface AttemptCallbacks {
   setPhase: (phase: BootstrapPhase) => void;
   setStatus: (status: string) => void;
   setDetail: (detail: string | null) => void;
+  setProgress: (progress: BootstrapProgress | null) => void;
 }
 
 const OVERALL_TIMEOUT_MS = 45_000;
@@ -34,6 +49,7 @@ export function useBootstrap(hubName: string | null): BootstrapState {
   const [phase, setPhase] = useState<BootstrapPhase>(hubName ? 'connecting' : 'landing');
   const [status, setStatus] = useState(hubName ? `Connecting to ${hubName}…` : 'Choose a hub');
   const [detail, setDetail] = useState<string | null>(null);
+  const [progress, setProgress] = useState<BootstrapProgress | null>(null);
   const [error, setError] = useState<ErrorClassification | null>(null);
   const [attemptNonce, setAttemptNonce] = useState(0);
 
@@ -42,6 +58,7 @@ export function useBootstrap(hubName: string | null): BootstrapState {
       setPhase('landing');
       setStatus('Choose a hub');
       setDetail(null);
+      setProgress(null);
       setError(null);
       return;
     }
@@ -57,6 +74,7 @@ export function useBootstrap(hubName: string | null): BootstrapState {
     setPhase('connecting');
     setStatus(`Connecting to ${hubName}…`);
     setDetail(null);
+    setProgress(null);
     setError(null);
 
     // Wall-clock watchdog: WebRTC can sit in "checking" forever on bad NATs.
@@ -71,7 +89,7 @@ export function useBootstrap(hubName: string | null): BootstrapState {
       setPhase('error');
     }, OVERALL_TIMEOUT_MS);
 
-    void runAttempt(hubName, ac.signal, peerRef, { setPhase, setStatus, setDetail })
+    void runAttempt(hubName, ac.signal, peerRef, { setPhase, setStatus, setDetail, setProgress })
       .then(() => clearTimeout(watchdog))
       .catch((err: unknown) => {
         clearTimeout(watchdog);
@@ -106,6 +124,7 @@ export function useBootstrap(hubName: string | null): BootstrapState {
     phase,
     status,
     detail,
+    progress,
     error,
     retry: () => setAttemptNonce((n) => n + 1),
   };
@@ -164,9 +183,11 @@ async function runAttempt(
 
   log('building asset graph');
   const graph = await buildAssetGraph(peerRef.current, hubName, hasServiceWorker, (event) => {
-    if (!signal.aborted) {
-      cb.setDetail(`${event.fetched} modules · ${shortenUrl(event.url)}`);
+    if (signal.aborted) {
+      return;
     }
+    cb.setDetail(`${event.fetched} / ${event.total} · ${shortenUrl(event.url)}`);
+    cb.setProgress({ fetched: event.fetched, total: event.total });
   });
   if (signal.aborted) {
     log('aborted after buildAssetGraph');

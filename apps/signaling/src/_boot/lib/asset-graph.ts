@@ -107,7 +107,16 @@ export interface AssetGraph {
 }
 
 export interface AssetGraphProgress {
+  /** Number of modules successfully primed into cache so far. */
   fetched: number;
+  /**
+   * Total modules discovered so far — initial entry set plus every
+   * transitive import the BFS has uncovered. Grows as the BFS walks
+   * deeper, so the fetched/total ratio can move backwards briefly
+   * when a freshly-fetched module reveals many new imports.
+   */
+  total: number;
+  /** URL of the most recent fetch (for the "currently loading" line). */
   url: string;
 }
 
@@ -272,7 +281,7 @@ async function primeCache(
 
   const recordFetched = (url: string): void => {
     fetched++;
-    onProgress?.({ fetched, url });
+    onProgress?.({ fetched, total: visited.size, url });
   };
 
   const enqueueRefs = (refs: readonly string[]): void => {
