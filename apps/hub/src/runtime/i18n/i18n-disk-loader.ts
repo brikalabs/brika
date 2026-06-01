@@ -8,7 +8,7 @@
  * here.
  */
 
-import { loadTarBytes, loadWorkspaceLocaleArchive } from '@brika/db/macros' with { type: 'macro' };
+import { loadTarBytes, loadWorkspaceLocaleArchive } from '@brika/embed' with { type: 'macro' };
 import type { TranslationRegistry } from '@brika/i18n';
 import {
   discoverPackageLocales,

@@ -1,90 +1,63 @@
-import { describe, expect, test } from 'bun:test';
-import { loadMigrations, loadTarBytes, loadWorkspaceLocaleArchive } from './macros';
+import { afterAll, describe, expect, test } from 'bun:test';
+import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { loadMigrations } from './macros';
+
+// loadMigrations resolves paths against the repo root, so fixtures must
+// live inside the repo. Use a temp dir under packages/db.
+const REPO_REL = 'packages/db/.cov-tmp';
+const ABS = join(import.meta.dir, '..', '.cov-tmp');
+
+afterAll(() => {
+  rmSync(ABS, { recursive: true, force: true });
+});
 
 describe('loadMigrations', () => {
-  test('returns drizzle MigrationMeta[] for an existing migrations folder', () => {
+  test('returns tagged SqlMigration[] for an existing migrations folder', () => {
     const migrations = loadMigrations('packages/auth/src/migrations');
     expect(migrations.length).toBeGreaterThan(0);
     const first = migrations[0];
+    expect(first?.kind).toBe('sql');
+    expect(first?.tag).toBe('0000_init_auth');
     expect(first?.hash).toMatch(/^[0-9a-f]{64}$/);
-    expect(Array.isArray(first?.sql)).toBe(true);
-    expect(first?.sql.length).toBeGreaterThan(0);
-    expect(typeof first?.folderMillis).toBe('number');
+    expect(Array.isArray(first?.statements)).toBe(true);
+    expect(first?.statements.length).toBeGreaterThan(0);
   });
 
-  test('returns sorted migrations (folderMillis ascending)', () => {
+  test('tags are in journal order and match the .sql filenames', () => {
     const migrations = loadMigrations('apps/hub/src/runtime/state/migrations');
-    if (migrations.length < 2) {
-      return;
-    }
-    for (let i = 1; i < migrations.length; i++) {
-      const prev = migrations[i - 1];
-      const curr = migrations[i];
-      expect(curr?.folderMillis).toBeGreaterThanOrEqual(prev?.folderMillis ?? 0);
-    }
-  });
-});
-
-describe('loadTarBytes', () => {
-  test('packs a folder into a gzip-compressed tar with content', async () => {
-    const bytes = await loadTarBytes('packages/auth/src/migrations');
-    expect(bytes.length).toBeGreaterThan(0);
-    // gzip magic bytes
-    expect(bytes[0]).toBe(0x1f);
-    expect(bytes[1]).toBe(0x8b);
+    expect(migrations.map((m) => m.tag)).toEqual(['0000_init_state', '0001_custom_themes']);
   });
 
-  test('produces a tar that round-trips back to the original files', async () => {
-    const bytes = await loadTarBytes('packages/auth/src/migrations');
-    const archive = new Bun.Archive(Bun.gunzipSync(new Uint8Array(bytes)));
-    const files = await archive.files();
-    expect(files.size).toBeGreaterThan(0);
-    expect([...files.keys()].some((p) => p.endsWith('_journal.json'))).toBe(true);
+  test('splits a multi-statement migration on the breakpoint marker and hashes the file', () => {
+    mkdirSync(join(ABS, 'multi', 'meta'), { recursive: true });
+    writeFileSync(
+      join(ABS, 'multi', 'meta', '_journal.json'),
+      JSON.stringify({ entries: [{ idx: 0, tag: '0000_two' }] })
+    );
+    writeFileSync(
+      join(ABS, 'multi', '0000_two.sql'),
+      'CREATE TABLE a (id);\n--> statement-breakpoint\nCREATE TABLE b (id);'
+    );
+
+    const [migration] = loadMigrations(`${REPO_REL}/multi`);
+    expect(migration?.statements).toHaveLength(2);
+    expect(migration?.hash).toMatch(/^[0-9a-f]{64}$/);
   });
 
-  test('produces output of reasonable size for a known folder', async () => {
-    const bytes = await loadTarBytes('packages/auth/src/migrations');
-    // sanity: at least a tar header, plus the small SQL/journal files compressed.
-    expect(bytes.length).toBeGreaterThan(64);
-    expect(bytes.length).toBeLessThan(50_000);
+  test('returns an empty list when the journal is structurally invalid', () => {
+    mkdirSync(join(ABS, 'bad', 'meta'), { recursive: true });
+    writeFileSync(join(ABS, 'bad', 'meta', '_journal.json'), JSON.stringify({ not: 'entries' }));
+    expect(loadMigrations(`${REPO_REL}/bad`)).toEqual([]);
   });
 
-  test('returns an empty array when the folder does not exist', async () => {
-    expect(await loadTarBytes('packages/does-not-exist-xyz')).toEqual([]);
-  });
-
-  test('returns an empty array when the path is a file (not a directory)', async () => {
-    expect(await loadTarBytes('packages/db/package.json')).toEqual([]);
-  });
-});
-
-describe('loadWorkspaceLocaleArchive', () => {
-  test('packs every package locales/ folder into a gzip-compressed tar', async () => {
-    const bytes = await loadWorkspaceLocaleArchive();
-    expect(bytes.length).toBeGreaterThan(0);
-    // gzip magic bytes
-    expect(bytes[0]).toBe(0x1f);
-    expect(bytes[1]).toBe(0x8b);
-  });
-
-  test('archive entries are namespaced by the package name (without scope)', async () => {
-    const bytes = await loadWorkspaceLocaleArchive();
-    const archive = new Bun.Archive(Bun.gunzipSync(new Uint8Array(bytes)));
-    const files = await archive.files();
-    const paths = [...files.keys()];
-
-    // permissions package has en/permissions.json and fr/permissions.json,
-    // packaged under its derived namespace `permissions`.
-    expect(paths.some((p) => p.startsWith('permissions/en/'))).toBe(true);
-    expect(paths.some((p) => p.startsWith('permissions/fr/'))).toBe(true);
-  });
-
-  test('only includes JSON locale files', async () => {
-    const bytes = await loadWorkspaceLocaleArchive();
-    const archive = new Bun.Archive(Bun.gunzipSync(new Uint8Array(bytes)));
-    const files = await archive.files();
-    for (const path of files.keys()) {
-      expect(path.endsWith('.json')).toBe(true);
-    }
+  test('skips journal entries without a string tag', () => {
+    mkdirSync(join(ABS, 'partial', 'meta'), { recursive: true });
+    writeFileSync(
+      join(ABS, 'partial', 'meta', '_journal.json'),
+      JSON.stringify({ entries: [{ idx: 0, tag: '0000_ok' }, { idx: 1 }, 'garbage'] })
+    );
+    writeFileSync(join(ABS, 'partial', '0000_ok.sql'), 'CREATE TABLE ok (id);');
+    expect(loadMigrations(`${REPO_REL}/partial`).map((m) => m.tag)).toEqual(['0000_ok']);
   });
 });

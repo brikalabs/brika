@@ -64,6 +64,22 @@ describe('inspectMigrationsFolder', () => {
     expect(report.orphanSql).toEqual([]);
   });
 
+  test('treats a folder with no journal as empty (all SQL orphaned)', () => {
+    // No meta/_journal.json at all.
+    writeSql(dir, '0000_init');
+    const report = inspectMigrationsFolder(dir);
+    expect(report.journalTags).toEqual([]);
+    expect(report.orphanSql).toEqual(['0000_init']);
+    expect(report.baselineSnapshotMissing).toBe(false);
+  });
+
+  test('treats a structurally-invalid journal as empty', () => {
+    mkdirSync(join(dir, 'meta'), { recursive: true });
+    // Valid JSON, but not the { entries: [...] } shape.
+    writeFileSync(join(dir, 'meta', '_journal.json'), JSON.stringify('not a journal'));
+    expect(inspectMigrationsFolder(dir).journalTags).toEqual([]);
+  });
+
   test('flags a missing baseline snapshot only for the latest entry', () => {
     writeJournal(dir, ['0000_init', '0001_more']);
     writeSql(dir, '0000_init');

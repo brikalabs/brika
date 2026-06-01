@@ -1,0 +1,29 @@
+{
+  "name": "@brika/embed",
+  "version": "0.3.1",
+  "description": "Build-time macros that pack repo assets (UI dist, templates, locales) into the single hub binary",
+  "type": "module",
+  "license": "MIT",
+  "author": "BRIKA Team",
+  "homepage": "https://github.com/brikalabs/brika/tree/main/packages/embed#readme",
+  "bugs": {
+    "url": "https://github.com/brikalabs/brika/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/brikalabs/brika.git",
+    "directory": "packages/embed"
+  },
+  "keywords": ["brika", "macro", "embed", "tar", "build-time"],
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": ["src", "README.md"],
+  "scripts": {
+    "test": "bun test",
+    "typecheck": "tsgo --noEmit"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.3.5"
+  }
+}

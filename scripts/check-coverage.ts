@@ -39,6 +39,8 @@ const DEFAULT_EXEMPT: ReadonlyArray<string> = [
   'apps/build',
   'apps/console',
   'packages/tui',
+  // Build-time asset-embedding macros; exercised by the hub build.
+  'packages/embed',
 ];
 
 function parseArgs(argv: ReadonlyArray<string>): { threshold: number; skip: Set<string> } {

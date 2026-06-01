@@ -8,8 +8,8 @@
  * only owns the template-unpack step.
  */
 
-import { loadTarBytes } from '@brika/db/macros' with { type: 'macro' };
 import { inject, singleton } from '@brika/di';
+import { loadTarBytes } from '@brika/embed' with { type: 'macro' };
 import { brikaContext } from '../context/brika-context';
 import { Logger } from '../logs/log-router';
 import { unpackTemplates } from './templates-tar';

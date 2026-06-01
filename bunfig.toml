@@ -14,6 +14,10 @@ coverageSkipSourceFiles = [
   "apps/build/**/*",
   "apps/console/**/*",
   "packages/tui/**/*",
+  # Build-time asset-embedding macros: read the repo's on-disk layout and are
+  # exercised by the hub build, not unit tests. Their guard branches (no
+  # packages/ dir, unreadable package.json) can't be reproduced in-process.
+  "packages/embed/**/*",
   "**/node_modules/**/*",
   "**/*.d.ts"
 ]

@@ -13,7 +13,7 @@ import { describe, expect, test } from 'bun:test';
 import { mkdtemp, readdir, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { loadTarBytes } from '@brika/db/macros' with { type: 'macro' };
+import { loadTarBytes } from '@brika/embed' with { type: 'macro' };
 import { unpackTemplates } from '@/runtime/config/templates-tar';
 import type { Logger } from '@/runtime/logs/log-router';
 

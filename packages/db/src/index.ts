@@ -16,6 +16,16 @@ export {
   type TableInfo,
 } from './inspect';
 export {
+  type CodeMigration,
+  defineMigration,
+  type Migration,
+  type MigrationContext,
+  type MigrationDatabase,
+  type SqlMigration,
+  sortMigrations,
+} from './migration';
+export { applyMigrations, LEDGER_TABLE, type MigrationOutcome } from './migrator';
+export {
   and,
   asc,
   blob,

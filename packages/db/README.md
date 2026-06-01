@@ -102,18 +102,62 @@ schema. `brika-db doctor` fails CI if a baseline snapshot is missing.
 > tool. If you see `Cannot find module 'bun:sqlite'` from `generate`, a
 > schema file is importing the runtime barrel instead of `@brika/db/schema`.
 
-### Data migrations (transforms SQL can't express)
+### TypeScript (code) migrations
 
-`generate` only emits *schema* DDL. For a data backfill or transform,
-generate an empty migration and fill in the SQL by hand:
+`generate` only emits *schema* DDL. For a data backfill or transform that
+SQL can't express, author a **TypeScript migration** with `defineMigration`
+and register it alongside the SQL migrations:
 
-```sh
-brika-db generate --schema src/schema.ts --custom
+```ts
+// src/migrations/0002_backfill_scores.ts
+import { defineMigration } from '@brika/db';
+import { isNull } from '@brika/db/schema';
+import { widgets } from '../schema';
+
+export default defineMigration('0002_backfill_scores', ({ db, sqlite }) => {
+  // `db` is the Drizzle handle; `sqlite` is the raw bun:sqlite connection.
+  db.update(widgets).set({ score: 0 }).where(isNull(widgets.score)).run();
+});
 ```
 
-For filesystem / cross-file reshaping (not a single DB), use the
-code-level `MigrationRunner` scopes in `apps/hub/src/runtime/migrations`
-instead — that runner exists precisely for migrations SQL can't express.
+```ts
+// src/database.ts
+import { defineDatabase } from '@brika/db';
+import { loadMigrations } from '@brika/db/macros' with { type: 'macro' };
+import backfillScores from './migrations/0002_backfill_scores';
+import { widgets } from './schema';
+
+export const widgetsDb = defineDatabase('widgets.db', { widgets }, [
+  ...loadMigrations('packages/widgets/src/migrations'),
+  backfillScores,
+]);
+```
+
+Migrations are a single ordered list keyed by **tag** (`NNNN_snake_name`).
+SQL and code migrations **interleave by tag**, so a backfill can sit
+between two schema migrations:
+
+```
+0001_add_score      (sql)   ALTER TABLE … ADD score
+0002_backfill_score (code)  fill score for existing rows
+0003_score_not_null (sql)   ALTER … score NOT NULL
+```
+
+Each migration runs in its **own transaction** together with the ledger
+write, so a crash leaves the DB at a clean boundary. `run` must be
+**synchronous** (bun:sqlite is synchronous), which keeps `.open()` sync.
+
+> For *filesystem* / cross-file reshaping (not a single DB), use the
+> code-level `MigrationRunner` scopes in `apps/hub/src/runtime/migrations`
+> instead — that runner re-layouts on-disk state, which SQL can't express.
+
+### The migration ledger
+
+Applied migrations are tracked by tag in `__brika_migrations`. Installs
+created before this ledger tracked SQL migrations by hash in Drizzle's
+`__drizzle_migrations`; on first open the runner **seeds** the new ledger
+from the old one (matching by stable hash), so an upgrade never re-runs an
+already-applied migration.
 
 ### How migrations run at runtime
 

@@ -1,8 +1,8 @@
 /**
- * Covers the migration runner. The key invariant: pending migrations are
- * decided by *hash*, not by `folderMillis`. A journal `when` value can
- * shift across rebases — we must not re-run an applied migration just
- * because its recorded timestamp falls behind the journal's new one.
+ * End-to-end coverage of `defineDatabase(...).open()`: SQL + code
+ * migrations applied on open, idempotency across reopens, and the
+ * `:memory:` path. Runner internals (ledger, legacy seed, transactions)
+ * are covered in `migrator.integration.test.ts`.
  */
 
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
@@ -10,15 +10,17 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { defineDatabase } from './database';
+import { defineMigration, type SqlMigration } from './migration';
+import { LEDGER_TABLE } from './migrator';
 
 type EmptySchema = Record<string, never>;
 const SCHEMA: EmptySchema = {};
 
-function migration(idx: number, hash: string, folderMillis: number, sql: string[]) {
-  return { idx, hash, folderMillis, sql, bps: true };
+function sql(tag: string, hash: string, statements: string[]): SqlMigration {
+  return { kind: 'sql', tag, hash, statements };
 }
 
-describe('applyMigrations', () => {
+describe('defineDatabase().open()', () => {
   let dir: string;
 
   beforeEach(() => {
@@ -29,69 +31,64 @@ describe('applyMigrations', () => {
     rmSync(dir, { recursive: true, force: true });
   });
 
-  test('runs pending migrations in order and records their hashes', () => {
+  test('runs pending migrations in tag order and records them in the ledger', () => {
     const path = join(dir, 'fresh.db');
     const { sqlite } = defineDatabase('fresh', SCHEMA, [
-      migration(0, 'h0', 1000, ['CREATE TABLE foo (id INTEGER)']),
-      migration(1, 'h1', 2000, ['CREATE TABLE bar (id INTEGER)']),
+      sql('0000_foo', 'h0', ['CREATE TABLE foo (id INTEGER)']),
+      sql('0001_bar', 'h1', ['CREATE TABLE bar (id INTEGER)']),
     ]).open(path);
 
-    const rows = sqlite
-      .query<{ hash: string; created_at: number }, []>(
-        'SELECT hash, created_at FROM __drizzle_migrations ORDER BY id'
-      )
-      .all();
-    expect(rows.map((r) => r.hash)).toEqual(['h0', 'h1']);
-    expect(rows.map((r) => r.created_at)).toEqual([1000, 2000]);
+    const tags = sqlite
+      .query<{ tag: string }, []>(`SELECT tag FROM ${LEDGER_TABLE} ORDER BY tag`)
+      .all()
+      .map((r) => r.tag);
+    expect(tags).toEqual(['0000_foo', '0001_bar']);
     sqlite.close();
   });
 
-  test('skips a migration whose hash is already recorded', () => {
-    const path = join(dir, 'prefilled.db');
+  test('skips already-applied migrations on reopen', () => {
+    const path = join(dir, 'reopen.db');
+    const migrations = [sql('0000_foo', 'h0', ['CREATE TABLE foo (id INTEGER)'])];
 
-    // First open: empty migrations list, set up the table by hand so we
-    // control the recorded hash.
-    const first = defineDatabase('prefilled', SCHEMA, []).open(path);
-    first.sqlite.run('CREATE TABLE foo (id INTEGER, extra TEXT)');
-    first.sqlite.run(
-      "INSERT INTO __drizzle_migrations (hash, created_at) VALUES ('h-existing', 1000)"
-    );
+    const first = defineDatabase('reopen', SCHEMA, migrations).open(path);
     first.sqlite.close();
 
-    // Second open: a migration with the same hash but a *later* folderMillis
-    // (simulating a journal `when` bump after a rebase). The SQL would error
-    // with "duplicate column" if re-applied — the dedup must skip it.
-    const second = defineDatabase('prefilled', SCHEMA, [
-      migration(0, 'h-existing', 5000, ['ALTER TABLE foo ADD COLUMN extra TEXT']),
-    ]).open(path);
-
-    const rows = second.sqlite
-      .query<{ hash: string; created_at: number }, []>(
-        'SELECT hash, created_at FROM __drizzle_migrations ORDER BY id'
-      )
-      .all();
-    expect(rows).toEqual([{ hash: 'h-existing', created_at: 1000 }]);
+    // Reopening with the same migration must not re-run the CREATE TABLE
+    // (which would throw "table foo already exists").
+    const second = defineDatabase('reopen', SCHEMA, migrations).open(path);
+    const count = second.sqlite
+      .query<{ n: number }, []>(`SELECT COUNT(*) AS n FROM ${LEDGER_TABLE}`)
+      .get();
+    expect(count?.n).toBe(1);
     second.sqlite.close();
   });
 
-  test('applies a new hash even when its folderMillis is below the latest recorded one', () => {
-    const path = join(dir, 'out-of-order.db');
-
-    const first = defineDatabase('out-of-order', SCHEMA, []).open(path);
-    first.sqlite.run("INSERT INTO __drizzle_migrations (hash, created_at) VALUES ('h-old', 9000)");
-    first.sqlite.close();
-
-    const second = defineDatabase('out-of-order', SCHEMA, [
-      migration(0, 'h-old', 9000, []),
-      migration(1, 'h-new', 1000, ['CREATE TABLE late (id INTEGER)']),
+  test('runs a code migration with access to the Drizzle handle and raw sqlite', () => {
+    const path = join(dir, 'code.db');
+    const { sqlite } = defineDatabase('code', SCHEMA, [
+      sql('0000_init', 'h0', ['CREATE TABLE counters (id INTEGER PRIMARY KEY, n INTEGER)']),
+      defineMigration('0001_seed_counter', ({ sqlite: raw }) => {
+        raw.run('INSERT INTO counters (n) VALUES (41)');
+      }),
+      defineMigration('0002_bump_counter', ({ db }) => {
+        // Exercise the Drizzle handle (raw SQL via the query builder).
+        db.run('UPDATE counters SET n = n + 1');
+      }),
     ]).open(path);
 
-    const tables = second.sqlite
-      .query<{ name: string }, []>(
-        "SELECT name FROM sqlite_master WHERE type='table' AND name='late'"
-      )
+    const row = sqlite.query<{ n: number }, []>('SELECT n FROM counters').get();
+    expect(row?.n).toBe(42);
+    sqlite.close();
+  });
+
+  test('supports the :memory: path', () => {
+    const { sqlite } = defineDatabase('mem', SCHEMA, [
+      sql('0000_init', 'h0', ['CREATE TABLE t (id INTEGER)']),
+    ]).open(':memory:');
+    const tables = sqlite
+      .query<{ name: string }, []>("SELECT name FROM sqlite_master WHERE name='t'")
       .all();
     expect(tables).toHaveLength(1);
-    second.sqlite.close();
+    sqlite.close();
   });
 });

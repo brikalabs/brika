@@ -32,6 +32,7 @@
     "@brika/compiler": "workspace:*",
     "@brika/db": "workspace:*",
     "@brika/di": "workspace:*",
+    "@brika/embed": "workspace:*",
     "@brika/errors": "workspace:*",
     "@brika/events": "workspace:*",
     "@brika/grants": "workspace:*",

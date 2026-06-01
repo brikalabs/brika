@@ -12,7 +12,7 @@
  * to `index.html`.
  */
 
-import { loadTarBytes } from '@brika/db/macros' with { type: 'macro' };
+import { loadTarBytes } from '@brika/embed' with { type: 'macro' };
 import type { Context, MiddlewareHandler, Next } from 'hono';
 
 let cache: Promise<Map<string, Uint8Array>> | null = null;

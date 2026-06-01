@@ -1,126 +1,54 @@
-import { existsSync, statSync } from 'node:fs';
-import { resolve } from 'node:path';
-import { readMigrationFiles } from 'drizzle-orm/migrator';
+import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+import { join, resolve } from 'node:path';
+import type { SqlMigration } from './migration';
 
 const REPO_ROOT = resolve(import.meta.dir, '../../..');
+const STATEMENT_BREAKPOINT = '--> statement-breakpoint';
 
-export function loadMigrations(repoRelativePath: string) {
-  return readMigrationFiles({
-    migrationsFolder: resolve(REPO_ROOT, repoRelativePath),
+/**
+ * Build-time macro: read a migrations folder and return tagged
+ * {@link SqlMigration} records, inlined into the binary. Iterates
+ * `meta/_journal.json` in order; for each tag it reads `<tag>.sql`,
+ * splits it into statements, and hashes the file with SHA-256.
+ *
+ * The hash is computed exactly as `drizzle-kit` does (SHA-256 of the raw
+ * file), so the runner's back-compat seed still matches the hashes a
+ * pre-existing `__drizzle_migrations` table recorded.
+ */
+export function loadMigrations(repoRelativePath: string): SqlMigration[] {
+  const folder = resolve(REPO_ROOT, repoRelativePath);
+  const journal: unknown = JSON.parse(readFileSync(join(folder, 'meta', '_journal.json'), 'utf8'));
+  return journalTags(journal).map((tag) => {
+    const sql = readFileSync(join(folder, `${tag}.sql`), 'utf8');
+    return {
+      kind: 'sql',
+      tag,
+      hash: createHash('sha256').update(sql).digest('hex'),
+      statements: sql.split(STATEMENT_BREAKPOINT),
+    };
   });
 }
 
-export async function loadTarBytes(repoRelativePath: string): Promise<number[]> {
-  const folderPath = resolve(REPO_ROOT, repoRelativePath);
-
-  // Don't throw when the directory is missing — some callers (e.g. the UI
-  // archive embedded into the hub binary) tolerate an empty bundle during
-  // development / CI builds that don't run the UI build first. Returning an
-  // empty array lets the consumer detect the "nothing to embed" case via
-  // `byteLength === 0` and fall through to a different code path.
-  if (!existsSync(folderPath) || !statSync(folderPath).isDirectory()) {
+function journalTags(journal: unknown): string[] {
+  if (
+    typeof journal !== 'object' ||
+    journal === null ||
+    !('entries' in journal) ||
+    !Array.isArray(journal.entries)
+  ) {
     return [];
   }
-
-  const glob = new Bun.Glob('**/*');
-  const files: Record<string, Uint8Array> = {};
-
-  for await (const relativePath of glob.scan({
-    cwd: folderPath,
-    absolute: false,
-    dot: true,
-  })) {
-    const file = Bun.file(resolve(folderPath, relativePath));
-    if (await file.exists()) {
-      try {
-        const content = await file.bytes();
-        if (content.length > 0) {
-          files[relativePath] = content;
-        }
-      } catch {
-        // skip directories or unreadable files
-      }
+  const tags: string[] = [];
+  for (const entry of journal.entries) {
+    if (
+      typeof entry === 'object' &&
+      entry !== null &&
+      'tag' in entry &&
+      typeof entry.tag === 'string'
+    ) {
+      tags.push(entry.tag);
     }
   }
-
-  if (Object.keys(files).length === 0) {
-    return [];
-  }
-
-  const archive = new Bun.Archive(files, { compress: 'gzip', level: 9 });
-  return Array.from(await archive.bytes());
-}
-
-export async function loadWorkspaceLocaleArchive(): Promise<number[]> {
-  const packagesDir = resolve(REPO_ROOT, 'packages');
-  if (!existsSync(packagesDir) || !statSync(packagesDir).isDirectory()) {
-    return [];
-  }
-
-  const files: Record<string, Uint8Array> = {};
-  const pkgGlob = new Bun.Glob('*/');
-
-  for await (const dirSlash of pkgGlob.scan({
-    cwd: packagesDir,
-    absolute: false,
-    onlyFiles: false,
-  })) {
-    const pkgDirName = dirSlash.replace(/\/$/, '');
-    if (!pkgDirName) {
-      continue;
-    }
-    await collectPackageLocaleFiles(packagesDir, pkgDirName, files);
-  }
-
-  if (Object.keys(files).length === 0) {
-    return [];
-  }
-
-  const archive = new Bun.Archive(files, { compress: 'gzip', level: 9 });
-  return Array.from(await archive.bytes());
-}
-
-async function collectPackageLocaleFiles(
-  packagesDir: string,
-  pkgDirName: string,
-  out: Record<string, Uint8Array>
-): Promise<void> {
-  const pkgRoot = resolve(packagesDir, pkgDirName);
-  const localesDir = resolve(pkgRoot, 'locales');
-  if (!existsSync(localesDir) || !statSync(localesDir).isDirectory()) {
-    return;
-  }
-
-  const namespace = await deriveNamespace(pkgRoot, pkgDirName);
-  const localeGlob = new Bun.Glob('**/*.json');
-
-  for await (const relPath of localeGlob.scan({ cwd: localesDir, absolute: false })) {
-    const file = Bun.file(resolve(localesDir, relPath));
-    if (!(await file.exists())) {
-      continue;
-    }
-    try {
-      const content = await file.bytes();
-      if (content.length > 0) {
-        out[`${namespace}/${relPath}`] = content;
-      }
-    } catch {
-      // skip unreadable files
-    }
-  }
-}
-
-async function deriveNamespace(pkgRoot: string, fallback: string): Promise<string> {
-  try {
-    const parsed: unknown = await Bun.file(resolve(pkgRoot, 'package.json')).json();
-    if (parsed !== null && typeof parsed === 'object' && 'name' in parsed) {
-      const name = parsed.name;
-      if (typeof name === 'string' && name.length > 0) {
-        return name.replace(/^@[^/]+\//, '');
-      }
-    }
-  } catch {
-    // Fall through to directory-name fallback.
-  }
-  return fallback;
+  return tags;
 }
