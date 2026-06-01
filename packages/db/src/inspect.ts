@@ -7,6 +7,7 @@
  * opens read-only so it is safe to run against a live install.
  */
 
+import type { Database } from 'bun:sqlite';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { LEDGER_TABLE } from './migrator';
@@ -93,7 +94,7 @@ export function inspectMigrationsFolder(folder: string): MigrationFolderReport {
     ? readdirSync(folder)
         .filter((f) => f.endsWith('.sql'))
         .map((f) => basename(f, '.sql'))
-        .sort()
+        .sort((a, b) => a.localeCompare(b))
     : [];
 
   const journalSet = new Set(journalTags);
@@ -160,30 +161,18 @@ export function inspectDatabaseFile(path: string): DatabaseFileReport {
     const tables: TableInfo[] = [];
     let appliedMigrations = 0;
 
-    for (const row of db
-      .query("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name")
-      .all()) {
-      if (typeof row !== 'object' || row === null || !('name' in row)) {
-        continue;
-      }
-      const name = row.name;
-      if (typeof name !== 'string' || name.startsWith('sqlite_')) {
-        continue;
-      }
-      // Drizzle uses a backtick-quoted identifier; quote to be safe.
-      const countRow = db.query(`SELECT COUNT(*) AS c FROM "${name}"`).get();
-      const rows =
-        typeof countRow === 'object' && countRow !== null && 'c' in countRow
-          ? Number(countRow.c)
-          : 0;
+    const rows = db
+      .query<{ name: string }, []>(
+        "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name"
+      )
+      .all();
+    for (const { name } of rows) {
+      const count = countRows(db, name);
       if (name === LEDGER_TABLE) {
-        appliedMigrations = rows;
-        continue;
+        appliedMigrations = count;
+      } else if (name !== LEGACY_LEDGER_TABLE) {
+        tables.push({ name, rows: count });
       }
-      if (name === LEGACY_LEDGER_TABLE) {
-        continue;
-      }
-      tables.push({ name, rows });
     }
 
     return {
@@ -197,4 +186,9 @@ export function inspectDatabaseFile(path: string): DatabaseFileReport {
   } finally {
     db.close();
   }
+}
+
+/** Count rows in a table. `name` comes from `sqlite_master`, quoted to be safe. */
+function countRows(db: Database, name: string): number {
+  return db.query<{ c: number }, []>(`SELECT COUNT(*) AS c FROM "${name}"`).get()?.c ?? 0;
 }

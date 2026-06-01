@@ -125,35 +125,34 @@ function seedFromLegacy(sqlite: Database, ordered: readonly Migration[]): void {
     return;
   }
 
-  const byHash = new Map<string, SqlMigration>();
-  for (const migration of ordered) {
-    if (migration.kind === 'sql') {
-      byHash.set(migration.hash, migration);
-    }
-  }
-
+  const byHash = indexSqlByHash(ordered);
   const seed = sqlite.prepare<unknown, [string, string, number]>(
     `INSERT OR IGNORE INTO ${LEDGER_TABLE} (tag, hash, kind, applied_at) VALUES (?, ?, 'sql', ?)`
   );
 
   sqlite.transaction(() => {
-    for (const row of sqlite.query(`SELECT hash, created_at FROM ${LEGACY_TABLE}`).all()) {
-      if (typeof row !== 'object' || row === null || !('hash' in row)) {
-        continue;
-      }
-      const hash = row.hash;
-      if (typeof hash !== 'string') {
-        continue;
-      }
+    const legacy = sqlite
+      .query<{ hash: string; created_at: number | null }, []>(
+        `SELECT hash, created_at FROM ${LEGACY_TABLE}`
+      )
+      .all();
+    for (const { hash, created_at: createdAt } of legacy) {
       const migration = byHash.get(hash);
-      if (!migration) {
-        continue;
+      if (migration) {
+        seed.run(migration.tag, hash, createdAt ?? Date.now());
       }
-      const createdAt =
-        'created_at' in row && typeof row.created_at === 'number' ? row.created_at : Date.now();
-      seed.run(migration.tag, hash, createdAt);
     }
   })();
+}
+
+function indexSqlByHash(migrations: readonly Migration[]): Map<string, SqlMigration> {
+  const byHash = new Map<string, SqlMigration>();
+  for (const migration of migrations) {
+    if (migration.kind === 'sql') {
+      byHash.set(migration.hash, migration);
+    }
+  }
+  return byHash;
 }
 
 function tableExists(sqlite: Database, name: string): boolean {

@@ -164,7 +164,42 @@ async function findMigrationFolders(root: string): Promise<string[]> {
     }
     folders.push(dirname(dirname(rel)));
   }
-  return folders.sort();
+  return folders.sort((a, b) => a.localeCompare(b));
+}
+
+interface FolderDrift {
+  readonly rel: string;
+  readonly issues: readonly string[];
+  readonly problems: number;
+  readonly warnings: number;
+  readonly hasProblem: boolean;
+  readonly migrations: number;
+}
+
+/** Build the drift report (issue lines + counts) for one migrations folder. */
+function describeFolderDrift(folder: string): FolderDrift {
+  const report = inspectMigrationsFolder(folder);
+  const issues: string[] = [];
+  for (const tag of report.orphanSql) {
+    issues.push(`  ✗ orphan SQL (never runs): ${tag}.sql is not in _journal.json`);
+  }
+  for (const tag of report.missingSql) {
+    issues.push(`  ✗ missing SQL: journal references ${tag} but ${tag}.sql is absent`);
+  }
+  if (report.baselineSnapshotMissing) {
+    issues.push(
+      `  ⚠ missing baseline snapshot: meta/${report.journalTags.at(-1)}.json — \`generate\` can't diff incrementally`
+    );
+  }
+  const problems = report.orphanSql.length + report.missingSql.length;
+  return {
+    rel: folder.replace(`${REPO_ROOT}/`, ''),
+    issues,
+    problems,
+    warnings: report.baselineSnapshotMissing ? 1 : 0,
+    hasProblem: problems > 0,
+    migrations: report.journalTags.length,
+  };
 }
 
 const doctor = defineCommand({
@@ -181,33 +216,16 @@ const doctor = defineCommand({
     let problems = 0;
     let warnings = 0;
     for (const folder of folders) {
-      const report = inspectMigrationsFolder(folder);
-      const rel = folder.replace(`${REPO_ROOT}/`, '');
-      const issues: string[] = [];
-      for (const tag of report.orphanSql) {
-        issues.push(`  ✗ orphan SQL (never runs): ${tag}.sql is not in _journal.json`);
-        problems++;
+      const drift = describeFolderDrift(folder);
+      problems += drift.problems;
+      warnings += drift.warnings;
+      if (drift.issues.length === 0) {
+        console.log(`✓ ${drift.rel} (${drift.migrations} migrations)`);
+        continue;
       }
-      for (const tag of report.missingSql) {
-        issues.push(`  ✗ missing SQL: journal references ${tag} but ${tag}.sql is absent`);
-        problems++;
-      }
-      if (report.baselineSnapshotMissing) {
-        const latest = report.journalTags.at(-1);
-        issues.push(
-          `  ⚠ missing baseline snapshot: meta/${latest}.json — \`generate\` can't diff incrementally`
-        );
-        warnings++;
-      }
-
-      const hasProblem = report.orphanSql.length > 0 || report.missingSql.length > 0;
-      if (issues.length === 0) {
-        console.log(`✓ ${rel} (${report.journalTags.length} migrations)`);
-      } else {
-        console.log(`${hasProblem ? '✗' : '⚠'} ${rel}`);
-        for (const issue of issues) {
-          console.log(issue);
-        }
+      console.log(`${drift.hasProblem ? '✗' : '⚠'} ${drift.rel}`);
+      for (const issue of drift.issues) {
+        console.log(issue);
       }
     }
 
@@ -240,7 +258,7 @@ const list = defineCommand({
 
     const files = readdirSync(dbDir)
       .filter((f) => f.endsWith('.db'))
-      .sort();
+      .sort((a, b) => a.localeCompare(b));
     if (files.length === 0) {
       console.log(`No .db files in: ${dbDir}`);
       return Promise.resolve();
@@ -271,7 +289,7 @@ async function collectDashboard(dataDir: string): Promise<{
   const databases = existsSync(dbDir)
     ? readdirSync(dbDir)
         .filter((f) => f.endsWith('.db'))
-        .sort()
+        .sort((a, b) => a.localeCompare(b))
         .map((f) => inspectDatabaseFile(join(dbDir, f)))
     : [];
 
@@ -313,11 +331,13 @@ const tui = defineCommand({
 
     await new Promise<void>((resolvePromise) => {
       const onKey = (key: string) => {
-        if (key === 'q' || key === '') {
+        if (key === 'q' || key === '\u0003') {
           stdin.off('data', onKey);
           resolvePromise();
         } else if (key === 'r') {
-          void draw();
+          draw().catch(() => {
+            /* a transient render failure shouldn't kill the loop */
+          });
         }
       };
       stdin.on('data', onKey);
