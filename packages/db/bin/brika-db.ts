@@ -1,7 +1,9 @@
 #!/usr/bin/env bun
-import { existsSync } from 'node:fs';
+import { existsSync, readdirSync } from 'node:fs';
+import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { CliError, createCli, defineCommand } from '@brika/cli';
+import { inspectDatabaseFile, inspectMigrationsFolder } from '../src/inspect';
 
 const SHARED_CONFIG = resolve(import.meta.dir, '../database.config.ts');
 
@@ -128,10 +130,134 @@ const status = defineCommand({
   },
 });
 
+const REPO_ROOT = resolve(import.meta.dir, '../../..');
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) {
+    return `${bytes} B`;
+  }
+  const units = ['KB', 'MB', 'GB'];
+  let value = bytes / 1024;
+  let unit = 0;
+  while (value >= 1024 && unit < units.length - 1) {
+    value /= 1024;
+    unit++;
+  }
+  return `${value.toFixed(1)} ${units[unit]}`;
+}
+
+async function findMigrationFolders(root: string): Promise<string[]> {
+  const glob = new Bun.Glob('**/migrations/meta/_journal.json');
+  const folders: string[] = [];
+  for await (const rel of glob.scan({
+    cwd: root,
+    absolute: true,
+    // Skip dependency trees — we only care about first-party migrations.
+    onlyFiles: true,
+  })) {
+    if (rel.includes('node_modules')) {
+      continue;
+    }
+    folders.push(dirname(dirname(rel)));
+  }
+  return folders.sort();
+}
+
+const doctor = defineCommand({
+  name: 'doctor',
+  description: 'Check every migrations folder for journal/SQL drift',
+  examples: ['brika-db doctor'],
+  async handler() {
+    const folders = await findMigrationFolders(REPO_ROOT);
+    if (folders.length === 0) {
+      console.log('No migrations folders found.');
+      return;
+    }
+
+    let problems = 0;
+    let warnings = 0;
+    for (const folder of folders) {
+      const report = inspectMigrationsFolder(folder);
+      const rel = folder.replace(`${REPO_ROOT}/`, '');
+      const issues: string[] = [];
+      for (const tag of report.orphanSql) {
+        issues.push(`  ✗ orphan SQL (never runs): ${tag}.sql is not in _journal.json`);
+        problems++;
+      }
+      for (const tag of report.missingSql) {
+        issues.push(`  ✗ missing SQL: journal references ${tag} but ${tag}.sql is absent`);
+        problems++;
+      }
+      for (const tag of report.missingSnapshots) {
+        issues.push(`  ⚠ missing snapshot: meta/${tag}.json (degrades \`generate\`)`);
+        warnings++;
+      }
+
+      const hasProblem = report.orphanSql.length > 0 || report.missingSql.length > 0;
+      if (issues.length === 0) {
+        console.log(`✓ ${rel} (${report.journalTags.length} migrations)`);
+      } else {
+        console.log(`${hasProblem ? '✗' : '⚠'} ${rel}`);
+        for (const issue of issues) {
+          console.log(issue);
+        }
+      }
+    }
+
+    console.log(
+      `\n${problems} problem(s), ${warnings} warning(s) across ${folders.length} folder(s)`
+    );
+    if (problems > 0) {
+      throw new CliError('Migration drift detected. Fix the issues above.');
+    }
+  },
+});
+
+const list = defineCommand({
+  name: 'list',
+  description: 'List every database file in a data dir with size + migration status',
+  options: {
+    dir: {
+      type: 'string',
+      description: 'Brika data dir (default: ~/.brika)',
+    },
+  },
+  examples: ['brika-db list', 'brika-db list --dir /path/to/.brika'],
+  handler({ values }) {
+    const dataDir = values.dir ?? join(homedir(), '.brika');
+    const dbDir = join(dataDir, 'db');
+    if (!existsSync(dbDir)) {
+      console.log(`No db directory at: ${dbDir}`);
+      return Promise.resolve();
+    }
+
+    const files = readdirSync(dbDir)
+      .filter((f) => f.endsWith('.db'))
+      .sort();
+    if (files.length === 0) {
+      console.log(`No .db files in: ${dbDir}`);
+      return Promise.resolve();
+    }
+
+    console.log(`Databases in ${dbDir}:\n`);
+    for (const file of files) {
+      const report = inspectDatabaseFile(join(dbDir, file));
+      const total = formatBytes(report.sizeBytes + report.walBytes);
+      console.log(`  ${file}  (${total}, ${report.appliedMigrations} migrations applied)`);
+      for (const table of report.tables) {
+        console.log(`    • ${table.name}: ${table.rows} rows`);
+      }
+    }
+    return Promise.resolve();
+  },
+});
+
 await createCli({ defaultCommand: 'help' })
   .addCommand(generate)
   .addCommand(migrate)
   .addCommand(studio)
   .addCommand(status)
+  .addCommand(doctor)
+  .addCommand(list)
   .addHelp()
   .run();

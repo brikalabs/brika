@@ -37,3 +37,10 @@ export {
 export { configureDatabases } from './config';
 export { type BrikaDatabase, type DatabaseDefinition, defineDatabase } from './database';
 export { cursorFilter, endTsFilter, oneOrMany, startTsFilter } from './helpers';
+export {
+  type DatabaseFileReport,
+  inspectDatabaseFile,
+  inspectMigrationsFolder,
+  type MigrationFolderReport,
+  type TableInfo,
+} from './inspect';

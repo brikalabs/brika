@@ -7,7 +7,7 @@ SQLite database layer for Brika. Provides typed schemas, automatic versioned mig
 | Concept | What it does |
 |---|---|
 | `configureDatabases(dir)` | Sets the root data directory once at startup. All logical database names resolve to `<dir>/db/<name>`. |
-| `defineDatabase(name, schema, import.meta)` | Declares a database. Captures the migrations folder path (`<module-dir>/migrations`) at module load time. Returns a lazy opener. |
+| `defineDatabase(name, schema, migrations)` | Declares a database. `migrations` is a `MigrationMeta[]` produced at build time by the `loadMigrations` **macro** (see below). Returns a lazy opener. |
 | `defineDatabase(...).open(path?)` | Opens (or creates) the SQLite file, runs pending migrations, and returns `{ db, sqlite, path }`. |
 
 ---
@@ -29,17 +29,27 @@ export const widgets = sqliteTable('widgets', {
 
 ### 2. Declare the database
 
-Place `database.ts` next to `schema.ts`. Pass `import.meta` so the migrations folder resolves relative to this file — not the caller's location.
+Place `database.ts` next to `schema.ts`. Load the migrations with the
+`loadMigrations` **macro** — `with { type: 'macro' }` runs it at *build
+time*, so the SQL is inlined into the binary and there is no filesystem
+read at runtime (critical for the single-binary distribution). Pass a
+repo-relative path to the migrations folder.
 
 ```ts
 // src/database.ts
 import { defineDatabase } from '@brika/db';
+import { loadMigrations } from '@brika/db/macros' with { type: 'macro' };
 import { widgets } from './schema';
 
-export const widgetsDb = defineDatabase('widgets.db', { widgets }, import.meta);
+const migrations = loadMigrations('packages/widgets/src/migrations');
+
+export const widgetsDb = defineDatabase('widgets.db', { widgets }, migrations);
 ```
 
 Migrations must live at `src/migrations/` (sibling of `database.ts`).
+The macro reads `meta/_journal.json` — **a `.sql` file that is not listed
+in the journal is silently ignored** (it never runs). Use `brika-db doctor`
+to catch that class of drift.
 
 ### 3. Configure and open at startup
 
@@ -134,12 +144,63 @@ Commands:
   migrate    Apply pending migrations to a database
   studio     Open a database browser UI
   status     Show applied / pending migrations
+  doctor     Check every migrations folder for journal/SQL drift
+  list       List database files in a data dir with size + migration status
 
 Options:
-  -s, --schema PATH   Path to a schema.ts file (required)
+  -s, --schema PATH   Path to a schema.ts file (required by generate/migrate/studio/status)
   --db PATH           Path to the SQLite database file
+  --dir PATH          Brika data dir for `list` (default: ~/.brika)
   -h, --help          Show this help
 ```
+
+### `brika-db doctor`
+
+Scans every `*/migrations/` folder in the repo and reports drift between
+`meta/_journal.json` and the `.sql` files on disk. Exits non-zero on a
+**problem** (an orphan `.sql` not in the journal, or a journal entry with
+no `.sql`); missing snapshots are reported as **warnings**. Run it in CI —
+a `migrations-consistency.test.ts` asserts the same invariant.
+
+### `brika-db list`
+
+Shows every database file under `<data-dir>/db/`, its size (including the
+`-wal`/`-shm` sidecars), how many migrations have been applied, and a row
+count per table — a single view of all on-disk state:
+
+```
+Databases in /home/user/.brika/db:
+
+  auth.db   (48.0 KB, 2 migrations applied)
+    • users: 1 rows
+    • sessions: 3 rows
+  state.db  (32.0 KB, 2 migrations applied)
+    • plugins: 6 rows
+    • settings: 4 rows
+    • custom_themes: 0 rows
+```
+
+---
+
+## Architecture: why several databases, not one
+
+Brika keeps **one SQLite file per domain** (`state.db`, `auth.db`,
+`logs.db`, `sparks.db`, `cache.db`) rather than a single `brika.db`. This
+is deliberate:
+
+| Database | Why it's separate |
+|---|---|
+| `logs.db`, `sparks.db` | High-volume, append-only, retention-pruned. Isolating them keeps WAL churn and `VACUUM` cost off the small, latency-sensitive core tables. |
+| `cache.db` | Disposable — can be deleted at any time to reclaim space without touching real state. |
+| `auth.db` | Security-sensitive (password hashes, session tokens); gets `chmod 600` and a clean ownership boundary. |
+| `state.db` | Core hub state (plugins, settings, themes). |
+
+SQLite opens files lazily and cheaply, so the file count has no runtime
+cost, and each domain owns its own independent migration history. The
+trade-off is that you can't `JOIN` or run a transaction across domains —
+which is the intended boundary. Add a new database when a domain has a
+distinct lifecycle (retention, disposability, security); don't split a
+domain that needs cross-table transactions.
 
 ---
 
