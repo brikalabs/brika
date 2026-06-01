@@ -38,14 +38,26 @@ function buildEnv(schema: string, out: string, db?: string): typeof process.env 
 const generate = defineCommand({
   name: 'generate',
   description: 'Generate SQL migrations from schema changes',
-  options: { schema: schemaOption },
+  options: {
+    schema: schemaOption,
+    custom: {
+      type: 'boolean',
+      description: 'Emit an empty migration to hand-write a data migration',
+    },
+  },
   examples: [
     'brika-db generate --schema apps/hub/src/runtime/logs/schema.ts',
     'brika-db generate --schema packages/auth/src/schema.ts',
+    'brika-db generate --schema packages/auth/src/schema.ts --custom',
   ],
   async handler({ values }) {
     const { schema, out } = requireSchema(values.schema);
-    await Bun.$`bunx drizzle-kit generate --config=${SHARED_CONFIG}`.env(buildEnv(schema, out));
+    const env = buildEnv(schema, out);
+    if (values.custom) {
+      await Bun.$`bunx drizzle-kit generate --config=${SHARED_CONFIG} --custom`.env(env);
+    } else {
+      await Bun.$`bunx drizzle-kit generate --config=${SHARED_CONFIG}`.env(env);
+    }
   },
 });
 
@@ -188,8 +200,11 @@ const doctor = defineCommand({
         issues.push(`  ✗ missing SQL: journal references ${tag} but ${tag}.sql is absent`);
         problems++;
       }
-      for (const tag of report.missingSnapshots) {
-        issues.push(`  ⚠ missing snapshot: meta/${tag}.json (degrades \`generate\`)`);
+      if (report.baselineSnapshotMissing) {
+        const latest = report.journalTags.at(-1);
+        issues.push(
+          `  ⚠ missing baseline snapshot: meta/${latest}.json — \`generate\` can't diff incrementally`
+        );
         warnings++;
       }
 

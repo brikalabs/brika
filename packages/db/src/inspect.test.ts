@@ -64,13 +64,17 @@ describe('inspectMigrationsFolder', () => {
     expect(report.orphanSql).toEqual([]);
   });
 
-  test('flags missing snapshots and clears them when present', () => {
-    writeJournal(dir, ['0000_init']);
+  test('flags a missing baseline snapshot only for the latest entry', () => {
+    writeJournal(dir, ['0000_init', '0001_more']);
     writeSql(dir, '0000_init');
-    expect(inspectMigrationsFolder(dir).missingSnapshots).toEqual(['0000_init']);
+    writeSql(dir, '0001_more');
+    // Latest (idx 1) has no snapshot → baseline missing, even though idx 0
+    // also lacks one (intermediate snapshots are not required).
+    expect(inspectMigrationsFolder(dir).baselineSnapshotMissing).toBe(true);
 
-    writeFileSync(join(dir, 'meta', '0000_init.json'), '{}');
-    expect(inspectMigrationsFolder(dir).missingSnapshots).toEqual([]);
+    // Drizzle names snapshots by padded index, not by tag.
+    writeFileSync(join(dir, 'meta', '0001_snapshot.json'), '{}');
+    expect(inspectMigrationsFolder(dir).baselineSnapshotMissing).toBe(false);
   });
 });
 

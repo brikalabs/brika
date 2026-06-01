@@ -78,15 +78,42 @@ const { db } = widgetsDb.open(':memory:');
 
 ### Generating migrations
 
-After changing `schema.ts`, generate the SQL diff:
+You **never hand-write SQL**. Change `schema.ts`, then generate the diff:
 
 ```sh
 brika-db generate --schema src/schema.ts
 ```
 
-This writes a new `.sql` file to `src/migrations/` and updates its journal.
+`drizzle-kit` diffs your new `schema.ts` against the most recent
+`meta/<idx>_snapshot.json` (the *baseline*) and writes an incremental
+`.sql` file (e.g. `ALTER TABLE … ADD COLUMN …`) plus a fresh snapshot,
+and updates the journal.
 
-**Commit both the `.sql` file and the updated journal.** Never edit generated SQL by hand.
+**Commit the `.sql` file, the new `<idx>_snapshot.json`, and the updated
+`_journal.json` together.** The snapshot is what makes the *next*
+`generate` incremental — drop it and drizzle-kit re-emits the whole
+schema. `brika-db doctor` fails CI if a baseline snapshot is missing.
+
+> **Why generate works under Node.** `drizzle-kit` runs under plain Node,
+> which has no `bun:sqlite`. `schema.ts` files therefore import their
+> builders from the **`@brika/db/schema`** subpath (pure — no runtime),
+> and the `@brika/db` barrel loads `bun:sqlite` / `drizzle-orm/bun-sqlite`
+> lazily, so importing it never drags the Bun SQLite runtime into the Node
+> tool. If you see `Cannot find module 'bun:sqlite'` from `generate`, a
+> schema file is importing the runtime barrel instead of `@brika/db/schema`.
+
+### Data migrations (transforms SQL can't express)
+
+`generate` only emits *schema* DDL. For a data backfill or transform,
+generate an empty migration and fill in the SQL by hand:
+
+```sh
+brika-db generate --schema src/schema.ts --custom
+```
+
+For filesystem / cross-file reshaping (not a single DB), use the
+code-level `MigrationRunner` scopes in `apps/hub/src/runtime/migrations`
+instead — that runner exists precisely for migrations SQL can't express.
 
 ### How migrations run at runtime
 

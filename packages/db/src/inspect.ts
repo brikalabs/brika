@@ -7,9 +7,9 @@
  * opens read-only so it is safe to run against a live install.
  */
 
-import { Database } from 'bun:sqlite';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { basename, join } from 'node:path';
+import { loadSqlite } from './sqlite';
 
 const MIGRATIONS_TABLE = '__drizzle_migrations';
 
@@ -37,8 +37,14 @@ export interface MigrationFolderReport {
   readonly orphanSql: readonly string[];
   /** Journal entries whose `.sql` file is missing — a broken migration. */
   readonly missingSql: readonly string[];
-  /** Journal entries lacking a `meta/<tag>.json` snapshot (degrades `generate`). */
-  readonly missingSnapshots: readonly string[];
+  /**
+   * `true` when the *latest* journal entry has no `meta/<tag>.json`
+   * snapshot. That snapshot is the baseline `drizzle-kit generate` diffs
+   * the next schema change against — without it, `generate` re-emits the
+   * whole schema instead of an incremental migration. Intermediate
+   * historical snapshots are not required and are not flagged.
+   */
+  readonly baselineSnapshotMissing: boolean;
 }
 
 function readJournal(folder: string): Journal | null {
@@ -90,6 +96,7 @@ export function inspectMigrationsFolder(folder: string): MigrationFolderReport {
   const journalSet = new Set(journalTags);
   const sqlSet = new Set(sqlFiles);
   const metaDir = join(folder, 'meta');
+  const latest = journal?.entries.at(-1);
 
   return {
     folder,
@@ -97,8 +104,14 @@ export function inspectMigrationsFolder(folder: string): MigrationFolderReport {
     sqlFiles,
     orphanSql: sqlFiles.filter((tag) => !journalSet.has(tag)),
     missingSql: journalTags.filter((tag) => !sqlSet.has(tag)),
-    missingSnapshots: journalTags.filter((tag) => !existsSync(join(metaDir, `${tag}.json`))),
+    // Drizzle names snapshots `<paddedIdx>_snapshot.json`, not `<tag>.json`.
+    baselineSnapshotMissing: latest !== undefined && !existsSync(snapshotPath(metaDir, latest.idx)),
   };
+}
+
+/** Path to the Drizzle snapshot for a migration index (`0001` → `meta/0001_snapshot.json`). */
+function snapshotPath(metaDir: string, idx: number): string {
+  return join(metaDir, `${String(idx).padStart(4, '0')}_snapshot.json`);
 }
 
 export interface TableInfo {
@@ -138,6 +151,7 @@ export function inspectDatabaseFile(path: string): DatabaseFileReport {
     };
   }
 
+  const Database = loadSqlite();
   const db = new Database(path, { readonly: true });
   try {
     const tables: TableInfo[] = [];

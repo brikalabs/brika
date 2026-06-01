@@ -1,4 +1,4 @@
-import { integer, sqliteTable, text } from '@brika/db';
+import { integer, sqliteTable, text } from '@brika/db/schema';
 import type { PluginHealth } from '@brika/plugin';
 
 export const plugins = sqliteTable('plugins', {

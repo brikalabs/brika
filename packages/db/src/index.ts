@@ -1,39 +1,10 @@
-// ORM query operators — consumers import from here, not drizzle-orm directly.
-// Swapping the underlying ORM only requires changing this package.
-export {
-  and,
-  asc,
-  count,
-  desc,
-  eq,
-  gt,
-  gte,
-  type InferInsertModel,
-  type InferSelectModel,
-  inArray,
-  isNotNull,
-  isNull,
-  like,
-  lt,
-  lte,
-  max,
-  min,
-  notInArray,
-  or,
-  type SQL,
-  sql,
-  sum,
-} from 'drizzle-orm';
-// Schema builders — consumers define their own table schemas using these, not drizzle directly.
-export {
-  blob,
-  index,
-  integer,
-  real,
-  sqliteTable,
-  text,
-  uniqueIndex,
-} from 'drizzle-orm/sqlite-core';
+// ORM query operators + schema builders — consumers import from here, not
+// drizzle-orm directly, so swapping the underlying ORM only touches this
+// package. The pure definitions live in `./schema` (no `bun:sqlite`), so
+// `schema.ts` files can import them under drizzle-kit's Node runtime via
+// the `@brika/db/schema` subpath. The barrel re-exports them for the
+// convenience of runtime code (which runs under Bun).
+
 export { configureDatabases } from './config';
 export { type BrikaDatabase, type DatabaseDefinition, defineDatabase } from './database';
 export { cursorFilter, endTsFilter, oneOrMany, startTsFilter } from './helpers';
@@ -44,3 +15,34 @@ export {
   type MigrationFolderReport,
   type TableInfo,
 } from './inspect';
+export {
+  and,
+  asc,
+  blob,
+  count,
+  desc,
+  eq,
+  gt,
+  gte,
+  type InferInsertModel,
+  type InferSelectModel,
+  inArray,
+  index,
+  integer,
+  isNotNull,
+  isNull,
+  like,
+  lt,
+  lte,
+  max,
+  min,
+  notInArray,
+  or,
+  real,
+  type SQL,
+  sql,
+  sqliteTable,
+  sum,
+  text,
+  uniqueIndex,
+} from './schema';

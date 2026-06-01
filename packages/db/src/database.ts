@@ -1,9 +1,9 @@
-import { Database } from 'bun:sqlite';
+import type { Database } from 'bun:sqlite';
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
-import { drizzle } from 'drizzle-orm/bun-sqlite';
 import type { MigrationMeta } from 'drizzle-orm/migrator';
 import { resolveDatabasePath } from './config';
+import { loadDrizzle, loadSqlite } from './sqlite';
 
 export type BrikaDatabase<TSchema extends Record<string, unknown>> = ReturnType<
   typeof openDatabase<TSchema>
@@ -32,6 +32,7 @@ function openDatabase<TSchema extends Record<string, unknown>>(
   if (resolved !== ':memory:') {
     mkdirSync(dirname(resolved), { recursive: true });
   }
+  const Database = loadSqlite();
   const sqlite = new Database(resolved, { create: true });
   sqlite.query('PRAGMA journal_mode = WAL').run();
   sqlite.query('PRAGMA synchronous = NORMAL').run();
@@ -41,7 +42,7 @@ function openDatabase<TSchema extends Record<string, unknown>>(
 
   applyMigrations(sqlite, migrations);
 
-  const db = drizzle(sqlite, { schema });
+  const db = loadDrizzle()(sqlite, { schema });
   return { db, sqlite, path: resolved };
 }
 
