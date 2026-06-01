@@ -40,7 +40,8 @@
       "!**/.env.*",
       "!**/*.md",
       "!**/template/**",
-      "!**/.astro/**"
+      "!**/.astro/**",
+      "!**/migrations/meta/**"
     ]
   },
 
