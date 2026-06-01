@@ -129,6 +129,32 @@ instead — that runner exists precisely for migrations SQL can't express.
   └─ return { db, sqlite, path }
 ```
 
+### Migrations across an app update
+
+Migrations are **forward-only** and run lazily on `.open()` during a
+binary's first boot — *after* the update has swapped the binary. The hub
+makes that safe by pairing the databases with the binary backup:
+
+```
+update applies      → brika.previous (binary backup) created, binary swapped, restart
+new binary boots    → db/ copied to db.previous BEFORE any .open() migrates  (db-backup.ts)
+  ├─ onStart OK      → recordBootSuccess() drops brika.previous AND db.previous
+  └─ onStart crashes → next boot restores db.previous over db while it swaps the
+                       binary back — schema and binary roll back together
+```
+
+So a failed upgrade never leaves an old binary staring at a
+newer-than-it-understands schema, and you don't have to write down
+migrations. The snapshot is a one-time directory copy taken before any
+handle is open, so it's point-in-time consistent. See
+`apps/hub/src/runtime/updates/db-backup.ts`.
+
+> Because the rollback discards everything the failed boot wrote, write
+> migrations **expand-contract** where you can (add columns/tables in one
+> release, stop reading the old shape in the next, drop it in a third) so
+> a forward boot that *doesn't* crash stays compatible with the previous
+> version too.
+
 ### Checking migration status
 
 ```sh

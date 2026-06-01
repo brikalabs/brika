@@ -25,6 +25,7 @@ import {
 import { ApiServer } from './runtime/http/api-server';
 import { allRoutes } from './runtime/http/routes';
 import { rollbackIfPreviousBootCrashed } from './runtime/updates/boot-rollback';
+import { backupDatabasesIfUpdatePending } from './runtime/updates/db-backup';
 import { UpdateOrchestrator } from './runtime/updates/orchestrator';
 
 /**
@@ -64,6 +65,13 @@ export async function startHub(): Promise<void> {
   // signal. Doing it at the entry point covers every later failure
   // mode.
   inject(UpdateOrchestrator).recordBootAttempt();
+
+  // Snapshot the databases BEFORE any `.open()` migrates them. Only fires
+  // on the first boot after a managed-binary update (guarded on the
+  // `brika.previous` backup); pairs the DB state with the binary backup so
+  // a later boot-crash rollback reverts schema and binary together. Must
+  // run before the bootstrap chain, which opens — and migrates — databases.
+  backupDatabasesIfUpdatePending();
 
   if (!readCliToken()) {
     writeCliToken();

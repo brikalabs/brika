@@ -24,6 +24,7 @@ import { existsSync, renameSync, rmSync } from 'node:fs';
 import { brikaContext } from '@/runtime/context/brika-context';
 import { RESTART_CODE } from '@/runtime/restart-code';
 import { UpdateAuditLog } from './audit-log';
+import { clearDatabaseBackup, restoreDatabases } from './db-backup';
 import { hasPreviousBackup, liveBinaryPath, previousBinaryPath } from './staged-install';
 import { VersionStateStore } from './version-state';
 
@@ -116,6 +117,26 @@ export function checkAndRollback(input: RollbackInput): RollbackOutcome {
       error: err instanceof Error ? err.message : String(err),
     });
     return 'no-backup';
+  }
+
+  // Binary is back on the known-good version; now revert the databases
+  // to their pre-migration snapshot so the restored binary doesn't open a
+  // schema the crashed version had already migrated forward. Best-effort:
+  // a restore failure must not block the rollback exit — the binary swap
+  // is the load-bearing recovery; worst case the operator sees a schema
+  // newer than the binary, which was the status quo before DB backups.
+  try {
+    if (restoreDatabases(input.brikaDir)) {
+      audit.append('db.restore', {
+        restoredToVersion: versionState.snapshot.lastBootSucceededVersion,
+      });
+    }
+    clearDatabaseBackup(input.brikaDir);
+  } catch (err) {
+    audit.append('apply.failure', {
+      reason: 'db-restore-failed',
+      error: err instanceof Error ? err.message : String(err),
+    });
   }
 
   versionState.recordUpdate({

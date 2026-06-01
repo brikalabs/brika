@@ -19,6 +19,7 @@ import { Logger } from '@/runtime/logs/log-router';
 import type { UpdateInfo, UpdatePhase } from '@/updater';
 import { UpdateAuditLog } from './audit-log';
 import type { UpdateChannelId } from './channels';
+import { clearDatabaseBackup } from './db-backup';
 import { detectRuntimeMode, type RuntimeMode } from './runtime-mode';
 import { clearPreviousBackup } from './staged-install';
 import { strategyForMode, UpdateRefusedError, type UpdateStrategy } from './strategies';
@@ -164,6 +165,10 @@ export class UpdateOrchestrator {
     this.#versionState.recordBootSuccess();
     this.#audit.append('boot.success', { version: brikaContext.version });
     clearPreviousBackup(brikaContext.installDir);
+    // The new schema has proven it can boot — drop the pre-migration DB
+    // snapshot alongside the binary backup. Both rollback paths are now
+    // closed for this version.
+    clearDatabaseBackup(brikaContext.brikaDir);
   }
 
   check(channel: UpdateChannelId): Promise<UpdateInfo> {

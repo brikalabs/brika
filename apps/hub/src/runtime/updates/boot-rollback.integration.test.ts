@@ -8,10 +8,11 @@
  */
 
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { checkAndRollback } from './boot-rollback';
+import { hasDatabaseBackup } from './db-backup';
 import { liveBinaryPath, previousBinaryPath } from './staged-install';
 import { VersionStateStore } from './version-state';
 
@@ -90,6 +91,27 @@ describe('checkAndRollback', () => {
       exit: noopExit,
     });
     expect(outcome).toBe('no-backup');
+  });
+
+  test('rollback restores the database snapshot and clears the backup', () => {
+    writeBinary(liveBinaryPath(installDir), 'broken-new');
+    writeBinary(previousBinaryPath(installDir), 'known-good');
+    const vs = new VersionStateStore(brikaDir, '0.6.0');
+    vs.recordBootAttempt();
+
+    // The crashed boot migrated the live db forward; `db.previous` holds
+    // the pre-migration snapshot the backup step captured.
+    mkdirSync(join(brikaDir, 'db'), { recursive: true });
+    mkdirSync(join(brikaDir, 'db.previous'), { recursive: true });
+    writeFileSync(join(brikaDir, 'db', 'state.db'), 'v2-migrated');
+    writeFileSync(join(brikaDir, 'db.previous', 'state.db'), 'v1-original');
+
+    checkAndRollback({ brikaDir, installDir, exit: noopExit });
+
+    // Binary AND schema reverted together; the snapshot is consumed.
+    expect(readFileSync(liveBinaryPath(installDir), 'utf8')).toBe('known-good');
+    expect(readFileSync(join(brikaDir, 'db', 'state.db'), 'utf8')).toBe('v1-original');
+    expect(hasDatabaseBackup(brikaDir)).toBe(false);
   });
 
   test('after rollback, version-state records the swap in updateHistory', () => {

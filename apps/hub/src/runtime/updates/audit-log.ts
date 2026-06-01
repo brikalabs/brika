@@ -44,7 +44,10 @@ export type AuditEventKind =
   | 'apply.refused'
   | 'boot.attempt'
   | 'boot.success'
-  | 'boot.crash-detected';
+  | 'boot.crash-detected'
+  | 'db.backup'
+  | 'db.restore'
+  | 'db.backup-cleared';
 
 export interface AuditEvent {
   ts: string;
