@@ -243,6 +243,7 @@ Commands:
   status     Show applied / pending migrations
   doctor     Check every migrations folder for journal/SQL drift
   list       List database files in a data dir with size + migration status
+  tui        Interactive dashboard of migrations + databases (r: refresh, q: quit)
 
 Options:
   -s, --schema PATH   Path to a schema.ts file (required by generate/migrate/studio/status)
@@ -276,6 +277,14 @@ Databases in /home/user/.brika/db:
     • settings: 4 rows
     • custom_themes: 0 rows
 ```
+
+### `brika-db tui`
+
+An interactive terminal dashboard combining `doctor` (migration drift)
+and `list` (database files) into one live board. Press `r` to refresh,
+`q` to quit. In a non-TTY (CI, piped) it prints the board once and exits,
+so it's safe to drop into scripts. The rendering is a pure function
+(`renderDashboard`) over the inspection core, unit-tested to 100%.
 
 ---
 

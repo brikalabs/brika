@@ -9,9 +9,12 @@
 
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { basename, join } from 'node:path';
+import { LEDGER_TABLE } from './migrator';
 import { loadSqlite } from './sqlite';
 
-const MIGRATIONS_TABLE = '__drizzle_migrations';
+// Both the current and legacy migration ledgers are internal bookkeeping;
+// hide them from the reported table list.
+const LEGACY_LEDGER_TABLE = '__drizzle_migrations';
 
 interface JournalEntry {
   readonly idx: number;
@@ -173,8 +176,11 @@ export function inspectDatabaseFile(path: string): DatabaseFileReport {
         typeof countRow === 'object' && countRow !== null && 'c' in countRow
           ? Number(countRow.c)
           : 0;
-      if (name === MIGRATIONS_TABLE) {
+      if (name === LEDGER_TABLE) {
         appliedMigrations = rows;
+        continue;
+      }
+      if (name === LEGACY_LEDGER_TABLE) {
         continue;
       }
       tables.push({ name, rows });

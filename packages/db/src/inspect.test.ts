@@ -95,15 +95,21 @@ describe('inspectMigrationsFolder', () => {
 });
 
 describe('inspectDatabaseFile', () => {
-  test('reports tables, row counts and applied migrations', () => {
+  test('reports tables, row counts and applied migrations, hiding both ledgers', () => {
     const dbPath = join(dir, 'test.db');
     const db = new Database(dbPath, { create: true });
     db.run('CREATE TABLE widgets (id INTEGER PRIMARY KEY, name TEXT)');
     db.run("INSERT INTO widgets (name) VALUES ('a'), ('b')");
+    // Applied count comes from the current ledger…
+    db.run(
+      'CREATE TABLE __brika_migrations (tag TEXT PRIMARY KEY, hash TEXT, kind TEXT, applied_at INTEGER)'
+    );
+    db.run("INSERT INTO __brika_migrations (tag) VALUES ('0000_a'), ('0001_b')");
+    // …and the legacy ledger is hidden from the table list too.
     db.run(
       'CREATE TABLE __drizzle_migrations (id INTEGER PRIMARY KEY, hash TEXT, created_at NUMERIC)'
     );
-    db.run("INSERT INTO __drizzle_migrations (hash, created_at) VALUES ('h0', 1), ('h1', 2)");
+    db.run("INSERT INTO __drizzle_migrations (hash, created_at) VALUES ('h0', 1)");
     db.close();
 
     const report = inspectDatabaseFile(dbPath);

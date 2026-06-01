@@ -3,7 +3,13 @@ import { existsSync, readdirSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { CliError, createCli, defineCommand } from '@brika/cli';
-import { inspectDatabaseFile, inspectMigrationsFolder } from '../src/inspect';
+import {
+  type DatabaseFileReport,
+  inspectDatabaseFile,
+  inspectMigrationsFolder,
+  type MigrationFolderReport,
+} from '../src/inspect';
+import { formatBytes, renderDashboard } from '../src/render';
 
 const SHARED_CONFIG = resolve(import.meta.dir, '../database.config.ts');
 
@@ -144,20 +150,6 @@ const status = defineCommand({
 
 const REPO_ROOT = resolve(import.meta.dir, '../../..');
 
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) {
-    return `${bytes} B`;
-  }
-  const units = ['KB', 'MB', 'GB'];
-  let value = bytes / 1024;
-  let unit = 0;
-  while (value >= 1024 && unit < units.length - 1) {
-    value /= 1024;
-    unit++;
-  }
-  return `${value.toFixed(1)} ${units[unit]}`;
-}
-
 async function findMigrationFolders(root: string): Promise<string[]> {
   const glob = new Bun.Glob('**/migrations/meta/_journal.json');
   const folders: string[] = [];
@@ -267,6 +259,76 @@ const list = defineCommand({
   },
 });
 
+/** Collect the data the dashboard renders: migration drift + db files. */
+async function collectDashboard(dataDir: string): Promise<{
+  migrations: MigrationFolderReport[];
+  databases: DatabaseFileReport[];
+}> {
+  const folders = await findMigrationFolders(REPO_ROOT);
+  const migrations = folders.map((folder) => inspectMigrationsFolder(folder));
+
+  const dbDir = join(dataDir, 'db');
+  const databases = existsSync(dbDir)
+    ? readdirSync(dbDir)
+        .filter((f) => f.endsWith('.db'))
+        .sort()
+        .map((f) => inspectDatabaseFile(join(dbDir, f)))
+    : [];
+
+  return { migrations, databases };
+}
+
+const ESC = '\u001b';
+const ALT_SCREEN_ON = `${ESC}[?1049h`;
+const ALT_SCREEN_OFF = `${ESC}[?1049l`;
+const CLEAR = `${ESC}[2J${ESC}[H`;
+
+const tui = defineCommand({
+  name: 'tui',
+  description: 'Interactive dashboard of migrations + databases (r: refresh, q: quit)',
+  options: { dir: { type: 'string', description: 'Brika data dir (default: ~/.brika)' } },
+  examples: ['brika-db tui', 'brika-db tui --dir /path/to/.brika'],
+  async handler({ values }) {
+    const dataDir = values.dir ?? join(homedir(), '.brika');
+
+    const draw = async () => {
+      const data = await collectDashboard(dataDir);
+      process.stdout.write(CLEAR + renderDashboard(data) + '\n\n[r] refresh   [q] quit\n');
+    };
+
+    const stdin = process.stdin;
+    const interactive = Boolean(stdin.isTTY) && typeof stdin.setRawMode === 'function';
+    if (!interactive) {
+      // Non-TTY (CI, piped): print once and exit.
+      const data = await collectDashboard(dataDir);
+      console.log(renderDashboard(data));
+      return;
+    }
+
+    process.stdout.write(ALT_SCREEN_ON);
+    stdin.setRawMode(true);
+    stdin.resume();
+    stdin.setEncoding('utf8');
+    await draw();
+
+    await new Promise<void>((resolvePromise) => {
+      const onKey = (key: string) => {
+        if (key === 'q' || key === '') {
+          stdin.off('data', onKey);
+          resolvePromise();
+        } else if (key === 'r') {
+          void draw();
+        }
+      };
+      stdin.on('data', onKey);
+    });
+
+    stdin.setRawMode(false);
+    stdin.pause();
+    process.stdout.write(ALT_SCREEN_OFF);
+  },
+});
+
 await createCli({ defaultCommand: 'help' })
   .addCommand(generate)
   .addCommand(migrate)
@@ -274,5 +336,6 @@ await createCli({ defaultCommand: 'help' })
   .addCommand(status)
   .addCommand(doctor)
   .addCommand(list)
+  .addCommand(tui)
   .addHelp()
   .run();

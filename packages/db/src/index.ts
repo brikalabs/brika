@@ -26,6 +26,14 @@ export {
 } from './migration';
 export { applyMigrations, LEDGER_TABLE, type MigrationOutcome } from './migrator';
 export {
+  type DashboardInput,
+  formatBytes,
+  migrationStatus,
+  renderDashboard,
+  renderDatabases,
+  renderMigrations,
+} from './render';
+export {
   and,
   asc,
   blob,
