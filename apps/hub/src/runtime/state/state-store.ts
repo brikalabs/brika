@@ -1,4 +1,4 @@
-import { type BrikaDatabase, eq, notInArray } from '@brika/db';
+import { eq, lazyDatabase, notInArray } from '@brika/db';
 import { inject, singleton } from '@brika/di';
 import { ThemeConfig } from '@brika/ipc/contract';
 import type { PluginError, PluginHealth } from '@brika/plugin';
@@ -52,12 +52,6 @@ export interface HubLocation {
   formattedAddress: string;
 }
 
-type StateSchema = {
-  plugins: typeof pluginsTable;
-  settings: typeof settingsTable;
-  customThemes: typeof customThemesTable;
-};
-
 export interface ActiveTheme {
   theme: string | null;
   mode: 'light' | 'dark' | 'system';
@@ -68,19 +62,16 @@ const DEFAULT_ACTIVE_THEME: ActiveTheme = { theme: null, mode: 'system' };
 @singleton()
 export class StateStore {
   private readonly logs = inject(Logger).withSource('state');
-  #database: BrikaDatabase<StateSchema> | null = null;
+  readonly #database = lazyDatabase(stateDb, 'StateStore');
 
   readonly #metadataCache = new Map<string, PluginPackageSchema>();
 
   private get db() {
-    if (!this.#database) {
-      throw new Error('StateStore not initialized — call init() first');
-    }
     return this.#database.db;
   }
 
   init(): void {
-    this.#database = stateDb.open();
+    this.#database.open();
   }
 
   // ─────────────────────────────────────────────────────────────────────────

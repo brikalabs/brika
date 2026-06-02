@@ -1,13 +1,13 @@
 import {
   and,
   asc,
-  type BrikaDatabase,
   count,
   cursorFilter,
   desc,
   endTsFilter,
   eq,
   isNotNull,
+  lazyDatabase,
   oneOrMany,
   startTsFilter,
 } from '@brika/db';
@@ -51,14 +51,14 @@ export interface StoredSparkEvent {
 
 @singleton()
 export class SparkStore {
-  #database: BrikaDatabase<{ sparks: typeof sparksTable }> | null = null;
+  readonly #database = lazyDatabase(sparksDb);
 
   init(): void {
-    this.#database = sparksDb.open();
+    this.#database.open();
   }
 
   private get db() {
-    return this.#database?.db ?? null;
+    return this.#database.dbOrNull;
   }
 
   insert(event: Omit<StoredSparkEvent, 'id'>): void {
@@ -163,7 +163,7 @@ export class SparkStore {
   }
 
   close(): void {
-    this.#database?.sqlite.close();
+    this.#database.close();
   }
 }
 

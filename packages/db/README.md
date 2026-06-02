@@ -85,6 +85,25 @@ const { db, sqlite } = widgetsDb.open();
 // pending migrations run automatically on open
 ```
 
+### 4. Stores opened after construction
+
+A DI singleton is constructed *before* `configureDatabases()` runs, so it
+can't open in its constructor. `lazyDatabase` holds the deferred handle and
+makes the "not opened yet" policy explicit — `db` throws, `dbOrNull`
+returns `null` (for stores that tolerate calls before boot, e.g. logging):
+
+```ts
+import { lazyDatabase } from '@brika/db';
+import { widgetsDb } from './database';
+
+class WidgetStore {
+  readonly #db = lazyDatabase(widgetsDb, 'WidgetStore');
+  init() { this.#db.open(); }     // called once at boot
+  close() { this.#db.close(); }
+  private get db() { return this.#db.db; }  // throws if init() hasn't run
+}
+```
+
 Pass an explicit path to override the logical name (useful for tests):
 
 ```ts

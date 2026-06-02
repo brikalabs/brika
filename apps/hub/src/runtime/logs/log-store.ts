@@ -1,6 +1,6 @@
 import {
-  and, asc, type BrikaDatabase, count, cursorFilter, desc, endTsFilter,
-  eq, isNotNull, like, lt, oneOrMany, startTsFilter,
+  and, asc, count, cursorFilter, desc, endTsFilter,
+  eq, isNotNull, lazyDatabase, like, lt, oneOrMany, startTsFilter,
 } from "@brika/db";
 import { singleton } from "@brika/di";
 import type { Json } from "@/types";
@@ -41,13 +41,13 @@ const MAX_INSERT_ERRORS = 5;
 
 @singleton()
 export class LogStore {
-  #database: BrikaDatabase<{ logs: typeof logsTable }> | null = null;
+  readonly #database = lazyDatabase(logsDb);
   #insertDisabled = false;
   #insertErrors = 0;
   #pruneTimer?: Timer;
 
   init(): void {
-    this.#database = logsDb.open();
+    this.#database.open();
   }
 
   /**
@@ -102,7 +102,7 @@ export class LogStore {
   }
 
   private get db() {
-    return this.#database?.db ?? null;
+    return this.#database.dbOrNull;
   }
 
   insert(event: LogEvent): void {
@@ -224,10 +224,7 @@ export class LogStore {
    */
   close(): void {
     this.stopRetention();
-    if (this.#database) {
-      this.#database.sqlite.close();
-      this.#database = null;
-    }
+    this.#database.close();
   }
 }
 

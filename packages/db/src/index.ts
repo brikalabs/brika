@@ -8,6 +8,7 @@
 export { configureDatabases } from './config';
 export { type BrikaDatabase, type DatabaseDefinition, defineDatabase } from './database';
 export { cursorFilter, endTsFilter, oneOrMany, startTsFilter } from './helpers';
+export { type LazyDatabase, lazyDatabase } from './lazy';
 export {
   type CodeMigration,
   defineMigration,
