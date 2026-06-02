@@ -29,6 +29,16 @@ export const log = message(
   })
 );
 
+/** Capture a product-analytics / feature-usage event */
+export const capture = message(
+  'capture',
+  z.object({
+    name: z.string(),
+    props: JsonRecord.optional(),
+    distinctId: z.string().optional(),
+  })
+);
+
 /** Ping for heartbeat */
 export const ping = rpc(
   'ping',

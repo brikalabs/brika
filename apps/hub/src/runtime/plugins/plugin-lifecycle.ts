@@ -348,6 +348,8 @@ export class PluginLifecycle {
         },
         onLog: (level, msg, meta) =>
           this.#eventHandler.onPluginLog(pluginName, level as LogLevelType, msg, meta),
+        onCapture: (name, props, distinctId) =>
+          this.#eventHandler.onPluginCapture(pluginName, name, props, distinctId),
         onBlock: (block) => this.#eventHandler.registerBlock(metadata.name, block, metadata),
         onBlockEmit: (instanceId, port, data) =>
           this.#eventHandler.onBlockEmit(instanceId, port, data),

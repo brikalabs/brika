@@ -41,6 +41,7 @@ export interface MockBridge {
   start: ReturnType<typeof mock>;
   onStop: ReturnType<typeof mock>;
   log: ReturnType<typeof mock>;
+  capture: ReturnType<typeof mock>;
 
   // Manifest
   getManifest: ReturnType<typeof mock>;
@@ -95,6 +96,7 @@ function createMockBridge(manifest: Partial<Manifest>): MockBridge {
       /* noop */
     }),
     log: noopMock(),
+    capture: noopMock(),
 
     // Manifest
     getManifest: mock(() => fullManifest),

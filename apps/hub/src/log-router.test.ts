@@ -33,16 +33,16 @@ describe('Logger', () => {
   });
 
   describe('setStore', () => {
-    test('inserts events into store', () => {
-      const insertedEvents: LogEvent[] = [];
+    test('enqueues events into store', () => {
+      const enqueuedEvents: LogEvent[] = [];
       const mockStore = {
-        insert: (e: LogEvent) => insertedEvents.push(e),
+        enqueue: (e: LogEvent) => enqueuedEvents.push(e),
       };
 
       logger.setStore(mockStore as never);
       logger.info('test');
 
-      expect(insertedEvents).toHaveLength(1);
+      expect(enqueuedEvents).toHaveLength(1);
     });
   });
 
@@ -116,13 +116,24 @@ describe('Logger', () => {
   });
 
   describe('log levels', () => {
-    test('logs debug messages', () => {
+    test('logs debug messages when the floor allows it', () => {
       const events: LogEvent[] = [];
       logger.subscribe((e) => events.push(e));
 
+      logger.setLevel('debug');
       logger.debug('debug message');
 
       expect(events[0]?.level).toBe('debug');
+    });
+
+    test('drops logs below the configured floor', () => {
+      const events: LogEvent[] = [];
+      logger.subscribe((e) => events.push(e));
+
+      // Default floor is `info`, so a debug log is short-circuited entirely.
+      logger.debug('debug message');
+
+      expect(events).toHaveLength(0);
     });
 
     test('logs info messages', () => {
@@ -285,6 +296,7 @@ describe('ScopedLogger', () => {
       const events: LogEvent[] = [];
       logger.subscribe((e) => events.push(e));
 
+      logger.setLevel('debug');
       scoped.debug('debug');
 
       expect(events[0]?.level).toBe('debug');

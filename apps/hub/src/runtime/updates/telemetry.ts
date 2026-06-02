@@ -84,7 +84,7 @@ function escapeForRegExp(literal: string): string {
  */
 const MIN_REDACT_PATH_LEN = 5;
 
-function redactPaths(message: string): string {
+export function redactPaths(message: string): string {
   let out = message;
   const home = homedir();
   if (home.length >= MIN_REDACT_PATH_LEN) {

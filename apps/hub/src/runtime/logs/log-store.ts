@@ -46,6 +46,12 @@ export class LogStore {
   #insertErrors = 0;
   #pruneTimer?: Timer;
 
+  // Write buffer for the batched hot path. Logger.emit() funnels every event
+  // through enqueue() so a burst of log lines collapses into a single
+  // transaction on the next tick instead of one synchronous fsync per line.
+  readonly #queue: LogEvent[] = [];
+  #flushTimer?: Timer;
+
   init(): void {
     this.#database = logsDb.open();
   }
@@ -105,22 +111,66 @@ export class LogStore {
     return this.#database?.db ?? null;
   }
 
+  /**
+   * Buffer an event for batched persistence. This is the hot path used by
+   * {@link Logger.emit}: the actual SQLite write is deferred to the next tick
+   * (or to {@link flush}/{@link close}), so a burst of synchronous log calls
+   * costs one transaction instead of N synchronous fsyncs. Events are never
+   * lost on a clean exit because {@link close} drains the buffer; on a crash
+   * the {@link crashHandlers} plugin calls close() which flushes too.
+   */
+  enqueue(event: LogEvent): void {
+    if (!this.db || this.#insertDisabled) { return; }
+    this.#queue.push(event);
+    if (!this.#flushTimer) {
+      // setTimeout(0) (not a microtask) so the whole synchronous call stack —
+      // which may emit many log lines — finishes enqueuing before we flush.
+      this.#flushTimer = setTimeout(() => this.flush(), 0);
+    }
+  }
+
+  /**
+   * Drain the write buffer into SQLite in a single transaction. Safe to call
+   * at any time (idempotent when the buffer is empty); invoked by the flush
+   * timer, on {@link close}, and on crash. Failures are swallowed for the
+   * same reason {@link insert} swallows them — log persistence must never
+   * crash the request pipeline.
+   */
+  flush(): void {
+    if (this.#flushTimer) {
+      clearTimeout(this.#flushTimer);
+      this.#flushTimer = undefined;
+    }
+    if (this.#queue.length === 0) { return; }
+
+    const batch = this.#queue.splice(0, this.#queue.length);
+    if (!this.db || this.#insertDisabled) { return; }
+
+    try {
+      this.#database?.sqlite.transaction(() => {
+        for (const event of batch) {
+          this.#insertRow(event);
+        }
+      })();
+      this.#insertErrors = 0;
+    } catch {
+      this.#insertErrors++;
+      if (this.#insertErrors >= MAX_INSERT_ERRORS) {
+        this.#insertDisabled = true;
+      }
+    }
+  }
+
+  /**
+   * Synchronous single-row insert with immediate read-after-write semantics.
+   * Kept for direct callers and tests; the logging hot path uses
+   * {@link enqueue} instead.
+   */
   insert(event: LogEvent): void {
     if (!this.db || this.#insertDisabled) { return; }
 
     try {
-      this.db.insert(logsTable).values({
-        ts: event.ts,
-        level: event.level,
-        source: event.source,
-        pluginName: event.pluginName ?? null,
-        message: event.message,
-        meta: event.meta ? JSON.stringify(event.meta) : null,
-        errorName: event.error?.name ?? null,
-        errorMessage: event.error?.message ?? null,
-        errorStack: event.error?.stack ?? null,
-        errorCause: event.error?.cause ?? null,
-      }).run();
+      this.#insertRow(event);
       this.#insertErrors = 0;
     } catch {
       // Silently drop — log persistence must never crash the request pipeline.
@@ -130,6 +180,21 @@ export class LogStore {
         this.#insertDisabled = true;
       }
     }
+  }
+
+  #insertRow(event: LogEvent): void {
+    this.db?.insert(logsTable).values({
+      ts: event.ts,
+      level: event.level,
+      source: event.source,
+      pluginName: event.pluginName ?? null,
+      message: event.message,
+      meta: event.meta ? JSON.stringify(event.meta) : null,
+      errorName: event.error?.name ?? null,
+      errorMessage: event.error?.message ?? null,
+      errorStack: event.error?.stack ?? null,
+      errorCause: event.error?.cause ?? null,
+    }).run();
   }
 
   query(params: LogQueryParams = {}): LogQueryResult {
@@ -224,6 +289,9 @@ export class LogStore {
    */
   close(): void {
     this.stopRetention();
+    // Drain any buffered events before releasing the handle so a clean stop
+    // (or a crash-handler close) never loses the tail of the log stream.
+    this.flush();
     if (this.#database) {
       this.#database.sqlite.close();
       this.#database = null;

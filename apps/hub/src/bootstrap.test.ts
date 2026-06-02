@@ -32,6 +32,7 @@ const mockConfig: BrikaConfig = {
       rssSoftLimitBytes: 0,
     },
     logs: { retentionDays: 7, pruneIntervalMs: 3600000 },
+    analytics: { retentionDays: 90, pruneIntervalMs: 3600000 },
     shutdown: { gracePeriodMs: 10000 },
   },
   plugins: [],

@@ -2,6 +2,8 @@ import { createBanner } from '@brika/banner';
 import { configureDatabases } from '@brika/db';
 import { inject } from '@brika/di';
 import { hub } from '@/hub';
+import { EventStore } from '@/runtime/analytics/event-store';
+import { EventForwarder } from '@/runtime/analytics/forwarder';
 import { BrikaInitializer, ConfigLoader } from '@/runtime/config';
 import { ApiServer } from '@/runtime/http/api-server';
 import { Logger } from '@/runtime/logs/log-router';
@@ -35,6 +37,8 @@ const TIMEOUT = Symbol('shutdown-timeout');
 export class Bootstrap {
   private readonly logs = inject(Logger);
   private readonly logStore = inject(LogStore);
+  private readonly eventStore = inject(EventStore);
+  private readonly eventForwarder = inject(EventForwarder);
   private readonly initializer = inject(BrikaInitializer);
   private readonly configLoader = inject(ConfigLoader);
   private readonly apiServer = inject(ApiServer);
@@ -65,12 +69,17 @@ export class Bootstrap {
     configureDatabases(`${this.configLoader.getRootDir()}/.brika`);
     this.logStore.init();
     this.logs.setStore(this.logStore);
+    this.eventStore.init();
     for (const p of this.plugins) {
       p.setup?.(this);
     }
     await this.initializer.init();
     const config = await this.configLoader.load();
     this.logStore.startRetention(config.hub.logs.retentionDays, config.hub.logs.pruneIntervalMs);
+    this.eventStore.startRetention(
+      config.hub.analytics.retentionDays,
+      config.hub.analytics.pruneIntervalMs
+    );
 
     await this.runPhase('Initializing', (p) => p.onInit?.());
     await this.runPhase('Loading', (p) => p.onLoad?.(config));
@@ -88,6 +97,8 @@ export class Bootstrap {
     setHubStopping();
     await this.runPhase('Stopping', (p) => p.onStop?.(), this.plugins.toReversed());
     this.logs.info('Brika Hub stopped successfully');
+    this.eventForwarder.stop();
+    this.eventStore.close();
     this.logStore.close();
   }
 
@@ -126,9 +137,11 @@ export class Bootstrap {
       if (timer) {
         clearTimeout(timer);
       }
-      // Guarantee the log buffer is flushed before exit. On the clean path
-      // stop() already closed it; close() is idempotent so this is a no-op
-      // there and the safety net on the timeout path.
+      // Guarantee the log + event buffers are flushed before exit. On the
+      // clean path stop() already closed them; close() is idempotent so this
+      // is a no-op there and the safety net on the timeout path.
+      this.eventForwarder.stop();
+      this.eventStore.close();
       this.logStore.close();
     }
   }

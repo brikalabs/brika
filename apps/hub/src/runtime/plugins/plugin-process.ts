@@ -6,6 +6,7 @@ import {
   blockLog,
   brickInstanceAction,
   callAction,
+  capture,
   deletePluginSecret,
   emitSpark,
   getGrantVector,
@@ -74,6 +75,7 @@ export interface SparkRegistration {
 export interface PluginProcessCallbacks {
   onReady: (process: PluginProcess) => void;
   onLog: (level: string, message: string, meta?: Record<string, Json>) => void;
+  onCapture: (name: string, props?: Record<string, Json>, distinctId?: string) => void;
   onBlock: (block: BlockRegistration) => void;
   onBlockEmit: (instanceId: string, port: string, data: Json) => void;
   onBlockLog: (instanceId: string, workflowId: string, level: string, message: string) => void;
@@ -578,6 +580,10 @@ export class PluginProcess {
 
     this.#channel.on(log, ({ level, message, meta }) => {
       this.callbacks.onLog(level, message, meta);
+    });
+
+    this.#channel.on(capture, ({ name, props, distinctId }) => {
+      this.callbacks.onCapture(name, props, distinctId);
     });
 
     this.#channel.on(registerBlock, ({ block }) => {

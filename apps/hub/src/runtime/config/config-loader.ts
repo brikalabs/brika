@@ -150,6 +150,15 @@ export interface BrikaConfig {
        */
       pruneIntervalMs: number;
     };
+    analytics: {
+      /**
+       * Drop captured feature-usage events older than this many days during
+       * periodic pruning. 0 disables retention (events grow unbounded).
+       */
+      retentionDays: number;
+      /** How often (in milliseconds) the analytics retention sweep runs. */
+      pruneIntervalMs: number;
+    };
     shutdown: ShutdownConfig;
   };
   plugins: PluginEntry[];
@@ -185,6 +194,10 @@ const DEFAULT_CONFIG: BrikaConfig = {
     },
     logs: {
       retentionDays: 7,
+      pruneIntervalMs: 60 * 60 * 1000,
+    },
+    analytics: {
+      retentionDays: 90,
       pruneIntervalMs: 60 * 60 * 1000,
     },
     shutdown: {
@@ -271,6 +284,7 @@ export class ConfigLoader {
       const hubParsed = (parsed.hub ?? {}) as Record<string, unknown>;
       const hubPluginsParsed = (hubParsed.plugins ?? {}) as Record<string, unknown>;
       const hubLogsParsed = (hubParsed.logs ?? {}) as Record<string, unknown>;
+      const hubAnalyticsParsed = (hubParsed.analytics ?? {}) as Record<string, unknown>;
 
       this.#config = {
         hub: {
@@ -296,6 +310,14 @@ export class ConfigLoader {
               (hubLogsParsed.retentionDays as number) ?? DEFAULT_CONFIG.hub.logs.retentionDays,
             pruneIntervalMs:
               (hubLogsParsed.pruneIntervalMs as number) ?? DEFAULT_CONFIG.hub.logs.pruneIntervalMs,
+          },
+          analytics: {
+            retentionDays:
+              (hubAnalyticsParsed.retentionDays as number) ??
+              DEFAULT_CONFIG.hub.analytics.retentionDays,
+            pruneIntervalMs:
+              (hubAnalyticsParsed.pruneIntervalMs as number) ??
+              DEFAULT_CONFIG.hub.analytics.pruneIntervalMs,
           },
           shutdown: ShutdownConfigSchema.parse(hubParsed.shutdown ?? {}),
         },
