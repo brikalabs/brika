@@ -13,6 +13,7 @@ export {
   type MigrationFolderReport,
   type TableInfo,
 } from './inspect';
+export { sortMigrations } from './migration';
 export { applyMigrations, LEDGER_TABLE, type MigrationOutcome } from './migrator';
 export {
   type DashboardInput,
@@ -22,4 +23,9 @@ export {
   renderDatabases,
   renderMigrations,
 } from './render';
-export { sortMigrations } from './migration';
+export {
+  databaseSource,
+  deriveNames,
+  type ScaffoldNames,
+  schemaSource,
+} from './scaffold';

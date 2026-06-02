@@ -1,15 +1,18 @@
 #!/usr/bin/env bun
-import { existsSync, readdirSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join, relative, resolve } from 'node:path';
 import { CliError, createCli, defineCommand } from '@brika/cli';
 import {
   type DatabaseFileReport,
+  databaseSource,
+  deriveNames,
   formatBytes,
   inspectDatabaseFile,
   inspectMigrationsFolder,
   type MigrationFolderReport,
   renderDashboard,
+  schemaSource,
 } from '@brika/db/tooling';
 
 const SHARED_CONFIG = resolve(import.meta.dir, '../database.config.ts');
@@ -120,6 +123,50 @@ const generate = defineCommand({
     }
   },
 });
+
+const newDb = defineCommand({
+  name: 'new',
+  description: 'Scaffold a new database: schema.ts + database.ts + first migration',
+  options: {
+    dir: { type: 'string', description: 'Source dir to create files in (default: .)' },
+  },
+  examples: ['brika-db new widgets --dir packages/widgets/src'],
+  async handler({ values, positionals }) {
+    const raw = positionals[0];
+    if (!raw) {
+      throw new CliError('Usage: brika-db new <name> [--dir <path>]');
+    }
+    const names = deriveNamesOrThrow(raw);
+
+    const dir = resolve(values.dir ?? '.');
+    const schemaPath = join(dir, 'schema.ts');
+    const databasePath = join(dir, 'database.ts');
+    if (existsSync(schemaPath) || existsSync(databasePath)) {
+      throw new CliError(`schema.ts or database.ts already exists in ${rel(dir)}.`);
+    }
+
+    const migrationsDir = join(dir, 'migrations');
+    mkdirSync(migrationsDir, { recursive: true });
+    await Bun.write(schemaPath, schemaSource(names.table));
+    await Bun.write(databasePath, databaseSource(names, relative(REPO_ROOT, migrationsDir)));
+    console.log(`✓ ${rel(schemaPath)}`);
+    console.log(`✓ ${rel(databasePath)}`);
+
+    // Generate the first migration so the macro has a journal to read.
+    await runDrizzleKit('generate', schemaPath);
+    console.log(
+      `\nNext: call configureDatabases() at boot, then \`${names.binding}.open()\` in your store.`
+    );
+  },
+});
+
+function deriveNamesOrThrow(raw: string): ReturnType<typeof deriveNames> {
+  try {
+    return deriveNames(raw);
+  } catch (error) {
+    throw new CliError(error instanceof Error ? error.message : String(error));
+  }
+}
 
 const migrate = defineCommand({
   name: 'migrate',
@@ -398,6 +445,7 @@ const tui = defineCommand({
 });
 
 await createCli({ defaultCommand: 'help' })
+  .addCommand(newDb)
   .addCommand(generate)
   .addCommand(migrate)
   .addCommand(studio)

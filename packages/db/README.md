@@ -12,6 +12,18 @@ SQLite database layer for Brika. Provides typed schemas, automatic versioned mig
 
 ---
 
+## Quickstart
+
+Scaffold a database — `schema.ts`, `database.ts` (with the migrations path
+baked in), and the first migration, all generated and ready to open:
+
+```sh
+brika-db new widgets --dir packages/widgets/src
+```
+
+Then add columns to `schema.ts` and run `brika-db generate`. The sections
+below show what the scaffold produces.
+
 ## Usage
 
 ### 1. Define a schema
@@ -242,6 +254,7 @@ brika-db studio --schema src/schema.ts --db ~/.brika/db/widgets.db
 brika-db <command> [options]
 
 Commands:
+  new        Scaffold a new database (schema.ts + database.ts + first migration)
   generate   Generate SQL migrations from schema changes (all schemas if no --schema)
   migrate    Apply pending migrations to a database
   studio     Open a database browser UI
