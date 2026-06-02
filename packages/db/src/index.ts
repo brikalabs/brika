@@ -1,9 +1,8 @@
-// ORM query operators + schema builders — consumers import from here, not
-// drizzle-orm directly, so swapping the underlying ORM only touches this
-// package. The pure definitions live in `./schema` (no `bun:sqlite`), so
-// `schema.ts` files can import them under drizzle-kit's Node runtime via
-// the `@brika/db/schema` subpath. The barrel re-exports them for the
-// convenience of runtime code (which runs under Bun).
+// Single entrypoint for everything: schema builders, query operators,
+// `defineDatabase`/`defineMigration`, and the inspection helpers. Schema
+// files and runtime code both import from `@brika/db`. The barrel stays
+// loadable under plain Node (for `drizzle-kit`) because the `bun:sqlite`
+// runtime is deferred to call time (see `sqlite.ts`).
 
 export { configureDatabases } from './config';
 export { type BrikaDatabase, type DatabaseDefinition, defineDatabase } from './database';

@@ -78,29 +78,28 @@ const { db } = widgetsDb.open(':memory:');
 
 ### Generating migrations
 
-You **never hand-write SQL**. Change `schema.ts`, then generate the diff:
+You **never hand-write SQL**. Change `schema.ts`, then run:
 
 ```sh
-brika-db generate --schema src/schema.ts
+brika-db generate           # regenerate every database that changed
+brika-db generate --schema packages/widgets/src/schema.ts   # just one
 ```
 
-`drizzle-kit` diffs your new `schema.ts` against the most recent
-`meta/<idx>_snapshot.json` (the *baseline*) and writes an incremental
-`.sql` file (e.g. `ALTER TABLE … ADD COLUMN …`) plus a fresh snapshot,
-and updates the journal.
+With no `--schema`, `brika-db generate` discovers every Drizzle schema in
+the repo and regenerates each (unchanged ones are a no-op). For each it
+diffs your `schema.ts` against the most recent `meta/<idx>_snapshot.json`
+(the *baseline*) and writes an incremental `.sql` (e.g. `ALTER TABLE … ADD
+COLUMN …`) plus a fresh snapshot, and updates the journal.
 
 **Commit the `.sql` file, the new `<idx>_snapshot.json`, and the updated
 `_journal.json` together.** The snapshot is what makes the *next*
 `generate` incremental — drop it and drizzle-kit re-emits the whole
 schema. `brika-db doctor` fails CI if a baseline snapshot is missing.
 
-> **Why generate works under Node.** `drizzle-kit` runs under plain Node,
-> which has no `bun:sqlite`. `schema.ts` files therefore import their
-> builders from the **`@brika/db/schema`** subpath (pure — no runtime),
-> and the `@brika/db` barrel loads `bun:sqlite` / `drizzle-orm/bun-sqlite`
-> lazily, so importing it never drags the Bun SQLite runtime into the Node
-> tool. If you see `Cannot find module 'bun:sqlite'` from `generate`, a
-> schema file is importing the runtime barrel instead of `@brika/db/schema`.
+> **One import path.** Everything — table builders, query operators,
+> `defineDatabase`, `defineMigration` — comes from `@brika/db`. The barrel
+> stays loadable under `drizzle-kit` (plain Node, no `bun:sqlite`) because
+> the package defers its `bun:sqlite` import to call time.
 
 ### TypeScript (code) migrations
 
@@ -110,8 +109,7 @@ and register it alongside the SQL migrations:
 
 ```ts
 // src/migrations/0002_backfill_scores.ts
-import { defineMigration } from '@brika/db';
-import { isNull } from '@brika/db/schema';
+import { defineMigration, isNull } from '@brika/db';
 import { widgets } from '../schema';
 
 export default defineMigration('0002_backfill_scores', ({ db, sqlite }) => {
@@ -237,7 +235,7 @@ brika-db studio --schema src/schema.ts --db ~/.brika/db/widgets.db
 brika-db <command> [options]
 
 Commands:
-  generate   Generate SQL migrations from schema changes
+  generate   Generate SQL migrations from schema changes (all schemas if no --schema)
   migrate    Apply pending migrations to a database
   studio     Open a database browser UI
   status     Show applied / pending migrations
@@ -246,7 +244,7 @@ Commands:
   tui        Interactive dashboard of migrations + databases (r: refresh, q: quit)
 
 Options:
-  -s, --schema PATH   Path to a schema.ts file (required by generate/migrate/studio/status)
+  -s, --schema PATH   Path to a schema.ts file (generate auto-discovers all if omitted)
   --db PATH           Path to the SQLite database file
   --dir PATH          Brika data dir for `list` (default: ~/.brika)
   -h, --help          Show this help

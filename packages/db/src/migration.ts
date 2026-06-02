@@ -68,7 +68,7 @@ const TAG_PATTERN = /^\d{4}_[a-z0-9]+(?:_[a-z0-9]+)*$/;
  * ```ts
  * // migrations/0002_backfill_scores.ts
  * import { defineMigration } from '@brika/db';
- * import { eq, isNull } from '@brika/db/schema';
+ * import { isNull } from '@brika/db';
  * import { widgets } from '../schema';
  *
  * export default defineMigration('0002_backfill_scores', ({ db }) => {

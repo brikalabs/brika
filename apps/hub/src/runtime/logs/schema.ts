@@ -1,4 +1,4 @@
-import { index, integer, sqliteTable, text } from '@brika/db/schema';
+import { index, integer, sqliteTable, text } from '@brika/db';
 
 export const logs = sqliteTable(
   'logs',

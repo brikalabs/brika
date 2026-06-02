@@ -1,18 +1,14 @@
 /**
- * Pure schema surface — Drizzle table builders, column types, query
- * operators and inference helpers. **This module imports nothing from
- * `bun:sqlite`** (directly or transitively), so it is safe to load under
- * plain Node, which is what `drizzle-kit generate/studio` does.
+ * Internal pure-builder module — Drizzle table builders, column types,
+ * query operators and inference helpers, re-exported by the package
+ * barrel (`@brika/db`). Imports nothing from `bun:sqlite`.
  *
- * `schema.ts` files MUST import their builders from `@brika/db/schema`,
- * not from `@brika/db`. The barrel (`@brika/db`) re-exports everything
- * here *and* the runtime opener (`defineDatabase`, which pulls in
- * `bun:sqlite`); importing the barrel from a schema file drags the Bun
- * SQLite runtime into drizzle-kit's Node process and breaks `generate`
- * with `Cannot find module 'bun:sqlite'`.
- *
- * Runtime code (stores, repositories) can import operators from either
- * path; it runs under Bun where `bun:sqlite` resolves fine.
+ * Consumers never import this file directly: everything is available from
+ * the single `@brika/db` entrypoint. The barrel stays loadable under
+ * plain Node (which is what `drizzle-kit generate/studio` runs) because
+ * `@brika/db` defers its `bun:sqlite` / drizzle-bun-sqlite imports to
+ * call time (see `sqlite.ts`), so a `schema.ts` importing `@brika/db`
+ * doesn't drag the Bun SQLite runtime into the Node tool.
  */
 
 // Query operators.
