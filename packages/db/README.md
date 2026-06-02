@@ -39,12 +39,19 @@ repo-relative path to the migrations folder.
 // src/database.ts
 import { defineDatabase } from '@brika/db';
 import { loadMigrations } from '@brika/db/macros' with { type: 'macro' };
-import { widgets } from './schema';
+import * as schema from './schema';
 
-const migrations = loadMigrations('packages/widgets/src/migrations');
-
-export const widgetsDb = defineDatabase('widgets.db', { widgets }, migrations);
+export const widgetsDb = defineDatabase(
+  'widgets.db',
+  schema,
+  loadMigrations('packages/widgets/src/migrations')
+);
 ```
+
+`import * as schema` passes every table without re-listing them. The
+`loadMigrations` path is repo-relative and checked at build time — a wrong
+path fails the build (it can't be derived from the file's location because
+Bun macro arguments must be static literals).
 
 Migrations must live at `src/migrations/` (sibling of `database.ts`).
 The macro reads `meta/_journal.json` — **a `.sql` file that is not listed
@@ -318,3 +325,15 @@ domain that needs cross-table transactions.
 | `endTsFilter(col, ts)` | `<= ts` if defined |
 
 All standard SQL operators (`eq`, `and`, `asc`, `desc`, `inArray`, …) and schema builders (`sqliteTable`, `text`, `integer`, …) are re-exported from `@brika/db`.
+
+## Package surface
+
+| Entrypoint | For | Exposes |
+|---|---|---|
+| `@brika/db` | application code | builders, operators, `defineDatabase`, `defineMigration`, query helpers, types |
+| `@brika/db/macros` | build-time (`with { type: 'macro' }`) | `loadMigrations` |
+| `@brika/db/tooling` | the `brika-db` CLI / diagnostics | `inspectDatabaseFile`, `inspectMigrationsFolder`, `render*`, `applyMigrations`, `LEDGER_TABLE`, `sortMigrations` |
+
+Diagnostics and migration-runner internals live in `@brika/db/tooling`,
+not the main entrypoint, so defining a table autocompletes to builders and
+`defineDatabase` — not `renderDashboard`.

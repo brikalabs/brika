@@ -5,11 +5,12 @@ import { dirname, join, relative, resolve } from 'node:path';
 import { CliError, createCli, defineCommand } from '@brika/cli';
 import {
   type DatabaseFileReport,
+  formatBytes,
   inspectDatabaseFile,
   inspectMigrationsFolder,
   type MigrationFolderReport,
-} from '../src/inspect';
-import { formatBytes, renderDashboard } from '../src/render';
+  renderDashboard,
+} from '@brika/db/tooling';
 
 const SHARED_CONFIG = resolve(import.meta.dir, '../database.config.ts');
 const REPO_ROOT = resolve(import.meta.dir, '../../..');
