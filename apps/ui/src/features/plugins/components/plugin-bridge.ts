@@ -35,8 +35,16 @@ const bridge = {
   React,
   jsx: {
     ...jsxRuntime,
-    jsxDEV(type: React.ElementType, props: object, key: React.Key | undefined, isStatic: boolean) {
-      return isStatic ? jsxRuntime.jsxs(type, props, key) : jsxRuntime.jsx(type, props, key);
+    // Signature is dictated by React's automatic JSX dev runtime, which calls
+    // `jsxDEV(type, props, key, isStaticChildren, source, self)` positionally.
+    // The 4th arg (`isStaticChildren`) is read from `rest` rather than as a
+    // typed boolean parameter: this is a single runtime entrypoint that can't
+    // be split into separate methods.
+    jsxDEV(type: React.ElementType, props: object, key: React.Key | undefined, ...rest: unknown[]) {
+      const isStaticChildren = rest[0] === true;
+      return isStaticChildren
+        ? jsxRuntime.jsxs(type, props, key)
+        : jsxRuntime.jsx(type, props, key);
     },
   },
   hooks: { useLocale, useAction, useCallAction, usePluginUid, usePluginRouteUrl },

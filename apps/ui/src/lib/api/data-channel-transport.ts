@@ -243,7 +243,7 @@ export class DataChannelTransport implements Transport {
       this.#inflight.set(id, inflight);
 
       // Plumb the assembler's head/error into the outer promise.
-      void assembler.response().then(
+      assembler.response().then(
         (res) => {
           inflight.headSeen = true;
           resolve(res);
@@ -290,7 +290,7 @@ export class DataChannelTransport implements Transport {
           this.#sendBinaryChunk('request.chunk', id, bytes);
         }
       : undefined;
-    void emitRequest(id, request, emit, { sendBinary }).catch((err: unknown) => {
+    emitRequest(id, request, emit, { sendBinary }).catch((err: unknown) => {
       debug('emit failed', { id, err: err instanceof Error ? err.message : String(err) });
     });
 

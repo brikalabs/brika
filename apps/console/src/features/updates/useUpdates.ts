@@ -53,7 +53,7 @@ export function useUpdates(): UseUpdates {
     if (!connected) {
       return;
     }
-    void runCheck();
+    runCheck().catch(() => undefined);
   }, [connected, runCheck]);
 
   const runCycleChannel = useCallback(async () => {
@@ -70,7 +70,7 @@ export function useUpdates(): UseUpdates {
       await setUpdateChannel(next);
       setChannel(next);
       // Re-check against the new channel so latestVersion reflects it.
-      void runCheck();
+      runCheck().catch(() => undefined);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }
@@ -102,15 +102,15 @@ export function useUpdates(): UseUpdates {
   }, [applying]);
 
   const check = useCallback(() => {
-    void runCheck();
+    runCheck().catch(() => undefined);
   }, [runCheck]);
 
   const cycleChannel = useCallback(() => {
-    void runCycleChannel();
+    runCycleChannel().catch(() => undefined);
   }, [runCycleChannel]);
 
   const startApply = useCallback(() => {
-    void runStartApply();
+    runStartApply().catch(() => undefined);
   }, [runStartApply]);
 
   return {

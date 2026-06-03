@@ -113,7 +113,7 @@ interface InkModule {
     element: ReactElement,
     options?: { exitOnCtrlC?: boolean }
   ) => {
-    waitUntilExit: () => Promise<void>;
+    waitUntilExit: () => Promise<unknown>;
   };
 }
 
@@ -121,7 +121,7 @@ async function loadInk(): Promise<InkModule> {
   try {
     // Dynamic import keeps ink off the cold path for non-TUI consumers
     // and lets the error message be specific when it's missing.
-    return (await import('ink')) as unknown as InkModule;
+    return await import('ink');
   } catch (cause) {
     throw new Error(
       "Couldn't load `ink` — install it as a peer of @brika/cli to use TUI commands.\n" +

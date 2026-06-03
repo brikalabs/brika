@@ -54,7 +54,7 @@ export function useServiceActionKeys(enabled: boolean): void {
       }
       const lineCount = focused.logs.length;
       toast.showToast(`Saving ${lineCount} lines…`);
-      void saveLogsToFile(focused.spec.id, focused.logs, supervisor.root).then(
+      saveLogsToFile(focused.spec.id, focused.logs, supervisor.root).then(
         (path) => toast.showToast(`Saved ${lineCount} lines → ${path}`),
         (err) => toast.showToast(`Save failed: ${err instanceof Error ? err.message : String(err)}`)
       );
@@ -70,13 +70,15 @@ export function useServiceActionKeys(enabled: boolean): void {
       }
       const lineCount = focused.logs.length;
       toast.showToast(`Copying ${lineCount} lines…`);
-      void copyLogsToClipboard(focused.logs).then((ok) =>
-        toast.showToast(
-          ok
-            ? `Copied ${lineCount} lines to clipboard`
-            : 'Copy failed — no clipboard tool found (install pbcopy/xclip/wl-copy)'
+      copyLogsToClipboard(focused.logs)
+        .then((ok) =>
+          toast.showToast(
+            ok
+              ? `Copied ${lineCount} lines to clipboard`
+              : 'Copy failed — no clipboard tool found (install pbcopy/xclip/wl-copy)'
+          )
         )
-      );
+        .catch(() => undefined);
     },
     enabled
   );
