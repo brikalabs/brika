@@ -1,9 +1,8 @@
 import { inject, singleton } from '@brika/di';
-import { RingBuffer } from '@/runtime/logs/utils/ring-buffer';
-import type { Json } from '@/types';
 import { EventStore } from './event-store';
 import { EventForwarder } from './forwarder';
-import type { CaptureEvent, CaptureSource } from './types';
+import { RingBuffer } from './ring-buffer';
+import type { CaptureEvent, CaptureSource, Json } from './types';
 
 export interface CaptureOptions {
   source?: CaptureSource;

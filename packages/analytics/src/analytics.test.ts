@@ -4,8 +4,8 @@
 import 'reflect-metadata';
 import { beforeEach, describe, expect, test } from 'bun:test';
 import { get, reset, useTestBed } from '@brika/di/testing';
-import { Analytics, ScopedAnalytics } from '@/runtime/analytics/analytics';
-import type { CaptureEvent } from '@/runtime/analytics/types';
+import { Analytics, ScopedAnalytics } from './analytics';
+import type { CaptureEvent } from './types';
 
 useTestBed({ autoStub: true });
 

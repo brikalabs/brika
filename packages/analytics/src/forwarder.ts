@@ -17,17 +17,15 @@
  * user id is attached only when `BRIKA_ANALYTICS_IDENTIFY` is set.
  */
 
-import { singleton } from '@brika/di';
-import { brikaContext } from '@/runtime/context/brika-context';
-import { redactPaths } from '@/runtime/updates/telemetry';
-import type { Json } from '@/types';
+import { inject, singleton } from '@brika/di';
+import { ANALYTICS_HOST, type AnalyticsHost } from './host';
 import {
   type ForwardedEvent,
   type ForwardRequest,
   resolveProvider,
   shouldIdentify,
 } from './providers';
-import type { CaptureEvent } from './types';
+import type { CaptureEvent, Json } from './types';
 
 const TELEMETRY_OPT_IN_ENV = 'BRIKA_TELEMETRY_EVENTS';
 
@@ -65,14 +63,17 @@ export function getForwardingStatus(env: Env = process.env): {
   return { enabled: provider !== null, provider: provider?.name ?? null };
 }
 
-/** Shallow-redact string prop values; non-strings pass through untouched. */
-function redactProps(props?: Record<string, Json>): Record<string, Json> | undefined {
+/** Shallow-redact string prop values via the host's redactor (if any). */
+function redactProps(
+  props: Record<string, Json> | undefined,
+  redact: (value: string) => string
+): Record<string, Json> | undefined {
   if (!props) {
     return undefined;
   }
   const out: Record<string, Json> = {};
   for (const [key, value] of Object.entries(props)) {
-    out[key] = typeof value === 'string' ? redactPaths(value) : value;
+    out[key] = typeof value === 'string' ? redact(value) : value;
   }
   return out;
 }
@@ -81,14 +82,25 @@ function redactProps(props?: Record<string, Json>): Record<string, Json> | undef
 export class EventForwarder {
   readonly #queue: ForwardedEvent[] = [];
   #timer?: Timer;
+  // Resolved lazily on first forward so the host only needs to register
+  // ANALYTICS_HOST when forwarding is actually enabled (opt-in).
+  #host: AnalyticsHost | null = null;
+
+  #hostContext(): AnalyticsHost {
+    this.#host ??= inject<AnalyticsHost>(ANALYTICS_HOST);
+    return this.#host;
+  }
 
   enqueue(event: CaptureEvent): void {
     if (!isEventTelemetryEnabled()) {
       return;
     }
 
+    const host = this.#hostContext();
+    const redact = host.redact ?? ((value: string) => value);
+
     this.#queue.push({
-      instanceId: brikaContext.instanceId,
+      instanceId: host.instanceId,
       ts: event.ts,
       name: event.name,
       source: event.source,
@@ -96,7 +108,7 @@ export class EventForwarder {
       distinctId: event.distinctId,
       // Local-only by default; attached for forwarding only when identify is on.
       userId: shouldIdentify() ? event.userId : undefined,
-      props: redactProps(event.props),
+      props: redactProps(event.props, redact),
     });
 
     if (this.#queue.length >= MAX_BATCH) {
@@ -132,7 +144,7 @@ export class EventForwarder {
         method: 'POST',
         headers: {
           ...request.headers,
-          'User-Agent': `brika/${brikaContext.version}`,
+          'User-Agent': this.#hostContext().userAgent,
         },
         body: request.body,
         signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),

@@ -1,11 +1,13 @@
+import {
+  Analytics,
+  CAPTURE_SOURCES,
+  EventStore,
+  getForwardingStatus,
+  type Json,
+} from '@brika/analytics';
 import { requireSession } from '@brika/auth/server';
 import { group, route } from '@brika/router';
 import { z } from 'zod';
-import { Analytics } from '@/runtime/analytics/analytics';
-import { EventStore } from '@/runtime/analytics/event-store';
-import { getForwardingStatus } from '@/runtime/analytics/forwarder';
-import { CAPTURE_SOURCES } from '@/runtime/analytics/types';
-import type { Json } from '@/types';
 
 const CaptureSourceSchema = z.enum(['hub', 'plugin', 'ui', 'cli']);
 

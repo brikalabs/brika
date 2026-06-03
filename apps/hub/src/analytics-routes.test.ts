@@ -4,11 +4,10 @@
 
 import 'reflect-metadata';
 import { describe, expect, mock, test } from 'bun:test';
+import { Analytics, EventStore } from '@brika/analytics';
 import { stub, useTestBed } from '@brika/di/testing';
 import type { Middleware } from '@brika/router';
 import { TestApp } from '@brika/router/testing';
-import { Analytics } from '@/runtime/analytics/analytics';
-import { EventStore } from '@/runtime/analytics/event-store';
 import { analyticsRoutes } from '@/runtime/http/routes/analytics';
 
 // Stand-in for the auth middleware: the analytics group runs under

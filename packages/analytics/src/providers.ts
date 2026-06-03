@@ -13,7 +13,7 @@
  * is set, so installs stay anonymous by default.
  */
 
-import type { Json } from '@/types';
+import type { Json } from './types';
 
 export interface ForwardedEvent {
   instanceId: string;

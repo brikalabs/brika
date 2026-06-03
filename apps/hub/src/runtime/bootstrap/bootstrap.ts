@@ -1,14 +1,15 @@
+import { ANALYTICS_HOST, EventForwarder, EventStore } from '@brika/analytics';
 import { createBanner } from '@brika/banner';
 import { configureDatabases } from '@brika/db';
-import { inject } from '@brika/di';
+import { container, inject } from '@brika/di';
 import { hub } from '@/hub';
-import { EventStore } from '@/runtime/analytics/event-store';
-import { EventForwarder } from '@/runtime/analytics/forwarder';
 import { BrikaInitializer, ConfigLoader } from '@/runtime/config';
+import { brikaContext } from '@/runtime/context/brika-context';
 import { ApiServer } from '@/runtime/http/api-server';
 import { Logger } from '@/runtime/logs/log-router';
 import { LogStore } from '@/runtime/logs/log-store';
 import { setHubReady, setHubStopping } from '@/runtime/readiness';
+import { redactPaths } from '@/runtime/updates/telemetry';
 import type { BootstrapPlugin } from './plugin';
 
 const HOT_STARTED = Symbol.for('brika.hub.started');
@@ -69,6 +70,14 @@ export class Bootstrap {
     configureDatabases(`${this.configLoader.getRootDir()}/.brika`);
     this.logStore.init();
     this.logs.setStore(this.logStore);
+    // Provide the analytics package its host context (anonymous instance id,
+    // User-Agent, and the hub's path redactor) used only when remote
+    // forwarding is opted into.
+    container.registerInstance(ANALYTICS_HOST, {
+      instanceId: brikaContext.instanceId,
+      userAgent: `brika/${brikaContext.version}`,
+      redact: redactPaths,
+    });
     this.eventStore.init();
     for (const p of this.plugins) {
       p.setup?.(this);

@@ -9,8 +9,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { configureDatabases } from '@brika/db';
 import { get, reset, useTestBed } from '@brika/di/testing';
-import { type EventQueryParams, EventStore } from '@/runtime/analytics/event-store';
-import type { CaptureEvent } from '@/runtime/analytics/types';
+import { type EventQueryParams, EventStore } from './event-store';
+import type { CaptureEvent } from './types';
 
 useTestBed({ autoStub: false });
 
@@ -55,8 +55,8 @@ describe('EventStore', () => {
       store.insert(createEvent({ name: 'workflow.created', props: { count: 3, kind: 'auto' } }));
       const result = store.query();
       expect(result.events).toHaveLength(1);
-      expect(result.events[0].name).toBe('workflow.created');
-      expect(result.events[0].props).toEqual({ count: 3, kind: 'auto' });
+      expect(result.events[0]?.name).toBe('workflow.created');
+      expect(result.events[0]?.props).toEqual({ count: 3, kind: 'auto' });
     });
 
     test('filters by name and source', () => {
@@ -66,7 +66,7 @@ describe('EventStore', () => {
 
       expect(store.query({ name: 'a.used' }).events).toHaveLength(2);
       expect(store.query({ source: 'plugin' }).events).toHaveLength(1);
-      expect(store.query({ pluginName: '@x/y' }).events[0].name).toBe('b.used');
+      expect(store.query({ pluginName: '@x/y' }).events[0]?.name).toBe('b.used');
     });
 
     test('orders descending by default and supports cursor paging', () => {
@@ -75,11 +75,11 @@ describe('EventStore', () => {
       }
       const first = store.query({ limit: 2 });
       expect(first.events).toHaveLength(2);
-      expect(first.events[0].ts).toBe(5000);
+      expect(first.events[0]?.ts).toBe(5000);
       expect(first.nextCursor).not.toBeNull();
 
       const second = store.query({ limit: 2, cursor: first.nextCursor ?? undefined });
-      expect(second.events[0].id).toBeLessThan(first.events[1].id);
+      expect(second.events[0]?.id ?? 0).toBeLessThan(first.events[1]?.id ?? 0);
     });
   });
 
@@ -114,7 +114,7 @@ describe('EventStore', () => {
 
       const buckets = store.timeSeries(hour, { name: 'a' });
       expect(buckets).toHaveLength(1);
-      expect(buckets[0].count).toBe(1);
+      expect(buckets[0]?.count).toBe(1);
     });
   });
 

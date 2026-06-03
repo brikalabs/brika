@@ -3,9 +3,8 @@
  */
 import 'reflect-metadata';
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
+import { EventForwarder, EventStore } from '@brika/analytics';
 import { get, stub, useTestBed } from '@brika/di/testing';
-import { EventStore } from '@/runtime/analytics/event-store';
-import { EventForwarder } from '@/runtime/analytics/forwarder';
 import { Bootstrap, bootstrap } from '@/runtime/bootstrap/bootstrap';
 import type { BrikaConfig } from '@/runtime/config';
 import { BrikaInitializer, ConfigLoader } from '@/runtime/config';
