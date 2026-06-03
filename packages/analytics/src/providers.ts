@@ -102,9 +102,23 @@ function webhookProvider(url: string): ForwarderProvider {
   };
 }
 
+/**
+ * Strip trailing `/` characters without a regex. The original `host.replace(
+ * /\/+$/, '')` is provably linear (`+` on a single literal char) but Sonar's
+ * super-linear-runtime heuristic flagged it anyway; a plain loop avoids the
+ * noise and is just as cheap.
+ */
+function stripTrailingSlash(value: string): string {
+  let end = value.length;
+  while (end > 0 && value.charCodeAt(end - 1) === 47 /* '/' */) {
+    end--;
+  }
+  return end === value.length ? value : value.slice(0, end);
+}
+
 /** PostHog batch capture API (`POST {host}/batch/`). */
 function posthogProvider(apiKey: string, host: string): ForwarderProvider {
-  const url = `${host.replace(/\/+$/, '')}/batch/`;
+  const url = `${stripTrailingSlash(host)}/batch/`;
   return {
     name: 'posthog',
     buildRequest: (events) => ({
