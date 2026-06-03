@@ -110,7 +110,7 @@ function webhookProvider(url: string): ForwarderProvider {
  */
 function stripTrailingSlash(value: string): string {
   let end = value.length;
-  while (end > 0 && value.charCodeAt(end - 1) === 47 /* '/' */) {
+  while (end > 0 && value.codePointAt(end - 1) === 47 /* '/' */) {
     end--;
   }
   return end === value.length ? value : value.slice(0, end);
@@ -156,7 +156,7 @@ function posthogProvider(apiKey: string, host: string): ForwarderProvider {
 function mixpanelInsertId(event: ForwardedEvent): string {
   let hash = 5381;
   for (let i = 0; i < event.name.length; i++) {
-    hash = ((hash * 33) ^ event.name.charCodeAt(i)) >>> 0;
+    hash = ((hash * 33) ^ (event.name.codePointAt(i) ?? 0)) >>> 0;
   }
   return `${event.instanceId}-${event.ts.toString(36)}-${hash.toString(36)}`;
 }
@@ -199,7 +199,8 @@ function mixpanelProvider(token: string): ForwarderProvider {
 
 /** Segment batch API (`POST /v1/batch`, HTTP Basic auth with the write key). */
 function segmentProvider(writeKey: string): ForwarderProvider {
-  const authorization = `Basic ${btoa(`${writeKey}:`)}`;
+  const basicCredentials = `${writeKey}:`;
+  const authorization = `Basic ${btoa(basicCredentials)}`;
   return {
     name: 'segment',
     buildRequest: (events) => ({

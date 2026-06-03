@@ -113,7 +113,8 @@ export const analyticsApi = {
 
   query: (params: EventQueryParams) => {
     const qs = buildQueryString(params);
-    return fetcher<EventQueryResult>(`/api/analytics${qs ? `?${qs}` : ''}`);
+    const suffix = qs ? `?${qs}` : '';
+    return fetcher<EventQueryResult>(`/api/analytics${suffix}`);
   },
 
   getNames: () => fetcher<{ names: EventNameCount[] }>('/api/analytics/names'),
@@ -143,7 +144,8 @@ export const analyticsApi = {
       search.set('endTs', String(params.endTs));
     }
     const qs = search.toString();
-    return fetcher<TimeSeriesResult>(`/api/analytics/timeseries${qs ? `?${qs}` : ''}`);
+    const suffix = qs ? `?${qs}` : '';
+    return fetcher<TimeSeriesResult>(`/api/analytics/timeseries${suffix}`);
   },
 
   clear: (params?: Partial<EventQueryParams>) =>

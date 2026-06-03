@@ -24,14 +24,14 @@ export function TopFeatures() {
               <span className="truncate font-medium">{n.name}</span>
               <span className="shrink-0 text-muted-foreground">{n.count.toLocaleString()}</span>
             </div>
-            <div
-              className="h-1.5 w-full overflow-hidden rounded-full bg-muted"
-              role="meter"
+            <meter
+              className="sr-only"
+              min={0}
+              max={max}
+              value={n.count}
               aria-label={`${n.name}: ${n.count}`}
-              aria-valuenow={n.count}
-              aria-valuemin={0}
-              aria-valuemax={max}
-            >
+            />
+            <div aria-hidden="true" className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
               <div
                 className="h-full rounded-full bg-primary"
                 style={{ width: `${Math.max(2, (n.count / max) * 100)}%` }}

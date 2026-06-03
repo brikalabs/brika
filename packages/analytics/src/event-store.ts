@@ -69,6 +69,7 @@ export interface TimeBucket {
 // ─────────────────────────────────────────────────────────────────────────────
 
 const MAX_INSERT_ERRORS = 5;
+const DAY_MS = 86_400_000;
 
 /**
  * SQLite-backed store for captured feature-usage events. Deliberately a close
@@ -100,22 +101,19 @@ export class EventStore {
    */
   startRetention(retentionDays: number, intervalMs: number): void {
     this.stopRetention();
-    if (retentionDays <= 0 || intervalMs <= 0) {
-      return;
+    if (retentionDays > 0 && intervalMs > 0) {
+      const sweepNow = () => this.pruneOlderThan(Date.now() - retentionDays * DAY_MS);
+      sweepNow();
+      this.#pruneTimer = setInterval(sweepNow, intervalMs);
     }
-    const sweep = () => {
-      const cutoff = Date.now() - retentionDays * 24 * 60 * 60 * 1000;
-      this.pruneOlderThan(cutoff);
-    };
-    sweep();
-    this.#pruneTimer = setInterval(sweep, intervalMs);
   }
 
   stopRetention(): void {
-    if (this.#pruneTimer) {
-      clearInterval(this.#pruneTimer);
-      this.#pruneTimer = undefined;
+    if (!this.#pruneTimer) {
+      return;
     }
+    clearInterval(this.#pruneTimer);
+    this.#pruneTimer = undefined;
   }
 
   pruneOlderThan(cutoff: number): number {
@@ -233,7 +231,10 @@ export class EventStore {
           distinctId ? eq(eventsTable.distinctId, distinctId) : undefined,
           userId ? eq(eventsTable.userId, userId) : undefined,
           search
-            ? sql`${eventsTable.name} LIKE ${`%${escapeLike(search)}%`} ESCAPE '\\'`
+            ? (() => {
+                const pattern = `%${escapeLike(search)}%`;
+                return sql`${eventsTable.name} LIKE ${pattern} ESCAPE '\\'`;
+              })()
             : undefined,
           startTsFilter(eventsTable.ts, startTs),
           endTsFilter(eventsTable.ts, endTs),

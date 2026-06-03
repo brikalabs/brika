@@ -130,7 +130,7 @@ export class PluginEventHandler {
     // distinct id is still useful for cross-event correlation within the
     // plugin's own surface, but it cannot collide with a real device id.
     const scopedDistinctId =
-      distinctId !== undefined ? `plugin:${pluginName}:${distinctId}` : undefined;
+      distinctId === undefined ? undefined : `plugin:${pluginName}:${distinctId}`;
     this.#analytics.capture(name, props, {
       pluginName,
       distinctId: scopedDistinctId,
