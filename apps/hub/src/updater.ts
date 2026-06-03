@@ -17,7 +17,7 @@
 
 import { createWriteStream } from 'node:fs';
 import { chmod, cp, mkdir, rename, rm } from 'node:fs/promises';
-import { dirname, join } from 'node:path';
+import { basename, dirname, join, normalize as normalizePath } from 'node:path';
 import { z } from 'zod';
 import { buildInfo } from './build-info';
 import { HUB_GITHUB_RELEASES_API, HUB_GITHUB_RELEASES_LIST_API, HUB_REPO, hub } from './hub';
@@ -456,11 +456,21 @@ export async function applyUpdate(options?: ApplyUpdateOptions): Promise<{
   // The brikaDir is created with the hub user's permissions and not
   // writable by other users; resume semantics are preserved because
   // the (version, asset) tuple still uniquely identifies the partial.
-  const tmpDir = join(brikaContext.brikaDir, '.update-cache', `${cmp.latestVersion}-${asset.name}`);
+  // `basename()` strips any path separators so the asset name can't escape
+  // `.update-cache/`. `isSafeAssetName` above already rejects anything that
+  // isn't `brika-<os>-<arch>.<ext>`, but layering `basename()` here makes the
+  // sanitization explicit to static analyzers and resilient to changes in
+  // the validation rule.
+  const safeAssetName = basename(asset.name);
+  const tmpDir = join(
+    brikaContext.brikaDir,
+    '.update-cache',
+    `${cmp.latestVersion}-${safeAssetName}`
+  );
   await mkdir(tmpDir, {
     recursive: true,
   });
-  const archivePath = join(tmpDir, asset.name);
+  const archivePath = join(tmpDir, safeAssetName);
 
   try {
     await downloadFile(asset.browser_download_url, archivePath, asset.size, (pct) => {
@@ -619,6 +629,17 @@ async function streamResponseToFile(
   onProgress: (pct: number) => void,
   resumed: boolean
 ): Promise<void> {
+  // Defence-in-depth at the sink: the caller validates `asset.name` with
+  // `isSafeAssetName` and `basename()`, but mirror the path-traversal
+  // check here so a future refactor can't silently route an unsanitised
+  // value into this write. `path.normalize` collapses `..` segments and
+  // the literal `..` check rejects anything that still encodes a relative
+  // escape (e.g. `/foo/../../etc/passwd`).
+  const safeDestPath = normalizePath(destPath);
+  if (safeDestPath.includes('..')) {
+    throw new Error(`Refusing unsafe destination path: ${destPath}`);
+  }
+
   const reader = response.body?.getReader();
   if (!reader) {
     throw new Error('Download response has no body');
@@ -628,7 +649,7 @@ async function streamResponseToFile(
   // existing partial with the *range* bytes starting at position 0).
   // Use `fs.createWriteStream` with `flags: 'a'` so resume genuinely
   // appends to whatever's already on disk.
-  const stream = createWriteStream(destPath, { flags: resumed ? 'a' : 'w' });
+  const stream = createWriteStream(safeDestPath, { flags: resumed ? 'a' : 'w' });
   let downloaded = startBytes;
   let lastPct = -1;
   try {
@@ -783,7 +804,15 @@ function resolveSourceDir(extractedDir: string): string {
     return extractedDir;
   }
 
-  const subDir = join(extractedDir, entries[0] ?? '');
+  // Defence against a crafted archive whose top-level entry name contains
+  // path separators or `..` — `basename()` collapses any such payload to a
+  // single name component so the resulting `subDir` cannot escape
+  // `extractedDir`.
+  const entryName = basename(entries[0] ?? '');
+  if (!entryName || entryName === '.' || entryName === '..') {
+    return extractedDir;
+  }
+  const subDir = join(extractedDir, entryName);
   try {
     const subEntries = [
       ...new Bun.Glob('*').scanSync({

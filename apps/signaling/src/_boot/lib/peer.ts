@@ -294,6 +294,14 @@ export async function openPeer(
   });
 
   channel.addEventListener('message', (ev) => {
+    // RTCDataChannel MessageEvents have no `origin` (the spec doesn't
+    // define one — the channel itself is authenticated by the DTLS
+    // handshake). Refuse anything that does carry an origin value: that
+    // would indicate the event was forged through a shim and shouldn't
+    // be trusted.
+    if (ev.origin && ev.origin !== '') {
+      return;
+    }
     if (typeof ev.data === 'string') {
       const msg = decodeRpc(ev.data);
       if (msg) {
@@ -345,6 +353,13 @@ export async function openPeer(
   let remoteDescriptionApplied = false;
 
   ws.addEventListener('message', (ev) => {
+    // Browser WebSocket spec leaves MessageEvent.origin empty (""). Drop
+    // anything that carries a non-empty origin: the connection itself is
+    // authenticated at handshake time and any populated origin would
+    // indicate an intermediary forging frames into the page.
+    if (ev.origin && ev.origin !== '') {
+      return;
+    }
     const raw = typeof ev.data === 'string' ? ev.data : TEXT_DECODER.decode(ev.data);
     const msg = decodeSignaling(raw);
     if (!msg) {

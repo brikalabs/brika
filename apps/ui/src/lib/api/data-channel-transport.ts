@@ -364,6 +364,13 @@ export class DataChannelTransport implements Transport {
         this.#bootstrapPeer(iceServers, resolve, reject, () => clearTimeout(timer));
       });
       ws.addEventListener('message', (ev) => {
+        // Browser WebSocket MessageEvent.origin is empty by spec. Drop
+        // anything that carries a non-empty origin — the connection is
+        // already handshake-authenticated, and a populated origin
+        // implies an intermediary tampering with the message stream.
+        if (ev.origin && ev.origin !== '') {
+          return;
+        }
         if (typeof ev.data === 'string') {
           this.#onSignalingMessage(ev.data);
         }
@@ -435,6 +442,12 @@ export class DataChannelTransport implements Transport {
       resolve();
     });
     channel.addEventListener('message', (ev) => {
+      // RTCDataChannel MessageEvents carry no spec-defined origin.
+      // Refuse anything that does — it would indicate a shimmed/forged
+      // event, not a real DTLS-authenticated channel message.
+      if (ev.origin && ev.origin !== '') {
+        return;
+      }
       if (typeof ev.data === 'string') {
         this.#onRpcMessage(ev.data);
       } else if (ev.data instanceof ArrayBuffer) {

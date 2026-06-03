@@ -51,6 +51,13 @@ export const defaultWsFactory: WsFactory = {
     let errorHandler: (message: string) => void = noopError;
     ws.addEventListener('open', () => openHandler());
     ws.addEventListener('message', (ev) => {
+      // Bun WebSocket leaves `origin` empty by default. Drop frames that
+      // carry a populated origin — the connection handshake already
+      // authenticates this socket; a populated origin signals an
+      // intermediary tampering with the message stream.
+      if (ev.origin && ev.origin !== '') {
+        return;
+      }
       const data = typeof ev.data === 'string' ? ev.data : new Uint8Array(ev.data);
       messageHandler(data);
     });

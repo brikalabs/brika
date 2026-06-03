@@ -52,6 +52,13 @@ export function installSwProxyListener(transport: Transport): void {
     .__brikaBootProxyUninstall;
   bootUninstall?.();
   navigator.serviceWorker.addEventListener('message', (event) => {
+    // Drop cross-origin postMessage attempts before touching `event.data`.
+    // The SW is same-origin by browser policy, but an anomalous origin
+    // value means an intermediary or hostile context is forging events.
+    const expectedOrigin = self.location.origin;
+    if (event.origin !== expectedOrigin && event.origin !== '') {
+      return;
+    }
     const data = event.data as ProxyRequest | undefined;
     if (data?.type !== 'brika:sw-proxy') {
       return;

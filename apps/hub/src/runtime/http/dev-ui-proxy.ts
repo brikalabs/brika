@@ -192,6 +192,13 @@ export const proxyWebSocketHandlers: Bun.WebSocketHandler<ProxyWsData> = {
   open: (ws) => {
     const { outbound } = ws.data;
     outbound.addEventListener('message', (ev) => {
+      // Bun WebSocket leaves MessageEvent.origin empty for client-
+      // initiated sockets. Drop anything that arrives with a populated
+      // origin — that would indicate a proxy/intermediary injecting
+      // frames the dev UI never authorized.
+      if (ev.origin && ev.origin !== '') {
+        return;
+      }
       try {
         if (typeof ev.data === 'string') {
           ws.send(ev.data);

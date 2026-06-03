@@ -68,6 +68,15 @@ interface SwMessage {
 }
 
 sw.addEventListener('message', (event: ExtendableMessageEvent) => {
+  // Gate on origin BEFORE touching `event.data`. Same-origin policy
+  // already restricts who can register/control this SW, but dropping
+  // any anomalous origin here is defence-in-depth against a tampered
+  // bridge that forwards events from a non-matching context.
+  const expectedOrigin = sw.location.origin;
+  if (event.origin !== expectedOrigin && event.origin !== '') {
+    log('message dropped — origin mismatch', { origin: event.origin });
+    return;
+  }
   const data = event.data as SwMessage | undefined;
   log('message received', {
     type: data?.type,
@@ -76,10 +85,6 @@ sw.addEventListener('message', (event: ExtendableMessageEvent) => {
     sourceId: event.source && 'id' in event.source ? event.source.id : null,
     sourceType: event.source?.constructor.name ?? null,
   });
-  if (event.origin !== sw.location.origin) {
-    log('message dropped — origin mismatch');
-    return;
-  }
   if (data?.type === 'SKIP_WAITING') {
     void sw.skipWaiting();
     return;
@@ -343,6 +348,13 @@ async function proxyThroughClient(req: Request, client: Client): Promise<Respons
       }
     }, 30_000);
     channel.port1.onmessage = (event: MessageEvent<ProxyMessage>) => {
+      // MessageChannel ports are private and unaddressable from other
+      // contexts, so `event.origin` is always empty here — but mirror the
+      // origin guard convention so anyone tampering with the port from a
+      // shimmed context can't push a non-empty value through unchecked.
+      if (event.origin && event.origin !== sw.location.origin) {
+        return;
+      }
       const msg = event.data;
       if (msg.kind === 'head' && !headSeen) {
         headSeen = true;
