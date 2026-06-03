@@ -88,9 +88,12 @@ describe('mixpanel provider', () => {
     expect(body[0].properties).toMatchObject({
       token: 'mp_tok',
       distinct_id: 'device-9',
-      time: event.ts,
+      // Mixpanel's `/track` API documents `time` as seconds, not ms.
+      time: Math.floor(event.ts / 1000),
       $user_id: 'user-42',
     });
+    // $insert_id must match `[a-zA-Z0-9-]{1,36}` for Mixpanel dedup to apply.
+    expect(body[0].properties.$insert_id).toMatch(/^[a-zA-Z0-9-]{1,36}$/);
   });
 });
 

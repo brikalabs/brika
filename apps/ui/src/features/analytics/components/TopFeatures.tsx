@@ -4,30 +4,43 @@ import { useTopEventNames } from '../hooks';
 
 export function TopFeatures() {
   const { t } = useLocale();
-  const { data, isLoading } = useTopEventNames();
+  const { data, isLoading, isError } = useTopEventNames();
   const names = data?.names ?? [];
   const max = names.reduce((m, n) => Math.max(m, n.count), 0) || 1;
 
   let body: React.ReactNode;
   if (isLoading) {
     body = [0, 1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-6 w-full" />);
+  } else if (isError) {
+    body = <p className="text-muted-foreground text-sm">{t('analytics:loadError')}</p>;
   } else if (names.length === 0) {
     body = <p className="text-muted-foreground text-sm">{t('analytics:empty')}</p>;
   } else {
-    body = names.slice(0, 10).map((n) => (
-      <div key={n.name} className="space-y-1">
-        <div className="flex items-center justify-between gap-3 text-sm">
-          <span className="truncate font-medium">{n.name}</span>
-          <span className="shrink-0 text-muted-foreground">{n.count.toLocaleString()}</span>
-        </div>
-        <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
-          <div
-            className="h-full rounded-full bg-primary"
-            style={{ width: `${Math.max(2, (n.count / max) * 100)}%` }}
-          />
-        </div>
-      </div>
-    ));
+    body = (
+      <ul className="space-y-3">
+        {names.slice(0, 10).map((n) => (
+          <li key={n.name} className="space-y-1">
+            <div className="flex items-center justify-between gap-3 text-sm">
+              <span className="truncate font-medium">{n.name}</span>
+              <span className="shrink-0 text-muted-foreground">{n.count.toLocaleString()}</span>
+            </div>
+            <div
+              className="h-1.5 w-full overflow-hidden rounded-full bg-muted"
+              role="meter"
+              aria-label={`${n.name}: ${n.count}`}
+              aria-valuenow={n.count}
+              aria-valuemin={0}
+              aria-valuemax={max}
+            >
+              <div
+                className="h-full rounded-full bg-primary"
+                style={{ width: `${Math.max(2, (n.count / max) * 100)}%` }}
+              />
+            </div>
+          </li>
+        ))}
+      </ul>
+    );
   }
 
   return (

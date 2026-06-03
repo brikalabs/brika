@@ -608,4 +608,36 @@ describe('LogStore', () => {
       expect(() => uninitStore.close()).not.toThrow();
     });
   });
+
+  describe('enqueue + batched flush', () => {
+    test('enqueue defers the write; rows appear after an explicit flush', () => {
+      // The hot path Logger.emit() takes — defers SQLite writes to the next
+      // tick so a burst of log lines collapses into one transaction.
+      store.enqueue(createLogEvent({ message: 'batched-1' }));
+      store.enqueue(createLogEvent({ message: 'batched-2' }));
+      // Force flush instead of waiting on setTimeout(0).
+      store.flush();
+      expect(store.count()).toBe(2);
+    });
+
+    test('flush is idempotent when the queue is empty', () => {
+      expect(() => store.flush()).not.toThrow();
+      expect(store.count()).toBe(0);
+    });
+
+    test('close() drains pending events before releasing the SQLite handle', () => {
+      // This is the contract the crash-handler relies on: the in-flight error
+      // log is enqueue()d and must reach disk before process.exit().
+      store.enqueue(createLogEvent({ message: 'drained-on-close' }));
+      store.close();
+      // Re-open the same DB on a fresh store and verify the event landed.
+      const reopened = new LogStore();
+      reopened.init();
+      try {
+        expect(reopened.query().logs.map((l) => l.message)).toContain('drained-on-close');
+      } finally {
+        reopened.close();
+      }
+    });
+  });
 });

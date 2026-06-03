@@ -8,7 +8,6 @@ import {
   endTsFilter,
   eq,
   isNotNull,
-  like,
   lt,
   oneOrMany,
   sql,
@@ -18,6 +17,14 @@ import { singleton } from '@brika/di';
 import { eventsDb } from './database';
 import { events as eventsTable } from './schema';
 import type { CaptureEvent, CaptureSource, Json } from './types';
+
+/**
+ * Escape SQLite LIKE wildcards (`%`, `_`) and the escape char itself so user
+ * input is matched literally. Pair with `ESCAPE '\\'` in the query.
+ */
+function escapeLike(value: string): string {
+  return value.replace(/[\\%_]/g, (m) => `\\${m}`);
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -221,7 +228,9 @@ export class EventStore {
           pluginName ? eq(eventsTable.pluginName, pluginName) : undefined,
           distinctId ? eq(eventsTable.distinctId, distinctId) : undefined,
           userId ? eq(eventsTable.userId, userId) : undefined,
-          search ? like(eventsTable.name, `%${search}%`) : undefined,
+          search
+            ? sql`${eventsTable.name} LIKE ${`%${escapeLike(search)}%`} ESCAPE '\\'`
+            : undefined,
           startTsFilter(eventsTable.ts, startTs),
           endTsFilter(eventsTable.ts, endTs),
           cursorFilter(eventsTable.id, cursor, order)

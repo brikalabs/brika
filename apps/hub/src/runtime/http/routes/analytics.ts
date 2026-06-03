@@ -5,9 +5,19 @@ import {
   getForwardingStatus,
   type Json,
 } from '@brika/analytics';
+import { Scope } from '@brika/auth';
 import { requireSession } from '@brika/auth/server';
 import { group, route } from '@brika/router';
 import { z } from 'zod';
+
+/**
+ * Hard cap on the JSON-stringified `props` payload (KiB-class). Without this,
+ * an authenticated client could fill the SQLite events table and the in-memory
+ * ring buffer with arbitrarily large objects.
+ */
+const MAX_CAPTURE_PROPS_BYTES = 16_384;
+/** Max length for the LIKE search input — bounds query-time scan work. */
+const MAX_SEARCH_LEN = 200;
 
 const CaptureSourceSchema = z.enum(['hub', 'plugin', 'ui', 'cli']);
 
@@ -23,7 +33,7 @@ const EventQuerySchema = z.object({
   pluginName: z.string().optional(),
   distinctId: z.string().optional(),
   userId: z.string().optional(),
-  search: z.string().optional(),
+  search: z.string().max(MAX_SEARCH_LEN).optional(),
   startTs: z.coerce.number().optional(),
   endTs: z.coerce.number().optional(),
   cursor: z.coerce.number().optional(),
@@ -54,8 +64,19 @@ const TimeSeriesQuerySchema = z.object({
 const CaptureBodySchema = z.object({
   name: z.string().min(1).max(200),
   // Arbitrary JSON context; validated as an object, trusted as Json at the
-  // boundary like other ingestion routes (see action-routes/sparks).
-  props: z.record(z.string(), z.unknown()).optional(),
+  // boundary like other ingestion routes (see action-routes/sparks). Size is
+  // capped below via a `.superRefine` so a single capture can't bloat the DB.
+  props: z
+    .record(z.string(), z.unknown())
+    .optional()
+    .superRefine((value, ctx) => {
+      if (value && JSON.stringify(value).length > MAX_CAPTURE_PROPS_BYTES) {
+        ctx.addIssue({
+          code: 'custom',
+          message: `props exceeds ${MAX_CAPTURE_PROPS_BYTES} bytes when serialized`,
+        });
+      }
+    }),
   distinctId: z.string().max(200).optional(),
 });
 
@@ -136,12 +157,15 @@ export const analyticsRoutes = group({
       },
     }),
 
-    // DELETE /api/analytics - Clear events with optional filters
+    // DELETE /api/analytics - Clear events with optional filters. Admin-only:
+    // wiping captured usage data is a destructive operation that should not be
+    // available to every authenticated session.
     route.delete({
       path: '/',
       body: EventClearSchema.optional(),
-      handler: ({ body, inject }) => {
-        const deleted = inject(EventStore).clear(body ?? {});
+      handler: (ctx) => {
+        requireSession(ctx, Scope.ADMIN_ALL);
+        const deleted = ctx.inject(EventStore).clear(ctx.body ?? {});
         return { ok: true, deleted };
       },
     }),

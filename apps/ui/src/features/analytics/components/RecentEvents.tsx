@@ -12,12 +12,14 @@ const SOURCE_VARIANT: Record<CaptureSource, 'default' | 'secondary' | 'outline'>
 
 export function RecentEvents() {
   const { t } = useLocale();
-  const { data, isLoading } = useCaptureEvents({ limit: 30, order: 'desc' });
+  const { data, isLoading, isError } = useCaptureEvents({ limit: 30, order: 'desc' });
   const events = data?.events ?? [];
 
   let body: React.ReactNode;
   if (isLoading) {
     body = [0, 1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-8 w-full" />);
+  } else if (isError) {
+    body = <p className="text-muted-foreground text-sm">{t('analytics:loadError')}</p>;
   } else if (events.length === 0) {
     body = <p className="text-muted-foreground text-sm">{t('analytics:empty')}</p>;
   } else {

@@ -24,9 +24,20 @@ const LEVEL_ORDER: Record<LogLevel, number> = {
   error: 40,
 };
 
-/** Resolve a level name from an env var, falling back when unset/invalid. */
+/**
+ * Resolve a level name from an env var, falling back when unset/invalid.
+ * Uses an explicit allowlist instead of `value in LEVEL_ORDER` — the `in`
+ * operator walks the prototype chain, so `BRIKA_LOG_LEVEL=toString` would
+ * otherwise satisfy the check and silence the whole pipeline.
+ */
+const LEVEL_NAMES: ReadonlySet<LogLevel> = new Set(['debug', 'info', 'warn', 'error']);
+
+function isLogLevel(value: string): value is LogLevel {
+  return LEVEL_NAMES.has(value as LogLevel);
+}
+
 function parseLevel(value: string | undefined, fallback: LogLevel): LogLevel {
-  return value && value in LEVEL_ORDER ? (value as LogLevel) : fallback;
+  return value && isLogLevel(value) ? value : fallback;
 }
 
 /**
@@ -43,7 +54,7 @@ function parseCallSiteLevel(value: string | undefined): number {
     return Number.POSITIVE_INFINITY;
   }
   if (normalized === 'all') { return 0; }
-  return normalized in LEVEL_ORDER ? LEVEL_ORDER[normalized as LogLevel] : LEVEL_ORDER.warn;
+  return isLogLevel(normalized) ? LEVEL_ORDER[normalized] : LEVEL_ORDER.warn;
 }
 
 function extractLogError(error: unknown): LogError {

@@ -2,6 +2,7 @@
   "title": "Analytique",
   "subtitle": "Utilisation des fonctionnalités de votre hub",
   "empty": "Aucun événement capturé pour le moment",
+  "loadError": "Impossible de charger les analyses — essayez de rafraîchir.",
   "anonymousNote": "Anonyme par défaut — un identifiant d'appareil durable est utilisé, et l'utilisateur connecté n'est enregistré que localement.",
   "stats": {
     "total": "Événements au total",

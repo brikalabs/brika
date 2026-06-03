@@ -259,6 +259,30 @@ describe('Logger', () => {
       expect(scoped).toBeInstanceOf(ScopedLogger);
     });
   });
+
+  describe('call-site capture gate', () => {
+    test('info logs do NOT carry sourceFile by default (warn-and-above only)', () => {
+      // BRIKA_LOG_CALLSITE defaults to `warn`. info is the high-volume path
+      // we deliberately spare from the stack-trace parse — this test pins
+      // that perf-critical default.
+      const events: LogEvent[] = [];
+      logger.subscribe((e) => events.push(e));
+
+      logger.info('skip-callsite');
+
+      expect(events[0]?.meta?.sourceFile).toBeUndefined();
+    });
+
+    test('warn logs DO carry sourceFile under the default gate', () => {
+      const events: LogEvent[] = [];
+      logger.subscribe((e) => events.push(e));
+
+      logger.warn('with-callsite');
+
+      expect(typeof events[0]?.meta?.sourceFile).toBe('string');
+      expect(typeof events[0]?.meta?.sourceLine).toBe('number');
+    });
+  });
 });
 
 describe('ScopedLogger', () => {

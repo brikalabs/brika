@@ -97,7 +97,30 @@ function posthogProvider(apiKey: string, host: string): ForwarderProvider {
   };
 }
 
-/** Mixpanel `/track` API (accepts a JSON array; `ip=0` disables geo-IP). */
+/**
+ * Build a Mixpanel-safe `$insert_id` for dedup. The platform constraint is
+ * `[a-zA-Z0-9-]{1,36}`; event names contain dots and the obvious
+ * `${instanceId}-${ts}-${name}` would both violate the charset and overflow
+ * the length. We hash the event name (djb2, base36) and concatenate the
+ * fixed-width instanceId + ts: ~26 alphanumeric chars total, always within
+ * the limit.
+ */
+function mixpanelInsertId(event: ForwardedEvent): string {
+  let hash = 5381;
+  for (let i = 0; i < event.name.length; i++) {
+    hash = ((hash * 33) ^ event.name.charCodeAt(i)) >>> 0;
+  }
+  return `${event.instanceId}-${event.ts.toString(36)}-${hash.toString(36)}`;
+}
+
+/**
+ * Mixpanel `/track` API (accepts a JSON array; `ip=0` disables geo-IP).
+ *
+ * Wire format notes (verified against Mixpanel's HTTP ingestion docs):
+ *   - `time` is **seconds**, not milliseconds — sending `Date.now()` makes
+ *     Mixpanel place events in the year ~55000 and silently drop them.
+ *   - `$insert_id` must match `[a-zA-Z0-9-]{1,36}` for dedup to apply.
+ */
 function mixpanelProvider(token: string): ForwarderProvider {
   return {
     name: 'mixpanel',
@@ -109,8 +132,8 @@ function mixpanelProvider(token: string): ForwarderProvider {
           event: e.name,
           properties: {
             token,
-            time: e.ts,
-            $insert_id: `${e.instanceId}-${e.ts}-${e.name}`,
+            time: Math.floor(e.ts / 1000),
+            $insert_id: mixpanelInsertId(e),
             distinct_id: distinctOf(e),
             ...baseProps(e),
             ...(e.userId ? { $user_id: e.userId } : {}),
