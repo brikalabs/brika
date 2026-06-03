@@ -1,6 +1,7 @@
 import { inject, singleton } from '@brika/di';
 import type { Json } from '@brika/ipc';
 import type { BlockDefinition } from '@brika/sdk';
+import { Analytics } from '@/runtime/analytics/analytics';
 import { BlockRegistry } from '@/runtime/blocks';
 import { BoardLoader } from '@/runtime/boards/board-loader';
 import { BrickDataStore, BrickTypeRegistry } from '@/runtime/bricks';
@@ -20,6 +21,7 @@ import { now } from './utils';
 @singleton()
 export class PluginEventHandler {
   readonly #logs = inject(Logger).withSource('plugin');
+  readonly #analytics = inject(Analytics).withSource('plugin');
   readonly #events = inject(EventSystem);
   readonly #state = inject(StateStore);
   readonly #blocks = inject(BlockRegistry);
@@ -112,6 +114,15 @@ export class PluginEventHandler {
       message,
       meta,
     });
+  }
+
+  onPluginCapture(
+    pluginName: string,
+    name: string,
+    props?: Record<string, Json>,
+    distinctId?: string
+  ): void {
+    this.#analytics.capture(name, props, { pluginName, distinctId, ts: now() });
   }
 
   registerBlock(

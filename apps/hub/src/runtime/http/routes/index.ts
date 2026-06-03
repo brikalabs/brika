@@ -2,6 +2,7 @@ import { Scope } from '@brika/auth';
 import { requireAuth, requireScope } from '@brika/auth/server';
 import { combineRoutes, group } from '@brika/router';
 import { actionRoutes } from './action-routes';
+import { analyticsRoutes } from './analytics';
 import { blocksRoutes } from './blocks';
 import { boardsRoutes } from './boards';
 import { bricksRoutes } from './bricks';
@@ -77,6 +78,7 @@ export const allRoutes = combineRoutes(
       sparksRoutes,
       workflowsRoutes,
       logsRoutes,
+      analyticsRoutes,
       streamsRoutes,
       registryRoutes,
       settingsRoutes,
