@@ -67,6 +67,8 @@ export interface PreludeBridge {
   // -- System --
   start(): void | Promise<void>;
   log(level: LogLevel, message: string, meta?: Record<string, Json>): void;
+  /** Capture a feature-usage / product-analytics event. */
+  capture(name: string, props?: Record<string, Json>, distinctId?: string): void;
 
   // -- Manifest --
   getManifest(): PluginManifest;

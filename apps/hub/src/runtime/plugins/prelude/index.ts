@@ -34,6 +34,7 @@ import {
 type StopHandler = () => void | Promise<void>;
 
 import {
+  capture as captureMsg,
   getGrantVector,
   hello,
   type LogLevelType,
@@ -112,6 +113,10 @@ safeOn('disconnect', () => {
 
 function log(level: LogLevelType, message: string, meta?: Record<string, Json>): void {
   channel.send(logMsg, { level, message, meta });
+}
+
+function capture(name: string, props?: Record<string, Json>, distinctId?: string): void {
+  channel.send(captureMsg, { name, props, distinctId });
 }
 
 // ---- Domain modules ----
@@ -198,6 +203,7 @@ const bridge = {
     }
     channel.send(ready, {});
   },
+  capture,
   onStop(handler: StopHandler) {
     stopHandlers.push(handler);
     return () => {

@@ -91,7 +91,28 @@ unsubscribe();
 
 ### Environment Variables
 
-- `BRIKA_LOG_LEVEL` - Minimum level to log (debug, info, warn, error). Default: `info`
+- `BRIKA_LOG_LEVEL` - Minimum level for the **whole pipeline** (debug, info,
+  warn, error). Default: `info`. A log below this floor short-circuits in
+  `Logger.#log` **before** any work — no call-site capture, no meta merge, no
+  ring/store write, no transport or subscriber fan-out. This is what makes
+  disabled `debug` logging effectively free. (Plugin logs arrive pre-formed
+  via `emit()` and are not gated by this floor.)
+- `BRIKA_LOG_CALLSITE` - Minimum level at which the (relatively expensive)
+  stack-trace call-site capture runs. Accepts a level name (`debug`/`info`/
+  `warn`/`error`), `all`, or `off`/`none`. Default: `warn` — `file:line`
+  matters most for problems, and skipping it on the high-volume info path is
+  the single biggest per-log saving.
+
+### Performance notes
+
+- **Early level gate** — see `BRIKA_LOG_LEVEL` above.
+- **Lazy call-site capture** — see `BRIKA_LOG_CALLSITE` above.
+- **Batched persistence** — `Logger.emit()` funnels events through
+  `LogStore.enqueue()`, which buffers and writes on the next tick in a single
+  transaction instead of one synchronous SQLite insert per line. The buffer
+  is drained on `close()` (including the crash-handler path), so no tail is
+  lost. `LogStore.insert()` remains a synchronous read-after-write path for
+  direct callers and tests.
 
 ### Color Detection
 

@@ -33,16 +33,16 @@ describe('Logger', () => {
   });
 
   describe('setStore', () => {
-    test('inserts events into store', () => {
-      const insertedEvents: LogEvent[] = [];
+    test('enqueues events into store', () => {
+      const enqueuedEvents: LogEvent[] = [];
       const mockStore = {
-        insert: (e: LogEvent) => insertedEvents.push(e),
+        enqueue: (e: LogEvent) => enqueuedEvents.push(e),
       };
 
       logger.setStore(mockStore as never);
       logger.info('test');
 
-      expect(insertedEvents).toHaveLength(1);
+      expect(enqueuedEvents).toHaveLength(1);
     });
   });
 
@@ -116,13 +116,24 @@ describe('Logger', () => {
   });
 
   describe('log levels', () => {
-    test('logs debug messages', () => {
+    test('logs debug messages when the floor allows it', () => {
       const events: LogEvent[] = [];
       logger.subscribe((e) => events.push(e));
 
+      logger.setLevel('debug');
       logger.debug('debug message');
 
       expect(events[0]?.level).toBe('debug');
+    });
+
+    test('drops logs below the configured floor', () => {
+      const events: LogEvent[] = [];
+      logger.subscribe((e) => events.push(e));
+
+      // Default floor is `info`, so a debug log is short-circuited entirely.
+      logger.debug('debug message');
+
+      expect(events).toHaveLength(0);
     });
 
     test('logs info messages', () => {
@@ -248,6 +259,30 @@ describe('Logger', () => {
       expect(scoped).toBeInstanceOf(ScopedLogger);
     });
   });
+
+  describe('call-site capture gate', () => {
+    test('info logs do NOT carry sourceFile by default (warn-and-above only)', () => {
+      // BRIKA_LOG_CALLSITE defaults to `warn`. info is the high-volume path
+      // we deliberately spare from the stack-trace parse — this test pins
+      // that perf-critical default.
+      const events: LogEvent[] = [];
+      logger.subscribe((e) => events.push(e));
+
+      logger.info('skip-callsite');
+
+      expect(events[0]?.meta?.sourceFile).toBeUndefined();
+    });
+
+    test('warn logs DO carry sourceFile under the default gate', () => {
+      const events: LogEvent[] = [];
+      logger.subscribe((e) => events.push(e));
+
+      logger.warn('with-callsite');
+
+      expect(typeof events[0]?.meta?.sourceFile).toBe('string');
+      expect(typeof events[0]?.meta?.sourceLine).toBe('number');
+    });
+  });
 });
 
 describe('ScopedLogger', () => {
@@ -285,6 +320,7 @@ describe('ScopedLogger', () => {
       const events: LogEvent[] = [];
       logger.subscribe((e) => events.push(e));
 
+      logger.setLevel('debug');
       scoped.debug('debug');
 
       expect(events[0]?.level).toBe('debug');

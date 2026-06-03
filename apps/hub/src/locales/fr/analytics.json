@@ -1,0 +1,29 @@
+{
+  "title": "Analytique",
+  "subtitle": "Utilisation des fonctionnalités de votre hub",
+  "empty": "Aucun événement capturé pour le moment",
+  "loadError": "Impossible de charger les analyses — essayez de rafraîchir.",
+  "anonymousNote": "Anonyme par défaut — un identifiant d'appareil durable est utilisé, et l'utilisateur connecté n'est enregistré que localement.",
+  "stats": {
+    "total": "Événements au total",
+    "recent": "Récents (en mémoire)",
+    "sources": "Sources",
+    "forwarding": "Transfert distant",
+    "forwardingOn": "Activé",
+    "forwardingOff": "Désactivé"
+  },
+  "activity": {
+    "title": "Activité",
+    "subtitle": "Événements des 7 derniers jours",
+    "axisCount": "Événements"
+  },
+  "topFeatures": {
+    "title": "Fonctionnalités les plus utilisées",
+    "subtitle": "Événements les plus fréquents",
+    "count": "{{count}} événements"
+  },
+  "recent": {
+    "title": "Événements récents",
+    "subtitle": "Flux de capture en direct"
+  }
+}

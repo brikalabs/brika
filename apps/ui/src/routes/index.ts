@@ -3,6 +3,7 @@ import { createRootRoute } from '@tanstack/react-router';
 import { ForbiddenPage } from '@/components/errors';
 import { RootLayout } from '@/layout/RootLayout';
 import { adminRoutes } from './admin';
+import { analyticsRoutes } from './analytics';
 import { authRoutes } from './auth';
 import { blockRoutes } from './blocks';
 import { boardRoutes } from './boards';
@@ -31,6 +32,7 @@ export const { routes, routeTree } = createProtectedRoutes(
     sparks: sparkRoutes,
     help: helpRoutes,
     logs: logRoutes,
+    analytics: analyticsRoutes,
     store: storeRoutes,
     settings: settingRoutes,
     admin: adminRoutes,

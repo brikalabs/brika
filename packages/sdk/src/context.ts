@@ -69,6 +69,10 @@ export class Context {
     this.#bridge.log(level, message, meta);
   }
 
+  capture(name: string, props?: AnyObj, distinctId?: string): void {
+    this.#bridge.capture(name, props, distinctId);
+  }
+
   getPluginName(): string {
     return this.#manifest.name;
   }

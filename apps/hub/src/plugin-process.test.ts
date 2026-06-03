@@ -121,6 +121,7 @@ describe('PluginProcess', () => {
     callbacks = {
       onReady: mock(),
       onLog: mock(),
+      onCapture: mock(),
       onBlock: mock(),
       onBlockEmit: mock(),
       onBlockLog: mock(),

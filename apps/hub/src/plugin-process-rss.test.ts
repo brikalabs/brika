@@ -101,6 +101,7 @@ describe('PluginProcess RSS soft-limit heartbeat branch', () => {
     callbacks = {
       onReady: mock(),
       onLog: mock(),
+      onCapture: mock(),
       onBlock: mock(),
       onBlockEmit: mock(),
       onBlockLog: mock(),

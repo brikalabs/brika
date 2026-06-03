@@ -3,6 +3,7 @@
  */
 import 'reflect-metadata';
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
+import { EventForwarder, EventStore } from '@brika/analytics';
 import { get, stub, useTestBed } from '@brika/di/testing';
 import { Bootstrap, bootstrap } from '@/runtime/bootstrap/bootstrap';
 import type { BrikaConfig } from '@/runtime/config';
@@ -32,6 +33,7 @@ const mockConfig: BrikaConfig = {
       rssSoftLimitBytes: 0,
     },
     logs: { retentionDays: 7, pruneIntervalMs: 3600000 },
+    analytics: { retentionDays: 90, pruneIntervalMs: 3600000 },
     shutdown: { gracePeriodMs: 10000 },
   },
   plugins: [],
@@ -56,6 +58,8 @@ describe('Bootstrap', () => {
     clearHotReload();
     stub(Logger);
     stub(LogStore);
+    stub(EventStore);
+    stub(EventForwarder);
     stub(ApiServer);
     stub(BrikaInitializer);
     stub(ConfigLoader, {

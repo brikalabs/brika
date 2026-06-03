@@ -1,0 +1,29 @@
+{
+  "title": "Analytics",
+  "subtitle": "Feature usage across your hub",
+  "empty": "No events captured yet",
+  "loadError": "Couldn't load analytics — try refreshing.",
+  "anonymousNote": "Anonymous by default — a durable device id is used, and the signed-in user is recorded locally only.",
+  "stats": {
+    "total": "Total events",
+    "recent": "Recent (in memory)",
+    "sources": "Sources",
+    "forwarding": "Remote forwarding",
+    "forwardingOn": "On",
+    "forwardingOff": "Off"
+  },
+  "activity": {
+    "title": "Activity",
+    "subtitle": "Events over the last 7 days",
+    "axisCount": "Events"
+  },
+  "topFeatures": {
+    "title": "Top features",
+    "subtitle": "Most-used events",
+    "count": "{{count}} events"
+  },
+  "recent": {
+    "title": "Recent events",
+    "subtitle": "Live capture stream"
+  }
+}

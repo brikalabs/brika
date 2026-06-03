@@ -4,6 +4,7 @@
 
 import 'reflect-metadata';
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
+import { Analytics } from '@brika/analytics';
 import { get, provide, stub, useTestBed } from '@brika/di/testing';
 import { BlockRegistry } from '@/runtime/blocks';
 import { BrickTypeRegistry } from '@/runtime/bricks';
@@ -47,6 +48,9 @@ describe('PluginEventHandler', () => {
   let mockPluginRouteRegistry: {
     register: ReturnType<typeof mock>;
   };
+  // The PluginEventHandler does `inject(Analytics).withSource('plugin').capture(...)`.
+  // Mock both legs so we can assert what the scoped service actually saw.
+  let scopedCapture: ReturnType<typeof mock>;
 
   beforeEach(() => {
     mockBlockRegistry = {
@@ -80,6 +84,10 @@ describe('PluginEventHandler', () => {
     };
 
     stub(Logger);
+    scopedCapture = mock();
+    stub(Analytics, {
+      withSource: mock().mockReturnValue({ capture: scopedCapture }),
+    });
     provide(BlockRegistry, mockBlockRegistry);
     provide(SparkRegistry, mockSparkRegistry);
     provide(StateStore, mockStateStore);
@@ -193,6 +201,37 @@ describe('PluginEventHandler', () => {
     test('handles log without meta', () => {
       // Should not throw
       expect(() => handler.onPluginLog('@test/plugin', 'warn', 'Warning message')).not.toThrow();
+    });
+  });
+
+  describe('onPluginCapture', () => {
+    test('forwards plugin-originated events to the scoped Analytics', () => {
+      // The plugin → hub IPC `capture` message lands here. Pin the contract
+      // so a regression doesn't silently strand the entire plugin analytics
+      // surface (plugins can call `capture(...)` but events would never
+      // reach the hub).
+      handler.onPluginCapture('@test/plugin', 'timer.started', { durationMs: 5000 }, 'sess-9');
+
+      expect(scopedCapture).toHaveBeenCalledTimes(1);
+      const [name, props, options] = scopedCapture.mock.calls[0] ?? [];
+      expect(name).toBe('timer.started');
+      expect(props).toEqual({ durationMs: 5000 });
+      expect(options).toMatchObject({
+        pluginName: '@test/plugin',
+        // Plugin-supplied distinct ids are namespaced so they can't spoof a
+        // UI session's anonymous device id.
+        distinctId: 'plugin:@test/plugin:sess-9',
+      });
+      // ts should be stamped server-side; just confirm it's a number.
+      expect(typeof options.ts).toBe('number');
+    });
+
+    test('handles capture with no props and no distinctId', () => {
+      expect(() => handler.onPluginCapture('@test/plugin', 'feature.used')).not.toThrow();
+      expect(scopedCapture).toHaveBeenCalled();
+      const [, props, options] = scopedCapture.mock.calls[0] ?? [];
+      expect(props).toBeUndefined();
+      expect(options.distinctId).toBeUndefined();
     });
   });
 

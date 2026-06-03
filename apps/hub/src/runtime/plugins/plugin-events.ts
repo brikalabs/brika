@@ -1,3 +1,4 @@
+import { Analytics } from '@brika/analytics';
 import { inject, singleton } from '@brika/di';
 import type { Json } from '@brika/ipc';
 import type { BlockDefinition } from '@brika/sdk';
@@ -20,6 +21,7 @@ import { now } from './utils';
 @singleton()
 export class PluginEventHandler {
   readonly #logs = inject(Logger).withSource('plugin');
+  readonly #analytics = inject(Analytics).withSource('plugin');
   readonly #events = inject(EventSystem);
   readonly #state = inject(StateStore);
   readonly #blocks = inject(BlockRegistry);
@@ -111,6 +113,28 @@ export class PluginEventHandler {
       pluginName: name,
       message,
       meta,
+    });
+  }
+
+  onPluginCapture(
+    pluginName: string,
+    name: string,
+    props?: Record<string, Json>,
+    distinctId?: string
+  ): void {
+    // @brika/analytics' Json is shape-compatible with @brika/ipc's, so the
+    // props record flows through without a cast.
+    //
+    // Namespace plugin-origin distinct ids under `plugin:<name>:` so a plugin
+    // cannot spoof a UI/hub session's anonymous device id. The forwarded
+    // distinct id is still useful for cross-event correlation within the
+    // plugin's own surface, but it cannot collide with a real device id.
+    const scopedDistinctId =
+      distinctId === undefined ? undefined : `plugin:${pluginName}:${distinctId}`;
+    this.#analytics.capture(name, props, {
+      pluginName,
+      distinctId: scopedDistinctId,
+      ts: now(),
     });
   }
 
