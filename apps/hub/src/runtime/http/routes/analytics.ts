@@ -3,7 +3,7 @@ import { group, route } from '@brika/router';
 import { z } from 'zod';
 import { Analytics } from '@/runtime/analytics/analytics';
 import { EventStore } from '@/runtime/analytics/event-store';
-import { isEventTelemetryEnabled } from '@/runtime/analytics/forwarder';
+import { getForwardingStatus } from '@/runtime/analytics/forwarder';
 import { CAPTURE_SOURCES } from '@/runtime/analytics/types';
 import type { Json } from '@/types';
 
@@ -122,12 +122,14 @@ export const analyticsRoutes = group({
       path: '/stats',
       handler: ({ inject }) => {
         const store = inject(EventStore);
+        const forwarding = getForwardingStatus();
         return {
           total: store.count(),
           ringBufferSize: inject(Analytics).recent().length,
           sources: CAPTURE_SOURCES,
           plugins: store.getPluginNames(),
-          remoteForwarding: isEventTelemetryEnabled(),
+          remoteForwarding: forwarding.enabled,
+          remoteForwardingProvider: forwarding.provider,
         };
       },
     }),

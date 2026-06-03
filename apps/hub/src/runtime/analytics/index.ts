@@ -6,5 +6,12 @@ export {
   EventStore,
   type StoredCaptureEvent,
 } from './event-store';
-export { EventForwarder, isEventTelemetryEnabled } from './forwarder';
+export { EventForwarder, getForwardingStatus, isEventTelemetryEnabled } from './forwarder';
+export {
+  type ForwardedEvent,
+  type ForwarderProvider,
+  type ForwardRequest,
+  resolveProvider,
+  shouldIdentify,
+} from './providers';
 export { CAPTURE_SOURCES, type CaptureEvent, type CaptureSource } from './types';

@@ -66,16 +66,30 @@ Posts to `POST /api/analytics/capture` with an anonymous per-tab session id.
 
 ## Configuration
 
-### Remote forwarding (opt-in, off by default)
+### Remote forwarding to an external platform (opt-in, off by default)
 
-Two keys must both be set, mirroring update telemetry — so a fork never phones
-home by accident and the endpoint is greppable in the binary:
+Forwarding requires **both** an opt-in flag and a configured destination, so a
+fork never phones home by accident and the destination is greppable:
 
 - `BRIKA_TELEMETRY_EVENTS=1` — operator opts in.
-- `BRIKA_TELEMETRY_URL=https://…` — endpoint baked into the build.
+- `BRIKA_ANALYTICS_PROVIDER` — destination, one of:
 
-Forwarded payloads carry the anonymous `instanceId`, event name, source,
-plugin name, and path-redacted props. Batched (size/time) and fire-and-forget.
+  | Provider   | Required env                                              | Endpoint                          |
+  | ---------- | --------------------------------------------------------- | --------------------------------- |
+  | `webhook`* | `BRIKA_TELEMETRY_URL`                                     | your URL — posts `{ events: [] }` |
+  | `posthog`  | `BRIKA_ANALYTICS_POSTHOG_KEY` (+ `…_POSTHOG_HOST`)        | `{host}/batch/`                   |
+  | `mixpanel` | `BRIKA_ANALYTICS_MIXPANEL_TOKEN`                          | `api.mixpanel.com/track`          |
+  | `segment`  | `BRIKA_ANALYTICS_SEGMENT_WRITE_KEY`                       | `api.segment.io/v1/batch`         |
+
+  *`webhook` is the default.
+
+Adapters live in `providers.ts` (pure `buildRequest()` mappers). Batches are
+fire-and-forget; string prop values are path-redacted before they leave the
+host.
+
+**Identity:** the anonymous device id (`distinctId`) is sent as the platform's
+distinct/anonymous id. The authenticated `userId` is attached **only** when
+`BRIKA_ANALYTICS_IDENTIFY=1` — installs stay anonymous by default.
 
 ### Retention (`brika.yml`)
 

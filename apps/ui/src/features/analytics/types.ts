@@ -65,4 +65,6 @@ export interface EventStats {
   sources: CaptureSource[];
   plugins: string[];
   remoteForwarding: boolean;
+  /** Active forwarding provider name (e.g. "posthog"), or null when off. */
+  remoteForwardingProvider: string | null;
 }

@@ -51,7 +51,7 @@ export function AnalyticsStatCards() {
         value={
           <Badge variant={data.remoteForwarding ? 'default' : 'outline'}>
             {data.remoteForwarding
-              ? t('analytics:stats.forwardingOn')
+              ? (data.remoteForwardingProvider ?? t('analytics:stats.forwardingOn'))
               : t('analytics:stats.forwardingOff')}
           </Badge>
         }

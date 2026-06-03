@@ -1,26 +1,34 @@
 /**
  * Opt-in remote forwarding for captured feature-usage events.
  *
- * Mirrors the privacy handshake used by update telemetry
- * (`apps/hub/src/runtime/updates/telemetry.ts`): forwarding only happens
- * when BOTH keys are set, so a self-hosted fork never phones home by
- * accident and an auditor can grep the binary for the endpoint:
+ * Forwarding requires the operator to opt in (`BRIKA_TELEMETRY_EVENTS=1`) AND a
+ * destination provider to be configured. The provider is chosen with
+ * `BRIKA_ANALYTICS_PROVIDER` and plugs into an existing analytics platform:
  *
- *   1. The operator opts in:         `BRIKA_TELEMETRY_EVENTS=1`
- *   2. The build embeds an endpoint: `BRIKA_TELEMETRY_URL=https://…`
+ *   - `webhook`  (default) → `BRIKA_TELEMETRY_URL`            posts { events }
+ *   - `posthog`            → `BRIKA_ANALYTICS_POSTHOG_KEY` (+ `_HOST`)
+ *   - `mixpanel`           → `BRIKA_ANALYTICS_MIXPANEL_TOKEN`
+ *   - `segment`            → `BRIKA_ANALYTICS_SEGMENT_WRITE_KEY`
  *
  * Events are batched (size- or time-triggered) and POSTed fire-and-forget;
  * failures are swallowed so analytics can never affect the request pipeline.
- * String prop values are path-redacted before they leave the host.
+ * String prop values are path-redacted before they leave the host. The
+ * anonymous device id is sent as the platform distinct id; the authenticated
+ * user id is attached only when `BRIKA_ANALYTICS_IDENTIFY` is set.
  */
 
 import { singleton } from '@brika/di';
 import { brikaContext } from '@/runtime/context/brika-context';
 import { redactPaths } from '@/runtime/updates/telemetry';
 import type { Json } from '@/types';
+import {
+  type ForwardedEvent,
+  type ForwardRequest,
+  resolveProvider,
+  shouldIdentify,
+} from './providers';
 import type { CaptureEvent } from './types';
 
-const TELEMETRY_URL_ENV = 'BRIKA_TELEMETRY_URL';
 const TELEMETRY_OPT_IN_ENV = 'BRIKA_TELEMETRY_EVENTS';
 
 /** Flush when the buffer reaches this many events. */
@@ -30,21 +38,31 @@ const FLUSH_INTERVAL_MS = 10_000;
 /** Never block the event loop on a slow endpoint. */
 const REQUEST_TIMEOUT_MS = 2000;
 
+type Env = Readonly<Record<string, string | undefined>>;
+
+function isOptedIn(env: Env): boolean {
+  const optIn = env[TELEMETRY_OPT_IN_ENV];
+  return optIn === '1' || optIn?.toLowerCase() === 'true';
+}
+
 /**
- * True when the operator opted in *and* the build has an endpoint baked in.
+ * True when the operator opted in *and* a destination provider is configured.
  * Exposed so the UI/status surface can show an honest on/off label.
  */
-export function isEventTelemetryEnabled(
-  env: Readonly<Record<string, string | undefined>> = process.env
-): boolean {
-  const optIn = env[TELEMETRY_OPT_IN_ENV];
-  const url = env[TELEMETRY_URL_ENV];
-  return (
-    typeof url === 'string' &&
-    url.length > 0 &&
-    typeof optIn === 'string' &&
-    (optIn === '1' || optIn.toLowerCase() === 'true')
-  );
+export function isEventTelemetryEnabled(env: Env = process.env): boolean {
+  return isOptedIn(env) && resolveProvider(env) !== null;
+}
+
+/** Forwarding status for the stats endpoint: on/off + active provider name. */
+export function getForwardingStatus(env: Env = process.env): {
+  enabled: boolean;
+  provider: string | null;
+} {
+  if (!isOptedIn(env)) {
+    return { enabled: false, provider: null };
+  }
+  const provider = resolveProvider(env);
+  return { enabled: provider !== null, provider: provider?.name ?? null };
 }
 
 /** Shallow-redact string prop values; non-strings pass through untouched. */
@@ -57,15 +75,6 @@ function redactProps(props?: Record<string, Json>): Record<string, Json> | undef
     out[key] = typeof value === 'string' ? redactPaths(value) : value;
   }
   return out;
-}
-
-interface ForwardedEvent {
-  instanceId: string;
-  ts: number;
-  name: string;
-  source: string;
-  pluginName?: string;
-  props?: Record<string, Json>;
 }
 
 @singleton()
@@ -84,6 +93,9 @@ export class EventForwarder {
       name: event.name,
       source: event.source,
       pluginName: event.pluginName,
+      distinctId: event.distinctId,
+      // Local-only by default; attached for forwarding only when identify is on.
+      userId: shouldIdentify() ? event.userId : undefined,
       props: redactProps(event.props),
     });
 
@@ -94,7 +106,7 @@ export class EventForwarder {
     this.#timer ??= setTimeout(() => this.flush(), FLUSH_INTERVAL_MS);
   }
 
-  /** Drain the buffer and POST the batch. Fire-and-forget; errors swallowed. */
+  /** Drain the buffer and POST the batch to the active provider. */
   flush(): void {
     if (this.#timer) {
       clearTimeout(this.#timer);
@@ -104,25 +116,25 @@ export class EventForwarder {
       return;
     }
 
-    const url = process.env[TELEMETRY_URL_ENV];
-    if (!url) {
+    const provider = resolveProvider();
+    if (!provider) {
       this.#queue.length = 0;
       return;
     }
 
     const batch = this.#queue.splice(0, this.#queue.length);
-    void this.#post(url, batch);
+    void this.#post(provider.buildRequest(batch));
   }
 
-  async #post(url: string, batch: ForwardedEvent[]): Promise<void> {
+  async #post(request: ForwardRequest): Promise<void> {
     try {
-      await fetch(url, {
+      await fetch(request.url, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          ...request.headers,
           'User-Agent': `brika/${brikaContext.version}`,
         },
-        body: JSON.stringify({ events: batch }),
+        body: request.body,
         signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       });
     } catch {
