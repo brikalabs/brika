@@ -1,12 +1,7 @@
-import {
-  Analytics,
-  CAPTURE_SOURCES,
-  EventStore,
-  getForwardingStatus,
-  type Json,
-} from '@brika/analytics';
+import { Analytics, CAPTURE_SOURCES, EventStore, getForwardingStatus } from '@brika/analytics';
 import { Scope } from '@brika/auth';
 import { requireSession } from '@brika/auth/server';
+import { JsonRecord } from '@brika/ipc';
 import { group, route } from '@brika/router';
 import { z } from 'zod';
 
@@ -63,20 +58,18 @@ const TimeSeriesQuerySchema = z.object({
 
 const CaptureBodySchema = z.object({
   name: z.string().min(1).max(200),
-  // Arbitrary JSON context; validated as an object, trusted as Json at the
-  // boundary like other ingestion routes (see action-routes/sparks). Size is
-  // capped below via a `.superRefine` so a single capture can't bloat the DB.
-  props: z
-    .record(z.string(), z.unknown())
-    .optional()
-    .superRefine((value, ctx) => {
-      if (value && JSON.stringify(value).length > MAX_CAPTURE_PROPS_BYTES) {
-        ctx.addIssue({
-          code: 'custom',
-          message: `props exceeds ${MAX_CAPTURE_PROPS_BYTES} bytes when serialized`,
-        });
-      }
-    }),
+  // Use @brika/ipc's JsonRecord (`z.record(z.string(), z.unknown())` validated
+  // and typed as the shared JSON shape) so the payload flows into
+  // Analytics.capture without a cast. Size is capped below via .superRefine so
+  // a single capture can't bloat the DB.
+  props: JsonRecord.optional().superRefine((value, ctx) => {
+    if (value && JSON.stringify(value).length > MAX_CAPTURE_PROPS_BYTES) {
+      ctx.addIssue({
+        code: 'custom',
+        message: `props exceeds ${MAX_CAPTURE_PROPS_BYTES} bytes when serialized`,
+      });
+    }
+  }),
   distinctId: z.string().max(200).optional(),
 });
 
@@ -100,13 +93,11 @@ export const analyticsRoutes = group({
         // hub additionally stamps the authenticated user id server-side. The
         // user id is local-only and never leaves the host (not forwarded).
         const session = requireSession(ctx);
-        ctx
-          .inject(Analytics)
-          .capture(ctx.body.name, ctx.body.props as Record<string, Json> | undefined, {
-            source: 'ui',
-            distinctId: ctx.body.distinctId,
-            userId: session.userId,
-          });
+        ctx.inject(Analytics).capture(ctx.body.name, ctx.body.props, {
+          source: 'ui',
+          distinctId: ctx.body.distinctId,
+          userId: session.userId,
+        });
         return { ok: true };
       },
     }),

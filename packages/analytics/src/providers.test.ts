@@ -123,3 +123,36 @@ describe('shouldIdentify', () => {
     expect(shouldIdentify({ BRIKA_ANALYTICS_IDENTIFY: 'true' })).toBe(true);
   });
 });
+
+describe('reserved-key collision handling', () => {
+  test('PostHog: caller-supplied source / $lib are preserved as _source / _$lib', () => {
+    const provider = resolveProvider({
+      BRIKA_ANALYTICS_PROVIDER: 'posthog',
+      BRIKA_ANALYTICS_POSTHOG_KEY: 'phc_k',
+    });
+    const req = provider?.buildRequest([
+      { ...event, props: { source: 'cron-job', $lib: 'caller-lib', plain: 1 } },
+    ]);
+    const props = JSON.parse(req?.body ?? '{}').batch[0].properties;
+    // Our protocol values win on every reserved key.
+    expect(props.source).toBe('ui');
+    expect(props.$lib).toBe('brika');
+    // …but caller data isn't silently dropped: it's still observable.
+    expect(props._source).toBe('cron-job');
+    expect(props.$lib).not.toBe('caller-lib');
+    expect(props._$lib).toBe('caller-lib');
+    // Non-reserved keys pass through verbatim.
+    expect(props.plain).toBe(1);
+  });
+
+  test('Segment: caller source is aliased to _source', () => {
+    const provider = resolveProvider({
+      BRIKA_ANALYTICS_PROVIDER: 'segment',
+      BRIKA_ANALYTICS_SEGMENT_WRITE_KEY: 'seg',
+    });
+    const req = provider?.buildRequest([{ ...event, props: { source: 'caller' } }]);
+    const props = JSON.parse(req?.body ?? '{}').batch[0].properties;
+    expect(props.source).toBe('ui');
+    expect(props._source).toBe('caller');
+  });
+});

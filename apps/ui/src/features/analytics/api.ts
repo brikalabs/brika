@@ -16,11 +16,22 @@ import type {
 const DISTINCT_ID_KEY = 'brika.analytics.distinctId';
 
 /**
+ * Module-level fallback: if localStorage is unavailable (private mode in some
+ * browsers, sandboxed iframes), we still want every event in this tab/session
+ * to share one id rather than collapsing to the literal `'anonymous'` on
+ * every call — that would make dedup at the platform impossible.
+ */
+let inMemoryDistinctId: string | null = null;
+
+/**
  * A durable anonymous device id (localStorage) so usage can be correlated
  * across sessions on this browser without any account/PII — the standard
  * product-analytics pattern (anonymous-by-default; the hub additionally
- * stamps the authenticated user id server-side when logged in). Falls back to
- * a one-off id if storage is unavailable.
+ * stamps the authenticated user id server-side when logged in).
+ *
+ * If localStorage isn't available, we fall back to a per-process random id
+ * memoised at module scope, so within a single tab/session the id is at
+ * least consistent across captures.
  */
 export function getDistinctId(): string {
   try {
@@ -32,7 +43,8 @@ export function getDistinctId(): string {
     localStorage.setItem(DISTINCT_ID_KEY, id);
     return id;
   } catch {
-    return 'anonymous';
+    inMemoryDistinctId ??= `anon-${crypto.randomUUID()}`;
+    return inMemoryDistinctId;
   }
 }
 

@@ -91,7 +91,13 @@ export class Analytics {
     this.#forwarder.enqueue(event);
 
     for (const subscriber of this.#subscribers) {
-      subscriber(event);
+      // A misbehaving subscriber must not poison capture() — it's documented
+      // as "must never throw into a caller's hot path".
+      try {
+        subscriber(event);
+      } catch {
+        // Subscriber errors are intentional swallows.
+      }
     }
   }
 

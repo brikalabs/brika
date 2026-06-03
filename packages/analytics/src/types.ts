@@ -1,5 +1,21 @@
-/** JSON value — self-contained so the package has no host-app dependency. */
-export type Json = null | boolean | number | string | Json[] | { [key: string]: Json };
+/**
+ * JSON value — self-contained so the package has no host-app dependency.
+ *
+ * Shape-matches `@brika/ipc`'s `Json`: object members and the top-level value
+ * both permit `undefined` to fit TypeScript's optional-property semantics.
+ * This lets ingress paths (the hub's IPC `capture` handler, the HTTP
+ * `/capture` route) pass through arbitrary JSON without a runtime cast.
+ * `JSON.stringify` strips `undefined` when persisting/forwarding, so the
+ * wire format is unchanged.
+ */
+export type Json =
+  | null
+  | boolean
+  | number
+  | string
+  | Json[]
+  | { [key: string]: Json | undefined }
+  | undefined;
 
 /**
  * Where a captured feature-usage event originated. Mirrors the architecture

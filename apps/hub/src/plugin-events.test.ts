@@ -218,7 +218,9 @@ describe('PluginEventHandler', () => {
       expect(props).toEqual({ durationMs: 5000 });
       expect(options).toMatchObject({
         pluginName: '@test/plugin',
-        distinctId: 'sess-9',
+        // Plugin-supplied distinct ids are namespaced so they can't spoof a
+        // UI session's anonymous device id.
+        distinctId: 'plugin:@test/plugin:sess-9',
       });
       // ts should be stamped server-side; just confirm it's a number.
       expect(typeof options.ts).toBe('number');

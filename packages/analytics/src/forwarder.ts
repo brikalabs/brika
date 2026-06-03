@@ -22,6 +22,7 @@ import { inject, singleton } from '@brika/di';
 import { ANALYTICS_HOST, type AnalyticsHost } from './host';
 import {
   type ForwardedEvent,
+  type ForwarderProvider,
   type ForwardRequest,
   resolveProvider,
   shouldIdentify,
@@ -143,6 +144,19 @@ export class EventForwarder {
   // One-time signal: the operator opted in but no host context was registered.
   // We disable forwarding rather than throwing into the capture hot path.
   #warnedMissingHost = false;
+  // Cached provider + opt-in decision. `undefined` means "not yet resolved";
+  // `null` means "resolved and disabled". Computed once on first enqueue/flush
+  // so the env-keyed switch in resolveProvider() doesn't run on every capture.
+  // Reset on stop() so a re-init after env changes picks up the new config.
+  #cachedProvider: ForwarderProvider | null | undefined;
+
+  #activeProvider(): ForwarderProvider | null {
+    if (this.#cachedProvider !== undefined) {
+      return this.#cachedProvider;
+    }
+    this.#cachedProvider = isEventTelemetryEnabled() ? resolveProvider() : null;
+    return this.#cachedProvider;
+  }
 
   #hostContext(): AnalyticsHost | null {
     if (this.#host) {
@@ -167,7 +181,7 @@ export class EventForwarder {
   }
 
   enqueue(event: CaptureEvent): void {
-    if (this.#disabled || !isEventTelemetryEnabled()) {
+    if (this.#disabled || !this.#activeProvider()) {
       return;
     }
 
@@ -213,7 +227,7 @@ export class EventForwarder {
       return;
     }
 
-    const provider = resolveProvider();
+    const provider = this.#activeProvider();
     if (!provider) {
       this.#queue.length = 0;
       return;
@@ -253,5 +267,8 @@ export class EventForwarder {
   /** Stop the flush timer (graceful shutdown). Drains the final batch. */
   stop(): void {
     this.flush();
+    // Invalidate the cached provider so a fresh start() picks up any env
+    // changes (mostly relevant in tests and hot reloads).
+    this.#cachedProvider = undefined;
   }
 }

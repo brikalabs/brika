@@ -1,4 +1,4 @@
-import { Analytics, type Json as AnalyticsJson } from '@brika/analytics';
+import { Analytics } from '@brika/analytics';
 import { inject, singleton } from '@brika/di';
 import type { Json } from '@brika/ipc';
 import type { BlockDefinition } from '@brika/sdk';
@@ -122,11 +122,18 @@ export class PluginEventHandler {
     props?: Record<string, Json>,
     distinctId?: string
   ): void {
-    // IPC Json allows `undefined` in object values; analytics uses strict JSON.
-    // Safe to bridge at this boundary — the values are already wire-serialised.
-    this.#analytics.capture(name, props as Record<string, AnalyticsJson> | undefined, {
+    // @brika/analytics' Json is shape-compatible with @brika/ipc's, so the
+    // props record flows through without a cast.
+    //
+    // Namespace plugin-origin distinct ids under `plugin:<name>:` so a plugin
+    // cannot spoof a UI/hub session's anonymous device id. The forwarded
+    // distinct id is still useful for cross-event correlation within the
+    // plugin's own surface, but it cannot collide with a real device id.
+    const scopedDistinctId =
+      distinctId !== undefined ? `plugin:${pluginName}:${distinctId}` : undefined;
+    this.#analytics.capture(name, props, {
       pluginName,
-      distinctId,
+      distinctId: scopedDistinctId,
       ts: now(),
     });
   }

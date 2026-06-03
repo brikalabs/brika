@@ -81,6 +81,10 @@ export class EventStore {
   #insertDisabled = false;
   #insertErrors = 0;
   #pruneTimer?: Timer;
+  // Hard-stop flag: once close() has run, enqueue/flush become no-ops so
+  // late-arriving events from a hot-reload or shutdown race can't accumulate
+  // in #queue (they would never be drained — and would also leak memory).
+  #closed = false;
 
   readonly #queue: CaptureEvent[] = [];
   #flushTimer?: Timer;
@@ -139,7 +143,7 @@ export class EventStore {
    * {@link Analytics.capture}; defers the SQLite write to the next tick.
    */
   enqueue(event: CaptureEvent): void {
-    if (!this.db || this.#insertDisabled) {
+    if (this.#closed || !this.db || this.#insertDisabled) {
       return;
     }
     this.#queue.push(event);
@@ -159,7 +163,7 @@ export class EventStore {
     }
 
     const batch = this.#queue.splice(0, this.#queue.length);
-    if (!this.db || this.#insertDisabled) {
+    if (this.#closed || !this.db || this.#insertDisabled) {
       return;
     }
 
@@ -340,7 +344,18 @@ export class EventStore {
 
   close(): void {
     this.stopRetention();
+    // Drain whatever is buffered BEFORE flipping #closed, so events in flight
+    // at shutdown still reach disk (crash-handler / graceful-stop contract).
     this.flush();
+    this.#closed = true;
+    // Anything that managed to enqueue between flush() and now is dropped;
+    // record-zero the queue explicitly rather than leaving it as a memory
+    // root that lives until the singleton is collected.
+    this.#queue.length = 0;
+    if (this.#flushTimer) {
+      clearTimeout(this.#flushTimer);
+      this.#flushTimer = undefined;
+    }
     if (this.#database) {
       this.#database.sqlite.close();
       this.#database = null;

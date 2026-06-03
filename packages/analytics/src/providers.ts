@@ -49,14 +49,44 @@ function distinctOf(event: ForwardedEvent): string {
   return event.distinctId || event.instanceId;
 }
 
-/** Common properties every platform gets, merged over the event's own props. */
-function baseProps(event: ForwardedEvent): Record<string, Json> {
-  return {
-    ...event.props,
-    source: event.source,
-    ...(event.pluginName ? { plugin: event.pluginName } : {}),
-  };
+/**
+ * Carry the caller's `props` into the platform payload without silently
+ * dropping data on a name collision with a key we set ourselves (e.g. the
+ * caller writes `{ source: 'cron' }` — we still need the canonical event-level
+ * `source` to win, but the caller's value should remain observable). Conflict
+ * keys are renamed to `_<key>` so downstream dashboards can still see them.
+ */
+function userProps(
+  props: Record<string, Json> | undefined,
+  reserved: ReadonlySet<string>
+): Record<string, Json> {
+  if (!props) {
+    return {};
+  }
+  const out: Record<string, Json> = {};
+  for (const [k, v] of Object.entries(props)) {
+    out[reserved.has(k) ? `_${k}` : k] = v;
+  }
+  return out;
 }
+
+/** Keys every provider stamps itself; caller collisions get the `_` prefix. */
+const PROVIDER_RESERVED_KEYS: ReadonlySet<string> = new Set(['source', 'plugin']);
+/** PostHog-specific keys we own — `$lib` plus the BRIKA-level metadata. */
+const POSTHOG_RESERVED_KEYS: ReadonlySet<string> = new Set([
+  ...PROVIDER_RESERVED_KEYS,
+  '$lib',
+  'user_id',
+]);
+/** Mixpanel-specific keys we own — `$user_id` plus the BRIKA-level metadata. */
+const MIXPANEL_RESERVED_KEYS: ReadonlySet<string> = new Set([
+  ...PROVIDER_RESERVED_KEYS,
+  '$user_id',
+  '$insert_id',
+  'distinct_id',
+  'token',
+  'time',
+]);
 
 // ── Providers ────────────────────────────────────────────────────────────────
 
@@ -87,7 +117,11 @@ function posthogProvider(apiKey: string, host: string): ForwarderProvider {
           timestamp: new Date(e.ts).toISOString(),
           distinct_id: distinctOf(e),
           properties: {
-            ...baseProps(e),
+            // Caller props first — but any key we reserve below is aliased to
+            // `_<key>` so it can't shadow our values *and* isn't silently lost.
+            ...userProps(e.props, POSTHOG_RESERVED_KEYS),
+            source: e.source,
+            ...(e.pluginName ? { plugin: e.pluginName } : {}),
             $lib: 'brika',
             ...(e.userId ? { user_id: e.userId } : {}),
           },
@@ -131,11 +165,16 @@ function mixpanelProvider(token: string): ForwarderProvider {
         events.map((e) => ({
           event: e.name,
           properties: {
+            // Caller props first — reserved-key collisions are aliased to
+            // `_<key>` (see userProps) so our wire-protocol values always win
+            // without dropping caller data.
+            ...userProps(e.props, MIXPANEL_RESERVED_KEYS),
             token,
             time: Math.floor(e.ts / 1000),
             $insert_id: mixpanelInsertId(e),
             distinct_id: distinctOf(e),
-            ...baseProps(e),
+            source: e.source,
+            ...(e.pluginName ? { plugin: e.pluginName } : {}),
             ...(e.userId ? { $user_id: e.userId } : {}),
           },
         }))
@@ -159,7 +198,12 @@ function segmentProvider(writeKey: string): ForwarderProvider {
           anonymousId: distinctOf(e),
           ...(e.userId ? { userId: e.userId } : {}),
           timestamp: new Date(e.ts).toISOString(),
-          properties: baseProps(e),
+          properties: {
+            // Same collision-safe merge as the other providers.
+            ...userProps(e.props, PROVIDER_RESERVED_KEYS),
+            source: e.source,
+            ...(e.pluginName ? { plugin: e.pluginName } : {}),
+          },
         })),
       }),
     }),
