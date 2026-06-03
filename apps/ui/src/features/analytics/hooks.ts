@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useCallback } from 'react';
 import type { Json } from '@/types';
 import { analyticsApi, analyticsKeys } from './api';
-import type { EventQueryParams } from './types';
+import type { EventQueryParams, TimeSeriesParams } from './types';
 
 /**
  * Returns a stable `capture` function for recording feature-usage events from
@@ -41,5 +41,13 @@ export function useCaptureEvents(params: EventQueryParams) {
   return useQuery({
     queryKey: analyticsKeys.query(params),
     queryFn: () => analyticsApi.query(params),
+  });
+}
+
+/** Event counts bucketed over time, for the activity chart. */
+export function useEventTimeSeries(params: TimeSeriesParams) {
+  return useQuery({
+    queryKey: analyticsKeys.timeseries(params),
+    queryFn: () => analyticsApi.getTimeSeries(params),
   });
 }

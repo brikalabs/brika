@@ -8,6 +8,8 @@ import type { CaptureEvent, CaptureSource } from './types';
 export interface CaptureOptions {
   source?: CaptureSource;
   distinctId?: string;
+  /** Authenticated user id, stamped server-side. Never forwarded remotely. */
+  userId?: string;
   pluginName?: string;
   /** Override the timestamp (defaults to `Date.now()`). */
   ts?: number;
@@ -71,6 +73,7 @@ export class Analytics {
       name,
       source: options?.source ?? this.#defaultSource,
       distinctId: options?.distinctId,
+      userId: options?.userId,
       pluginName: options?.pluginName,
       props,
     };
