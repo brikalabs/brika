@@ -65,8 +65,11 @@ export function LogRow({ log, isExpanded, onToggle }: Readonly<LogRowProps>) {
   const hasMetadata = log.meta && Object.keys(log.meta).length > 0;
   const isExpandable = hasError || hasMetadata;
 
+  const rawSourceFile = log.meta?.sourceFile;
   const sourceFile =
-    log.meta?.sourceFile === null || log.meta?.sourceFile === undefined ? null : String(log.meta.sourceFile);
+    typeof rawSourceFile === 'string' || typeof rawSourceFile === 'number'
+      ? String(rawSourceFile)
+      : null;
   const sourceLine =
     log.meta?.sourceLine === null || log.meta?.sourceLine === undefined ? null : Number(log.meta.sourceLine);
   // Allocates two objects + an array per call. Logs poll every ~1s and the

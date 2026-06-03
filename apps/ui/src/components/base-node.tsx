@@ -43,16 +43,21 @@ export function BaseNodeHeader({ className, ...props }: ComponentProps<'header'>
  * The title text for the node. To maintain a native application feel, the title
  * text is not selectable.
  */
-export function BaseNodeHeaderTitle({ className, ...props }: ComponentProps<'h3'>) {
+export function BaseNodeHeaderTitle({
+  className,
+  children,
+  'aria-label': ariaLabel,
+  ...props
+}: ComponentProps<'h3'>) {
   return (
     <h3
       data-slot="base-node-title"
-      aria-label={
-        props['aria-label'] ?? (typeof props.children === 'string' ? props.children : undefined)
-      }
+      aria-label={ariaLabel ?? (typeof children === 'string' ? children : undefined)}
       className={cn('user-select-none flex-1 font-semibold', className)}
       {...props}
-    />
+    >
+      {children}
+    </h3>
   );
 }
 

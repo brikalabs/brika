@@ -150,7 +150,7 @@ export function useLogSearch(opts: Readonly<UseLogSearchOptions> = {}): LogSearc
         setMode('idle');
         return;
       }
-      void runQuery(trimmed);
+      runQuery(trimmed).catch(() => undefined);
     },
     [runQuery]
   );
