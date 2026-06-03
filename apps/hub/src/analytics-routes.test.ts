@@ -5,10 +5,25 @@
 import 'reflect-metadata';
 import { describe, expect, mock, test } from 'bun:test';
 import { stub, useTestBed } from '@brika/di/testing';
+import type { Middleware } from '@brika/router';
 import { TestApp } from '@brika/router/testing';
 import { Analytics } from '@/runtime/analytics/analytics';
 import { EventStore } from '@/runtime/analytics/event-store';
 import { analyticsRoutes } from '@/runtime/http/routes/analytics';
+
+// Stand-in for the auth middleware: the analytics group runs under
+// requireAuth() in production, so the capture handler can rely on a session.
+const withSession: Middleware = async (c, next) => {
+  c.set('session', {
+    id: 'sess',
+    userId: 'user-42',
+    userEmail: 'u@example.com',
+    userName: 'U',
+    userRole: 'admin',
+    scopes: [],
+  });
+  await next();
+};
 
 describe('analytics routes', () => {
   let app: ReturnType<typeof TestApp.create>;
@@ -38,7 +53,7 @@ describe('analytics routes', () => {
     };
     stub(Analytics, mockAnalytics);
     stub(EventStore, mockEventStore);
-    app = TestApp.create(analyticsRoutes);
+    app = TestApp.create(analyticsRoutes, [withSession]);
   });
 
   test('POST /api/analytics/capture records a UI event', async () => {
@@ -53,7 +68,7 @@ describe('analytics routes', () => {
     expect(mockAnalytics.capture).toHaveBeenCalledWith(
       'board.created',
       { columns: 12 },
-      { source: 'ui', distinctId: 'sess-1' }
+      { source: 'ui', distinctId: 'sess-1', userId: 'user-42' }
     );
   });
 

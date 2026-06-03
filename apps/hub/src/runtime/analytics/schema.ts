@@ -8,6 +8,7 @@ export const events = sqliteTable(
     name: text('name').notNull(),
     source: text('source').notNull(),
     distinctId: text('distinct_id'),
+    userId: text('user_id'),
     pluginName: text('plugin_name'),
     props: text('props'),
   },
@@ -16,6 +17,7 @@ export const events = sqliteTable(
     index('idx_events_name').on(table.name),
     index('idx_events_source').on(table.source),
     index('idx_events_plugin').on(table.pluginName),
+    index('idx_events_user').on(table.userId),
     index('idx_events_ts_name').on(table.ts, table.name),
   ]
 );

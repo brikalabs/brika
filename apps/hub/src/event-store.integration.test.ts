@@ -93,6 +93,31 @@ describe('EventStore', () => {
     });
   });
 
+  describe('timeSeries', () => {
+    test('buckets event counts into fixed windows, oldest first', () => {
+      const hour = 60 * 60 * 1000;
+      // Two events in the first hour bucket, one in the third.
+      store.insert(createEvent({ ts: 1000, name: 'a' }));
+      store.insert(createEvent({ ts: 2000, name: 'a' }));
+      store.insert(createEvent({ ts: 2 * hour + 5000, name: 'b' }));
+
+      const buckets = store.timeSeries(hour);
+      expect(buckets).toHaveLength(2);
+      expect(buckets[0]).toEqual({ bucket: 0, count: 2 });
+      expect(buckets[1]).toEqual({ bucket: 2 * hour, count: 1 });
+    });
+
+    test('honours name/source filters', () => {
+      const hour = 60 * 60 * 1000;
+      store.insert(createEvent({ ts: 1000, name: 'a', source: 'ui' }));
+      store.insert(createEvent({ ts: 2000, name: 'b', source: 'hub' }));
+
+      const buckets = store.timeSeries(hour, { name: 'a' });
+      expect(buckets).toHaveLength(1);
+      expect(buckets[0].count).toBe(1);
+    });
+  });
+
   describe('topNames', () => {
     test('returns names ordered by frequency', () => {
       store.insert(createEvent({ name: 'hot' }));

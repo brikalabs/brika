@@ -20,8 +20,17 @@ export interface CaptureEvent {
   ts: number;
   name: string;
   source: CaptureSource;
-  /** Optional anonymous actor/session id, set by the caller when relevant. */
+  /**
+   * Durable anonymous device/session id supplied by the client (the UI keeps
+   * one in localStorage). Always present for UI events; never contains PII.
+   */
   distinctId?: string;
+  /**
+   * Authenticated user id, stamped server-side from the session when the
+   * caller is logged in. Local-only — it is intentionally **never** included
+   * in remote forwarding (see {@link EventForwarder}).
+   */
+  userId?: string;
   /** Set when {@link source} is `plugin`. */
   pluginName?: string;
   props?: Record<string, Json>;

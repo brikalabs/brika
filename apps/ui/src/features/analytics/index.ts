@@ -1,5 +1,12 @@
+export { AnalyticsPage } from './AnalyticsPage';
 export { analyticsApi, analyticsKeys, getDistinctId } from './api';
-export { useCapture, useCaptureEvents, useEventStats, useTopEventNames } from './hooks';
+export {
+  useCapture,
+  useCaptureEvents,
+  useEventStats,
+  useEventTimeSeries,
+  useTopEventNames,
+} from './hooks';
 export type {
   CaptureEvent,
   CaptureSource,

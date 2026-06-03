@@ -1,25 +1,35 @@
 import { fetcher } from '@/lib/query';
 import type { Json } from '@/types';
-import type { EventNameCount, EventQueryParams, EventQueryResult, EventStats } from './types';
+import type {
+  EventNameCount,
+  EventQueryParams,
+  EventQueryResult,
+  EventStats,
+  TimeSeriesParams,
+  TimeSeriesResult,
+} from './types';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Anonymous session id
 // ─────────────────────────────────────────────────────────────────────────────
 
-const SESSION_KEY = 'brika.analytics.distinctId';
+const DISTINCT_ID_KEY = 'brika.analytics.distinctId';
 
 /**
- * A stable-per-tab anonymous id so events from one session can be correlated
- * without any account/PII. Regenerated when sessionStorage is unavailable.
+ * A durable anonymous device id (localStorage) so usage can be correlated
+ * across sessions on this browser without any account/PII — the standard
+ * product-analytics pattern (anonymous-by-default; the hub additionally
+ * stamps the authenticated user id server-side when logged in). Falls back to
+ * a one-off id if storage is unavailable.
  */
 export function getDistinctId(): string {
   try {
-    const existing = sessionStorage.getItem(SESSION_KEY);
+    const existing = localStorage.getItem(DISTINCT_ID_KEY);
     if (existing) {
       return existing;
     }
     const id = crypto.randomUUID();
-    sessionStorage.setItem(SESSION_KEY, id);
+    localStorage.setItem(DISTINCT_ID_KEY, id);
     return id;
   } catch {
     return 'anonymous';
@@ -45,6 +55,9 @@ function buildQueryString(params: EventQueryParams): string {
   }
   if (params.distinctId) {
     searchParams.set('distinctId', params.distinctId);
+  }
+  if (params.userId) {
+    searchParams.set('userId', params.userId);
   }
   if (params.search) {
     searchParams.set('search', params.search);
@@ -95,6 +108,32 @@ export const analyticsApi = {
 
   getStats: () => fetcher<EventStats>('/api/analytics/stats'),
 
+  getTimeSeries: (params: TimeSeriesParams = {}) => {
+    const search = new URLSearchParams();
+    if (params.bucketMs) {
+      search.set('bucketMs', String(params.bucketMs));
+    }
+    if (params.name) {
+      const names = Array.isArray(params.name) ? params.name : [params.name];
+      search.set('name', names.join(','));
+    }
+    if (params.source) {
+      const sources = Array.isArray(params.source) ? params.source : [params.source];
+      search.set('source', sources.join(','));
+    }
+    if (params.pluginName) {
+      search.set('pluginName', params.pluginName);
+    }
+    if (params.startTs) {
+      search.set('startTs', String(params.startTs));
+    }
+    if (params.endTs) {
+      search.set('endTs', String(params.endTs));
+    }
+    const qs = search.toString();
+    return fetcher<TimeSeriesResult>(`/api/analytics/timeseries${qs ? `?${qs}` : ''}`);
+  },
+
   clear: (params?: Partial<EventQueryParams>) =>
     fetcher<{ ok: boolean; deleted: number }>('/api/analytics', {
       method: 'DELETE',
@@ -111,4 +150,5 @@ export const analyticsKeys = {
   query: (params: EventQueryParams) => ['analytics', 'query', params] as const,
   names: ['analytics', 'names'] as const,
   stats: ['analytics', 'stats'] as const,
+  timeseries: (params: TimeSeriesParams) => ['analytics', 'timeseries', params] as const,
 };

@@ -1,3 +1,4 @@
+import { requireSession } from '@brika/auth/server';
 import { group, route } from '@brika/router';
 import { z } from 'zod';
 import { Analytics } from '@/runtime/analytics/analytics';
@@ -19,12 +20,33 @@ const EventQuerySchema = z.object({
     .optional(),
   pluginName: z.string().optional(),
   distinctId: z.string().optional(),
+  userId: z.string().optional(),
   search: z.string().optional(),
   startTs: z.coerce.number().optional(),
   endTs: z.coerce.number().optional(),
   cursor: z.coerce.number().optional(),
   limit: z.coerce.number().min(1).max(1000).default(100),
   order: z.enum(['asc', 'desc']).default('desc'),
+});
+
+const TimeSeriesQuerySchema = z.object({
+  // Bucket width in ms. Default 1h; clamped to [1m, 30d].
+  bucketMs: z.coerce
+    .number()
+    .min(60_000)
+    .max(30 * 24 * 60 * 60 * 1000)
+    .default(60 * 60 * 1000),
+  name: z.union([z.string().transform((s) => s.split(',')), z.array(z.string())]).optional(),
+  source: z
+    .union([
+      CaptureSourceSchema,
+      z.array(CaptureSourceSchema),
+      z.string().transform((s) => s.split(',') as ('hub' | 'plugin' | 'ui' | 'cli')[]),
+    ])
+    .optional(),
+  pluginName: z.string().optional(),
+  startTs: z.coerce.number().optional(),
+  endTs: z.coerce.number().optional(),
 });
 
 const CaptureBodySchema = z.object({
@@ -50,11 +72,18 @@ export const analyticsRoutes = group({
     route.post({
       path: '/capture',
       body: CaptureBodySchema,
-      handler: ({ body, inject }) => {
-        inject(Analytics).capture(body.name, body.props as Record<string, Json> | undefined, {
-          source: 'ui',
-          distinctId: body.distinctId,
-        });
+      handler: (ctx) => {
+        // Anonymous-by-default: the client supplies a durable device id; the
+        // hub additionally stamps the authenticated user id server-side. The
+        // user id is local-only and never leaves the host (not forwarded).
+        const session = requireSession(ctx);
+        ctx
+          .inject(Analytics)
+          .capture(ctx.body.name, ctx.body.props as Record<string, Json> | undefined, {
+            source: 'ui',
+            distinctId: ctx.body.distinctId,
+            userId: session.userId,
+          });
         return { ok: true };
       },
     }),
@@ -76,6 +105,16 @@ export const analyticsRoutes = group({
     route.get({
       path: '/names',
       handler: ({ inject }) => ({ names: inject(EventStore).topNames() }),
+    }),
+
+    // GET /api/analytics/timeseries - Event counts bucketed over time
+    route.get({
+      path: '/timeseries',
+      query: TimeSeriesQuerySchema,
+      handler: ({ query, inject }) => {
+        const { bucketMs, ...filters } = query;
+        return { bucketMs, buckets: inject(EventStore).timeSeries(bucketMs, filters) };
+      },
     }),
 
     // GET /api/analytics/stats - Totals + remote-forwarding status

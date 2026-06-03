@@ -7,6 +7,7 @@ export interface CaptureEvent {
   name: string;
   source: CaptureSource;
   distinctId?: string;
+  userId?: string;
   pluginName?: string;
   props?: Record<string, Json>;
 }
@@ -20,12 +21,32 @@ export interface EventQueryParams {
   source?: CaptureSource | CaptureSource[];
   pluginName?: string;
   distinctId?: string;
+  userId?: string;
   search?: string;
   startTs?: number;
   endTs?: number;
   cursor?: number;
   limit?: number;
   order?: 'asc' | 'desc';
+}
+
+export interface TimeBucket {
+  bucket: number;
+  count: number;
+}
+
+export interface TimeSeriesResult {
+  bucketMs: number;
+  buckets: TimeBucket[];
+}
+
+export interface TimeSeriesParams {
+  bucketMs?: number;
+  name?: string | string[];
+  source?: CaptureSource | CaptureSource[];
+  pluginName?: string;
+  startTs?: number;
+  endTs?: number;
 }
 
 export interface EventQueryResult {

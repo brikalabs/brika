@@ -11,6 +11,7 @@ import {
   like,
   lt,
   oneOrMany,
+  sql,
   startTsFilter,
 } from '@brika/db';
 import { singleton } from '@brika/di';
@@ -28,6 +29,7 @@ export interface EventQueryParams {
   source?: CaptureSource | CaptureSource[];
   pluginName?: string;
   distinctId?: string;
+  userId?: string;
   search?: string;
   startTs?: number;
   endTs?: number;
@@ -47,6 +49,12 @@ export interface StoredCaptureEvent extends CaptureEvent {
 
 export interface EventNameCount {
   name: string;
+  count: number;
+}
+
+export interface TimeBucket {
+  /** Start timestamp (ms) of the bucket window. */
+  bucket: number;
   count: number;
 }
 
@@ -188,6 +196,7 @@ export class EventStore {
         name: event.name,
         source: event.source,
         distinctId: event.distinctId ?? null,
+        userId: event.userId ?? null,
         pluginName: event.pluginName ?? null,
         props: event.props ? JSON.stringify(event.props) : null,
       })
@@ -199,7 +208,7 @@ export class EventStore {
       return { events: [], nextCursor: null };
     }
 
-    const { name, source, pluginName, distinctId, search, startTs, endTs, cursor } = params;
+    const { name, source, pluginName, distinctId, userId, search, startTs, endTs, cursor } = params;
     const limit = Math.min(params.limit ?? 100, 1000);
     const order = params.order ?? 'desc';
 
@@ -212,6 +221,7 @@ export class EventStore {
           oneOrMany(eventsTable.source, source),
           pluginName ? eq(eventsTable.pluginName, pluginName) : undefined,
           distinctId ? eq(eventsTable.distinctId, distinctId) : undefined,
+          userId ? eq(eventsTable.userId, userId) : undefined,
           search ? like(eventsTable.name, `%${search}%`) : undefined,
           startTsFilter(eventsTable.ts, startTs),
           endTsFilter(eventsTable.ts, endTs),
@@ -253,6 +263,36 @@ export class EventStore {
       .all();
 
     return deleted.length;
+  }
+
+  /**
+   * Event counts bucketed into fixed-width time windows (`bucketMs`), oldest
+   * first — the data behind the "events over time" chart. Honours the same
+   * filters as {@link query} (name/source/pluginName/time range).
+   */
+  timeSeries(bucketMs: number, params: EventQueryParams = {}): TimeBucket[] {
+    if (!this.db || bucketMs <= 0) {
+      return [];
+    }
+    const { name, source, pluginName, startTs, endTs } = params;
+    const bucketExpr = sql<number>`(${eventsTable.ts} / ${bucketMs}) * ${bucketMs}`;
+
+    return this.db
+      .select({ bucket: bucketExpr, count: count() })
+      .from(eventsTable)
+      .where(
+        and(
+          oneOrMany(eventsTable.name, name),
+          oneOrMany(eventsTable.source, source),
+          pluginName ? eq(eventsTable.pluginName, pluginName) : undefined,
+          startTsFilter(eventsTable.ts, startTs),
+          endTsFilter(eventsTable.ts, endTs)
+        )
+      )
+      .groupBy(bucketExpr)
+      .orderBy(asc(bucketExpr))
+      .all()
+      .map((row) => ({ bucket: Number(row.bucket), count: Number(row.count) }));
   }
 
   /** Distinct event names with their occurrence counts, most frequent first. */
@@ -313,6 +353,7 @@ function mapRowToStoredEvent(row: EventRow): StoredCaptureEvent {
     name: row.name,
     source: row.source as CaptureSource,
     distinctId: row.distinctId ?? undefined,
+    userId: row.userId ?? undefined,
     pluginName: row.pluginName ?? undefined,
     props: row.props ? (JSON.parse(row.props) as Record<string, Json>) : undefined,
   };

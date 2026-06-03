@@ -27,6 +27,7 @@ import {
 } from '@brika/clay/components/sidebar';
 import { Link, Navigate, Outlet, useMatchRoute, useRouterState } from '@tanstack/react-router';
 import {
+  BarChart3,
   Blocks,
   BookOpen,
   ChevronsUpDown,
@@ -118,6 +119,11 @@ const NAV_GROUPS: NavGroup[] = [
         to: '/logs',
         labelKey: 'nav:logs',
         icon: FileText,
+      },
+      {
+        to: '/analytics',
+        labelKey: 'nav:analytics',
+        icon: BarChart3,
       },
       {
         to: '/admin/users',
