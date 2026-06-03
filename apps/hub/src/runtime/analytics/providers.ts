@@ -145,8 +145,12 @@ function segmentProvider(writeKey: string): ForwarderProvider {
 
 // ── Resolution ───────────────────────────────────────────────────────────────
 
-/** Default PostHog cloud host when one isn't configured. */
-const DEFAULT_POSTHOG_HOST = 'https://app.posthog.com';
+/**
+ * Default PostHog Cloud ingestion host (US region) when one isn't configured.
+ * EU-region projects must set `BRIKA_ANALYTICS_POSTHOG_HOST=https://eu.i.posthog.com`
+ * (or their self-hosted URL). PostHog Cloud's free tier works out of the box.
+ */
+const DEFAULT_POSTHOG_HOST = 'https://us.i.posthog.com';
 
 /**
  * Resolve the configured provider, or `null` when the selected provider is

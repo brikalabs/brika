@@ -83,6 +83,20 @@ fork never phones home by accident and the destination is greppable:
 
   *`webhook` is the default.
 
+**Free, hosted, no self-host:** PostHog Cloud has a free tier (~1M events/mo).
+Create a project, copy its Project API key, then:
+
+```bash
+BRIKA_TELEMETRY_EVENTS=1
+BRIKA_ANALYTICS_PROVIDER=posthog
+BRIKA_ANALYTICS_POSTHOG_KEY=phc_xxx
+# US is the default; EU projects set:
+# BRIKA_ANALYTICS_POSTHOG_HOST=https://eu.i.posthog.com
+```
+
+(For zero external services at all, just leave forwarding off — the built-in
+`/analytics` dashboard is free and fully local.)
+
 Adapters live in `providers.ts` (pure `buildRequest()` mappers). Batches are
 fire-and-forget; string prop values are path-redacted before they leave the
 host.
