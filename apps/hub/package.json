@@ -27,6 +27,7 @@
     "lint:fix": "bun x biome check . --write"
   },
   "dependencies": {
+    "@brika/analytics": "workspace:*",
     "@brika/auth": "workspace:*",
     "@brika/banner": "workspace:*",
     "@brika/compiler": "workspace:*",

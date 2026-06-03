@@ -1,0 +1,28 @@
+{
+  "name": "@brika/analytics",
+  "version": "0.3.1",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/brikalabs/brika.git",
+    "directory": "packages/analytics"
+  },
+  "keywords": ["brika", "analytics", "product-analytics", "feature-usage", "telemetry"],
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "bun test --parallel",
+    "typecheck": "tsgo --noEmit"
+  },
+  "dependencies": {
+    "@brika/db": "workspace:*",
+    "@brika/di": "workspace:*"
+  },
+  "devDependencies": {
+    "@brika/testing": "workspace:*",
+    "@types/bun": "^1.3.5",
+    "reflect-metadata": "^0.2.2"
+  }
+}

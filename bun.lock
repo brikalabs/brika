@@ -55,6 +55,7 @@
       "name": "@brika/hub",
       "version": "0.3.1",
       "dependencies": {
+        "@brika/analytics": "workspace:*",
         "@brika/auth": "workspace:*",
         "@brika/banner": "workspace:*",
         "@brika/compiler": "workspace:*",
@@ -166,6 +167,19 @@
         "@types/react-dom": "^19.2.3",
         "@vitejs/plugin-react": "^6.0.2",
         "vite": "^8.0.14",
+      },
+    },
+    "packages/analytics": {
+      "name": "@brika/analytics",
+      "version": "0.3.1",
+      "dependencies": {
+        "@brika/db": "workspace:*",
+        "@brika/di": "workspace:*",
+      },
+      "devDependencies": {
+        "@brika/testing": "workspace:*",
+        "@types/bun": "^1.3.5",
+        "reflect-metadata": "^0.2.2",
       },
     },
     "packages/archunit": {
@@ -738,6 +752,8 @@
     "@biomejs/cli-win32-arm64": ["@biomejs/cli-win32-arm64@2.4.15", "", { "os": "win32", "cpu": "arm64" }, "sha512-ouhkYdlhp/1GghEJPdWwD/Vi3gQ1nFxuSpMolWsbq3Lsq3QUR4jl6UdhhscdCugKU5vOEuMiJhvKj66O0OCq+w=="],
 
     "@biomejs/cli-win32-x64": ["@biomejs/cli-win32-x64@2.4.15", "", { "os": "win32", "cpu": "x64" }, "sha512-zBrGq5mx5wwpnow4+2BxUvleDM+GNd4sLbPaMapsSLQLD0NGRCquqPBTgN+7XkUteHvj7M+BstuI8tmnV7+HgQ=="],
+
+    "@brika/analytics": ["@brika/analytics@workspace:packages/analytics"],
 
     "@brika/archunit": ["@brika/archunit@workspace:packages/archunit"],
 

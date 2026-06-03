@@ -1,7 +1,7 @@
+import { Analytics, type Json as AnalyticsJson } from '@brika/analytics';
 import { inject, singleton } from '@brika/di';
 import type { Json } from '@brika/ipc';
 import type { BlockDefinition } from '@brika/sdk';
-import { Analytics } from '@/runtime/analytics/analytics';
 import { BlockRegistry } from '@/runtime/blocks';
 import { BoardLoader } from '@/runtime/boards/board-loader';
 import { BrickDataStore, BrickTypeRegistry } from '@/runtime/bricks';
@@ -122,7 +122,13 @@ export class PluginEventHandler {
     props?: Record<string, Json>,
     distinctId?: string
   ): void {
-    this.#analytics.capture(name, props, { pluginName, distinctId, ts: now() });
+    // IPC Json allows `undefined` in object values; analytics uses strict JSON.
+    // Safe to bridge at this boundary — the values are already wire-serialised.
+    this.#analytics.capture(name, props as Record<string, AnalyticsJson> | undefined, {
+      pluginName,
+      distinctId,
+      ts: now(),
+    });
   }
 
   registerBlock(

@@ -1,4 +1,5 @@
-import type { Json } from '@/types';
+/** JSON value — self-contained so the package has no host-app dependency. */
+export type Json = null | boolean | number | string | Json[] | { [key: string]: Json };
 
 /**
  * Where a captured feature-usage event originated. Mirrors the architecture

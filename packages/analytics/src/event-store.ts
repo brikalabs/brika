@@ -15,10 +15,9 @@ import {
   startTsFilter,
 } from '@brika/db';
 import { singleton } from '@brika/di';
-import type { Json } from '@/types';
 import { eventsDb } from './database';
 import { events as eventsTable } from './schema';
-import type { CaptureEvent, CaptureSource } from './types';
+import type { CaptureEvent, CaptureSource, Json } from './types';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types

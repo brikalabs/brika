@@ -3,11 +3,7 @@
  */
 import 'reflect-metadata';
 import { describe, expect, test } from 'bun:test';
-import {
-  type ForwardedEvent,
-  resolveProvider,
-  shouldIdentify,
-} from '@/runtime/analytics/providers';
+import { type ForwardedEvent, resolveProvider, shouldIdentify } from './providers';
 
 const event: ForwardedEvent = {
   instanceId: 'inst-1',

@@ -5,8 +5,10 @@ export {
   type EventQueryResult,
   EventStore,
   type StoredCaptureEvent,
+  type TimeBucket,
 } from './event-store';
 export { EventForwarder, getForwardingStatus, isEventTelemetryEnabled } from './forwarder';
+export { ANALYTICS_HOST, type AnalyticsHost } from './host';
 export {
   type ForwardedEvent,
   type ForwarderProvider,
@@ -14,4 +16,4 @@ export {
   resolveProvider,
   shouldIdentify,
 } from './providers';
-export { CAPTURE_SOURCES, type CaptureEvent, type CaptureSource } from './types';
+export { CAPTURE_SOURCES, type CaptureEvent, type CaptureSource, type Json } from './types';
