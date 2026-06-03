@@ -74,22 +74,6 @@ export function getForwardingStatus(env: Env = process.env): {
 }
 
 /**
- * Accept only well-formed http(s) URLs as forwarding destinations. The
- * destination is operator-configured (env vars), never request input — but a
- * misconfiguration like `file:///etc/...` or a typo'd `javascript:` scheme
- * should be refused before it reaches `fetch`. This also satisfies the SAST
- * SSRF gate so the package can be scanned cleanly.
- */
-function isHttpUrl(raw: string): boolean {
-  try {
-    const { protocol } = new URL(raw);
-    return protocol === 'https:' || protocol === 'http:';
-  } catch {
-    return false;
-  }
-}
-
-/**
  * Recursively redact string values inside a JSON tree. The host's redactor
  * (e.g. the hub's path scrubber) is applied to every string at every depth,
  * so nested data like `{ context: { path: '/Users/<name>/...' } }` no longer
@@ -242,7 +226,17 @@ export class EventForwarder {
     // operator env, never request input — but refuse anything that isn't a
     // plain http(s) URL so a misconfiguration can't turn into SSRF via exotic
     // schemes (file:, gopher:, javascript:).
-    if (!isHttpUrl(request.url)) {
+    //
+    // Parse + scheme-validate inline at the fetch site (instead of behind a
+    // helper) so SAST data-flow analyzers can directly see the sanitizer
+    // between the env-derived input and the network call.
+    let parsed: URL;
+    try {
+      parsed = new URL(request.url);
+    } catch {
+      return;
+    }
+    if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
       return;
     }
     const host = this.#hostContext();
@@ -250,7 +244,9 @@ export class EventForwarder {
       return;
     }
     try {
-      await fetch(request.url, {
+      // Pass the canonicalised URL object — only `parsed` reaches fetch, not
+      // the raw string.
+      await fetch(parsed, {
         method: 'POST',
         headers: {
           ...request.headers,

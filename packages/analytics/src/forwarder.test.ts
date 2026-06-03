@@ -28,8 +28,11 @@ let fetchMock: ReturnType<typeof mock>;
 
 function captureFetch(): Array<{ url: string; init: RequestInit }> {
   const calls: Array<{ url: string; init: RequestInit }> = [];
-  fetchMock = mock((url: string, init: RequestInit) => {
-    calls.push({ url, init });
+  fetchMock = mock((url: string | URL, init: RequestInit) => {
+    // The forwarder canonicalises the URL through `new URL(...)` before fetch
+    // so SAST tools see the sanitiser inline; coerce back to string here so
+    // assertions don't care about the call shape.
+    calls.push({ url: String(url), init });
     return Promise.resolve(new Response(null, { status: 204 }));
   });
   // biome-ignore lint/suspicious/noExplicitAny: test-only fetch substitution
