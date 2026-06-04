@@ -634,8 +634,7 @@ async function streamResponseToFile(
   onProgress: (pct: number) => void,
   resumed: boolean
 ): Promise<void> {
-  // Path-traversal sanitisation at the sink: basename() strips any
-  // separator from the filename so it cannot escape the resolved root.
+  // basename() strips any separator so the filename cannot escape the root.
   const safeDestPath = resolvePath(destDir, basename(fileName));
 
   const reader = response.body?.getReader();

@@ -103,7 +103,6 @@ export async function stageArtifacts(opts: StageInstallOptions): Promise<{ stage
     chmodSync(tmpBinary, 0o755);
   }
   rmSync(stagedBinary, { force: true });
-  // resolve() absolutises both arguments before the syscall.
   renameSync(resolvePath(tmpBinary), resolvePath(stagedBinary));
 
   // Stage the UI bundle if present in the archive.
