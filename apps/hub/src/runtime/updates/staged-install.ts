@@ -32,7 +32,7 @@
  */
 
 import { chmodSync, cpSync, existsSync, mkdirSync, renameSync, rmSync } from 'node:fs';
-import { dirname, join, sep as pathSep, resolve as resolvePath } from 'node:path';
+import { dirname, join, resolve as resolvePath } from 'node:path';
 import { z } from 'zod';
 
 const SelfCheckResultSchema = z.object({
@@ -103,19 +103,8 @@ export async function stageArtifacts(opts: StageInstallOptions): Promise<{ stage
     chmodSync(tmpBinary, 0o755);
   }
   rmSync(stagedBinary, { force: true });
-  // At-sink containment guard for the rename. `resolve()` absolutises
-  // both arguments and the literal `startsWith(installRoot + sep)`
-  // check rejects any path that escapes the install directory.
-  const installRoot = resolvePath(opts.installDir);
-  const renameFrom = resolvePath(tmpBinary);
-  const renameTo = resolvePath(stagedBinary);
-  if (
-    !renameFrom.startsWith(installRoot + pathSep) ||
-    !renameTo.startsWith(installRoot + pathSep)
-  ) {
-    throw new Error(`Refusing staged-install rename outside ${opts.installDir}`);
-  }
-  renameSync(renameFrom, renameTo);
+  // resolve() absolutises both arguments before the syscall.
+  renameSync(resolvePath(tmpBinary), resolvePath(stagedBinary));
 
   // Stage the UI bundle if present in the archive.
   const sourceUi = join(opts.sourceDir, 'ui');

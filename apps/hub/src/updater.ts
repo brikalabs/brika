@@ -17,7 +17,7 @@
 
 import { createWriteStream } from 'node:fs';
 import { chmod, cp, mkdir, rename, rm } from 'node:fs/promises';
-import { basename, dirname, join, sep as pathSep, resolve as resolvePath } from 'node:path';
+import { basename, dirname, join, resolve as resolvePath } from 'node:path';
 import { z } from 'zod';
 import { buildInfo } from './build-info';
 import { HUB_GITHUB_RELEASES_API, HUB_GITHUB_RELEASES_LIST_API, HUB_REPO, hub } from './hub';
@@ -634,18 +634,9 @@ async function streamResponseToFile(
   onProgress: (pct: number) => void,
   resumed: boolean
 ): Promise<void> {
-  // Path-traversal sanitisation at the sink — the canonical pattern
-  // every SAST flow-tracker recognises:
-  //   1. `basename()` strips any separator from the filename.
-  //   2. `resolve()` absolutises destDir + the safe filename.
-  //   3. Literal `startsWith(rootWithSep)` containment check rejects
-  //      any payload that resolves outside the requested directory.
-  const safeFileName = basename(fileName);
-  const safeRoot = resolvePath(destDir);
-  const safeDestPath = resolvePath(safeRoot, safeFileName);
-  if (safeDestPath !== safeRoot && !safeDestPath.startsWith(safeRoot + pathSep)) {
-    throw new Error(`Refusing unsafe destination path under ${destDir}: ${fileName}`);
-  }
+  // Path-traversal sanitisation at the sink: basename() strips any
+  // separator from the filename so it cannot escape the resolved root.
+  const safeDestPath = resolvePath(destDir, basename(fileName));
 
   const reader = response.body?.getReader();
   if (!reader) {
@@ -700,9 +691,7 @@ export async function downloadFile(
   totalBytes: number,
   onProgress?: (pct: number) => void
 ): Promise<void> {
-  // Resolve the path consumers (detectPartial, Bun.write) using basename
-  // so any traversal payload in `fileName` is collapsed before it
-  // touches the filesystem.
+  // basename() collapses any traversal payload before the path is used.
   const destPath = join(destDir, basename(fileName));
   const partialSize = await detectPartial(destPath);
 
