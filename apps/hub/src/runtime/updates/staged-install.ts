@@ -103,9 +103,7 @@ export async function stageArtifacts(opts: StageInstallOptions): Promise<{ stage
     chmodSync(tmpBinary, 0o755);
   }
   rmSync(stagedBinary, { force: true });
-  // Sanitise rename arguments at the sink: `normalize` collapses `..`
-  // segments and the literal-`..` check rejects any relative escape
-  // that survives normalisation.
+  // At-sink rename guard: normalize collapses `..`, literal-`..` rejects escapes.
   const renameFrom = normalizePath(tmpBinary);
   const renameTo = normalizePath(stagedBinary);
   if (renameFrom.includes('..') || renameTo.includes('..')) {

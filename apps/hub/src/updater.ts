@@ -164,6 +164,22 @@ export function isSafeAssetName(name: string): boolean {
 }
 
 /**
+ * Build the staging paths used by `applyUpdate` from an asset name +
+ * a version. `basename()` mirrors `isSafeAssetName` at the
+ * path-construction sink — defence-in-depth + visible-to-analyser.
+ * Exported for unit testing the path-traversal containment.
+ */
+export function deriveCachePaths(
+  assetName: string,
+  version: string
+): { safeAssetName: string; tmpDir: string; archivePath: string } {
+  const safeAssetName = basename(assetName);
+  const tmpDir = join(brikaContext.brikaDir, '.update-cache', `${version}-${safeAssetName}`);
+  const archivePath = join(tmpDir, safeAssetName);
+  return { safeAssetName, tmpDir, archivePath };
+}
+
+/**
  * Normalize a version string so `Bun.semver.order` returns sensible results.
  *
  * - Strips a leading `v`.
@@ -456,18 +472,8 @@ export async function applyUpdate(options?: ApplyUpdateOptions): Promise<{
   // The brikaDir is created with the hub user's permissions and not
   // writable by other users; resume semantics are preserved because
   // the (version, asset) tuple still uniquely identifies the partial.
-  // `basename()` mirrors the `isSafeAssetName` allow-list at the
-  // path-construction sink — defence-in-depth + visible-to-analyser.
-  const safeAssetName = basename(asset.name);
-  const tmpDir = join(
-    brikaContext.brikaDir,
-    '.update-cache',
-    `${cmp.latestVersion}-${safeAssetName}`
-  );
-  await mkdir(tmpDir, {
-    recursive: true,
-  });
-  const archivePath = join(tmpDir, safeAssetName);
+  const { tmpDir, archivePath } = deriveCachePaths(asset.name, cmp.latestVersion);
+  await mkdir(tmpDir, { recursive: true });
 
   try {
     await downloadFile(asset.browser_download_url, archivePath, asset.size, (pct) => {
@@ -626,8 +632,7 @@ async function streamResponseToFile(
   onProgress: (pct: number) => void,
   resumed: boolean
 ): Promise<void> {
-  // At-sink path-traversal guard: normalize collapses `..` segments;
-  // the literal `..` check rejects any relative escape that survives.
+  // At-sink path-traversal guard.
   const safeDestPath = normalizePath(destPath);
   if (safeDestPath.includes('..')) {
     throw new Error(`Refusing unsafe destination path: ${destPath}`);
@@ -797,8 +802,7 @@ export function resolveSourceDir(extractedDir: string): string {
     return extractedDir;
   }
 
-  // `basename()` collapses any path-traversal payload in the archive's
-  // top-level entry to a single name component.
+  // `basename()` collapses any traversal payload to a single component.
   const entryName = basename(entries[0] ?? '');
   if (!entryName || entryName === '.' || entryName === '..') {
     return extractedDir;

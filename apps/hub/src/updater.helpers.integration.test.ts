@@ -10,7 +10,9 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { brikaContext } from './runtime/context/brika-context';
 import {
+  deriveCachePaths,
   isNewer,
   isPrerelease,
   isSafeAssetName,
@@ -43,6 +45,30 @@ describe('isSafeAssetName', () => {
     'release-meta.json',
   ])('rejects %s', (name) => {
     expect(isSafeAssetName(name)).toBe(false);
+  });
+});
+
+describe('deriveCachePaths', () => {
+  test('returns paths anchored under the brika user-directory cache root', () => {
+    const { safeAssetName, tmpDir, archivePath } = deriveCachePaths(
+      'brika-linux-x64.tar.gz',
+      '0.5.0'
+    );
+    expect(safeAssetName).toBe('brika-linux-x64.tar.gz');
+    expect(tmpDir).toBe(
+      join(brikaContext.brikaDir, '.update-cache', '0.5.0-brika-linux-x64.tar.gz')
+    );
+    expect(archivePath).toBe(join(tmpDir, 'brika-linux-x64.tar.gz'));
+  });
+
+  test('basename strips any path separators in the asset name', () => {
+    // `isSafeAssetName` rejects these upstream, but the at-sink basename
+    // is the defence-in-depth backstop — verify it actually collapses
+    // separators rather than passing them through.
+    const { safeAssetName, archivePath } = deriveCachePaths('../etc/passwd', '0.5.0');
+    expect(safeAssetName).toBe('passwd');
+    expect(archivePath.endsWith('/passwd')).toBe(true);
+    expect(archivePath.includes('..')).toBe(false);
   });
 });
 
