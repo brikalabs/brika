@@ -17,7 +17,7 @@
 
 import { createWriteStream } from 'node:fs';
 import { chmod, cp, mkdir, rename, rm } from 'node:fs/promises';
-import { basename, dirname, join, normalize as normalizePath } from 'node:path';
+import { basename, dirname, join, sep as pathSep, resolve as resolvePath } from 'node:path';
 import { z } from 'zod';
 import { buildInfo } from './build-info';
 import { HUB_GITHUB_RELEASES_API, HUB_GITHUB_RELEASES_LIST_API, HUB_REPO, hub } from './hub';
@@ -472,11 +472,11 @@ export async function applyUpdate(options?: ApplyUpdateOptions): Promise<{
   // The brikaDir is created with the hub user's permissions and not
   // writable by other users; resume semantics are preserved because
   // the (version, asset) tuple still uniquely identifies the partial.
-  const { tmpDir, archivePath } = deriveCachePaths(asset.name, cmp.latestVersion);
+  const { tmpDir, archivePath, safeAssetName } = deriveCachePaths(asset.name, cmp.latestVersion);
   await mkdir(tmpDir, { recursive: true });
 
   try {
-    await downloadFile(asset.browser_download_url, archivePath, asset.size, (pct) => {
+    await downloadFile(asset.browser_download_url, tmpDir, safeAssetName, asset.size, (pct) => {
       onProgress?.('downloading', `Downloading v${cmp.latestVersion}... ${pct}%`);
     });
 
@@ -570,8 +570,9 @@ export async function maybeVerifySignature(
     throw new Error('Signature required but no .minisig asset was published for this release');
   }
 
-  const sigPath = join(tmpDir, `${asset.name}.minisig`);
-  await downloadFile(sigAsset.browser_download_url, sigPath, sigAsset.size);
+  const sigFileName = `${basename(asset.name)}.minisig`;
+  const sigPath = join(tmpDir, sigFileName);
+  await downloadFile(sigAsset.browser_download_url, tmpDir, sigFileName, sigAsset.size);
   const result = await verifyMinisignFile(archivePath, sigPath);
   if (result.status === 'failed') {
     throw new Error(`Signature verification failed: ${result.reason}`);
@@ -626,16 +627,24 @@ async function detectPartial(destPath: string): Promise<number> {
 
 async function streamResponseToFile(
   response: Response,
-  destPath: string,
+  destDir: string,
+  fileName: string,
   totalBytes: number,
   startBytes: number,
   onProgress: (pct: number) => void,
   resumed: boolean
 ): Promise<void> {
-  // At-sink path-traversal guard.
-  const safeDestPath = normalizePath(destPath);
-  if (safeDestPath.includes('..')) {
-    throw new Error(`Refusing unsafe destination path: ${destPath}`);
+  // Path-traversal sanitisation at the sink — the canonical pattern
+  // every SAST flow-tracker recognises:
+  //   1. `basename()` strips any separator from the filename.
+  //   2. `resolve()` absolutises destDir + the safe filename.
+  //   3. Literal `startsWith(rootWithSep)` containment check rejects
+  //      any payload that resolves outside the requested directory.
+  const safeFileName = basename(fileName);
+  const safeRoot = resolvePath(destDir);
+  const safeDestPath = resolvePath(safeRoot, safeFileName);
+  if (safeDestPath !== safeRoot && !safeDestPath.startsWith(safeRoot + pathSep)) {
+    throw new Error(`Refusing unsafe destination path under ${destDir}: ${fileName}`);
   }
 
   const reader = response.body?.getReader();
@@ -676,13 +685,25 @@ async function streamResponseToFile(
 
 /** Exported for direct unit testing — exercises resume, no-progress,
  * stale-partial truncation, and stream-with-progress branches without
- * standing up the whole `applyUpdate` flow. */
+ * standing up the whole `applyUpdate` flow.
+ *
+ * Takes `(destDir, fileName)` rather than a single path so the sink can
+ * apply `basename()` to the (potentially-tainted) filename without
+ * losing the directory the caller wanted to write into. The combined
+ * sanitiser-at-sink in `streamResponseToFile` is what satisfies Snyk's
+ * `javascript/PT` flow-tracker, on top of the upstream
+ * `isSafeAssetName` allow-list. */
 export async function downloadFile(
   url: string,
-  destPath: string,
+  destDir: string,
+  fileName: string,
   totalBytes: number,
   onProgress?: (pct: number) => void
 ): Promise<void> {
+  // Resolve the path consumers (detectPartial, Bun.write) using basename
+  // so any traversal payload in `fileName` is collapsed before it
+  // touches the filesystem.
+  const destPath = join(destDir, basename(fileName));
   const partialSize = await detectPartial(destPath);
 
   // Partial already matches expected size — skip the network entirely.
@@ -714,7 +735,8 @@ export async function downloadFile(
   }
   await streamResponseToFile(
     response,
-    destPath,
+    destDir,
+    fileName,
     totalBytes,
     resumed ? partialSize : 0,
     onProgress,
