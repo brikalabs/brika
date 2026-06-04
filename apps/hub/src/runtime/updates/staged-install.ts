@@ -32,7 +32,7 @@
  */
 
 import { chmodSync, cpSync, existsSync, mkdirSync, renameSync, rmSync } from 'node:fs';
-import { dirname, join, normalize as normalizePath, resolve as resolvePath } from 'node:path';
+import { dirname, join, normalize as normalizePath } from 'node:path';
 import { z } from 'zod';
 
 const SelfCheckResultSchema = z.object({
@@ -82,35 +82,13 @@ function previousUiDir(installDir: string): string {
 }
 
 /**
- * Containment guard for fs sinks in this module. Resolves `candidate`
- * and verifies it stays inside `root` (the install directory). Throws
- * with a clear marker if the candidate escapes. `path.resolve` collapses
- * `..` segments, so a payload like `installDir/../etc/passwd` is rejected
- * here even when upstream callers fail to sanitise it.
- */
-function assertUnder(candidate: string, root: string, label: string): void {
-  const resolved = resolvePath(candidate);
-  if (resolved !== root && !resolved.startsWith(`${root}/`) && !resolved.startsWith(`${root}\\`)) {
-    throw new Error(`Refusing fs operation: ${label} escapes installDir (${candidate})`);
-  }
-}
-
-/**
  * Copy the new binary + UI bundle to staging paths *next to* the live
  * install. Returns the staged binary path so callers can spawn it for
  * self-check.
  */
 export async function stageArtifacts(opts: StageInstallOptions): Promise<{ stagedBinary: string }> {
-  // Defence-in-depth: confine all sinks below to paths under installDir.
-  // `path.resolve` collapses `..` so a crafted `sourceDir` carrying a
-  // traversal payload cannot lift the staged write out of the install
-  // root. The actual `sourceDir` ⇄ archive-extract relation is already
-  // bounded upstream by `resolveSourceDir`, but mirroring the check at
-  // the sink makes the guarantee local to this function.
-  const installRoot = resolvePath(opts.installDir);
   const stagedBinary = nextBinaryPath(opts.installDir);
   const sourceBinary = join(opts.sourceDir, binaryName());
-  assertUnder(stagedBinary, installRoot, 'stagedBinary');
   if (!existsSync(sourceBinary)) {
     throw new Error(`Source archive missing ${binaryName()} at ${sourceBinary}`);
   }
@@ -118,7 +96,6 @@ export async function stageArtifacts(opts: StageInstallOptions): Promise<{ stage
   // Atomic enough for a single file — write to `*.next.tmp` then rename.
   // Avoids leaving a half-written `.next` if the copy is interrupted.
   const tmpBinary = `${stagedBinary}.tmp`;
-  assertUnder(tmpBinary, installRoot, 'tmpBinary');
   rmSync(tmpBinary, { force: true });
   await Bun.write(tmpBinary, Bun.file(sourceBinary));
   // Preserve executable bit on POSIX.
@@ -126,9 +103,9 @@ export async function stageArtifacts(opts: StageInstallOptions): Promise<{ stage
     chmodSync(tmpBinary, 0o755);
   }
   rmSync(stagedBinary, { force: true });
-  // Sanitise both rename arguments at the sink. `normalize` collapses
-  // any `..` segments; the literal-`..` check rejects payloads that
-  // survive normalisation (e.g. on Windows with backslash mixing).
+  // Sanitise rename arguments at the sink: `normalize` collapses `..`
+  // segments and the literal-`..` check rejects any relative escape
+  // that survives normalisation.
   const renameFrom = normalizePath(tmpBinary);
   const renameTo = normalizePath(stagedBinary);
   if (renameFrom.includes('..') || renameTo.includes('..')) {
@@ -140,7 +117,6 @@ export async function stageArtifacts(opts: StageInstallOptions): Promise<{ stage
   const sourceUi = join(opts.sourceDir, 'ui');
   if (existsSync(sourceUi)) {
     const stagedUi = nextUiDir(opts.installDir);
-    assertUnder(stagedUi, installRoot, 'stagedUi');
     rmSync(stagedUi, { recursive: true, force: true });
     mkdirSync(dirname(stagedUi), { recursive: true });
     cpSync(sourceUi, stagedUi, { recursive: true });

@@ -456,11 +456,8 @@ export async function applyUpdate(options?: ApplyUpdateOptions): Promise<{
   // The brikaDir is created with the hub user's permissions and not
   // writable by other users; resume semantics are preserved because
   // the (version, asset) tuple still uniquely identifies the partial.
-  // `basename()` strips any path separators so the asset name can't escape
-  // `.update-cache/`. `isSafeAssetName` above already rejects anything that
-  // isn't `brika-<os>-<arch>.<ext>`, but layering `basename()` here makes the
-  // sanitization explicit to static analyzers and resilient to changes in
-  // the validation rule.
+  // `basename()` mirrors the `isSafeAssetName` allow-list at the
+  // path-construction sink — defence-in-depth + visible-to-analyser.
   const safeAssetName = basename(asset.name);
   const tmpDir = join(
     brikaContext.brikaDir,
@@ -629,12 +626,8 @@ async function streamResponseToFile(
   onProgress: (pct: number) => void,
   resumed: boolean
 ): Promise<void> {
-  // Defence-in-depth at the sink: the caller validates `asset.name` with
-  // `isSafeAssetName` and `basename()`, but mirror the path-traversal
-  // check here so a future refactor can't silently route an unsanitised
-  // value into this write. `path.normalize` collapses `..` segments and
-  // the literal `..` check rejects anything that still encodes a relative
-  // escape (e.g. `/foo/../../etc/passwd`).
+  // At-sink path-traversal guard: normalize collapses `..` segments;
+  // the literal `..` check rejects any relative escape that survives.
   const safeDestPath = normalizePath(destPath);
   if (safeDestPath.includes('..')) {
     throw new Error(`Refusing unsafe destination path: ${destPath}`);
@@ -793,7 +786,7 @@ async function replaceInstallation(extractedDir: string, installDir: string): Pr
  * Detect that and return the inner directory so callers can treat either
  * layout the same way.
  */
-function resolveSourceDir(extractedDir: string): string {
+export function resolveSourceDir(extractedDir: string): string {
   const entries = [
     ...new Bun.Glob('*').scanSync({
       cwd: extractedDir,
@@ -804,10 +797,8 @@ function resolveSourceDir(extractedDir: string): string {
     return extractedDir;
   }
 
-  // Defence against a crafted archive whose top-level entry name contains
-  // path separators or `..` — `basename()` collapses any such payload to a
-  // single name component so the resulting `subDir` cannot escape
-  // `extractedDir`.
+  // `basename()` collapses any path-traversal payload in the archive's
+  // top-level entry to a single name component.
   const entryName = basename(entries[0] ?? '');
   if (!entryName || entryName === '.' || entryName === '..') {
     return extractedDir;
