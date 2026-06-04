@@ -68,15 +68,12 @@ export function useBlocksFilters(blockTypes: BlockDefinition[]) {
 
   // Group by category
   const groupedBlocks = useMemo(() => {
-    return filteredBlocks.reduce(
-      (acc, block) => {
-        const cat = block.category || 'other';
-        acc[cat] ??= [];
-        acc[cat].push(block);
-        return acc;
-      },
-      {} as Record<string, BlockDefinition[]>
-    );
+    return filteredBlocks.reduce<Record<string, BlockDefinition[]>>((acc, block) => {
+      const cat = block.category || 'other';
+      acc[cat] ??= [];
+      acc[cat].push(block);
+      return acc;
+    }, {});
   }, [filteredBlocks]);
 
   const hasActiveFilters = pluginFilter !== 'all' || categoryFilter !== 'all' || search !== '';

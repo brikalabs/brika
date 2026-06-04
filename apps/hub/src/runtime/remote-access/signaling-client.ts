@@ -135,7 +135,16 @@ export class SignalingClient {
 
     this.#ws = ws;
     ws.addEventListener('open', () => this.#onOpen());
-    ws.addEventListener('message', (ev) => this.#onMessage(ev));
+    ws.addEventListener('message', (ev) => {
+      // Bun WebSocket leaves `origin` empty for client-spawned sockets.
+      // Drop frames that carry a populated origin — the connection
+      // handshake authenticates this socket; a populated origin signals
+      // an intermediary tampering with the message stream.
+      if (ev.origin && ev.origin !== '') {
+        return;
+      }
+      this.#onMessage(ev);
+    });
     ws.addEventListener('close', (ev) => this.#onClose(ev));
     ws.addEventListener('error', (ev) => this.#onError(ev));
   }

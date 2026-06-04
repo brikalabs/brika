@@ -13,6 +13,12 @@ import React from 'react';
 import { withScopeGuard } from '../react/withScopeGuard';
 import { Scope } from '../types';
 
+/**
+ * Scope requirement for a route. A single scope, a list of scopes, or `null`
+ * (authenticated-only, no scope check).
+ */
+export type ScopeSpec = Scope | Scope[] | null;
+
 // ─── Path param type extraction ──────────────────────────────────────────────
 
 /** Normalize bare splat `$` to `_splat` (matches TanStack Router convention) */
@@ -38,7 +44,7 @@ export type ParamsArg<T extends string> = [ExtractParams<T>] extends [never]
 export interface ProtectedRouteDefinition<TPath extends string = string> {
   path: TPath;
   /** undefined = inherit parent scopes. null = no scope check. */
-  scopes?: Scope | Scope[] | null;
+  scopes?: ScopeSpec;
   component: React.ComponentType;
 }
 
@@ -62,7 +68,7 @@ export interface ProtectedRouteResult<TPath extends string = string> {
   /** The URL path pattern */
   path: TPath;
   /** Effective scopes (after inheritance). null = authenticated only. */
-  scopes: Scope | Scope[] | null;
+  scopes: ScopeSpec;
   /** Resolve path params to a concrete URL */
   to(...args: ParamsArg<TPath>): string;
 }
@@ -145,7 +151,7 @@ function processChildren(
   children: Record<string, ProtectedRouteDefinition>,
   parentPath: string,
   parentRoute: AnyRoute,
-  parentScopes: Scope | Scope[] | null,
+  parentScopes: ScopeSpec,
   groupResults: Record<string, ProtectedRouteResult>,
   options?: ProtectedRoutesOptions
 ): void {
@@ -173,7 +179,7 @@ function processChildren(
 function buildRoute<TPath extends string>(
   definition: ProtectedRouteDefinition<TPath>,
   getParentRoute: () => AnyRoute,
-  effectiveScopes: Scope | Scope[] | null,
+  effectiveScopes: ScopeSpec,
   options?: ProtectedRoutesOptions,
   absolutePath?: string
 ): ProtectedRouteResult<TPath> {

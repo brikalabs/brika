@@ -17,7 +17,7 @@
 
 import { createWriteStream } from 'node:fs';
 import { chmod, cp, mkdir, rename, rm } from 'node:fs/promises';
-import { dirname, join } from 'node:path';
+import { basename, dirname, join, resolve as resolvePath } from 'node:path';
 import { z } from 'zod';
 import { buildInfo } from './build-info';
 import { HUB_GITHUB_RELEASES_API, HUB_GITHUB_RELEASES_LIST_API, HUB_REPO, hub } from './hub';
@@ -161,6 +161,22 @@ const ASSET_NAME_RE = /^brika-(linux|darwin|windows)-(x64|arm64)\.(?:zip|tar\.gz
 /** Exported for unit testing — the regex itself is the contract. */
 export function isSafeAssetName(name: string): boolean {
   return ASSET_NAME_RE.test(name);
+}
+
+/**
+ * Build the staging paths used by `applyUpdate` from an asset name +
+ * a version. `basename()` mirrors `isSafeAssetName` at the
+ * path-construction sink — defence-in-depth + visible-to-analyser.
+ * Exported for unit testing the path-traversal containment.
+ */
+export function deriveCachePaths(
+  assetName: string,
+  version: string
+): { safeAssetName: string; tmpDir: string; archivePath: string } {
+  const safeAssetName = basename(assetName);
+  const tmpDir = join(brikaContext.brikaDir, '.update-cache', `${version}-${safeAssetName}`);
+  const archivePath = join(tmpDir, safeAssetName);
+  return { safeAssetName, tmpDir, archivePath };
 }
 
 /**
@@ -456,14 +472,11 @@ export async function applyUpdate(options?: ApplyUpdateOptions): Promise<{
   // The brikaDir is created with the hub user's permissions and not
   // writable by other users; resume semantics are preserved because
   // the (version, asset) tuple still uniquely identifies the partial.
-  const tmpDir = join(brikaContext.brikaDir, '.update-cache', `${cmp.latestVersion}-${asset.name}`);
-  await mkdir(tmpDir, {
-    recursive: true,
-  });
-  const archivePath = join(tmpDir, asset.name);
+  const { tmpDir, archivePath, safeAssetName } = deriveCachePaths(asset.name, cmp.latestVersion);
+  await mkdir(tmpDir, { recursive: true });
 
   try {
-    await downloadFile(asset.browser_download_url, archivePath, asset.size, (pct) => {
+    await downloadFile(asset.browser_download_url, tmpDir, safeAssetName, asset.size, (pct) => {
       onProgress?.('downloading', `Downloading v${cmp.latestVersion}... ${pct}%`);
     });
 
@@ -557,8 +570,9 @@ export async function maybeVerifySignature(
     throw new Error('Signature required but no .minisig asset was published for this release');
   }
 
-  const sigPath = join(tmpDir, `${asset.name}.minisig`);
-  await downloadFile(sigAsset.browser_download_url, sigPath, sigAsset.size);
+  const sigFileName = `${basename(asset.name)}.minisig`;
+  const sigPath = join(tmpDir, sigFileName);
+  await downloadFile(sigAsset.browser_download_url, tmpDir, sigFileName, sigAsset.size);
   const result = await verifyMinisignFile(archivePath, sigPath);
   if (result.status === 'failed') {
     throw new Error(`Signature verification failed: ${result.reason}`);
@@ -613,12 +627,16 @@ async function detectPartial(destPath: string): Promise<number> {
 
 async function streamResponseToFile(
   response: Response,
-  destPath: string,
+  destDir: string,
+  fileName: string,
   totalBytes: number,
   startBytes: number,
   onProgress: (pct: number) => void,
   resumed: boolean
 ): Promise<void> {
+  // basename() strips any separator so the filename cannot escape the root.
+  const safeDestPath = resolvePath(destDir, basename(fileName));
+
   const reader = response.body?.getReader();
   if (!reader) {
     throw new Error('Download response has no body');
@@ -628,7 +646,7 @@ async function streamResponseToFile(
   // existing partial with the *range* bytes starting at position 0).
   // Use `fs.createWriteStream` with `flags: 'a'` so resume genuinely
   // appends to whatever's already on disk.
-  const stream = createWriteStream(destPath, { flags: resumed ? 'a' : 'w' });
+  const stream = createWriteStream(safeDestPath, { flags: resumed ? 'a' : 'w' });
   let downloaded = startBytes;
   let lastPct = -1;
   try {
@@ -657,13 +675,23 @@ async function streamResponseToFile(
 
 /** Exported for direct unit testing — exercises resume, no-progress,
  * stale-partial truncation, and stream-with-progress branches without
- * standing up the whole `applyUpdate` flow. */
+ * standing up the whole `applyUpdate` flow.
+ *
+ * Takes `(destDir, fileName)` rather than a single path so the sink can
+ * apply `basename()` to the (potentially-tainted) filename without
+ * losing the directory the caller wanted to write into. The combined
+ * sanitiser-at-sink in `streamResponseToFile` is what satisfies Snyk's
+ * `javascript/PT` flow-tracker, on top of the upstream
+ * `isSafeAssetName` allow-list. */
 export async function downloadFile(
   url: string,
-  destPath: string,
+  destDir: string,
+  fileName: string,
   totalBytes: number,
   onProgress?: (pct: number) => void
 ): Promise<void> {
+  // basename() collapses any traversal payload before the path is used.
+  const destPath = join(destDir, basename(fileName));
   const partialSize = await detectPartial(destPath);
 
   // Partial already matches expected size — skip the network entirely.
@@ -695,7 +723,8 @@ export async function downloadFile(
   }
   await streamResponseToFile(
     response,
-    destPath,
+    destDir,
+    fileName,
     totalBytes,
     resumed ? partialSize : 0,
     onProgress,
@@ -772,7 +801,7 @@ async function replaceInstallation(extractedDir: string, installDir: string): Pr
  * Detect that and return the inner directory so callers can treat either
  * layout the same way.
  */
-function resolveSourceDir(extractedDir: string): string {
+export function resolveSourceDir(extractedDir: string): string {
   const entries = [
     ...new Bun.Glob('*').scanSync({
       cwd: extractedDir,
@@ -783,7 +812,8 @@ function resolveSourceDir(extractedDir: string): string {
     return extractedDir;
   }
 
-  const subDir = join(extractedDir, entries[0] ?? '');
+  // `basename()` collapses any traversal payload to a single component.
+  const subDir = join(extractedDir, basename(entries[0] ?? ''));
   try {
     const subEntries = [
       ...new Bun.Glob('*').scanSync({

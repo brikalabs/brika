@@ -32,7 +32,7 @@
  */
 
 import { chmodSync, cpSync, existsSync, mkdirSync, renameSync, rmSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve as resolvePath } from 'node:path';
 import { z } from 'zod';
 
 const SelfCheckResultSchema = z.object({
@@ -103,7 +103,7 @@ export async function stageArtifacts(opts: StageInstallOptions): Promise<{ stage
     chmodSync(tmpBinary, 0o755);
   }
   rmSync(stagedBinary, { force: true });
-  renameSync(tmpBinary, stagedBinary);
+  renameSync(resolvePath(tmpBinary), resolvePath(stagedBinary));
 
   // Stage the UI bundle if present in the archive.
   const sourceUi = join(opts.sourceDir, 'ui');

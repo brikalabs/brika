@@ -26,9 +26,21 @@ FROM oven/bun:${BUN_VERSION}-slim AS bun-source
 FROM debian:bookworm-slim
 WORKDIR /app
 
-COPY --from=bun-source /usr/local/bin/bun /usr/local/bin/bun
-COPY brika ./brika
-COPY ui    ./ui
+# Create a non-root `brika` user (UID/GID 1000) and own /app + the
+# secrets volume mount-point before dropping privileges. Running as root
+# is the single biggest container-hardening lever — even a remote code
+# execution bug in the hub is bounded to a low-privilege user and can't
+# trivially escape to the host (no setuid, no /dev/raw, no capability
+# set). Clears Snyk/Trivy's "image runs as root" finding (CIS Docker
+# Benchmark 4.1).
+RUN groupadd --system --gid 1000 brika \
+ && useradd --system --uid 1000 --gid brika --home-dir /app --shell /sbin/nologin brika \
+ && mkdir -p /app/.brika \
+ && chown -R brika:brika /app
+
+COPY --from=bun-source --chown=brika:brika /usr/local/bin/bun /usr/local/bin/bun
+COPY --chown=brika:brika brika ./brika
+COPY --chown=brika:brika ui    ./ui
 
 ENV NODE_ENV=production \
     BRIKA_HOST=0.0.0.0 \
@@ -40,6 +52,8 @@ ENV NODE_ENV=production \
     # secrets in production so the master key isn't co-located with
     # the ciphertext.
     BRIKA_SECRETS_BACKEND=file
+
+USER brika
 
 EXPOSE 3001
 VOLUME ["/app/.brika"]

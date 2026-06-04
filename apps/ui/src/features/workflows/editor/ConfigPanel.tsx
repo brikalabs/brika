@@ -113,7 +113,14 @@ function toDisplayString(value: unknown, fallback = ''): string {
   if (typeof value === 'object') {
     return JSON.stringify(value);
   }
-  return String(value);
+  if (typeof value === 'string') {
+    return value;
+  }
+  if (typeof value === 'number' || typeof value === 'boolean' || typeof value === 'bigint') {
+    return String(value);
+  }
+  // symbol | function — not expected for config values.
+  return fallback;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

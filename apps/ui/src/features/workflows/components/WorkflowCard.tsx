@@ -128,15 +128,16 @@ export function WorkflowCard({
           </Badge>
         )}
 
-        <div className="flex items-center gap-1" onClick={stopNav} onKeyDown={stopNav} role="group">
+        <div className="flex items-center gap-1">
           <Switch
             checked={workflow.enabled}
             disabled={isError}
+            onClick={stopNav}
             onCheckedChange={(checked) => onToggle({ id: workflow.id, enabled: checked })}
           />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button size="icon" variant="ghost" className="size-8">
+              <Button size="icon" variant="ghost" className="size-8" onClick={stopNav}>
                 <MoreVertical className="size-4" />
               </Button>
             </DropdownMenuTrigger>

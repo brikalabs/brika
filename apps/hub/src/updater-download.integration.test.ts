@@ -62,7 +62,9 @@ describe('downloadFile', () => {
 
     const dest = join(dir, 'a.bin');
     const progress: number[] = [];
-    await downloadFile('https://x/a', dest, payload.byteLength, (pct) => progress.push(pct));
+    await downloadFile('https://x/a', dir, 'a.bin', payload.byteLength, (pct) =>
+      progress.push(pct)
+    );
 
     const out = readFileSync(dest);
     expect(out.byteLength).toBe(payload.byteLength);
@@ -75,7 +77,7 @@ describe('downloadFile', () => {
     writeFileSync(dest, payload);
 
     const progress: number[] = [];
-    await downloadFile('https://x/a', dest, payload.length, (pct) => progress.push(pct));
+    await downloadFile('https://x/a', dir, 'a.bin', payload.length, (pct) => progress.push(pct));
 
     expect(mockFetch).not.toHaveBeenCalled();
     expect(progress).toEqual([100]);
@@ -102,7 +104,9 @@ describe('downloadFile', () => {
     });
 
     const progress: number[] = [];
-    await downloadFile('https://x/a', dest, head.length + tail.length, (pct) => progress.push(pct));
+    await downloadFile('https://x/a', dir, 'a.bin', head.length + tail.length, (pct) =>
+      progress.push(pct)
+    );
 
     const range = new Headers(seenInit?.headers).get('Range');
     expect(range).toBe(`bytes=${head.length}-`);
@@ -127,7 +131,8 @@ describe('downloadFile', () => {
     const progress: number[] = [];
     await downloadFile(
       'https://x/a',
-      dest,
+      dir,
+      'a.bin',
       stalePartial.length + 99, // totalBytes > partial → triggers Range header
       (pct) => progress.push(pct)
     );
@@ -141,7 +146,7 @@ describe('downloadFile', () => {
       Promise.resolve(new Response('boom', { status: 500, statusText: 'Internal Server Error' }))
     );
 
-    await expect(downloadFile('https://x/a', join(dir, 'a.bin'), 100)).rejects.toThrow(
+    await expect(downloadFile('https://x/a', dir, 'a.bin', 100)).rejects.toThrow(
       /Download failed: 500/
     );
   });
@@ -159,7 +164,27 @@ describe('downloadFile', () => {
 
     const dest = join(dir, 'a.bin');
     // No progress callback + totalBytes 0 → simple write path.
-    await downloadFile('https://x/a', dest, 0);
+    await downloadFile('https://x/a', dir, 'a.bin', 0);
     expect(readFileSync(dest, 'utf8')).toBe('xyz');
+  });
+
+  test('basename() at the sink collapses a traversal payload in the filename', async () => {
+    // The at-sink `basename()` + `resolve()` + `startsWith()` containment
+    // check is the canonical Snyk-recognised path-traversal sanitiser:
+    // basename strips any separator, and the containment check rejects
+    // any filename that resolves outside the requested destDir.
+    const payload = new Uint8Array(8).fill(0x01);
+    mockFetch.mockImplementation(() =>
+      Promise.resolve(
+        new Response(bodyStream([payload]), {
+          status: 200,
+          headers: { 'Content-Length': String(payload.byteLength) },
+        })
+      )
+    );
+
+    await downloadFile('https://x/a', dir, '../etc/passwd', payload.byteLength, () => undefined);
+    // basename('../etc/passwd') = 'passwd' → write lands inside `dir`.
+    expect(readFileSync(join(dir, 'passwd'))).toEqual(Buffer.from(payload));
   });
 });

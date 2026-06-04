@@ -127,7 +127,7 @@ export function PanelHeader({
             className="cursor-pointer rounded-md border border-dt-border bg-dt-bg-raised px-1.5 py-0.5 font-mono font-semibold text-[10px] text-indigo-400 uppercase outline-none transition-colors focus:border-indigo-400/50"
             value={isCiMode ? 'cimode' : currentLang}
             onChange={(e) => {
-              void switchLanguage(e.target.value);
+              switchLanguage(e.target.value).catch(() => undefined);
             }}
             disabled={isCiMode}
           >

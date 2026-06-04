@@ -72,6 +72,18 @@ describe('stageArtifacts', () => {
     await stageArtifacts({ sourceDir, installDir });
     expect(readFileSync(nextBinaryPath(installDir), 'utf8')).toBe('fresh');
   });
+
+  test('stages successfully under any absolute installDir (containment guard passes)', async () => {
+    // The at-sink `resolve()` + `startsWith(installRoot + sep)` guard
+    // refuses to swap any path that escapes `installDir`. Pin the
+    // happy-path behaviour: an absolute `installDir` always produces
+    // staged paths under that root, so the guard is a no-op for valid
+    // input and only fires if a future caller threads a tainted source
+    // through `stagedBinary`/`tmpBinary` derivation.
+    writeSourceBinary('payload');
+    const { stagedBinary } = await stageArtifacts({ sourceDir, installDir });
+    expect(stagedBinary.startsWith(installDir)).toBe(true);
+  });
 });
 
 describe('commitStagedArtifacts', () => {

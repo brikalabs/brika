@@ -134,7 +134,7 @@ jobs:
 
   sonar:
     name: SonarQube Scan
-    needs: test
+    needs: [setup, test]
     # Run even when tests fail -- partial coverage is still useful and lets
     # Sonar's quality-gate fire on whatever new code was analysed.
     if: ${{ !cancelled() }}
@@ -143,6 +143,23 @@ jobs:
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
+      # Install dependencies so the scanner's TypeScript analyzer can resolve
+      # types from node_modules. Without them every external/cross-package type
+      # degrades to `any`, which makes type-aware rules (e.g. S4325 redundant
+      # assertions, S7785 promise chains on zod's `.catch()`) fire as false
+      # positives on code that is actually correct.
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ needs.setup.outputs.bun_version }}
+      - uses: actions/cache@v5
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: bun-${{ runner.os }}-
+      - run: bun install --frozen-lockfile
       - name: Download coverage report
         uses: actions/download-artifact@v5
         with:
