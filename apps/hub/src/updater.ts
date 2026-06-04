@@ -814,11 +814,7 @@ export function resolveSourceDir(extractedDir: string): string {
   }
 
   // `basename()` collapses any traversal payload to a single component.
-  const entryName = basename(entries[0] ?? '');
-  if (!entryName || entryName === '.' || entryName === '..') {
-    return extractedDir;
-  }
-  const subDir = join(extractedDir, entryName);
+  const subDir = join(extractedDir, basename(entries[0] ?? ''));
   try {
     const subEntries = [
       ...new Bun.Glob('*').scanSync({
