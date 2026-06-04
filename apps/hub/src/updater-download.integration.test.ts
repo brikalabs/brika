@@ -162,4 +162,27 @@ describe('downloadFile', () => {
     await downloadFile('https://x/a', dest, 0);
     expect(readFileSync(dest, 'utf8')).toBe('xyz');
   });
+
+  test('rejects a destination path whose normalised form still contains `..`', async () => {
+    // The at-sink `normalize` + literal-`..` check in `streamResponseToFile`
+    // is the defence-in-depth backstop behind the caller-side
+    // `isSafeAssetName` allow-list. `path.normalize` collapses
+    // `/abs/sub/../../etc` to a clean path, so the guard fires only on
+    // payloads where `..` survives normalisation — i.e. relative paths
+    // that escape upwards. Use one of those to exercise the throw.
+    const payload = new Uint8Array(8).fill(0x01);
+    mockFetch.mockImplementation(() =>
+      Promise.resolve(
+        new Response(bodyStream([payload]), {
+          status: 200,
+          headers: { 'Content-Length': String(payload.byteLength) },
+        })
+      )
+    );
+
+    const unsafeDest = '../etc/passwd';
+    await expect(
+      downloadFile('https://x/a', unsafeDest, payload.byteLength, () => undefined)
+    ).rejects.toThrow(/unsafe destination path/);
+  });
 });

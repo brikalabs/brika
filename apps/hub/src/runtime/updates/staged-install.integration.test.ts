@@ -72,6 +72,21 @@ describe('stageArtifacts', () => {
     await stageArtifacts({ sourceDir, installDir });
     expect(readFileSync(nextBinaryPath(installDir), 'utf8')).toBe('fresh');
   });
+
+  test('rejects a relative installDir whose path survives normalisation with `..`', async () => {
+    // `path.normalize` collapses interior `..` segments, so the
+    // rename-sink guard only fires on payloads that retain a literal
+    // `..` after normalisation — i.e. a relative path that traverses
+    // upwards from cwd. The realistic-production installDir is always
+    // an absolute `dirname(process.execPath)`; this test pins the
+    // defence-in-depth backstop so a future caller passing relative
+    // strings is caught at the rename sink rather than silently
+    // writing outside the intended root.
+    writeSourceBinary('payload');
+    await expect(stageArtifacts({ sourceDir, installDir: '../escape' })).rejects.toThrow(
+      /escapes installDir|relative segment/
+    );
+  });
 });
 
 describe('commitStagedArtifacts', () => {

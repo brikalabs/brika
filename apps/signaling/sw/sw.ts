@@ -349,12 +349,10 @@ async function proxyThroughClient(req: Request, client: Client): Promise<Respons
     }, 30_000);
     channel.port1.onmessage = (event: MessageEvent<ProxyMessage>) => {
       // MessageChannel ports are private and unaddressable from other
-      // contexts, so `event.origin` is always empty here — but mirror the
-      // origin guard convention so anyone tampering with the port from a
-      // shimmed context can't push a non-empty value through unchecked.
-      if (event.origin && event.origin !== sw.location.origin) {
-        return;
-      }
+      // contexts — `event.origin` is always empty here. No origin check
+      // needed; both ends of the channel are held by the SW itself and
+      // by the FetchEvent-targeted client, both same-origin by the
+      // `respondWith` contract.
       const msg = event.data;
       if (msg.kind === 'head' && !headSeen) {
         headSeen = true;
