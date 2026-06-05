@@ -48,7 +48,7 @@ const startCommand = defineCommand({
   },
   async handler({ values }) {
     const cfg = await resolveAndLoad(values.config);
-    await runStack(cfg, { plain: values['no-tui'] === true });
+    await runStack(cfg, { plain: values.noTui });
   },
 });
 

@@ -27,14 +27,18 @@ Boot the hub. Detached by default (returns immediately), or attached (blocks the
 | `--attach`, `-a` | off | Run in foreground; same as `brika hub` |
 | `--port`, `-p` | `3001` | Listen port |
 | `--host` | `127.0.0.1` | Listen address |
+| `--open` | off | Open the hub UI in the browser once it is ready |
 
 ```sh
 brika start                       # detach
+brika start --open                # detach, then open the UI when ready
 brika start --attach              # foreground
 brika start -p 8080
 brika start --host 0.0.0.0
 brika start -a -p 8080 --host 0.0.0.0
 ```
+
+`--open` waits for the hub to answer `/api/health` (not just claim its pid file) before launching the browser, so you do not land on a connection-refused page. It composes with `--attach` (the browser opens in the background while the foreground hub runs).
 
 Detached mode forks a `brika hub` child, writes its PID into `.brika/brika.pid`, and waits ~1.5 s for the hub's `/api/health` to respond before printing the supervisor PID. If a hub is already running in the workspace the command refuses with a clear error.
 
@@ -76,10 +80,11 @@ Possible outputs:
 
 ## `brika open`
 
-Open the hub UI in your default browser. Refuses if no hub is running so you do not land on a connection-refused page.
+Open the hub UI in your default browser. If no hub is running, `open` starts one (detached) first so you do not land on a connection-refused page. Pass `--no-start` to refuse instead of starting a hub.
 
 ```sh
 brika open
+brika open --no-start   # error out if the hub isn't running
 ```
 
 Honours `BRIKA_HOST` and `BRIKA_PORT`.
@@ -121,15 +126,14 @@ Default mode runs a short Brix animation in the TUI. The CLI auto-falls back to 
 
 ## `brika update`
 
-Check for a new release and apply it. Talks to the running hub's `/api/system/update` endpoint so the CLI uses the same updater path as the web UI — there's no second copy of the check/apply logic.
+Check for a new release and apply it. Runs the updater **in this process**, so it works whether or not the hub is running (no HTTP call, no cli-token).
 
 | Flag | Description |
 |---|---|
 | `--check` | Check only; print availability and exit |
 | `--yes`, `-y` | Apply without prompting |
 | `--force` | Reinstall the current version |
-| `--channel <name>` | Switch update channel before checking (`stable` or `canary`) |
-| `--offline` | Run the updater locally, no running hub required |
+| `--channel <name>` | Override the channel for this run only (`stable`, `beta`, `canary`, `pinned`) |
 
 ```sh
 brika update                    # check, prompt, apply
@@ -137,16 +141,13 @@ brika update --check
 brika update --yes
 brika update --channel canary
 brika update --force
-brika update --offline          # recovery when the hub is unreachable
 ```
 
-The hub performs an in-place binary swap and restarts itself via the supervisor when the apply completes.
+The apply is dispatched through the same per-runtime strategy the hub uses. On a **standalone** install it performs an in-place binary swap guarded by the cross-process `.update.lock` (so it cannot race a hub-driven apply). On a **container**, **system-package**, or **dev** install it refuses with guidance (pull a new image / use your package manager / you are running from source) instead of clobbering a binary it does not own.
 
-### Offline path
+The saved update channel and pinned version are read from the hub's SQLite state **read-only**: the CLI honours what the hub/UI persisted but never writes that DB. `--channel` overrides the channel for a single run without persisting it; change the saved channel from the hub UI.
 
-`--offline` imports the updater functions from `@brika/hub/updater` directly and runs them in this process. Use it when the running hub is broken or stopped. Acquires the same cross-process `.update.lock` the hub uses, so a mid-apply hub will not race the offline path.
-
-Channel switching is **not** supported offline because the channel preference lives in the hub's SQLite state and the CLI does not fight the hub for the DB lock.
+If a hub is running when the swap completes, it keeps serving the old binary until you restart it (`brika stop` then `brika start`); the command prints a reminder.
 
 ## `brika completions`
 

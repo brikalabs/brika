@@ -1,7 +1,6 @@
 /**
  * Unit tests for the loopback hub HTTP client — URL composition, fetch
- * wrapper, and `hubFetchOk`'s `CliError` wrapping. `requireRunningHub`
- * needs a real pid file and supervisor and is covered elsewhere.
+ * wrapper, and `hubFetchOk`'s `CliError` wrapping.
  */
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdtempSync, rmSync } from 'node:fs';

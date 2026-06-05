@@ -5,8 +5,8 @@
  * actual binary swap.
  */
 
-import { checkForUpdate, type UpdateInfo } from '@/runtime/updates/updater';
 import type { UpdateChannelId } from '../channels';
+import { checkForUpdate, type UpdateInfo } from '../updater';
 import {
   type StrategyApplyOptions,
   type StrategyApplyResult,

@@ -38,7 +38,7 @@ brika update          # apply the latest stable
 brika update --check  # see what is available without installing
 ```
 
-`brika update` re-runs the installer script under the hood, swaps the binary, and asks you to restart the hub.
+`brika update` runs the updater in-process (no running hub required): it checks GitHub Releases on your saved channel, swaps the binary in place, and, if a hub is running, asks you to restart it so the new version takes effect.
 
 ### Uninstalling
 

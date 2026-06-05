@@ -50,7 +50,7 @@ export async function readPid(): Promise<number | null> {
  * response — even 4xx — means *something* is listening; what we care
  * about here is liveness, not whether we're authenticated. URL is
  * built inline rather than going through `hubFetch` to avoid an
- * import cycle (hub-client needs `checkPid` for `requireRunningHub`).
+ * import cycle.
  */
 export async function pingHub(): Promise<boolean> {
   try {
