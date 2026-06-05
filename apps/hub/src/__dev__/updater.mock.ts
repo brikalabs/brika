@@ -44,7 +44,7 @@ import {
   type ProviderApplyOptions,
   UpdateProvider,
 } from '@/runtime/updates/update-provider';
-import type { UpdateInfo, UpdatePhase } from '@/updater';
+import type { UpdateInfo, UpdatePhase } from '@/runtime/updates/updater';
 
 export const MOCK_ENV_VAR = 'BRIKA_DEV_FAKE_UPDATE';
 export const MOCK_DELAY_ENV_VAR = 'BRIKA_DEV_FAKE_UPDATE_DELAY_MS';

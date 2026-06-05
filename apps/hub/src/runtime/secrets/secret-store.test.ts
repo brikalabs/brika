@@ -1,9 +1,9 @@
 import 'reflect-metadata';
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { get, reset } from '@brika/di/testing';
+import { type BunSecretsMock, installBunSecretsMock } from '@/helpers/_bun-secrets-mock';
 import { brikaContext } from '@/runtime/context/brika-context';
 import { SecretStore } from '@/runtime/secrets/secret-store';
-import { type BunSecretsMock, installBunSecretsMock } from './_bun-secrets-mock';
 
 const SERVICE = brikaContext.serviceName;
 

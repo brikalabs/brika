@@ -31,14 +31,14 @@ describe('PluginWatcher', () => {
 
   test('watch() starts watching a plugin directory', () => {
     // Use the hub's own src/ directory as a known-to-exist directory
-    const hubDir = import.meta.dir;
+    const hubDir = join(import.meta.dir, '../..');
 
     // Should not throw
     watcher.watch('@test/plugin', hubDir);
   });
 
   test('watch() is idempotent — re-watching the same plugin unwatches first', () => {
-    const hubDir = import.meta.dir;
+    const hubDir = join(import.meta.dir, '../..');
 
     watcher.watch('@test/plugin', hubDir);
     watcher.watch('@test/plugin', hubDir);
@@ -54,7 +54,7 @@ describe('PluginWatcher', () => {
   });
 
   test('unwatch() stops watching a plugin', () => {
-    const hubDir = import.meta.dir;
+    const hubDir = join(import.meta.dir, '../..');
 
     watcher.watch('@test/plugin', hubDir);
     watcher.unwatch('@test/plugin');
@@ -69,7 +69,7 @@ describe('PluginWatcher', () => {
   });
 
   test('stopAll() stops all watchers', () => {
-    const hubDir = import.meta.dir;
+    const hubDir = join(import.meta.dir, '../..');
 
     watcher.watch('@test/a', hubDir);
     watcher.watch('@test/b', hubDir);

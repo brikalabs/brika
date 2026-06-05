@@ -19,18 +19,18 @@ import { createWriteStream } from 'node:fs';
 import { chmod, cp, mkdir, rename, rm } from 'node:fs/promises';
 import { basename, dirname, join, resolve as resolvePath } from 'node:path';
 import { z } from 'zod';
-import { buildInfo } from './build-info';
-import { HUB_GITHUB_RELEASES_API, HUB_GITHUB_RELEASES_LIST_API, HUB_REPO, hub } from './hub';
-import { brikaContext } from './runtime/context/brika-context';
-import { DEFAULT_CHANNEL_ID, type UpdateChannelId } from './runtime/updates/channels';
-import { GithubEtagCache } from './runtime/updates/etag-cache';
-import { BRIKA_SIGNING_PUBKEY_B64, verifyMinisignFile } from './runtime/updates/signature';
+import { buildInfo } from '../../build-info';
+import { HUB_GITHUB_RELEASES_API, HUB_GITHUB_RELEASES_LIST_API, HUB_REPO, hub } from '../../hub';
+import { brikaContext } from '../context/brika-context';
+import { DEFAULT_CHANNEL_ID, type UpdateChannelId } from './channels';
+import { GithubEtagCache } from './etag-cache';
+import { BRIKA_SIGNING_PUBKEY_B64, verifyMinisignFile } from './signature';
 import {
   commitStagedArtifacts,
   discardStagedArtifacts,
   runStagedSelfCheck,
   stageArtifacts,
-} from './runtime/updates/staged-install';
+} from './staged-install';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types

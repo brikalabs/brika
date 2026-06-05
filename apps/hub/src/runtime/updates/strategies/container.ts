@@ -7,7 +7,7 @@
  * available" without misleading the user about how to install it.
  */
 
-import { checkForUpdate, type UpdateInfo } from '@/updater';
+import { checkForUpdate, type UpdateInfo } from '@/runtime/updates/updater';
 import type { UpdateChannelId } from '../channels';
 import {
   type StrategyApplyOptions,

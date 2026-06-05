@@ -24,7 +24,7 @@ import {
   checkForUpdate,
   type UpdateInfo,
   type UpdatePhase,
-} from '@/updater';
+} from '@/runtime/updates/updater';
 
 export interface ApplyResult {
   previousVersion: string;

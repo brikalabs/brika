@@ -23,7 +23,7 @@ import { UpdateService } from '@/runtime/updates';
 import { CompatReportBuilder } from '@/runtime/updates/compat-report';
 import { UpdateOrchestrator } from '@/runtime/updates/orchestrator';
 import { UpdateRefusedError } from '@/runtime/updates/strategies';
-import type { UpdatePhase } from '@/updater';
+import type { UpdatePhase } from '@/runtime/updates/updater';
 
 // ─── Public-ish (authed) read endpoints ──────────────────────────────────────
 
