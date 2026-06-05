@@ -48,7 +48,9 @@ Status-style commands use exit codes so scripts can branch on them without parsi
 
 ## How commands reach the running hub
 
-`brika status`, `brika open`, and `brika update` all talk to the hub over HTTP, not by reaching into shared memory. The CLI reads `~/.brika/cli-token` (a per-user bearer token written by the hub on startup) and includes it in the `Authorization` header so the request bypasses normal auth. See [Authentication](../architecture/auth.md) for the auth model.
+`brika status` and `brika open` talk to the hub over HTTP, not by reaching into shared memory. The CLI reads `~/.brika/cli-token` (a per-user bearer token written by the hub on startup) and includes it in the `Authorization` header so the request bypasses normal auth. See [Authentication](../architecture/auth.md) for the auth model.
+
+`brika update` is the exception: it runs the updater **in-process** and never contacts the hub, so it works even when the hub is stopped or unreachable. It reads the saved update channel from the hub's state database (read-only) and guards the binary swap with a cross-process lock so it can't race a hub-driven apply. If a hub is running when the swap completes, the CLI tells you to restart it so the new binary takes effect.
 
 If you have multiple hubs running on different ports on the same machine, set `BRIKA_HOST` / `BRIKA_PORT` to target a specific one.
 

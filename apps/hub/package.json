@@ -17,6 +17,7 @@
     "./updater": "./src/runtime/updates/updater.ts",
     "./self-check": "./src/runtime/updates/self-check.ts",
     "./update-lock": "./src/runtime/updates/update-lock.ts",
+    "./update-prefs": "./src/runtime/updates/update-prefs.ts",
     "./brika-context": "./src/runtime/context/brika-context.ts"
   },
   "scripts": {
