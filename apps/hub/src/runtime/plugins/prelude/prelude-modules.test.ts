@@ -76,6 +76,14 @@ async function triggerMessage(channel: Channel, name: string, payload: Record<st
 
 const logMock = mock() as ReturnType<typeof mock> & ((level: string, message: string) => void);
 
+/**
+ * Grant-vector gate passed to setupLifecycle/setupBricks. Already-resolved so
+ * the preferences/brick-config handlers dispatch immediately in tests that are
+ * not exercising the startup race. The dedicated "deferred until vector"
+ * tests build their own unresolved promise.
+ */
+const readyVector = Promise.resolve();
+
 // ─── Actions ──────────────────────────────────────────────────────────────────
 
 describe('Prelude Actions', () => {
@@ -464,7 +472,7 @@ describe('Prelude Bricks', () => {
   });
 
   test('registerBrickType validates against manifest', () => {
-    const bricks = setupBricks(channel, logMock, declaredBricks);
+    const bricks = setupBricks(channel, logMock, declaredBricks, readyVector);
 
     expect(() => bricks.registerBrickType({ id: 'unknown', families: ['sm'] })).toThrow(
       'not in package.json'
@@ -472,7 +480,7 @@ describe('Prelude Bricks', () => {
   });
 
   test('registerBrickType sends message for declared brick', () => {
-    const bricks = setupBricks(channel, logMock, declaredBricks);
+    const bricks = setupBricks(channel, logMock, declaredBricks, readyVector);
     bricks.registerBrickType({ id: 'clock', families: ['sm', 'md'] });
 
     const msg = sent.find((m) => m.t === registerBrickType.name) as Record<string, unknown>;
@@ -481,7 +489,7 @@ describe('Prelude Bricks', () => {
   });
 
   test('setBrickData sends message for declared brick', () => {
-    const bricks = setupBricks(channel, logMock, declaredBricks);
+    const bricks = setupBricks(channel, logMock, declaredBricks, readyVector);
     bricks.setBrickData('clock', { time: '12:00' });
 
     const msg = sent.find((m) => m.t === pushBrickData.name) as Record<string, unknown>;
@@ -490,14 +498,14 @@ describe('Prelude Bricks', () => {
   });
 
   test('setBrickData logs error for unknown brick', () => {
-    const bricks = setupBricks(channel, logMock, declaredBricks);
+    const bricks = setupBricks(channel, logMock, declaredBricks, readyVector);
     bricks.setBrickData('unknown', {});
 
     expect(logMock).toHaveBeenCalledWith('error', expect.stringContaining('unknown brick type'));
   });
 
   test('onBrickConfigChange dispatches and can unsubscribe', async () => {
-    const bricks = setupBricks(channel, logMock, declaredBricks);
+    const bricks = setupBricks(channel, logMock, declaredBricks, readyVector);
     const handler = mock();
 
     const unsub = bricks.onBrickConfigChange(handler);
@@ -521,7 +529,7 @@ describe('Prelude Bricks', () => {
   });
 
   test('onBrickConfigChange logs error from handler', async () => {
-    const bricks = setupBricks(channel, logMock, declaredBricks);
+    const bricks = setupBricks(channel, logMock, declaredBricks, readyVector);
     bricks.onBrickConfigChange(() => {
       throw new Error('handler boom');
     });
@@ -532,6 +540,31 @@ describe('Prelude Bricks', () => {
     });
 
     expect(logMock).toHaveBeenCalledWith('error', expect.stringContaining('handler boom'));
+  });
+
+  test('onBrickConfigChange is deferred until the grant vector is installed', async () => {
+    // Models the startup race: a brick-config event lands before the grant
+    // vector (and the net fetch proxy it unlocks) is applied. The handler must
+    // NOT fire until the vector promise resolves, otherwise a poll-on-config
+    // plugin hits the scrubbed fetch deny-stub.
+    let installVector: () => void = () => {};
+    const vectorReady = new Promise<void>((resolve) => {
+      installVector = resolve;
+    });
+    const bricks = setupBricks(channel, logMock, declaredBricks, vectorReady);
+    const handler = mock();
+    bricks.onBrickConfigChange(handler);
+
+    void triggerMessage(channel, updateBrickConfig.name, {
+      instanceId: 'inst-1',
+      config: { city: 'Lausanne' },
+    });
+    await Promise.resolve();
+    expect(handler).not.toHaveBeenCalled();
+
+    installVector();
+    await waitFor(() => handler.mock.calls.length > 0);
+    expect(handler).toHaveBeenCalledWith('inst-1', { city: 'Lausanne' });
   });
 });
 
@@ -766,7 +799,7 @@ describe('Prelude Lifecycle', () => {
   });
 
   test('onInit runs handler after first preferences message', async () => {
-    const lifecycle = setupLifecycle(channel, logMock);
+    const lifecycle = setupLifecycle(channel, logMock, readyVector);
     const initFn = mock();
     lifecycle.onInit(initFn);
 
@@ -777,7 +810,7 @@ describe('Prelude Lifecycle', () => {
   });
 
   test('onInit runs immediately if already initialized', async () => {
-    const lifecycle = setupLifecycle(channel, logMock);
+    const lifecycle = setupLifecycle(channel, logMock, readyVector);
 
     // Initialize
     await triggerMessage(channel, preferences.name, { values: {} });
@@ -794,7 +827,7 @@ describe('Prelude Lifecycle', () => {
   });
 
   test('init handlers only run once', async () => {
-    const lifecycle = setupLifecycle(channel, logMock);
+    const lifecycle = setupLifecycle(channel, logMock, readyVector);
     const initFn = mock();
     lifecycle.onInit(initFn);
 
@@ -805,7 +838,7 @@ describe('Prelude Lifecycle', () => {
   });
 
   test('init handler error is logged', async () => {
-    const lifecycle = setupLifecycle(channel, logMock);
+    const lifecycle = setupLifecycle(channel, logMock, readyVector);
     lifecycle.onInit(() => {
       throw new Error('init boom');
     });
@@ -815,8 +848,31 @@ describe('Prelude Lifecycle', () => {
     expect(logMock).toHaveBeenCalledWith('error', expect.stringContaining('init boom'));
   });
 
+  test('onInit is deferred until the grant vector is installed', async () => {
+    // The hub sends the first `preferences` message as soon as it sees `hello`,
+    // before the vector round-trip completes. onInit must wait so a plugin that
+    // calls fetch from onInit sees the real net proxy, not the deny-stub.
+    let installVector: () => void = () => {};
+    const vectorReady = new Promise<void>((resolve) => {
+      installVector = resolve;
+    });
+    const lifecycle = setupLifecycle(channel, logMock, vectorReady);
+    const initFn = mock();
+    lifecycle.onInit(initFn);
+
+    void triggerMessage(channel, preferences.name, { values: { theme: 'dark' } });
+    await Promise.resolve();
+    expect(initFn).not.toHaveBeenCalled();
+    // Preferences state is still updated synchronously, regardless of the gate.
+    expect(lifecycle.getPreferences()).toEqual({ theme: 'dark' });
+
+    installVector();
+    await waitFor(() => initFn.mock.calls.length > 0);
+    expect(initFn).toHaveBeenCalled();
+  });
+
   test('onPreferencesChange fires on subsequent preferences messages', async () => {
-    const lifecycle = setupLifecycle(channel, logMock);
+    const lifecycle = setupLifecycle(channel, logMock, readyVector);
     const changeFn = mock();
     lifecycle.onPreferencesChange(changeFn);
 
@@ -830,7 +886,7 @@ describe('Prelude Lifecycle', () => {
   });
 
   test('onPreferencesChange unsubscribe works', async () => {
-    const lifecycle = setupLifecycle(channel, logMock);
+    const lifecycle = setupLifecycle(channel, logMock, readyVector);
     const changeFn = mock();
     const unsub = lifecycle.onPreferencesChange(changeFn);
 
@@ -842,7 +898,7 @@ describe('Prelude Lifecycle', () => {
   });
 
   test('getPreferences returns current preferences', async () => {
-    const lifecycle = setupLifecycle(channel, logMock);
+    const lifecycle = setupLifecycle(channel, logMock, readyVector);
 
     expect(lifecycle.getPreferences()).toEqual({});
 
@@ -851,7 +907,7 @@ describe('Prelude Lifecycle', () => {
   });
 
   test('updatePreference updates local state and sends message', async () => {
-    const lifecycle = setupLifecycle(channel, logMock);
+    const lifecycle = setupLifecycle(channel, logMock, readyVector);
 
     await triggerMessage(channel, preferences.name, { values: { lang: 'en' } });
     lifecycle.updatePreference('lang', 'fr');
@@ -864,7 +920,7 @@ describe('Prelude Lifecycle', () => {
   });
 
   test('onUninstall runs handlers', async () => {
-    const lifecycle = setupLifecycle(channel, logMock);
+    const lifecycle = setupLifecycle(channel, logMock, readyVector);
     const uninstallFn = mock();
     lifecycle.onUninstall(uninstallFn);
 
@@ -874,7 +930,7 @@ describe('Prelude Lifecycle', () => {
   });
 
   test('onUninstall logs handler errors', async () => {
-    const lifecycle = setupLifecycle(channel, logMock);
+    const lifecycle = setupLifecycle(channel, logMock, readyVector);
     lifecycle.onUninstall(() => {
       throw new Error('uninstall boom');
     });
@@ -885,7 +941,7 @@ describe('Prelude Lifecycle', () => {
   });
 
   test('onUninstall unsubscribe works', async () => {
-    const lifecycle = setupLifecycle(channel, logMock);
+    const lifecycle = setupLifecycle(channel, logMock, readyVector);
     const fn = mock();
     const unsub = lifecycle.onUninstall(fn);
     unsub();
@@ -895,7 +951,7 @@ describe('Prelude Lifecycle', () => {
   });
 
   test('definePreferenceOptions and preferenceOptions RPC', async () => {
-    const lifecycle = setupLifecycle(channel, logMock);
+    const lifecycle = setupLifecycle(channel, logMock, readyVector);
     lifecycle.definePreferenceOptions('theme', () => [
       { value: 'dark', label: 'Dark' },
       { value: 'light', label: 'Light' },
@@ -911,14 +967,14 @@ describe('Prelude Lifecycle', () => {
   });
 
   test('preferenceOptions RPC returns empty for unknown provider', async () => {
-    setupLifecycle(channel, logMock);
+    setupLifecycle(channel, logMock, readyVector);
 
     const result = await triggerRpc(channel, sent, preferenceOptions.name, { name: 'nope' });
     expect(result).toEqual({ options: [] });
   });
 
   test('preferenceOptions RPC logs provider errors', async () => {
-    const lifecycle = setupLifecycle(channel, logMock);
+    const lifecycle = setupLifecycle(channel, logMock, readyVector);
     lifecycle.definePreferenceOptions('broken', () => {
       throw new Error('provider boom');
     });
@@ -929,7 +985,7 @@ describe('Prelude Lifecycle', () => {
   });
 
   test('onInit unsubscribe before init prevents execution', async () => {
-    const lifecycle = setupLifecycle(channel, logMock);
+    const lifecycle = setupLifecycle(channel, logMock, readyVector);
     const fn = mock();
     const unsub = lifecycle.onInit(fn);
     unsub();

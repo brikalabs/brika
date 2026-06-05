@@ -67,6 +67,24 @@ const declaredBlocks = new Map(manifest.blocks?.map((b) => [b.id, b]) ?? []);
 
 const stopHandlers: StopHandler[] = [];
 
+// ---- Grant-vector gate ----
+// The grant vector (and the real net fetch/WebSocket proxies it unlocks) is
+// only installed inside `start()`, after a `getGrantVector` round-trip. The
+// hub, however, sends `preferences` (which fires onInit) and `updateBrickConfig`
+// (which fires onBrickConfigChange) as soon as it sees our `hello`, and those
+// can land BEFORE the vector is applied. A plugin that calls `ctx.net.fetch` or
+// `globalThis.fetch` from one of those early handlers would hit the scrubbed
+// deny-stub ("globalThis.fetch is not available to plugin").
+//
+// `vectorReady` gates those handlers: they await it before invoking any
+// plugin-facing callback, so config/init work never runs until the proxies
+// are live. Awaiting inside each handler preserves arrival order (handlers
+// resume in the order they suspended). This does NOT weaken the security
+// boundary: the vector is installed exactly as before, only the plugin's
+// observation of config/init is deferred to after it lands.
+const vectorGate = Promise.withResolvers<void>();
+const vectorReady = vectorGate.promise;
+
 // ---- Channel setup ----
 // `process.send` and `process.on` are scrubbed by lockdown.ts on enforce
 // mode, so reach them through the captured-reference accessors. Plugin
@@ -107,7 +125,24 @@ safeOn('message', (msg: WireMessage) => {
 
 safeOn('disconnect', () => {
   channel.close(new Error('IPC disconnected'));
+  // The hub closed the IPC channel (graceful unload, or the hub itself went
+  // away). Nothing can reach this process anymore, so exit instead of lingering
+  // as an orphan.
+  process.exit(0);
 });
+
+// Parent-death watchdog. Bun does not deliver a reliable 'disconnect' when the
+// hub dies abruptly (the dev supervisor SIGKILLs it on restart, or it crashes),
+// and macOS has no PR_SET_PDEATHSIG. Bun's `process.ppid` is live, so once we
+// are reparented to init (ppid 1) the hub is gone and we must exit, otherwise
+// the host leaks as an orphan forever. `.unref()` keeps this timer from holding
+// the process open on its own.
+const PARENT_DEATH_POLL_MS = 2000;
+setInterval(() => {
+  if (process.ppid === 1) {
+    process.exit(0);
+  }
+}, PARENT_DEATH_POLL_MS).unref();
 
 // ---- Log helper ----
 
@@ -121,12 +156,12 @@ function capture(name: string, props?: Record<string, Json>, distinctId?: string
 
 // ---- Domain modules ----
 
-const lifecycle = setupLifecycle(channel, log);
+const lifecycle = setupLifecycle(channel, log, vectorReady);
 const actions = setupActions(channel);
 const routes = setupRoutes(channel);
 const sparks = setupSparks(channel, log, declaredSparks);
 const blocks = setupBlocks(channel, log, declaredBlocks);
-const bricks = setupBricks(channel, log, declaredBricks);
+const bricks = setupBricks(channel, log, declaredBricks, vectorReady);
 const location = setupLocation(channel);
 const secrets = setupSecrets(channel);
 
@@ -201,6 +236,10 @@ const bridge = {
       });
       process.exit(78);
     }
+    // The grant vector and net proxies are now live. Release any
+    // preferences/brick-config handlers that arrived early and parked on
+    // `vectorReady`, so onInit / onBrickConfigChange can safely call fetch.
+    vectorGate.resolve();
     channel.send(ready, {});
   },
   capture,

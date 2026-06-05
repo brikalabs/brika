@@ -18,11 +18,22 @@ type BrickConfigChangeHandler = (instanceId: string, config: Record<string, unkn
 export function setupBricks(
   channel: Channel,
   log: (level: LogLevelType, message: string) => void,
-  declaredBricks: ReadonlySet<string>
+  declaredBricks: ReadonlySet<string>,
+  /**
+   * Resolves once the grant vector + net proxies are installed. The
+   * updateBrickConfig handler awaits this before firing onBrickConfigChange so
+   * a plugin that polls (calls fetch) from that handler does not hit the
+   * scrubbed deny-stub during the startup window. See prelude/index.ts.
+   */
+  vectorReady: Promise<void>
 ) {
   const configChangeHandlers = new Set<BrickConfigChangeHandler>();
 
-  channel.on(updateBrickConfigMsg, ({ instanceId, config }) => {
+  channel.on(updateBrickConfigMsg, async ({ instanceId, config }) => {
+    // Defer onBrickConfigChange until the grant vector is live, so a plugin
+    // that polls via fetch on first config sees the real net proxy rather
+    // than the lockdown deny-stub.
+    await vectorReady;
     for (const handler of configChangeHandlers) {
       try {
         handler(instanceId, config);
