@@ -27,7 +27,14 @@ type PreferenceOptionsProvider = () => PreferenceOption[] | Promise<PreferenceOp
 
 export function setupLifecycle(
   channel: Channel,
-  log: (level: LogLevelType, message: string) => void
+  log: (level: LogLevelType, message: string) => void,
+  /**
+   * Resolves once the grant vector + net proxies are installed. The
+   * preferences handler awaits this before firing onInit / onPreferencesChange
+   * so a plugin that calls fetch from one of those handlers does not hit the
+   * scrubbed deny-stub during the startup window. See prelude/index.ts.
+   */
+  vectorReady: Promise<void>
 ) {
   const initHandlers = new Set<InitHandler>();
   const uninstallHandlers = new Set<UninstallHandler>();
@@ -50,9 +57,15 @@ export function setupLifecycle(
     }
   }
 
-  channel.on(preferencesMsg, ({ values }) => {
+  channel.on(preferencesMsg, async ({ values }) => {
     const isFirstTime = Object.keys(preferences).length === 0;
     preferences = values;
+
+    // Defer onInit / onPreferencesChange until the grant vector is live, so a
+    // plugin that calls fetch from one of those handlers sees the real proxy
+    // rather than the lockdown deny-stub. State (`preferences`) is updated
+    // synchronously above so `getPreferences()` is correct immediately.
+    await vectorReady;
 
     if (isFirstTime) {
       runInitHandlers();

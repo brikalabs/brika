@@ -3,7 +3,9 @@
  */
 
 import 'reflect-metadata';
-import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from 'bun:test';
+import type { FSWatcher } from 'node:fs';
+import * as nodeFs from 'node:fs';
 import { mkdir, mkdtemp, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -185,6 +187,142 @@ describe('PluginWatcher', () => {
     // Negative assertion: nothing should fire past debounce window after cancel
     await sleep(600);
 
+    expect(handler).not.toHaveBeenCalled();
+
+    await rm(tmpRoot, { recursive: true, force: true });
+  });
+
+  test('poller fires reload even when fs.watch never delivers events', async () => {
+    // Simulate the macOS failure mode: fs.watch is alive but silent. We swap
+    // node:fs watch for a real-but-inert watcher pointed at an empty directory
+    // that is never modified, so it never emits a source-change event. This
+    // proves the mtime poller alone keeps hot-reload working.
+    const inertDir = await realpath(await mkdtemp(join(tmpdir(), 'brika-watcher-inert-')));
+    const realWatch = nodeFs.watch;
+    const inertWatch: typeof nodeFs.watch = (): FSWatcher => realWatch(inertDir);
+    const watchSpy = spyOn(nodeFs, 'watch').mockImplementation(inertWatch);
+    try {
+      const tmpRoot = await realpath(await mkdtemp(join(tmpdir(), 'brika-watcher-test-')));
+      const srcDir = join(tmpRoot, 'src');
+      await mkdir(srcDir, { recursive: true });
+      await writeFile(join(srcDir, 'index.ts'), 'export const a = 1;');
+
+      stub(Logger);
+      provide(PluginWatcher, new PluginWatcher());
+      const realWatcher = get(PluginWatcher);
+      const handler = mock();
+      realWatcher.setReloadHandler(handler);
+
+      realWatcher.watch('@test/poll-only', tmpRoot);
+      expect(watchSpy).toHaveBeenCalled();
+
+      await sleep(100);
+      await writeFile(join(srcDir, 'index.ts'), 'export const a = 2;');
+
+      // No fs.watch events will ever fire; only the poller can catch this.
+      await waitFor(() => handler.mock.calls.length > 0, { timeoutMs: 6000 });
+      expect(handler).toHaveBeenCalledWith('@test/poll-only');
+
+      realWatcher.unwatch('@test/poll-only');
+      await rm(tmpRoot, { recursive: true, force: true });
+    } finally {
+      watchSpy.mockRestore();
+      await rm(inertDir, { recursive: true, force: true });
+    }
+  });
+
+  test('re-arms after an fs.watch error event, and survives a failed re-arm via the poller', async () => {
+    // FSEvents on macOS can collapse the watch stream and emit 'error'. The
+    // watcher must close the dead handle and re-arm; if the re-arm itself
+    // fails, the mtime poller is the safety net (no crash, no leaked handle).
+    const inertDir = await realpath(await mkdtemp(join(tmpdir(), 'brika-watcher-rearm-')));
+    const realWatch = nodeFs.watch;
+    let armCalls = 0;
+    // Collected in an array: a closure-assigned `let` would narrow to `null`
+    // for the type checker (it can't see the assignment inside mockImplementation).
+    const armed: FSWatcher[] = [];
+    const flakyWatch: typeof nodeFs.watch = (): FSWatcher => {
+      armCalls += 1;
+      if (armCalls === 1) {
+        const w = realWatch(inertDir);
+        armed.push(w);
+        return w;
+      }
+      throw new Error('re-arm failed; poller remains the safety net');
+    };
+    const watchSpy = spyOn(nodeFs, 'watch').mockImplementation(flakyWatch);
+    try {
+      const tmpRoot = await realpath(await mkdtemp(join(tmpdir(), 'brika-watcher-rearm-root-')));
+      await mkdir(join(tmpRoot, 'src'), { recursive: true });
+
+      stub(Logger);
+      provide(PluginWatcher, new PluginWatcher());
+      const realWatcher = get(PluginWatcher);
+      realWatcher.setReloadHandler(mock());
+
+      realWatcher.watch('@test/rearm', tmpRoot);
+      expect(armCalls).toBe(1);
+
+      // Synthesize the FSEvents collapse: the handler closes the dead watcher
+      // and re-arms (call #2), which throws and falls through to the catch.
+      armed[0]?.emit('error', new Error('FSEvents stream collapsed'));
+      await waitFor(() => armCalls === 2, { timeoutMs: 2000 });
+      expect(armCalls).toBe(2);
+
+      realWatcher.unwatch('@test/rearm');
+      await rm(tmpRoot, { recursive: true, force: true });
+    } finally {
+      watchSpy.mockRestore();
+      await rm(inertDir, { recursive: true, force: true });
+    }
+  });
+
+  test('poller detects added source files', async () => {
+    const tmpRoot = await realpath(await mkdtemp(join(tmpdir(), 'brika-watcher-test-')));
+    const srcDir = join(tmpRoot, 'src');
+    await mkdir(srcDir, { recursive: true });
+    await writeFile(join(srcDir, 'index.ts'), 'export const a = 1;');
+
+    stub(Logger);
+    provide(PluginWatcher, new PluginWatcher());
+    const realWatcher = get(PluginWatcher);
+    const handler = mock();
+    realWatcher.setReloadHandler(handler);
+
+    realWatcher.watch('@test/poll-add', tmpRoot);
+
+    await sleep(100);
+    // Add a brand-new source file: the snapshot size grows, poller fires.
+    await writeFile(join(srcDir, 'extra.tsx'), 'export const b = 2;');
+
+    await waitFor(() => handler.mock.calls.length > 0, { timeoutMs: 5000 });
+    expect(handler).toHaveBeenCalledWith('@test/poll-add');
+
+    realWatcher.unwatch('@test/poll-add');
+    await rm(tmpRoot, { recursive: true, force: true });
+  });
+
+  test('unwatch clears the poll interval (no further reloads)', async () => {
+    const tmpRoot = await realpath(await mkdtemp(join(tmpdir(), 'brika-watcher-test-')));
+    const srcDir = join(tmpRoot, 'src');
+    await mkdir(srcDir, { recursive: true });
+    await writeFile(join(srcDir, 'index.ts'), 'export const a = 1;');
+
+    stub(Logger);
+    provide(PluginWatcher, new PluginWatcher());
+    const realWatcher = get(PluginWatcher);
+    const handler = mock();
+    realWatcher.setReloadHandler(handler);
+
+    realWatcher.watch('@test/poll-stop', tmpRoot);
+    await sleep(100);
+    realWatcher.unwatch('@test/poll-stop');
+
+    // Mutate after unwatch: neither fs.watch nor poller should be alive.
+    await writeFile(join(srcDir, 'index.ts'), 'export const a = 2;');
+
+    // Wait well past two poll intervals plus debounce.
+    await sleep(3600);
     expect(handler).not.toHaveBeenCalled();
 
     await rm(tmpRoot, { recursive: true, force: true });
