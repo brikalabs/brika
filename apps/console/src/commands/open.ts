@@ -28,7 +28,7 @@ export default defineCommand({
   examples: ['brika open', 'brika open --no-start'],
   async handler({ values }) {
     if (!(await pingHub())) {
-      if (values['no-start']) {
+      if (values.noStart) {
         throw new CliError("hub isn't running, start it first with `brika start`");
       }
       process.stdout.write(`${pc.dim("hub isn't running, starting it...")}\n`);

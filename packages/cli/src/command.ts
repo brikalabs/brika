@@ -42,10 +42,19 @@ type InferValue<T extends CommandOption> = T extends {
   ? BaseValue<T>
   : BaseValue<T> | undefined;
 
-/** Map an options record to its parsed values type. */
+/**
+ * Convert a kebab-case option key to camelCase. The flag stays
+ * `--no-boot`, but the handler reads `values.noBoot` instead of the
+ * bracket-only `values['no-boot']`.
+ */
+type CamelCase<S extends string> = S extends `${infer Head}-${infer Rest}`
+  ? `${Head}${Capitalize<CamelCase<Rest>>}`
+  : S;
+
+/** Map an options record to its parsed values type (keys camelCased). */
 type InferValues<O extends Record<string, CommandOption> | undefined> =
   O extends Record<string, CommandOption>
-    ? { [K in keyof O]: InferValue<O[K]> }
+    ? { [K in keyof O as CamelCase<K & string>]: InferValue<O[K]> }
     : Record<string, string | boolean | number | undefined>;
 
 export interface HandlerArgs<O extends Record<string, CommandOption> | undefined = undefined> {
