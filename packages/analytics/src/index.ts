@@ -4,6 +4,8 @@ export {
   type EventQueryParams,
   type EventQueryResult,
   EventStore,
+  type PluginCount,
+  type SourceCount,
   type StoredCaptureEvent,
   type TimeBucket,
 } from './event-store';

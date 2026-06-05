@@ -18,6 +18,11 @@ import { eventsDb } from './database';
 import { events as eventsTable } from './schema';
 import type { CaptureEvent, CaptureSource, Json } from './types';
 
+/** Narrow a stored source string to the {@link CaptureSource} union. */
+function isCaptureSource(value: string): value is CaptureSource {
+  return value === 'hub' || value === 'plugin' || value === 'ui' || value === 'cli';
+}
+
 /**
  * Escape SQLite LIKE wildcards (`%`, `_`) and the escape char itself so user
  * input is matched literally. Pair with `ESCAPE '\\'` in the query.
@@ -58,6 +63,16 @@ export interface EventNameCount {
   count: number;
 }
 
+export interface SourceCount {
+  source: CaptureSource;
+  count: number;
+}
+
+export interface PluginCount {
+  pluginName: string;
+  count: number;
+}
+
 export interface TimeBucket {
   /** Start timestamp (ms) of the bucket window. */
   bucket: number;
@@ -73,8 +88,8 @@ const DAY_MS = 86_400_000;
 
 /**
  * SQLite-backed store for captured feature-usage events. Deliberately a close
- * sibling of `LogStore` — same batched-write hot path, same retention sweep,
- * same graceful-degradation-on-error stance — but for the `events` table.
+ * sibling of `LogStore`, same batched-write hot path, same retention sweep,
+ * same graceful-degradation-on-error stance, but for the `events` table.
  */
 @singleton()
 export class EventStore {
@@ -84,7 +99,7 @@ export class EventStore {
   #pruneTimer?: Timer;
   // Hard-stop flag: once close() has run, enqueue/flush become no-ops so
   // late-arriving events from a hot-reload or shutdown race can't accumulate
-  // in #queue (they would never be drained — and would also leak memory).
+  // in #queue (they would never be drained, and would also leak memory).
   #closed = false;
 
   readonly #queue: CaptureEvent[] = [];
@@ -280,7 +295,7 @@ export class EventStore {
 
   /**
    * Event counts bucketed into fixed-width time windows (`bucketMs`), oldest
-   * first — the data behind the "events over time" chart. Honours the same
+   * first, the data behind the "events over time" chart. Honours the same
    * filters as {@link query} (name/source/pluginName/time range).
    */
   timeSeries(bucketMs: number, params: EventQueryParams = {}): TimeBucket[] {
@@ -321,6 +336,40 @@ export class EventStore {
       .limit(Math.min(limit, 500))
       .all()
       .map((row) => ({ name: row.name as string, count: Number(row.count) }));
+  }
+
+  /** Event counts grouped by source (ui/plugin/hub/cli), most frequent first. */
+  topSources(): SourceCount[] {
+    if (!this.db) {
+      return [];
+    }
+    return this.db
+      .select({ source: eventsTable.source, count: count() })
+      .from(eventsTable)
+      .groupBy(eventsTable.source)
+      .orderBy(desc(count()))
+      .all()
+      .flatMap((row) =>
+        isCaptureSource(row.source) ? [{ source: row.source, count: Number(row.count) }] : []
+      );
+  }
+
+  /** Event counts grouped by originating plugin, most frequent first. */
+  topPlugins(limit = 20): PluginCount[] {
+    if (!this.db) {
+      return [];
+    }
+    return this.db
+      .select({ pluginName: eventsTable.pluginName, count: count() })
+      .from(eventsTable)
+      .where(isNotNull(eventsTable.pluginName))
+      .groupBy(eventsTable.pluginName)
+      .orderBy(desc(count()))
+      .limit(Math.min(limit, 200))
+      .all()
+      .flatMap((row) =>
+        row.pluginName === null ? [] : [{ pluginName: row.pluginName, count: Number(row.count) }]
+      );
   }
 
   getPluginNames(): string[] {

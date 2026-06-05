@@ -1,14 +1,10 @@
-import { Badge, Card, CardContent, CardHeader, CardTitle, Skeleton } from '@brika/clay';
+import { Card, CardContent, CardHeader, CardTitle, Skeleton } from '@brika/clay';
+import { Link } from '@tanstack/react-router';
+import { ArrowRight } from 'lucide-react';
 import { useLocale } from '@/lib/use-locale';
+import { paths } from '@/routes/paths';
 import { useCaptureEvents } from '../hooks';
-import type { CaptureSource } from '../types';
-
-const SOURCE_VARIANT: Record<CaptureSource, 'default' | 'secondary' | 'outline'> = {
-  ui: 'default',
-  plugin: 'secondary',
-  hub: 'outline',
-  cli: 'outline',
-};
+import { EventName, PropsRow, SourceBadge } from './event-ui';
 
 export function RecentEvents() {
   const { t } = useLocale();
@@ -26,18 +22,23 @@ export function RecentEvents() {
     body = events.map((e) => (
       <div
         key={e.id}
-        className="flex items-center justify-between gap-3 border-border/50 border-b py-1.5 text-sm last:border-0"
+        className="flex flex-col gap-1 border-border/50 border-b py-1.5 text-sm last:border-0"
       >
-        <div className="flex min-w-0 items-center gap-2">
-          <Badge variant={SOURCE_VARIANT[e.source]}>{e.source}</Badge>
-          <span className="truncate font-medium">{e.name}</span>
-          {e.pluginName && (
-            <span className="truncate text-muted-foreground text-xs">{e.pluginName}</span>
-          )}
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-2">
+            <SourceBadge source={e.source} />
+            <EventName name={e.name} />
+            {e.pluginName && (
+              <span className="truncate font-mono text-muted-foreground text-xs">
+                {e.pluginName}
+              </span>
+            )}
+          </div>
+          <time className="shrink-0 text-muted-foreground text-xs">
+            {new Date(e.ts).toLocaleTimeString()}
+          </time>
         </div>
-        <time className="shrink-0 text-muted-foreground text-xs">
-          {new Date(e.ts).toLocaleTimeString()}
-        </time>
+        {e.props && <PropsRow props={e.props} max={3} />}
       </div>
     ));
   }
@@ -45,8 +46,19 @@ export function RecentEvents() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{t('analytics:recent.title')}</CardTitle>
-        <p className="text-muted-foreground text-sm">{t('analytics:recent.subtitle')}</p>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <CardTitle>{t('analytics:recent.title')}</CardTitle>
+            <p className="text-muted-foreground text-sm">{t('analytics:recent.subtitle')}</p>
+          </div>
+          <Link
+            to={paths.analytics.tab.to({ tab: 'events' })}
+            className="flex shrink-0 items-center gap-1 text-muted-foreground text-xs hover:text-foreground"
+          >
+            {t('analytics:recent.viewAll')}
+            <ArrowRight className="size-3.5" />
+          </Link>
+        </div>
       </CardHeader>
       <CardContent className="space-y-2">{body}</CardContent>
     </Card>

@@ -2,15 +2,25 @@
   "title": "Analytics",
   "subtitle": "Feature usage across your hub",
   "empty": "No events captured yet",
-  "loadError": "Couldn't load analytics — try refreshing.",
-  "anonymousNote": "Anonymous by default — a durable device id is used, and the signed-in user is recorded locally only.",
+  "loadError": "Couldn't load analytics, try refreshing.",
+  "anonymousNote": "Anonymous by default: a durable device id is used, and the signed-in user is recorded locally only.",
   "stats": {
     "total": "Total events",
+    "last24h": "Last 24h",
     "recent": "Recent (in memory)",
     "sources": "Sources",
     "forwarding": "Remote forwarding",
     "forwardingOn": "On",
     "forwardingOff": "Off"
+  },
+  "breakdown": {
+    "title": "By source",
+    "subtitle": "Event distribution across sources"
+  },
+  "topPlugins": {
+    "title": "Top plugins",
+    "subtitle": "Most active plugins",
+    "empty": "No plugin events yet"
   },
   "activity": {
     "title": "Activity",
@@ -24,6 +34,49 @@
   },
   "recent": {
     "title": "Recent events",
-    "subtitle": "Live capture stream"
+    "subtitle": "Live capture stream",
+    "viewAll": "View all"
+  },
+  "tabs": {
+    "overview": "Overview",
+    "events": "All events"
+  },
+  "explorer": {
+    "searchPlaceholder": "Search events…",
+    "clearSearch": "Clear search",
+    "allEvents": "All events",
+    "allPlugins": "All plugins",
+    "colTime": "Time",
+    "colSource": "Source",
+    "colEvent": "Event",
+    "colPlugin": "Plugin",
+    "colProps": "Properties",
+    "order": {
+      "newest": "Newest first",
+      "oldest": "Oldest first"
+    },
+    "range": {
+      "1h": "Last hour",
+      "24h": "Last 24h",
+      "7d": "Last 7 days",
+      "30d": "Last 30 days",
+      "all": "All time"
+    },
+    "clearFilters": "Clear filters",
+    "loadMore": "Load more",
+    "loading": "Loading…",
+    "end": "End of results",
+    "showing": "Showing {{count}} events",
+    "noMatch": "No events match these filters.",
+    "noMatchHint": "Try widening the date range or clearing a filter."
+  },
+  "detail": {
+    "when": "When",
+    "identity": "Identity",
+    "properties": "Properties",
+    "noProps": "No properties.",
+    "copy": "Copy JSON",
+    "copied": "Copied",
+    "notAuthenticated": "-"
   }
 }

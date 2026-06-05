@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { useCallback } from 'react';
 import type { Json } from '@/types';
 import { analyticsApi, analyticsKeys } from './api';
@@ -7,7 +7,7 @@ import type { EventQueryParams, TimeSeriesParams } from './types';
 /**
  * How often the dashboard re-queries the hub for fresh aggregates. Picked to
  * feel "live" without hammering SQLite (capture is best-effort and the
- * ring/store update fast) — matches the cadence the logs feature uses.
+ * ring/store update fast), matches the cadence the logs feature uses.
  */
 const DASHBOARD_REFETCH_MS = 30_000;
 /** Recent-events stream refreshes more often so the live feed actually moves. */
@@ -15,7 +15,7 @@ const RECENT_REFETCH_MS = 5_000;
 
 /**
  * Returns a stable `capture` function for recording feature-usage events from
- * anywhere in the UI. Fire-and-forget — calling it never throws or blocks.
+ * anywhere in the UI. Fire-and-forget, calling it never throws or blocks.
  *
  * @example
  * ```tsx
@@ -47,12 +47,39 @@ export function useTopEventNames() {
   });
 }
 
+/** Event counts grouped by source and by plugin, for the overview breakdowns. */
+export function useEventBreakdown() {
+  return useQuery({
+    queryKey: analyticsKeys.breakdown,
+    queryFn: () => analyticsApi.getBreakdown(),
+    refetchInterval: DASHBOARD_REFETCH_MS,
+  });
+}
+
 /** Query stored events with filters. */
 export function useCaptureEvents(params: EventQueryParams) {
   return useQuery({
     queryKey: analyticsKeys.query(params),
     queryFn: () => analyticsApi.query(params),
     refetchInterval: RECENT_REFETCH_MS,
+  });
+}
+
+/**
+ * Cursor-paginated event query for the explorer. Accumulates pages so "Load
+ * more" appends rather than replaces, and keeps the previous page mounted on
+ * a filter change so the table never blanks to skeletons mid-browse.
+ */
+export function useInfiniteCaptureEvents(params: EventQueryParams) {
+  return useInfiniteQuery({
+    queryKey: analyticsKeys.infinite(params),
+    queryFn: ({ pageParam }) => analyticsApi.query({ ...params, cursor: pageParam }),
+    // `as` is load-bearing here: it sets useInfiniteQuery's page-param type to
+    // `number | undefined` (matching getNextPageParam). Without it the param
+    // collapses to `undefined` and the overload fails. Same pattern as logs/hooks.
+    initialPageParam: undefined as number | undefined,
+    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+    placeholderData: keepPreviousData,
   });
 }
 

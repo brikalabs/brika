@@ -1,6 +1,7 @@
 import { fetcher } from '@/lib/query';
 import type { Json } from '@/types';
 import type {
+  EventBreakdown,
   EventNameCount,
   EventQueryParams,
   EventQueryResult,
@@ -19,13 +20,13 @@ const DISTINCT_ID_KEY = 'brika.analytics.distinctId';
  * Module-level fallback: if localStorage is unavailable (private mode in some
  * browsers, sandboxed iframes), we still want every event in this tab/session
  * to share one id rather than collapsing to the literal `'anonymous'` on
- * every call — that would make dedup at the platform impossible.
+ * every call, that would make dedup at the platform impossible.
  */
 let inMemoryDistinctId: string | null = null;
 
 /**
  * A durable anonymous device id (localStorage) so usage can be correlated
- * across sessions on this browser without any account/PII — the standard
+ * across sessions on this browser without any account/PII, the standard
  * product-analytics pattern (anonymous-by-default; the hub additionally
  * stamps the authenticated user id server-side when logged in).
  *
@@ -119,6 +120,8 @@ export const analyticsApi = {
 
   getNames: () => fetcher<{ names: EventNameCount[] }>('/api/analytics/names'),
 
+  getBreakdown: () => fetcher<EventBreakdown>('/api/analytics/breakdown'),
+
   getStats: () => fetcher<EventStats>('/api/analytics/stats'),
 
   getTimeSeries: (params: TimeSeriesParams = {}) => {
@@ -162,6 +165,8 @@ export const analyticsApi = {
 export const analyticsKeys = {
   all: ['analytics'] as const,
   query: (params: EventQueryParams) => ['analytics', 'query', params] as const,
+  infinite: (params: EventQueryParams) => ['analytics', 'infinite', params] as const,
+  breakdown: ['analytics', 'breakdown'] as const,
   names: ['analytics', 'names'] as const,
   stats: ['analytics', 'stats'] as const,
   timeseries: (params: TimeSeriesParams) => ['analytics', 'timeseries', params] as const,
