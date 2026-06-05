@@ -9,6 +9,7 @@ import {
   SelectValue,
 } from "@brika/clay";
 import { Plug } from "lucide-react";
+import { useCapture } from "@/features/analytics/hooks";
 import { useLocale } from "@/lib/use-locale";
 import { pluginsApi } from "../../plugins/api";
 import { usePlugins } from "../../plugins/hooks";
@@ -27,11 +28,15 @@ export function LogPluginFilter({
 }: Readonly<LogPluginFilterProps>) {
   const { t, tp } = useLocale();
   const { data: plugins = [] } = usePlugins();
+  const capture = useCapture();
 
   return (
     <Select
       value={pluginName ?? "all"}
-      onValueChange={(v) => onPluginChange(v === "all" ? null : v)}
+      onValueChange={(v) => {
+        capture("logs.plugin_filter_changed", { cleared: v === "all" });
+        onPluginChange(v === "all" ? null : v);
+      }}
     >
       <SelectTrigger className="w-56">
         <Plug className="mr-2 size-4 text-muted-foreground" />

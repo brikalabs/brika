@@ -2,6 +2,7 @@
  * Switch controls — large centered power toggle with status label.
  */
 
+import { capture } from '@brika/sdk';
 import clsx from 'clsx';
 import { Power } from 'lucide-react';
 import { useCallback } from 'react';
@@ -15,8 +16,9 @@ export function SwitchControls({ device }: Readonly<{ device: DeviceState }>) {
   const sendCommand = useSendCommand();
 
   const handleToggle = useCallback(() => {
+    capture('matter.switch_toggled', { turnedOn: !isOn });
     sendCommand(device.nodeId, 'toggle');
-  }, [sendCommand, device.nodeId]);
+  }, [sendCommand, device.nodeId, isOn]);
 
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-3">

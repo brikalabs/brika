@@ -1,6 +1,7 @@
-import { Button, Input } from "@brika/clay";
+import { Button, InputGroup, InputGroupAddon, InputGroupInput } from "@brika/clay";
 import { Search, X } from "lucide-react";
 import { useState } from "react";
+import { useCapture } from "@/features/analytics/hooks";
 import { useLocale } from "@/lib/use-locale";
 import type { PluginInfo } from "../api";
 import { LogPluginFilter } from "./LogPluginFilter";
@@ -25,20 +26,29 @@ export function LogSearchBar({
   onReset,
 }: Readonly<LogSearchBarProps>) {
   const { t } = useLocale();
+  const capture = useCapture();
   const [searchInput, setSearchInput] = useState(search);
 
   return (
     <div className="flex gap-3">
-      <form onSubmit={(e) => { e.preventDefault(); onSearchChange(searchInput); }} className="flex flex-1 gap-2">
-        <div className="relative flex-1">
-          <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          capture("logs.searched", { hasQuery: searchInput.trim().length > 0 });
+          onSearchChange(searchInput);
+        }}
+        className="flex flex-1 gap-2"
+      >
+        <InputGroup className="flex-1">
+          <InputGroupAddon>
+            <Search className="size-4" />
+          </InputGroupAddon>
+          <InputGroupInput
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             placeholder={t("logs:searchPlaceholder")}
-            className="pl-9"
           />
-        </div>
+        </InputGroup>
         <Button type="submit" variant="secondary">
           {t("common:actions.search")}
         </Button>
@@ -53,7 +63,14 @@ export function LogSearchBar({
       )}
 
       {hasActiveFilters && (
-        <Button variant="ghost" onClick={onReset} className="gap-2">
+        <Button
+          variant="ghost"
+          onClick={() => {
+            capture("logs.filters_reset");
+            onReset();
+          }}
+          className="gap-2"
+        >
           <X className="size-4" />
           {t("logs:clearFilters")}
         </Button>

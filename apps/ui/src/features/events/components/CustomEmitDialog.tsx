@@ -12,6 +12,7 @@ import {
 } from '@brika/clay';
 import { Loader2 } from 'lucide-react';
 import { useState } from 'react';
+import { useCapture } from '@/features/analytics/hooks';
 import { useLocale } from '@/lib/use-locale';
 import { useEmitEvent } from '../sparks-hooks';
 
@@ -22,6 +23,7 @@ interface CustomEmitDialogProps {
 
 export function CustomEmitDialog({ open, onOpenChange }: Readonly<CustomEmitDialogProps>) {
   const { t } = useLocale();
+  const capture = useCapture();
   const emitEvent = useEmitEvent();
   const [type, setType] = useState('test.event');
   const [payload, setPayload] = useState('{"message": "hello"}');
@@ -34,7 +36,7 @@ export function CustomEmitDialog({ open, onOpenChange }: Readonly<CustomEmitDial
       });
       onOpenChange(false);
     } catch {
-      // Invalid JSON or emit error
+      capture('sparks.custom_emit_failed');
     }
   };
 
@@ -64,7 +66,13 @@ export function CustomEmitDialog({ open, onOpenChange }: Readonly<CustomEmitDial
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button
+            variant="outline"
+            onClick={() => {
+              capture('sparks.custom_emit_cancelled');
+              onOpenChange(false);
+            }}
+          >
             {t('common:actions.cancel')}
           </Button>
           <Button onClick={handleEmit} disabled={emitEvent.isPending} className="gap-2">

@@ -1,4 +1,4 @@
-import { defineReactiveBlock, input, log, output, z } from '@brika/sdk';
+import { capture, defineReactiveBlock, input, log, output, z } from '@brika/sdk';
 import { getApi, resolveDevice, toSpotifyUri } from '../shared';
 
 export const playBlock = defineReactiveBlock(
@@ -44,6 +44,10 @@ export const playBlock = defineReactiveBlock(
 
         const target = deviceId ? ` on ${deviceId}` : '';
         log.info(`Spotify playback started${target}`);
+        capture('spotify.play_block_triggered', {
+          hasContextUri: contextUri !== undefined,
+          hasDevice: deviceId !== undefined,
+        });
         outputs.started.emit({ deviceId: deviceId ?? '', contextUri: uri });
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);

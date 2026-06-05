@@ -2,6 +2,7 @@ import { Avatar, AvatarFallback, Card } from '@brika/clay';
 import { Link } from '@tanstack/react-router';
 import { ArrowRight } from 'lucide-react';
 import type React from 'react';
+import { useCapture } from '@/features/analytics/hooks';
 import type { Accent } from './StatCard';
 
 export interface QuickActionProps {
@@ -12,8 +13,10 @@ export interface QuickActionProps {
 }
 
 export function QuickAction({ icon: Icon, label, href, accent }: Readonly<QuickActionProps>) {
+  const capture = useCapture();
+
   return (
-    <Link to={href}>
+    <Link to={href} onClick={() => capture('dashboard.quick_action_clicked', { label, href })}>
       <Card accent={accent} interactive className="p-3">
         <div className="relative flex items-center gap-3">
           <Avatar className="size-9 bg-accent/10 text-accent">

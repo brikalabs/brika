@@ -1,3 +1,4 @@
+import { Analytics } from '@brika/analytics';
 import { type BrikaDatabase, eq, notInArray } from '@brika/db';
 import { inject, singleton } from '@brika/di';
 import { ThemeConfig } from '@brika/ipc/contract';
@@ -68,6 +69,7 @@ const DEFAULT_ACTIVE_THEME: ActiveTheme = { theme: null, mode: 'system' };
 @singleton()
 export class StateStore {
   private readonly logs = inject(Logger).withSource('state');
+  readonly #analytics = inject(Analytics);
   #database: BrikaDatabase<StateSchema> | null = null;
 
   readonly #metadataCache = new Map<string, PluginPackageSchema>();
@@ -239,11 +241,16 @@ export class StateStore {
   }
 
   setGrantedPermissions(name: string, permissions: string[]): void {
+    const prior = this.getGrantedPermissions(name).length;
     this.db
       .update(pluginsTable)
       .set({ grantedPermissions: JSON.stringify(permissions), updatedAt: Date.now() })
       .where(eq(pluginsTable.name, name))
       .run();
+    this.#analytics.capture('permissions.updated', {
+      granted: permissions.length,
+      delta: permissions.length - prior,
+    });
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -256,6 +263,12 @@ export class StateStore {
 
   setHubLocation(location: HubLocation | null): void {
     this.#setSetting('hubLocation', location);
+    // Never emit the street / postal / formatted address (PII). Country code
+    // is coarse-grained and useful for regional adoption signals.
+    this.#analytics.capture('settings.location_changed', {
+      cleared: location === null,
+      countryCode: location?.countryCode ?? null,
+    });
   }
 
   getUpdateChannel(): UpdateChannelId {
@@ -269,6 +282,7 @@ export class StateStore {
 
   setUpdateChannel(channel: UpdateChannelId): void {
     this.#setSetting('updateChannel', channel);
+    this.#analytics.capture('settings.update_channel_changed', { channel });
   }
 
   /**
@@ -282,6 +296,7 @@ export class StateStore {
 
   setPinnedVersion(version: string | null): void {
     this.#setSetting('updatePinnedVersion', version);
+    this.#analytics.capture('settings.update_pin_changed', { pinned: version !== null });
   }
 
   getHubTimezone(): string | null {
@@ -290,6 +305,7 @@ export class StateStore {
 
   setHubTimezone(timezone: string | null): void {
     this.#setSetting('hubTimezone', timezone);
+    this.#analytics.capture('settings.timezone_changed', { cleared: timezone === null });
   }
 
   applyTimezone(): void {
@@ -308,6 +324,10 @@ export class StateStore {
 
   setSetupCompleted(completed: boolean): void {
     this.#setSetting('setupCompleted', completed);
+    // Onboarding lifecycle transition: high-signal first-run completion.
+    if (completed) {
+      this.#analytics.capture('setup.completed');
+    }
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -343,6 +363,12 @@ export class StateStore {
   }
 
   upsertCustomTheme(theme: ThemeConfig): void {
+    const existed =
+      this.db
+        .select({ id: customThemesTable.id })
+        .from(customThemesTable)
+        .where(eq(customThemesTable.id, theme.id))
+        .get() !== undefined;
     const row = {
       id: theme.id,
       config: JSON.stringify(theme),
@@ -353,10 +379,12 @@ export class StateStore {
       .values(row)
       .onConflictDoUpdate({ target: customThemesTable.id, set: row })
       .run();
+    this.#analytics.capture('theme.saved', { created: !existed });
   }
 
   deleteCustomTheme(id: string): void {
     this.db.delete(customThemesTable).where(eq(customThemesTable.id, id)).run();
+    this.#analytics.capture('theme.deleted');
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -370,6 +398,10 @@ export class StateStore {
   setActiveTheme(patch: Partial<ActiveTheme>): ActiveTheme {
     const next = { ...this.getActiveTheme(), ...patch };
     this.#setSetting('activeTheme', next);
+    this.#analytics.capture('theme.activated', {
+      mode: next.mode,
+      hasCustomTheme: next.theme !== null,
+    });
     return next;
   }
 

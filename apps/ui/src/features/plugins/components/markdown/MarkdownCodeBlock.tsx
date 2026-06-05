@@ -7,6 +7,7 @@ import {
   CodeBlockInfo,
 } from '@brika/clay';
 import { Fragment, type ReactElement } from 'react';
+import { useCapture } from '@/features/analytics/hooks';
 import { useLocale } from '@/lib/use-locale';
 
 interface MarkdownCodeBlockProps {
@@ -17,6 +18,7 @@ interface MarkdownCodeBlockProps {
 
 export function MarkdownCodeBlock({ code, language, filename }: Readonly<MarkdownCodeBlockProps>) {
   const { t } = useLocale();
+  const capture = useCapture();
 
   return (
     <CodeBlock className="mb-4">
@@ -65,6 +67,7 @@ export function MarkdownCodeBlock({ code, language, filename }: Readonly<Markdow
           <CodeBlockCopyButton
             copyLabel={t('common:actions.copy')}
             copiedLabel={t('common:messages.copied')}
+            onClick={() => capture('plugins.readme_code_copied', { language })}
           />
         </CodeBlockActions>
       </CodeBlockHeader>

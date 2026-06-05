@@ -3,6 +3,7 @@ import type { Plugin } from '@brika/plugin';
 import { Link } from '@tanstack/react-router';
 import { Plug } from 'lucide-react';
 import { DynamicIcon, type IconName } from 'lucide-react/dynamic';
+import { useCapture } from '@/features/analytics/hooks';
 import { useLocale } from '@/lib/use-locale';
 import { paths } from '@/routes/paths';
 import { pluginsApi } from '../../plugins/api';
@@ -15,6 +16,7 @@ interface BlockCardProps {
 
 export function BlockCard({ block, plugin }: Readonly<BlockCardProps>) {
   const { tp } = useLocale();
+  const capture = useCapture();
   const iconName = (block.icon || 'box') as IconName;
   const color = block.color || 'var(--primary)';
   const blockKey = block.id.split(':').pop() || block.id;
@@ -68,7 +70,10 @@ export function BlockCard({ block, plugin }: Readonly<BlockCardProps>) {
               uid: plugin.uid,
             })}
             className="group/plugin -mx-2 -mb-2 flex items-center gap-2 rounded-lg p-2 transition-colors hover:bg-muted/50"
-            onClick={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation();
+              capture('blocks.plugin_opened', { category: block.category ?? 'other' });
+            }}
           >
             <Avatar className="size-6">
               <AvatarImage src={pluginsApi.getIconUrl(plugin.uid)} />

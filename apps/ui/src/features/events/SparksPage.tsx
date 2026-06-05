@@ -1,6 +1,7 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@brika/clay';
 import { useNavigate, useParams } from '@tanstack/react-router';
 import { Clock, Zap } from 'lucide-react';
+import { useCapture } from '@/features/analytics/hooks';
 import { useLocale } from '@/lib/use-locale';
 import { paths } from '@/routes/paths';
 import { EventStreamTab, RegisteredSparksTab } from './components';
@@ -9,6 +10,7 @@ type SparkTab = 'registry' | 'stream';
 
 export function SparksPage() {
   const { t } = useLocale();
+  const capture = useCapture();
   const navigate = useNavigate();
   const params = useParams({
     strict: false,
@@ -16,6 +18,7 @@ export function SparksPage() {
   const activeTab: SparkTab = params.tab === 'stream' ? 'stream' : 'registry';
 
   const handleTabChange = (tab: string) => {
+    capture('sparks.tab_switched', { tab });
     navigate({
       to: paths.sparks.tab.to({
         tab,

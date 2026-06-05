@@ -1,6 +1,7 @@
 import { Avatar, AvatarFallback, AvatarImage, Badge, Button } from '@brika/clay';
 import { Link } from '@tanstack/react-router';
 import { ArrowLeft, Code2, Download, ExternalLink, Home, Package, Tag, User } from 'lucide-react';
+import { useCapture } from '@/features/analytics/hooks';
 import { useLocale } from '@/lib/use-locale';
 import { paths } from '@/routes/paths';
 import type { StorePlugin } from '../types';
@@ -25,6 +26,7 @@ function formatDownloads(count: number): string {
 
 export function StorePluginHeader({ plugin }: Readonly<StorePluginHeaderProps>) {
   const { t, tp } = useLocale();
+  const capture = useCapture();
 
   const authorName = typeof plugin.author === 'string' ? plugin.author : plugin.author?.name;
   const repoUrl =
@@ -37,6 +39,7 @@ export function StorePluginHeader({ plugin }: Readonly<StorePluginHeaderProps>) 
       {/* Back link */}
       <Link
         to={paths.store.list.path}
+        onClick={() => capture('store.back_to_list', { from: 'detail' })}
         className="inline-flex items-center gap-2 text-muted-foreground transition-colors hover:text-foreground"
       >
         <ArrowLeft className="size-4" />
@@ -77,6 +80,7 @@ export function StorePluginHeader({ plugin }: Readonly<StorePluginHeaderProps>) 
                   href={`https://www.npmjs.com/package/${plugin.name}`}
                   target="_blank"
                   rel="noopener noreferrer"
+                  onClick={() => capture('store.external_link_opened', { target: 'npm' })}
                   className="gap-1.5"
                 >
                   <ExternalLink className="size-3.5" />
@@ -115,6 +119,7 @@ export function StorePluginHeader({ plugin }: Readonly<StorePluginHeaderProps>) 
               href={repoUrl}
               target="_blank"
               rel="noopener noreferrer"
+              onClick={() => capture('store.external_link_opened', { target: 'repository' })}
               className="flex items-center gap-1 transition-colors hover:text-foreground"
             >
               <Code2 className="size-3" />
@@ -127,6 +132,7 @@ export function StorePluginHeader({ plugin }: Readonly<StorePluginHeaderProps>) 
               href={plugin.homepage}
               target="_blank"
               rel="noopener noreferrer"
+              onClick={() => capture('store.external_link_opened', { target: 'homepage' })}
               className="flex items-center gap-1 transition-colors hover:text-foreground"
             >
               <Home className="size-3" />

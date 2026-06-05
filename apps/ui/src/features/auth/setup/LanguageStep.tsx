@@ -1,5 +1,6 @@
 import { Check } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useCapture } from '@/features/analytics/hooks';
 import { useAvailableLocales } from '@/features/settings/components/language/hooks';
 import { useLocale } from '@/lib/use-locale';
 import { StepBody, StepHeader, StepNav } from './shared';
@@ -8,6 +9,7 @@ export function LanguageStep() {
   const { t } = useTranslation('setup');
   const { locale, changeLocale, getLanguageName } = useLocale();
   const { data: locales } = useAvailableLocales();
+  const capture = useCapture();
 
   return (
     <>
@@ -26,7 +28,10 @@ export function LanguageStep() {
                 <button
                   key={loc}
                   type="button"
-                  onClick={() => changeLocale(loc)}
+                  onClick={() => {
+                    capture('auth.setup_language_selected', { locale: loc });
+                    changeLocale(loc);
+                  }}
                   className={`group flex w-full items-center gap-3 rounded-lg border px-4 py-3 text-left transition-all duration-200 ${
                     isActive
                       ? 'border-primary/40 bg-primary/[0.06] shadow-primary/10 shadow-sm'

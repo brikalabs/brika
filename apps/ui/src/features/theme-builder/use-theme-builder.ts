@@ -6,6 +6,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useCapture } from '@/features/analytics/hooks';
 import { useTheme } from '@/lib/theme-context';
 import { useCustomThemes } from './hooks';
 import {
@@ -51,6 +52,7 @@ function initialSavedIdFor(activeThemeName: string): string | null {
 
 export function useThemeBuilder() {
   const { t } = useTranslation('themeBuilder');
+  const capture = useCapture();
   const themes = useCustomThemes();
   const { theme: activeThemeName, setTheme } = useTheme();
 
@@ -68,7 +70,8 @@ export function useThemeBuilder() {
     customThemeStorage.save(draft);
     setSavedId(draft.id);
     setLastSavedMs(Date.now());
-  }, [draft]);
+    capture('theme_builder.saved', { isNew: savedId === null });
+  }, [capture, draft, savedId]);
 
   useEffect(() => {
     if (savedId && savedVersion && !isDirty) {
@@ -96,14 +99,26 @@ export function useThemeBuilder() {
       if (e.key.toLowerCase() === 'z' && !e.shiftKey) {
         e.preventDefault();
         history.undo();
+        capture('theme_builder.undone', { source: 'keyboard' });
       } else if ((e.key.toLowerCase() === 'z' && e.shiftKey) || e.key.toLowerCase() === 'y') {
         e.preventDefault();
         history.redo();
+        capture('theme_builder.redone', { source: 'keyboard' });
       }
     };
     globalThis.addEventListener('keydown', onKey);
     return () => globalThis.removeEventListener('keydown', onKey);
-  }, [handleSave, history, isDirty]);
+  }, [capture, handleSave, history, isDirty]);
+
+  const handleUndo = useCallback(() => {
+    history.undo();
+    capture('theme_builder.undone', { source: 'toolbar' });
+  }, [capture, history]);
+
+  const handleRedo = useCallback(() => {
+    history.redo();
+    capture('theme_builder.redone', { source: 'toolbar' });
+  }, [capture, history]);
 
   const handleDuplicate = useCallback(() => {
     const now = Date.now();
@@ -118,13 +133,15 @@ export function useThemeBuilder() {
     history.reset(copy);
     setSavedId(copy.id);
     setLastSavedMs(now);
-  }, [draft, history]);
+    capture('theme_builder.duplicated', {});
+  }, [capture, draft, history]);
 
   const handleNew = useCallback(() => {
     history.reset(createDefaultThemeConfig());
     setSavedId(null);
     setLastSavedMs(null);
-  }, [history]);
+    capture('theme_builder.new', {});
+  }, [capture, history]);
 
   const handlePickPreset = useCallback(
     (preset: ThemePreset) => {
@@ -149,8 +166,9 @@ export function useThemeBuilder() {
       history.reset(theme);
       setSavedId(theme.id);
       setLastSavedMs(null);
+      capture('theme_builder.theme_selected', {});
     },
-    [history]
+    [capture, history]
   );
 
   const handleDelete = useCallback(() => {
@@ -160,29 +178,38 @@ export function useThemeBuilder() {
     if (!confirm(t('confirm.deleteTheme', { name: draft.name }))) {
       return;
     }
+    capture('theme_builder.deleted', {});
     customThemeStorage.remove(savedId);
     if (activeThemeName === customThemeSelector(savedId)) {
       setTheme('brika');
     }
     handleNew();
-  }, [activeThemeName, draft.name, handleNew, savedId, setTheme, t]);
+  }, [activeThemeName, capture, draft.name, handleNew, savedId, setTheme, t]);
 
   const handleApply = useCallback(() => {
     if (!savedId) {
       return;
     }
     setTheme(customThemeSelector(savedId));
-  }, [savedId, setTheme]);
+    capture('theme_builder.applied', {});
+  }, [capture, savedId, setTheme]);
 
-  const handleExport = useCallback(() => exportThemeToFile(draft), [draft]);
-  const handleExportCss = useCallback(() => exportThemeAsCss(draft), [draft]);
+  const handleExport = useCallback(() => {
+    capture('theme_builder.exported', { format: 'json' });
+    exportThemeToFile(draft);
+  }, [capture, draft]);
+  const handleExportCss = useCallback(() => {
+    capture('theme_builder.exported', { format: 'css' });
+    exportThemeAsCss(draft);
+  }, [capture, draft]);
   const handleCopyCss = useCallback(async () => {
     try {
       await copyThemeCssToClipboard(draft);
+      capture('theme_builder.css_copied', {});
     } catch {
       alert(t('errors.copyCssFailed'));
     }
-  }, [draft, t]);
+  }, [capture, draft, t]);
 
   const handleImport = useCallback(
     async (file: File) => {
@@ -192,11 +219,12 @@ export function useThemeBuilder() {
         history.reset(imported);
         setSavedId(imported.id);
         setLastSavedMs(Date.now());
+        capture('theme_builder.imported', {});
       } catch (err) {
         alert(err instanceof Error ? err.message : t('errors.importFailed'));
       }
     },
-    [history, t]
+    [capture, history, t]
   );
 
   const handleChange = useCallback((next: ThemeConfig) => history.set(next), [history]);
@@ -211,8 +239,8 @@ export function useThemeBuilder() {
     lastSavedMs,
     canUndo: history.canUndo,
     canRedo: history.canRedo,
-    undo: history.undo,
-    redo: history.redo,
+    undo: handleUndo,
+    redo: handleRedo,
     handleSave,
     handleDuplicate,
     handleNew,

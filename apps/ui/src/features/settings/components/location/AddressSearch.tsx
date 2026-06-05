@@ -1,6 +1,14 @@
-import { Input, Popover, PopoverContent, PopoverTrigger } from '@brika/clay';
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@brika/clay';
 import { MapPin, Search } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCapture } from '@/features/analytics/hooks';
 import { useLocale } from '@/lib/use-locale';
 import type { HubLocation } from './hooks';
 import { featureToLocation, formatAddress, type PhotonFeature, searchAddress } from './photon';
@@ -11,6 +19,7 @@ interface AddressSearchProps {
 
 export function AddressSearch({ onSelect }: Readonly<AddressSearchProps>) {
   const { t } = useLocale();
+  const capture = useCapture();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<PhotonFeature[]>([]);
   const [open, setOpen] = useState(false);
@@ -55,6 +64,7 @@ export function AddressSearch({ onSelect }: Readonly<AddressSearchProps>) {
 
   function handleSelect(feature: PhotonFeature) {
     const location = featureToLocation(feature);
+    capture('settings.location_address_selected');
     setQuery(location.formattedAddress);
     setOpen(false);
     onSelect(location);
@@ -63,15 +73,16 @@ export function AddressSearch({ onSelect }: Readonly<AddressSearchProps>) {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <div className="relative">
-          <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
+        <InputGroup>
+          <InputGroupAddon>
+            <Search className="size-4" />
+          </InputGroupAddon>
+          <InputGroupInput
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={t('settings:location.searchPlaceholder')}
-            className="pl-9"
           />
-        </div>
+        </InputGroup>
       </PopoverTrigger>
       <PopoverContent
         className="w-[var(--radix-popover-trigger-width)] p-1"

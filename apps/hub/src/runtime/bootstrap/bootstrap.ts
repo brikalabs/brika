@@ -1,4 +1,4 @@
-import { ANALYTICS_HOST, EventForwarder, EventStore } from '@brika/analytics';
+import { ANALYTICS_HOST, Analytics, EventForwarder, EventStore } from '@brika/analytics';
 import { createBanner } from '@brika/banner';
 import { configureDatabases } from '@brika/db';
 import { container, inject } from '@brika/di';
@@ -37,6 +37,7 @@ const TIMEOUT = Symbol('shutdown-timeout');
  */
 export class Bootstrap {
   private readonly logs = inject(Logger);
+  private readonly analytics = inject(Analytics);
   private readonly logStore = inject(LogStore);
   private readonly eventStore = inject(EventStore);
   private readonly eventForwarder = inject(EventForwarder);
@@ -96,6 +97,10 @@ export class Bootstrap {
 
     setHubReady();
     this.logs.info('Brika Hub started successfully', {
+      version: hub.version,
+      pluginCount: this.plugins.length,
+    });
+    this.analytics.capture('boot.completed', {
       version: hub.version,
       pluginCount: this.plugins.length,
     });

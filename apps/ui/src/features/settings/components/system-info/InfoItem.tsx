@@ -2,6 +2,7 @@ import { cn } from '@brika/clay';
 import type { LucideIcon } from 'lucide-react';
 import { Check, Copy } from 'lucide-react';
 import { type MouseEvent, type ReactNode, useState } from 'react';
+import { useCapture } from '@/features/analytics/hooks';
 
 export interface InfoItemProps {
   icon: LucideIcon;
@@ -22,6 +23,7 @@ export function InfoItem({
   mono = true,
   secondary,
 }: Readonly<InfoItemProps>) {
+  const capture = useCapture();
   const [copied, setCopied] = useState(false);
   const canCopy = copyable && typeof value === 'string';
 
@@ -32,6 +34,7 @@ export function InfoItem({
       return;
     }
 
+    capture('settings.system_info_copied', { field: label });
     await navigator.clipboard.writeText(value);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -62,7 +65,13 @@ export function InfoItem({
 
   if (href) {
     return (
-      <a href={href} target="_blank" rel="noopener noreferrer" className={className}>
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={className}
+        onClick={() => capture('settings.system_info_link_opened', { field: label })}
+      >
         {content}
       </a>
     );

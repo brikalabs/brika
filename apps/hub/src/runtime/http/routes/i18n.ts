@@ -1,3 +1,4 @@
+import { Analytics } from '@brika/analytics';
 import { BadRequest, createSSEStream, NotFound, route } from '@brika/router';
 import { z } from 'zod';
 import { I18nService } from '@/runtime/i18n';
@@ -187,6 +188,10 @@ export const i18nWriteRoutes = [
           namespace: params.namespace,
           locale: params.locale,
           key: body.key,
+        });
+        inject(Analytics).capture('i18n.translation_edited', {
+          namespace: params.namespace,
+          locale: params.locale,
         });
       } catch (e) {
         if (isUnsafeKeyPathError(e)) {

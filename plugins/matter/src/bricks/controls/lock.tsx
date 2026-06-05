@@ -2,6 +2,7 @@
  * Lock controls — large animated lock icon with toggle button.
  */
 
+import { capture } from '@brika/sdk';
 import { Lock, LockOpen } from 'lucide-react';
 import { useCallback } from 'react';
 import { GlassButton } from '../components';
@@ -16,6 +17,7 @@ export function LockControls({ device }: Readonly<{ device: DeviceState }>) {
   const sendCommand = useSendCommand();
 
   const handleToggle = useCallback(() => {
+    capture('matter.lock_toggled', { locked: !isLocked });
     sendCommand(device.nodeId, isLocked ? 'unlock' : 'lock');
   }, [sendCommand, device.nodeId, isLocked]);
 

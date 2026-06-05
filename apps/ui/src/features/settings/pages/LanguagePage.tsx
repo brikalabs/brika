@@ -1,10 +1,12 @@
 import { Check, Languages } from 'lucide-react';
+import { useCapture } from '@/features/analytics/hooks';
 import { useLocale } from '@/lib/use-locale';
 import { useAvailableLocales } from '../components/language/hooks';
 import { PageHeader, SettingsSection } from './primitives';
 
 export function LanguagePage() {
   const { t, locale, changeLocale, getLanguageName } = useLocale();
+  const capture = useCapture();
   const { data: locales } = useAvailableLocales();
 
   return (
@@ -28,7 +30,10 @@ export function LanguagePage() {
                 <button
                   key={loc}
                   type="button"
-                  onClick={() => changeLocale(loc)}
+                  onClick={() => {
+                    capture('settings.language_changed', { locale: loc });
+                    changeLocale(loc);
+                  }}
                   className={`group flex items-center gap-3 rounded-lg border px-3.5 py-3 text-left transition-all duration-200 ${
                     isActive
                       ? 'border-primary/40 bg-primary/[0.06] shadow-primary/10 shadow-sm'

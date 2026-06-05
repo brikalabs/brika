@@ -9,6 +9,7 @@ import {
 } from '@brika/clay';
 import { ArrowUp, EllipsisVertical, Power, RotateCcw, Skull, Trash2 } from 'lucide-react';
 import { useState } from 'react';
+import { useCapture } from '@/features/analytics/hooks';
 import { useLocale } from '@/lib/use-locale';
 import { UninstallDialog } from './UninstallDialog';
 
@@ -40,7 +41,13 @@ export function PluginHeaderActions({
   onUninstall,
 }: Readonly<PluginHeaderActionsProps>) {
   const { t } = useLocale();
+  const capture = useCapture();
   const [uninstallOpen, setUninstallOpen] = useState(false);
+
+  const openUpdateDialog = (source: 'button' | 'menu') => {
+    capture('plugins.update_dialog_opened', { source });
+    onUpdate();
+  };
 
   let statusBadgeVariant: 'default' | 'destructive' | 'secondary';
   if (status === 'running') {
@@ -90,7 +97,7 @@ export function PluginHeaderActions({
         <Button
           variant="default"
           size="sm"
-          onClick={onUpdate}
+          onClick={() => openUpdateDialog('button')}
           disabled={isBusy}
           className="gap-1.5"
         >
@@ -104,7 +111,13 @@ export function PluginHeaderActions({
         </Button>
       )}
 
-      <DropdownMenu>
+      <DropdownMenu
+        onOpenChange={(open) => {
+          if (open) {
+            capture('plugins.actions_menu_opened', { status });
+          }
+        }}
+      >
         <DropdownMenuTrigger asChild>
           <Button variant="outline" size="icon-sm">
             <EllipsisVertical className="size-4" />
@@ -112,7 +125,7 @@ export function PluginHeaderActions({
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           {!updateAvailable && (
-            <DropdownMenuItem onClick={onUpdate} disabled={isBusy}>
+            <DropdownMenuItem onClick={() => openUpdateDialog('menu')} disabled={isBusy}>
               <ArrowUp />
               {t('plugins:actions.update')}
             </DropdownMenuItem>
@@ -126,7 +139,13 @@ export function PluginHeaderActions({
             <Skull />
             {t('plugins:actions.kill')}
           </DropdownMenuItem>
-          <DropdownMenuItem variant="destructive" onClick={() => setUninstallOpen(true)}>
+          <DropdownMenuItem
+            variant="destructive"
+            onClick={() => {
+              capture('plugins.uninstall_dialog_opened');
+              setUninstallOpen(true);
+            }}
+          >
             <Trash2 />
             {t('plugins:actions.uninstall')}
           </DropdownMenuItem>

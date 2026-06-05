@@ -13,6 +13,7 @@ import { useNavigate } from '@tanstack/react-router';
 import { AlertCircle, ArrowRight, Check, Loader2, Mail, ShieldCheck, User } from 'lucide-react';
 import { type SyntheticEvent, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useCapture } from '@/features/analytics/hooks';
 import { PasswordStrength } from '../password/PasswordStrength';
 import { StepBody, StepHeader, StepNav } from './shared';
 
@@ -33,6 +34,7 @@ export function AccountStep() {
 function AccountEdit() {
   const { client, user, updateSession } = useAuth();
   const { t } = useTranslation('setup');
+  const capture = useCapture();
 
   const [name, setName] = useState(user?.name ?? '');
   const [currentPassword, setCurrentPassword] = useState('');
@@ -52,6 +54,7 @@ function AccountEdit() {
     }
     setSaving(true);
     setFeedback(null);
+    capture('auth.setup_account_saved', { name: nameDirty, password: passwordDirty });
 
     try {
       if (nameDirty) {
@@ -188,6 +191,7 @@ function AccountSignIn() {
   const { client, refreshSession } = useAuth();
   const { t } = useTranslation('setup');
   const navigate = useNavigate();
+  const capture = useCapture();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -204,13 +208,16 @@ function AccountSignIn() {
 
     setError(null);
     setLoading(true);
+    capture('auth.setup_login_submitted');
 
     try {
       await client.login(email, password);
       await refreshSession();
+      capture('auth.setup_login_succeeded');
       navigate({ to: '/setup/avatar' });
     } catch {
       setError(t('account.signInFailed'));
+      capture('auth.setup_login_failed');
       setLoading(false);
     }
   };
@@ -269,7 +276,10 @@ function AccountSignIn() {
               variant="ghost"
               size="sm"
               className="-ml-2 gap-1.5 text-muted-foreground hover:text-foreground"
-              onClick={() => navigate({ to: '/setup/language' })}
+              onClick={() => {
+                capture('auth.setup_step_back', { to: '/setup/language' });
+                navigate({ to: '/setup/language' });
+              }}
             >
               {t('nav.back')}
             </Button>
@@ -304,6 +314,7 @@ function AccountForm() {
   const { client, updateSession } = useAuth();
   const { t } = useTranslation('setup');
   const navigate = useNavigate();
+  const capture = useCapture();
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -329,13 +340,16 @@ function AccountForm() {
 
     setError(null);
     setLoading(true);
+    capture('auth.setup_account_create_submitted');
 
     try {
       const session = await client.setup({ email, name, password });
       updateSession(session);
+      capture('auth.setup_account_create_succeeded');
       navigate({ to: '/setup/avatar' });
     } catch (err) {
       setError(err instanceof Error ? err.message : t('errors.failed'));
+      capture('auth.setup_account_create_failed');
       setLoading(false);
     }
   };
@@ -433,7 +447,10 @@ function AccountForm() {
               variant="ghost"
               size="sm"
               className="-ml-2 gap-1.5 text-muted-foreground hover:text-foreground"
-              onClick={() => navigate({ to: '/setup/language' })}
+              onClick={() => {
+                capture('auth.setup_step_back', { to: '/setup/language' });
+                navigate({ to: '/setup/language' });
+              }}
             >
               {t('nav.back')}
             </Button>

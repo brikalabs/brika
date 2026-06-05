@@ -3,6 +3,7 @@ import { Link } from '@tanstack/react-router';
 import type { VariantProps } from 'class-variance-authority';
 import { ArrowRight } from 'lucide-react';
 import type React from 'react';
+import { useCapture } from '@/features/analytics/hooks';
 
 export type Accent = VariantProps<typeof cardVariants>['accent'];
 
@@ -23,8 +24,10 @@ export function StatCard({
   href,
   accent,
 }: Readonly<StatCardProps>) {
+  const capture = useCapture();
+
   return (
-    <Link to={href}>
+    <Link to={href} onClick={() => capture('dashboard.stat_card_clicked', { label, href })}>
       <Card accent={accent} interactive className="h-full p-5">
         <div className="relative flex h-full flex-col justify-center">
           <Avatar className="absolute top-0 right-0 size-9 bg-accent/10 text-accent">

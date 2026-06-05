@@ -11,7 +11,9 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-  Input,
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
   Tabs,
   TabsList,
   TabsTrigger,
@@ -19,6 +21,7 @@ import {
 import { ArrowLeftRight, Search, Sparkles, SunMoon } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useCapture } from '@/features/analytics/hooks';
 import { invertLightness, mix, parseHex, shiftLightness } from '../color-utils';
 import { TOKEN_GROUPS } from '../tokens';
 import { metaFor } from '../tokens-meta';
@@ -68,6 +71,7 @@ function generateFromPrimary(colors: TokenMap, mode: 'light' | 'dark'): TokenMap
 
 export function PaletteTab({ draft, onChange }: Readonly<PaletteTabProps>) {
   const { t } = useTranslation('themeBuilder');
+  const capture = useCapture();
   const [editingMode, setEditingMode] = useState<'light' | 'dark'>('light');
   const [query, setQuery] = useState('');
 
@@ -88,6 +92,7 @@ export function PaletteTab({ draft, onChange }: Readonly<PaletteTabProps>) {
       colors: { ...draft.colors, [target]: { ...draft.colors?.[from] } },
     });
     setEditingMode(target);
+    capture('theme_builder.palette_synced', { action: 'copy', from, to: target });
   };
 
   const autoInvertTo = (target: 'light' | 'dark') => {
@@ -102,6 +107,7 @@ export function PaletteTab({ draft, onChange }: Readonly<PaletteTabProps>) {
       colors: { ...draft.colors, [target]: inverted },
     });
     setEditingMode(target);
+    capture('theme_builder.palette_synced', { action: 'auto_invert', from: source, to: target });
   };
 
   const generateNeutrals = () => {
@@ -110,6 +116,7 @@ export function PaletteTab({ draft, onChange }: Readonly<PaletteTabProps>) {
       ...draft,
       colors: { ...draft.colors, [editingMode]: next },
     });
+    capture('theme_builder.palette_tinted_from_primary', { mode: editingMode });
   };
 
   const normalizedQuery = query.trim().toLowerCase();
@@ -127,17 +134,26 @@ export function PaletteTab({ draft, onChange }: Readonly<PaletteTabProps>) {
     <>
       <div className="shrink-0 space-y-2 border-b px-3 pb-2">
         <div className="flex items-center justify-between gap-2">
-          <div className="relative flex-1">
-            <Search className="pointer-events-none absolute top-1/2 left-2 size-3 -translate-y-1/2 text-muted-foreground" />
-            <Input
+          <InputGroup className="h-7 flex-1">
+            <InputGroupAddon>
+              <Search className="size-3" />
+            </InputGroupAddon>
+            <InputGroupInput
               type="search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder={t('palette.filterPlaceholder')}
-              className="h-7 py-1 pr-2 pl-7 text-[11px]"
+              className="text-[11px]"
             />
-          </div>
-          <Tabs value={editingMode} onValueChange={(v) => setEditingMode(v as 'light' | 'dark')}>
+          </InputGroup>
+          <Tabs
+            value={editingMode}
+            onValueChange={(v) => {
+              const next = v === 'dark' ? 'dark' : 'light';
+              setEditingMode(next);
+              capture('theme_builder.palette_mode_switched', { mode: next });
+            }}
+          >
             <TabsList className="h-7">
               <TabsTrigger value="light" className="h-6 px-2 text-[10px]">
                 {t('palette.modeLight')}
@@ -150,7 +166,13 @@ export function PaletteTab({ draft, onChange }: Readonly<PaletteTabProps>) {
         </div>
 
         <div className="flex flex-wrap gap-1">
-          <DropdownMenu>
+          <DropdownMenu
+            onOpenChange={(next) => {
+              if (next) {
+                capture('theme_builder.palette_sync_menu_opened', {});
+              }
+            }}
+          >
             <DropdownMenuTrigger asChild>
               <Button size="sm" variant="outline" className="h-6 gap-1 px-1.5 text-[10px]">
                 <SunMoon className="size-3" /> {t('palette.sync')}

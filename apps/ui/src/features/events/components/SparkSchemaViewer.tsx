@@ -1,11 +1,13 @@
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { useState } from 'react';
+import { useCapture } from '@/features/analytics/hooks';
 
 interface SparkSchemaViewerProps {
   schema?: Record<string, unknown>;
 }
 
 export function SparkSchemaViewer({ schema }: Readonly<SparkSchemaViewerProps>) {
+  const capture = useCapture();
   const [expanded, setExpanded] = useState(false);
 
   if (!schema) {
@@ -18,6 +20,7 @@ export function SparkSchemaViewer({ schema }: Readonly<SparkSchemaViewerProps>) 
         type="button"
         onClick={(e) => {
           e.stopPropagation();
+          capture(expanded ? 'sparks.schema_collapsed' : 'sparks.schema_expanded');
           setExpanded(!expanded);
         }}
         className="flex items-center gap-1 text-muted-foreground text-xs hover:text-foreground"

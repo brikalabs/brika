@@ -28,6 +28,7 @@ import {
   UserPen,
 } from 'lucide-react';
 import { type ChangeEvent, useRef, useState } from 'react';
+import { useCapture } from '@/features/analytics/hooks';
 import { useLocale } from '@/lib/use-locale';
 import { PasswordSection } from './password';
 import { SessionsSection } from './SessionsSection';
@@ -35,6 +36,7 @@ import { SessionsSection } from './SessionsSection';
 export function ProfilePage() {
   const { user, client, refreshSession } = useAuth();
   const { t, formatDate } = useLocale();
+  const capture = useCapture();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [name, setName] = useState(user?.name ?? '');
@@ -61,6 +63,7 @@ export function ProfilePage() {
       return;
     }
     setSaving(true);
+    capture('auth.profile_name_saved');
     try {
       await client.updateProfile({
         name: name.trim(),
@@ -79,6 +82,7 @@ export function ProfilePage() {
       return;
     }
     setUploading(true);
+    capture('auth.avatar_uploaded');
     try {
       await client.uploadAvatar(file);
       await refreshSession();
@@ -92,6 +96,7 @@ export function ProfilePage() {
 
   const handleAvatarRemove = async () => {
     setUploading(true);
+    capture('auth.avatar_removed');
     try {
       await client.removeAvatar();
       await refreshSession();
@@ -102,6 +107,7 @@ export function ProfilePage() {
 
   const handleCopyEmail = async () => {
     await navigator.clipboard.writeText(user.email);
+    capture('auth.email_copied');
     setCopied(true);
     setTimeout(() => setCopied(false), 1600);
   };

@@ -1,4 +1,5 @@
 import { Badge } from "@brika/clay";
+import { useCapture } from "@/features/analytics/hooks";
 import { useLocale } from "@/lib/use-locale";
 import type { LogSource } from "../types";
 
@@ -14,11 +15,14 @@ export function LogSourceFilter({
   onSourcesChange,
 }: Readonly<LogSourceFilterProps>) {
   const { t } = useLocale();
+  const capture = useCapture();
 
   const toggleSource = (source: LogSource) => {
-    const newSources = selectedSources.includes(source)
-      ? selectedSources.filter((s) => s !== source)
-      : [...selectedSources, source];
+    const enabled = !selectedSources.includes(source);
+    const newSources = enabled
+      ? [...selectedSources, source]
+      : selectedSources.filter((s) => s !== source);
+    capture("logs.source_filter_changed", { source, enabled });
     onSourcesChange(newSources);
   };
 

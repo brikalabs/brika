@@ -40,6 +40,7 @@ import {
 } from 'lucide-react';
 import { type ChangeEvent, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useCapture } from '@/features/analytics/hooks';
 import type { ThemeConfig } from '../types';
 
 interface ThemeBuilderToolbarProps {
@@ -96,6 +97,7 @@ export function ThemeBuilderToolbar({
   onImport,
 }: Readonly<ThemeBuilderToolbarProps>) {
   const { t } = useTranslation('themeBuilder');
+  const capture = useCapture();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const justSaved = useJustSaved(lastSavedMs);
 
@@ -164,7 +166,13 @@ export function ThemeBuilderToolbar({
             className="hidden"
           />
 
-          <DropdownMenu>
+          <DropdownMenu
+            onOpenChange={(next) => {
+              if (next) {
+                capture('theme_builder.export_menu_opened', {});
+              }
+            }}
+          >
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm">
                 <Download /> {t('toolbar.actions.export')}{' '}

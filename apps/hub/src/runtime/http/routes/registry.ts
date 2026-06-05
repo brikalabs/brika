@@ -1,3 +1,4 @@
+import { Analytics } from '@brika/analytics';
 import { createSSEStream, group, NotFound, route } from '@brika/router';
 import { z } from 'zod';
 import { HUB_VERSION } from '@/hub';
@@ -53,6 +54,10 @@ export const registryRoutes = group({
       handler: async ({ body, inject }) => {
         const registry = inject(PluginRegistry);
         await registry.init();
+        inject(Analytics).capture('registry.install_started', {
+          package: body.package,
+          pinned: body.version !== undefined,
+        });
         const generator = registry.install(body.package, body.version);
         return createSSEStream((send, close) => streamProgress(generator, send, close));
       },
@@ -66,6 +71,9 @@ export const registryRoutes = group({
       handler: async ({ body, inject }) => {
         const registry = inject(PluginRegistry);
         await registry.init();
+        inject(Analytics).capture('registry.update_started', {
+          allPackages: body.package === undefined,
+        });
         const generator = registry.update(body.package);
         return createSSEStream((send, close) => streamProgress(generator, send, close));
       },
@@ -115,6 +123,7 @@ export const registryRoutes = group({
       handler: async ({ params, inject }) => {
         const registry = inject(PluginRegistry);
         await registry.uninstall(params.name);
+        inject(Analytics).capture('registry.package_uninstalled', { package: params.name });
         return {
           success: true,
         };

@@ -8,6 +8,7 @@
 import { watch } from 'node:fs';
 import { rm } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
+import { Analytics } from '@brika/analytics';
 import { inject, singleton } from '@brika/di';
 import { parse as parseYAML, stringify as stringifyYAML } from 'yaml';
 import { z } from 'zod';
@@ -65,6 +66,7 @@ type YAMLBoard = z.output<typeof YAMLBoardSchema>;
 @singleton()
 export class BoardLoader {
   private readonly logs = inject(Logger).withSource('state');
+  readonly #analytics = inject(Analytics);
 
   #dir: string | null = null;
   #watcher: ReturnType<typeof watch> | null = null;
@@ -180,6 +182,17 @@ export class BoardLoader {
       await this.#persistOrder();
     }
 
+    // Discrete lifecycle: a new board is created. Plain saves (every brick
+    // move / config write also call saveBoard) are intentionally skipped to
+    // avoid flooding on layout churn.
+    if (isNew) {
+      this.#analytics.capture('board.created', {
+        boardId: board.id,
+        hasIcon: board.icon !== undefined,
+        columns: board.columns,
+      });
+    }
+
     this.logs.info('Board saved', {
       fileName: basename(filePath),
       boardId: board.id,
@@ -212,6 +225,8 @@ export class BoardLoader {
     for (const l of this.#changeListeners) {
       l(id, 'unload');
     }
+
+    this.#analytics.capture('board.deleted', { boardId: id });
 
     this.logs.info('Board deleted', {
       fileName: basename(filePath),
@@ -256,6 +271,9 @@ export class BoardLoader {
       }
     }
     await this.#persistOrder();
+
+    this.#analytics.capture('board.reordered', { count: this.#order.length });
+
     return true;
   }
 

@@ -13,6 +13,7 @@
  * so the index can wrap each appropriately.
  */
 
+import { Analytics } from '@brika/analytics';
 import { Conflict, createSSEStream, group, Locked, route } from '@brika/router';
 import { z } from 'zod';
 import { MigrationStatus } from '@/runtime/bootstrap/plugins/migrations';
@@ -84,7 +85,8 @@ export const systemAdminRoutes = group({
     /** POST /api/system/restart — signal supervisor to restart the hub */
     route.post({
       path: '/restart',
-      handler: () => {
+      handler: ({ inject }) => {
+        inject(Analytics).capture('system.restart_requested');
         setTimeout(() => process.exit(RESTART_CODE), 100);
         return { ok: true };
       },
@@ -92,7 +94,8 @@ export const systemAdminRoutes = group({
     /** POST /api/system/stop — shut down the hub and supervisor */
     route.post({
       path: '/stop',
-      handler: () => {
+      handler: ({ inject }) => {
+        inject(Analytics).capture('system.stop_requested');
         setTimeout(() => process.exit(0), 100);
         return { ok: true };
       },
@@ -140,6 +143,7 @@ export const updateAdminRoutes = group({
       }),
       handler: async ({ inject, query }) => {
         const orchestrator = inject(UpdateOrchestrator);
+        const analytics = inject(Analytics);
 
         if (!orchestrator.canApply()) {
           // Route refusals through the strategy's own rejection so the
@@ -173,6 +177,8 @@ export const updateAdminRoutes = group({
             send({ phase, message, error }, 'progress');
           };
 
+          analytics.capture('update.apply_started', { forced: query.force === true });
+
           (async () => {
             try {
               const state = inject(StateStore);
@@ -183,6 +189,11 @@ export const updateAdminRoutes = group({
                 onProgress(phase, detail) {
                   sendProgress(phase, detail);
                 },
+              });
+
+              analytics.capture('update.apply_completed', {
+                fromVersion: result.previousVersion,
+                toVersion: result.newVersion,
               });
 
               sendProgress(
@@ -202,6 +213,9 @@ export const updateAdminRoutes = group({
               // to a JSON error body. Surface every failure as a
               // structured `'error'` progress event.
               const message = error instanceof Error ? error.message : String(error);
+              analytics.capture('update.apply_failed', {
+                reason: error instanceof Error ? error.name : 'unknown',
+              });
               sendProgress('error', message, message);
               close();
             }

@@ -2,6 +2,7 @@ import { Button, Card, CardContent, CardHeader, CardTitle } from '@brika/clay';
 import { BrikaLogo } from '@brika/clay/components/brika-logo';
 import { Link } from '@tanstack/react-router';
 import { ArrowRight, BookOpen, LayoutGrid, type LucideIcon, Plug, Workflow } from 'lucide-react';
+import { useCapture } from '@/features/analytics/hooks';
 import { useLocale } from '@/lib/use-locale';
 import { paths } from '@/routes/paths';
 
@@ -27,6 +28,7 @@ function StepRow({ icon: Icon, title, description }: Readonly<StepRowProps>) {
 
 export function GettingStartedCard() {
   const { t } = useLocale();
+  const capture = useCapture();
 
   return (
     <Card className="flex-1">
@@ -57,7 +59,10 @@ export function GettingStartedCard() {
         />
 
         <Button asChild size="sm" className="mt-1 w-full gap-2">
-          <Link to={paths.plugins.list.path}>
+          <Link
+            to={paths.plugins.list.path}
+            onClick={() => capture('dashboard.getting_started_cta_clicked')}
+          >
             <Plug className="size-4" />
             {t('onboarding:gettingStarted.steps.installPlugin.action')}
             <ArrowRight className="ml-auto size-4" />
@@ -66,6 +71,7 @@ export function GettingStartedCard() {
 
         <Link
           to={paths.help.concepts.path}
+          onClick={() => capture('dashboard.getting_started_learn_more_clicked')}
           className="inline-flex items-center gap-1.5 text-muted-foreground text-xs transition-colors hover:text-foreground"
         >
           <BookOpen className="size-3.5" />

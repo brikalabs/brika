@@ -20,6 +20,7 @@ import {
   Tag,
 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCapture } from '@/features/analytics/hooks';
 import { Markdown } from '@/features/plugins/components/Markdown';
 import { useWaitForHub } from '@/hooks/use-wait-for-hub';
 import type { LocaleUtils } from '@/lib/use-locale';
@@ -307,6 +308,7 @@ export function UpdateDialog({
   force,
 }: Readonly<UpdateDialogProps>) {
   const { t } = useLocale();
+  const capture = useCapture();
   const [state, setState] = useState<DialogState>('idle');
   const [phase, setPhase] = useState<string>('');
   const [logs, setLogs] = useState<string[]>([]);
@@ -385,6 +387,7 @@ export function UpdateDialog({
           setError(p.error ?? p.message);
           setState('error');
         } else if (p.phase === 'restarting' || p.phase === 'complete') {
+          capture('update.applied', { version: updateInfo.latestVersion, force: force ?? false });
           setState('restarting');
           hubPoller.start();
         }
@@ -395,7 +398,7 @@ export function UpdateDialog({
       setError(extractErrorMessage(err));
       setState('error');
     }
-  }, [hubPoller, force]);
+  }, [hubPoller, force, capture, updateInfo.latestVersion]);
 
   const handleClose = () => {
     if (state === 'updating' || state === 'restarting') {

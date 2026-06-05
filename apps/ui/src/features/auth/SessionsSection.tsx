@@ -26,6 +26,7 @@ import {
 } from '@brika/clay';
 import { Globe, Loader2, LogOut } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
+import { useCapture } from '@/features/analytics/hooks';
 import { useLocale } from '@/lib/use-locale';
 import { SessionDetailDialog } from './sessions/SessionDetailDialog';
 import { SessionRow } from './sessions/SessionRow';
@@ -51,6 +52,7 @@ function SessionsSkeleton() {
 export function SessionsSection() {
   const { client, clearSession } = useAuth();
   const { t } = useLocale();
+  const capture = useCapture();
 
   const [sessions, setSessions] = useState<SessionInfo[]>([]);
   const [loading, setLoading] = useState(true);
@@ -83,6 +85,7 @@ export function SessionsSection() {
   const handleRevoke = useCallback(
     async (session: SessionInfo) => {
       setRevokingId(session.id);
+      capture('auth.session_revoke_confirmed', { current: session.current });
       try {
         await client.revokeSession(session.id);
         if (session.current) {
@@ -95,11 +98,14 @@ export function SessionsSection() {
         setConfirmSession(null);
       }
     },
-    [client, clearSession]
+    [client, clearSession, capture]
   );
+
+  const otherSessionsCount = sessions.filter((s) => !s.current).length;
 
   const handleRevokeAll = useCallback(async () => {
     setRevokingAll(true);
+    capture('auth.session_revoke_all_confirmed', { count: otherSessionsCount });
     try {
       await client.revokeAllSessions();
       clearSession();
@@ -107,9 +113,7 @@ export function SessionsSection() {
       setRevokingAll(false);
       setConfirmRevokeAll(false);
     }
-  }, [client, clearSession]);
-
-  const otherSessionsCount = sessions.filter((s) => !s.current).length;
+  }, [client, clearSession, capture, otherSessionsCount]);
 
   function renderSessions() {
     if (loading) {
@@ -125,8 +129,14 @@ export function SessionsSection() {
             key={session.id}
             session={session}
             revokingId={revokingId}
-            onRevoke={() => setConfirmSession(session)}
-            onDetails={() => setDetailSession(session)}
+            onRevoke={() => {
+              capture('auth.session_revoke_prompted', { current: session.current });
+              setConfirmSession(session);
+            }}
+            onDetails={() => {
+              capture('auth.session_details_opened', { current: session.current });
+              setDetailSession(session);
+            }}
           />
         ))}
       </div>
@@ -151,7 +161,10 @@ export function SessionsSection() {
               variant="outline"
               size="sm"
               className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
-              onClick={() => setConfirmRevokeAll(true)}
+              onClick={() => {
+                capture('auth.session_revoke_all_prompted', { count: otherSessionsCount });
+                setConfirmRevokeAll(true);
+              }}
             >
               <LogOut className="size-3.5" />
               {t('auth:sessions.revokeAll')}

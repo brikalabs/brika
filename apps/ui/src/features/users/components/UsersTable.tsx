@@ -20,6 +20,7 @@ import {
 import { KeyRound, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { UserAvatar } from '@/components/user-avatar';
+import { useCapture } from '@/features/analytics/hooks';
 import { useLocale } from '@/lib/use-locale';
 import type { UserRecord } from '../api';
 import { DeleteUserDialog } from './DeleteUserDialog';
@@ -35,6 +36,7 @@ interface UsersTableProps {
 export function UsersTable({ users, isLoading }: Readonly<UsersTableProps>) {
   const { t, formatDate } = useLocale();
   const { user: currentUser } = useAuth();
+  const capture = useCapture();
 
   const [editUser, setEditUser] = useState<UserRecord | null>(null);
   const [resetUser, setResetUser] = useState<UserRecord | null>(null);
@@ -81,6 +83,11 @@ export function UsersTable({ users, isLoading }: Readonly<UsersTableProps>) {
               const isSelf = currentUser?.id === user.id;
               const canDelete = !isSelf && user.role !== 'admin';
 
+              const openDeleteDialog = () => {
+                capture('users.delete_dialog_opened', { role: user.role });
+                setDeleteUser(user);
+              };
+
               return (
                 <TableRow key={user.id}>
                   <TableCell>
@@ -108,7 +115,7 @@ export function UsersTable({ users, isLoading }: Readonly<UsersTableProps>) {
                           variant="ghost"
                           size="sm"
                           className="size-8 p-0 text-muted-foreground hover:text-destructive"
-                          onClick={() => setDeleteUser(user)}
+                          onClick={openDeleteDialog}
                         >
                           <Trash2 className="size-4" />
                         </Button>
@@ -120,11 +127,21 @@ export function UsersTable({ users, isLoading }: Readonly<UsersTableProps>) {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => setEditUser(user)}>
+                          <DropdownMenuItem
+                            onClick={() => {
+                              capture('users.edit_dialog_opened', { role: user.role });
+                              setEditUser(user);
+                            }}
+                          >
                             <Pencil className="size-4" />
                             {t('users:editUser')}
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => setResetUser(user)}>
+                          <DropdownMenuItem
+                            onClick={() => {
+                              capture('users.reset_password_dialog_opened');
+                              setResetUser(user);
+                            }}
+                          >
                             <KeyRound className="size-4" />
                             {t('users:resetPassword')}
                           </DropdownMenuItem>
@@ -132,7 +149,7 @@ export function UsersTable({ users, isLoading }: Readonly<UsersTableProps>) {
                             <>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem
-                                onClick={() => setDeleteUser(user)}
+                                onClick={openDeleteDialog}
                                 className="text-destructive focus:text-destructive"
                               >
                                 <Trash2 className="size-4" />

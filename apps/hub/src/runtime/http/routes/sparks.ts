@@ -1,3 +1,4 @@
+import { Analytics } from '@brika/analytics';
 import { group, NotFound, route } from '@brika/router';
 import { z } from 'zod';
 import { SparkActions } from '@/runtime/events/actions';
@@ -99,6 +100,7 @@ export const sparksRoutes = group({
           'debug'
         );
         events.dispatch(action);
+        inject(Analytics).capture('spark.debug_emitted', { type: body.type });
         return {
           id: action.id,
           type: body.type,

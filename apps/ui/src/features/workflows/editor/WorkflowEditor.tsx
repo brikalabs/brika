@@ -26,6 +26,7 @@ import {
   Zap,
 } from 'lucide-react';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCapture } from '@/features/analytics/hooks';
 import { fetcher } from '@/lib/query';
 import { useLocale } from '@/lib/use-locale';
 import '@xyflow/react/dist/style.css';
@@ -145,6 +146,7 @@ function isValidPanelStates(value: unknown): value is PanelStates {
 }
 
 function usePanelState() {
+  const capture = useCapture();
   const [panelStates, setPanelStates] = useState<PanelStates>(() => {
     try {
       const saved = localStorage.getItem('workflow-editor-panels');
@@ -160,16 +162,20 @@ function usePanelState() {
     return DEFAULT_PANEL_STATES;
   });
 
-  const togglePanel = useCallback((panel: PanelName) => {
-    setPanelStates((prev: PanelStates) => {
-      const next = {
-        ...prev,
-        [panel]: !prev[panel],
-      };
-      localStorage.setItem('workflow-editor-panels', JSON.stringify(next));
-      return next;
-    });
-  }, []);
+  const togglePanel = useCallback(
+    (panel: PanelName) => {
+      setPanelStates((prev: PanelStates) => {
+        const next = {
+          ...prev,
+          [panel]: !prev[panel],
+        };
+        capture('workflow.editor_panel_toggled', { panel, open: next[panel] });
+        localStorage.setItem('workflow-editor-panels', JSON.stringify(next));
+        return next;
+      });
+    },
+    [capture]
+  );
 
   return {
     panelStates,
@@ -269,11 +275,13 @@ function DebugSidePanel({ isOpen, onToggle, workflow }: Readonly<DebugSidePanelP
 function EditorControls({ showInteractive }: Readonly<{ showInteractive: boolean }>) {
   const { zoomIn, zoomOut, fitView } = useReactFlow();
   const store = useStoreApi();
+  const capture = useCapture();
   const [locked, setLocked] = useState(false);
 
   const toggleLock = useCallback(() => {
     setLocked((prev) => {
       const next = !prev;
+      capture('workflow.canvas_lock_toggled', { locked: next });
       store.setState({
         nodesDraggable: !next,
         nodesConnectable: !next,
@@ -281,7 +289,7 @@ function EditorControls({ showInteractive }: Readonly<{ showInteractive: boolean
       });
       return next;
     });
-  }, [store]);
+  }, [store, capture]);
 
   return (
     <Panel position="bottom-left">
@@ -290,7 +298,10 @@ function EditorControls({ showInteractive }: Readonly<{ showInteractive: boolean
           size="icon"
           variant="ghost"
           className="size-7 rounded-none rounded-t-md"
-          onClick={() => zoomIn()}
+          onClick={() => {
+            capture('workflow.canvas_zoom_in');
+            zoomIn();
+          }}
         >
           <Plus className="size-3.5" />
         </Button>
@@ -298,7 +309,10 @@ function EditorControls({ showInteractive }: Readonly<{ showInteractive: boolean
           size="icon"
           variant="ghost"
           className="size-7 rounded-none"
-          onClick={() => zoomOut()}
+          onClick={() => {
+            capture('workflow.canvas_zoom_out');
+            zoomOut();
+          }}
         >
           <Minus className="size-3.5" />
         </Button>
@@ -306,7 +320,10 @@ function EditorControls({ showInteractive }: Readonly<{ showInteractive: boolean
           size="icon"
           variant="ghost"
           className="size-7 rounded-none"
-          onClick={() => fitView()}
+          onClick={() => {
+            capture('workflow.canvas_fit_view');
+            fitView();
+          }}
         >
           <Maximize2 className="size-3.5" />
         </Button>
@@ -549,6 +566,7 @@ function WorkflowEditorWithBlocks({
 }: Readonly<WorkflowEditorWithBlocksProps>) {
   const { screenToFlowPosition } = useReactFlow();
   const { panelStates, togglePanel } = usePanelState();
+  const capture = useCapture();
 
   // Fetch sparks for type resolution
   const { data: sparks = [] } = useQuery({
@@ -640,9 +658,13 @@ function WorkflowEditorWithBlocks({
         defaultConfig: {},
       };
 
+      capture('workflow.block_added', {
+        blockType: blockType.type,
+        pluginId: blockDef.pluginId,
+      });
       addBlock(blockType, position);
     },
-    [addBlock, screenToFlowPosition]
+    [addBlock, screenToFlowPosition, capture]
   );
 
   // Get available variables for selected block

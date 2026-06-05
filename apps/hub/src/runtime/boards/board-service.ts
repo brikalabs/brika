@@ -6,6 +6,7 @@
  * (type validation).
  */
 
+import { Analytics } from '@brika/analytics';
 import { inject, singleton } from '@brika/di';
 import { BrickTypeRegistry } from '@/runtime/bricks';
 import { BoardActions } from '@/runtime/events/actions';
@@ -33,18 +34,27 @@ export class BoardService {
   private readonly brickTypes = inject(BrickTypeRegistry);
   private readonly lifecycle = inject(PluginLifecycle);
   private readonly events = inject(EventSystem);
+  readonly #analytics = inject(Analytics);
 
   readonly #activeViewers = new Map<string, number>();
 
   viewerConnected(boardId: string): void {
     const count = (this.#activeViewers.get(boardId) ?? 0) + 1;
     this.#activeViewers.set(boardId, count);
+    // Lifecycle transition only (0 → 1): a board going from idle to actively
+    // viewed. Subsequent connections are not captured to avoid per-connection
+    // floods from multi-tab / multi-device viewers.
+    if (count === 1) {
+      this.#analytics.capture('board.activated', { boardId });
+    }
   }
 
   viewerDisconnected(boardId: string): void {
     const count = (this.#activeViewers.get(boardId) ?? 1) - 1;
     if (count <= 0) {
       this.#activeViewers.delete(boardId);
+      // Lifecycle transition only (1 → 0): the last viewer left.
+      this.#analytics.capture('board.deactivated', { boardId });
     } else {
       this.#activeViewers.set(boardId, count);
     }
@@ -102,6 +112,12 @@ export class BoardService {
       )
     );
 
+    this.#analytics.capture('board.brick_added', {
+      boardId,
+      brickTypeId,
+      configKeys: Object.keys(config).length,
+    });
+
     return placement;
   }
 
@@ -119,7 +135,7 @@ export class BoardService {
       return false;
     }
 
-    board.bricks.splice(idx, 1);
+    const [removed] = board.bricks.splice(idx, 1);
     await this.loader.saveBoard(board);
 
     this.events.dispatch(
@@ -131,6 +147,11 @@ export class BoardService {
         'hub'
       )
     );
+
+    this.#analytics.capture('board.brick_removed', {
+      boardId,
+      brickTypeId: removed.brickTypeId,
+    });
 
     return true;
   }
@@ -174,6 +195,12 @@ export class BoardService {
       )
     );
 
+    this.#analytics.capture('board.brick_config_changed', {
+      boardId,
+      brickTypeId: brick.brickTypeId,
+      configKeys: Object.keys(config).length,
+    });
+
     return true;
   }
 
@@ -204,6 +231,14 @@ export class BoardService {
         'hub'
       )
     );
+
+    // Capture intent (named vs cleared), never the label text, which is
+    // user-authored free-form content and could carry PII.
+    this.#analytics.capture('board.brick_label_changed', {
+      boardId,
+      brickTypeId: brick.brickTypeId,
+      cleared: label === undefined || label === '',
+    });
 
     return true;
   }

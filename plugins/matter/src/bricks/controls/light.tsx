@@ -5,6 +5,7 @@
  * Brightness slider uses local state with debounced commands for smooth dragging.
  */
 
+import { capture } from '@brika/sdk';
 import { Sun } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { hsvToHex, miredsToHex } from '../color-utils';
@@ -120,8 +121,9 @@ export function LightControls({
   // ─── Handlers ──────────────────────────────────────────────────────
 
   const handleToggle = useCallback(() => {
+    capture('matter.light_toggled', { turnedOn: !isOn });
     sendCommand(device.nodeId, 'toggle');
-  }, [sendCommand, device.nodeId]);
+  }, [sendCommand, device.nodeId, isOn]);
 
   const handleBrightness = useCallback(
     (value: number) => {
@@ -137,6 +139,7 @@ export function LightControls({
 
   const handleColorPreset = useCallback(
     (presetH: number, presetS: number) => {
+      capture('matter.light_color_preset_selected');
       const matterHue = Math.round((presetH / 360) * 254);
       const matterSat = Math.round((presetS / 100) * 254);
       sendCommand(device.nodeId, 'setHueSaturation', {
@@ -149,6 +152,7 @@ export function LightControls({
 
   const handleTempPreset = useCallback(
     (mireds: number) => {
+      capture('matter.light_temp_preset_selected');
       sendCommand(device.nodeId, 'setColorTemp', { mireds: String(mireds) });
     },
     [sendCommand, device.nodeId]

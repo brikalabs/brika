@@ -2,6 +2,7 @@ import { Skeleton } from "@brika/clay";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { ArrowUp } from "lucide-react";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCapture } from "@/features/analytics/hooks";
 import { useLocale } from "@/lib/use-locale";
 import type { StoredLogEvent } from "../api";
 import { LogRow } from "./LogRow";
@@ -29,6 +30,7 @@ export function LogList({
   onRevealPending,
 }: Readonly<LogListProps>) {
   const { t } = useLocale();
+  const capture = useCapture();
   const scrollRef = useRef<HTMLDivElement>(null);
   const prevScrollHeightRef = useRef(0);
   const firstLogIdRef = useRef<number | undefined>(undefined);
@@ -37,17 +39,21 @@ export function LogList({
   // Lifted out of LogRow so virtualization doesn't destroy it when rows leave the viewport.
   const [expandedIds, setExpandedIds] = useState<ReadonlySet<number>>(new Set());
 
-  const toggleExpanded = useCallback((id: number) => {
-    setExpandedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
-      return next;
-    });
-  }, []);
+  const toggleExpanded = useCallback(
+    (id: number) => {
+      setExpandedIds((prev) => {
+        const next = new Set(prev);
+        if (next.has(id)) {
+          next.delete(id);
+        } else {
+          next.add(id);
+        }
+        return next;
+      });
+      capture(expandedIds.has(id) ? "logs.entry_collapsed" : "logs.entry_expanded");
+    },
+    [capture, expandedIds],
+  );
 
   const virtualizer = useVirtualizer({
     count: logs.length,
@@ -125,8 +131,9 @@ export function LogList({
       // fires after the reveal — avoids the compensation kicking in and undoing the scroll.
       el.scrollTop = 0;
     }
+    capture("logs.pending_revealed", { count: pendingCount });
     onRevealPending?.();
-  }, [onRevealPending]);
+  }, [onRevealPending, capture, pendingCount]);
 
   if (isLoading) {
     return (

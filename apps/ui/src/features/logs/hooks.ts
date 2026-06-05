@@ -1,5 +1,6 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef } from "react";
+import { useCapture } from "@/features/analytics/hooks";
 import { getStreamUrl } from "@/lib/query";
 import { type LogQueryParams, logsApi, logsKeys, type PluginInfo, type StoredLogEvent } from "./api";
 import { type LogFilters, useLogsStore } from "./store";
@@ -108,11 +109,13 @@ export function useLogStats() {
 
 export function useClearLogs() {
   const qc = useQueryClient();
+  const capture = useCapture();
   const { clearNew } = useLogsStore();
 
   return useMutation({
     mutationFn: logsApi.clear,
     onSuccess: () => {
+      capture("logs.cleared");
       qc.invalidateQueries({ queryKey: logsKeys.all });
       clearNew();
     },

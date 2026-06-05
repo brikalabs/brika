@@ -38,6 +38,7 @@ import {
 } from 'lucide-react';
 import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useCapture } from '@/features/analytics/hooks';
 import { Markdown } from '@/features/plugins/components/Markdown';
 import { useUpdateCheck } from '@/features/updates';
 import { type HubUpdateInfo, type UpdateProgress, updateApi } from '@/features/updates/api';
@@ -91,6 +92,7 @@ function pickInitialState(data: HubUpdateInfo | undefined): StepState {
 export function UpdateStep() {
   const { t } = useTranslation('setup');
   const navigate = useNavigate();
+  const capture = useCapture();
   const { data, isLoading } = useUpdateCheck();
   const [state, setState] = useState<StepState>('loading');
   const [releaseNotesOpen, setReleaseNotesOpen] = useState(false);
@@ -144,6 +146,7 @@ export function UpdateStep() {
   }, [navigate]);
 
   const handleUpdate = useCallback(async () => {
+    capture('auth.setup_update_started');
     setState('updating');
     setPhase('checking');
     setLogs([]);
@@ -175,7 +178,7 @@ export function UpdateStep() {
       setError(err instanceof Error ? err.message : String(err));
       setState('error');
     }
-  }, [hubPoller, t]);
+  }, [hubPoller, t, capture]);
 
   if (state === 'loading') {
     return (
@@ -291,7 +294,10 @@ export function UpdateStep() {
                 variant="ghost"
                 size="sm"
                 className="gap-1.5 text-muted-foreground hover:text-foreground"
-                onClick={() => setReleaseNotesOpen(true)}
+                onClick={() => {
+                  capture('auth.setup_release_notes_opened');
+                  setReleaseNotesOpen(true);
+                }}
               >
                 <FileText className="size-3.5" />
                 {t('update.viewReleaseNotes')}
@@ -308,7 +314,15 @@ export function UpdateStep() {
               <ArrowDownToLine className="size-4" />
               {t('update.updateNow')}
             </Button>
-            <Button size="lg" variant="outline" className="flex-1 gap-2" onClick={handleSkip}>
+            <Button
+              size="lg"
+              variant="outline"
+              className="flex-1 gap-2"
+              onClick={() => {
+                capture('auth.setup_update_skipped');
+                handleSkip();
+              }}
+            >
               {t('update.skip')}
               <ArrowRight className="size-4" />
             </Button>

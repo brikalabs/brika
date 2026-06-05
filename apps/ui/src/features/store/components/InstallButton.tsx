@@ -3,6 +3,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@brika/clay/components/
 import { useQueryClient } from '@tanstack/react-query';
 import { Check, Download, Loader2, Trash2 } from 'lucide-react';
 import { type MouseEvent, useState } from 'react';
+import { useCapture } from '@/features/analytics/hooks';
 import { pluginsKeys } from '@/features/plugins/api';
 import { registryApi, registryKeys } from '@/features/plugins/registry-api';
 import { useLocale } from '@/lib/use-locale';
@@ -22,12 +23,14 @@ export function InstallButton({
 }: Readonly<InstallButtonProps>) {
   const { t } = useLocale();
   const queryClient = useQueryClient();
+  const capture = useCapture();
   const [isWorking, setIsWorking] = useState(false);
   const [showInstallDialog, setShowInstallDialog] = useState(false);
 
   const handleInstall = (e: MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    capture('store.install_clicked', { source: plugin.source, size });
     setShowInstallDialog(true);
   };
 
@@ -35,10 +38,12 @@ export function InstallButton({
     e.preventDefault();
     e.stopPropagation();
 
+    capture('store.uninstall_clicked', { source: plugin.source });
     setIsWorking(true);
 
     try {
       await registryApi.uninstall(plugin.name);
+      capture('store.uninstalled', { source: plugin.source });
 
       // Await invalidation so the spinner stays until fresh data arrives
       await Promise.all([
@@ -53,6 +58,7 @@ export function InstallButton({
         }),
       ]);
     } catch (error) {
+      capture('store.uninstall_failed', { source: plugin.source });
       console.error('Uninstall failed:', error);
     } finally {
       setIsWorking(false);

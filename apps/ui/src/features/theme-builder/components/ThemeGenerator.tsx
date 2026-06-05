@@ -26,6 +26,7 @@ import {
 import { Wand2 } from 'lucide-react';
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useCapture } from '@/features/analytics/hooks';
 import { parseHex } from '../color-utils';
 import {
   accentSwatchesFor,
@@ -127,6 +128,7 @@ interface ThemeGeneratorProps {
 
 export function ThemeGenerator({ onGenerate, trigger }: Readonly<ThemeGeneratorProps>) {
   const { t } = useTranslation('themeBuilder');
+  const capture = useCapture();
   const [open, setOpen] = useState(false);
   const [primary, setPrimary] = useState(DEFAULT_PRIMARY);
   const [style, setStyle] = useState<GenerateStyle>('balanced');
@@ -145,12 +147,21 @@ export function ThemeGenerator({ onGenerate, trigger }: Readonly<ThemeGeneratorP
       style,
       name: name.trim() || undefined,
     };
+    capture('theme_builder.generated', { style, radius });
     onGenerate(generateTheme(options));
     setOpen(false);
-  }, [primary, radius, style, name, valid, onGenerate]);
+  }, [primary, radius, style, name, valid, onGenerate, capture]);
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (next) {
+          capture('theme_builder.generator_opened', {});
+        }
+      }}
+    >
       <DialogTrigger asChild>
         {trigger ?? (
           <Button size="sm" variant="outline" className="w-full justify-start gap-2">

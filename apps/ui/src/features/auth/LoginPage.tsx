@@ -12,11 +12,13 @@ import { BrikaLogo } from '@brika/clay/components/brika-logo';
 import { AlertCircle, ArrowRight, Loader2, Mail } from 'lucide-react';
 import { type SyntheticEvent, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useCapture } from '@/features/analytics/hooks';
 import { AmbientCanvas } from './AmbientCanvas';
 
 export function LoginPage() {
   const { client, refreshSession } = useAuth();
   const { t } = useTranslation('auth');
+  const capture = useCapture();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -26,12 +28,15 @@ export function LoginPage() {
     event.preventDefault();
     setError(null);
     setLoading(true);
+    capture('auth.login_submitted');
 
     try {
       await client.login(email, password);
       await refreshSession();
+      capture('auth.login_succeeded');
     } catch (_err) {
       setError(t('loginFailed'));
+      capture('auth.login_failed');
     } finally {
       setLoading(false);
     }

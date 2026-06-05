@@ -20,6 +20,7 @@ import type {
 } from '@brika/plugin';
 import { ExternalLink, RefreshCw } from 'lucide-react';
 import { useCallback, useState } from 'react';
+import { useCapture } from '@/features/analytics/hooks';
 import { pluginsApi } from '../api';
 
 interface PreferenceFieldProps {
@@ -218,8 +219,10 @@ function DynamicDropdown({
 }>) {
   const [options, setOptions] = useState(pref.options ?? []);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const capture = useCapture();
 
   const refresh = useCallback(async () => {
+    capture('plugins.config_options_refreshed');
     setIsRefreshing(true);
     try {
       const data = await pluginsApi.getPreferenceOptions(pluginUid, pref.name);
@@ -227,7 +230,7 @@ function DynamicDropdown({
     } finally {
       setIsRefreshing(false);
     }
-  }, [pluginUid, pref.name]);
+  }, [pluginUid, pref.name, capture]);
 
   return (
     <div className="space-y-2">
@@ -271,12 +274,17 @@ function LinkField({
     pluginUid: string;
   }
 >) {
+  const capture = useCapture();
+
   return (
     <div className="space-y-2">
       <Button
         variant="outline"
         className="w-full justify-start"
-        onClick={() => window.open(resolvePluginUrl(pref.url, pluginUid), '_blank', 'noopener')}
+        onClick={() => {
+          capture('plugins.config_link_opened');
+          window.open(resolvePluginUrl(pref.url, pluginUid), '_blank', 'noopener');
+        }}
       >
         <ExternalLink className="mr-2 size-4" />
         {label}

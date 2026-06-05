@@ -8,6 +8,7 @@
 import { Button } from '@brika/clay/components/button';
 import { Input } from '@brika/clay/components/input';
 import { useEffect, useState } from 'react';
+import { useCapture } from '@/features/analytics/hooks';
 import { useLocale } from '@/lib/use-locale';
 import { usePinnedVersion, useSetPinnedVersion } from './channel-hooks';
 
@@ -15,6 +16,7 @@ const VERSION_RE = /^v?\d+\.\d+\.\d+(?:[-+][\w.-]+)?$/u;
 
 export function PinnedVersionInput() {
   const { t } = useLocale();
+  const capture = useCapture();
   const { data, isLoading } = usePinnedVersion();
   const { mutate, isPending } = useSetPinnedVersion();
   const [draft, setDraft] = useState<string>('');
@@ -47,7 +49,10 @@ export function PinnedVersionInput() {
         <Button
           size="sm"
           disabled={!isValid || !hasChanges || isPending}
-          onClick={() => mutate(draft.length === 0 ? null : draft)}
+          onClick={() => {
+            capture('settings.update_pinned_version_saved', { cleared: draft.length === 0 });
+            mutate(draft.length === 0 ? null : draft);
+          }}
         >
           {isPending ? t('common:actions.saving') : t('common:actions.save')}
         </Button>
@@ -57,6 +62,7 @@ export function PinnedVersionInput() {
             variant="outline"
             disabled={isPending}
             onClick={() => {
+              capture('settings.update_pinned_version_cleared');
               setDraft('');
               mutate(null);
             }}

@@ -16,6 +16,7 @@ import {
 import { Sparkles } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useCapture } from '@/features/analytics/hooks';
 import { THEME_PRESETS, type ThemePreset } from '../presets';
 
 interface PresetPickerProps {
@@ -113,15 +114,25 @@ function PresetCard({ preset, onPick }: Readonly<PresetCardProps>) {
 
 export function PresetPicker({ onPick, trigger }: Readonly<PresetPickerProps>) {
   const { t } = useTranslation('themeBuilder');
+  const capture = useCapture();
   const [open, setOpen] = useState(false);
 
   const handlePick = (preset: ThemePreset) => {
+    capture('theme_builder.preset_applied', { preset: preset.id });
     onPick(preset);
     setOpen(false);
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (next) {
+          capture('theme_builder.presets_opened', {});
+        }
+      }}
+    >
       <DialogTrigger asChild>
         {trigger ?? (
           <Button size="sm" variant="outline" className="w-full justify-start gap-2">

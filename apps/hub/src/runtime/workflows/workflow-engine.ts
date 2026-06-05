@@ -5,6 +5,7 @@
  * Workflows run indefinitely until stopped.
  */
 
+import { Analytics } from '@brika/analytics';
 import { inject, singleton } from '@brika/di';
 import type { BlockDefinition } from '@brika/sdk';
 import { BlockRegistry } from '@/runtime/blocks';
@@ -20,6 +21,7 @@ import { type ExecutionListener, WorkflowExecutor } from './workflow-executor';
 export class WorkflowEngine {
   private readonly logs: ScopedLogger = inject(Logger).withSource('workflow');
   private readonly blocks = inject(BlockRegistry);
+  readonly #analytics = inject(Analytics);
 
   /** Registered workflows */
   readonly #workflows = new Map<string, Workflow>();
@@ -191,10 +193,19 @@ export class WorkflowEngine {
         workflowName: workflow.name,
         startedAt: workflow.startedAt,
       });
+      this.#analytics.capture('workflow.run_succeeded', {
+        workflowId: id,
+        blockCount: workflow.blocks.length,
+        connectionCount: workflow.connections.length,
+      });
     } catch (err) {
       // Set error status
       this.#updateWorkflowState(workflow, 'error', String(err));
       this.#executors.delete(id);
+      this.#analytics.capture('workflow.run_failed', {
+        workflowId: id,
+        blockCount: workflow.blocks.length,
+      });
       this.logs.error(
         'Failed to start workflow',
         {

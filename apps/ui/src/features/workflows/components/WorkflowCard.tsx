@@ -16,6 +16,7 @@ import {
 import { useNavigate } from '@tanstack/react-router';
 import { AlertCircle, Bug, MoreVertical, Play, Square, Trash2, Workflow } from 'lucide-react';
 import { DynamicIcon, type IconName } from 'lucide-react/dynamic';
+import { useCapture } from '@/features/analytics/hooks';
 import { useLocale } from '@/lib/use-locale';
 import { paths } from '@/routes/paths';
 import type { BlockDefinition, Workflow as WorkflowType } from '../api';
@@ -72,6 +73,7 @@ export function WorkflowCard({
 }: Readonly<WorkflowCardProps>) {
   const { t, formatTime } = useLocale();
   const navigate = useNavigate();
+  const capture = useCapture();
 
   const status = getStatusConfig(workflow.status);
   const isError = workflow.status === 'error';
@@ -82,7 +84,10 @@ export function WorkflowCard({
     <Card
       interactive
       className={cn('p-4', status.card)}
-      onClick={() => navigate({ to: paths.workflows.edit.to({ id: workflow.id }) })}
+      onClick={() => {
+        capture('workflow.editor_opened', { id: workflow.id, blockCount });
+        navigate({ to: paths.workflows.edit.to({ id: workflow.id }) });
+      }}
     >
       <div className="flex items-center gap-3">
         <div
@@ -142,14 +147,23 @@ export function WorkflowCard({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem disabled={!isRunning} onClick={() => onDebug(workflow)}>
+              <DropdownMenuItem
+                disabled={!isRunning}
+                onClick={() => {
+                  capture('workflow.debug_opened', { id: workflow.id });
+                  onDebug(workflow);
+                }}
+              >
                 <Bug className="size-4" />
                 {t('workflows:actions.debug')}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 className="text-destructive focus:text-destructive"
-                onClick={() => onDelete(workflow.id)}
+                onClick={() => {
+                  capture('workflow.delete_requested', { id: workflow.id });
+                  onDelete(workflow.id);
+                }}
               >
                 <Trash2 className="size-4" />
                 {t('common:actions.delete')}

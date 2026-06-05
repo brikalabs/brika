@@ -5,6 +5,7 @@
  * The status endpoint is public; the complete endpoint requires auth.
  */
 
+import { Analytics } from '@brika/analytics';
 import { UserService } from '@brika/auth/server';
 import { group, route } from '@brika/router';
 import { StateStore } from '@/runtime/state/state-store';
@@ -44,6 +45,10 @@ export const hubSetupProtectedRoutes = group({
       path: '/complete',
       handler: ({ inject }) => {
         const state = inject(StateStore);
+        // Only emit on the real transition, not idempotent re-POSTs.
+        if (!state.isSetupCompleted()) {
+          inject(Analytics).capture('setup.completed');
+        }
         state.setSetupCompleted(true);
         return { ok: true };
       },

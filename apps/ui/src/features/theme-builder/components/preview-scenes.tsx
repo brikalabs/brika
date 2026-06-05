@@ -28,6 +28,9 @@ import {
   EmptyStateIcon,
   EmptyStateTitle,
   Input,
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
   Label,
   Progress,
   SectionLabel,
@@ -224,10 +227,12 @@ function AppSceneImpl() {
       <div className="min-w-0 space-y-4">
         {/* Header / search */}
         <div className="flex items-center gap-2">
-          <div className="relative flex-1">
-            <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input placeholder={t('preview.app.searchPlaceholder')} className="pl-8" />
-          </div>
+          <InputGroup className="flex-1">
+            <InputGroupAddon>
+              <Search className="size-4" />
+            </InputGroupAddon>
+            <InputGroupInput placeholder={t('preview.app.searchPlaceholder')} />
+          </InputGroup>
           <Button size="sm" variant="outline">
             <Bell /> {t('preview.app.notifications')}
           </Button>

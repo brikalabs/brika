@@ -1,5 +1,6 @@
 import { useMutation } from '@tanstack/react-query';
 import { useEffect, useMemo } from 'react';
+import { useCapture } from '@/features/analytics/hooks';
 import { fetcher, getStreamUrl } from '@/lib/query';
 import { subscribeSharedEvents } from '@/lib/shared-event-source';
 import { useEventsStore } from './store';
@@ -100,6 +101,7 @@ export function useSparkStream() {
 }
 
 export function useEmitEvent() {
+  const capture = useCapture();
   return useMutation({
     mutationFn: ({ type, payload }: { type: string; payload: unknown }) =>
       fetcher<BrikaEvent>('/api/sparks/emit', {
@@ -109,5 +111,8 @@ export function useEmitEvent() {
           payload,
         }),
       }),
+    onSuccess: (_data, { type }) => {
+      capture('spark.emitted', { type });
+    },
   });
 }

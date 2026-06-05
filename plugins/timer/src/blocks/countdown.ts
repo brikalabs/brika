@@ -1,4 +1,4 @@
-import { defineReactiveBlock, input, output, z } from '@brika/sdk';
+import { capture, defineReactiveBlock, input, output, z } from '@brika/sdk';
 import { log } from '@brika/sdk/lifecycle';
 import { countdownCompleted, countdownTick } from '../sparks';
 
@@ -41,6 +41,7 @@ export const countdown = defineReactiveBlock(
       stop();
       endTime = Date.now() + config.duration;
       log.info(`Countdown started: ${config.duration}ms`);
+      capture('timer.countdown_started', { durationMs: config.duration });
 
       intervalId = setInterval(() => {
         const remaining = Math.max(0, endTime - Date.now());
@@ -59,6 +60,8 @@ export const countdown = defineReactiveBlock(
           stop();
           log.info('Countdown completed');
 
+          capture('timer.countdown_completed', { durationMs: config.duration });
+
           countdownCompleted.emit({ total: config.duration });
           outputs.completed.emit({ total: config.duration });
         }
@@ -70,6 +73,7 @@ export const countdown = defineReactiveBlock(
         const remaining = Math.max(0, endTime - Date.now());
         stop();
         log.info(`Countdown cancelled with ${remaining}ms remaining`);
+        capture('timer.countdown_cancelled', { remainingMs: remaining });
         outputs.cancelled.emit({ remaining });
       }
     });

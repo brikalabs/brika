@@ -8,6 +8,7 @@ import { cn, Tooltip, TooltipContent, TooltipTrigger } from '@brika/clay';
 import { Blocks, Layers, type LucideIcon, Ruler, Shapes, Type, Wind } from 'lucide-react';
 import { type ReactNode, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useCapture } from '@/features/analytics/hooks';
 import {
   getBackdropBlur,
   getBorderWidth,
@@ -102,12 +103,17 @@ export function DesignTab({
   onFontMonoChange,
 }: Readonly<DesignTabProps>) {
   const { t } = useTranslation('themeBuilder');
+  const capture = useCapture();
   const [active, setActive] = useState<SectionId>(() => readActiveSection());
 
-  const selectSection = useCallback((id: SectionId) => {
-    setActive(id);
-    writeActiveSection(id);
-  }, []);
+  const selectSection = useCallback(
+    (id: SectionId) => {
+      setActive(id);
+      writeActiveSection(id);
+      capture('theme_builder.design_section_switched', { section: id });
+    },
+    [capture]
+  );
 
   const activeMeta = SECTIONS.find((s) => s.id === active) ?? SECTIONS[0];
 

@@ -1,5 +1,6 @@
 import { Input } from "@brika/clay";
 import { Calendar } from "lucide-react";
+import { useCapture } from "@/features/analytics/hooks";
 import { useLocale } from "@/lib/use-locale";
 
 interface LogDateRangeFilterProps {
@@ -14,6 +15,7 @@ export function LogDateRangeFilter({
   onDateRangeChange,
 }: Readonly<LogDateRangeFilterProps>) {
   const { t } = useLocale();
+  const capture = useCapture();
 
   const formatDateForInput = (date: Date | null): string => {
     if (!date) { return ""; }
@@ -29,14 +31,22 @@ export function LogDateRangeFilter({
       <Input
         type="datetime-local"
         value={formatDateForInput(startDate)}
-        onChange={(e) => onDateRangeChange(e.target.value ? new Date(e.target.value) : null, endDate)}
+        onChange={(e) => {
+          const next = e.target.value ? new Date(e.target.value) : null;
+          capture("logs.date_range_changed", { bound: "start", set: next !== null });
+          onDateRangeChange(next, endDate);
+        }}
         className="w-auto"
       />
       <span className="text-muted-foreground">{t("logs:filters.to")}</span>
       <Input
         type="datetime-local"
         value={formatDateForInput(endDate)}
-        onChange={(e) => onDateRangeChange(startDate, e.target.value ? new Date(e.target.value) : null)}
+        onChange={(e) => {
+          const next = e.target.value ? new Date(e.target.value) : null;
+          capture("logs.date_range_changed", { bound: "end", set: next !== null });
+          onDateRangeChange(startDate, next);
+        }}
         className="w-auto"
       />
     </div>

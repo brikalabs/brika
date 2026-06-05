@@ -3,6 +3,7 @@
  * Position bar always visible when available.
  */
 
+import { capture } from '@brika/sdk';
 import { ChevronDown, ChevronUp, Square } from 'lucide-react';
 import { useCallback } from 'react';
 import { GlassButton } from '../components';
@@ -15,18 +16,18 @@ export function CoverControls({ device }: Readonly<{ device: DeviceState }>) {
   const theme = getDeviceTheme('cover');
   const sendCommand = useSendCommand();
 
-  const handleOpen = useCallback(
-    () => sendCommand(device.nodeId, 'coverOpen'),
-    [sendCommand, device.nodeId]
-  );
-  const handleStop = useCallback(
-    () => sendCommand(device.nodeId, 'coverStop'),
-    [sendCommand, device.nodeId]
-  );
-  const handleClose = useCallback(
-    () => sendCommand(device.nodeId, 'coverClose'),
-    [sendCommand, device.nodeId]
-  );
+  const handleOpen = useCallback(() => {
+    capture('matter.cover_commanded', { action: 'open' });
+    sendCommand(device.nodeId, 'coverOpen');
+  }, [sendCommand, device.nodeId]);
+  const handleStop = useCallback(() => {
+    capture('matter.cover_commanded', { action: 'stop' });
+    sendCommand(device.nodeId, 'coverStop');
+  }, [sendCommand, device.nodeId]);
+  const handleClose = useCallback(() => {
+    capture('matter.cover_commanded', { action: 'close' });
+    sendCommand(device.nodeId, 'coverClose');
+  }, [sendCommand, device.nodeId]);
 
   return (
     <div className="flex flex-col gap-3">

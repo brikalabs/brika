@@ -2,6 +2,7 @@ import { Button } from '@brika/clay';
 import { useQueryClient } from '@tanstack/react-query';
 import { ArrowDownToLine, RefreshCw } from 'lucide-react';
 import { useCallback, useState } from 'react';
+import { useCapture } from '@/features/analytics/hooks';
 import { UpdateDialog, updateApi, updateKeys, useUpdateCheck } from '@/features/updates';
 import { useDelayedLoading } from '@/hooks/use-delayed-loading';
 import { useLocale } from '@/lib/use-locale';
@@ -11,6 +12,7 @@ import { UpdateBadge } from './UpdateBadge';
 
 export function UpdateSection() {
   const { t } = useLocale();
+  const capture = useCapture();
   const queryClient = useQueryClient();
   const { data, isFetching } = useUpdateCheck();
   const [forcing, setForcing] = useState(false);
@@ -30,6 +32,7 @@ export function UpdateSection() {
    * channel selection.
    */
   const handleCheck = useCallback(async () => {
+    capture('settings.update_check_clicked');
     setForcing(true);
     try {
       const fresh = await updateApi.checkRefresh();
@@ -38,9 +41,10 @@ export function UpdateSection() {
     } finally {
       setForcing(false);
     }
-  }, [queryClient]);
+  }, [queryClient, capture]);
 
   const openDialog = (force: boolean) => {
+    capture('settings.update_dialog_opened', { reinstall: force });
     setForceReinstall(force);
     setDialogOpen(true);
   };

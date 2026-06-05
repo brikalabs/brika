@@ -15,6 +15,7 @@ import { Button } from '@brika/clay/components/button';
 import { useQuery } from '@tanstack/react-query';
 import { AlertTriangle, Sparkles, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { useCapture } from '@/features/analytics/hooks';
 import { useLocale } from '@/lib/use-locale';
 import { hasNoteworthyMigrations, migrationApi, migrationKeys } from './api';
 
@@ -22,6 +23,7 @@ const DISMISS_STORAGE_KEY = 'brika.migration.dismissedAt';
 
 export function MigrationBanner() {
   const { t } = useLocale();
+  const capture = useCapture();
   const { data: status } = useQuery({
     queryKey: migrationKeys.status,
     queryFn: migrationApi.status,
@@ -53,6 +55,7 @@ export function MigrationBanner() {
   const failed = status.reports.flatMap((r) => r.failed);
 
   const handleDismiss = () => {
+    capture('migration.dismissed', { applied, failed: failed.length });
     if (status.completedAt !== null) {
       setDismissedAt(status.completedAt);
       try {

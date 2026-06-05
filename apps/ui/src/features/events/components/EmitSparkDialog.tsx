@@ -11,6 +11,7 @@ import {
 } from '@brika/clay';
 import { Loader2, Send, Zap } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { useCapture } from '@/features/analytics/hooks';
 import { useLocale } from '@/lib/use-locale';
 import { useEmitEvent } from '../sparks-hooks';
 import { SparkSchemaViewer } from './SparkSchemaViewer';
@@ -32,6 +33,7 @@ interface EmitSparkDialogProps {
 
 export function EmitSparkDialog({ spark, open, onOpenChange }: Readonly<EmitSparkDialogProps>) {
   const { t } = useLocale();
+  const capture = useCapture();
   const emitSpark = useEmitEvent();
   const [payload, setPayload] = useState('{}');
   const [error, setError] = useState<string | null>(null);
@@ -58,6 +60,7 @@ export function EmitSparkDialog({ spark, open, onOpenChange }: Readonly<EmitSpar
       onOpenChange(false);
       setError(null);
     } catch (e) {
+      capture('sparks.emit_failed', { type: spark.type });
       setError(e instanceof Error ? e.message : 'Invalid JSON');
     }
   };
@@ -95,7 +98,13 @@ export function EmitSparkDialog({ spark, open, onOpenChange }: Readonly<EmitSpar
           )}
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button
+            variant="outline"
+            onClick={() => {
+              capture('sparks.emit_cancelled', { type: spark.type });
+              onOpenChange(false);
+            }}
+          >
             {t('common:actions.cancel')}
           </Button>
           <Button onClick={handleEmit} disabled={emitSpark.isPending} className="gap-2">

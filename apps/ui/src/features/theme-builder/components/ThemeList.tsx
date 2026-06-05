@@ -8,8 +8,9 @@
 
 import { Button, cn } from '@brika/clay';
 import { ChevronLeft, ChevronRight, Palette, Plus } from 'lucide-react';
-import { type ReactNode, useEffect, useState } from 'react';
+import { type ReactNode, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useCapture } from '@/features/analytics/hooks';
 import type { ThemeConfig } from '../types';
 
 interface ThemeListProps {
@@ -32,6 +33,7 @@ export function ThemeList({
   presetTrigger,
 }: Readonly<ThemeListProps>) {
   const { t } = useTranslation('themeBuilder');
+  const capture = useCapture();
   const [collapsed, setCollapsed] = useState<boolean>(() => {
     try {
       return globalThis.sessionStorage?.getItem(COLLAPSED_KEY) === '1';
@@ -39,6 +41,14 @@ export function ThemeList({
       return false;
     }
   });
+
+  const toggleCollapsed = useCallback(
+    (next: boolean) => {
+      setCollapsed(next);
+      capture('theme_builder.list_collapsed_toggled', { collapsed: next });
+    },
+    [capture]
+  );
 
   useEffect(() => {
     try {
@@ -55,7 +65,7 @@ export function ThemeList({
           <Button
             size="icon-sm"
             variant="ghost"
-            onClick={() => setCollapsed(false)}
+            onClick={() => toggleCollapsed(false)}
             aria-label={t('list.expandLabel')}
             title={t('list.expandTooltip')}
           >
@@ -129,7 +139,7 @@ export function ThemeList({
           <Button
             size="icon-sm"
             variant="ghost"
-            onClick={() => setCollapsed(true)}
+            onClick={() => toggleCollapsed(true)}
             aria-label={t('list.collapseLabel')}
             title={t('list.collapseTooltip')}
           >

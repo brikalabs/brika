@@ -8,6 +8,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@brika/clay';
+import { useCapture } from '@/features/analytics/hooks';
 import { useLocale } from '@/lib/use-locale';
 import { useUserMutations } from '../hooks';
 
@@ -25,6 +26,7 @@ export function DeleteUserDialog({
   userName,
 }: Readonly<DeleteUserDialogProps>) {
   const { t } = useLocale();
+  const capture = useCapture();
   const { delete: deleteMutation } = useUserMutations();
 
   const handleDelete = () => {
@@ -45,7 +47,9 @@ export function DeleteUserDialog({
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>{t('common:actions.cancel')}</AlertDialogCancel>
+          <AlertDialogCancel onClick={() => capture('users.delete_cancelled')}>
+            {t('common:actions.cancel')}
+          </AlertDialogCancel>
           <AlertDialogAction
             onClick={handleDelete}
             disabled={deleteMutation.isPending}

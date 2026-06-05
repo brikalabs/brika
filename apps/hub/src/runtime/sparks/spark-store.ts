@@ -1,3 +1,4 @@
+import { Analytics } from '@brika/analytics';
 import {
   and,
   asc,
@@ -11,7 +12,7 @@ import {
   oneOrMany,
   startTsFilter,
 } from '@brika/db';
-import { singleton } from '@brika/di';
+import { inject, singleton } from '@brika/di';
 import type { Json } from '@/types';
 import { sparksDb } from './database';
 import { sparks as sparksTable } from './schema';
@@ -51,6 +52,7 @@ export interface StoredSparkEvent {
 
 @singleton()
 export class SparkStore {
+  readonly #analytics = inject(Analytics);
   #database: BrikaDatabase<{ sparks: typeof sparksTable }> | null = null;
 
   init(): void {
@@ -136,6 +138,20 @@ export class SparkStore {
       )
       .returning({ id: sparksTable.id })
       .all();
+
+    // Discrete operator action: clearing spark history. Persisting/inserting
+    // sparks is intentionally NOT captured (per-event hot path); deleting is a
+    // deliberate one-off. `filtered` distinguishes a scoped purge from a
+    // wipe-all.
+    this.#analytics.capture('sparks.cleared', {
+      count: deleted.length,
+      filtered:
+        type !== undefined ||
+        source !== undefined ||
+        pluginId !== undefined ||
+        startTs !== undefined ||
+        endTs !== undefined,
+    });
 
     return deleted.length;
   }

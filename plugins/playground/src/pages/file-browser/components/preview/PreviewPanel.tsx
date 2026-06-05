@@ -1,3 +1,4 @@
+import { capture } from '@brika/sdk';
 import { Button } from '@brika/sdk/ui-kit';
 import { Download, ExternalLink, X } from '@brika/sdk/ui-kit/icons';
 import { describeFile } from '../../lib/file-kind';
@@ -60,7 +61,13 @@ export function PreviewPanel({ preview, onClose, onDownload }: Readonly<PreviewP
       {/* Footer — primary download + secondary "open in tab" when applicable. */}
       <footer className="flex flex-wrap items-center justify-end gap-2 border-border/70 border-t px-4 py-3">
         {externalUrl && (
-          <a href={externalUrl} target="_blank" rel="noreferrer" className="contents">
+          <a
+            href={externalUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="contents"
+            onClick={() => capture('playground.preview_opened_external', { kind: preview.kind })}
+          >
             <Button variant="ghost" size="sm" className="gap-1.5">
               <ExternalLink className="size-3.5" />
               Open

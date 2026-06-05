@@ -3,11 +3,13 @@ import { Avatar, AvatarFallback, AvatarImage } from '@brika/clay';
 import { AlertCircle, Camera, Loader2 } from 'lucide-react';
 import { type ChangeEvent, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useCapture } from '@/features/analytics/hooks';
 import { StepBody, StepHeader, StepNav } from './shared';
 
 export function AvatarStep() {
   const { t } = useTranslation('setup');
   const { client, user } = useAuth();
+  const capture = useCapture();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
@@ -41,6 +43,7 @@ export function AvatarStep() {
     setError(null);
     setPreviewUrl(URL.createObjectURL(file));
     setUploading(true);
+    capture('auth.setup_avatar_uploaded');
 
     try {
       await client.uploadAvatar(file);

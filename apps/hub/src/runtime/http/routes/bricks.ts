@@ -1,3 +1,4 @@
+import { Analytics } from '@brika/analytics';
 import { group, NotFound, route } from '@brika/router';
 import { z } from 'zod';
 import { BrickTypeRegistry } from '@/runtime/bricks';
@@ -190,6 +191,10 @@ export const bricksRoutes = group({
           body.actionId,
           body.payload as Json
         );
+        inject(Analytics).capture('brick.instance_action_invoked', {
+          brickTypeId: body.brickTypeId,
+          actionId: body.actionId,
+        });
         return {
           ok: true,
         };

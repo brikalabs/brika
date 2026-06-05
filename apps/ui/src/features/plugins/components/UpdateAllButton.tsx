@@ -12,6 +12,7 @@ import type { Plugin } from '@brika/plugin';
 import { useQueryClient } from '@tanstack/react-query';
 import { ArrowUp, Loader2 } from 'lucide-react';
 import React from 'react';
+import { useCapture } from '@/features/analytics/hooks';
 import { getProgressValue, useProgressStream } from '@/hooks/use-progress-stream';
 import { useLocale } from '@/lib/use-locale';
 import { pluginsKeys } from '../api';
@@ -27,6 +28,7 @@ interface UpdateAllButtonProps {
 
 export function UpdateAllButton({ updates, plugins }: Readonly<UpdateAllButtonProps>) {
   const { t } = useLocale();
+  const capture = useCapture();
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = React.useState(false);
 
@@ -61,6 +63,7 @@ export function UpdateAllButton({ updates, plugins }: Readonly<UpdateAllButtonPr
   };
 
   const handleUpdate = async () => {
+    capture('plugins.update_all_started', { count: updates.length });
     start();
     try {
       const stream = await registryApi.updateStream();
@@ -77,7 +80,15 @@ export function UpdateAllButton({ updates, plugins }: Readonly<UpdateAllButtonPr
 
   return (
     <>
-      <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setDialogOpen(true)}>
+      <Button
+        variant="outline"
+        size="sm"
+        className="gap-1.5"
+        onClick={() => {
+          capture('plugins.update_all_dialog_opened', { count: updates.length });
+          setDialogOpen(true);
+        }}
+      >
         <ArrowUp className="size-3.5" />
         {t('plugins:update.updateAll')}
         <span className="flex size-4.5 items-center justify-center rounded-full bg-blue-500 font-medium text-[10px] text-white">

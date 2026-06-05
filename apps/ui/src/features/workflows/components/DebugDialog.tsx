@@ -11,6 +11,7 @@ import {
 } from '@brika/clay';
 import { Bug } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import { useCapture } from '@/features/analytics/hooks';
 import { useLocale } from '@/lib/use-locale';
 import {
   DebugEventEntry,
@@ -34,6 +35,7 @@ export function DebugDialog({
   onClose,
 }: Readonly<DebugDialogProps>) {
   const { t } = useLocale();
+  const capture = useCapture();
   const [filter, setFilter] = useState<DebugFilter>('all');
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -77,7 +79,10 @@ export function DebugDialog({
             <span>{workflowName || workflowId}</span>
             <EventFilterButtons
               filter={filter}
-              onChange={setFilter}
+              onChange={(next) => {
+                capture('workflow.debug_filter_changed', { filter: next });
+                setFilter(next);
+              }}
               labels={{
                 all: t('workflows:debug.all'),
                 logs: t('workflows:debug.logsOnly'),
@@ -111,10 +116,24 @@ export function DebugDialog({
                 : `${filteredEvents.length} / ${events.length} ${t('workflows:debug.events')}`}
             </span>
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={clear}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  capture('workflow.debug_cleared', { eventCount: events.length });
+                  clear();
+                }}
+              >
                 {t('workflows:debug.clear')}
               </Button>
-              <Button variant="outline" size="sm" onClick={onClose}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  capture('workflow.debug_closed', { eventCount: events.length });
+                  onClose();
+                }}
+              >
                 {t('common:actions.close')}
               </Button>
             </div>

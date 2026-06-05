@@ -4,6 +4,7 @@
  * Hub-level configuration endpoints (location, themes, etc.).
  */
 
+import { Analytics } from '@brika/analytics';
 import {
   ActiveThemeUpdate as ActiveThemeUpdateSchema,
   HubLocation as HubLocationSchema,
@@ -44,6 +45,7 @@ export const settingsAdminRoutes = group({
           );
         }
         state.setUpdateChannel(body.channel);
+        inject(Analytics).capture('settings.update_channel_changed', { channel: body.channel });
         // Drop the cached UpdateInfo so the next `GET /api/system/update`
         // re-fetches against the new channel. Without this the UI would
         // see stale info for up to 6 hours (the TTL on the background
@@ -69,6 +71,9 @@ export const settingsAdminRoutes = group({
       }),
       handler: ({ body, inject }) => {
         inject(StateStore).setPinnedVersion(body.version);
+        inject(Analytics).capture('settings.pinned_version_changed', {
+          cleared: body.version === null,
+        });
         // Same reason as update-channel: drop the cache so the next
         // `check()` fetches against the newly-pinned tag.
         inject(UpdateService).invalidate();
@@ -99,6 +104,7 @@ export const settingsRoutes = group({
       handler: ({ body, inject }) => {
         const state = inject(StateStore);
         state.setHubLocation(body);
+        inject(Analytics).capture('settings.location_changed', { cleared: false });
         return {
           location: body,
         };
@@ -111,6 +117,7 @@ export const settingsRoutes = group({
       handler: ({ inject }) => {
         const state = inject(StateStore);
         state.setHubLocation(null);
+        inject(Analytics).capture('settings.location_changed', { cleared: true });
         return {
           ok: true,
         };
@@ -140,6 +147,10 @@ export const settingsRoutes = group({
         state.setHubTimezone(body.timezone);
         state.applyTimezone();
         inject(PluginManager).broadcastTimezone(body.timezone);
+        inject(Analytics).capture('settings.timezone_changed', {
+          timezone: body.timezone,
+          cleared: false,
+        });
         return {
           timezone: body.timezone,
         };
@@ -157,6 +168,7 @@ export const settingsRoutes = group({
         state.setHubTimezone(null);
         state.applyTimezone();
         inject(PluginManager).broadcastTimezone(null);
+        inject(Analytics).capture('settings.timezone_changed', { cleared: true });
         return {
           ok: true,
         };
@@ -198,6 +210,7 @@ export const settingsRoutes = group({
         }
         inject(StateStore).upsertCustomTheme(body);
         inject(EventSystem).dispatch(ThemeActions.customThemesChanged.create({}, 'hub'));
+        inject(Analytics).capture('settings.custom_theme_saved');
         return { theme: body };
       },
     }),
@@ -209,6 +222,7 @@ export const settingsRoutes = group({
       handler: ({ params, inject }) => {
         inject(StateStore).deleteCustomTheme(params.id);
         inject(EventSystem).dispatch(ThemeActions.customThemesChanged.create({}, 'hub'));
+        inject(Analytics).capture('settings.custom_theme_deleted');
         return { ok: true };
       },
     }),
@@ -228,6 +242,11 @@ export const settingsRoutes = group({
         inject(EventSystem).dispatch(
           ThemeActions.activeChanged.create({ theme: next.theme, mode: next.mode }, 'hub')
         );
+        inject(Analytics).capture('settings.active_theme_changed', {
+          mode: next.mode,
+          themeChanged: body.theme !== undefined,
+          modeChanged: body.mode !== undefined,
+        });
         return next;
       },
     }),

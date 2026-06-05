@@ -8,6 +8,7 @@ import {
 } from '@brika/clay';
 import { useQueryClient } from '@tanstack/react-query';
 import { ArrowUpCircle, RotateCcw } from 'lucide-react';
+import { useCapture } from '@/features/analytics/hooks';
 import { getProgressValue, useProgressStream } from '@/hooks/use-progress-stream';
 import { useLocale } from '@/lib/use-locale';
 import { pluginsKeys } from '../api';
@@ -37,6 +38,7 @@ export function UpdatePluginDialog({
 }: Readonly<UpdatePluginDialogProps>) {
   const queryClient = useQueryClient();
   const { t } = useLocale();
+  const capture = useCapture();
 
   const {
     isProcessing,
@@ -66,6 +68,7 @@ export function UpdatePluginDialog({
   };
 
   const handleUpdate = async () => {
+    capture('plugins.update_started', { mode });
     start();
     try {
       const stream =

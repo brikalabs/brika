@@ -1,10 +1,12 @@
 import { useAuth } from '@brika/auth/react';
 import { type SubmitEvent, useRef, useState } from 'react';
+import { useCapture } from '@/features/analytics/hooks';
 import { useLocale } from '@/lib/use-locale';
 
 export function usePasswordForm() {
   const { client } = useAuth();
   const { t } = useLocale();
+  const capture = useCapture();
 
   const currentRef = useRef<HTMLInputElement>(null);
   const newRef = useRef<HTMLInputElement>(null);
@@ -57,14 +59,17 @@ export function usePasswordForm() {
 
     clearError();
     setSaving(true);
+    capture('auth.password_change_submitted');
     try {
       await client.changePassword(currentPassword, newPassword);
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
       setSaved(true);
+      capture('auth.password_change_succeeded');
       setTimeout(() => setSaved(false), 2500);
     } catch (err) {
+      capture('auth.password_change_failed');
       handlePasswordError(err);
     } finally {
       setSaving(false);

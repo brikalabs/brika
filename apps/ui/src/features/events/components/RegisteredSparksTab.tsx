@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Plug, Zap } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useDataView } from '@/components/DataView';
+import { useCapture } from '@/features/analytics/hooks';
 import { fetcher } from '@/lib/query';
 import { useLocale } from '@/lib/use-locale';
 import { EmitSparkDialog, type RegisteredSpark } from './EmitSparkDialog';
@@ -89,6 +90,7 @@ function SparkPluginGroup({
 
 export function RegisteredSparksTab() {
   const { t } = useLocale();
+  const capture = useCapture();
   const { data: sparks = [], isLoading } = useSparks();
   const [selectedSpark, setSelectedSpark] = useState<RegisteredSpark | null>(null);
   const [emitDialogOpen, setEmitDialogOpen] = useState(false);
@@ -103,6 +105,7 @@ export function RegisteredSparksTab() {
   }, [sparks]);
 
   const handleSelectSpark = (spark: RegisteredSpark) => {
+    capture('sparks.emit_dialog_opened', { type: spark.type, pluginId: spark.pluginId });
     setSelectedSpark(spark);
     setEmitDialogOpen(true);
   };

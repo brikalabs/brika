@@ -5,6 +5,7 @@ import { ArrowLeft, Info, Plug, Tag } from 'lucide-react';
 import { DynamicIcon, type IconName } from 'lucide-react/dynamic';
 import { useState } from 'react';
 import { useDataView } from '@/components/DataView';
+import { useCapture } from '@/features/analytics/hooks';
 import { useLocale } from '@/lib/use-locale';
 import { paths } from '@/routes/paths';
 import { PluginDetailHeader } from './components';
@@ -21,6 +22,7 @@ export function PluginDetailPage() {
   const navigate = useNavigate();
   const { data: plugin, isLoading, refetch } = usePlugin(pluginUid ?? '');
   const { t, tp } = useLocale();
+  const capture = useCapture();
 
   const [updateDialogOpen, setUpdateDialogOpen] = useState(false);
   const activeTab = params.tab ?? 'overview';
@@ -94,6 +96,7 @@ export function PluginDetailPage() {
           <Link
             to={paths.plugins.list.path}
             className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground"
+            onClick={() => capture('plugins.back_to_list_clicked', { source: 'not_found' })}
           >
             <ArrowLeft className="size-4" />
             {t('plugins:backToList')}
@@ -163,6 +166,7 @@ export function PluginDetailPage() {
                         uid: pluginUid ?? '',
                       })}
                       className={tabLink('overview', activeTab === 'overview')}
+                      onClick={() => capture('plugins.tab_switched', { tab: 'overview' })}
                     >
                       <Info className="size-4" />
                       {t('plugins:tabs.overview')}
@@ -175,6 +179,7 @@ export function PluginDetailPage() {
                           tab: page.id,
                         })}
                         className={tabLink(page.id, activeTab === page.id)}
+                        onClick={() => capture('plugins.tab_switched', { tab: page.id })}
                       >
                         <DynamicIcon name={(page.icon ?? 'file') as IconName} className="size-4" />
                         {tp(plugin.name, `pages.${page.id}.name`, page.id)}
