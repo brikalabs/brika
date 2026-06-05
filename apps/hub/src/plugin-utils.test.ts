@@ -60,6 +60,13 @@ describe('satisfiesVersion', () => {
     expect(satisfiesVersion('1.0.0', '1.0.0')).toBe(true);
     expect(satisfiesVersion('1.0.1', '1.0.0')).toBe(false);
   });
+
+  test('treats a prerelease build as its base release', () => {
+    // A canary hub build must still load plugins pinning the stable line.
+    expect(satisfiesVersion('0.3.1-canary.1780563316.00a985d', '^0.3.0')).toBe(true);
+    expect(satisfiesVersion('0.3.1-canary.abc', '~0.3.0')).toBe(true);
+    expect(satisfiesVersion('0.3.1-canary.abc', '^0.4.0')).toBe(false);
+  });
 });
 
 describe('HUB_VERSION', () => {

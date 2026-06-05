@@ -20,9 +20,16 @@ export function generateUid(pluginName: string): string {
   return hash.toString(36);
 }
 
-/** Check if a version satisfies a semver range. */
+/**
+ * Check if a hub/target version satisfies a plugin's `engines.brika` range.
+ *
+ * The version is reduced to its base release first: a prerelease hub build (e.g.
+ * a `0.3.1-canary.…` canary) is treated as `0.3.1`. Standard semver excludes
+ * prereleases from ranges that don't themselves carry one, so without this every
+ * plugin pinning a stable range like `^0.3.0` would fail to load on canary builds.
+ */
 export function satisfiesVersion(version: string, range: string): boolean {
-  return semver.satisfies(version, range);
+  return semver.satisfies(semver.stripPrerelease(version), range);
 }
 
 /**
