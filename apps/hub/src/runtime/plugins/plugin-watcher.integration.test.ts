@@ -231,6 +231,49 @@ describe('PluginWatcher', () => {
     }
   });
 
+  test('re-arms after an fs.watch error event, and survives a failed re-arm via the poller', async () => {
+    // FSEvents on macOS can collapse the watch stream and emit 'error'. The
+    // watcher must close the dead handle and re-arm; if the re-arm itself
+    // fails, the mtime poller is the safety net (no crash, no leaked handle).
+    const inertDir = await realpath(await mkdtemp(join(tmpdir(), 'brika-watcher-rearm-')));
+    const realWatch = nodeFs.watch;
+    let armCalls = 0;
+    let firstWatcher: FSWatcher | null = null;
+    const flakyWatch: typeof nodeFs.watch = (): FSWatcher => {
+      armCalls += 1;
+      if (armCalls === 1) {
+        firstWatcher = realWatch(inertDir);
+        return firstWatcher;
+      }
+      throw new Error('re-arm failed; poller remains the safety net');
+    };
+    const watchSpy = spyOn(nodeFs, 'watch').mockImplementation(flakyWatch);
+    try {
+      const tmpRoot = await realpath(await mkdtemp(join(tmpdir(), 'brika-watcher-rearm-root-')));
+      await mkdir(join(tmpRoot, 'src'), { recursive: true });
+
+      stub(Logger);
+      provide(PluginWatcher, new PluginWatcher());
+      const realWatcher = get(PluginWatcher);
+      realWatcher.setReloadHandler(mock());
+
+      realWatcher.watch('@test/rearm', tmpRoot);
+      expect(armCalls).toBe(1);
+
+      // Synthesize the FSEvents collapse: the handler closes the dead watcher
+      // and re-arms (call #2), which throws and falls through to the catch.
+      firstWatcher?.emit('error', new Error('FSEvents stream collapsed'));
+      await waitFor(() => armCalls === 2, { timeoutMs: 2000 });
+      expect(armCalls).toBe(2);
+
+      realWatcher.unwatch('@test/rearm');
+      await rm(tmpRoot, { recursive: true, force: true });
+    } finally {
+      watchSpy.mockRestore();
+      await rm(inertDir, { recursive: true, force: true });
+    }
+  });
+
   test('poller detects added source files', async () => {
     const tmpRoot = await realpath(await mkdtemp(join(tmpdir(), 'brika-watcher-test-')));
     const srcDir = join(tmpRoot, 'src');
