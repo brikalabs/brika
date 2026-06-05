@@ -1,13 +1,17 @@
 import { useBrickData } from '@brika/sdk/brick-views';
 import { useLocale } from '@brika/sdk/ui-kit/hooks';
-import { TrendingDown, TrendingUp, Zap } from 'lucide-react';
+import { Zap } from 'lucide-react';
 import type { ConsumptionPoint, ElectricityState } from '../types';
 import {
+  CompactStat,
   formatChf,
   formatKwh,
   Loader,
+  NoCredentials,
   PeriodPlaceholder,
   pointCost,
+  TrendRow,
+  trendPercent,
   useSizeTier,
 } from '../ui/states';
 
@@ -18,23 +22,6 @@ function currentAndPreviousMonth(points: ConsumptionPoint[]): {
   const last = points.at(-1);
   const prev = points.at(-2);
   return { current: last?.total ?? 0, previous: prev?.total ?? 0 };
-}
-
-function trendPercent(current: number, previous: number): number | null {
-  if (previous === 0) {
-    return null;
-  }
-  return Math.round(((current - previous) / previous) * 100);
-}
-
-function NoCredentials() {
-  const { t } = useLocale();
-  return (
-    <div className="flex h-full flex-col items-center justify-center gap-1 p-3 text-center">
-      <Zap className="size-6 text-data-6/60" />
-      <p className="text-[10px] text-muted-foreground">{t('ui.noCookie')}</p>
-    </div>
-  );
 }
 
 function Sparkline({ points }: Readonly<{ points: ConsumptionPoint[] }>) {
@@ -71,7 +58,7 @@ export default function ElectricitySummary() {
     return <Loader tone="yellow" />;
   }
   if (!state.credentialsSet) {
-    return <NoCredentials />;
+    return <NoCredentials icon={Zap} accent="text-data-6/60" />;
   }
   if (!data || data.points.length === 0) {
     return <PeriodPlaceholder error={periodState?.error} tone="yellow" />;
@@ -93,33 +80,16 @@ export default function ElectricitySummary() {
 
   if (tier === 'compact') {
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-0.5 p-1 text-center">
-        <Zap className="size-4 text-data-6" />
-        <span className="font-bold text-foreground text-xl tabular-nums leading-none">
-          {formatKwh(current)}
-        </span>
-        <span className="text-[9px] text-muted-foreground uppercase tracking-wide">
-          {t('ui.consumption')}
-        </span>
-      </div>
+      <CompactStat
+        icon={Zap}
+        accent="text-data-6"
+        value={formatKwh(current)}
+        label={t('ui.consumption')}
+      />
     );
   }
 
-  const trendRow = trend !== null && (
-    <div className="flex items-center gap-1">
-      {trend > 0 ? (
-        <TrendingUp className="size-3 text-destructive" />
-      ) : (
-        <TrendingDown className="size-3 text-success" />
-      )}
-      <span
-        className={`font-medium text-[10px] ${trend > 0 ? 'text-destructive' : 'text-success'}`}
-      >
-        {trend > 0 ? '+' : ''}
-        {trend}% {t('ui.vsPrevious')}
-      </span>
-    </div>
-  );
+  const trendRow = trend !== null && <TrendRow trend={trend} label={t('ui.vsPrevious')} />;
 
   // Wide-but-short card (3x2 / 4x2): stat on the left, sparkline fills the right.
   if (tier === 'wide') {

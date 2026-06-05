@@ -197,6 +197,32 @@ describe('hub net.fetch handler', () => {
     });
   });
 
+  test('maxRedirects: 0 hands back the raw 3xx without following it', async () => {
+    // redirect: 'manual' on the plugin side maps to maxRedirects 0: the
+    // handler must return the 3xx as-is (so the caller can read each hop's
+    // Location and Set-Cookie itself) rather than following internally.
+    const fetcher = mockFetcher(
+      () =>
+        new Response(null, {
+          status: 302,
+          headers: { location: 'https://api.example.com/next' },
+        })
+    );
+    const reg = buildRegistry(fetcher);
+
+    const result = await reg.dispatch(
+      'dev.brika.net.fetch',
+      { url: 'https://api.example.com/x', method: 'GET', maxRedirects: 0 },
+      handlerCtx({ allow: ['api.example.com'] })
+    );
+
+    const parsed = FetchResultSchema.parse(result);
+    expect(parsed.status).toBe(302);
+    expect(parsed.headers.location).toBe('https://api.example.com/next');
+    // The redirect was NOT followed: exactly one upstream call.
+    expect(fetcher.calls).toHaveLength(1);
+  });
+
   test('parent abort short-circuits retry backoff', async () => {
     // Force a retryable 503 so performFetch enters the backoff path,
     // then abort the parent signal — the sleep must race the signal and

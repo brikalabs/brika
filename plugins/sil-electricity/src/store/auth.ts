@@ -104,7 +104,11 @@ function registerFailure(err: unknown): void {
   }
   consecutiveFailures += 1;
   const base = Math.min(AUTH_BACKOFF_BASE_MS * 2 ** (consecutiveFailures - 1), AUTH_BACKOFF_MAX_MS);
-  const backoff = base + Math.floor(base * 0.2 * Math.random());
+  // +0-20% jitter so concurrent failures don't retry in lockstep. Uses the
+  // crypto RNG (not Math.random) purely to keep static scanners quiet; the
+  // value gates nothing security-sensitive, it only spreads a retry delay.
+  const jitter = crypto.getRandomValues(new Uint32Array(1))[0] / 2 ** 32;
+  const backoff = base + Math.floor(base * 0.2 * jitter);
   cooldownReason = 'auth';
   cooldownUntil = Date.now() + backoff;
   log.error('SIL login failed; backing off', {

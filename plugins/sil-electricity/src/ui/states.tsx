@@ -4,7 +4,14 @@
 
 import { useBrickSize } from '@brika/sdk/brick-views';
 import { useLocale } from '@brika/sdk/ui-kit/hooks';
-import { Hourglass, LockKeyhole, type LucideIcon, WifiOff } from 'lucide-react';
+import {
+  Hourglass,
+  LockKeyhole,
+  type LucideIcon,
+  TrendingDown,
+  TrendingUp,
+  WifiOff,
+} from 'lucide-react';
 import type { ConsumptionPoint, Prices } from '../types';
 
 export type SizeTier = 'compact' | 'normal' | 'wide' | 'full';
@@ -117,4 +124,60 @@ export function PeriodPlaceholder({
     return <Message icon={WifiOff} text={t('ui.networkError')} />;
   }
   return <Loader tone={tone} />;
+}
+
+/** Percent change current-vs-previous, or null when the previous period is 0. */
+export function trendPercent(current: number, previous: number): number | null {
+  if (previous === 0) {
+    return null;
+  }
+  return Math.round(((current - previous) / previous) * 100);
+}
+
+/** Up/down arrow + signed percent, colored by direction. Shared by stat bricks. */
+export function TrendRow({ trend, label }: Readonly<{ trend: number; label: string }>) {
+  const up = trend > 0;
+  return (
+    <div className="flex items-center gap-1">
+      {up ? (
+        <TrendingUp className="size-3 text-destructive" />
+      ) : (
+        <TrendingDown className="size-3 text-success" />
+      )}
+      <span className={`font-medium text-[10px] ${up ? 'text-destructive' : 'text-success'}`}>
+        {up ? '+' : ''}
+        {trend}% {label}
+      </span>
+    </div>
+  );
+}
+
+/** "No credentials" placeholder; the brick supplies its accent icon. */
+export function NoCredentials({
+  icon: Icon,
+  accent,
+}: Readonly<{ icon: LucideIcon; accent: string }>) {
+  const { t } = useLocale();
+  return (
+    <div className="flex h-full flex-col items-center justify-center gap-1 p-3 text-center">
+      <Icon className={`size-6 ${accent}`} />
+      <p className="text-[10px] text-muted-foreground">{t('ui.noCookie')}</p>
+    </div>
+  );
+}
+
+/** Compact 1-cell stat card: accent icon, headline value, caption. */
+export function CompactStat({
+  icon: Icon,
+  accent,
+  value,
+  label,
+}: Readonly<{ icon: LucideIcon; accent: string; value: string; label: string }>) {
+  return (
+    <div className="flex h-full flex-col items-center justify-center gap-0.5 p-1 text-center">
+      <Icon className={`size-4 ${accent}`} />
+      <span className="font-bold text-foreground text-xl tabular-nums leading-none">{value}</span>
+      <span className="text-[9px] text-muted-foreground uppercase tracking-wide">{label}</span>
+    </div>
+  );
 }
