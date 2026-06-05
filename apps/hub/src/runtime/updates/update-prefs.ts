@@ -28,6 +28,7 @@ import { DEFAULT_CHANNEL_ID, UPDATE_CHANNEL_IDS, type UpdateChannelId } from './
 export type { UpdateChannelId } from './channels';
 
 const UpdateChannelSchema = z.enum(UPDATE_CHANNEL_IDS);
+const PinnedVersionSchema = z.string();
 
 export interface UpdatePrefs {
   readonly channel: UpdateChannelId;
@@ -81,10 +82,10 @@ export function readUpdatePrefs(dbPath: string = stateDbPath()): UpdatePrefs {
   try {
     db = new Database(dbPath, { readonly: true });
     const channel = UpdateChannelSchema.safeParse(readSetting(db, 'updateChannel'));
-    const pinned = readSetting(db, 'updatePinnedVersion');
+    const pinned = PinnedVersionSchema.safeParse(readSetting(db, 'updatePinnedVersion'));
     return {
       channel: channel.success ? channel.data : DEFAULT_CHANNEL_ID,
-      pinnedVersion: typeof pinned === 'string' ? pinned : null,
+      pinnedVersion: pinned.success ? pinned.data : null,
     };
   } catch {
     return DEFAULT_PREFS;

@@ -101,8 +101,9 @@ async function applyInProcess(strategy: UpdateStrategy, opts: ApplyOptions): Pro
     spinner.stop(pc.green(`Updated v${result.previousVersion} to v${result.newVersion}`));
     return result.newVersion;
   } catch (err) {
-    spinner.error(err instanceof Error ? err.message : String(err));
-    throw new CliError(err instanceof Error ? err.message : String(err));
+    const message = err instanceof Error ? err.message : String(err);
+    spinner.error(message);
+    throw new CliError(message);
   } finally {
     lock.release();
   }

@@ -30,13 +30,15 @@ function sleep(ms: number): Promise<void> {
 /** Poll /api/health until it answers or the timeout elapses. */
 async function waitForHub(): Promise<boolean> {
   const deadline = Date.now() + READY_TIMEOUT_MS;
-  while (Date.now() < deadline) {
+  while (true) {
     if (await pingHub()) {
       return true;
     }
+    if (Date.now() >= deadline) {
+      return false;
+    }
     await sleep(READY_POLL_MS);
   }
-  return pingHub();
 }
 
 export default defineCommand({
