@@ -14,6 +14,24 @@ const CONCURRENCY = 4;
 interface Workspace {
   readonly dir: string;
   readonly name: string;
+  readonly testArgs: string[];
+}
+
+/**
+ * Extract a workspace `test` script's positional args (e.g. the path filters
+ * in `@brika/ui`'s `bun test src/lib ...`), dropping the `bun test` prefix and
+ * any `--parallel`. We deliberately strip `--parallel`: bun's parallel runner
+ * collects coverage per worker and merges it, and on a many-core CI host that
+ * merge non-deterministically drops line hits, so a fully-tested file can be
+ * reported well under 80% new-code coverage. Running the coverage pass serially
+ * keeps a single coverage context, so the lcov matches what the tests actually
+ * exercise. (Local dev still uses the parallel `bun test` for speed.)
+ */
+function parseTestArgs(script: string): string[] {
+  return script
+    .replace(/^\s*bun\s+test\s*/, '')
+    .split(/\s+/)
+    .filter((arg) => arg.length > 0 && arg !== '--parallel');
 }
 
 async function discoverWorkspaces(): Promise<Workspace[]> {
@@ -22,18 +40,25 @@ async function discoverWorkspaces(): Promise<Workspace[]> {
   for await (const path of glob.scan('.')) {
     const pkg = await Bun.file(path).json();
     if (typeof pkg.scripts?.test === 'string') {
-      out.push({ dir: dirname(path), name: pkg.name });
+      out.push({ dir: dirname(path), name: pkg.name, testArgs: parseTestArgs(pkg.scripts.test) });
     }
   }
   return out;
 }
 
 async function runOne(ws: Workspace): Promise<number> {
-  // Use the workspace's own `test` script (`bun run test`) so any
-  // `--parallel` flag baked into that script is preserved; append the
-  // coverage flags as positional args.
+  // Run `bun test` directly (not `bun run test`) with the script's own
+  // positional args but WITHOUT `--parallel` (see parseTestArgs for why a
+  // serial coverage pass is required for accurate lcov on CI).
   const proc = Bun.spawn({
-    cmd: ['bun', 'run', 'test', '--coverage', '--coverage-reporter=lcov', '--timeout=30000'],
+    cmd: [
+      'bun',
+      'test',
+      ...ws.testArgs,
+      '--coverage',
+      '--coverage-reporter=lcov',
+      '--timeout=30000',
+    ],
     cwd: ws.dir,
     stdout: 'pipe',
     stderr: 'pipe',
