@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect } from 'react';
+import { useCapture } from '@/features/analytics/hooks';
 import { getStreamUrl } from '@/lib/query';
 import type { Json } from '@/types';
 import type { BoardSummary } from './api';
@@ -38,6 +39,63 @@ export function useLoadBoard(boardId: string | undefined) {
   });
 }
 
+/**
+ * In-flight brick-data fetches, keyed by board id. Shared across the
+ * board-level mount hook and the per-brick hydration so that mounting N bricks
+ * (or remounting a board) coalesces into a single REST request instead of N.
+ * The promise is removed once it settles, allowing a later refresh to re-fetch.
+ */
+const brickDataInFlight = new Map<string, Promise<void>>();
+
+/**
+ * Fetch the current brick-data snapshot for a board and write it into the
+ * store, deduplicating concurrent callers. Whichever caller arrives first
+ * starts the request; later callers await the same promise. Both this and the
+ * per-board SSE replay write the same store keys, so whichever lands first wins
+ * and the other is a harmless no-op overwrite of identical data.
+ */
+export function hydrateBrickData(boardId: string, reason: string): Promise<void> {
+  const existing = brickDataInFlight.get(boardId);
+  if (existing) {
+    return existing;
+  }
+  const request = boardsApi
+    .brickData(boardId)
+    .then(({ entries }) => {
+      console.info(
+        `[boards] hydrated ${entries.length} brick-data entr${entries.length === 1 ? 'y' : 'ies'} for board ${boardId} (${reason})`
+      );
+      useBoardStore.getState().setBrickDataBatch(entries);
+    })
+    .catch((error: unknown) => {
+      console.warn(`[boards] failed to hydrate brick-data for board ${boardId} (${reason})`, error);
+    })
+    .finally(() => {
+      brickDataInFlight.delete(boardId);
+    });
+  brickDataInFlight.set(boardId, request);
+  return request;
+}
+
+/**
+ * Hydrate current brick data on board mount via a REST snapshot.
+ *
+ * The per-board SSE already replays a `brick.dataSnapshot` on connect, but
+ * that ties data delivery to SSE connect timing. Fetching the same snapshot
+ * over REST on mount makes a freshly-loaded/refreshed board deterministically
+ * receive the current values right away, so a slow-polling plugin (e.g.
+ * weather) never leaves a card stuck on a bare spinner waiting for the next
+ * push.
+ */
+export function useBrickDataSnapshot(boardId: string | undefined) {
+  useEffect(() => {
+    if (!boardId) {
+      return;
+    }
+    hydrateBrickData(boardId, 'board mount');
+  }, [boardId]);
+}
+
 export function useBrickTypesList() {
   const setBrickTypes = useBoardStore((s) => s.setBrickTypes);
 
@@ -55,10 +113,12 @@ export function useBrickTypesList() {
 
 export function useCreateBoard() {
   const qc = useQueryClient();
+  const capture = useCapture();
 
   return useMutation({
     mutationFn: (args: { name: string; icon?: string }) => boardsApi.create(args.name, args.icon),
-    onSuccess: () => {
+    onSuccess: (board) => {
+      capture('board.created', { boardId: board.id });
       qc.invalidateQueries({
         queryKey: boardKeys.all,
       });
@@ -68,6 +128,7 @@ export function useCreateBoard() {
 
 export function useUpdateBoard() {
   const qc = useQueryClient();
+  const capture = useCapture();
 
   return useMutation({
     mutationFn: ({
@@ -81,6 +142,7 @@ export function useUpdateBoard() {
       };
     }) => boardsApi.update(id, data),
     onSuccess: (updated) => {
+      capture('board.updated', { boardId: updated.id });
       const store = useBoardStore.getState();
       if (store.activeBoardId === updated.id) {
         store.setActiveBoard(updated);
@@ -97,10 +159,12 @@ export function useUpdateBoard() {
 
 export function useDeleteBoard() {
   const qc = useQueryClient();
+  const capture = useCapture();
 
   return useMutation({
     mutationFn: (id: string) => boardsApi.delete(id),
-    onSuccess: () => {
+    onSuccess: (_data, id) => {
+      capture('board.deleted', { boardId: id });
       qc.invalidateQueries({
         queryKey: boardKeys.all,
       });
@@ -110,9 +174,13 @@ export function useDeleteBoard() {
 
 export function useReorderBoards() {
   const qc = useQueryClient();
+  const capture = useCapture();
 
   return useMutation({
     mutationFn: (ids: string[]) => boardsApi.reorder(ids),
+    onSuccess: (_data, ids) => {
+      capture('board.reordered', { count: ids.length });
+    },
     onMutate: async (ids) => {
       await qc.cancelQueries({
         queryKey: boardKeys.all,
@@ -146,6 +214,7 @@ export function useReorderBoards() {
 
 export function useAddBrick() {
   const qc = useQueryClient();
+  const capture = useCapture();
 
   return useMutation({
     mutationFn: (args: {
@@ -166,7 +235,8 @@ export function useAddBrick() {
       }
       return boardsApi.addBrick(boardId, args.brickTypeId, args.config, args.position, args.size);
     },
-    onSuccess: (placement) => {
+    onSuccess: (placement, args) => {
+      capture('brick.added', { brickTypeId: args.brickTypeId });
       useBoardStore.getState().addBrickPlacement(placement);
       // Only invalidate the board list (for brickCount), not the detail query.
       // The detail is already updated optimistically via addBrickPlacement.
@@ -180,6 +250,7 @@ export function useAddBrick() {
 
 export function useRemoveBrick() {
   const qc = useQueryClient();
+  const capture = useCapture();
 
   return useMutation({
     mutationFn: async (instanceId: string) => {
@@ -191,6 +262,7 @@ export function useRemoveBrick() {
       return instanceId;
     },
     onSuccess: (instanceId) => {
+      capture('brick.removed', { instanceId });
       useBoardStore.getState().removeBrickPlacement(instanceId);
       // Only invalidate the board list (for brickCount), not the detail query.
       qc.invalidateQueries({
@@ -202,6 +274,8 @@ export function useRemoveBrick() {
 }
 
 export function useRenameBrick() {
+  const capture = useCapture();
+
   return useMutation({
     mutationFn: ({ instanceId, label }: { instanceId: string; label: string | undefined }) => {
       const boardId = useBoardStore.getState().activeBoardId;
@@ -213,6 +287,7 @@ export function useRenameBrick() {
       });
     },
     onSuccess: (_, { instanceId, label }) => {
+      capture('brick.renamed', { instanceId });
       useBoardStore.getState().updateBrickLabel(instanceId, label);
     },
   });

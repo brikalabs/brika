@@ -39,6 +39,30 @@ function makeBoard(overrides?: Partial<Board>): Board {
   };
 }
 
+/**
+ * Read SSE frames until the accumulated text contains `needle`, or a frame
+ * budget is exhausted. The per-board SSE always emits a `brick.dataSnapshot`
+ * frame first on connect, so forwarded-event assertions must read past it.
+ */
+async function readUntilContains(
+  reader: { read(): Promise<{ value?: Uint8Array; done: boolean }> },
+  needle: string,
+  maxFrames = 5
+): Promise<string> {
+  const decoder = new TextDecoder();
+  let text = '';
+  for (let i = 0; i < maxFrames; i++) {
+    const { value, done } = await reader.read();
+    if (value) {
+      text += decoder.decode(value);
+    }
+    if (text.includes(needle) || done) {
+      break;
+    }
+  }
+  return text;
+}
+
 describe('boards routes', () => {
   let app: ReturnType<typeof TestApp.create>;
   let mockLoader: {
@@ -605,8 +629,7 @@ describe('boards routes', () => {
       },
     });
 
-    const { value } = await reader.read();
-    const text = new TextDecoder().decode(value);
+    const text = await readUntilContains(reader, 'brick.dataUpdated');
     expect(text).toContain('brick.dataUpdated');
     expect(text).toContain('timer:clock');
 
@@ -662,8 +685,7 @@ describe('boards routes', () => {
       },
     });
 
-    const { value } = await reader.read();
-    const text = new TextDecoder().decode(value);
+    const text = await readUntilContains(reader, 'timer:clock');
     // Should only contain the matching event, not the filtered one
     expect(text).toContain('timer:clock');
     expect(text).not.toContain('weather:card');
@@ -712,8 +734,7 @@ describe('boards routes', () => {
       },
     });
 
-    const { value } = await reader.read();
-    const text = new TextDecoder().decode(value);
+    const text = await readUntilContains(reader, 'board.brickAdded');
     expect(text).toContain('board.brickAdded');
     expect(text).toContain('new-inst');
 
@@ -818,8 +839,7 @@ describe('boards routes', () => {
       },
     });
 
-    const { value } = await reader.read();
-    const text = new TextDecoder().decode(value);
+    const text = await readUntilContains(reader, 'board.brickRemoved');
     expect(text).toContain('board.brickRemoved');
 
     await reader.cancel();
@@ -921,8 +941,7 @@ describe('boards routes', () => {
       },
     });
 
-    const { value } = await reader.read();
-    const text = new TextDecoder().decode(value);
+    const text = await readUntilContains(reader, 'board.layoutChanged');
     expect(text).toContain('board.layoutChanged');
 
     await reader.cancel();
@@ -1024,8 +1043,7 @@ describe('boards routes', () => {
       },
     });
 
-    const { value } = await reader.read();
-    const text = new TextDecoder().decode(value);
+    const text = await readUntilContains(reader, 'board.brickLabelChanged');
     expect(text).toContain('board.brickLabelChanged');
 
     await reader.cancel();
@@ -1130,8 +1148,7 @@ describe('boards routes', () => {
       },
     });
 
-    const { value } = await reader.read();
-    const text = new TextDecoder().decode(value);
+    const text = await readUntilContains(reader, 'board.brickConfigChanged');
     expect(text).toContain('board.brickConfigChanged');
 
     await reader.cancel();
@@ -1255,5 +1272,45 @@ describe('boards routes', () => {
     for (const unsub of unsubs) {
       expect(unsub).toHaveBeenCalledTimes(1);
     }
+  });
+
+  // ─── REST brick-data snapshot ───────────────────────────────────────────────
+
+  test('GET /api/boards/:id/brick-data returns current entries', async () => {
+    const board = makeBoard({
+      bricks: [makePlacement({ instanceId: 'inst-1', brickTypeId: 'timer:clock' })],
+    });
+    mockLoader.get.mockReturnValue(board);
+    mockBrickDataStore.get.mockReturnValue({ time: '12:00' });
+
+    const res = await app.get<{ entries: Array<[string, unknown]> }>(
+      '/api/boards/board-1/brick-data'
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.body.entries).toEqual([['timer:clock', { time: '12:00' }]]);
+  });
+
+  test('GET /api/boards/:id/brick-data returns empty entries when no data', async () => {
+    const board = makeBoard({
+      bricks: [makePlacement({ instanceId: 'inst-1', brickTypeId: 'timer:clock' })],
+    });
+    mockLoader.get.mockReturnValue(board);
+    mockBrickDataStore.get.mockReturnValue(undefined);
+
+    const res = await app.get<{ entries: Array<[string, unknown]> }>(
+      '/api/boards/board-1/brick-data'
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.body.entries).toEqual([]);
+  });
+
+  test('GET /api/boards/:id/brick-data returns 404 when board not found', async () => {
+    mockLoader.get.mockReturnValue(undefined);
+
+    const res = await app.get('/api/boards/missing/brick-data');
+
+    expect(res.status).toBe(404);
   });
 });

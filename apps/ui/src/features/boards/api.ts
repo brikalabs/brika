@@ -92,6 +92,12 @@ export const brickInstancesApi = {
 export const boardsApi = {
   list: () => fetcher<BoardSummary[]>('/api/boards'),
   get: (id: string) => fetcher<Board>(`/api/boards/${encodeURIComponent(id)}`),
+  // Current brick-data snapshot, fetched on board mount so a freshly-loaded
+  // page hydrates immediately instead of waiting for the next plugin push.
+  brickData: (id: string) =>
+    fetcher<{ entries: Array<[string, unknown]> }>(
+      `/api/boards/${encodeURIComponent(id)}/brick-data`
+    ),
   create: (name: string, icon?: string) =>
     fetcher<Board>('/api/boards', {
       method: 'POST',
