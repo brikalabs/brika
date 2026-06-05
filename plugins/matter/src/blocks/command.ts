@@ -24,11 +24,7 @@ export const matterCommand = defineReactiveBlock(
     inputs.trigger.on(async () => {
       try {
         const controller = getMatterController();
-        const ok = await controller.sendCommand(
-          config.nodeId,
-          config.command as MatterCommand,
-          config.params
-        );
+        const ok = await controller.sendCommand(config.nodeId, config.command, config.params);
         if (ok) {
           outputs.success.emit({ nodeId: config.nodeId, command: config.command });
         } else {

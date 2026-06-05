@@ -117,7 +117,7 @@ export function requireOwnerOf(
     // The secret is the token (already verified by the indexed hash lookup in
     // findByToken). The hub name is public — it's in the URL — so a plain
     // comparison is correct here; constant-time would protect nothing.
-    if (owner === null || owner.name !== target) {
+    if (owner?.name !== target) {
       return c.json({ error: 'Unauthorized' }, 401);
     }
     c.set('owner', owner);

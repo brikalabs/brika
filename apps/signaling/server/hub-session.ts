@@ -67,11 +67,11 @@ export class HubSession {
   }
 
   async webSocketMessage(ws: WebSocket, message: string | ArrayBuffer): Promise<void> {
-    await this.#sessionState().handleMessage(ws as WsLike, message);
+    await this.#sessionState().handleMessage(ws, message);
   }
 
   webSocketClose(ws: WebSocket, _code: number, _reason: string, _wasClean: boolean): void {
-    this.#sessionState().handleClose(ws as WsLike);
+    this.#sessionState().handleClose(ws);
   }
 
   webSocketError(ws: WebSocket, _error: unknown): void {
@@ -80,7 +80,7 @@ export class HubSession {
     // idempotent (it deletes the attachment, so a follow-up close finds none
     // and no-ops), and tearing down here guarantees a hub's clients are
     // released even if the close event never arrives.
-    this.#sessionState().handleClose(ws as WsLike);
+    this.#sessionState().handleClose(ws);
   }
 
   // ─── Internals ──────────────────────────────────────────────────────────
@@ -108,7 +108,7 @@ export class HubSession {
       attachments: this.#attachmentStore(),
     });
     for (const ws of this.#state.getWebSockets()) {
-      session.rehydrate(ws as WsLike);
+      session.rehydrate(ws);
     }
     this.#session = session;
     return session;
@@ -145,7 +145,7 @@ export class HubSession {
     }
     const { client, server } = newPair();
     this.#state.acceptWebSocket(server, ['hub']);
-    this.#sessionState().attachHub(server as WsLike, hubName);
+    this.#sessionState().attachHub(server, hubName);
     return upgradeResponse(client, protocol);
   }
 
@@ -170,7 +170,7 @@ export class HubSession {
     // paths; the browser observes either a live channel or the error+close.
     // The standalone transport (`open` handler) behaves identically.
     this.#state.acceptWebSocket(server, ['client']);
-    await this.#sessionState().attachClient(server as WsLike, {
+    await this.#sessionState().attachClient(server, {
       name: hubName,
       clientIp,
       clientUserAgent,
