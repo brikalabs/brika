@@ -20,9 +20,16 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-/** Poll /api/health until it answers or the timeout elapses. */
-export async function waitForHub(): Promise<boolean> {
-  const deadline = Date.now() + READY_TIMEOUT_MS;
+/**
+ * Poll /api/health until it answers or the timeout elapses. The timing
+ * is parameterised (defaulting to the module constants) so tests can
+ * exercise the retry/timeout path without waiting whole seconds.
+ */
+export async function waitForHub(
+  timeoutMs: number = READY_TIMEOUT_MS,
+  pollMs: number = READY_POLL_MS
+): Promise<boolean> {
+  const deadline = Date.now() + timeoutMs;
   while (true) {
     if (await pingHub()) {
       return true;
@@ -30,7 +37,7 @@ export async function waitForHub(): Promise<boolean> {
     if (Date.now() >= deadline) {
       return false;
     }
-    await sleep(READY_POLL_MS);
+    await sleep(pollMs);
   }
 }
 

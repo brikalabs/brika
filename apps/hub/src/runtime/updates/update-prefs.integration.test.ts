@@ -8,7 +8,7 @@
 import 'reflect-metadata';
 import { Database } from 'bun:sqlite';
 import { afterAll, afterEach, beforeAll, describe, expect, test } from 'bun:test';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { configureDatabases } from '@brika/db';
@@ -84,6 +84,12 @@ describe('readUpdatePrefs: fixtures', () => {
     const db = new Database(path, { create: true });
     db.run('CREATE TABLE plugins (name TEXT)');
     db.close();
+    expect(readUpdatePrefs(path)).toEqual({ channel: 'stable', pinnedVersion: null });
+  });
+
+  test('returns defaults when the file is not a valid database', () => {
+    const path = join(tmp, 'garbage.db');
+    writeFileSync(path, 'this is definitely not sqlite');
     expect(readUpdatePrefs(path)).toEqual({ channel: 'stable', pinnedVersion: null });
   });
 });
