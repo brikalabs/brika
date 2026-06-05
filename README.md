@@ -77,12 +77,12 @@ On first start BRIKA creates a `.brika/` directory in the current working direct
 | `brika stop`         | Stop a running hub                                                       |
 | `brika restart`      | Restart the running hub                                                  |
 | `brika status`       | Show whether the hub is running                                          |
-| `brika open`         | Open the web UI in the default browser                                   |
+| `brika open`         | Open the web UI in the browser (starts the hub if it isn't running)      |
 | `brika log`          | Show and search application logs                                         |
 | `brika auth`         | Manage authentication and tokens                                         |
 | `brika plugin`       | Manage plugins (install, uninstall, list)                                |
 | `brika version`      | Show version and platform info                                           |
-| `brika update`       | Update to the latest version                                             |
+| `brika update`       | Update to the latest version (runs locally, no running hub required)     |
 | `brika uninstall`    | Remove BRIKA from this machine (`--purge` to also delete `.brika/` data) |
 | `brika completions`  | Set up shell tab-completion (bash, zsh, fish)                            |
 | `brika help`         | Show help for a command                                                  |
@@ -93,8 +93,8 @@ On first start BRIKA creates a `.brika/` directory in the current working direct
 |------------------------|------------------------------------------------|
 | `-p, --port <port>`    | Listen port (default: `3001`)                  |
 | `--host <addr>`        | Listen address (default: `127.0.0.1`)          |
-| `-f, --foreground`     | Keep attached to terminal (default: detach)    |
-| `-o, --open`           | Open the UI in the default browser after start |
+| `-a, --attach`         | Keep attached to terminal (default: detach)    |
+| `--open`               | Open the UI in the browser once the hub is ready |
 
 ### Log Flags
 
@@ -121,7 +121,7 @@ On first start BRIKA creates a `.brika/` directory in the current working direct
 brika start --open             # Start and open the UI
 brika start -p 8080            # Start on port 8080
 brika start --host 0.0.0.0    # Listen on all interfaces (e.g. Docker/VM)
-brika start --foreground       # Stay attached to terminal
+brika start --attach           # Stay attached to terminal
 brika status                   # Check if hub is running
 brika log                      # Show recent logs
 brika log -f                   # Live tail logs
@@ -192,7 +192,7 @@ Environment variables override config file values:
 
 ## Process Management
 
-`brika start` detaches the hub into the background by default. Use `--foreground` to keep it attached. The hub writes its PID to `.brika/brika.pid` on startup so `brika stop` and `brika status` can track it.
+`brika start` detaches the hub into the background by default. Use `--attach` to keep it attached. The hub writes its PID to `.brika/brika.pid` on startup so `brika stop` and `brika status` can track it.
 
 Starting a second instance in the same directory is rejected immediately:
 
