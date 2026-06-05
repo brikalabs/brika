@@ -161,13 +161,13 @@ export async function startStandalone(
         const data = ws.data;
         const session = sessionFor(data.name);
         if (data.kind === 'hub') {
-          session.attachHub(ws as unknown as WsLike, data.name);
+          session.attachHub(ws, data.name);
         } else {
           // `attachClient` is async because the IceServerProvider may fetch
           // creds. Discard the promise — the WS is already accepted; any send
           // failure is benign and the catch swallows it.
           session
-            .attachClient(ws as unknown as WsLike, {
+            .attachClient(ws, {
               name: data.name,
               clientIp: data.clientIp,
               clientUserAgent: data.clientUserAgent,
@@ -182,13 +182,13 @@ export async function startStandalone(
         if (!session) {
           return;
         }
-        session.handleMessage(ws as unknown as WsLike, toFrame(message)).catch(() => {
+        session.handleMessage(ws, toFrame(message)).catch(() => {
           /* benign — close handler will tidy up */
         });
       },
       close(ws) {
         const session = sessions.get(ws.data.name);
-        session?.handleClose(ws as unknown as WsLike);
+        session?.handleClose(ws);
       },
     },
   });
