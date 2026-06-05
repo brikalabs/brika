@@ -335,7 +335,7 @@ export class EventStore {
       .orderBy(desc(count()))
       .limit(Math.min(limit, 500))
       .all()
-      .map((row) => ({ name: row.name as string, count: Number(row.count) }));
+      .map((row) => ({ name: row.name, count: Number(row.count) }));
   }
 
   /** Event counts grouped by source (ui/plugin/hub/cli), most frequent first. */
