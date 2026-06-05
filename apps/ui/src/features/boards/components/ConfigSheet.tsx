@@ -30,12 +30,14 @@ import {
 } from '@brika/clay/components/sheet';
 import { Trash2, X } from 'lucide-react';
 import { DynamicIcon, type IconName } from 'lucide-react/dynamic';
+import { useCapture } from '@/features/analytics/hooks';
 import { useLocale } from '@/lib/use-locale';
 import { ConfigField } from './config-sheet/field-renderers';
 import { useConfigSheetState } from './config-sheet/use-config-sheet-state';
 
 export function ConfigSheet() {
   const { t, tp } = useLocale();
+  const capture = useCapture();
   const {
     open,
     configBrickId,
@@ -96,7 +98,14 @@ export function ConfigSheet() {
                   onChange={(e) => setLocalLabel(e.target.value)}
                   placeholder={brickTypeName ?? ''}
                 />
-                <Button variant="outline" onClick={() => setLocalLabel('')} disabled={!localLabel}>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    capture('boards.brick_label_cleared');
+                    setLocalLabel('');
+                  }}
+                  disabled={!localLabel}
+                >
                   <X />
                 </Button>
               </ButtonGroup>
@@ -174,7 +183,10 @@ export function ConfigSheet() {
               variant="ghost"
               size="sm"
               className="mr-auto text-destructive hover:bg-destructive/10 hover:text-destructive"
-              onClick={() => setDeleteOpen(true)}
+              onClick={() => {
+                capture('boards.brick_delete_dialog_opened');
+                setDeleteOpen(true);
+              }}
             >
               <Trash2 className="mr-1.5 size-3.5" />
               {t('common:actions.delete')}

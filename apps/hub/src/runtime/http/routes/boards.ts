@@ -1,9 +1,11 @@
+import { Analytics } from '@brika/analytics';
 import { createSSEStream, group, NotFound, route } from '@brika/router';
 import { z } from 'zod';
 import { BoardLoader, BoardService } from '@/runtime/boards';
 import { BrickDataStore } from '@/runtime/bricks';
 import { BoardActions, BrickActions } from '@/runtime/events/actions';
 import { EventSystem } from '@/runtime/events/event-system';
+import { Logger } from '@/runtime/logs/log-router';
 import type { Json } from '@/types';
 
 const brickPlacementFields = {
@@ -82,6 +84,7 @@ export const boardsRoutes = group({
           bricks: [],
         };
         await loader.saveBoard(board);
+        inject(Analytics).capture('board.created', { hasIcon: body.icon !== undefined });
         return board;
       },
     }),
@@ -100,6 +103,7 @@ export const boardsRoutes = group({
         if (!ok) {
           throw new NotFound('One or more board IDs not found');
         }
+        inject(Analytics).capture('board.reordered', { count: body.ids.length });
         return {
           ok: true,
         };
@@ -150,6 +154,10 @@ export const boardsRoutes = group({
         }
 
         await loader.saveBoard(board);
+        inject(Analytics).capture('board.updated', {
+          renamed: body.name !== undefined,
+          iconChanged: body.icon !== undefined,
+        });
         return board;
       },
     }),
@@ -174,6 +182,7 @@ export const boardsRoutes = group({
         if (!deleted) {
           throw new NotFound('Board not found');
         }
+        inject(Analytics).capture('board.deleted', { brickCount: board.bricks.length });
         return {
           ok: true,
         };
@@ -203,6 +212,10 @@ export const boardsRoutes = group({
         if (!placement) {
           throw new NotFound('Board or brick type not found');
         }
+        inject(Analytics).capture('board.brick_added', {
+          brickTypeId: body.brickTypeId,
+          withConfig: body.config !== undefined,
+        });
         return placement;
       },
     }),
@@ -236,6 +249,11 @@ export const boardsRoutes = group({
         if (body.position && body.size) {
           await service.moveBrick(params.id, params.instanceId, body.position, body.size);
         }
+        inject(Analytics).capture('board.brick_updated', {
+          labelChanged: body.label !== undefined,
+          configChanged: body.config !== undefined,
+          moved: Boolean(body.position && body.size),
+        });
         return {
           ok: true,
         };
@@ -256,6 +274,7 @@ export const boardsRoutes = group({
         if (!removed) {
           throw new NotFound('Brick not found on board');
         }
+        inject(Analytics).capture('board.brick_removed');
         return {
           ok: true,
         };
@@ -286,9 +305,38 @@ export const boardsRoutes = group({
         if (!updated) {
           throw new NotFound('Board not found');
         }
+        inject(Analytics).capture('board.layout_saved', { brickCount: body.layouts.length });
         return {
           ok: true,
         };
+      },
+    }),
+
+    /**
+     * REST: Current brick-data snapshot for a board.
+     *
+     * Lets a freshly-loaded page hydrate brick data immediately on mount,
+     * independent of SSE connect timing. The SSE `brick.dataSnapshot` covers
+     * the live-stream path; this covers the (re)load path so a slow-polling
+     * plugin (e.g. weather, minutes between pushes) never leaves a card stuck
+     * on a bare spinner waiting for the next push.
+     */
+    route.get({
+      path: '/:id/brick-data',
+      params: z.object({
+        id: z.string(),
+      }),
+      handler: ({ params, inject }) => {
+        const board = inject(BoardLoader).get(params.id);
+        if (!board) {
+          throw new NotFound('Board not found');
+        }
+        const entries = collectBrickDataEntries(board.bricks, inject(BrickDataStore));
+        inject(Logger).withSource('state').debug('Served REST brick-data snapshot', {
+          boardId: params.id,
+          entryCount: entries.length,
+        });
+        return { entries };
       },
     }),
 
@@ -306,6 +354,7 @@ export const boardsRoutes = group({
         const events = inject(EventSystem);
         const loader = inject(BoardLoader);
         const brickDataStore = inject(BrickDataStore);
+        const logs = inject(Logger).withSource('state');
 
         const board = loader.get(params.id);
         if (!board) {
@@ -317,11 +366,16 @@ export const boardsRoutes = group({
         return createSSEStream((send) => {
           service.viewerConnected(params.id);
 
-          // Send initial brick data snapshot
+          // Send initial brick data snapshot. Always sent (even when empty) so
+          // the client has a deterministic "connected" signal and a single,
+          // well-known replay point for the current values.
           const dataEntries = collectBrickDataEntries(board.bricks, brickDataStore);
-          if (dataEntries.length > 0) {
-            send({ type: 'brick.dataSnapshot', payload: { entries: dataEntries } }, 'board');
-          }
+          send({ type: 'brick.dataSnapshot', payload: { entries: dataEntries } }, 'board');
+          logs.debug('Board SSE connected, sent brick-data snapshot', {
+            boardId: params.id,
+            brickCount: board.bricks.length,
+            entryCount: dataEntries.length,
+          });
 
           /** Re-read the board so SSE callbacks see bricks added/removed after connect. */
           const currentBoard = () => loader.get(params.id);
@@ -342,6 +396,10 @@ export const boardsRoutes = group({
               // Check if any board brick uses this type
               const brickTypeId = action.payload.brickTypeId;
               if (currentBoard()?.bricks.some((b) => b.brickTypeId === brickTypeId)) {
+                logs.debug('Forwarding live brick-data update to board viewer', {
+                  boardId: params.id,
+                  brickTypeId,
+                });
                 forward(action.type, action.payload as unknown as Json);
               }
             }),

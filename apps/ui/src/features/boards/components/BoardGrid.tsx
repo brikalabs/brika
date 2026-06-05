@@ -1,6 +1,7 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Layout } from 'react-grid-layout/legacy';
 import { ReactGridLayout } from 'react-grid-layout/legacy';
+import { useCapture } from '@/features/analytics/hooks';
 import type { Board } from '../api';
 import { useBrickTypes } from '../store';
 import { BoardBrick } from './BoardBrick';
@@ -47,6 +48,7 @@ export const BoardGrid = memo(function BoardGrid({ board, onSaveLayout }: BoardG
   const containerRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(0);
   const brickTypes = useBrickTypes();
+  const capture = useCapture();
 
   // Measure container width via ResizeObserver
   useEffect(() => {
@@ -115,15 +117,17 @@ export const BoardGrid = memo(function BoardGrid({ board, onSaveLayout }: BoardG
   // Only save when drag/resize ends — NOT on every frame
   const handleDragStop = useCallback(
     (currentLayout: Layout) => {
+      capture('boards.brick_moved', { count: currentLayout.length });
       onSaveLayout(layoutToPayload(currentLayout));
     },
-    [onSaveLayout]
+    [onSaveLayout, capture]
   );
   const handleResizeStop = useCallback(
-    (currentLayout: Layout) => {
+    (currentLayout: Layout, _old: Layout[number] | null, updated: Layout[number] | null) => {
+      capture('boards.brick_resized', { w: updated?.w, h: updated?.h });
       onSaveLayout(layoutToPayload(currentLayout));
     },
-    [onSaveLayout]
+    [onSaveLayout, capture]
   );
 
   // First render: just measure, don't render the grid yet

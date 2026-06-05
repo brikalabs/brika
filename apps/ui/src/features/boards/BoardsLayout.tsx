@@ -2,6 +2,7 @@ import { Button } from '@brika/clay';
 import { Outlet, useNavigate, useParams } from '@tanstack/react-router';
 import { Plus } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
+import { useCapture } from '@/features/analytics/hooks';
 import { useLocale } from '@/lib/use-locale';
 import { paths } from '@/routes/paths';
 import type { BoardSummary } from './api';
@@ -15,6 +16,7 @@ import { useActiveBoard, useBoardStore } from './store';
 
 export function BoardsLayout() {
   const { t } = useLocale();
+  const capture = useCapture();
   const navigate = useNavigate();
   const { boardId } = useParams({
     strict: false,
@@ -41,7 +43,10 @@ export function BoardsLayout() {
   const setAddBrickOpen = useBoardStore((s) => s.setAddBrickOpen);
   const [editBoard, setEditBoard] = useState<BoardSummary | null>(null);
 
-  const handleAddBrick = useCallback(() => setAddBrickOpen(true), [setAddBrickOpen]);
+  const handleAddBrick = useCallback(() => {
+    capture('boards.add_brick_sheet_opened', { source: 'header' });
+    setAddBrickOpen(true);
+  }, [setAddBrickOpen, capture]);
 
   const brickCount = board?.bricks.length ?? 0;
 
