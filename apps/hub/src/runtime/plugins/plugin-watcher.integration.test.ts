@@ -238,12 +238,15 @@ describe('PluginWatcher', () => {
     const inertDir = await realpath(await mkdtemp(join(tmpdir(), 'brika-watcher-rearm-')));
     const realWatch = nodeFs.watch;
     let armCalls = 0;
-    let firstWatcher: FSWatcher | null = null;
+    // Collected in an array: a closure-assigned `let` would narrow to `null`
+    // for the type checker (it can't see the assignment inside mockImplementation).
+    const armed: FSWatcher[] = [];
     const flakyWatch: typeof nodeFs.watch = (): FSWatcher => {
       armCalls += 1;
       if (armCalls === 1) {
-        firstWatcher = realWatch(inertDir);
-        return firstWatcher;
+        const w = realWatch(inertDir);
+        armed.push(w);
+        return w;
       }
       throw new Error('re-arm failed; poller remains the safety net');
     };
@@ -262,7 +265,7 @@ describe('PluginWatcher', () => {
 
       // Synthesize the FSEvents collapse: the handler closes the dead watcher
       // and re-arms (call #2), which throws and falls through to the catch.
-      firstWatcher?.emit('error', new Error('FSEvents stream collapsed'));
+      armed[0]?.emit('error', new Error('FSEvents stream collapsed'));
       await waitFor(() => armCalls === 2, { timeoutMs: 2000 });
       expect(armCalls).toBe(2);
 
