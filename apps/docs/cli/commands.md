@@ -76,10 +76,11 @@ Possible outputs:
 
 ## `brika open`
 
-Open the hub UI in your default browser. Refuses if no hub is running so you do not land on a connection-refused page.
+Open the hub UI in your default browser. If no hub is running, `open` starts one (detached) first so you do not land on a connection-refused page. Pass `--no-start` to refuse instead of starting a hub.
 
 ```sh
 brika open
+brika open --no-start   # error out if the hub isn't running
 ```
 
 Honours `BRIKA_HOST` and `BRIKA_PORT`.
