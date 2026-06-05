@@ -16,6 +16,7 @@ import {
   SelectValue,
 } from '@brika/clay';
 import { type SyntheticEvent, useState } from 'react';
+import { useCapture } from '@/features/analytics/hooks';
 import { useLocale } from '@/lib/use-locale';
 import { useUserMutations } from '../hooks';
 
@@ -28,6 +29,7 @@ interface CreateUserDialogProps {
 
 export function CreateUserDialog({ open, onOpenChange }: Readonly<CreateUserDialogProps>) {
   const { t } = useLocale();
+  const capture = useCapture();
   const { create } = useUserMutations();
 
   const [email, setEmail] = useState('');
@@ -108,7 +110,13 @@ export function CreateUserDialog({ open, onOpenChange }: Readonly<CreateUserDial
 
           <div className="space-y-2">
             <Label htmlFor="create-role">{t('users:fields.role')}</Label>
-            <Select value={role} onValueChange={setRole}>
+            <Select
+              value={role}
+              onValueChange={(value) => {
+                capture('users.create_role_selected', { role: value });
+                setRole(value);
+              }}
+            >
               <SelectTrigger id="create-role">
                 <SelectValue />
               </SelectTrigger>

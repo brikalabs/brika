@@ -1,6 +1,7 @@
 import { Avatar, AvatarFallback, AvatarImage, Badge } from '@brika/clay';
 import { Link } from '@tanstack/react-router';
 import { ArrowLeft, Code2, ExternalLink, Plug, User } from 'lucide-react';
+import { useCapture } from '@/features/analytics/hooks';
 import { useLocale } from '@/lib/use-locale';
 import { paths } from '@/routes/paths';
 import type { Plugin } from '../api';
@@ -34,6 +35,7 @@ export function PluginDetailHeader({
   onUninstall,
 }: Readonly<PluginDetailHeaderProps>) {
   const { t, tp } = useLocale();
+  const capture = useCapture();
 
   const authorName = getAuthorName(plugin);
   const repoUrl = getRepoUrl(plugin);
@@ -43,6 +45,7 @@ export function PluginDetailHeader({
       <Link
         to={paths.plugins.list.path}
         className="inline-flex items-center gap-2 text-muted-foreground transition-colors hover:text-foreground"
+        onClick={() => capture('plugins.back_to_list_clicked', { source: 'header' })}
       >
         <ArrowLeft className="size-4" />
         {t('plugins:backToList')}
@@ -101,6 +104,7 @@ export function PluginDetailHeader({
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-1 transition-colors hover:text-foreground"
+              onClick={() => capture('plugins.repository_opened')}
             >
               <Code2 className="size-3" />
               {t('plugins:details.repository')}

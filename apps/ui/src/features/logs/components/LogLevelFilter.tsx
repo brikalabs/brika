@@ -1,4 +1,5 @@
 import { Badge } from "@brika/clay";
+import { useCapture } from "@/features/analytics/hooks";
 import { useLocale } from "@/lib/use-locale";
 import type { LogLevel } from "../types";
 import { LEVEL_COLORS } from "./log-level-config";
@@ -15,11 +16,14 @@ export function LogLevelFilter({
   onLevelsChange,
 }: Readonly<LogLevelFilterProps>) {
   const { t } = useLocale();
+  const capture = useCapture();
 
   const toggleLevel = (level: LogLevel) => {
-    const newLevels = selectedLevels.includes(level)
-      ? selectedLevels.filter((l) => l !== level)
-      : [...selectedLevels, level];
+    const enabled = !selectedLevels.includes(level);
+    const newLevels = enabled
+      ? [...selectedLevels, level]
+      : selectedLevels.filter((l) => l !== level);
+    capture("logs.level_filter_changed", { level, enabled });
     onLevelsChange(newLevels);
   };
 

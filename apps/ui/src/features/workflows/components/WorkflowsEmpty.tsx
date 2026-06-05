@@ -1,6 +1,7 @@
 import { Button, Card } from '@brika/clay';
 import { useNavigate } from '@tanstack/react-router';
 import { Plus, Search, Workflow } from 'lucide-react';
+import { useCapture } from '@/features/analytics/hooks';
 import { useLocale } from '@/lib/use-locale';
 import { paths } from '@/routes/paths';
 
@@ -11,6 +12,7 @@ interface WorkflowsEmptyProps {
 export function WorkflowsEmpty({ hasSearch }: Readonly<WorkflowsEmptyProps>) {
   const { t } = useLocale();
   const navigate = useNavigate();
+  const capture = useCapture();
 
   const Icon = hasSearch ? Search : Workflow;
 
@@ -28,7 +30,12 @@ export function WorkflowsEmpty({ hasSearch }: Readonly<WorkflowsEmptyProps>) {
             {t('workflows:emptyDescription')}
           </p>
           <div className="mt-4">
-            <Button onClick={() => navigate({ to: paths.workflows.new.path })}>
+            <Button
+              onClick={() => {
+                capture('workflows.create_clicked', { source: 'empty_state' });
+                navigate({ to: paths.workflows.new.path });
+              }}
+            >
               <Plus className="mr-2 size-4" />
               {t('workflows:actions.create')}
             </Button>

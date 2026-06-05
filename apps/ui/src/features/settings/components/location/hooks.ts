@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
+import { useCapture } from '@/features/analytics/hooks';
 import { fetcher } from '@/lib/query';
 import { reverseGeocode } from './photon';
 
@@ -32,6 +33,7 @@ export function useHubLocation() {
 
 export function useUpdateHubLocation() {
   const qc = useQueryClient();
+  const capture = useCapture();
   return useMutation({
     mutationFn: (location: HubLocation) =>
       fetcher<HubLocationResponse>('/api/settings/location', {
@@ -39,6 +41,8 @@ export function useUpdateHubLocation() {
         body: JSON.stringify(location),
       }),
     onSuccess: () => {
+      // No props: coordinates/address are location PII; the event is the signal.
+      capture('settings.location_updated');
       qc.invalidateQueries({
         queryKey: locationKeys.all,
       });

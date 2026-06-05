@@ -1,4 +1,4 @@
-import { defineReactiveBlock, input, output, z } from '@brika/sdk';
+import { capture, defineReactiveBlock, input, output, z } from '@brika/sdk';
 import { log } from '@brika/sdk/lifecycle';
 import { timerCompleted, timerStarted } from '../sparks';
 
@@ -37,6 +37,11 @@ export const timer = defineReactiveBlock(
 
       log.info(`Timer "${name}" started for ${config.duration}ms`);
 
+      capture('timer.started', {
+        hasName: config.name !== undefined,
+        durationMs: config.duration,
+      });
+
       timerStarted.emit({
         name,
         duration: config.duration,
@@ -46,6 +51,8 @@ export const timer = defineReactiveBlock(
       activeTimer = setTimeout(() => {
         const completedAt = Date.now();
         log.info(`Timer "${name}" completed`);
+
+        capture('timer.completed', { durationMs: config.duration });
 
         const result = {
           name,

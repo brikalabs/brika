@@ -9,6 +9,7 @@ import {
 import { ChevronDown, Loader2, MapPin, Navigation } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useCapture } from '@/features/analytics/hooks';
 import { AddressSearch } from '@/features/settings/components/location/AddressSearch';
 import type { HubLocation } from '@/features/settings/components/location/hooks';
 import {
@@ -35,6 +36,12 @@ export function LocationStep() {
 
   const [showDetails, setShowDetails] = useState(false);
   const updateMutation = useUpdateHubLocation();
+  const capture = useCapture();
+
+  const handleDetectClick = () => {
+    capture('auth.setup_location_detected');
+    handleDetect();
+  };
 
   // Save on Continue if there is a draft and changes are pending. Otherwise
   // just navigate forward — location is optional.
@@ -59,7 +66,7 @@ export function LocationStep() {
         {!hasLocation && (
           <EmptyState
             detecting={detecting}
-            onDetect={handleDetect}
+            onDetect={handleDetectClick}
             emptyHint={t('location.emptyHint')}
             detectLabel={t('location.detect')}
             detectingLabel={t('location.detecting')}
@@ -70,9 +77,14 @@ export function LocationStep() {
           <LocationCard
             draft={draft}
             showDetails={showDetails}
-            onShowDetailsChange={setShowDetails}
+            onShowDetailsChange={(open) => {
+              if (open) {
+                capture('auth.setup_location_details_expanded');
+              }
+              setShowDetails(open);
+            }}
             onFieldChange={handleFieldChange}
-            onRedetect={handleDetect}
+            onRedetect={handleDetectClick}
             redetecting={detecting}
             t={t}
           />

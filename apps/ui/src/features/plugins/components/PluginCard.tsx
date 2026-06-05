@@ -14,6 +14,7 @@ import type { Plugin, PluginHealth } from '@brika/plugin';
 import { Link } from '@tanstack/react-router';
 import { AlertTriangle, ArrowUp, Boxes, LayoutDashboard, Loader2, Plug, Zap } from 'lucide-react';
 import React from 'react';
+import { useCapture } from '@/features/analytics/hooks';
 import { useLocale } from '@/lib/use-locale';
 import { paths } from '@/routes/paths';
 import { pluginsApi } from '../api';
@@ -204,6 +205,7 @@ export function PluginCard({
   onKill,
 }: Readonly<PluginCardProps>) {
   const { t, tp } = useLocale();
+  const capture = useCapture();
   const [updateDialogOpen, setUpdateDialogOpen] = React.useState(false);
 
   const statusStyle = getStatusStyle(p.status);
@@ -274,7 +276,12 @@ export function PluginCard({
               updateInfo={updateInfo}
               uid={p.uid}
               isBusy={isBusy}
-              onUpdate={() => setUpdateDialogOpen(true)}
+              onUpdate={() => {
+                capture('plugins.update_dialog_opened', {
+                  source: 'card',
+                });
+                setUpdateDialogOpen(true);
+              }}
               onReload={onReload}
               onDisable={onDisable}
               onKill={onKill}

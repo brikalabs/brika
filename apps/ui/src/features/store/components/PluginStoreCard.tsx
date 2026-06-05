@@ -1,6 +1,7 @@
 import { Avatar, AvatarFallback, AvatarImage, Badge, Card } from '@brika/clay';
 import { Link } from '@tanstack/react-router';
 import { Download, Package, Tag, User } from 'lucide-react';
+import { useCapture } from '@/features/analytics/hooks';
 import { useLocale } from '@/lib/use-locale';
 import { paths } from '@/routes/paths';
 import type { StorePlugin } from '../types';
@@ -25,6 +26,7 @@ function formatDownloads(count: number): string {
 
 export function PluginStoreCard({ plugin }: Readonly<PluginStoreCardProps>) {
   const { t, tp } = useLocale();
+  const capture = useCapture();
   const accent = plugin.featured ? 'blue' : 'none';
   const authorName = typeof plugin.author === 'string' ? plugin.author : plugin.author?.name;
 
@@ -34,6 +36,13 @@ export function PluginStoreCard({ plugin }: Readonly<PluginStoreCardProps>) {
         source: plugin.source,
         _splat: plugin.name,
       })}
+      onClick={() =>
+        capture('store.details_opened', {
+          source: plugin.source,
+          verified: plugin.verified,
+          installed: plugin.installed,
+        })
+      }
       className="group block"
     >
       <Card accent={accent} interactive className="h-full p-5">

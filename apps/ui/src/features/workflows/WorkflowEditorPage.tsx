@@ -10,6 +10,7 @@ import { useNavigate, useParams } from '@tanstack/react-router';
 import { ReactFlowProvider } from '@xyflow/react';
 import { ArrowLeft, Loader2, Save } from 'lucide-react';
 import { useCallback, useRef, useState } from 'react';
+import { useCapture } from '@/features/analytics/hooks';
 import { useLocale } from '@/lib/use-locale';
 import { paths } from '@/routes/paths';
 import type { Workflow } from './api';
@@ -31,6 +32,7 @@ function createNewWorkflow(): Workflow {
 export function WorkflowEditorPage() {
   const { t } = useLocale();
   const navigate = useNavigate();
+  const capture = useCapture();
   const params = useParams({
     strict: false,
   });
@@ -109,18 +111,14 @@ export function WorkflowEditorPage() {
 
   // Handle back navigation
   const handleBack = useCallback(() => {
-    if (isDirty) {
-      if (confirm(t('workflows:editor.unsavedChanges'))) {
-        navigate({
-          to: paths.workflows.list.path,
-        });
-      }
-    } else {
+    const discarded = isDirty && confirm(t('workflows:editor.unsavedChanges'));
+    capture('workflow.editor_back', { dirty: isDirty, discarded });
+    if (!isDirty || discarded) {
       navigate({
         to: paths.workflows.list.path,
       });
     }
-  }, [isDirty, navigate, t]);
+  }, [isDirty, navigate, t, capture]);
 
   // Loading state
   if (!isNew && isLoading) {
@@ -138,11 +136,12 @@ export function WorkflowEditorPage() {
         <p className="text-muted-foreground">{t('workflows:notFound')}</p>
         <Button
           variant="outline"
-          onClick={() =>
+          onClick={() => {
+            capture('workflow.not_found_back');
             navigate({
               to: paths.workflows.list.path,
-            })
-          }
+            });
+          }}
         >
           <ArrowLeft className="mr-2 size-4" />
           {t('common:actions.back')}
@@ -181,6 +180,10 @@ export function WorkflowEditorPage() {
             onClick={() => {
               const wf = currentWorkflowRef.current || currentWorkflow;
               if (wf) {
+                capture('workflow.save_clicked', {
+                  isNew,
+                  blockCount: wf.blocks?.length ?? 0,
+                });
                 handleSave(wf);
               }
             }}

@@ -1,3 +1,4 @@
+import { Analytics } from '@brika/analytics';
 import { BadRequest, createSSEStream, group, route } from '@brika/router';
 import { z } from 'zod';
 import { BlockRegistry } from '@/runtime/blocks';
@@ -69,6 +70,11 @@ export const workflowsRoutes = group({
           connections,
         };
         await inject(WorkflowLoader).saveWorkflow(workflow);
+        inject(Analytics).capture('workflow.saved', {
+          blockCount: workflow.blocks.length,
+          connectionCount: connections.length,
+          enabled: workflow.enabled,
+        });
         return {
           ok: true,
           id: body.id,
@@ -89,9 +95,11 @@ export const workflowsRoutes = group({
         id: z.string(),
       }),
       handler: ({ body, inject }) => {
-        return {
-          ok: inject(WorkflowEngine).setEnabled(body.id, true),
-        };
+        const ok = inject(WorkflowEngine).setEnabled(body.id, true);
+        if (ok) {
+          inject(Analytics).capture('workflow.enabled');
+        }
+        return { ok };
       },
     }),
 
@@ -101,9 +109,11 @@ export const workflowsRoutes = group({
         id: z.string(),
       }),
       handler: ({ body, inject }) => {
-        return {
-          ok: inject(WorkflowEngine).setEnabled(body.id, false),
-        };
+        const ok = inject(WorkflowEngine).setEnabled(body.id, false);
+        if (ok) {
+          inject(Analytics).capture('workflow.disabled');
+        }
+        return { ok };
       },
     }),
 
@@ -162,6 +172,9 @@ export const workflowsRoutes = group({
       }),
       handler: async ({ params, inject }) => {
         const ok = await inject(WorkflowLoader).deleteWorkflow(params.id);
+        if (ok) {
+          inject(Analytics).capture('workflow.deleted');
+        }
         return {
           ok,
         };

@@ -2,6 +2,7 @@ import { Avatar, AvatarFallback, AvatarImage, Button, Skeleton } from '@brika/cl
 import { Link } from '@tanstack/react-router';
 import { ArrowRight, Download, Package, Sparkles } from 'lucide-react';
 import { useMemo } from 'react';
+import { useCapture } from '@/features/analytics/hooks';
 import { useStorePlugins, useVerifiedPlugins } from '@/features/store/hooks';
 import type { PluginSearchResult } from '@/features/store/types';
 import { useLocale } from '@/lib/use-locale';
@@ -16,6 +17,7 @@ interface PluginsEmptyStarterProps {
 
 export function PluginsEmptyStarter({ onInstall }: Readonly<PluginsEmptyStarterProps>) {
   const { t } = useLocale();
+  const capture = useCapture();
   const { data: verifiedData, isLoading: verifiedLoading } = useVerifiedPlugins();
   const { data: searchData, isLoading: searchLoading } = useStorePlugins({ limit: 50 });
 
@@ -75,6 +77,7 @@ export function PluginsEmptyStarter({ onInstall }: Readonly<PluginsEmptyStarterP
       <Link
         to={paths.store.list.path}
         className="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-[12.5px] text-muted-foreground transition-colors hover:bg-foreground/[0.04] hover:text-foreground"
+        onClick={() => capture('plugins.browse_store_clicked', { source: 'empty_starter' })}
       >
         {t('plugins:starter.browseAll')}
         <ArrowRight className="size-3.5" />
@@ -116,6 +119,7 @@ interface StarterCardProps {
 
 function StarterCard({ starter, onInstall }: Readonly<StarterCardProps>) {
   const { t, tp } = useLocale();
+  const capture = useCapture();
   const pkg = starter.package;
   const displayName = tp(pkg.name, 'name', pkg.displayName ?? humanize(pkg.name));
   const description = tp(pkg.name, 'description', pkg.description ?? '');
@@ -148,7 +152,12 @@ function StarterCard({ starter, onInstall }: Readonly<StarterCardProps>) {
         size="sm"
         variant="outline"
         className="w-full justify-center gap-1.5 transition-colors group-hover:border-foreground/20"
-        onClick={() => onInstall(pkg.name)}
+        onClick={() => {
+          capture('plugins.install_dialog_opened', {
+            source: 'starter',
+          });
+          onInstall(pkg.name);
+        }}
       >
         <Download className="size-3.5" />
         {t('plugins:starter.install')}

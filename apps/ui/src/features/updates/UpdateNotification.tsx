@@ -14,6 +14,7 @@
 import { Button } from '@brika/clay';
 import { ArrowDownToLine, Sparkles, X } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
+import { useCapture } from '@/features/analytics/hooks';
 import { useLocale } from '@/lib/use-locale';
 import { UpdateDialog } from './UpdateDialog';
 import { useUpdateCheck } from './use-update';
@@ -38,6 +39,7 @@ function writeDismissed(version: string): void {
 
 export function UpdateNotification() {
   const { t } = useLocale();
+  const capture = useCapture();
   const { data } = useUpdateCheck();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dismissedVersion, setDismissedVersion] = useState<string | null>(() => readDismissed());
@@ -57,9 +59,10 @@ export function UpdateNotification() {
     if (!data?.latestVersion) {
       return;
     }
+    capture('update.dismissed', { version: data.latestVersion });
     writeDismissed(data.latestVersion);
     setDismissedVersion(data.latestVersion);
-  }, [data]);
+  }, [data, capture]);
 
   if (!data?.updateAvailable) {
     return null;
@@ -93,7 +96,14 @@ export function UpdateNotification() {
               <X className="size-3.5" />
             </button>
           </div>
-          <Button size="sm" className="gap-1.5 self-end" onClick={() => setDialogOpen(true)}>
+          <Button
+            size="sm"
+            className="gap-1.5 self-end"
+            onClick={() => {
+              capture('update.dialog_opened', { version: data.latestVersion });
+              setDialogOpen(true);
+            }}
+          >
             <ArrowDownToLine className="size-3.5" />
             {t('common:updates.updateNow')}
           </Button>

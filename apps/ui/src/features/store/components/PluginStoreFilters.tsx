@@ -1,4 +1,4 @@
-import { Input } from '@brika/clay/components/input';
+import { InputGroup, InputGroupAddon, InputGroupInput } from '@brika/clay/components/input-group';
 import {
   Select,
   SelectContent,
@@ -7,6 +7,7 @@ import {
   SelectValue,
 } from '@brika/clay/components/select';
 import { Search } from 'lucide-react';
+import { useCapture } from '@/features/analytics/hooks';
 import { useLocale } from '@/lib/use-locale';
 
 const FILTER_VALUES = ['all', 'verified', 'compatible', 'installed'] as const;
@@ -39,18 +40,26 @@ export function PluginStoreFilters({
   onSortChange,
 }: Readonly<PluginStoreFiltersProps>) {
   const { t } = useLocale();
+  const capture = useCapture();
 
   return (
     <div className="flex flex-col gap-4 sm:flex-row">
       {/* Search */}
-      <div className="relative flex-1">
-        <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
+      <InputGroup className="flex-1">
+        <InputGroupAddon>
+          <Search className="size-4" />
+        </InputGroupAddon>
+        <InputGroupInput
           placeholder={t('store:search.placeholder')}
           onChange={(e) => onSearchChange(e.target.value)}
-          className="pl-9"
+          onKeyDown={(e) => {
+            const term = e.currentTarget.value.trim();
+            if (e.key === 'Enter' && term) {
+              capture('store.searched', { term });
+            }
+          }}
         />
-      </div>
+      </InputGroup>
 
       {/* Filter */}
       <Select

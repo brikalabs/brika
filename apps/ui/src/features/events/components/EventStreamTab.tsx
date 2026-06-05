@@ -1,6 +1,7 @@
 import { Badge, Button, Card, CardContent, ScrollArea } from '@brika/clay';
 import { Clock, Pause, Play, Send, Trash2 } from 'lucide-react';
 import { useState } from 'react';
+import { useCapture } from '@/features/analytics/hooks';
 import { useLocale } from '@/lib/use-locale';
 import { useEmitEvent, useSparkStream } from '../sparks-hooks';
 import { CustomEmitDialog } from './CustomEmitDialog';
@@ -8,12 +9,14 @@ import { EventRow } from './EventRow';
 
 export function EventStreamTab() {
   const { t, formatTime } = useLocale();
+  const capture = useCapture();
   const { events, paused, clear, togglePaused } = useSparkStream();
   const emitEvent = useEmitEvent();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [resendingId, setResendingId] = useState<string | null>(null);
 
   const handleResend = async (eventId: string, type: string, payload: unknown) => {
+    capture('sparks.event_resent', { type });
     setResendingId(eventId);
     try {
       await emitEvent.mutateAsync({
@@ -31,17 +34,35 @@ export function EventStreamTab() {
         <Button
           variant={paused ? 'default' : 'secondary'}
           size="sm"
-          onClick={togglePaused}
+          onClick={() => {
+            capture(paused ? 'sparks.stream_resumed' : 'sparks.stream_paused');
+            togglePaused();
+          }}
           className="gap-2"
         >
           {paused ? <Play className="size-4" /> : <Pause className="size-4" />}
           {paused ? t('sparks:actions.resume') : t('sparks:actions.pause')}
         </Button>
-        <Button variant="outline" size="sm" onClick={clear} className="gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            capture('sparks.stream_cleared', { count: events.length });
+            clear();
+          }}
+          className="gap-2"
+        >
           <Trash2 className="size-4" />
           {t('sparks:actions.clear')}
         </Button>
-        <Button size="sm" className="gap-2" onClick={() => setDialogOpen(true)}>
+        <Button
+          size="sm"
+          className="gap-2"
+          onClick={() => {
+            capture('sparks.custom_emit_opened');
+            setDialogOpen(true);
+          }}
+        >
           <Send className="size-4" />
           {t('sparks:actions.emitCustom')}
         </Button>

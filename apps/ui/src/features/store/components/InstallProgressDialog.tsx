@@ -11,6 +11,7 @@ import {
 import { useQueryClient } from '@tanstack/react-query';
 import { Package } from 'lucide-react';
 import { useEffect } from 'react';
+import { useCapture } from '@/features/analytics/hooks';
 import { pluginsKeys } from '@/features/plugins/api';
 import { registryApi, registryKeys } from '@/features/plugins/registry-api';
 import { getProgressValue, useProgressStream } from '@/hooks/use-progress-stream';
@@ -31,6 +32,7 @@ export function InstallProgressDialog({
 }: Readonly<InstallProgressDialogProps>) {
   const { t } = useLocale();
   const queryClient = useQueryClient();
+  const capture = useCapture();
 
   const {
     isProcessing,
@@ -44,7 +46,11 @@ export function InstallProgressDialog({
     start,
     stop,
   } = useProgressStream({
+    onError: () => {
+      capture('store.install_failed', { hasVersion: !!version });
+    },
     onSuccess: () => {
+      capture('plugin.installed', { packageName, version });
       queryClient.invalidateQueries({
         queryKey: pluginsKeys.all,
       });
@@ -67,6 +73,9 @@ export function InstallProgressDialog({
   const handleClose = () => {
     if (isProcessing) {
       return;
+    }
+    if (!success) {
+      capture('store.install_dialog_dismissed', { errored: !!error });
     }
     reset();
     onOpenChange(false);

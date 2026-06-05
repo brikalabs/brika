@@ -1,4 +1,5 @@
 import { cn } from '@brika/clay';
+import { useCapture } from '@/features/analytics/hooks';
 import type { TimeFormat } from '@/lib/time-format';
 import { useLocale } from '@/lib/use-locale';
 
@@ -16,6 +17,7 @@ const OPTIONS: readonly { value: TimeFormat; labelKey: string }[] = [
 
 export function TimeFormatToggle({ className }: Readonly<TimeFormatToggleProps>) {
   const { t, timeFormat, setTimeFormat } = useLocale();
+  const capture = useCapture();
 
   return (
     <div
@@ -34,7 +36,10 @@ export function TimeFormatToggle({ className }: Readonly<TimeFormatToggleProps>)
             type="button"
             role="radio"
             aria-checked={isActive}
-            onClick={() => setTimeFormat(option.value)}
+            onClick={() => {
+              capture('settings.time_format_changed', { format: option.value });
+              setTimeFormat(option.value);
+            }}
             className={cn(
               'rounded-sm px-3 py-1 font-medium text-[12px] transition-all',
               isActive

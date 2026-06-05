@@ -1,6 +1,7 @@
 import { Button, cn } from '@brika/clay';
 import type { Plugin } from '@brika/plugin';
 import { Plus, RefreshCw } from 'lucide-react';
+import { useCapture } from '@/features/analytics/hooks';
 import { useLocale } from '@/lib/use-locale';
 import type { UpdateInfo } from '../registry-api';
 import { UpdateAllButton } from './UpdateAllButton';
@@ -23,6 +24,7 @@ export function PluginsPageHeader({
   onInstallClick,
 }: Readonly<PluginsPageHeaderProps>) {
   const { t } = useLocale();
+  const capture = useCapture();
 
   return (
     <div className="flex items-center justify-between">
@@ -39,14 +41,29 @@ export function PluginsPageHeader({
         <Button
           variant="ghost"
           size="icon"
-          onClick={onRefresh}
+          onClick={() => {
+            capture('plugins.list_refreshed', {
+              pluginCount,
+              updatesAvailable: availableUpdates.length,
+            });
+            onRefresh();
+          }}
           disabled={isLoading}
           className="size-8"
         >
           <RefreshCw className={cn('size-4', isLoading && 'animate-spin')} />
         </Button>
         <UpdateAllButton updates={availableUpdates} plugins={plugins} />
-        <Button size="sm" className="gap-1.5" onClick={onInstallClick}>
+        <Button
+          size="sm"
+          className="gap-1.5"
+          onClick={() => {
+            capture('plugins.install_dialog_opened', {
+              source: 'header',
+            });
+            onInstallClick();
+          }}
+        >
           <Plus className="size-4" />
           {t('plugins:actions.load')}
         </Button>

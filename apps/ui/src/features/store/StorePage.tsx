@@ -2,6 +2,7 @@ import { Card, CardContent } from '@brika/clay';
 import { Package } from 'lucide-react';
 import React from 'react';
 import { useDataView } from '@/components/DataView';
+import { useCapture } from '@/features/analytics/hooks';
 import { useDebouncedState } from '@/hooks/use-debounce';
 import { useLocale } from '@/lib/use-locale';
 import type { FilterValue, SortValue } from './components';
@@ -11,9 +12,20 @@ import type { PluginSearchResult, StorePlugin } from './types';
 
 export function StorePage() {
   const { t, tp } = useLocale();
+  const capture = useCapture();
   const [debouncedSearch, setSearch] = useDebouncedState('', 300);
   const [filter, setFilter] = React.useState<FilterValue>('all');
   const [sort, setSort] = React.useState<SortValue>('downloads');
+
+  const handleFilterChange = (value: FilterValue) => {
+    setFilter(value);
+    capture('store.filter_changed', { filter: value });
+  };
+
+  const handleSortChange = (value: SortValue) => {
+    setSort(value);
+    capture('store.sort_changed', { sort: value });
+  };
 
   const { data: searchData, isLoading } = useStorePlugins({
     q: debouncedSearch,
@@ -122,9 +134,9 @@ export function StorePage() {
       <PluginStoreFilters
         onSearchChange={setSearch}
         filter={filter}
-        onFilterChange={setFilter}
+        onFilterChange={handleFilterChange}
         sort={sort}
-        onSortChange={setSort}
+        onSortChange={handleSortChange}
       />
 
       <View.Root>

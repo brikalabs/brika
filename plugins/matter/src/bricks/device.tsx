@@ -11,6 +11,7 @@
  * Commands are sent via callAction(doDeviceCommand, ...).
  */
 
+import { capture } from '@brika/sdk';
 import { useBrickConfig, useBrickData, useBrickSize } from '@brika/sdk/brick-views';
 import { useLocale } from '@brika/sdk/ui-kit/hooks';
 import clsx from 'clsx';
@@ -171,6 +172,7 @@ export default function DeviceBrick() {
   // ─── Tap handler for micro/strip tappable devices ────────────────────
 
   const handleTap = useCallback(() => {
+    capture('matter.device_brick_tapped', { deviceType: device.deviceType });
     if (device.deviceType === 'lock') {
       sendCommand(device.nodeId, device.state.locked ? 'unlock' : 'lock');
     } else {

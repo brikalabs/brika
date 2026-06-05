@@ -10,6 +10,7 @@ import {
   Workflow,
   Zap,
 } from 'lucide-react';
+import { useCapture } from '@/features/analytics/hooks';
 import { useLocale } from '@/lib/use-locale';
 import { paths } from '@/routes/paths';
 
@@ -58,6 +59,7 @@ interface ConceptCardProps {
 
 function ConceptCard({ concept }: Readonly<ConceptCardProps>) {
   const { t } = useLocale();
+  const capture = useCapture();
   const Icon = concept.icon;
 
   return (
@@ -79,6 +81,7 @@ function ConceptCard({ concept }: Readonly<ConceptCardProps>) {
         {concept.link && (
           <Link
             to={concept.link.to}
+            onClick={() => capture('help.concept_link_opened', { concept: concept.id })}
             className="inline-flex items-center gap-1.5 text-primary text-sm transition-opacity hover:opacity-80"
           >
             {t(concept.link.labelKey)}

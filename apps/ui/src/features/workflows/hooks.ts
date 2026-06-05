@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useCapture } from '@/features/analytics/hooks';
 import * as api from './api';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -65,31 +66,39 @@ export function useWorkflowRuns() {
 
 export function useEnableWorkflow() {
   const qc = useQueryClient();
+  const capture = useCapture();
   return useMutation({
     mutationFn: api.enableWorkflow,
-    onSuccess: () =>
+    onSuccess: (_data, id) => {
+      capture('workflow.enabled', { id });
       qc.invalidateQueries({
         queryKey: ['workflows'],
-      }),
+      });
+    },
   });
 }
 
 export function useDisableWorkflow() {
   const qc = useQueryClient();
+  const capture = useCapture();
   return useMutation({
     mutationFn: api.disableWorkflow,
-    onSuccess: () =>
+    onSuccess: (_data, id) => {
+      capture('workflow.disabled', { id });
       qc.invalidateQueries({
         queryKey: ['workflows'],
-      }),
+      });
+    },
   });
 }
 
 export function useSaveWorkflow() {
   const qc = useQueryClient();
+  const capture = useCapture();
   return useMutation({
     mutationFn: api.saveWorkflow,
     onSuccess: (_data, workflow) => {
+      capture('workflow.saved', { id: workflow.id });
       // Invalidate all workflow queries to ensure fresh data
       qc.invalidateQueries({
         queryKey: ['workflows'],
@@ -104,11 +113,14 @@ export function useSaveWorkflow() {
 
 export function useDeleteWorkflow() {
   const qc = useQueryClient();
+  const capture = useCapture();
   return useMutation({
     mutationFn: api.deleteWorkflow,
-    onSuccess: () =>
+    onSuccess: (_data, id) => {
+      capture('workflow.deleted', { id });
       qc.invalidateQueries({
         queryKey: ['workflows'],
-      }),
+      });
+    },
   });
 }

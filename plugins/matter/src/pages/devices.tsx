@@ -1,3 +1,4 @@
+import { capture } from '@brika/sdk';
 import {
   Avatar,
   AvatarFallback,
@@ -539,6 +540,7 @@ export default function DevicesPage() {
   const typeGroups = groupByType(devices, bridgeIds);
 
   const handleScan = async () => {
+    capture('matter.network_scan_started');
     setScanning(true);
     try {
       await callAction(scan);
@@ -553,6 +555,7 @@ export default function DevicesPage() {
     if (!code) {
       return;
     }
+    capture('matter.device_commissioned');
     setCommissioning(true);
     try {
       await callAction(commission, { pairingCode: code });
@@ -564,6 +567,7 @@ export default function DevicesPage() {
   };
 
   const handleRemove = async (nodeId: string) => {
+    capture('matter.device_removed');
     setRemovingId(nodeId);
     try {
       await callAction(remove, { nodeId });
@@ -571,6 +575,11 @@ export default function DevicesPage() {
     } finally {
       setRemovingId(null);
     }
+  };
+
+  const handleInfo = (device: MatterDevice) => {
+    capture('matter.device_info_opened', { deviceType: device.deviceType });
+    setInfoDevice(device);
   };
 
   if (loading && !data) {
@@ -656,7 +665,7 @@ export default function DevicesPage() {
               devices={groupDevices}
               allDevices={devices}
               onRemove={handleRemove}
-              onInfo={setInfoDevice}
+              onInfo={handleInfo}
               removingId={removingId}
               t={t}
             />
@@ -669,7 +678,7 @@ export default function DevicesPage() {
               devices={bridges}
               allDevices={devices}
               onRemove={handleRemove}
-              onInfo={setInfoDevice}
+              onInfo={handleInfo}
               removingId={removingId}
               t={t}
             />

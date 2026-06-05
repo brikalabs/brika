@@ -9,6 +9,7 @@
  */
 
 import { useCallback, useState } from 'react';
+import { useCapture } from '@/features/analytics/hooks';
 import { COMPONENT_TOKEN_INDEX } from '../clay-tokens';
 import { kebabToCamel } from '../naming';
 import type { ThemeConfig, TokenMap } from '../types';
@@ -22,7 +23,21 @@ interface ComponentsSectionProps {
 }
 
 export function ComponentsSection({ draft, onChange }: Readonly<ComponentsSectionProps>) {
+  const capture = useCapture();
   const [selected, setSelected] = useState<string | null>(null);
+
+  const handleSelect = useCallback(
+    (component: string) => {
+      setSelected(component);
+      capture('theme_builder.component_selected', { component });
+    },
+    [capture]
+  );
+
+  const handleBack = useCallback(() => {
+    setSelected(null);
+    capture('theme_builder.component_closed', {});
+  }, [capture]);
 
   const setComponentToken = useCallback<ComponentTokenSetter>(
     (component, suffix, value) => {
@@ -88,8 +103,9 @@ export function ComponentsSection({ draft, onChange }: Readonly<ComponentsSectio
         components: Object.keys(nextTokens).length === 0 ? undefined : nextTokens,
         colors: { light, dark },
       });
+      capture('theme_builder.component_reset', { component });
     },
-    [draft, onChange]
+    [capture, draft, onChange]
   );
 
   if (selected) {
@@ -97,7 +113,7 @@ export function ComponentsSection({ draft, onChange }: Readonly<ComponentsSectio
       <ComponentDetail
         component={selected}
         draft={draft}
-        onBack={() => setSelected(null)}
+        onBack={handleBack}
         onColorChange={setColor}
         onTokenChange={setComponentToken}
         onResetAll={() => resetComponent(selected)}
@@ -105,5 +121,5 @@ export function ComponentsSection({ draft, onChange }: Readonly<ComponentsSectio
     );
   }
 
-  return <ComponentsList draft={draft} onSelect={setSelected} />;
+  return <ComponentsList draft={draft} onSelect={handleSelect} />;
 }

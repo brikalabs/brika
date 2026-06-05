@@ -3,6 +3,7 @@ import { useNavigate } from '@tanstack/react-router';
 import { ArrowLeft, ArrowRight, Loader2 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useCapture } from '@/features/analytics/hooks';
 
 // ─── Setup paths ────────────────────────────────────────────────────────────
 
@@ -100,6 +101,7 @@ export function StepNav({
 }: Readonly<StepNavProps>) {
   const { t } = useTranslation('setup');
   const navigate = useNavigate();
+  const capture = useCapture();
 
   const handleContinue = async () => {
     if (loading || disabled) {
@@ -124,7 +126,10 @@ export function StepNav({
           variant="ghost"
           size="sm"
           className="-ml-2 gap-1.5 text-muted-foreground hover:text-foreground"
-          onClick={() => navigate({ to: back })}
+          onClick={() => {
+            capture('auth.setup_step_back', { to: back });
+            navigate({ to: back });
+          }}
         >
           <ArrowLeft className="size-3.5" />
           {t('nav.back')}

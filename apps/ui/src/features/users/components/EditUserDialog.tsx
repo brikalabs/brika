@@ -16,6 +16,7 @@ import {
   Switch,
 } from '@brika/clay';
 import { type SubmitEventHandler, useEffect, useState } from 'react';
+import { useCapture } from '@/features/analytics/hooks';
 import { useLocale } from '@/lib/use-locale';
 import type { UserRecord } from '../api';
 import { useUserMutations } from '../hooks';
@@ -52,6 +53,7 @@ interface EditUserDialogProps {
 export function EditUserDialog({ open, onOpenChange, user }: Readonly<EditUserDialogProps>) {
   const { t } = useLocale();
   const { update } = useUserMutations();
+  const capture = useCapture();
 
   const [name, setName] = useState(user.name);
   const [role, setRole] = useState(user.role);
@@ -79,6 +81,7 @@ export function EditUserDialog({ open, onOpenChange, user }: Readonly<EditUserDi
   const isAdmin = role === 'admin';
 
   function handleScopeToggle(scope: string, enabled: boolean) {
+    capture('users.scope_toggled', { category: scopeCategory(scope), enabled });
     setScopes((prev) => (enabled ? [...prev, scope] : prev.filter((s) => s !== scope)));
   }
 
@@ -135,7 +138,13 @@ export function EditUserDialog({ open, onOpenChange, user }: Readonly<EditUserDi
 
           <div className="space-y-2">
             <Label htmlFor="edit-role">{t('users:fields.role')}</Label>
-            <Select value={role} onValueChange={setRole}>
+            <Select
+              value={role}
+              onValueChange={(value) => {
+                capture('users.edit_role_changed', { role: value });
+                setRole(value);
+              }}
+            >
               <SelectTrigger id="edit-role">
                 <SelectValue />
               </SelectTrigger>
@@ -151,7 +160,14 @@ export function EditUserDialog({ open, onOpenChange, user }: Readonly<EditUserDi
 
           <div className="flex items-center justify-between">
             <Label htmlFor="edit-active">{t('users:fields.active')}</Label>
-            <Switch id="edit-active" checked={isActive} onCheckedChange={setIsActive} />
+            <Switch
+              id="edit-active"
+              checked={isActive}
+              onCheckedChange={(checked) => {
+                capture('users.active_toggled', { active: checked });
+                setIsActive(checked);
+              }}
+            />
           </div>
 
           {isAdmin ? (

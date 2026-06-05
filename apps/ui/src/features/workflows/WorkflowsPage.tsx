@@ -1,8 +1,15 @@
-import { Button, Input } from '@brika/clay';
+import {
+  Button,
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupInput,
+} from '@brika/clay';
 import { useNavigate } from '@tanstack/react-router';
-import { AlertTriangle, Plus, Search } from 'lucide-react';
+import { AlertTriangle, Plus, Search, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useDataView } from '@/components/DataView';
+import { useCapture } from '@/features/analytics/hooks';
 import { useLocale } from '@/lib/use-locale';
 import { paths } from '@/routes/paths';
 import type { BlockDefinition, Workflow } from './api';
@@ -24,6 +31,7 @@ import {
 export function WorkflowsPage() {
   const { t } = useLocale();
   const navigate = useNavigate();
+  const capture = useCapture();
   const [search, setSearch] = useState('');
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [debugWorkflow, setDebugWorkflow] = useState<Workflow | null>(null);
@@ -49,6 +57,7 @@ export function WorkflowsPage() {
 
   const confirmDelete = () => {
     if (deleteId) {
+      capture('workflows.delete_confirmed', { id: deleteId });
       deleteMutation.mutate(deleteId);
       setDeleteId(null);
     }
@@ -88,16 +97,34 @@ export function WorkflowsPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <div className="relative">
-            <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
+          <InputGroup className="w-64">
+            <InputGroupAddon>
+              <Search className="size-4" />
+            </InputGroupAddon>
+            <InputGroupInput
               placeholder={t('workflows:search')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-64 pl-9"
             />
-          </div>
-          <Button onClick={() => navigate({ to: paths.workflows.new.path })}>
+            {search && (
+              <InputGroupAddon align="inline-end">
+                <InputGroupButton
+                  variant="ghost"
+                  size="icon-xs"
+                  aria-label={t('common:actions.clear')}
+                  onClick={() => setSearch('')}
+                >
+                  <X className="size-3.5" />
+                </InputGroupButton>
+              </InputGroupAddon>
+            )}
+          </InputGroup>
+          <Button
+            onClick={() => {
+              capture('workflows.create_clicked', { source: 'header' });
+              navigate({ to: paths.workflows.new.path });
+            }}
+          >
             <Plus className="mr-2 size-4" />
             {t('workflows:actions.create')}
           </Button>

@@ -8,6 +8,7 @@ import { Tabs, TabsList, TabsTrigger } from '@brika/clay';
 import { Layout, LayoutDashboard, Moon, Sun } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useCapture } from '@/features/analytics/hooks';
 import type { ThemeConfig } from '../types';
 import { AppScene, LibraryScene } from './preview-scenes';
 import { ThemedSurface } from './ThemedSurface';
@@ -29,13 +30,21 @@ interface PreviewCanvasProps {
 
 export function PreviewCanvas({ theme }: Readonly<PreviewCanvasProps>) {
   const { t } = useTranslation('themeBuilder');
+  const capture = useCapture();
   const [mode, setMode] = useState<'light' | 'dark'>('light');
   const [scene, setScene] = useState<SceneId>('library');
 
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="flex shrink-0 items-center justify-between gap-2 border-b py-2 pr-safe pl-3">
-        <Tabs value={scene} onValueChange={(v) => setScene(v as SceneId)}>
+        <Tabs
+          value={scene}
+          onValueChange={(v) => {
+            const next = v === 'app' ? 'app' : 'library';
+            setScene(next);
+            capture('theme_builder.preview_scene_switched', { scene: next });
+          }}
+        >
           <TabsList className="h-8">
             {SCENES.map(({ id, icon: Icon }) => (
               <TabsTrigger key={id} value={id} className="h-7 gap-1 px-2 text-xs">
@@ -46,7 +55,14 @@ export function PreviewCanvas({ theme }: Readonly<PreviewCanvasProps>) {
           </TabsList>
         </Tabs>
 
-        <Tabs value={mode} onValueChange={(v) => setMode(v === 'dark' ? 'dark' : 'light')}>
+        <Tabs
+          value={mode}
+          onValueChange={(v) => {
+            const next = v === 'dark' ? 'dark' : 'light';
+            setMode(next);
+            capture('theme_builder.preview_mode_switched', { mode: next });
+          }}
+        >
           <TabsList className="h-8">
             <TabsTrigger value="light" className="h-7 gap-1 px-2 text-xs">
               <Sun className="size-3" /> {t('preview.modeLight')}

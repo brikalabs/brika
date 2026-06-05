@@ -4,7 +4,10 @@ import {
   Badge,
   Button,
   cn,
-  Input,
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupInput,
   ScrollArea,
   Skeleton,
   Tooltip,
@@ -28,6 +31,7 @@ import {
 } from 'lucide-react';
 import { DynamicIcon, type IconName } from 'lucide-react/dynamic';
 import { type DragEvent, useMemo, useState } from 'react';
+import { useCapture } from '@/features/analytics/hooks';
 import { useLocale } from '@/lib/use-locale';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -256,6 +260,7 @@ interface BlockToolbarProps {
 
 export function BlockToolbar({ onDragStart, onCollapse, className }: Readonly<BlockToolbarProps>) {
   const { t } = useLocale();
+  const capture = useCapture();
   const [search, setSearch] = useState('');
   const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({});
 
@@ -330,25 +335,31 @@ export function BlockToolbar({ onDragStart, onCollapse, className }: Readonly<Bl
             </Tooltip>
           )}
         </div>
-        <div className="relative">
-          <Search className="absolute top-2.5 left-2.5 size-4 text-muted-foreground" />
-          <Input
+        <InputGroup className="h-9 bg-background">
+          <InputGroupAddon>
+            <Search className="size-4" />
+          </InputGroupAddon>
+          <InputGroupInput
             placeholder={t('workflows:editor.panels.searchBlocks')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className={cn('h-9 bg-background pl-8', search && 'pr-8')}
           />
           {search && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="absolute top-1 right-1 h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
-              onClick={() => setSearch('')}
-            >
-              <X className="size-3.5" />
-            </Button>
+            <InputGroupAddon align="inline-end">
+              <InputGroupButton
+                variant="ghost"
+                size="icon-xs"
+                aria-label={t('common:actions.clear')}
+                onClick={() => {
+                  capture('workflow.block_search_cleared');
+                  setSearch('');
+                }}
+              >
+                <X className="size-3.5" />
+              </InputGroupButton>
+            </InputGroupAddon>
           )}
-        </div>
+        </InputGroup>
       </div>
 
       <ScrollArea className="min-h-0 flex-1 overflow-hidden">
@@ -382,12 +393,16 @@ export function BlockToolbar({ onDragStart, onCollapse, className }: Readonly<Bl
                   <Collapsible
                     key={category.id}
                     open={isOpen}
-                    onOpenChange={(open) =>
+                    onOpenChange={(open) => {
+                      capture('workflow.block_category_toggled', {
+                        category: category.id,
+                        open,
+                      });
                       setOpenCategories((prev) => ({
                         ...prev,
                         [category.id]: open,
-                      }))
-                    }
+                      }));
+                    }}
                   >
                     <CollapsibleTrigger asChild>
                       <button

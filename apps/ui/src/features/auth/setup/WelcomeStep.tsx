@@ -3,11 +3,13 @@ import { BrikaLogo } from '@brika/clay/components/brika-logo';
 import { useNavigate } from '@tanstack/react-router';
 import { ArrowRight, Clock } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useCapture } from '@/features/analytics/hooks';
 import { Eyebrow } from './shared';
 
 export function WelcomeStep() {
   const { t } = useTranslation('setup');
   const navigate = useNavigate();
+  const capture = useCapture();
 
   return (
     <div className="flex flex-col items-center gap-7 px-8 pt-12 pb-10 text-center">
@@ -31,7 +33,10 @@ export function WelcomeStep() {
 
       <div className="flex flex-col items-center gap-4 pt-2">
         <Button
-          onClick={() => navigate({ to: '/setup/language' })}
+          onClick={() => {
+            capture('auth.setup_started');
+            navigate({ to: '/setup/language' });
+          }}
           size="lg"
           className="min-w-[200px] gap-2"
         >

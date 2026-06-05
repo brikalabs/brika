@@ -11,6 +11,7 @@ import {
 import { useQueryClient } from '@tanstack/react-query';
 import { Download, Loader2, Package } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { useCapture } from '@/features/analytics/hooks';
 import { getProgressValue, useProgressStream } from '@/hooks/use-progress-stream';
 import { useLocale } from '@/lib/use-locale';
 import { pluginsKeys } from '../api';
@@ -31,6 +32,7 @@ export function InstallPluginDialog({
 }: Readonly<InstallPluginDialogProps>) {
   const queryClient = useQueryClient();
   const { t } = useLocale();
+  const capture = useCapture();
   const [packageName, setPackageName] = useState(defaultName);
   const [version, setVersion] = useState('');
 
@@ -80,6 +82,7 @@ export function InstallPluginDialog({
       return;
     }
 
+    capture('plugins.install_started', { versionPinned: version.trim().length > 0 });
     start();
 
     try {

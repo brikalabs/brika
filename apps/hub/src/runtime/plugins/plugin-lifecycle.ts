@@ -1,5 +1,6 @@
 import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
+import { Analytics } from '@brika/analytics';
 import { inject, singleton } from '@brika/di';
 import type { LogLevelType } from '@brika/ipc/contract';
 import type { Plugin, PluginHealth } from '@brika/plugin';
@@ -72,6 +73,9 @@ export class PluginLifecycle {
   readonly #bunRunner = inject(BunRunner);
   readonly #brikaInit = inject(BrikaInitializer);
   readonly #logs = inject(Logger).withSource('plugin');
+  // Hub-origin analytics: lifecycle/system events the hub itself observes.
+  // Plugin-origin capture forwarding lives in PluginEventHandler (source 'plugin').
+  readonly #analytics = inject(Analytics);
   readonly #state = inject(StateStore);
   readonly #events = inject(EventSystem);
   readonly #i18n = inject(I18nService);
@@ -85,6 +89,11 @@ export class PluginLifecycle {
   readonly #processes = new Map<string, PluginProcessInstance>();
   readonly #uidIndex = new Map<string, string>(); // uid → plugin name
   readonly #stabilityTimers = new Map<string, Timer>();
+  /**
+   * Per-plugin operation chain. Serializes load/unload for a plugin so
+   * concurrent reloads cannot interleave and leak orphan host processes.
+   */
+  readonly #opChains = new Map<string, Promise<unknown>>();
   readonly #restartPolicy: RestartPolicy;
   readonly #watcher = inject(PluginWatcher);
   /**
@@ -113,11 +122,20 @@ export class PluginLifecycle {
       const uid = process.uid;
       this.load(rootDir, true)
         .then(() => {
+          // Dev-mode hot reload: a source change was detected, the plugin
+          // rebuilt and reloaded. Debounced in the watcher, so this is a
+          // discrete event, not a hot path.
+          this.#analytics.capture('plugin.hot_reloaded', { uid }, { pluginName });
           this.#events.dispatch(PluginActions.reloaded.create({ uid, name: pluginName }, 'hub'));
           // Notify UI about recompiled client-side brick modules
           this.#emitModuleRecompiled(pluginName);
         })
         .catch((e) => {
+          this.#analytics.capture(
+            'plugin.hot_reload_failed',
+            { uid, reason: e instanceof Error ? e.name : 'unknown' },
+            { pluginName }
+          );
           this.#logs.error('Hot reload failed', { pluginName }, { error: e });
         });
     });
@@ -208,8 +226,41 @@ export class PluginLifecycle {
   // Load/Unload
   // ───────────────────────────────────────────────────────────────────────
 
+  /**
+   * Run `fn` after any in-flight load/unload for `key` settles, chaining so
+   * operations on the same plugin never overlap. The tail promise never
+   * rejects, so one failed op does not wedge the chain, and the map entry is
+   * cleaned up once it is the last link.
+   */
+  #serialize<T>(key: string, fn: () => Promise<T>): Promise<T> {
+    const tail = this.#opChains.get(key) ?? Promise.resolve();
+    const run = tail.then(fn, fn);
+    const guarded = run.then(
+      () => undefined,
+      () => undefined
+    );
+    this.#opChains.set(key, guarded);
+    guarded.then(() => {
+      if (this.#opChains.get(key) === guarded) {
+        this.#opChains.delete(key);
+      }
+    });
+    return run;
+  }
+
   async load(moduleId: string, force = false, parent?: string): Promise<void> {
-    const { rootDirectory, entryPoint, metadata } = await this.#resolver.resolve(moduleId, parent);
+    const resolved = await this.#resolver.resolve(moduleId, parent);
+    // Serialize all load/unload work for a given plugin so concurrent reloads
+    // (a burst of source saves each firing the watcher) cannot race to spawn
+    // two host processes and leak one as an orphan.
+    return this.#serialize(resolved.metadata.name, () => this.#loadResolved(resolved, force));
+  }
+
+  async #loadResolved(
+    resolved: Awaited<ReturnType<PluginResolver['resolve']>>,
+    force: boolean
+  ): Promise<void> {
+    const { rootDirectory, entryPoint, metadata } = resolved;
     const pluginName = metadata.name;
 
     if (this.#processes.has(pluginName) && !force) {
@@ -217,7 +268,7 @@ export class PluginLifecycle {
     }
 
     if (force && this.#processes.has(pluginName)) {
-      await this.unload(pluginName, true);
+      await this.#unloadInner(pluginName, true);
       if (this.#processes.has(pluginName)) {
         throw new Error(`Plugin ${pluginName} failed to unload`);
       }
@@ -261,6 +312,11 @@ export class PluginLifecycle {
         pluginName,
         errors: buildResult.errors.join('; '),
       });
+      this.#analytics.capture(
+        'plugin.load_failed',
+        { uid, reason: 'build_failed', errorCount: buildResult.errors.length },
+        { pluginName }
+      );
       // Persist plugin state before setting health so it can be restored later
       this.#state.registerPlugin({ name: pluginName, rootDirectory, entryPoint, uid });
       this.#state.setHealth(pluginName, 'crashed', PluginErrors.buildFailed(buildResult.errors));
@@ -435,7 +491,11 @@ export class PluginLifecycle {
     this.#watcher.watch(pluginName, rootDirectory);
   }
 
-  async unload(name: string, skipRestartReset = false): Promise<void> {
+  unload(name: string, skipRestartReset = false): Promise<void> {
+    return this.#serialize(name, () => this.#unloadInner(name, skipRestartReset));
+  }
+
+  async #unloadInner(name: string, skipRestartReset = false): Promise<void> {
     const process = this.#processes.get(name);
     if (!process) {
       return;
@@ -474,6 +534,7 @@ export class PluginLifecycle {
     this.#logs.info('Plugin unloaded successfully', {
       pluginName: name,
     });
+    this.#analytics.capture('plugin.unloaded', { uid: process.uid }, { pluginName: process.name });
     this.#events.dispatch(
       PluginActions.unloaded.create(
         {
@@ -588,6 +649,11 @@ export class PluginLifecycle {
       timeoutMs: this.#config.heartbeatTimeoutMs,
     });
 
+    this.#analytics.capture(
+      'plugin.crashed',
+      { uid: process.uid, reason: 'heartbeat_timeout', silentMs },
+      { pluginName: process.name }
+    );
     this.#state.setHealth(process.name, 'crashed', PluginErrors.heartbeatTimeout());
     this.#eventHandler.onPluginDisconnected(process.name);
     this.unload(process.name, true)
@@ -614,6 +680,12 @@ export class PluginLifecycle {
     limitBytes: number
   ): void {
     this.#eventHandler.onRssSoftLimitBreached(process.uid, process.name, rssBytes, limitBytes);
+
+    this.#analytics.capture(
+      'plugin.rss_restarted',
+      { uid: process.uid, rssBytes, limitBytes },
+      { pluginName: process.name }
+    );
 
     this.#state.setHealth(process.name, 'crashed', PluginErrors.rssSoftLimit(rssBytes, limitBytes));
 
@@ -646,6 +718,11 @@ export class PluginLifecycle {
       {
         error,
       }
+    );
+    this.#analytics.capture(
+      'plugin.crashed',
+      { uid: process.uid, reason: 'disconnected' },
+      { pluginName: process.name }
     );
     this.#state.setHealth(name, 'crashed', PluginErrors.crashed(reason));
     this.#eventHandler.onPluginDisconnected(name);
@@ -688,6 +765,11 @@ export class PluginLifecycle {
         pluginName: name,
         reason: decision.reason,
       });
+      this.#analytics.capture(
+        'plugin.crash_loop',
+        { uid: this.#state.get(name)?.uid },
+        { pluginName: name }
+      );
       this.#state.setHealth(name, 'crash-loop', PluginErrors.crashLoop(decision.reason));
       return;
     }
@@ -786,6 +868,11 @@ export class PluginLifecycle {
     });
     await this.#i18n.registerPluginTranslations(metadata.name, rootDirectory);
     const required = metadata.engines?.brika;
+    this.#analytics.capture(
+      'plugin.incompatible',
+      { uid: existingUid, hubVersion: HUB_VERSION, hasRequirement: required !== undefined },
+      { pluginName }
+    );
     this.#state.setHealth(
       pluginName,
       'incompatible',

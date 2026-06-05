@@ -10,6 +10,7 @@
  * on the mutating endpoint.
  */
 
+import { Analytics } from '@brika/analytics';
 import { Role } from '@brika/auth';
 import { UserService } from '@brika/auth/server';
 import { Conflict, group, route, UnprocessableEntity } from '@brika/router';
@@ -74,6 +75,14 @@ export const usersRoutes = group({
         if (body.password) {
           await service.setPassword(user.id, body.password);
         }
+
+        // Hub-origin lifecycle signal: a new account was provisioned. Only
+        // emit ids/enums/booleans, never the email, name, or password.
+        inject(Analytics).capture('user.created', {
+          userId: user.id,
+          role: user.role,
+          withPassword: Boolean(body.password),
+        });
 
         return { user: toDto(user) };
       },

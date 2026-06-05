@@ -8,6 +8,7 @@ import {
 } from '@brika/clay';
 import { Check, ChevronDown, MapPin, Navigation } from 'lucide-react';
 import { useState } from 'react';
+import { useCapture } from '@/features/analytics/hooks';
 import { useLocale } from '@/lib/use-locale';
 import { AddressSearch } from './AddressSearch';
 import { useLocationSettings } from './hooks';
@@ -28,6 +29,7 @@ export function LocationSettings() {
     handleSave,
   } = useLocationSettings();
   const [showDetails, setShowDetails] = useState(false);
+  const capture = useCapture();
   const saveLabel = isSaving ? t('common:actions.saving') : t('common:actions.save');
 
   return (
@@ -36,7 +38,15 @@ export function LocationSettings() {
         <div className="flex-1">
           <AddressSearch onSelect={handleAddressSelect} />
         </div>
-        <Button variant="outline" size="sm" onClick={handleDetect} disabled={detecting}>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            capture('settings.location_detect_clicked');
+            handleDetect();
+          }}
+          disabled={detecting}
+        >
           <Navigation className="mr-2 size-4" />
           {detecting ? t('settings:location.detecting') : t('settings:location.detect')}
         </Button>
@@ -66,7 +76,15 @@ export function LocationSettings() {
             </div>
           )}
 
-          <Collapsible open={showDetails} onOpenChange={setShowDetails}>
+          <Collapsible
+            open={showDetails}
+            onOpenChange={(open) => {
+              setShowDetails(open);
+              if (open) {
+                capture('settings.location_details_expanded');
+              }
+            }}
+          >
             <CollapsibleTrigger asChild>
               <Button
                 variant="ghost"

@@ -14,6 +14,7 @@ import {
   Sun,
 } from 'lucide-react';
 import type { KeyboardEvent, MouseEvent } from 'react';
+import { useCapture } from '@/features/analytics/hooks';
 import { useCustomThemes } from '@/features/theme-builder/hooks';
 import { customThemeSelector } from '@/features/theme-builder/runtime';
 import { useTheme } from '@/lib/theme-context';
@@ -23,6 +24,7 @@ import { PageHeader, SettingsSection } from './primitives';
 
 export function AppearancePage() {
   const { t } = useLocale();
+  const capture = useCapture();
   const { theme, mode, resolvedMode, setTheme, setMode } = useTheme();
   const customThemes = useCustomThemes();
 
@@ -48,7 +50,10 @@ export function AppearancePage() {
                 theme={cfg}
                 mode={resolvedMode}
                 selected={theme === cfg.id}
-                onSelect={(target) => setTheme(cfg.id, target)}
+                onSelect={(target) => {
+                  capture('settings.appearance_theme_selected', { theme: cfg.id, custom: false });
+                  setTheme(cfg.id, target);
+                }}
               />
             ))}
           </div>
@@ -66,7 +71,10 @@ export function AppearancePage() {
                 key={option.value}
                 option={option}
                 selected={mode === option.value}
-                onSelect={(e) => setMode(option.value, e)}
+                onSelect={(e) => {
+                  capture('settings.appearance_mode_selected', { mode: option.value });
+                  setMode(option.value, e);
+                }}
                 label={t(`settings:modes.${option.value}`)}
                 description={t(`settings:appearance.mode.${option.value}Description`)}
               />
@@ -81,7 +89,12 @@ export function AppearancePage() {
           description={t('settings:appearance.custom.description')}
           actions={
             <Button asChild size="sm" variant="outline" className="gap-1.5">
-              <Link to={paths.settings.themes.path}>
+              <Link
+                to={paths.settings.themes.path}
+                onClick={() =>
+                  capture('settings.theme_builder_opened', { source: 'header_action' })
+                }
+              >
                 <Sparkles className="size-3.5" />
                 {t('settings:appearance.custom.openBuilder')}
               </Link>
@@ -97,7 +110,12 @@ export function AppearancePage() {
                 {t('settings:appearance.custom.empty')}
               </p>
               <Button asChild size="sm" className="mt-1 gap-1.5">
-                <Link to={paths.settings.themes.path}>
+                <Link
+                  to={paths.settings.themes.path}
+                  onClick={() =>
+                    capture('settings.theme_builder_opened', { source: 'empty_state_cta' })
+                  }
+                >
                   {t('settings:appearance.custom.createCta')}
                   <ArrowRight className="size-3.5" />
                 </Link>
@@ -113,7 +131,10 @@ export function AppearancePage() {
                     theme={ct}
                     mode={resolvedMode}
                     selected={theme === selectorId}
-                    onSelect={(target) => setTheme(selectorId, target)}
+                    onSelect={(target) => {
+                      capture('settings.appearance_theme_selected', { custom: true });
+                      setTheme(selectorId, target);
+                    }}
                   />
                 );
               })}

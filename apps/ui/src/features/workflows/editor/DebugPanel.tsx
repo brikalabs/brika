@@ -16,6 +16,7 @@ import {
 } from '@brika/clay';
 import { ChevronRight, Radio, Trash2, Zap } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import { useCapture } from '@/features/analytics/hooks';
 import { useLocale } from '@/lib/use-locale';
 import type { Workflow } from '../api';
 import {
@@ -42,6 +43,7 @@ interface DebugPanelProps {
 
 export function DebugPanel({ workflow, onCollapse, className }: Readonly<DebugPanelProps>) {
   const { t } = useLocale();
+  const capture = useCapture();
   const [showAll, setShowAll] = useState(false);
   const [filter, setFilter] = useState<DebugFilter>('all');
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -88,7 +90,10 @@ export function DebugPanel({ workflow, onCollapse, className }: Readonly<DebugPa
             size="sm"
             variant="ghost"
             className={cn('h-6 px-2 text-[10px]', showAll && 'bg-muted')}
-            onClick={() => setShowAll(!showAll)}
+            onClick={() => {
+              capture('workflow.debug_panel_scope_toggled', { showAll: !showAll });
+              setShowAll(!showAll);
+            }}
           >
             {t('workflows:debug.all')}
           </Button>
@@ -96,7 +101,10 @@ export function DebugPanel({ workflow, onCollapse, className }: Readonly<DebugPa
             size="sm"
             variant="ghost"
             className="h-6 px-2 text-muted-foreground hover:text-foreground"
-            onClick={clear}
+            onClick={() => {
+              capture('workflow.debug_panel_cleared', { eventCount: events.length });
+              clear();
+            }}
             title={t('workflows:debug.clear')}
           >
             <Trash2 className="size-3" />
@@ -123,7 +131,13 @@ export function DebugPanel({ workflow, onCollapse, className }: Readonly<DebugPa
 
       {/* Filter */}
       <div className="flex items-center justify-between border-b px-3 py-1.5">
-        <EventFilterButtons filter={filter} onChange={setFilter} />
+        <EventFilterButtons
+          filter={filter}
+          onChange={(next) => {
+            capture('workflow.debug_panel_filter_changed', { filter: next });
+            setFilter(next);
+          }}
+        />
       </div>
 
       {/* Events */}

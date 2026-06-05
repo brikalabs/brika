@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useCapture } from '@/features/analytics/hooks';
 import { fetcher } from '@/lib/query';
 
 interface HubTimezoneResponse {
@@ -18,13 +19,15 @@ export function useHubTimezone() {
 
 export function useUpdateHubTimezone() {
   const qc = useQueryClient();
+  const capture = useCapture();
   return useMutation({
     mutationFn: (timezone: string) =>
       fetcher<HubTimezoneResponse>('/api/settings/timezone', {
         method: 'PUT',
         body: JSON.stringify({ timezone }),
       }),
-    onSuccess: () => {
+    onSuccess: (_data, timezone) => {
+      capture('settings.timezone_updated', { timezone });
       qc.invalidateQueries({
         queryKey: timezoneKeys.all,
       });

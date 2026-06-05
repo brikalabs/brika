@@ -10,6 +10,7 @@ import { Link } from '@tanstack/react-router';
 import type { LucideIcon } from 'lucide-react';
 import { ChevronDown, RefreshCw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useCapture } from '@/features/analytics/hooks';
 
 interface ErrorLayoutProps {
   icon: LucideIcon;
@@ -31,8 +32,19 @@ function ErrorDebugPanel({
 }: Readonly<{
   error: Error;
 }>) {
+  const capture = useCapture();
+
   return (
-    <Collapsible className="w-full max-w-lg">
+    <Collapsible
+      className="w-full max-w-lg"
+      onOpenChange={(open) => {
+        if (open) {
+          capture('error.details_expanded', {
+            name: error.name,
+          });
+        }
+      }}
+    >
       <CollapsibleTrigger className="group flex w-full items-center justify-center gap-1.5 text-muted-foreground/60 text-xs transition-colors hover:text-muted-foreground">
         <span className="font-mono">Details</span>
         <ChevronDown className="size-3 transition-transform group-data-[state=open]:rotate-180" />
@@ -76,7 +88,15 @@ export function ErrorLayout({
   showGoHome = true,
 }: Readonly<ErrorLayoutProps>) {
   const { t } = useTranslation();
+  const capture = useCapture();
   const hasActions = onRetry || showGoHome;
+
+  const handleRetry = () => {
+    capture('error.retry_clicked', {
+      code: code ?? null,
+    });
+    onRetry?.();
+  };
 
   return (
     <div
@@ -111,14 +131,19 @@ export function ErrorLayout({
             <Separator className="w-16" />
             <div className="flex gap-3">
               {onRetry && (
-                <Button variant="outline" onClick={onRetry}>
+                <Button variant="outline" onClick={handleRetry}>
                   <RefreshCw className="size-4" />
                   {t('common:errors.tryAgain')}
                 </Button>
               )}
               {showGoHome && (
                 <Button asChild variant={onRetry ? 'ghost' : 'outline'}>
-                  <Link to="/">{t('common:errors.goHome')}</Link>
+                  <Link
+                    to="/"
+                    onClick={() => capture('error.go_home_clicked', { code: code ?? null })}
+                  >
+                    {t('common:errors.goHome')}
+                  </Link>
                 </Button>
               )}
             </div>

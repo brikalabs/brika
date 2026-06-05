@@ -22,6 +22,9 @@ import { now } from './utils';
 export class PluginEventHandler {
   readonly #logs = inject(Logger).withSource('plugin');
   readonly #analytics = inject(Analytics).withSource('plugin');
+  // Hub-origin analytics for lifecycle/system events the hub observes,
+  // distinct from the plugin-origin forwarding in `onPluginCapture`.
+  readonly #hubAnalytics = inject(Analytics);
   readonly #events = inject(EventSystem);
   readonly #state = inject(StateStore);
   readonly #blocks = inject(BlockRegistry);
@@ -72,6 +75,11 @@ export class PluginEventHandler {
       version: process.version,
       pid: process.pid,
     });
+    this.#hubAnalytics.capture(
+      'plugin.loaded',
+      { uid: process.uid, version: process.version },
+      { pluginName: process.name }
+    );
     this.#events.dispatch(
       PluginActions.loaded.create(
         {

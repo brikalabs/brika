@@ -9,6 +9,7 @@
  *   - POST   /api/remote-access/test-coordinator probe the configured coordinator's /v1/health
  */
 
+import { Analytics } from '@brika/analytics';
 import { group, route } from '@brika/router';
 import { z } from 'zod';
 import { RemoteAccessClaimError, RemoteAccessService } from '@/runtime/remote-access';
@@ -45,7 +46,11 @@ export const remoteAccessRoutes = group({
       body: PatchSchema,
       handler: async ({ body, inject }) => {
         try {
-          return await inject(RemoteAccessService).setCoordinatorOrigin(body.coordinatorOrigin);
+          const result = await inject(RemoteAccessService).setCoordinatorOrigin(
+            body.coordinatorOrigin
+          );
+          inject(Analytics).capture('remote_access.coordinator_changed');
+          return result;
         } catch (err) {
           return handleClaimError(err);
         }
@@ -59,6 +64,7 @@ export const remoteAccessRoutes = group({
       handler: async ({ body, inject }) => {
         try {
           const result = await inject(RemoteAccessService).claim(body.name);
+          inject(Analytics).capture('remote_access.claimed');
           return { ok: true, ...result };
         } catch (err) {
           return handleClaimError(err);
@@ -80,6 +86,7 @@ export const remoteAccessRoutes = group({
       path: '/',
       handler: async ({ inject }) => {
         const result = await inject(RemoteAccessService).forget();
+        inject(Analytics).capture('remote_access.forgotten');
         return { ok: true, ...result };
       },
     }),

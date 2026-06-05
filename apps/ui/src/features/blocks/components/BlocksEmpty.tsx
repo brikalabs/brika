@@ -1,6 +1,7 @@
 import { Button, Card } from '@brika/clay';
 import { useNavigate } from '@tanstack/react-router';
 import { Blocks, Plug, Search } from 'lucide-react';
+import { useCapture } from '@/features/analytics/hooks';
 import { useLocale } from '@/lib/use-locale';
 import { paths } from '@/routes/paths';
 
@@ -11,6 +12,7 @@ interface BlocksEmptyProps {
 export function BlocksEmpty({ hasSearch }: Readonly<BlocksEmptyProps>) {
   const { t } = useLocale();
   const navigate = useNavigate();
+  const capture = useCapture();
 
   const Icon = hasSearch ? Search : Blocks;
 
@@ -31,7 +33,12 @@ export function BlocksEmpty({ hasSearch }: Readonly<BlocksEmptyProps>) {
             {t('blocks:emptyDescription')}
           </p>
           <div className="mt-4">
-            <Button onClick={() => navigate({ to: paths.plugins.list.path })}>
+            <Button
+              onClick={() => {
+                capture('blocks.install_plugin_clicked');
+                navigate({ to: paths.plugins.list.path });
+              }}
+            >
               <Plug className="mr-2 size-4" />
               {t('blocks:installPlugin')}
             </Button>

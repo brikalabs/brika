@@ -3,7 +3,10 @@ import {
   AvatarFallback,
   AvatarImage,
   Button,
-  Input,
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupInput,
   Select,
   SelectContent,
   SelectItem,
@@ -12,6 +15,7 @@ import {
 } from '@brika/clay';
 import type { Plugin } from '@brika/plugin';
 import { Filter, Plug, Search, X } from 'lucide-react';
+import { useCapture } from '@/features/analytics/hooks';
 import { useLocale } from '@/lib/use-locale';
 import { pluginsApi } from '../../plugins/api';
 
@@ -43,21 +47,46 @@ export function BlocksFilters({
   getPlugin,
 }: Readonly<BlocksFiltersProps>) {
   const { t, tp } = useLocale();
+  const capture = useCapture();
 
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-      <div className="relative flex-1 sm:max-w-sm">
-        <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
+      <InputGroup className="flex-1 sm:max-w-sm">
+        <InputGroupAddon>
+          <Search className="size-4" />
+        </InputGroupAddon>
+        <InputGroupInput
           placeholder={t('blocks:search')}
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
-          className="w-full pl-9"
         />
-      </div>
+        {search && (
+          <InputGroupAddon align="inline-end">
+            <InputGroupButton
+              variant="ghost"
+              size="icon-xs"
+              aria-label={t('common:actions.clear')}
+              onClick={() => onSearchChange('')}
+            >
+              <X className="size-3.5" />
+            </InputGroupButton>
+          </InputGroupAddon>
+        )}
+      </InputGroup>
 
       <div className="flex flex-wrap gap-2">
-        <Select value={pluginFilter} onValueChange={onPluginFilterChange}>
+        <Select
+          value={pluginFilter}
+          onOpenChange={(open) => {
+            if (open) {
+              capture('blocks.filter_opened', { filter: 'plugin', optionCount: pluginIds.length });
+            }
+          }}
+          onValueChange={(value) => {
+            capture('blocks.filter_changed', { filter: 'plugin', cleared: value === 'all' });
+            onPluginFilterChange(value);
+          }}
+        >
           <SelectTrigger className="w-52">
             <Plug className="mr-2 size-4 text-muted-foreground" />
             <SelectValue placeholder={t('blocks:filters.plugin')} />
@@ -85,7 +114,21 @@ export function BlocksFilters({
           </SelectContent>
         </Select>
 
-        <Select value={categoryFilter} onValueChange={onCategoryFilterChange}>
+        <Select
+          value={categoryFilter}
+          onOpenChange={(open) => {
+            if (open) {
+              capture('blocks.filter_opened', {
+                filter: 'category',
+                optionCount: categories.length,
+              });
+            }
+          }}
+          onValueChange={(value) => {
+            capture('blocks.filter_changed', { filter: 'category', cleared: value === 'all' });
+            onCategoryFilterChange(value);
+          }}
+        >
           <SelectTrigger className="w-40">
             <Filter className="mr-2 size-4 text-muted-foreground" />
             <SelectValue placeholder={t('blocks:filters.category')} />
@@ -101,7 +144,15 @@ export function BlocksFilters({
         </Select>
 
         {hasActiveFilters && (
-          <Button variant="ghost" size="sm" onClick={onClear} className="gap-1.5">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              capture('blocks.filters_cleared');
+              onClear();
+            }}
+            className="gap-1.5"
+          >
             <X className="size-4" />
             {t('common:actions.clearFilters')}
           </Button>

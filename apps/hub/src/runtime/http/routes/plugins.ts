@@ -1,3 +1,4 @@
+import { Analytics } from '@brika/analytics';
 import type { Plugin } from '@brika/plugin';
 import { group, route, UnprocessableEntity } from '@brika/router';
 import { z } from 'zod';
@@ -44,6 +45,7 @@ const createPluginAction = (
     }),
     handler: async ({ params, inject }) => {
       await inject(PluginManager)[action](params.uid);
+      inject(Analytics).capture('plugin.lifecycle_action', { action, uid: params.uid });
       return {
         ok: true,
       };
@@ -72,6 +74,11 @@ export const pluginsRoutes = group({
       }),
       handler: async ({ body, inject }) => {
         await inject(PluginManager).load(body.ref);
+        // Classify the ref rather than emitting it raw: a local ref can be a
+        // filesystem path that embeds the operator's username.
+        inject(Analytics).capture('plugin.loaded_by_ref', {
+          local: body.ref.startsWith('.') || body.ref.startsWith('/') || body.ref.includes(':\\'),
+        });
         return {
           ok: true,
         };
@@ -287,6 +294,11 @@ export const pluginsRoutes = group({
           }
         }
 
+        inject(Analytics).capture('plugin.config_updated', {
+          uid: plugin.uid,
+          fieldCount: Object.keys(body).length,
+        });
+
         return {
           values: await configService.getConfigForApi(plugin.name),
         };
@@ -312,6 +324,11 @@ export const pluginsRoutes = group({
         // toggle takes effect on the very next `ctx.*` call — no plugin
         // restart needed for the hub-side check.
         inject(PluginLifecycle).getProcess(plugin.name)?.invalidateVector();
+        inject(Analytics).capture('plugin.permission_toggled', {
+          uid: plugin.uid,
+          permission: body.permission,
+          granted: body.granted,
+        });
         return {
           grantedPermissions: updated,
         };
@@ -387,6 +404,8 @@ export const pluginsRoutes = group({
         } catch {
           // Package might not exist in registry (e.g., workspace plugin)
         }
+
+        inject(Analytics).capture('plugin.uninstalled', { uid: plugin.uid });
 
         return {
           ok: true,

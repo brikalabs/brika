@@ -1,11 +1,13 @@
 import { Badge, Button, ButtonGroup } from '@brika/clay';
 import { Loader2, Power, RefreshCw } from 'lucide-react';
+import { useCapture } from '@/features/analytics/hooks';
 import { useLocale } from '@/lib/use-locale';
 import { useSystem } from '../../hooks';
 import { useHubControl } from './hooks';
 
 export function HubControlSection() {
   const { t } = useLocale();
+  const capture = useCapture();
   const { data: system } = useSystem();
   const { state, setState, busy, handleRestart, handleStop } = useHubControl();
 
@@ -30,18 +32,41 @@ export function HubControlSection() {
 
       {state !== 'restarting' && state !== 'stopped' && (
         <div className="flex flex-wrap items-center gap-2">
-          <Button variant="outline" size="sm" onClick={handleRestart} disabled={busy}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              capture('settings.hub_restart_clicked');
+              handleRestart();
+            }}
+            disabled={busy}
+          >
             <RefreshCw />
             {t('settings:hubControl.restart')}
           </Button>
 
           {state === 'confirmStop' ? (
             <ButtonGroup>
-              <Button variant="destructive" size="sm" onClick={handleStop} disabled={busy}>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => {
+                  capture('settings.hub_stop_confirmed');
+                  handleStop();
+                }}
+                disabled={busy}
+              >
                 <Power />
                 {t('settings:hubControl.confirmStop')}
               </Button>
-              <Button variant="outline" size="sm" onClick={() => setState('idle')}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  capture('settings.hub_stop_cancelled');
+                  setState('idle');
+                }}
+              >
                 {t('common:actions.cancel')}
               </Button>
             </ButtonGroup>
@@ -49,7 +74,10 @@ export function HubControlSection() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setState('confirmStop')}
+              onClick={() => {
+                capture('settings.hub_stop_requested');
+                setState('confirmStop');
+              }}
               disabled={busy}
             >
               <Power />

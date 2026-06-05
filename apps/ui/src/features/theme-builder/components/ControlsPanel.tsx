@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@brika/clay';
 import { Palette as PaletteIcon, Sliders } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useCapture } from '@/features/analytics/hooks';
 import type { ThemeConfig } from '../types';
 import { DesignTab } from './DesignTab';
 import { MetaHeader } from './MetaHeader';
@@ -22,6 +23,7 @@ interface ControlsPanelProps {
 
 export function ControlsPanel({ draft, onChange }: Readonly<ControlsPanelProps>) {
   const { t } = useTranslation('themeBuilder');
+  const capture = useCapture();
   const [tab, setTab] = useState<'design' | 'palette'>('design');
 
   const updateFontSans = (sans: string) =>
@@ -37,7 +39,11 @@ export function ControlsPanel({ draft, onChange }: Readonly<ControlsPanelProps>)
 
       <Tabs
         value={tab}
-        onValueChange={(v) => setTab(v === 'palette' ? 'palette' : 'design')}
+        onValueChange={(v) => {
+          const next = v === 'palette' ? 'palette' : 'design';
+          setTab(next);
+          capture('theme_builder.tab_switched', { tab: next });
+        }}
         className="flex min-h-0 flex-1 flex-col"
       >
         <TabsList className="mx-3 mt-2 grid shrink-0 grid-cols-2">

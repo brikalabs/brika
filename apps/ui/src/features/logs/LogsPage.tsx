@@ -1,6 +1,7 @@
 import { Badge, Button, Card, CardContent } from "@brika/clay";
 import { Download, Pause, Play, Radio, RefreshCw, Trash2 } from "lucide-react";
 import React from "react";
+import { useCapture } from "@/features/analytics/hooks";
 import { useLocale } from "@/lib/use-locale";
 import { LogFilterBar } from "./components/LogFilterBar";
 import { LogList } from "./components/LogList";
@@ -8,6 +9,7 @@ import { useLogs } from "./hooks";
 
 export function LogsPage() {
   const { t } = useLocale();
+  const capture = useCapture();
   const {
     logs,
     newLogsCount,
@@ -36,6 +38,7 @@ export function LogsPage() {
   } = useLogs();
 
   const handleExport = () => {
+    capture("logs.exported", { count: logs.length });
     const content = logs
       .map((l) => {
         const pluginSuffix = l.pluginName ? `:${l.pluginName}` : "";
@@ -53,7 +56,19 @@ export function LogsPage() {
   const handleClear = async () => {
     if (confirm(t("logs:confirmClear"))) {
       await clear({});
+    } else {
+      capture("logs.clear_cancelled");
     }
+  };
+
+  const handleTogglePaused = () => {
+    capture("logs.stream_toggled", { paused: !paused });
+    togglePaused();
+  };
+
+  const handleRefresh = () => {
+    capture("logs.refreshed");
+    refetch();
   };
 
   return (
@@ -68,12 +83,12 @@ export function LogsPage() {
         </div>
 
         <div className="flex gap-2">
-          <Button variant={paused ? "default" : "secondary"} onClick={togglePaused} className="gap-2">
+          <Button variant={paused ? "default" : "secondary"} onClick={handleTogglePaused} className="gap-2">
             {paused ? <Play className="size-4" /> : <Pause className="size-4" />}
             {paused ? t("logs:actions.resume") : t("logs:actions.pause")}
           </Button>
 
-          <Button variant="secondary" onClick={() => refetch()} className="gap-2">
+          <Button variant="secondary" onClick={handleRefresh} className="gap-2">
             <RefreshCw className="size-4" />
             {t("common:actions.refresh")}
           </Button>

@@ -6,8 +6,9 @@
 import { Button } from '@brika/clay';
 import type { TokenCategory } from '@brika/clay/tokens';
 import { ArrowLeft, RotateCcw } from 'lucide-react';
-import { type ReactNode, useEffect, useState } from 'react';
+import { type ReactNode, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useCapture } from '@/features/analytics/hooks';
 import { CATEGORY_ICONS, identityFor } from '../clay-component-identity';
 import { CATEGORY_ORDER, COMPONENT_TOKEN_INDEX, tokensByCategoryFor } from '../clay-tokens';
 import type { ThemeConfig } from '../types';
@@ -34,7 +35,17 @@ export function ComponentDetail({
   onResetAll,
 }: Readonly<ComponentDetailProps>) {
   const { t } = useTranslation('themeBuilder');
+  const capture = useCapture();
   const [mode, setMode] = useState<PreviewMode>('light');
+
+  const handleModeChange = useCallback(
+    (next: PreviewMode) => {
+      setMode(next);
+      capture('theme_builder.component_preview_mode_switched', { mode: next, component });
+    },
+    [capture, component]
+  );
+
   const totalOverrides = countOverrides(draft, component);
   const grouped = tokensByCategoryFor(component);
   const meta = identityFor(component);
@@ -97,7 +108,7 @@ export function ComponentDetail({
         </div>
       </header>
 
-      <PreviewStage draft={draft} mode={mode} onModeChange={setMode}>
+      <PreviewStage draft={draft} mode={mode} onModeChange={handleModeChange}>
         {Preview ? <Preview /> : <PreviewPlaceholder />}
       </PreviewStage>
 

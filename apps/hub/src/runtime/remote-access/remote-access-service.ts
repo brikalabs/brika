@@ -25,6 +25,7 @@
  * does not block hub startup.
  */
 
+import { Analytics } from '@brika/analytics';
 import { inject, singleton } from '@brika/di';
 import {
   DEFAULT_ICE_SERVERS,
@@ -128,6 +129,7 @@ function parseRemoteClaim(raw: string | undefined): { name: string; token: strin
 export class RemoteAccessService {
   readonly #config = inject(HubConfig);
   readonly #log = inject(Logger).withSource('remote-access');
+  readonly #analytics = inject(Analytics);
   readonly #apiServer = inject(ApiServer);
   readonly #secrets = inject(SecretStore);
   readonly #sessions = new Map<string, { session: PeerSession; rpc: RpcServer }>();
@@ -190,6 +192,7 @@ export class RemoteAccessService {
       throw new RemoteAccessClaimError(400, 'invalid-url', `"${origin}" is not a valid URL`);
     }
     await this.#secrets.setHubSecret(COORDINATOR_ORIGIN_KEY, normalized);
+    this.#analytics.capture('remote_access.coordinator_set');
     // Bounce so any active signaling client picks up the new URL.
     this.stop();
     await this.start();
@@ -348,6 +351,7 @@ export class RemoteAccessService {
       { name: trimmed }
     );
     await this.#writeIdentity(body);
+    this.#analytics.capture('remote_access.name_claimed');
 
     this.stop();
     await this.start();
@@ -393,8 +397,11 @@ export class RemoteAccessService {
     const removedName = await this.#secrets.deleteHubSecret(SIGNALING_NAME_KEY);
     this.#activeName = '';
 
+    const removed = removedCombined || removedToken || removedName;
+    this.#analytics.capture('remote_access.name_released', { removed, coordinatorReleased });
+
     return {
-      removed: removedCombined || removedToken || removedName,
+      removed,
       coordinatorReleased,
     };
   }
@@ -558,6 +565,9 @@ export class RemoteAccessService {
           sessionId,
           remaining: this.#sessions.size,
         });
+        this.#analytics.capture('remote_access.session_disconnected', {
+          activeSessions: this.#sessions.size,
+        });
       },
       onRpc: (frame, sender) => rpc.handle(frame, sender),
     });
@@ -566,6 +576,9 @@ export class RemoteAccessService {
 
     try {
       await session.acceptOffer(offerSdp);
+      this.#analytics.capture('remote_access.session_connected', {
+        activeSessions: this.#sessions.size,
+      });
     } catch (err) {
       this.#log.error('failed to accept session offer', {
         sessionId,

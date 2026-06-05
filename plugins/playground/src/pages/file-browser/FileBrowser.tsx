@@ -1,3 +1,4 @@
+import { capture } from '@brika/sdk';
 import { type DragEvent, useCallback, useState } from 'react';
 import { EntryList } from './components/EntryList';
 import { NewFolderInput } from './components/NewFolderInput';
@@ -54,6 +55,7 @@ export function FileBrowser() {
     if (preview.kind === 'none') {
       return;
     }
+    capture('playground.file_downloaded', { source: 'preview' });
     downloadEntry({
       name: preview.name,
       isFile: true,
@@ -62,6 +64,43 @@ export function FileBrowser() {
       mtime: 0,
     });
   }, [preview, downloadEntry]);
+
+  const handleSortChange = useCallback((key: SortKey) => {
+    capture('playground.files_sorted', { sortKey: key });
+    setSortKey(key);
+  }, []);
+
+  const handleNavigate = useCallback(
+    (name: string) => {
+      capture('playground.folder_opened');
+      setCurrentPath(joinPath(currentPath, name));
+    },
+    [currentPath]
+  );
+
+  const handlePreviewOpen = useCallback(
+    (entry: FsEntry) => {
+      capture('playground.file_preview_opened');
+      openPreview(entry);
+    },
+    [openPreview]
+  );
+
+  const handleEntryDownload = useCallback(
+    (entry: FsEntry) => {
+      capture('playground.file_downloaded', { source: 'list' });
+      downloadEntry(entry);
+    },
+    [downloadEntry]
+  );
+
+  const handleEntryDelete = useCallback(
+    (entry: FsEntry) => {
+      capture('playground.file_delete_requested', { isDirectory: entry.isDirectory });
+      deleteEntry(entry);
+    },
+    [deleteEntry]
+  );
 
   function handleDragOver(e: DragEvent<HTMLDivElement>) {
     e.preventDefault();
@@ -72,6 +111,7 @@ export function FileBrowser() {
     e.preventDefault();
     setDragOver(false);
     if (e.dataTransfer.files.length > 0) {
+      capture('playground.files_uploaded', { source: 'drop', count: e.dataTransfer.files.length });
       upload(e.dataTransfer.files, currentPath);
     }
   }
@@ -92,9 +132,15 @@ export function FileBrowser() {
         sortKey={sortKey}
         newFolderDisabled={newFolderMode}
         onNavigate={setCurrentPath}
-        onSortChange={setSortKey}
-        onNewFolder={() => setNewFolderMode(true)}
-        onUpload={(files) => upload(files, currentPath)}
+        onSortChange={handleSortChange}
+        onNewFolder={() => {
+          capture('playground.new_folder_started');
+          setNewFolderMode(true);
+        }}
+        onUpload={(files) => {
+          capture('playground.files_uploaded', { source: 'picker', count: files.length });
+          upload(files, currentPath);
+        }}
       />
 
       {/*
@@ -134,10 +180,10 @@ export function FileBrowser() {
             entries={sortedEntries}
             loading={loading}
             dragOver={dragOver}
-            onNavigate={(name) => setCurrentPath(joinPath(currentPath, name))}
-            onPreview={openPreview}
-            onDownload={downloadEntry}
-            onDelete={deleteEntry}
+            onNavigate={handleNavigate}
+            onPreview={handlePreviewOpen}
+            onDownload={handleEntryDownload}
+            onDelete={handleEntryDelete}
           />
         </section>
 

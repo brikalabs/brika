@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo } from 'react';
+import { useCapture } from '@/features/analytics/hooks';
 import { pluginsApi, pluginsKeys } from './api';
 import { registryApi, registryKeys, type UpdateInfo } from './registry-api';
 
@@ -51,35 +52,40 @@ export function usePluginReadme(uid: string) {
 
 export function usePluginMutations() {
   const qc = useQueryClient();
+  const capture = useCapture();
   const invalidate = () =>
     qc.invalidateQueries({
       queryKey: pluginsKeys.all,
     });
+  const onSuccess = (event: string) => (_data: unknown, target: string) => {
+    capture(event, { target });
+    invalidate();
+  };
 
   return {
     load: useMutation({
       mutationFn: pluginsApi.load,
-      onSuccess: invalidate,
+      onSuccess: onSuccess('plugin.loaded'),
     }),
     enable: useMutation({
       mutationFn: pluginsApi.enable,
-      onSuccess: invalidate,
+      onSuccess: onSuccess('plugin.enabled'),
     }),
     disable: useMutation({
       mutationFn: pluginsApi.disable,
-      onSuccess: invalidate,
+      onSuccess: onSuccess('plugin.disabled'),
     }),
     reload: useMutation({
       mutationFn: pluginsApi.reload,
-      onSuccess: invalidate,
+      onSuccess: onSuccess('plugin.reloaded'),
     }),
     kill: useMutation({
       mutationFn: pluginsApi.kill,
-      onSuccess: invalidate,
+      onSuccess: onSuccess('plugin.killed'),
     }),
     uninstall: useMutation({
       mutationFn: pluginsApi.uninstall,
-      onSuccess: invalidate,
+      onSuccess: onSuccess('plugin.uninstalled'),
     }),
   };
 }
@@ -94,24 +100,30 @@ export function usePluginConfig(uid: string) {
 
 export function usePluginConfigMutation(uid: string) {
   const qc = useQueryClient();
+  const capture = useCapture();
   return useMutation({
     mutationFn: (config: Record<string, unknown>) => pluginsApi.setConfig(uid, config),
-    onSuccess: () =>
+    onSuccess: () => {
+      capture('plugin.config_updated', { uid });
       qc.invalidateQueries({
         queryKey: pluginsKeys.config(uid),
-      }),
+      });
+    },
   });
 }
 
 export function useTogglePermission(uid: string) {
   const qc = useQueryClient();
+  const capture = useCapture();
   return useMutation({
     mutationFn: ({ permission, granted }: { permission: string; granted: boolean }) =>
       pluginsApi.togglePermission(uid, permission, granted),
-    onSuccess: () =>
+    onSuccess: (_data, { permission, granted }) => {
+      capture('plugin.permission_toggled', { uid, permission, granted });
       qc.invalidateQueries({
         queryKey: pluginsKeys.detail(uid),
-      }),
+      });
+    },
   });
 }
 

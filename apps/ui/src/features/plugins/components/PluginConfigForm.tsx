@@ -1,6 +1,7 @@
 import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@brika/clay';
 import { Settings } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { useCapture } from '@/features/analytics/hooks';
 import { useLocale } from '@/lib/use-locale';
 import { usePluginConfig, usePluginConfigMutation } from '../hooks';
 import { PreferenceField } from './PreferenceField';
@@ -14,6 +15,7 @@ export function PluginConfigForm({ pluginUid, pluginName }: Readonly<Props>) {
   const { data, isLoading } = usePluginConfig(pluginUid);
   const mutation = usePluginConfigMutation(pluginUid);
   const { t, tp } = useLocale();
+  const capture = useCapture();
   const [values, setValues] = useState<Record<string, unknown>>({});
   const [isDirty, setIsDirty] = useState(false);
 
@@ -59,6 +61,7 @@ export function PluginConfigForm({ pluginUid, pluginName }: Readonly<Props>) {
   };
 
   const handleReset = () => {
+    capture('plugins.config_reset');
     setValues({});
     setIsDirty(false);
   };

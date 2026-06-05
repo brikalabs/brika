@@ -48,6 +48,7 @@ import {
 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useMemo, useState } from 'react';
+import { useCapture } from '@/features/analytics/hooks';
 import { fetcher } from '@/lib/query';
 import { useLocale } from '@/lib/use-locale';
 import type { BlockNodeData, BlockPort } from './BlockNode';
@@ -190,16 +191,19 @@ function ExpressionField({
   placeholder,
   multiline,
 }: Readonly<ExpressionFieldProps>) {
+  const capture = useCapture();
   const [showVars, setShowVars] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
 
   const insertVariable = (varName: string) => {
+    capture('workflow.config_variable_inserted');
     const expr = `{{ ${varName} }}`;
     onChange(value + expr);
     setShowVars(false);
   };
 
   const copyVariable = (varName: string) => {
+    capture('workflow.config_variable_copied', { surface: 'expression_field' });
     navigator.clipboard.writeText(`{{ ${varName} }}`);
     setCopied(varName);
     setTimeout(() => setCopied(null), 1500);
@@ -221,7 +225,14 @@ function ExpressionField({
           variant="ghost"
           size="sm"
           className="absolute top-1 right-1 h-7 w-7 p-0"
-          onClick={() => setShowVars(!showVars)}
+          onClick={() => {
+            if (!showVars) {
+              capture('workflow.config_variable_picker_opened', {
+                variableCount: variables.length,
+              });
+            }
+            setShowVars(!showVars);
+          }}
           title="Insert variable"
         >
           <Sparkles className="size-4 text-primary" />
@@ -291,9 +302,11 @@ function KeyValueEditor({
   keyPlaceholder = 'key',
   valuePlaceholder = 'value',
 }: Readonly<KeyValueEditorProps>) {
+  const capture = useCapture();
   const entries = Object.entries(value || {});
 
   const addEntry = () => {
+    capture('workflow.config_kv_added', { count: entries.length + 1 });
     const newKey = `key${entries.length + 1}`;
     onChange({
       ...value,
@@ -302,6 +315,7 @@ function KeyValueEditor({
   };
 
   const removeEntry = (key: string) => {
+    capture('workflow.config_kv_removed', { count: entries.length - 1 });
     const newValue = {
       ...value,
     };
@@ -1126,6 +1140,7 @@ interface VariablesReferenceProps {
 
 function VariablesReference({ variables }: Readonly<VariablesReferenceProps>) {
   const { t } = useLocale();
+  const capture = useCapture();
 
   if (variables.length === 0) {
     return null;
@@ -1145,7 +1160,10 @@ function VariablesReference({ variables }: Readonly<VariablesReferenceProps>) {
               type="button"
               key={v.name}
               className="flex w-full cursor-pointer items-center justify-between rounded-md border-none bg-muted/50 p-2 text-left font-inherit text-xs transition-colors hover:bg-muted"
-              onClick={() => navigator.clipboard.writeText(`{{ ${v.name} }}`)}
+              onClick={() => {
+                capture('workflow.config_variable_copied', { surface: 'reference_list' });
+                navigator.clipboard.writeText(`{{ ${v.name} }}`);
+              }}
               title={t('workflows:editor.panels.clickToCopy')}
             >
               <code className="font-mono text-primary">{`{{ ${v.name} }}`}</code>

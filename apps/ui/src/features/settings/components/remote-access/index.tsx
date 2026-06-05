@@ -25,6 +25,7 @@ import {
   XCircle,
 } from 'lucide-react';
 import { memo, type SyntheticEvent, useEffect, useState } from 'react';
+import { useCapture } from '@/features/analytics/hooks';
 import { useLocale } from '@/lib/use-locale';
 import {
   type RemoteAccessStatus,
@@ -64,6 +65,7 @@ function CoordinatorEditor({
   onSaved,
 }: Readonly<{ coordinatorOrigin: string; onSaved?: () => void }>) {
   const { t } = useLocale();
+  const capture = useCapture();
   const set = useSetCoordinatorOrigin();
   const test = useTestCoordinator();
   const [editing, setEditing] = useState(false);
@@ -81,6 +83,7 @@ function CoordinatorEditor({
       setEditing(false);
       return;
     }
+    capture('settings.remote_coordinator_saved');
     set.mutate(trimmed, {
       onSuccess: (res) => {
         setDraft(res.coordinatorOrigin);
@@ -130,14 +133,25 @@ function CoordinatorEditor({
             type="button"
             variant="ghost"
             size="sm"
-            onClick={() => test.mutate()}
+            onClick={() => {
+              capture('settings.remote_coordinator_tested');
+              test.mutate();
+            }}
             disabled={test.isPending || editing}
           >
             <Plug />
             {t('settings:remoteAccess.coordinator.test')}
           </Button>
           {!editing && (
-            <Button type="button" variant="ghost" size="sm" onClick={() => setEditing(true)}>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                capture('settings.remote_coordinator_edit_opened');
+                setEditing(true);
+              }}
+            >
               <Pencil />
               {t('settings:remoteAccess.coordinator.edit')}
             </Button>
@@ -178,6 +192,7 @@ function CoordinatorEditor({
 
 function ClaimForm({ coordinatorOrigin }: Readonly<{ coordinatorOrigin: string }>) {
   const { t } = useLocale();
+  const capture = useCapture();
   const claim = useClaimRemoteAccessName();
   const [name, setName] = useState('');
 
@@ -187,6 +202,7 @@ function ClaimForm({ coordinatorOrigin }: Readonly<{ coordinatorOrigin: string }
     if (trimmed.length < 4) {
       return;
     }
+    capture('settings.remote_name_claim_submitted', { nameLength: trimmed.length });
     claim.mutate(trimmed);
   };
 
@@ -225,11 +241,13 @@ function ClaimForm({ coordinatorOrigin }: Readonly<{ coordinatorOrigin: string }
 
 function ShareUrl({ url }: Readonly<{ url: string }>) {
   const { t } = useLocale();
+  const capture = useCapture();
   const [copied, setCopied] = useState(false);
 
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(url);
+      capture('settings.remote_public_origin_copied');
       setCopied(true);
       setTimeout(() => {
         setCopied(false);
@@ -262,6 +280,7 @@ function ShareUrl({ url }: Readonly<{ url: string }>) {
         href={url}
         target="_blank"
         rel="noreferrer"
+        onClick={() => capture('settings.remote_public_origin_opened')}
         className="inline-flex size-7 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
         aria-label={t('settings:remoteAccess.shareUrl.open')}
       >
@@ -311,10 +330,12 @@ const ConnectedView = memo(function ConnectedView({
   status,
 }: Readonly<{ status: RemoteAccessStatus }>) {
   const { t } = useLocale();
+  const capture = useCapture();
   const forget = useForgetRemoteAccess();
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   const handleConfirm = () => {
+    capture('settings.remote_forget_confirmed');
     forget.mutate(undefined, {
       onSettled: () => setConfirmOpen(false),
     });
@@ -367,7 +388,10 @@ const ConnectedView = memo(function ConnectedView({
           type="button"
           variant="ghost"
           size="sm"
-          onClick={() => setConfirmOpen(true)}
+          onClick={() => {
+            capture('settings.remote_forget_dialog_opened');
+            setConfirmOpen(true);
+          }}
           disabled={forget.isPending}
         >
           <Trash2 />
