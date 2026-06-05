@@ -73,9 +73,12 @@ describe('hub grants — audit log integration', () => {
     expect(entry?.result).toMatchObject({
       status: 200,
       headers: {
-        'set-cookie': '<redacted>',
         'content-type': 'text/plain',
       },
+      // Set-Cookie is pulled out of the flat headers map into its own
+      // `setCookies` field (so duplicate cookies survive), then logged as
+      // a count only: the values are session secrets and never recorded.
+      setCookieCount: 1,
       bodyBytes: 'the-response-body'.length,
       attempts: 1,
     });

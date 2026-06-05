@@ -6,6 +6,7 @@
 
 import { describe, expect, test } from 'bun:test';
 import { BrikaError } from '@brika/errors';
+import { FetchResultSchema } from '@brika/sdk/grants';
 import type { NetCallbacks } from './net';
 import type { DnsResolver } from './net/dns-guard';
 import { buildHubGrants } from './registry-factory';
@@ -150,6 +151,50 @@ describe('hub net.fetch handler', () => {
     }
     expect(thrown?.code).toBe('INVALID_INPUT');
     expect(fetcher.calls).toHaveLength(0);
+  });
+
+  test('multiple Set-Cookie response headers survive materialize onto setCookies', async () => {
+    // A single upstream response setting several cookies (F5 BIG-IP / SSO
+    // login). `new Response` with repeated [k,v] header pairs keeps them
+    // distinct, which `getSetCookie()` recovers: exactly the case the flat
+    // headers map used to collapse to one.
+    const cookies = [
+      'LastMRH_Session=abc; path=/',
+      'MRHSession=def; path=/; secure',
+      'TSaa4b119f027=ghi; path=/',
+    ];
+    const fetcher = mockFetcher(
+      () =>
+        new Response('body', {
+          status: 200,
+          headers: [
+            ['content-type', 'text/plain'],
+            ...cookies.map((c): [string, string] => ['set-cookie', c]),
+          ],
+        })
+    );
+    const reg = buildRegistry(fetcher);
+
+    const logs: Array<{ level: string; message: string }> = [];
+    const result = await reg.dispatch(
+      'dev.brika.net.fetch',
+      { url: 'https://sso.example.com/login', method: 'GET' },
+      {
+        ...handlerCtx({ allow: ['sso.example.com'] }),
+        log: (level: string, message: string) => logs.push({ level, message }),
+      }
+    );
+
+    const parsed = FetchResultSchema.parse(result);
+    expect(parsed.setCookies).toEqual(cookies);
+    // The collapsed copy must NOT linger in the flat headers map.
+    expect(parsed.headers['set-cookie']).toBeUndefined();
+    expect(parsed.headers['content-type']).toBe('text/plain');
+    // Debug line recorded the count (never the values).
+    expect(logs).toContainEqual({
+      level: 'debug',
+      message: `net.fetch carried ${cookies.length} set-cookie header(s) for sso.example.com`,
+    });
   });
 
   test('parent abort short-circuits retry backoff', async () => {

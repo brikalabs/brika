@@ -12,7 +12,7 @@
     },
     "pricePerKwh": {
       "title": "Price per kWh (CHF)",
-      "description": "Your SIL electricity rate. Find it on your latest bill (typical: 0.25–0.35)."
+      "description": "Your SIL electricity rate. Find it on your latest bill (typical: 0.25 to 0.35)."
     },
     "injectionPricePerKwh": {
       "title": "Injection price per kWh (CHF)",
@@ -69,7 +69,8 @@
     "monthConsumption": "Monthly consumption",
     "vsPrevious": "vs previous",
     "noCookie": "Add your lausanne.ch email and password in plugin settings",
-    "authError": "Login failed — check your email and password in plugin settings",
-    "networkError": "Could not reach SIL — check your connection"
+    "authError": "Login failed. Check your email and password in plugin settings",
+    "networkError": "Could not reach SIL. Check your connection",
+    "rateLimited": "SIL temporarily blocked automated login (CAPTCHA). Retrying later."
   }
 }

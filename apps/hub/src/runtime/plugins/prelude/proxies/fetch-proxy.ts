@@ -152,6 +152,7 @@ async function argsFromRequest(req: Request, init: RequestInit | undefined): Pro
     method: castMethod(method),
     headers: { ...headers, ...headersFromInit(init) },
     body,
+    maxRedirects: maxRedirectsFor(init?.redirect ?? req.redirect),
   };
 }
 
@@ -159,7 +160,26 @@ function argsFromInit(url: string, init: RequestInit | undefined): FetchArgs {
   const method = castMethod((init?.method ?? 'GET').toUpperCase());
   const headers = headersFromInit(init);
   const body = canHaveBody(method) ? extractStringBody(init?.body) : undefined;
-  return { url, method, headers: Object.keys(headers).length > 0 ? headers : undefined, body };
+  return {
+    url,
+    method,
+    headers: Object.keys(headers).length > 0 ? headers : undefined,
+    body,
+    maxRedirects: maxRedirectsFor(init?.redirect),
+  };
+}
+
+/**
+ * Translate the standard `RequestInit.redirect` mode onto the grant's
+ * `maxRedirects`. A plugin that follows redirects itself (its own CookieJar
+ * reads each hop's Location and Set-Cookie) passes `redirect: 'manual'`, which
+ * must reach the hub as `maxRedirects: 0` so the proxy returns the raw 3xx.
+ * Otherwise the proxy follows internally and the intermediate hops' cookies
+ * (the F5 session cookies) and Location headers never reach the caller.
+ * `undefined` leaves the host default (follow) in place.
+ */
+function maxRedirectsFor(redirect: RequestInit['redirect']): number | undefined {
+  return redirect === 'manual' ? 0 : undefined;
 }
 
 // Typed as `Set<string>` (rather than `Set<FetchArgs['method']>`) so the
@@ -275,9 +295,17 @@ function extractStringBody(body: unknown): string | undefined {
 }
 
 function shapeResponse(result: FetchResult): Response {
+  const headers = new Headers(result.headers);
+  // Re-expand the cookies the hub carried out-of-band. `append` (not `set`)
+  // so each cookie stays a distinct header value, letting a plugin-side
+  // CookieJar see every one via `getSetCookie()` / `forEach`, exactly like
+  // a raw fetch. A flat headers map cannot represent this on its own.
+  for (const cookie of result.setCookies) {
+    headers.append('set-cookie', cookie);
+  }
   return new Response(result.body, {
     status: result.status,
     statusText: result.statusText,
-    headers: result.headers,
+    headers,
   });
 }
