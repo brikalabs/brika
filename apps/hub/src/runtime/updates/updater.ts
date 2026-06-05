@@ -664,6 +664,12 @@ async function streamResponseToFile(
       if (pct !== lastPct) {
         lastPct = pct;
         onProgress(pct);
+        // Yield to the macrotask queue so a caller's progress UI (the CLI
+        // spinner repaints on a setInterval) gets a chance to run. A
+        // buffered or fast body resolves reads as microtasks, which would
+        // otherwise starve that timer and leave the percent frozen until
+        // the download finishes. Bounded to once per integer percent.
+        await new Promise<void>((resolve) => setTimeout(resolve));
       }
     }
   } finally {

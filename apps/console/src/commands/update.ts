@@ -133,15 +133,18 @@ export default defineCommand({
   options: {
     check: {
       type: 'boolean',
+      default: false,
       description: 'Check only: print availability and exit without prompting',
     },
     yes: {
       type: 'boolean',
       short: 'y',
+      default: false,
       description: 'Skip the confirmation prompt and apply immediately if an update is available',
     },
     force: {
       type: 'boolean',
+      default: false,
       description: 'Reinstall the current version even when already up to date',
     },
     channel: {
@@ -180,7 +183,7 @@ export default defineCommand({
       return;
     }
 
-    const force = values.force === true;
+    const force = values.force;
     if (!info.updateAvailable && !force) {
       process.stdout.write(
         `${pc.dim('Nothing to apply. Use')} ${pc.cyan('--force')} ${pc.dim('to reinstall the current version.')}\n`

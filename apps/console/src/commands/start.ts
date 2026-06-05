@@ -19,8 +19,10 @@
 import { defineCommand } from '@brika/cli';
 import pc from 'picocolors';
 import { CliError } from '../shared/cli/errors';
+import { hubUrl } from '../shared/cli/hub-client';
 import { spawnHubDetached } from '../shared/cli/hub-spawn-detached';
 import { runForegroundHub } from '../shared/cli/hub-supervisor';
+import { openHubUiWhenReady } from '../shared/cli/hub-ui';
 
 export default defineCommand({
   name: 'start',
@@ -41,9 +43,15 @@ export default defineCommand({
       type: 'string',
       description: 'Listen address (default: 127.0.0.1)',
     },
+    open: {
+      type: 'boolean',
+      default: false,
+      description: 'Open the hub UI in the browser once it is ready',
+    },
   },
   examples: [
     'brika start',
+    'brika start --open',
     'brika start --attach',
     'brika start -p 8080',
     'brika start -a -p 8080 --host 0.0.0.0',
@@ -60,6 +68,12 @@ export default defineCommand({
     }
 
     if (values.attach) {
+      // Foreground hub blocks until Ctrl+C, so open in the background:
+      // the poll runs on the same event loop and fires once the server
+      // is listening.
+      if (values.open) {
+        void openHubUiWhenReady();
+      }
       await runForegroundHub({ port: values.port, host: values.host });
       return;
     }
@@ -69,6 +83,11 @@ export default defineCommand({
       process.stdout.write(`${label}\n`);
     } catch (e) {
       throw new CliError(`couldn't start hub: ${e instanceof Error ? e.message : String(e)}`);
+    }
+    if (values.open && !(await openHubUiWhenReady())) {
+      process.stdout.write(
+        `${pc.yellow("hub isn't responding yet; open it manually at")} ${hubUrl()}\n`
+      );
     }
   },
 });

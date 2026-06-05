@@ -27,14 +27,18 @@ Boot the hub. Detached by default (returns immediately), or attached (blocks the
 | `--attach`, `-a` | off | Run in foreground; same as `brika hub` |
 | `--port`, `-p` | `3001` | Listen port |
 | `--host` | `127.0.0.1` | Listen address |
+| `--open` | off | Open the hub UI in the browser once it is ready |
 
 ```sh
 brika start                       # detach
+brika start --open                # detach, then open the UI when ready
 brika start --attach              # foreground
 brika start -p 8080
 brika start --host 0.0.0.0
 brika start -a -p 8080 --host 0.0.0.0
 ```
+
+`--open` waits for the hub to answer `/api/health` (not just claim its pid file) before launching the browser, so you do not land on a connection-refused page. It composes with `--attach` (the browser opens in the background while the foreground hub runs).
 
 Detached mode forks a `brika hub` child, writes its PID into `.brika/brika.pid`, and waits ~1.5 s for the hub's `/api/health` to respond before printing the supervisor PID. If a hub is already running in the workspace the command refuses with a clear error.
 
