@@ -11,7 +11,7 @@ import { z } from 'zod';
  * ring buffer with arbitrarily large objects.
  */
 const MAX_CAPTURE_PROPS_BYTES = 16_384;
-/** Max length for the LIKE search input — bounds query-time scan work. */
+/** Max length for the LIKE search input, bounds query-time scan work. */
 const MAX_SEARCH_LEN = 200;
 
 const CaptureSourceSchema = z.enum(['hub', 'plugin', 'ui', 'cli']);
@@ -119,6 +119,15 @@ export const analyticsRoutes = group({
     route.get({
       path: '/names',
       handler: ({ inject }) => ({ names: inject(EventStore).topNames() }),
+    }),
+
+    // GET /api/analytics/breakdown - Event counts grouped by source and by plugin
+    route.get({
+      path: '/breakdown',
+      handler: ({ inject }) => {
+        const store = inject(EventStore);
+        return { sources: store.topSources(), plugins: store.topPlugins() };
+      },
     }),
 
     // GET /api/analytics/timeseries - Event counts bucketed over time

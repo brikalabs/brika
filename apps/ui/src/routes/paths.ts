@@ -48,6 +48,10 @@ export const paths = {
     list: route('/sparks'),
     tab: route('/sparks/$tab'),
   },
+  analytics: {
+    list: route('/analytics'),
+    tab: route('/analytics/$tab'),
+  },
   store: {
     list: route('/store'),
     detail: route('/store/$source/$'),

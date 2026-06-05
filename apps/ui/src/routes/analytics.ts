@@ -8,4 +8,10 @@ export const analyticsRoutes = {
     select: (m) => m.AnalyticsPage,
     scopes: [Scope.PLUGIN_READ, Scope.ADMIN_ALL],
   }),
+  tab: page({
+    path: '/analytics/$tab',
+    load: () => import('@/features/analytics'),
+    select: (m) => m.AnalyticsPage,
+    scopes: [Scope.PLUGIN_READ, Scope.ADMIN_ALL],
+  }),
 };

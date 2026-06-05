@@ -2,15 +2,25 @@
   "title": "Analytique",
   "subtitle": "Utilisation des fonctionnalités de votre hub",
   "empty": "Aucun événement capturé pour le moment",
-  "loadError": "Impossible de charger les analyses — essayez de rafraîchir.",
-  "anonymousNote": "Anonyme par défaut — un identifiant d'appareil durable est utilisé, et l'utilisateur connecté n'est enregistré que localement.",
+  "loadError": "Impossible de charger les analyses, essayez de rafraîchir.",
+  "anonymousNote": "Anonyme par défaut : un identifiant d'appareil durable est utilisé, et l'utilisateur connecté n'est enregistré que localement.",
   "stats": {
     "total": "Événements au total",
+    "last24h": "Dernières 24h",
     "recent": "Récents (en mémoire)",
     "sources": "Sources",
     "forwarding": "Transfert distant",
     "forwardingOn": "Activé",
     "forwardingOff": "Désactivé"
+  },
+  "breakdown": {
+    "title": "Par source",
+    "subtitle": "Répartition des évènements par source"
+  },
+  "topPlugins": {
+    "title": "Plugins les plus actifs",
+    "subtitle": "Plugins générant le plus d'évènements",
+    "empty": "Aucun évènement de plugin pour le moment"
   },
   "activity": {
     "title": "Activité",
@@ -24,6 +34,49 @@
   },
   "recent": {
     "title": "Événements récents",
-    "subtitle": "Flux de capture en direct"
+    "subtitle": "Flux de capture en direct",
+    "viewAll": "Tout voir"
+  },
+  "tabs": {
+    "overview": "Vue d'ensemble",
+    "events": "Tous les évènements"
+  },
+  "explorer": {
+    "searchPlaceholder": "Rechercher des évènements…",
+    "clearSearch": "Effacer la recherche",
+    "allEvents": "Tous les évènements",
+    "allPlugins": "Tous les plugins",
+    "colTime": "Heure",
+    "colSource": "Source",
+    "colEvent": "Évènement",
+    "colPlugin": "Plugin",
+    "colProps": "Propriétés",
+    "order": {
+      "newest": "Plus récents d'abord",
+      "oldest": "Plus anciens d'abord"
+    },
+    "range": {
+      "1h": "Dernière heure",
+      "24h": "Dernières 24h",
+      "7d": "7 derniers jours",
+      "30d": "30 derniers jours",
+      "all": "Tout"
+    },
+    "clearFilters": "Effacer les filtres",
+    "loadMore": "Charger plus",
+    "loading": "Chargement…",
+    "end": "Fin des résultats",
+    "showing": "{{count}} évènements affichés",
+    "noMatch": "Aucun évènement ne correspond à ces filtres.",
+    "noMatchHint": "Élargissez la plage de dates ou retirez un filtre."
+  },
+  "detail": {
+    "when": "Quand",
+    "identity": "Identité",
+    "properties": "Propriétés",
+    "noProps": "Aucune propriété.",
+    "copy": "Copier le JSON",
+    "copied": "Copié",
+    "notAuthenticated": "-"
   }
 }

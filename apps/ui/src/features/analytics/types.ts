@@ -59,6 +59,21 @@ export interface EventNameCount {
   count: number;
 }
 
+export interface SourceCount {
+  source: CaptureSource;
+  count: number;
+}
+
+export interface PluginCount {
+  pluginName: string;
+  count: number;
+}
+
+export interface EventBreakdown {
+  sources: SourceCount[];
+  plugins: PluginCount[];
+}
+
 export interface EventStats {
   total: number;
   ringBufferSize: number;

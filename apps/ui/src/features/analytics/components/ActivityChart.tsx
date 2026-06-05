@@ -29,7 +29,7 @@ export function ActivityChart() {
 
   let body: React.ReactNode;
   if (isLoading) {
-    body = <Skeleton className="h-48 w-full" />;
+    body = <Skeleton className="h-64 w-full" />;
   } else if (isError) {
     body = <p className="text-muted-foreground text-sm">{t('analytics:loadError')}</p>;
   } else {
@@ -37,7 +37,7 @@ export function ActivityChart() {
       <Chart
         data={points}
         showAxes
-        className="h-48"
+        className="h-64"
         yLabel={t('analytics:activity.axisCount')}
         formatValue={(v) => String(Math.round(v))}
         formatX={(ts) =>
@@ -56,7 +56,7 @@ export function ActivityChart() {
       <CardContent>
         <figure>
           <figcaption className="sr-only">
-            {t('analytics:activity.title')} — {t('analytics:activity.subtitle')}
+            {t('analytics:activity.title')}: {t('analytics:activity.subtitle')}
           </figcaption>
           {body}
         </figure>

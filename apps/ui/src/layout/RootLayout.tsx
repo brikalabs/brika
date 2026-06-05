@@ -45,6 +45,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { UserAvatar } from '@/components/user-avatar';
+import { useCapture } from '@/features/analytics/hooks';
 import { LoginPage } from '@/features/auth';
 import { useHealth } from '@/features/dashboard/hooks';
 import { MigrationBanner } from '@/features/migrations';
@@ -189,13 +190,21 @@ function NavGroupComponent({
 }
 
 function AppSidebarHeader() {
-  const { toggleSidebar } = useSidebar();
+  const { toggleSidebar, state } = useSidebar();
+  const capture = useCapture();
+
+  const handleToggle = () => {
+    capture('layout.sidebar_toggled', {
+      collapsed: state === 'expanded',
+    });
+    toggleSidebar();
+  };
 
   return (
     <SidebarHeader>
       <SidebarMenu>
         <SidebarMenuItem>
-          <SidebarMenuButton size="lg" onClick={toggleSidebar} tooltip="BRIKA">
+          <SidebarMenuButton size="lg" onClick={handleToggle} tooltip="BRIKA">
             <div className="flex aspect-square size-8 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary">
               <BrikaLogo className="size-5 text-white" />
             </div>
@@ -229,12 +238,14 @@ function UserMenu() {
   const { user, clearSession, client } = useAuth();
   const { t } = useLocale();
   const { isMobile } = useSidebar();
+  const capture = useCapture();
 
   if (!user) {
     return null;
   }
 
   const handleLogout = async () => {
+    capture('layout.logout_clicked');
     await client.logout();
     clearSession();
   };
@@ -242,7 +253,13 @@ function UserMenu() {
   return (
     <SidebarMenu>
       <SidebarMenuItem>
-        <DropdownMenu>
+        <DropdownMenu
+          onOpenChange={(open) => {
+            if (open) {
+              capture('layout.user_menu_opened');
+            }
+          }}
+        >
           <DropdownMenuTrigger asChild>
             <SidebarMenuButton size="lg" tooltip={user.name}>
               <UserAvatar user={user} />
@@ -262,13 +279,19 @@ function UserMenu() {
             </div>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
-              <Link to="/profile">
+              <Link
+                to="/profile"
+                onClick={() => capture('layout.user_menu_item_clicked', { item: 'profile' })}
+              >
                 <CircleUserRound />
                 {t('auth:profile')}
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <Link to="/help/concepts">
+              <Link
+                to="/help/concepts"
+                onClick={() => capture('layout.user_menu_item_clicked', { item: 'help' })}
+              >
                 <BookOpen />
                 {t('nav:help')}
               </Link>
@@ -327,8 +350,14 @@ function AppSidebar() {
   );
 }
 
-// Routes that should have no padding (full-bleed layout)
-const FULL_BLEED_ROUTES = ['/workflows/new', '/workflows/$id/edit'];
+// Routes that should have no padding (full-bleed layout). Analytics manages its
+// own height so the events explorer scrolls internally instead of the whole page.
+const FULL_BLEED_ROUTES = [
+  '/workflows/new',
+  '/workflows/$id/edit',
+  '/analytics',
+  '/analytics/$tab',
+];
 
 export function RootLayout() {
   const { isAuthenticated, isLoading, needsSetup } = useAuth();
