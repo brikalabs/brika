@@ -10,7 +10,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { brikaContext } from './runtime/context/brika-context';
+import { brikaContext } from '@/runtime/context/brika-context';
 import {
   deriveCachePaths,
   isNewer,
@@ -19,7 +19,7 @@ import {
   noUpdateInfo,
   resolveSourceDir,
   verifyChecksum,
-} from './updater';
+} from '@/runtime/updates/updater';
 
 describe('isSafeAssetName', () => {
   test.each([

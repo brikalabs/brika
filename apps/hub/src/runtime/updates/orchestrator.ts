@@ -16,7 +16,7 @@
 import { inject, singleton } from '@brika/di';
 import { brikaContext } from '@/runtime/context/brika-context';
 import { Logger } from '@/runtime/logs/log-router';
-import type { UpdateInfo, UpdatePhase } from '@/updater';
+import type { UpdateInfo, UpdatePhase } from '@/runtime/updates/updater';
 import { UpdateAuditLog } from './audit-log';
 import type { UpdateChannelId } from './channels';
 import { detectRuntimeMode, type RuntimeMode } from './runtime-mode';

@@ -18,8 +18,8 @@ import { existsSync } from 'node:fs';
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { selfUninstall } from '@/uninstaller';
-import { captureLog } from './helpers/capture';
+import { captureLog } from '@/helpers/capture';
+import { selfUninstall } from '@/runtime/uninstaller';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Test-level state

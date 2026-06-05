@@ -6,11 +6,11 @@ import 'reflect-metadata';
 import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
 import { get, provide, useTestBed } from '@brika/di/testing';
 import type { PreferenceDefinition } from '@brika/plugin';
+import { type BunSecretsMock, installBunSecretsMock } from '@/helpers/_bun-secrets-mock';
 import { ConfigLoader } from '@/runtime/config';
 import { PluginConfigService } from '@/runtime/plugins/plugin-config';
 import { SecretStore } from '@/runtime/secrets/secret-store';
 import { StateStore } from '@/runtime/state/state-store';
-import { type BunSecretsMock, installBunSecretsMock } from './_bun-secrets-mock';
 
 useTestBed({
   autoStub: false,

@@ -8,7 +8,7 @@
  * without changing the strategy boundary.
  */
 
-import { applyUpdate, checkForUpdate, type UpdateInfo } from '@/updater';
+import { applyUpdate, checkForUpdate, type UpdateInfo } from '@/runtime/updates/updater';
 import type { UpdateChannelId } from '../channels';
 import type { StrategyApplyOptions, StrategyApplyResult, UpdateStrategy } from './strategy';
 

@@ -17,7 +17,7 @@
  * orchestrator factory.
  */
 
-import type { UpdateInfo, UpdatePhase } from '@/updater';
+import type { UpdateInfo, UpdatePhase } from '@/runtime/updates/updater';
 import type { UpdateChannelId } from '../channels';
 
 /** Reasons a strategy may refuse to apply. Surfaced to the client as the `code`. */

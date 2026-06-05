@@ -14,7 +14,7 @@ import { join } from 'node:path';
 
 setDefaultTimeout(15_000);
 
-const LOCKDOWN_PATH = join(import.meta.dir, 'runtime/plugins/prelude/lockdown.ts');
+const LOCKDOWN_PATH = join(import.meta.dir, 'lockdown.ts');
 
 interface Outcome {
   stdout: string;
