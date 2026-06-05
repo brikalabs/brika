@@ -54,7 +54,14 @@ describe('SingleFlightCache', () => {
         // Yield once so all three concurrent callers register on the
         // single-flight entry before the upstream settles.
         await Promise.resolve();
-        return { status: 200, statusText: '', headers: {}, body: 'hi', attempts: 1 };
+        return {
+          status: 200,
+          statusText: '',
+          headers: {},
+          setCookies: [],
+          body: 'hi',
+          attempts: 1,
+        };
       });
     const [a, b, c] = await Promise.all([promise(), promise(), promise()]);
     expect(upstreamCalls).toBe(1);
@@ -68,7 +75,14 @@ describe('SingleFlightCache', () => {
     const run = () =>
       cache.run('k', async () => {
         calls += 1;
-        return { status: 200, statusText: '', headers: {}, body: 'hi', attempts: 1 };
+        return {
+          status: 200,
+          statusText: '',
+          headers: {},
+          setCookies: [],
+          body: 'hi',
+          attempts: 1,
+        };
       });
     await run();
     await run();
@@ -85,7 +99,14 @@ describe('SingleFlightCache', () => {
         if (calls === 1) {
           throw new Error('boom');
         }
-        return { status: 200, statusText: '', headers: {}, body: 'ok', attempts: 1 };
+        return {
+          status: 200,
+          statusText: '',
+          headers: {},
+          setCookies: [],
+          body: 'ok',
+          attempts: 1,
+        };
       });
     await expect(run()).rejects.toThrow('boom');
     const result = await run();
@@ -98,7 +119,7 @@ describe('SingleFlightCache', () => {
     let calls = 0;
     const factory = async () => {
       calls += 1;
-      return { status: 200, statusText: '', headers: {}, body: '', attempts: 1 };
+      return { status: 200, statusText: '', headers: {}, setCookies: [], body: '', attempts: 1 };
     };
     await Promise.all([cache.run('a', factory), cache.run('b', factory)]);
     expect(calls).toBe(2);

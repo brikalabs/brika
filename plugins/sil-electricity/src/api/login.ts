@@ -14,7 +14,16 @@
  */
 
 import { CookieJar, fetchAndIngest } from './cookies';
+import { AuthError, RateLimitError } from './errors';
 import { BASE, GOTO, IAM, timedFetch } from './internals';
+
+/**
+ * Optional per-step logger so the 6-step flow is debuggable without coupling
+ * this pure API layer to the SDK runtime. `auth.ts` injects the plugin logger;
+ * standalone callers (tests, probes) omit it and get a no-op.
+ */
+export type StepLog = (message: string, meta?: Record<string, unknown>) => void;
+const noStepLog: StepLog = () => undefined;
 
 /** Headers that exactly match Chrome's working HAR for the auth chain. */
 const NAV_HEADERS = {
@@ -38,16 +47,29 @@ const NAV_HEADERS = {
 
 const GOTO_ENC = encodeURIComponent(GOTO);
 
-export async function silLogin(email: string, password: string): Promise<string> {
+export async function silLogin(
+  email: string,
+  password: string,
+  onStep: StepLog = noStepLog
+): Promise<string> {
   const jar = new CookieJar();
 
+  // Each step logs at debug so a mid-handshake failure shows exactly how far the
+  // F5/APM dance got. Cookie names are safe to log; values are not logged.
   await openSecurityDeviceSession(jar);
+  onStep('SIL step 1-2: handshake done', { cookies: jar.names() });
+
   await postCredentials(jar, email, password);
+  onStep('SIL step 3: credentials accepted (202)');
+
   const ssoToken = await fetchSsoToken(jar);
+  onStep('SIL step 4: SSO token obtained', { length: ssoToken.length });
+
   await submitSsoToken(jar, ssoToken);
+  onStep('SIL step 5-6: policy submitted', { cookies: jar.names() });
 
   if (jar.size === 0) {
-    throw new Error('AUTH_NO_COOKIE');
+    throw new AuthError('AUTH_NO_COOKIE');
   }
   return jar.toString();
 }
@@ -59,9 +81,12 @@ export async function silLogin(email: string, password: string): Promise<string>
 async function openSecurityDeviceSession(jar: CookieJar): Promise<void> {
   // Hit the protected page; F5 redirects to my.policy which serves a tiny HTML
   // form whose script auto-submits to login.html with client_data=SecurityDevice.
-  await fetchAndIngest(jar, `${BASE}${GOTO}`, { headers: NAV_HEADERS, redirect: 'follow' });
+  const warmup = await fetchAndIngest(jar, `${BASE}${GOTO}`, {
+    headers: NAV_HEADERS,
+    redirect: 'follow',
+  });
 
-  await fetchAndIngest(jar, `${IAM}/login.html?goto=${GOTO_ENC}`, {
+  const handshake = await fetchAndIngest(jar, `${IAM}/login.html?goto=${GOTO_ENC}`, {
     method: 'POST',
     headers: {
       ...NAV_HEADERS,
@@ -75,6 +100,16 @@ async function openSecurityDeviceSession(jar: CookieJar): Promise<void> {
     }),
     redirect: 'follow',
   });
+
+  // The handshake's only job is to register F5/APM session cookies (token_F5,
+  // MRHSession, etc.). If none landed, the policy agent rejects every later
+  // request and the credential POST comes back non-202, which would otherwise
+  // surface misleadingly as a credentials failure. Fail with the real cause.
+  if (jar.size === 0) {
+    throw new AuthError(
+      `handshake set no session cookies (warmup=${warmup.status}, handshake=${handshake.status})`
+    );
+  }
 }
 
 /** Step 3: validate credentials. The browser does this as an XHR. */
@@ -99,7 +134,18 @@ async function postCredentials(jar: CookieJar, email: string, password: string):
   jar.ingest(r);
 
   if (r.status !== 202) {
-    throw new Error('AUTH_FAILED');
+    const body = await r.text().catch(() => '');
+    // A CAPTCHA / verification-code challenge means the portal is rate-limiting
+    // us after too many attempts, not that the credentials are wrong. Signal it
+    // distinctly so the caller backs off instead of hammering the login.
+    if (/captcha|v[eé]rification/i.test(body)) {
+      throw new RateLimitError(`captcha challenge (HTTP ${r.status})`);
+    }
+    // Otherwise surface status + body snippet so a 401 (bad creds) is
+    // distinguishable from a 302/403 (handshake or flow drift) in the log.
+    throw new AuthError(
+      `credentials POST returned HTTP ${r.status}${body ? `: ${body.slice(0, 200)}` : ''}`
+    );
   }
   // Drain the JSON body so the connection can be reused.
   await r.json().catch(() => null);
@@ -121,7 +167,7 @@ async function fetchSsoToken(jar: CookieJar): Promise<string> {
   const html = await r.text().catch(() => '');
   const token = extractSsoFromHtml(html) ?? jar.ssoCandidate();
   if (!token) {
-    throw new Error('AUTH_NO_TOKEN');
+    throw new AuthError('AUTH_NO_TOKEN');
   }
   return token;
 }
@@ -152,7 +198,7 @@ async function submitSsoToken(jar: CookieJar, ssoToken: string): Promise<void> {
 
   const location = r.headers.get('location') ?? '';
   if (location.includes('errorcode') || location.includes('logout')) {
-    throw new Error(`AUTH_POLICY_DENIED: ${location}`);
+    throw new AuthError(`AUTH_POLICY_DENIED: ${location}`);
   }
 
   if (location) {

@@ -1,17 +1,19 @@
 import { useBrickConfig, useBrickData } from '@brika/sdk/brick-views';
 import { useLocale } from '@brika/sdk/ui-kit/hooks';
+import { Zap } from 'lucide-react';
 import { useId, useMemo } from 'react';
 import { ResponsiveContainer } from 'recharts';
 import type { ElectricityState, Granularity } from '../types';
 import { buildRows, resolvePeriod, resolveStyle } from '../ui/chart-helpers';
 import { AreaVariant, BarVariant, LineVariant, type RenderProps } from '../ui/chart-variants';
-import { Loader, Message } from '../ui/states';
+import { Loader, Message, PeriodPlaceholder, useSizeTier } from '../ui/states';
 
 export default function ConsumptionChart() {
   const state = useBrickData<ElectricityState>();
   const config = useBrickConfig();
   const { t, locale } = useLocale();
   const gradId = useId();
+  const tier = useSizeTier();
 
   const period = resolvePeriod(config);
   const periodState = state?.periods?.[period];
@@ -28,16 +30,10 @@ export default function ConsumptionChart() {
     return <Loader />;
   }
   if (!state.credentialsSet) {
-    return <Message icon="⚡" text={t('ui.noCookie')} />;
-  }
-  if (periodState?.error === 'auth' && !periodState.data) {
-    return <Message icon="🔒" text={t('ui.authError')} />;
-  }
-  if (periodState?.error === 'network' && !periodState.data) {
-    return <Message icon="📡" text={t('ui.networkError')} />;
+    return <Message icon={Zap} text={t('ui.noCookie')} />;
   }
   if (rows.length === 0) {
-    return <Loader />;
+    return <PeriodPlaceholder error={periodState?.error} />;
   }
 
   const granularity: Granularity = periodState?.data?.granularity ?? 'month';
@@ -47,12 +43,14 @@ export default function ConsumptionChart() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex shrink-0 items-center justify-between px-1 pb-1">
-        <span className="font-semibold text-foreground/80 text-xs">
-          {t(`ui.${granularity}Consumption`)}
-        </span>
-        <span className="text-[10px] text-muted-foreground">kWh</span>
-      </div>
+      {tier !== 'compact' && (
+        <div className="flex shrink-0 items-center justify-between px-1 pb-1">
+          <span className="truncate font-semibold text-foreground/80 text-xs">
+            {t(`ui.${granularity}Consumption`)}
+          </span>
+          <span className="shrink-0 text-[10px] text-muted-foreground">kWh</span>
+        </div>
+      )}
       <div className="min-h-0 flex-1">
         <ResponsiveContainer width="100%" height="100%" initialDimension={{ width: 1, height: 1 }}>
           {style === 'bar' && <BarVariant {...props} />}

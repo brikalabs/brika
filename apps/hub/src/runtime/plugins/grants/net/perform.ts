@@ -135,11 +135,20 @@ async function materialize(
   response.headers.forEach((value, key) => {
     headers[key] = value;
   });
+  // `Set-Cookie` is the one header where a single response legitimately
+  // carries multiple values. The flat `headers` map above keeps only the
+  // last (a Record holds one value per key), so pull every cookie out via
+  // the dedicated accessor and ship them in their own field. Drop the
+  // collapsed copy from `headers` so the plugin side never sees a partial
+  // cookie alongside the full set.
+  const setCookies = response.headers.getSetCookie();
+  delete headers['set-cookie'];
   const body = await readBoundedText(response, { limit: bodyLimit });
   return {
     status: response.status,
     statusText: response.statusText,
     headers,
+    setCookies,
     body,
     attempts,
   };

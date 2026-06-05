@@ -12,7 +12,7 @@
     },
     "pricePerKwh": {
       "title": "Prix au kWh (CHF)",
-      "description": "Votre tarif SIL. Vous le trouvez sur votre dernière facture (typique : 0.25–0.35)."
+      "description": "Votre tarif SIL. Vous le trouvez sur votre dernière facture (typique : 0.25 à 0.35)."
     },
     "injectionPricePerKwh": {
       "title": "Prix d'injection au kWh (CHF)",
@@ -69,7 +69,8 @@
     "monthConsumption": "Consommation mensuelle",
     "vsPrevious": "vs précédent",
     "noCookie": "Ajoutez votre email et mot de passe lausanne.ch dans les paramètres",
-    "authError": "Connexion échouée — vérifiez votre email et mot de passe",
-    "networkError": "Impossible de joindre SIL — vérifiez votre connexion"
+    "authError": "Connexion échouée. Vérifiez votre email et mot de passe",
+    "networkError": "Impossible de joindre SIL. Vérifiez votre connexion",
+    "rateLimited": "SIL a temporairement bloqué la connexion automatique (CAPTCHA). Nouvel essai plus tard."
   }
 }

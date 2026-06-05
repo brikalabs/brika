@@ -1,5 +1,5 @@
 /**
- * Three chart variants — Bar / Area / Line — sharing the same axes and tooltip.
+ * Three chart variants (Bar / Area / Line) sharing the same axes and tooltip.
  */
 
 import {

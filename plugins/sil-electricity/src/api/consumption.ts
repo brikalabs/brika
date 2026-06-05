@@ -4,6 +4,7 @@
 
 import type { ConsumptionPoint, Granularity, Period } from '../types';
 import { dateRangeForPeriod, granularityForPeriod } from './dates';
+import { AuthError } from './errors';
 import { BASE, DIAMOND, GOTO, timedFetch } from './internals';
 
 interface CubeQuery {
@@ -104,7 +105,7 @@ export async function fetchConsumption(
   });
 
   if (res.status === 401 || res.status === 403) {
-    throw new Error('AUTH_FAILED');
+    throw new AuthError(`consumption returned HTTP ${res.status}`);
   }
   if (!res.ok) {
     throw new Error(`HTTP ${res.status}`);
@@ -113,7 +114,7 @@ export async function fetchConsumption(
   // HTML response means we were redirected to the login page (session expired)
   const contentType = res.headers.get('content-type') ?? '';
   if (contentType.includes('text/html')) {
-    throw new Error('AUTH_FAILED');
+    throw new AuthError('consumption returned HTML (session expired)');
   }
 
   const json: unknown = await res.json();

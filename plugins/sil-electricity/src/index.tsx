@@ -36,7 +36,7 @@ function isPeriod(value: unknown): value is Period {
 
 /**
  * A push is "informative" if the bricks would render something concrete
- * from it — actual data, an explicit error, or a credentials-missing
+ * from it: actual data, an explicit error, or a credentials-missing
  * banner. Loading-only states (`{loading:true, data:null, error:null}`)
  * carry no display value, and pushing them after a hot reload would
  * overwrite the UI's last-known-good cache and force every brick back
@@ -90,7 +90,10 @@ function bindInstance(instanceId: string, config: Record<string, unknown>): void
 }
 
 function applyPrefs(p: SilPrefs): void {
-  setCredentials(p.email?.trim() ?? '', p.password ?? '');
+  // Trim both: a stray space or newline pasted into the password field (common
+  // from password managers) makes SIL reject an otherwise-correct password as
+  // "identifiants incorrects".
+  setCredentials(p.email?.trim() ?? '', p.password?.trim() ?? '');
   setPrices(pickPrices(p));
 }
 
@@ -100,12 +103,21 @@ function applyPrefs(p: SilPrefs): void {
 
 useElectricityStore.subscribe(pushState);
 
-onBrickConfigChange((instanceId, config) => bindInstance(instanceId, config));
+onBrickConfigChange((instanceId, config) => {
+  bindInstance(instanceId, config);
+  // Hand every freshly bound brick the current state right away, including the
+  // summary/cost/live bricks that carry no per-instance period (so bindInstance
+  // returns early for them) and ride the always-on base subscriptions. Without
+  // this, a brick added onto an already-polling period gets no new poll, no
+  // state change, and no push, so it would spin on its loader forever. The
+  // isInformative guard means we only push when there is real data or an error.
+  pushState();
+});
 
 onPreferencesChange<SilPrefs>(applyPrefs);
 
 // ─── Plugin init (runs AFTER preferences are delivered) ────────────────────
-// `getPreferences()` returns `{}` synchronously at module load — the real
+// `getPreferences()` returns `{}` synchronously at module load, and the real
 // values arrive later via the preferences IPC message, which fires `onInit`
 // the first time. So we hold off setting credentials and starting polling
 // until here.

@@ -4,10 +4,21 @@
  */
 
 import { log } from '@brika/sdk/lifecycle';
-import { fetchConsumption, granularityForPeriod } from '../api';
+import { AuthError, fetchConsumption, granularityForPeriod } from '../api';
 import type { ConsumptionData, Period } from '../types';
-import { authenticate, clearSession, getCredentials, getSessionCookie } from './auth';
+import {
+  authenticate,
+  clearSession,
+  getCooldownReason,
+  getCredentials,
+  getSessionCookie,
+} from './auth';
 import { patchPeriod } from './store';
+
+/** After a failed login, distinguish a CAPTCHA cooldown from a plain auth failure. */
+function authErrorState(): 'auth' | 'rateLimited' {
+  return getCooldownReason();
+}
 
 const POLL_MS_BY_PERIOD: Record<Period, number> = {
   '24h': 5 * 60 * 1000,
@@ -25,6 +36,7 @@ interface Entry {
 const entries = new Map<Period, Entry>();
 
 async function fetchAndStore(period: Period): Promise<void> {
+  const startedAt = Date.now();
   const points = await fetchConsumption(getSessionCookie(), period);
   const data: ConsumptionData = {
     points,
@@ -33,6 +45,7 @@ async function fetchAndStore(period: Period): Promise<void> {
     lastUpdated: Date.now(),
   };
   patchPeriod(period, { data, loading: false, error: null });
+  log.debug('SIL poll OK', { period, points: points.length, ms: Date.now() - startedAt });
 }
 
 export async function pollPeriod(period: Period): Promise<void> {
@@ -44,7 +57,7 @@ export async function pollPeriod(period: Period): Promise<void> {
   }
 
   if (!getSessionCookie() && !(await authenticate())) {
-    patchPeriod(period, { loading: false, error: 'auth' });
+    patchPeriod(period, { loading: false, error: authErrorState() });
     return;
   }
 
@@ -55,11 +68,10 @@ export async function pollPeriod(period: Period): Promise<void> {
   }
 }
 
-/** Auth-failed → clear session, log in again, retry once. */
+/** Auth-failed: clear session, log in again, retry once. */
 async function handleFetchError(period: Period, err: unknown): Promise<void> {
-  const message = err instanceof Error ? err.message : String(err);
-
-  if (message !== 'AUTH_FAILED') {
+  if (!(err instanceof AuthError)) {
+    const message = err instanceof Error ? err.message : String(err);
     log.error(`SIL poll[${period}] failed: ${message}`);
     patchPeriod(period, { loading: false, error: 'network' });
     return;
@@ -67,7 +79,7 @@ async function handleFetchError(period: Period, err: unknown): Promise<void> {
 
   clearSession();
   if (!(await authenticate())) {
-    patchPeriod(period, { loading: false, error: 'auth' });
+    patchPeriod(period, { loading: false, error: authErrorState() });
     return;
   }
 
