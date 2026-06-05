@@ -1,4 +1,4 @@
-import { getDeviceLocation, getPreferences, setBrickData } from '@brika/sdk';
+import { capture, getDeviceLocation, getPreferences, setBrickData } from '@brika/sdk';
 import {
   log,
   onBrickConfigChange,
@@ -195,10 +195,12 @@ onPreferencesChange<WeatherPrefs>((prefs) => {
 
   if (newUnit !== currentUnit) {
     currentUnit = newUnit;
+    capture('weather.unit_changed', { unit: newUnit });
     pushBrickData();
   }
 
-  if (newCity) {
+  if (newCity && newCity !== defaultCity) {
+    capture('weather.default_city_changed');
     setDefaultCity(newCity);
   }
 });
