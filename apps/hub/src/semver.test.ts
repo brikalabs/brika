@@ -3,9 +3,30 @@
  */
 
 import { describe, expect, test } from 'bun:test';
-import { coerce, gte, isValid, maxSatisfying, satisfies } from '@/runtime/utils/semver';
+import {
+  coerce,
+  gte,
+  isValid,
+  maxSatisfying,
+  satisfies,
+  stripPrerelease,
+} from '@/runtime/utils/semver';
 
 describe('semver', () => {
+  describe('stripPrerelease', () => {
+    test('removes prerelease tag', () => {
+      expect(stripPrerelease('0.3.1-canary.1780563316.00a985d')).toBe('0.3.1');
+    });
+
+    test('removes build metadata', () => {
+      expect(stripPrerelease('1.2.3+build.5')).toBe('1.2.3');
+    });
+
+    test('leaves a plain release untouched', () => {
+      expect(stripPrerelease('1.2.3')).toBe('1.2.3');
+    });
+  });
+
   describe('gte', () => {
     test('returns true when a > b', () => {
       expect(gte('2.0.0', '1.0.0')).toBe(true);

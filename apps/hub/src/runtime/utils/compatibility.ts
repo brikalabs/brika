@@ -46,8 +46,12 @@ export function checkCompatibility(
   }
 
   try {
-    // Check if current version satisfies the requirement
-    const satisfied = semver.satisfies(currentVersion, engineRequirement);
+    // Check if current version satisfies the requirement.
+    // Treat a prerelease hub build (e.g. a `0.3.1-canary.…` canary) as its base
+    // release: standard semver excludes prereleases from ranges that don't
+    // themselves carry a prerelease, so without this every plugin pinning a
+    // stable range like `^0.3.0` would be flagged incompatible on canary builds.
+    const satisfied = semver.satisfies(semver.stripPrerelease(currentVersion), engineRequirement);
 
     if (satisfied) {
       return {

@@ -54,6 +54,14 @@ describe('compatibility', () => {
       expect(checkCompatibility('0.2.0', '0.2.0').compatible).toBe(true);
       expect(checkCompatibility('0.2.0', '0.2.1').compatible).toBe(false);
     });
+
+    test('treats a prerelease hub build as its base release', () => {
+      // A canary build of 0.3.1 must satisfy plugins pinning the stable 0.3.x line.
+      expect(checkCompatibility('^0.3.0', '0.3.1-canary.1780563316.00a985d').compatible).toBe(true);
+      expect(checkCompatibility('~0.3.0', '0.3.1-canary.abc').compatible).toBe(true);
+      // Out-of-range prereleases are still rejected.
+      expect(checkCompatibility('^0.4.0', '0.3.1-canary.abc').compatible).toBe(false);
+    });
   });
 
   describe('meetsMinimumVersion', () => {

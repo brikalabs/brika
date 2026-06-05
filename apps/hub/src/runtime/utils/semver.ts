@@ -60,6 +60,19 @@ export function maxSatisfying(versions: string[], range?: string): string | null
 }
 
 /**
+ * Strip the prerelease and build-metadata portions from a version, leaving the
+ * release tuple (`major.minor.patch`).
+ *
+ * @example
+ * stripPrerelease("0.3.1-canary.1780563316.00a985d") // "0.3.1"
+ * stripPrerelease("1.2.3+build.5")                    // "1.2.3"
+ * stripPrerelease("1.2.3")                            // "1.2.3"
+ */
+export function stripPrerelease(version: string): string {
+  return version.split('+', 1)[0].split('-', 1)[0];
+}
+
+/**
  * Check if version is valid semver using Bun's native API.
  */
 export function isValid(version: string): boolean {

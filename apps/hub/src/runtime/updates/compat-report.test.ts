@@ -63,12 +63,11 @@ describe('computeCompatReport', () => {
   });
 
   test('pre-release target satisfies caret range to the same major.minor', () => {
-    // semver caret semantics: `^0.5.0` satisfies `0.5.x` (any patch + prerelease).
+    // A prerelease target is treated as its base release for compatibility:
+    // `0.5.0-rc.1` is checked as `0.5.0`, which satisfies `^0.5.0`. This keeps
+    // canary hub builds compatible with plugins pinning a stable range
+    // (see semver.stripPrerelease).
     const report = computeCompatReport('0.5.0-rc.1', [p('a', '^0.5.0')]);
-    // Note: semver caret on a 0.x range is strict — `0.5.0-rc.1` does NOT
-    // satisfy `^0.5.0` because pre-releases don't intersect ranges unless
-    // explicit. Document the behavior so future readers don't assume the test
-    // is wrong.
-    expect(report.plugins[0]?.willBeCompatible).toBe(false);
+    expect(report.plugins[0]?.willBeCompatible).toBe(true);
   });
 });
