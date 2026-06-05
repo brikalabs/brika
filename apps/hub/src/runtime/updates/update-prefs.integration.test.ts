@@ -41,7 +41,7 @@ function writeFixture(name: string, settings: Record<string, string>): string {
   return path;
 }
 
-describe('readUpdatePrefs — fixtures', () => {
+describe('readUpdatePrefs: fixtures', () => {
   test('reads channel + pinned version (values are JSON-encoded)', () => {
     const path = writeFixture('canary.db', {
       updateChannel: JSON.stringify('canary'),
@@ -88,7 +88,7 @@ describe('readUpdatePrefs — fixtures', () => {
   });
 });
 
-describe('readUpdatePrefs — StateStore interop', () => {
+describe('readUpdatePrefs: StateStore interop', () => {
   let statePath: string;
   let state: StateStore;
 
@@ -105,22 +105,17 @@ describe('readUpdatePrefs — StateStore interop', () => {
     state.setPinnedVersion(null);
   });
 
-  /** Flush WAL frames into the main db so a fresh read-only handle sees them. */
-  function checkpoint(): void {
-    const db = new Database(statePath);
-    db.run('PRAGMA wal_checkpoint(TRUNCATE)');
-    db.close();
-  }
-
-  test('reads what StateStore wrote', () => {
+  // No checkpoint: the StateStore connection stays open (WAL mode), and
+  // a read-only handle sees its committed, un-checkpointed frames. This
+  // mirrors the live-hub case the feature targets, the hub holds the DB
+  // open while the CLI reads.
+  test('reads what a live StateStore wrote (un-checkpointed WAL)', () => {
     state.setUpdateChannel('canary');
     state.setPinnedVersion('0.5.2');
-    checkpoint();
     expect(readUpdatePrefs(statePath)).toEqual({ channel: 'canary', pinnedVersion: '0.5.2' });
   });
 
   test('reflects the default stable channel with no pin', () => {
-    checkpoint();
     expect(readUpdatePrefs(statePath)).toEqual({ channel: 'stable', pinnedVersion: null });
   });
 });
