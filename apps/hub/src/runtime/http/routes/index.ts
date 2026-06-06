@@ -57,6 +57,10 @@ export const allRoutes = combineRoutes(
   healthRoute,
   i18nRoutes,
   hubSetupPublicRoutes,
+  // OAuth authorize/callback are self-secured by a single-use `state` + PKCE
+  // verifier, so they must be public: the provider redirects the callback to
+  // 127.0.0.1 (loopback requirement), which carries no app session cookie.
+  oauthRoutes,
   group({
     middleware: [requireAuth()],
     routes: [
@@ -70,7 +74,6 @@ export const allRoutes = combineRoutes(
         middleware: [requireScope(Scope.ADMIN_ALL)],
         routes: [i18nWriteRoutes, updateAdminRoutes, systemAdminRoutes, settingsAdminRoutes],
       }),
-      oauthRoutes,
       modulesRoutes,
       pluginRoutesHandler,
       pluginsRoutes,
