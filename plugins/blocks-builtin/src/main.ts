@@ -33,11 +33,6 @@ const HttpResponseSchema = z.object({
 export const httpRequest = defineReactiveBlock(
   {
     id: 'http-request',
-    name: 'HTTP Request',
-    description: 'Make HTTP requests to external APIs',
-    category: 'action',
-    icon: 'globe',
-    color: '#3b82f6',
     inputs: {
       trigger: input(z.generic(), { name: 'Trigger' }),
     },
@@ -98,11 +93,6 @@ export const httpRequest = defineReactiveBlock(
 export const condition = defineReactiveBlock(
   {
     id: 'condition',
-    name: 'Condition',
-    description: 'Branch based on a condition',
-    category: 'flow',
-    icon: 'git-branch',
-    color: '#f59e0b',
     inputs: {
       in: input(z.generic(), { name: 'Input' }),
     },
@@ -201,11 +191,6 @@ function evaluate(fieldValue: unknown, operator: string, compareValue: unknown):
 export const switchBlock = defineReactiveBlock(
   {
     id: 'switch',
-    name: 'Switch',
-    description: 'Multi-way branch based on a value',
-    category: 'flow',
-    icon: 'shuffle',
-    color: '#8b5cf6',
     inputs: {
       in: input(z.generic(), { name: 'Input' }),
     },
@@ -240,11 +225,6 @@ export const switchBlock = defineReactiveBlock(
 export const delay = defineReactiveBlock(
   {
     id: 'delay',
-    name: 'Delay',
-    description: 'Wait for a duration before continuing',
-    category: 'flow',
-    icon: 'timer',
-    color: '#6b7280',
     inputs: {
       in: input(z.generic(), { name: 'Input' }),
     },
@@ -270,11 +250,6 @@ export const delay = defineReactiveBlock(
 export const clock = defineReactiveBlock(
   {
     id: 'clock',
-    name: 'Clock',
-    description: 'Emit periodic ticks on an interval',
-    category: 'trigger',
-    icon: 'clock',
-    color: '#22c55e',
     inputs: {},
     outputs: {
       tick: output(z.object({ count: z.number(), ts: z.number() }), { name: 'Tick' }),
@@ -302,11 +277,6 @@ export const clock = defineReactiveBlock(
 export const transform = defineReactiveBlock(
   {
     id: 'transform',
-    name: 'Transform',
-    description: 'Transform or extract data',
-    category: 'transform',
-    icon: 'edit',
-    color: '#ec4899',
     inputs: {
       in: input(z.generic(), { name: 'Input' }),
     },
@@ -395,11 +365,6 @@ function interpolate(
 export const logBlock = defineReactiveBlock(
   {
     id: 'log',
-    name: 'Log',
-    description: 'Log a message with variable interpolation',
-    category: 'action',
-    icon: 'file-text',
-    color: '#78716c',
     inputs: {
       in: input(z.generic(), { name: 'Input' }),
     },
@@ -436,11 +401,6 @@ export const logBlock = defineReactiveBlock(
 export const merge = defineReactiveBlock(
   {
     id: 'merge',
-    name: 'Merge',
-    description: 'Wait for both inputs before continuing',
-    category: 'flow',
-    icon: 'git-merge',
-    color: '#06b6d4',
     inputs: {
       a: input(z.generic(), { name: 'Input A' }),
       b: input(z.generic(), { name: 'Input B' }),
@@ -476,11 +436,6 @@ export const merge = defineReactiveBlock(
 export const split = defineReactiveBlock(
   {
     id: 'split',
-    name: 'Split',
-    description: 'Send data to multiple branches',
-    category: 'flow',
-    icon: 'git-fork',
-    color: '#a855f7',
     inputs: {
       in: input(z.generic(), { name: 'Input' }),
     },
@@ -506,11 +461,6 @@ export const split = defineReactiveBlock(
 export const end = defineReactiveBlock(
   {
     id: 'end',
-    name: 'End',
-    description: 'End the workflow branch',
-    category: 'flow',
-    icon: 'square',
-    color: '#dc2626',
     inputs: {
       in: input(z.generic(), { name: 'Input' }),
     },
@@ -547,11 +497,6 @@ export const end = defineReactiveBlock(
 export const sparkReceiver = defineReactiveBlock(
   {
     id: 'spark-receiver',
-    name: 'Spark Receiver',
-    description: 'Receives typed spark events',
-    category: 'trigger',
-    icon: 'zap',
-    color: '#f59e0b',
     inputs: {},
     outputs: {
       // Output type is resolved from spark's schema via config.sparkType
@@ -584,11 +529,6 @@ export const sparkReceiver = defineReactiveBlock(
 export const text = defineReactiveBlock(
   {
     id: 'text',
-    name: 'Text',
-    description: 'Display text on the canvas and pass values through',
-    category: 'transform',
-    icon: 'type',
-    color: '#0ea5e9',
     inputs: {
       in: input(z.generic(), { name: 'Input' }),
     },
@@ -612,11 +552,6 @@ export const text = defineReactiveBlock(
 export const image = defineReactiveBlock(
   {
     id: 'image',
-    name: 'Image',
-    description: 'Display an image on the canvas and pass values through',
-    category: 'transform',
-    icon: 'image',
-    color: '#a855f7',
     inputs: {
       in: input(z.generic(), { name: 'Input' }),
     },

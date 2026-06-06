@@ -76,10 +76,6 @@ export interface BlockInstance {
  *
  * export const comfortBlock = defineReactiveBlock({
  *   id: "comfort-index",
- *   name: "Comfort Index",
- *   category: "sensors",
- *   icon: "thermometer",
- *   color: "#10b981",
  *
  *   inputs: {
  *     temperature: input(z.number(), { name: "Temperature °C" }),

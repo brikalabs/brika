@@ -168,18 +168,12 @@ export interface ReactiveBlockSpec<
   TOutputs extends Record<string, OutputDef<OutputSchema>>,
   TConfig extends z.ZodObject<z.ZodRawShape>,
 > {
-  /** Unique block ID */
+  /**
+   * Unique block ID. Display metadata (name, description, category, icon,
+   * color) lives in the plugin manifest `blocks[]` entry, not here: the host
+   * registers it from there, so duplicating it in code has no effect.
+   */
   id: string;
-  /** Display name */
-  name?: string;
-  /** Description */
-  description?: string;
-  /** Category for grouping */
-  category?: string;
-  /** Lucide icon name */
-  icon?: string;
-  /** Hex color */
-  color?: string;
   /** Typed input port definitions */
   inputs: TInputs;
   /** Typed output port definitions */
