@@ -120,6 +120,26 @@
       "id": "track-changed",
       "name": "Track Changed",
       "description": "Emitted when the playing track changes"
+    },
+    {
+      "id": "playback-started",
+      "name": "Playback Started",
+      "description": "Emitted when playback resumes"
+    },
+    {
+      "id": "playback-paused",
+      "name": "Playback Paused",
+      "description": "Emitted when playback pauses or stops"
+    },
+    {
+      "id": "volume-changed",
+      "name": "Volume Changed",
+      "description": "Emitted when the active device volume changes"
+    },
+    {
+      "id": "device-changed",
+      "name": "Device Changed",
+      "description": "Emitted when playback moves to a different device"
     }
   ],
   "dependencies": {

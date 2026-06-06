@@ -326,7 +326,7 @@ export const BlockNode = memo(function BlockNode(props: NodeProps) {
   return (
     <BaseNode
       className={cn(
-        'relative min-w-[200px] transition-all duration-200',
+        'relative w-64 transition-all duration-200',
         statusStyles[status] || '',
         selected && 'ring-2 ring-primary ring-offset-2'
       )}

@@ -42,7 +42,13 @@ definePreferenceOptions('device', fetchDeviceOptions);
 
 // ─── Sparks ───────────────────────────────────────────────────────────────────
 
-export { trackChanged } from './sparks';
+export {
+  deviceChanged,
+  playbackPaused,
+  playbackStarted,
+  trackChanged,
+  volumeChanged,
+} from './sparks';
 
 // ─── Blocks ───────────────────────────────────────────────────────────────────
 
