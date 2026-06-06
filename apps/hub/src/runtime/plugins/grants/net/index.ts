@@ -53,7 +53,7 @@ export function buildNetGrants(cb: NetCallbacks, opts?: NetGrantOptions) {
 
       const release = await limiter.acquire(ctx.pluginUid);
       try {
-        return await runUnderCoalesce({
+        const result = await runUnderCoalesce({
           args,
           scope,
           cb,
@@ -61,6 +61,14 @@ export function buildNetGrants(cb: NetCallbacks, opts?: NetGrantOptions) {
           inFlight,
           parentSignal: ctx.signal,
         });
+        if (result.setCookies.length > 0) {
+          // Count only: cookie values are session secrets, never logged.
+          ctx.log(
+            'debug',
+            `net.fetch carried ${result.setCookies.length} set-cookie header(s) for ${url.hostname}`
+          );
+        }
+        return result;
       } finally {
         release();
       }

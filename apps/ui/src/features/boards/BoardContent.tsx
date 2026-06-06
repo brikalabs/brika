@@ -2,9 +2,10 @@ import { Button, Skeleton } from '@brika/clay';
 import { useParams } from '@tanstack/react-router';
 import { LayoutGrid, Plus } from 'lucide-react';
 import { useCallback, useEffect } from 'react';
+import { useCapture } from '@/features/analytics/hooks';
 import { useLocale } from '@/lib/use-locale';
 import { BoardGrid } from './components/BoardGrid';
-import { useBoardSSE, useLoadBoard, useSaveLayout } from './hooks';
+import { useBoardSSE, useBrickDataSnapshot, useLoadBoard, useSaveLayout } from './hooks';
 import { useActiveBoard, useBoardStore } from './store';
 
 function GridSkeleton() {
@@ -19,6 +20,7 @@ function GridSkeleton() {
 
 export function BoardContent() {
   const { t } = useLocale();
+  const capture = useCapture();
   const { boardId } = useParams({
     strict: false,
   });
@@ -36,6 +38,9 @@ export function BoardContent() {
 
   // Per-board data loading and SSE
   const { data: loadedBoard, isLoading } = useLoadBoard(boardId);
+  // Hydrate current brick data immediately on mount (REST snapshot), in
+  // parallel with the SSE stream below which then keeps it live.
+  useBrickDataSnapshot(boardId);
   useBoardSSE(boardId);
 
   // Sync query data → store (covers cache hits where queryFn doesn't re-run)
@@ -48,7 +53,10 @@ export function BoardContent() {
   const board = useActiveBoard();
   const saveLayout = useSaveLayout();
   const setAddBrickOpen = useBoardStore((s) => s.setAddBrickOpen);
-  const handleAddBrick = useCallback(() => setAddBrickOpen(true), [setAddBrickOpen]);
+  const handleAddBrick = useCallback(() => {
+    capture('boards.add_brick_sheet_opened', { source: 'empty_state' });
+    setAddBrickOpen(true);
+  }, [setAddBrickOpen, capture]);
 
   if (!boardId) {
     return null;

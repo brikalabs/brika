@@ -7,18 +7,21 @@
  * the jar captures every hop.
  */
 
+import { AuthError } from './errors';
 import { timedFetch } from './internals';
 
 export class CookieJar {
   private readonly map = new Map<string, string>();
 
   ingest(res: Response): void {
-    res.headers.forEach((header, name) => {
-      if (name.toLowerCase() !== 'set-cookie') {
-        return;
-      }
+    // Use getSetCookie() rather than forEach: a single response can carry
+    // several Set-Cookie headers (the F5 handshake sets many at once), and
+    // Headers.forEach collapses same-name headers to the last value, whereas
+    // getSetCookie() returns every one. Missing cookies yield an incomplete
+    // session that the portal answers with a CAPTCHA.
+    for (const header of res.headers.getSetCookie()) {
       this.#parseSetCookie(header);
-    });
+    }
   }
 
   #parseSetCookie(header: string): void {
@@ -122,5 +125,5 @@ export async function fetchAndIngest(
     }
     await res.body?.cancel();
   }
-  throw new Error('TOO_MANY_REDIRECTS');
+  throw new AuthError('TOO_MANY_REDIRECTS during login');
 }

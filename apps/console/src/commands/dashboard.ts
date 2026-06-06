@@ -20,7 +20,7 @@ export default defineCommand({
   },
   examples: ['brika', 'brika dashboard', 'brika --no-boot'],
   async handler({ values }) {
-    const boot = !values['no-boot'] && process.env.BRIKA_NO_BOOT !== '1';
+    const boot = !values.noBoot && process.env.BRIKA_NO_BOOT !== '1';
     await runTui(React.createElement(App, { version: CLI_VERSION, boot }));
   },
 });

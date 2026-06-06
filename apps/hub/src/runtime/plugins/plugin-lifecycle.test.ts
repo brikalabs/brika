@@ -551,7 +551,7 @@ describe('PluginLifecycle', () => {
 
     test('does not remove plugins with existing package.json', async () => {
       // Use a real directory that has a package.json (apps/hub)
-      const hubDir = join(import.meta.dir, '..');
+      const hubDir = join(import.meta.dir, '../../..');
       mockState.listInstalled.mockReturnValue([
         {
           name: '@test/existing-plugin',

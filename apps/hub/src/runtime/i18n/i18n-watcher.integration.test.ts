@@ -12,8 +12,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { TranslationRegistry } from '@brika/i18n';
 import { waitFor } from '@brika/testing';
+import { FsWatchMock } from '@/helpers/fs-watch-mock';
 import { LocaleWatcher } from '@/runtime/i18n/i18n-watcher';
-import { FsWatchMock } from './fs-watch-mock';
 
 const TEST_DEBOUNCE_MS = 20;
 

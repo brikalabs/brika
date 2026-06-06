@@ -8,8 +8,8 @@
  * without changing the strategy boundary.
  */
 
-import { applyUpdate, checkForUpdate, type UpdateInfo } from '@/updater';
 import type { UpdateChannelId } from '../channels';
+import { applyUpdate, checkForUpdate, type UpdateInfo } from '../updater';
 import type { StrategyApplyOptions, StrategyApplyResult, UpdateStrategy } from './strategy';
 
 export class StandaloneStrategy implements UpdateStrategy {

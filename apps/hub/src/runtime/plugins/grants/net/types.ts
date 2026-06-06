@@ -50,6 +50,14 @@ export interface FetchResult {
   status: number;
   statusText: string;
   headers: Record<string, string>;
+  /**
+   * Every `Set-Cookie` response header, preserved individually. The flat
+   * `headers` map can only hold one value per key, so a response that sets
+   * several cookies at once (F5 BIG-IP / SSO flows) would otherwise lose
+   * all but the last. Carried separately so the plugin-side `Response`
+   * exposes each cookie via `getSetCookie()` / `forEach`.
+   */
+  setCookies: string[];
   body: string;
   attempts: number;
 }

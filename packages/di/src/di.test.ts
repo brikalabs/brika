@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 import { describe, expect, it } from 'bun:test';
-import { container, inject, injectable, singleton } from '@brika/di';
-import { get, provide, reset, useTestBed } from '@brika/di/testing';
+import { container, inject, injectable, singleton } from '.';
+import { get, provide, reset, useTestBed } from './testing';
 
 useTestBed({
   autoStub: false,

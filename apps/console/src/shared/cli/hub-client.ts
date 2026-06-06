@@ -10,7 +10,6 @@
 import pc from 'picocolors';
 import { readCliToken } from './auth-token';
 import { CliError } from './errors';
-import { checkPid } from './pid';
 
 const DEFAULT_HOST = '127.0.0.1';
 const DEFAULT_PORT = 3001;
@@ -50,11 +49,4 @@ export async function hubFetchOk(path: string, init?: RequestInit): Promise<Resp
     throw new CliError(`${pc.red('Error')} — ${detail}`);
   }
   return res;
-}
-
-export async function requireRunningHub(): Promise<void> {
-  const status = await checkPid();
-  if (status.state !== 'running') {
-    throw new CliError(`${pc.red('Hub is not running.')} Start it with: ${pc.cyan('brika start')}`);
-  }
 }

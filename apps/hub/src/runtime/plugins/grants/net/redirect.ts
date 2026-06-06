@@ -66,6 +66,12 @@ export async function resolveRedirect(
   if (!REDIRECT_STATUS.has(response.status)) {
     return null;
   }
+  if (context.maxRedirects === 0) {
+    // Caller opted out of following (e.g. fetch with redirect: 'manual'); hand
+    // back the raw 3xx so it can follow the chain itself, reading each hop's
+    // Location and Set-Cookie. Following internally would drop those.
+    return null;
+  }
   if (hop + 1 > context.maxRedirects) {
     throw errors.netRedirectLoop({ url: currentUrl, hops: context.maxRedirects });
   }

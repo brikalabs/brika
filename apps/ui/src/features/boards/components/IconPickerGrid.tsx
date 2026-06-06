@@ -1,4 +1,12 @@
-import { Badge, cn, Input, Label } from '@brika/clay';
+import {
+  Badge,
+  cn,
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupInput,
+  Label,
+} from '@brika/clay';
 import uFuzzy from '@leeoniya/ufuzzy';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { LayoutDashboard, Search, SearchX, X } from 'lucide-react';
@@ -99,25 +107,30 @@ export default function IconPickerGrid({ value, onChange }: Readonly<IconPickerG
           </Badge>
         )}
       </div>
-      <div className="relative">
-        <Search className="pointer-events-none absolute top-2.5 left-2.5 size-3.5 text-muted-foreground" />
-        <Input
+      <InputGroup className="h-9">
+        <InputGroupAddon>
+          <Search className="size-3.5" />
+        </InputGroupAddon>
+        <InputGroupInput
           ref={searchRef}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder={t('boards:board.iconHint')}
-          className="h-9 pr-8 pl-8 text-sm"
+          className="text-sm"
         />
         {isSearching && (
-          <button
-            type="button"
-            onClick={clearSearch}
-            className="absolute top-2.5 right-2.5 text-muted-foreground transition-colors hover:text-foreground"
-          >
-            <X className="size-3.5" />
-          </button>
+          <InputGroupAddon align="inline-end">
+            <InputGroupButton
+              variant="ghost"
+              size="icon-xs"
+              aria-label={t('common:actions.clear')}
+              onClick={clearSearch}
+            >
+              <X className="size-3.5" />
+            </InputGroupButton>
+          </InputGroupAddon>
         )}
-      </div>
+      </InputGroup>
 
       {filteredIcons.length === 0 && isSearching ? (
         <div

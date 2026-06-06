@@ -17,7 +17,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { realFetch } from '@brika/testing';
-import { downloadFile } from '@/updater';
+import { downloadFile } from '@/runtime/updates/updater';
 
 let dir: string;
 let mockFetch: ReturnType<typeof mock>;

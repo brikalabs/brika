@@ -36,6 +36,7 @@ import { Link, useNavigate, useParams } from '@tanstack/react-router';
 import { ChevronDown, LayoutDashboard, Pencil, Plus } from 'lucide-react';
 import { DynamicIcon, type IconName } from 'lucide-react/dynamic';
 import { useState } from 'react';
+import { useCapture } from '@/features/analytics/hooks';
 import { useLocale } from '@/lib/use-locale';
 import { paths } from '@/routes/paths';
 import type { BoardSummary } from '../api';
@@ -154,6 +155,7 @@ const getKey = (d: BoardSummary) => d.id;
 
 export function BoardSwitcher({ onEdit }: Readonly<BoardSwitcherProps>) {
   const { t } = useLocale();
+  const capture = useCapture();
   const navigate = useNavigate();
   const { boardId } = useParams({
     strict: false,
@@ -161,6 +163,11 @@ export function BoardSwitcher({ onEdit }: Readonly<BoardSwitcherProps>) {
   const { data: boards = [] } = useBoards();
   const { mutate: reorderBoards } = useReorderBoards();
   const setCreateBoardOpen = useBoardStore((s) => s.setCreateBoardOpen);
+
+  const handleEdit = (board: BoardSummary) => {
+    capture('boards.edit_dialog_opened', { boardId: board.id });
+    onEdit(board);
+  };
 
   const [activeId, setActiveId] = useState<string | null>(null);
 
@@ -228,7 +235,7 @@ export function BoardSwitcher({ onEdit }: Readonly<BoardSwitcherProps>) {
           >
             {visible.map((d) => (
               <OverflowListItem key={d.id} itemId={d.id}>
-                <SortableTab board={d} onEdit={onEdit} activeId={activeId} />
+                <SortableTab board={d} onEdit={handleEdit} activeId={activeId} />
               </OverflowListItem>
             ))}
           </SortableContext>
@@ -258,13 +265,14 @@ export function BoardSwitcher({ onEdit }: Readonly<BoardSwitcherProps>) {
                 <DropdownMenuItem
                   key={`overflow-${d.id}`}
                   className="group/item flex items-center justify-between gap-3"
-                  onClick={() =>
+                  onClick={() => {
+                    capture('boards.board_opened', { source: 'overflow_menu' });
                     navigate({
                       to: paths.boards.detail.to({
                         boardId: d.id,
                       }),
-                    })
-                  }
+                    });
+                  }}
                 >
                   <span className="flex items-center gap-1.5">
                     <BoardIcon icon={d.icon} />
@@ -274,7 +282,7 @@ export function BoardSwitcher({ onEdit }: Readonly<BoardSwitcherProps>) {
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
-                      onEdit(d);
+                      handleEdit(d);
                     }}
                     className="flex size-5 items-center justify-center rounded opacity-0 hover:bg-accent group-hover/item:opacity-100"
                   >
@@ -296,7 +304,10 @@ export function BoardSwitcher({ onEdit }: Readonly<BoardSwitcherProps>) {
             variant="ghost"
             size="icon"
             className="size-7 shrink-0"
-            onClick={() => setCreateBoardOpen(true)}
+            onClick={() => {
+              capture('boards.create_dialog_opened');
+              setCreateBoardOpen(true);
+            }}
           >
             <Plus className="size-3.5" />
           </Button>

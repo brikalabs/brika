@@ -11,7 +11,7 @@ import { EventSystem } from '@/runtime/events/event-system';
 import { Logger } from '@/runtime/logs/log-router';
 import { StateStore } from '@/runtime/state/state-store';
 import { UpdateProvider } from '@/runtime/updates/update-provider';
-import { noUpdateInfo, type UpdateInfo } from '@/updater';
+import { noUpdateInfo, type UpdateInfo } from '@/runtime/updates/updater';
 
 /** Check every 6 hours */
 const CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000;

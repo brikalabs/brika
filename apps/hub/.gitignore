@@ -1,0 +1,5 @@
+# Runtime artifacts that leak into src/ when a test runs with the wrong cwd.
+# board-loader writes board-order.json into its working dir; integration tests
+# create .test-* scratch dirs next to themselves.
+src/board-order.json
+src/.test-*/

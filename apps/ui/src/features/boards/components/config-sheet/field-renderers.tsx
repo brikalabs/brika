@@ -17,6 +17,7 @@ import {
 import type { PreferenceDefinition } from '@brika/plugin';
 import { RefreshCw } from 'lucide-react';
 import { useCallback, useState } from 'react';
+import { useCapture } from '@/features/analytics/hooks';
 import { brickTypesApi } from '@/features/boards/api';
 import { useLocale } from '@/lib/use-locale';
 import type { Json } from '@/types';
@@ -98,6 +99,7 @@ function DropdownField({
   brickTypeId,
 }: Readonly<FieldProps>) {
   const { tp } = useLocale();
+  const capture = useCapture();
   const isDynamic = field.type === 'dynamic-dropdown';
 
   const [dynamicOptions, setDynamicOptions] = useState<Array<{ value: string; label?: string }>>(
@@ -106,6 +108,7 @@ function DropdownField({
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const refresh = useCallback(async () => {
+    capture('boards.config_options_refreshed', { brickTypeId });
     setIsRefreshing(true);
     try {
       const data = await brickTypesApi.getConfigOptions(brickTypeId, field.name);
@@ -113,7 +116,7 @@ function DropdownField({
     } finally {
       setIsRefreshing(false);
     }
-  }, [brickTypeId, field.name]);
+  }, [brickTypeId, field.name, capture]);
 
   if (field.type !== 'dropdown' && !isDynamic) {
     return null;

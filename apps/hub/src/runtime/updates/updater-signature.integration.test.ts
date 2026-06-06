@@ -18,7 +18,7 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { realFetch } from '@brika/testing';
-import { type GitHubRelease, maybeVerifySignature } from '@/updater';
+import { type GitHubRelease, maybeVerifySignature } from '@/runtime/updates/updater';
 
 let dir: string;
 

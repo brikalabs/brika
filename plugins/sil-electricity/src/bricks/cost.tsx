@@ -1,25 +1,18 @@
 import { useBrickData } from '@brika/sdk/brick-views';
 import { useLocale } from '@brika/sdk/ui-kit/hooks';
-import { Banknote, TrendingDown, TrendingUp } from 'lucide-react';
+import { Banknote } from 'lucide-react';
 import type { ConsumptionPoint, ElectricityState, Prices } from '../types';
-import { formatChf, Loader, pointCost } from '../ui/states';
-
-function NoCredentials() {
-  const { t } = useLocale();
-  return (
-    <div className="flex h-full flex-col items-center justify-center gap-1 p-3 text-center">
-      <Banknote className="size-6 text-data-5/60" />
-      <p className="text-[10px] text-muted-foreground">{t('ui.noCookie')}</p>
-    </div>
-  );
-}
-
-function trendPercent(current: number, previous: number): number | null {
-  if (previous === 0) {
-    return null;
-  }
-  return Math.round(((current - previous) / previous) * 100);
-}
+import {
+  CompactStat,
+  formatChf,
+  Loader,
+  NoCredentials,
+  PeriodPlaceholder,
+  pointCost,
+  TrendRow,
+  trendPercent,
+  useSizeTier,
+} from '../ui/states';
 
 function lastTwoCosts(
   points: ConsumptionPoint[],
@@ -36,22 +29,24 @@ function lastTwoCosts(
 export default function ElectricityCost() {
   const state = useBrickData<ElectricityState>();
   const { t, locale } = useLocale();
+  const tier = useSizeTier();
 
-  const data = state?.periods?.['12m']?.data;
+  const periodState = state?.periods?.['12m'];
+  const data = periodState?.data;
 
   if (!state) {
     return <Loader tone="violet" />;
   }
   if (!state.credentialsSet) {
-    return <NoCredentials />;
+    return <NoCredentials icon={Banknote} accent="text-data-5/60" />;
   }
   if (!data || data.points.length === 0) {
-    return <Loader tone="violet" />;
+    return <PeriodPlaceholder error={periodState?.error} tone="violet" />;
   }
 
   const last = data.points.at(-1);
   if (!last) {
-    return <Loader tone="violet" />;
+    return <PeriodPlaceholder error={periodState?.error} tone="violet" />;
   }
 
   const { current, previous } = lastTwoCosts(data.points, state.prices);
@@ -61,40 +56,64 @@ export default function ElectricityCost() {
     year: 'numeric',
   });
 
-  return (
-    <div className="flex h-full flex-col justify-between p-1">
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="text-[10px] text-muted-foreground uppercase tracking-wide">
+  if (tier === 'compact') {
+    return (
+      <CompactStat
+        icon={Banknote}
+        accent="text-data-5"
+        value={formatChf(current)}
+        label={t('ui.estimatedCost')}
+      />
+    );
+  }
+
+  const trendRow = trend !== null && <TrendRow trend={trend} label={t('ui.vsPrevious')} />;
+
+  // Wide-but-short card (3x2 / 4x2): cost + trend on the left, the per-kWh rate
+  // on the right, so the spare width is used rather than left empty.
+  if (tier === 'wide') {
+    return (
+      <div className="flex h-full items-center justify-between gap-2 p-1">
+        <div className="flex min-w-0 flex-col">
+          <p className="truncate text-[10px] text-muted-foreground uppercase tracking-wide">
             {t('ui.estimatedCost')}
           </p>
-          <p className="text-[10px] text-muted-foreground/70">{periodLabel}</p>
+          <span className="font-bold text-2xl text-foreground tabular-nums leading-tight">
+            {formatChf(current)}
+          </span>
+          {trendRow}
         </div>
-        <Banknote className="size-4 text-data-5" />
+        <p className="shrink-0 text-[10px] text-muted-foreground/70">
+          @ {formatChf(state.prices.perKwh)}/kWh
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex h-full flex-col justify-between p-1">
+      <div className="flex items-start justify-between gap-1">
+        <div className="min-w-0">
+          <p className="truncate text-[10px] text-muted-foreground uppercase tracking-wide">
+            {t('ui.estimatedCost')}
+          </p>
+          <p className="truncate text-[10px] text-muted-foreground/70">{periodLabel}</p>
+        </div>
+        <Banknote className="size-4 shrink-0 text-data-5" />
       </div>
 
       <div className="flex flex-col gap-0.5">
         <span className="font-bold text-2xl text-foreground tabular-nums leading-none">
           {formatChf(current)}
         </span>
-        {trend !== null && (
-          <div className="flex items-center gap-1">
-            {trend > 0 ? (
-              <TrendingUp className="size-3 text-destructive" />
-            ) : (
-              <TrendingDown className="size-3 text-success" />
-            )}
-            <span
-              className={`font-medium text-[10px] ${trend > 0 ? 'text-destructive' : 'text-success'}`}
-            >
-              {trend > 0 ? '+' : ''}
-              {trend}% {t('ui.vsPrevious')}
-            </span>
-          </div>
-        )}
+        {trendRow}
       </div>
 
-      <p className="text-[10px] text-muted-foreground/70">@ {formatChf(state.prices.perKwh)}/kWh</p>
+      {tier === 'full' && (
+        <p className="text-[10px] text-muted-foreground/70">
+          @ {formatChf(state.prices.perKwh)}/kWh
+        </p>
+      )}
     </div>
   );
 }

@@ -5,7 +5,7 @@
  */
 
 import { describe, expect, test } from 'bun:test';
-import { flush, useBunMock } from '@brika/testing';
+import { flush, useBunMock, waitFor } from '@brika/testing';
 import { Text } from 'ink';
 import { render } from 'ink-testing-library';
 import React from 'react';
@@ -50,6 +50,12 @@ function Probe({ onResult }: Readonly<ProbeProps>): React.ReactElement {
 describe('useLogSearch', () => {
   const bun = useBunMock();
 
+  // Poll for the expected control state rather than asserting after a fixed
+  // `flush()` delay: a state-changing action drives an async fetch + setState +
+  // ink re-render, and the 25ms flush races that chain on a loaded CI runner
+  // (it flaked there under both parallel and serial test execution).
+  const settle = (predicate: () => boolean) => waitFor(predicate, { timeoutMs: 2000 });
+
   test('initial state is idle with empty query and results', async () => {
     bun.fetch(async () => logsResponse([]));
     const latest: { current: LogSearchControls | null } = { current: null };
@@ -60,7 +66,7 @@ describe('useLogSearch', () => {
         },
       })
     );
-    await flush();
+    await settle(() => latest.current?.mode === 'idle');
     expect(latest.current?.mode).toBe('idle');
     expect(latest.current?.query).toBe('');
     expect(latest.current?.results).toEqual([]);
@@ -82,7 +88,7 @@ describe('useLogSearch', () => {
     );
     await flush();
     latest.current?.enter();
-    await flush();
+    await settle(() => latest.current?.mode === 'editing');
     expect(latest.current?.mode).toBe('editing');
     unmount();
   });
@@ -99,9 +105,9 @@ describe('useLogSearch', () => {
     );
     await flush();
     latest.current?.enter();
-    await flush();
+    await settle(() => latest.current?.mode === 'editing');
     latest.current?.cancel();
-    await flush();
+    await settle(() => latest.current?.mode === 'idle');
     expect(latest.current?.mode).toBe('idle');
     unmount();
   });
@@ -118,12 +124,12 @@ describe('useLogSearch', () => {
     );
     await flush();
     latest.current?.commit('error');
-    await flush();
+    await settle(() => latest.current?.mode === 'ready');
     expect(latest.current?.mode).toBe('ready');
     latest.current?.enter();
-    await flush();
+    await settle(() => latest.current?.mode === 'editing');
     latest.current?.cancel();
-    await flush();
+    await settle(() => latest.current?.mode === 'ready');
     expect(latest.current?.mode).toBe('ready');
     unmount();
   });
@@ -144,7 +150,7 @@ describe('useLogSearch', () => {
     );
     await flush();
     latest.current?.commit('');
-    await flush();
+    await settle(() => latest.current?.mode === 'idle');
     expect(latest.current?.mode).toBe('idle');
     expect(latest.current?.query).toBe('');
     expect(latest.current?.results).toEqual([]);
@@ -172,7 +178,7 @@ describe('useLogSearch', () => {
     );
     await flush();
     latest.current?.commit('error');
-    await flush();
+    await settle(() => latest.current?.mode === 'ready');
     expect(lastSearchRef.current).toBe('error');
     expect(latest.current?.mode).toBe('ready');
     expect(latest.current?.query).toBe('error');
@@ -195,7 +201,7 @@ describe('useLogSearch', () => {
     );
     await flush();
     latest.current?.commit('boom');
-    await flush();
+    await settle(() => latest.current?.mode === 'error');
     expect(latest.current?.mode).toBe('error');
     expect(latest.current?.results).toEqual([]);
     expect(latest.current?.error).toMatch(/500/);
@@ -220,25 +226,26 @@ describe('useLogSearch', () => {
     );
     await flush();
     latest.current?.commit('x');
-    await flush();
+    // Wait for results to populate; next()/prev() are no-ops on an empty list.
+    await settle(() => latest.current?.mode === 'ready' && latest.current?.results.length === 3);
     expect(latest.current?.currentIdx).toBe(0);
 
     latest.current?.next();
-    await flush();
+    await settle(() => latest.current?.currentIdx === 1);
     expect(latest.current?.currentIdx).toBe(1);
 
     latest.current?.next();
-    await flush();
+    await settle(() => latest.current?.currentIdx === 2);
     expect(latest.current?.currentIdx).toBe(2);
 
     // wrap forward
     latest.current?.next();
-    await flush();
+    await settle(() => latest.current?.currentIdx === 0);
     expect(latest.current?.currentIdx).toBe(0);
 
     // wrap backward
     latest.current?.prev();
-    await flush();
+    await settle(() => latest.current?.currentIdx === 2);
     expect(latest.current?.currentIdx).toBe(2);
     unmount();
   });
@@ -274,11 +281,11 @@ describe('useLogSearch', () => {
     );
     await flush();
     latest.current?.commit('hit');
-    await flush();
+    await settle(() => latest.current?.results.length === 1);
     expect(latest.current?.results).toHaveLength(1);
 
     latest.current?.clear();
-    await flush();
+    await settle(() => latest.current?.mode === 'idle');
     expect(latest.current?.mode).toBe('idle');
     expect(latest.current?.query).toBe('');
     expect(latest.current?.results).toEqual([]);

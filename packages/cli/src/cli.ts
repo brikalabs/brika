@@ -108,6 +108,25 @@ function applyCoercionAndDefaults(
   return values;
 }
 
+/** Convert a kebab-case flag key to camelCase (`no-boot` → `noBoot`). */
+function toCamelCase(key: string): string {
+  return key.replace(/-(\w)/g, (_, char: string) => char.toUpperCase());
+}
+
+/**
+ * Re-key a parsed values object so hyphenated flags read as camelCase
+ * properties in handlers (`values.noBoot` rather than `values['no-boot']`),
+ * matching the camelCased type from `InferValues`. Single-word keys are
+ * unchanged.
+ */
+function camelCaseKeys<T>(values: Record<string, T>): Record<string, T> {
+  const out: Record<string, T> = {};
+  for (const [key, value] of Object.entries(values)) {
+    out[toCamelCase(key)] = value;
+  }
+  return out;
+}
+
 /** Remove a global flag and its value from argv (e.g. --cwd /path). */
 function stripFlag(argv: string[], ...names: string[]): string[] {
   const out: string[] = [];
@@ -194,11 +213,11 @@ export function createCli(config?: CliConfig): Cli {
           return;
         }
 
-        const values = command.options
-          ? applyCoercionAndDefaults(parsed.values, command.options)
-          : {
-              ...parsed.values,
-            };
+        const values = camelCaseKeys(
+          command.options
+            ? applyCoercionAndDefaults(parsed.values, command.options)
+            : { ...parsed.values }
+        );
 
         if (beforeFn && command.name !== 'help') {
           await beforeFn();

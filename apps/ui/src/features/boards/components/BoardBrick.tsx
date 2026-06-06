@@ -2,6 +2,7 @@ import { Button } from '@brika/clay';
 import { Bug, Ellipsis, PackageX } from 'lucide-react';
 import { DynamicIcon, type IconName } from 'lucide-react/dynamic';
 import { Component, type ErrorInfo, memo, type ReactNode } from 'react';
+import { useCapture } from '@/features/analytics/hooks';
 import { useLocale } from '@/lib/use-locale';
 import { useBoardStore, useBrickPlacement } from '../store';
 import { ClientBrickView } from './ClientBrickView';
@@ -55,6 +56,7 @@ interface BoardBrickProps {
 
 export const BoardBrick = memo(function BoardBrick({ instanceId, brickTypeId }: BoardBrickProps) {
   const { t, tp } = useLocale();
+  const capture = useCapture();
   const brickType = useBoardStore((s) => s.brickTypes.get(brickTypeId));
   const placement = useBrickPlacement(instanceId);
   const setConfigBrickId = useBoardStore((s) => s.setConfigBrickId);
@@ -88,7 +90,10 @@ export const BoardBrick = memo(function BoardBrick({ instanceId, brickTypeId }: 
           variant="ghost"
           size="icon"
           className="no-drag size-5 shrink-0 text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover/brick:opacity-100"
-          onClick={() => setConfigBrickId(instanceId)}
+          onClick={() => {
+            capture('boards.brick_config_opened', { brickTypeId });
+            setConfigBrickId(instanceId);
+          }}
         >
           <Ellipsis className="size-3.5" />
         </Button>

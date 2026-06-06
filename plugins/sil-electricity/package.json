@@ -42,7 +42,7 @@
       "name": "pricePerKwh",
       "type": "number",
       "label": "Price per kWh (CHF)",
-      "description": "Your SIL electricity rate. Find it on your latest bill (typical: 0.25–0.35).",
+      "description": "Your SIL electricity rate. Find it on your latest bill (typical: 0.25 to 0.35).",
       "default": 0.3,
       "min": 0,
       "max": 1

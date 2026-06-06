@@ -85,6 +85,17 @@ export const FetchResultSchema = z.object({
   status: z.number().int(),
   statusText: z.string(),
   headers: z.record(z.string(), z.string()),
+  /**
+   * Every `Set-Cookie` response header, carried separately so duplicate
+   * cookies survive the wire. The flat `headers` map above collapses
+   * repeated header names (a `Record` can hold one value per key), which
+   * silently drops all-but-one cookie when a server sets several in a
+   * single response (common in F5 BIG-IP / SSO login flows). Reconstruction
+   * appends each entry back as an individual `set-cookie` header so the
+   * plugin-side `Response.headers.getSetCookie()` sees them all. Optional,
+   * defaulted to [], for backward compatibility with older hubs.
+   */
+  setCookies: z.array(z.string()).default([]),
   body: z.string(),
   attempts: z.number().int().positive(),
 });
@@ -155,6 +166,8 @@ export const netFetch = defineGrant(
         status: result.status,
         statusText: result.statusText,
         headers: redactHeaders(result.headers),
+        // Count only: never log cookie values (they are session secrets).
+        setCookieCount: result.setCookies.length,
         bodyBytes: result.body.length,
         attempts: result.attempts,
       }),

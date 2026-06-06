@@ -19,7 +19,7 @@ import { join } from 'node:path';
 // Subprocess spawn is slow under parallel load.
 setDefaultTimeout(20_000);
 
-const LOCKDOWN_PATH = join(import.meta.dir, 'runtime/plugins/prelude/lockdown.ts');
+const LOCKDOWN_PATH = join(import.meta.dir, 'lockdown.ts');
 
 interface AttackResult {
   exitCode: number;

@@ -9,8 +9,8 @@ import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
 import { realFetch } from '@brika/testing';
 import { buildInfo } from '@/build-info';
 import { hub } from '@/hub';
-import type { UpdateInfo } from '@/updater';
-import { checkForUpdate, isNewer, isPrerelease, noUpdateInfo } from '@/updater';
+import type { UpdateInfo } from '@/runtime/updates/updater';
+import { checkForUpdate, isNewer, isPrerelease, noUpdateInfo } from '@/runtime/updates/updater';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers

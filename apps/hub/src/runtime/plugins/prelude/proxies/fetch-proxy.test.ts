@@ -192,6 +192,43 @@ describe('buildFetchProxy', () => {
     expect(await res.json()).toEqual({ steeped: true });
   });
 
+  test('multiple set-cookie headers round-trip as distinct cookies (F5 BIG-IP / SSO login fix)', async () => {
+    // A real F5 BIG-IP APM login sets many cookies in one response. The flat
+    // headers map cannot carry duplicates, so the hub ships them in the
+    // dedicated `setCookies` field; the proxy must re-expand each one.
+    const cookies = [
+      'LastMRH_Session=abc; path=/',
+      'MRHSession=def; path=/; secure',
+      'LB-prod_DMZ_SRV=ghi; path=/',
+      'TS01917844=jkl; path=/',
+      'F5_ST=mno; path=/; HttpOnly',
+    ];
+    const { pluginChan } = loopback(() => okResult('ok', { setCookies: cookies }));
+    const fetch = buildFetchProxy({ channel: pluginChan });
+    const res = await fetch('https://sso.example.com/login');
+
+    // getSetCookie() must surface every cookie, exactly like a raw fetch.
+    // This is the standard accessor a plugin-side CookieJar uses, and the
+    // one the old flat-headers path collapsed to a single cookie.
+    expect(res.headers.getSetCookie()).toEqual(cookies);
+    expect(res.headers.getSetCookie()).toHaveLength(cookies.length);
+
+    // A CookieJar reading the joined header value (Headers.get joins
+    // same-name values with ", ") must still see every cookie present.
+    const joined = res.headers.get('set-cookie');
+    expect(joined).toBeDefined();
+    for (const cookie of cookies) {
+      expect(joined).toContain(cookie);
+    }
+  });
+
+  test('absent setCookies defaults to [] and yields no set-cookie header (backward compat)', async () => {
+    const { pluginChan } = loopback(() => okResult('ok'));
+    const fetch = buildFetchProxy({ channel: pluginChan });
+    const res = await fetch('https://api.example.com/');
+    expect(res.headers.getSetCookie()).toEqual([]);
+  });
+
   test('hub-side rejection (Zod parse fails) propagates as a thrown error', async () => {
     // Return a malformed result — missing required fields.
     const { pluginChan } = loopback(() => ({ status: 200 }));

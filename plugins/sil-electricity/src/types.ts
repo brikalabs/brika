@@ -33,7 +33,7 @@ export interface Prices {
 export interface ElectricityState {
   /** True once email + password are configured in plugin prefs */
   credentialsSet: boolean;
-  /** True once we have valid SIL session cookies (transient — cleared on auth failure) */
+  /** True once we have valid SIL session cookies (transient, cleared on auth failure) */
   authed: boolean;
   /** Per-period data, error, and loading state */
   periods: Partial<Record<Period, PeriodState>>;

@@ -8,8 +8,8 @@
  * upstream" — useful when the distro package lags behind GitHub.
  */
 
-import { checkForUpdate, type UpdateInfo } from '@/updater';
 import type { UpdateChannelId } from '../channels';
+import { checkForUpdate, type UpdateInfo } from '../updater';
 import {
   type StrategyApplyOptions,
   type StrategyApplyResult,

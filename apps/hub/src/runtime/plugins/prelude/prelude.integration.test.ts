@@ -14,8 +14,8 @@ import { join } from 'node:path';
 import { sleep } from '@brika/testing';
 
 const BUN = process.execPath;
-const PRELUDE = join(import.meta.dir, 'runtime/plugins/prelude/index.ts');
-const FIXTURE = join(import.meta.dir, 'fixtures/prelude-test-plugin.ts');
+const PRELUDE = join(import.meta.dir, 'index.ts');
+const FIXTURE = join(import.meta.dir, '../../../fixtures/prelude-test-plugin.ts');
 
 interface WireMessage {
   t: string;

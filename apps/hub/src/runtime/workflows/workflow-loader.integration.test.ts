@@ -8,12 +8,12 @@ import { mkdir, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { get, provide, reset, stub, useTestBed } from '@brika/di/testing';
 import { sleep, waitFor } from '@brika/testing';
+import { FsWatchMock } from '@/helpers/fs-watch-mock';
 import { BlockRegistry } from '@/runtime/blocks/block-registry';
 import { Logger } from '@/runtime/logs/log-router';
 import type { Workflow } from '@/runtime/workflows/types';
 import { WorkflowEngine } from '@/runtime/workflows/workflow-engine';
 import { WorkflowLoader } from '@/runtime/workflows/workflow-loader';
-import { FsWatchMock } from './fs-watch-mock';
 
 useTestBed({
   autoStub: false,

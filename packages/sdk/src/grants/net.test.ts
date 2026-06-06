@@ -135,11 +135,12 @@ describe('netFetch spec', () => {
     });
   });
 
-  test('redact.result summarises bytes + redacts set-cookie', () => {
+  test('redact.result summarises bytes + redacts set-cookie + counts cookies (never logs values)', () => {
     const summary = netFetch.spec.redact?.result?.({
       status: 200,
       statusText: 'OK',
       headers: { 'set-cookie': 'session=abc', 'content-type': 'text/plain' },
+      setCookies: ['a=1; path=/', 'b=2; path=/'],
       body: 'hello',
       attempts: 1,
     });
@@ -147,9 +148,21 @@ describe('netFetch spec', () => {
       status: 200,
       statusText: 'OK',
       headers: { 'set-cookie': '<redacted>', 'content-type': 'text/plain' },
+      setCookieCount: 2,
       bodyBytes: 5,
       attempts: 1,
     });
+  });
+
+  test('setCookies defaults to [] when absent (backward compat)', () => {
+    const result = FetchResultSchema.parse({
+      status: 200,
+      statusText: 'OK',
+      headers: {},
+      body: '',
+      attempts: 1,
+    });
+    expect(result.setCookies).toEqual([]);
   });
 
   test('SDK-side handler throws', () => {

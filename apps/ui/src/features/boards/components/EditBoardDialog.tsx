@@ -18,6 +18,7 @@ import {
 } from '@brika/clay';
 import { Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { useCapture } from '@/features/analytics/hooks';
 import { useLocale } from '@/lib/use-locale';
 import type { BoardSummary } from '../api';
 import { useDeleteBoard, useUpdateBoard } from '../hooks';
@@ -38,6 +39,7 @@ export function EditBoardDialog({
   onDeleted,
 }: Readonly<EditBoardDialogProps>) {
   const { t } = useLocale();
+  const capture = useCapture();
   const [name, setName] = useState(board.name);
   const [icon, setIcon] = useState(board.icon ?? '');
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -110,7 +112,10 @@ export function EditBoardDialog({
               variant="ghost"
               size="sm"
               className="text-destructive hover:text-destructive"
-              onClick={() => setDeleteOpen(true)}
+              onClick={() => {
+                capture('boards.board_delete_dialog_opened', { boardId: board.id });
+                setDeleteOpen(true);
+              }}
             >
               <Trash2 className="mr-1.5 size-3.5" />
               {t('boards:board.delete')}

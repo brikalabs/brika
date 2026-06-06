@@ -17,7 +17,7 @@
 
 import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
 import { realFetch } from '@brika/testing';
-import { checkForUpdate } from '@/updater';
+import { checkForUpdate } from '@/runtime/updates/updater';
 
 interface GhAsset {
   name: string;
