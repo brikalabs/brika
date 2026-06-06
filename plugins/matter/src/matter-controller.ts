@@ -174,13 +174,30 @@ export class MatterController {
   #started = false;
 
   async start(): Promise<void> {
-    if (this.#started) {
+    // Already running. Require both flags so a previously failed start (which
+    // resets #started) can be retried instead of being wedged forever.
+    if (this.#started && this.#controller) {
       return;
     }
-    this.#started = true;
 
     log.info('Matter controller starting...');
 
+    try {
+      await this.#startInternal();
+      this.#started = true;
+      log.info('Matter controller started');
+    } catch (err) {
+      // Reset so a later start() (e.g. triggered by a commission attempt or a
+      // plugin reload) can retry, and surface the real matter.js cause rather
+      // than leaving callers with the opaque "not yet started" guard.
+      this.#started = false;
+      this.#controller = undefined;
+      log.error(`Matter controller failed to start: ${describeError(err)}`);
+      throw err;
+    }
+  }
+
+  async #startInternal(): Promise<void> {
     // Configure environment with our data dir as storage. matter.js 0.17
     // made `StorageService.location` a getter-only property; the previous
     // direct assignment (`environment.get(StorageService).location = …`)
@@ -228,8 +245,6 @@ export class MatterController {
         log.warn(`Failed to connect to node ${nodeId}: ${err}`);
       }
     }
-
-    log.info('Matter controller started');
   }
 
   async stop(): Promise<void> {
@@ -247,6 +262,7 @@ export class MatterController {
   // ─── Discovery ─────────────────────────────────────────────────────────────
 
   async discover(): Promise<MatterDevice[]> {
+    await this.start();
     if (!this.#controller) {
       throw new Error('Controller not started');
     }
@@ -290,6 +306,7 @@ export class MatterController {
   }
 
   async commission(pairingCode: string): Promise<string> {
+    await this.start();
     if (!this.#controller) {
       throw new Error('Controller not started');
     }
@@ -413,6 +430,7 @@ export class MatterController {
     command: MatterCommand,
     params?: Record<string, string>
   ): Promise<boolean> {
+    await this.start();
     // deviceId can be "nodeId" or "nodeId:endpointNumber" (bridge children)
     const [nodeIdPart, epPart] = deviceId.split(':');
     const pairedNode = this.#pairedNodes.get(nodeIdPart);
@@ -749,6 +767,19 @@ export class MatterController {
 
     return state;
   }
+}
+
+/** Serialize an error including its full `cause` chain (matter.js hides the
+ * real failure under a generic wrapper, attaching the true error as `cause`). */
+function describeError(err: unknown, depth = 0): string {
+  if (!(err instanceof Error)) {
+    return String(err);
+  }
+  const head = err.stack ?? `${err.name}: ${err.message}`;
+  if (err.cause !== undefined && depth < 5) {
+    return `${head}\n  caused by: ${describeError(err.cause, depth + 1)}`;
+  }
+  return head;
 }
 
 // ─── Singleton ───────────────────────────────────────────────────────────────
