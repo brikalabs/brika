@@ -11,6 +11,13 @@ interface TextConfig {
   content?: string;
 }
 
+function toText(value: unknown): string {
+  if (typeof value === 'object') {
+    return JSON.stringify(value);
+  }
+  return String(value);
+}
+
 export default function TextNode() {
   const config = useBlockConfig<TextConfig>();
   const data = useBlockData<unknown>();
@@ -27,7 +34,7 @@ export default function TextNode() {
       )}
       {data !== undefined && (
         <code className="block truncate rounded bg-muted/50 px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
-          {typeof data === 'object' ? JSON.stringify(data) : String(data)}
+          {toText(data)}
         </code>
       )}
     </div>

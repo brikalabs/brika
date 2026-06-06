@@ -13,6 +13,8 @@ import { GitFork, Plus, Trash2 } from 'lucide-react';
 
 interface SwitchCase {
   value: string;
+  /** Stable id for React keys; cases are an editable positional list. */
+  id: string;
 }
 
 interface SwitchConfig {
@@ -26,10 +28,10 @@ export default function SwitchView() {
   const cases = config.cases ?? [];
 
   const setCases = (next: SwitchCase[]) => update({ cases: next });
-  const addCase = () => setCases([...cases, { value: '' }]);
+  const addCase = () => setCases([...cases, { value: '', id: crypto.randomUUID() }]);
   const removeCase = (index: number) => setCases(cases.filter((_, i) => i !== index));
   const setCaseValue = (index: number, value: string) =>
-    setCases(cases.map((c, i) => (i === index ? { value } : c)));
+    setCases(cases.map((c, i) => (i === index ? { ...c, value } : c)));
 
   return (
     <div className="space-y-4">
@@ -56,8 +58,7 @@ export default function SwitchView() {
           </p>
         )}
         {cases.map((c, i) => (
-          // Cases are an ordered, editable positional list with no stable id.
-          <div key={i} className="flex items-center gap-2">
+          <div key={c.id} className="flex items-center gap-2">
             <span className="w-14 shrink-0 font-mono text-muted-foreground text-xs">
               case {i + 1}
             </span>

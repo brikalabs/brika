@@ -49,13 +49,13 @@ export default function CountdownNode() {
   return (
     <div className="flex flex-col items-center gap-1.5 py-1">
       <div className="relative" style={{ width: SIZE, height: SIZE }}>
+        {/* Decorative ring: the remaining time is shown as visible text below. */}
         <svg
           width={SIZE}
           height={SIZE}
           viewBox={`0 0 ${SIZE} ${SIZE}`}
           className="-rotate-90"
-          role="img"
-          aria-label={`${formatClock(remaining)} remaining`}
+          aria-hidden="true"
         >
           <circle
             cx={SIZE / 2}

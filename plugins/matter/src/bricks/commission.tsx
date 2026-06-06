@@ -64,8 +64,8 @@ export default function CommissionBrick() {
       setPairedName(result.device?.name ?? 'New device');
       setStatus('success');
       setPairingCode('');
-    } catch (caught: unknown) {
-      setError(errorMessage(caught));
+    } catch (error_: unknown) {
+      setError(errorMessage(error_));
       setStatus('error');
     }
   }, [callAction, pairingCode]);

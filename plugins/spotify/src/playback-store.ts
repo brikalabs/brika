@@ -97,7 +97,7 @@ function emitPlaybackEvents(state: PlaybackState | null): void {
     return;
   }
 
-  if (!prevSnapshot || prevSnapshot.trackName !== state.trackName) {
+  if (prevSnapshot?.trackName !== state.trackName) {
     trackChanged.emit({
       trackName: state.trackName,
       artistName: state.artistName,

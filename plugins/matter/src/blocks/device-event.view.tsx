@@ -143,7 +143,7 @@ export default function DeviceEventView() {
           </div>
         ))}
 
-        {suggestions.filter((s) => !hasAttr(s)).length > 0 && (
+        {suggestions.some((s) => !hasAttr(s)) && (
           <div className="flex flex-wrap gap-1.5">
             {suggestions
               .filter((s) => !hasAttr(s))

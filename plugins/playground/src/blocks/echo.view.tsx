@@ -37,7 +37,7 @@ export default function EchoView() {
       navigator.clipboard.writeText(ref).catch(() => undefined);
     }
     setCopied(name);
-    window.setTimeout(() => {
+    globalThis.setTimeout(() => {
       setCopied((current) => (current === name ? null : current));
     }, 1200);
   };

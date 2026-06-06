@@ -203,7 +203,7 @@ export const switchBlock = defineReactiveBlock(
     config: z.object({
       field: z.string().describe('Field path to check'),
       cases: z
-        .array(z.object({ value: z.string() }))
+        .array(z.object({ value: z.string(), id: z.string() }))
         .default([])
         .describe('Values to match, in order; each adds its own output port'),
     }),
@@ -212,8 +212,9 @@ export const switchBlock = defineReactiveBlock(
     inputs.in.on((data) => {
       const value = String(resolveFieldValue(data, config.field));
       const index = (config.cases ?? []).findIndex((c) => c.value === value);
-      log.debug(`Switch value: ${value} -> ${index >= 0 ? `case-${index}` : 'default'}`);
-      emit(index >= 0 ? `case-${index}` : 'default', data);
+      const target = index >= 0 ? `case-${index}` : 'default';
+      log.debug(`Switch value: ${value} -> ${target}`);
+      emit(target, data);
     });
   }
 );
