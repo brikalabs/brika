@@ -66,7 +66,7 @@ export const sparkReceiver = defineReactiveBlock(
 
 Key points:
 
-* `config.sparkType` is a `z.sparkType()` field — the UI renders a picker with every spark on the hub.
+* `config.sparkType` is a `z.sparkType()` field. The host no longer hardcodes a spark picker for it: a block chooses how to surface the field through its own [custom view](reactive-blocks.md#custom-block-views). The built-in `spark-receiver` view (`plugins/blocks-builtin/src/blocks/spark-receiver.view.tsx`) fetches `/api/sparks` and renders a dropdown grouped by plugin.
 * `output(z.resolved('spark', 'sparkType'), …)` tells the type system that this output's type depends on the spark schema referenced by the `sparkType` config field. The UI uses this to type-check the connection.
 * `subscribeSpark` returns a `Source<SparkEvent>`; passing it to `start()` ties the subscription to the block's cleanup registry.
 

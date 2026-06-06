@@ -25,6 +25,7 @@ import { type MouseEvent, useCallback, useEffect, useMemo, useRef, useState } fr
 import type { Workflow, WorkflowBlock } from '../api';
 import type { BlockNodeData } from './BlockNode';
 import type { BlockDefinition, BlockTypeInfo } from './BlockToolbar';
+import { expandDynamicPorts } from './dynamic-ports';
 import type { RegisteredSpark } from './WorkflowEditor';
 import {
   collectConfigVariables,
@@ -294,8 +295,10 @@ export function useWorkflowEditor(
           icon: blockType.icon,
           color: blockType.color,
           pluginId: blockType.pluginId,
+          pluginUid: blockType.pluginUid,
+          nodeModuleUrl: blockType.nodeModuleUrl,
           inputs: blockType.inputs,
-          outputs: blockType.outputs,
+          outputs: expandDynamicPorts(blockType.outputs, { ...blockType.defaultConfig }),
           isFirst: false,
           isLast: blockTypeId.includes('end'),
           status: 'idle',
@@ -309,7 +312,9 @@ export function useWorkflowEditor(
     [setNodes]
   );
 
-  // Update block config (targeted — only creates new object for the changed node)
+  // Update block config (targeted — only creates new object for the changed node).
+  // When the block has dynamic (templated) output ports, recompute them from the
+  // merged config so adding/removing a case adds/removes its handle immediately.
   const updateBlockConfig = useCallback(
     (nodeId: string, config: Partial<WorkflowBlock>) => {
       setNodes((nds) => {
@@ -322,23 +327,59 @@ export function useWorkflowEditor(
           return nds;
         }
         const data = node.data as BlockNodeData;
+        const mergedConfig = { ...data.config, ...config };
+        const def = blockSchemaMap[data.type];
+        const outputs = def?.outputs?.some((p) => p.dynamic)
+          ? expandDynamicPorts(
+              def.outputs.map((p) => ({
+                id: p.id,
+                name: p.name || p.id,
+                typeName: p.typeName || 'generic<T>',
+                type: p.type,
+                dynamic: p.dynamic,
+              })),
+              mergedConfig
+            )
+          : data.outputs;
         const updated = [...nds];
         updated[idx] = {
           ...node,
-          data: {
-            ...data,
-            config: {
-              ...data.config,
-              ...config,
-            },
-          },
+          data: { ...data, config: mergedConfig, outputs },
         };
         return updated;
       });
       setIsDirty(true);
     },
-    [setNodes]
+    [setNodes, blockSchemaMap]
   );
+
+  // Keep edges valid as dynamic ports appear/disappear: drop any edge whose
+  // source/target handle no longer exists on its node. Returns the same array
+  // reference when nothing changed, so this never loops.
+  useEffect(() => {
+    setEdges((eds) => {
+      const handlesByNode = new Map<string, Set<string>>();
+      for (const n of nodes) {
+        const d = n.data as BlockNodeData;
+        handlesByNode.set(
+          n.id,
+          new Set([...(d.inputs ?? []).map((p) => p.id), ...(d.outputs ?? []).map((p) => p.id)])
+        );
+      }
+      const valid = eds.filter((e) => {
+        const srcHandles = handlesByNode.get(e.source);
+        if (srcHandles && e.sourceHandle && !srcHandles.has(e.sourceHandle)) {
+          return false;
+        }
+        const tgtHandles = handlesByNode.get(e.target);
+        if (tgtHandles && e.targetHandle && !tgtHandles.has(e.targetHandle)) {
+          return false;
+        }
+        return true;
+      });
+      return valid.length === eds.length ? eds : valid;
+    });
+  }, [nodes, setEdges]);
 
   // Set block status (for debugging)
   const setBlockStatus = useCallback(
@@ -366,6 +407,27 @@ export function useWorkflowEditor(
             };
           }
           return node;
+        })
+      );
+    },
+    [setNodes]
+  );
+
+  // Push the latest emitted value into a block's node data so node-body views
+  // (useBlockData) render live. Scoped to blocks that actually ship a node view,
+  // so high-frequency workflows don't re-render the whole graph.
+  const setBlockLiveOutput = useCallback(
+    (blockId: string, output: unknown) => {
+      setNodes((nds) =>
+        nds.map((node) => {
+          if (node.id !== blockId || node.type !== 'block') {
+            return node;
+          }
+          const data = node.data as BlockNodeData;
+          if (!data.nodeModuleUrl || Object.is(data.output, output)) {
+            return node;
+          }
+          return { ...node, data: { ...data, output } };
         })
       );
     },
@@ -448,6 +510,7 @@ export function useWorkflowEditor(
     blockOutputs,
     executionLogs,
     setBlockStatus,
+    setBlockLiveOutput,
     addExecutionLog,
     clearExecutionState,
     getAvailableVariables,

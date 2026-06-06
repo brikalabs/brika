@@ -76,11 +76,13 @@ function pingHandle(blockId: string, portId: string) {
   }
 }
 
-// Process new debug events and ping the relevant port handles
+// Process new debug events: ping the relevant port handles and feed the latest
+// emitted value into node-body views (useBlockData) for live previews.
 function processNewEvents(
   events: DebugEvent[],
   edges: Edge[],
-  lastProcessedTimestamp: React.RefObject<number>
+  lastProcessedTimestamp: React.RefObject<number>,
+  setBlockLiveOutput: (blockId: string, output: unknown) => void
 ) {
   const newEvents = events.filter((e) => e.timestamp > lastProcessedTimestamp.current);
 
@@ -91,6 +93,10 @@ function processNewEvents(
   for (const event of newEvents) {
     if (event.type !== 'block.emit' || !event.blockId || !event.port) {
       continue;
+    }
+    // Surface the emitted value to the block's node-body view.
+    if (event.data !== undefined) {
+      setBlockLiveOutput(event.blockId, event.data);
     }
     // Ping output port
     pingHandle(event.blockId, event.port);
@@ -216,6 +222,8 @@ interface ConfigSidePanelProps {
     type: string;
   }>;
   blockSchema: BlockDefinition['schema'] | undefined;
+  viewModuleUrl: string | undefined;
+  pluginUid: string | undefined;
 }
 
 function ConfigSidePanel({
@@ -225,6 +233,8 @@ function ConfigSidePanel({
   updateBlockConfig,
   availableVariables,
   blockSchema,
+  viewModuleUrl,
+  pluginUid,
 }: Readonly<ConfigSidePanelProps>) {
   const { t } = useLocale();
 
@@ -242,6 +252,8 @@ function ConfigSidePanel({
         onUpdateBlock={updateBlockConfig}
         availableVariables={availableVariables}
         blockSchema={blockSchema}
+        viewModuleUrl={viewModuleUrl}
+        pluginUid={pluginUid}
         className="h-full w-full"
         onCollapse={onToggle}
       />
@@ -608,6 +620,7 @@ function WorkflowEditorWithBlocks({
     getAvailableVariables,
     portTypeMap,
     blockSchemaMap,
+    setBlockLiveOutput,
   } = editor;
 
   // Connect to debug stream for port ping animations
@@ -619,10 +632,10 @@ function WorkflowEditorWithBlocks({
   // Track last processed event timestamp to handle array truncation
   const lastProcessedTimestamp = useRef(0);
 
-  // Trigger port pings when emit events come in
+  // Trigger port pings + live node-view updates when emit events come in
   useEffect(() => {
-    processNewEvents(events, edges, lastProcessedTimestamp);
-  }, [events, edges]);
+    processNewEvents(events, edges, lastProcessedTimestamp, setBlockLiveOutput);
+  }, [events, edges, setBlockLiveOutput]);
 
   // Handle drop from toolbar
   const onDragOver = useCallback((event: React.DragEvent) => {
@@ -670,13 +683,12 @@ function WorkflowEditorWithBlocks({
   // Get available variables for selected block
   const availableVariables = selectedNode ? getAvailableVariables(selectedNode.id) : [];
 
-  // Get block schema for selected node
-  const selectedBlockSchema = useMemo(() => {
+  // Get the full block definition for the selected node (schema + custom view).
+  const selectedBlockDef = useMemo(() => {
     if (selectedNode?.type !== 'block') {
       return undefined;
     }
-    const blockType = getBlockType(selectedNode);
-    return blockSchemaMap[blockType]?.schema;
+    return blockSchemaMap[getBlockType(selectedNode)];
   }, [selectedNode, blockSchemaMap]);
 
   // Check which panels are collapsed for stacking
@@ -718,7 +730,9 @@ function WorkflowEditorWithBlocks({
             selectedNode={selectedNode}
             updateBlockConfig={updateBlockConfig}
             availableVariables={availableVariables}
-            blockSchema={selectedBlockSchema}
+            blockSchema={selectedBlockDef?.schema}
+            viewModuleUrl={selectedBlockDef?.viewModuleUrl}
+            pluginUid={selectedBlockDef?.pluginUid}
           />
         )}
 

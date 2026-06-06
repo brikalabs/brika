@@ -18,12 +18,59 @@ import {
   startPlayback,
   usePlayerStore,
 } from './playback-store';
-import { resolveDeviceId } from './shared';
+import { getApi, resolveDeviceId } from './shared';
 
 function resolveTarget(deviceId?: string): string | undefined {
   const id = resolveDeviceId(deviceId);
   return id ?? usePlayerStore.get().devices[0]?.id;
 }
+
+// ─── Block-view data ──────────────────────────────────────────────────────────
+
+/** Current track summary surfaced on the Play block's canvas node. */
+export interface NowPlaying {
+  trackName: string;
+  artistName: string;
+  albumArt: string | null;
+  isPlaying: boolean;
+}
+
+/**
+ * Read the currently playing (or most recently played) track from the shared
+ * player store. Returns null when nothing is available (not authed / idle).
+ * Consumed by the Play block's node view via `useAction(getNowPlaying)`.
+ */
+export const getNowPlaying = defineAction(async (): Promise<NowPlaying | null> => {
+  const { playback, recentTrack } = usePlayerStore.get();
+  const track = playback ?? recentTrack;
+  if (!track) {
+    return null;
+  }
+  return {
+    trackName: track.trackName,
+    artistName: track.artistName,
+    albumArt: track.albumArt,
+    isPlaying: playback?.isPlaying ?? false,
+  };
+});
+
+/** A selectable Spotify Connect device option. */
+export interface DeviceOption {
+  value: string;
+  label: string;
+}
+
+/**
+ * List available Spotify Connect devices as `{ value, label }` options.
+ * Consumed by the Play block's config view device picker.
+ */
+export const listDevices = defineAction(async (): Promise<DeviceOption[]> => {
+  const devices = await getApi().getDevices();
+  return devices.map((device) => ({
+    value: device.id,
+    label: `${device.name} (${device.type})`,
+  }));
+});
 
 export const doPlay = defineAction(async (input?: { deviceId?: string }) => {
   const target = resolveTarget(input?.deviceId);

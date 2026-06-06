@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { BrickTypeRegistry } from '@/runtime/bricks';
 import type { RegisteredBrickType } from '@/runtime/bricks/brick-type-registry';
 import { ModuleCompiler } from '@/runtime/modules';
+import { MODULE_KINDS, resolveModuleUrl } from '@/runtime/modules/module-kinds';
 import { PluginLifecycle } from '@/runtime/plugins/plugin-lifecycle';
 import type { Json } from '@/types';
 
@@ -19,13 +20,9 @@ async function toBrickTypeDto(
   const pluginUid = t.pluginUid ?? lifecycle.getProcess(t.pluginName)?.uid;
 
   // Build the full module URL so the frontend doesn't assemble it
-  let moduleUrl: string | undefined;
-  if (pluginUid) {
-    const entry = compiler.get(`${t.pluginName}:bricks/${t.localId}`);
-    if (entry) {
-      moduleUrl = `/api/bricks/modules/${encodeURIComponent(pluginUid)}/${t.localId}.${entry.hash}.js`;
-    }
-  }
+  const moduleUrl = pluginUid
+    ? resolveModuleUrl(compiler, t.pluginName, pluginUid, MODULE_KINDS.brick, t.localId)
+    : undefined;
 
   return {
     id: t.fullId,
@@ -124,40 +121,7 @@ export const bricksRoutes = group({
       },
     }),
 
-    // ─── Brick Type Modules ─────────────────────────────────────────────────────
-    // Uses pluginUid + brickId to avoid encoded slashes in scoped package names.
-    // CSS is inlined into the JS module as a self-injecting <style> tag.
-
-    /**
-     * Serve the compiled JS module for a brick type (CSS inlined).
-     * URL format: /modules/:pluginUid/:brickId.:hash.js — hash is for cache busting only.
-     */
-    route.get({
-      path: '/modules/:pluginUid/:file',
-      params: z.object({
-        pluginUid: z.string(),
-        file: z.string(),
-      }),
-      handler: ({ params, inject }) => {
-        const pluginName = inject(PluginLifecycle).resolvePluginNameByUid(params.pluginUid);
-        if (!pluginName) {
-          return new Response('Plugin not found', { status: 404 });
-        }
-        // Parse brickId from "brickId.hash.js"
-        const dotIdx = params.file.indexOf('.');
-        const brickId = dotIdx > 0 ? params.file.slice(0, dotIdx) : params.file;
-        const entry = inject(ModuleCompiler).get(`${pluginName}:bricks/${brickId}`);
-        if (!entry) {
-          return new Response('Brick module not found', { status: 404 });
-        }
-        return new Response(Bun.file(entry.filePath), {
-          headers: {
-            'Content-Type': 'application/javascript',
-            'Cache-Control': 'public, max-age=31536000, immutable',
-          },
-        });
-      },
-    }),
+    // Brick view modules are served by the generic /api/modules route.
 
     // ─── Brick Instance Actions ─────────────────────────────────────────────────
 

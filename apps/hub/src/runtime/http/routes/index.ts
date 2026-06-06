@@ -8,8 +8,8 @@ import { boardsRoutes } from './boards';
 import { bricksRoutes } from './bricks';
 import { i18nRoutes, i18nWriteRoutes } from './i18n';
 import { logsRoutes } from './logs';
+import { modulesRoutes } from './modules';
 import { oauthRoutes } from './oauth';
-import { pageRoutes } from './pages';
 import { pluginRoutesHandler } from './plugin-routes';
 import { pluginsRoutes } from './plugins';
 import { registryRoutes } from './registry';
@@ -71,7 +71,7 @@ export const allRoutes = combineRoutes(
         routes: [i18nWriteRoutes, updateAdminRoutes, systemAdminRoutes, settingsAdminRoutes],
       }),
       oauthRoutes,
-      pageRoutes,
+      modulesRoutes,
       pluginRoutesHandler,
       pluginsRoutes,
       remoteAccessRoutes,

@@ -4,6 +4,7 @@ import { group, route, UnprocessableEntity } from '@brika/router';
 import { z } from 'zod';
 import { getProcessMetrics, MetricsStore } from '@/runtime/metrics';
 import { ModuleCompiler } from '@/runtime/modules';
+import { MODULE_KINDS, resolveModuleUrl } from '@/runtime/modules/module-kinds';
 import { PluginConfigService } from '@/runtime/plugins/plugin-config';
 import { PluginLifecycle } from '@/runtime/plugins/plugin-lifecycle';
 import { PluginManager } from '@/runtime/plugins/plugin-manager';
@@ -19,13 +20,10 @@ function enrichPages(plugin: Plugin, compiler: ModuleCompiler) {
   if (!plugin.pages.length) {
     return plugin.pages;
   }
-  return plugin.pages.map((page) => {
-    const entry = compiler.get(`${plugin.name}:pages/${page.id}`);
-    return {
-      ...page,
-      moduleUrl: entry ? `/api/plugins/${plugin.uid}/pages/${page.id}.${entry.hash}.js` : undefined,
-    };
-  });
+  return plugin.pages.map((page) => ({
+    ...page,
+    moduleUrl: resolveModuleUrl(compiler, plugin.name, plugin.uid, MODULE_KINDS.page, page.id),
+  }));
 }
 
 function enrichPlugin(plugin: Plugin, compiler: ModuleCompiler) {

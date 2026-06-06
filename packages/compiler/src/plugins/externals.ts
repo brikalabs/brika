@@ -13,6 +13,7 @@ const BRIDGE: Record<string, string> = {
   'lucide-react': 'icons',
   '@brika/sdk/ui-kit/hooks': 'hooks',
   '@brika/sdk/brick-views': 'brickHooks',
+  '@brika/sdk/block-views': 'blockHooks',
   clsx: 'clsx',
   'class-variance-authority': 'cva',
 };

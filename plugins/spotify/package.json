@@ -94,7 +94,9 @@
       "description": "Start playback on a Spotify device",
       "category": "action",
       "icon": "play",
-      "color": "#1DB954"
+      "color": "#1DB954",
+      "view": true,
+      "nodeView": true
     }
   ],
   "sparks": [

@@ -58,12 +58,19 @@ export interface BlockDefinition {
     name: string;
     typeName?: string;
     type?: Record<string, unknown>;
+    dynamic?: string;
   }>;
   schema: {
     type: 'object';
     properties?: Record<string, unknown>;
     required?: string[];
   };
+  /** URL of the plugin's compiled config-panel view module, when it ships one. */
+  viewModuleUrl?: string;
+  /** URL of the plugin's compiled node-body display module, when it ships one. */
+  nodeModuleUrl?: string;
+  /** Owning plugin process UID (present when a view module is available). */
+  pluginUid?: string;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

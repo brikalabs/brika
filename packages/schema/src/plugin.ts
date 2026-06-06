@@ -147,6 +147,20 @@ const BlockSchema = z.object({
       .regex(/^#[0-9a-fA-F]{6}$/)
       .describe('Hex color')
   ),
+  view: z.optional(
+    z
+      .boolean()
+      .describe(
+        'When true, the block ships a custom React view at `src/blocks/<id>.view.tsx` that fully owns its configuration UI in the workflow editor. Otherwise a generic schema-driven form is rendered.'
+      )
+  ),
+  nodeView: z.optional(
+    z
+      .boolean()
+      .describe(
+        'When true, the block ships a custom React view at `src/blocks/<id>.node.tsx` rendered inside the block node on the canvas (text, image, live previews) instead of the default config summary.'
+      )
+  ),
 });
 
 const SparkSchema = z.object({

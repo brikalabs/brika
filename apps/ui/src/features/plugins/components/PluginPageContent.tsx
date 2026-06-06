@@ -22,7 +22,7 @@ export function PluginPageContent({
 
   // moduleUrl is pre-built by the hub with the content hash in the filename.
   // Fallback to unhashed URL if moduleUrl is not available (plugin just started).
-  const url = moduleUrl ?? `/api/plugins/${pluginUid}/pages/${pageId}.js`;
+  const url = moduleUrl ?? `/api/modules/${pluginUid}/page/${pageId}.js`;
 
   return (
     <PluginModule

@@ -7,5 +7,6 @@
     // `noUncheckedIndexedAccess`. Flip back to `true` once tightened.
     "noUncheckedIndexedAccess": false
   },
-  "include": ["src"]
+  "include": ["src"],
+  "exclude": ["src/blocks/**/*.view.tsx", "src/blocks/**/*.node.tsx"]
 }

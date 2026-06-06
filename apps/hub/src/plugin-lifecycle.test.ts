@@ -79,6 +79,7 @@ describe('PluginLifecycle', () => {
   };
   let mockModuleCompiler: {
     compile: ReturnType<typeof mock>;
+    syncManifest: ReturnType<typeof mock>;
     get: ReturnType<typeof mock>;
     prune: ReturnType<typeof mock>;
     remove: ReturnType<typeof mock>;
@@ -161,6 +162,7 @@ describe('PluginLifecycle', () => {
     };
     mockModuleCompiler = {
       compile: mock().mockResolvedValue(undefined),
+      syncManifest: mock().mockResolvedValue(undefined),
       get: mock().mockReturnValue(undefined),
       prune: mock(),
       remove: mock(),

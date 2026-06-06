@@ -9,6 +9,22 @@ import { defineAction } from '@brika/sdk/actions';
 import { getMatterController, type MatterCommand } from './matter-controller';
 import { serializeDevice } from './serialize';
 
+/**
+ * Compact device list for selector UIs (block config views, dynamic dropdowns).
+ * Returns one entry per commissioned device with a stable `value` (nodeId) and a
+ * human `label`, plus the device type and online flag so the picker can render a
+ * matching icon and status dot.
+ */
+export const listDevices = defineAction(async () => {
+  const controller = getMatterController();
+  return controller.getCommissionedDevices().map((d) => ({
+    value: d.nodeId,
+    label: d.name,
+    deviceType: d.deviceType,
+    online: d.online,
+  }));
+});
+
 /** Get all commissioned devices */
 export const getDevices = defineAction(async () => {
   const controller = getMatterController();

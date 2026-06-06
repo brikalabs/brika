@@ -30,6 +30,11 @@ export interface BlockPort {
   type?: Record<string, unknown>;
   /** JSON Schema for this port (undefined for generic/passthrough) */
   jsonSchema?: Record<string, unknown>;
+  /**
+   * When set, this output is a template repeated once per item of the named
+   * config array (e.g. `cases`), producing ports `<id>-<index>` in the editor.
+   */
+  dynamic?: string;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

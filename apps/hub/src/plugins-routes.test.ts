@@ -127,7 +127,7 @@ describe('plugins routes', () => {
     }>('/api/plugins/plg-1');
 
     expect(res.status).toBe(200);
-    expect(res.body.pages[0].moduleUrl).toBe('/api/plugins/plg-1/pages/settings.abc123.js');
+    expect(res.body.pages[0].moduleUrl).toBe('/api/modules/plg-1/page/settings.abc123.js');
   });
 
   test('GET /api/plugins/:uid returns 404 for unknown plugin', async () => {

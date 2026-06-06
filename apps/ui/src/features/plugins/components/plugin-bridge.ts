@@ -12,6 +12,14 @@ import {
   useCallBrickAction,
 } from '@/features/boards/brick-view-hooks';
 import {
+  useBlockConfig,
+  useBlockData,
+  useBlockId,
+  useBlockType,
+  useBlockVariables,
+  useUpdateBlockConfig,
+} from '@/features/workflows/block-view-hooks';
+import {
   usePluginAction as useAction,
   useCallAction,
   usePluginLocale as useLocale,
@@ -49,6 +57,14 @@ const bridge = {
   },
   hooks: { useLocale, useAction, useCallAction, usePluginUid, usePluginRouteUrl },
   brickHooks: { useBrickData, useBrickConfig, useBrickSize, useCallBrickAction },
+  blockHooks: {
+    useBlockConfig,
+    useUpdateBlockConfig,
+    useBlockId,
+    useBlockType,
+    useBlockData,
+    useBlockVariables,
+  },
   icons,
   ui,
   cva,

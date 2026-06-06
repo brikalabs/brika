@@ -45,7 +45,9 @@
       "description": "Send a command to a Matter device (on/off, level, color)",
       "category": "action",
       "icon": "cpu",
-      "color": "#6366f1"
+      "color": "#6366f1",
+      "view": true,
+      "nodeView": true
     }
   ],
   "pages": [

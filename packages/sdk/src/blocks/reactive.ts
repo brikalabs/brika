@@ -28,6 +28,12 @@ export interface PortMeta {
   name: string;
   /** Description for tooltip */
   description?: string;
+  /**
+   * Mark an output as a dynamic template: the editor repeats it once per item of
+   * the named config array (e.g. `repeat: 'cases'`), creating ports `<id>-<index>`.
+   * Emit to them at runtime with the raw `emit(\`<id>-\${i}\`, data)` context method.
+   */
+  repeat?: string;
 }
 
 /**
@@ -133,6 +139,13 @@ export interface BlockContext<
 
   /** Typed configuration */
   readonly config: z.infer<TConfig>;
+
+  /**
+   * Raw emit to any output port id, including dynamic template ports
+   * (e.g. `emit(\`case-\${i}\`, data)`). Bypasses per-port schema validation, so
+   * prefer the typed `outputs` emitters for statically-declared ports.
+   */
+  emit(portId: string, data: unknown): void;
 
   /** Self-returning context */
   readonly context: this;

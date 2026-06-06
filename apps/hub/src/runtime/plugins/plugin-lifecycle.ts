@@ -13,6 +13,7 @@ import { I18nService } from '@/runtime/i18n';
 import { Logger } from '@/runtime/logs/log-router';
 import { MetricsStore } from '@/runtime/metrics';
 import { ModuleCompiler } from '@/runtime/modules';
+import { MODULE_KINDS, resolveModuleUrl } from '@/runtime/modules/module-kinds';
 import { SecretStore } from '@/runtime/secrets/secret-store';
 import { type PluginStateWithMetadata, StateStore } from '@/runtime/state/state-store';
 import { buildHubGrants } from './grants/registry-factory';
@@ -567,23 +568,27 @@ export class PluginLifecycle {
     if (!process) {
       return;
     }
-    const bricks = process.metadata.bricks ?? [];
-    for (const brick of bricks) {
-      const fullId = `${pluginName}:${brick.id}`;
-      const entry = this.#moduleCompiler.get(`${pluginName}:bricks/${brick.id}`);
-      if (entry) {
-        const moduleUrl = `/api/bricks/modules/${encodeURIComponent(process.uid)}/${brick.id}.${entry.hash}.js`;
-        this.#events.dispatch(
-          BrickActions.moduleRecompiled.create(
-            {
-              pluginName,
-              brickTypeId: fullId,
-              moduleUrl,
-            },
-            'hub'
-          )
-        );
+    // Only board bricks live-swap in place; pages and block views reload on
+    // navigation, so this stays brick-scoped (a genuine semantic difference,
+    // not duplication). URL/key shapes come from the registry so they cannot
+    // drift from the serving route.
+    for (const id of MODULE_KINDS.brick.select(process.metadata)) {
+      const moduleUrl = resolveModuleUrl(
+        this.#moduleCompiler,
+        pluginName,
+        process.uid,
+        MODULE_KINDS.brick,
+        id
+      );
+      if (!moduleUrl) {
+        continue;
       }
+      this.#events.dispatch(
+        BrickActions.moduleRecompiled.create(
+          { pluginName, brickTypeId: `${pluginName}:${id}`, moduleUrl },
+          'hub'
+        )
+      );
     }
   }
 
@@ -881,21 +886,7 @@ export class PluginLifecycle {
   }
 
   async #compilePluginModules(metadata: PluginPackageSchema, rootDirectory: string): Promise<void> {
-    const pages = metadata.pages ?? [];
-    const bricks = metadata.bricks ?? [];
-
-    // Evict cached modules that are no longer in the manifest
-    const currentKeys = new Set([
-      ...pages.map((p) => `pages/${p.id}`),
-      ...bricks.map((b) => `bricks/${b.id}`),
-    ]);
-    this.#moduleCompiler.prune(metadata.name, currentKeys, rootDirectory);
-
-    await this.#moduleCompiler.compile(metadata.name, rootDirectory, {
-      pages,
-      bricks,
-    });
-
+    await this.#moduleCompiler.syncManifest(metadata.name, rootDirectory, metadata);
     await ensurePluginTsconfig(rootDirectory);
   }
 }

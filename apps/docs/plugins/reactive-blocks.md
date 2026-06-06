@@ -212,6 +212,121 @@ The block setup function can return:
 * `() => void` — a cleanup function called when the block is stopped.
 * `Promise<void>` — the runtime awaits it. Don't do this; do async work from inside subscriptions instead.
 
+## Custom block views
+
+By default a block has no UI of its own: the hub reads its `config` schema, generates a JSON Schema, and renders a generic form (see [Config](#config)). Zero-config blocks get that form for free and never need anything more.
+
+When the generic form is not enough, a block can ship **its own React views**. There are two independent surfaces, each opt-in from the block's `package.json` entry:
+
+| Surface | File | Manifest flag | Renders in |
+|---|---|---|---|
+| Config panel | `src/blocks/<id>.view.tsx` | `"view": true` | The block's settings panel in the workflow editor |
+| Node body | `src/blocks/<id>.node.tsx` | `"nodeView": true` | The block's node on the workflow canvas |
+
+```json
+"blocks": [
+  {
+    "id": "timer",
+    "name": "Timer",
+    "category": "trigger",
+    "view": true,
+    "nodeView": true
+  }
+]
+```
+
+The filename (minus the `.view.tsx` / `.node.tsx` suffix) must match the block `id`. Each file's **default export** is the React component; a view fully owns its surface, replacing the generic form (for `.view.tsx`) or the default node label (for `.node.tsx`).
+
+### Hooks
+
+Views import their hooks from `@brika/sdk/block-views`. They only work inside a block view's render function.
+
+| Hook | Returns |
+|---|---|
+| `useBlockConfig<T>()` | The block instance's current config, typed as `T`. |
+| `useUpdateBlockConfig()` | A merge-patch updater: call `update({ field: value })` to persist a partial config change. |
+| `useBlockId()` | This block instance's ID. |
+| `useBlockType()` | The block's type (its manifest `id`). |
+| `useBlockData<T>()` | The block's latest emitted value, typed as `T`. Use it for live previews on the node body. `undefined` until the block has emitted. |
+| `useBlockVariables()` | The typed variables available from upstream event types, for building field autocompletion. |
+
+### A config view
+
+The config view owns the whole settings panel. Read config with `useBlockConfig<T>()`, write it with `useUpdateBlockConfig()`. The built-in `condition` block (`plugins/blocks-builtin/src/blocks/condition.view.tsx`) renders a visual rule builder:
+
+```tsx
+import { useBlockConfig, useUpdateBlockConfig } from '@brika/sdk/block-views';
+import { Input, Label } from '@brika/sdk/ui-kit';
+
+interface ConditionConfig {
+  field?: string;
+  operator?: string;
+  value?: unknown;
+}
+
+export default function ConditionView() {
+  const config = useBlockConfig<ConditionConfig>();
+  const update = useUpdateBlockConfig();
+
+  return (
+    <Label className="text-xs">
+      Field
+      <Input
+        value={config.field ?? ''}
+        onChange={(e) => update({ field: e.target.value })}
+        className="bg-background font-mono"
+      />
+    </Label>
+  );
+}
+```
+
+### A node-body view
+
+The node-body view renders a compact summary on the canvas. It commonly pairs `useBlockConfig` with `useBlockData<T>()` to preview the live value flowing through the block, as the built-in `text` block does (`plugins/blocks-builtin/src/blocks/text.node.tsx`):
+
+```tsx
+import { useBlockConfig, useBlockData } from '@brika/sdk/block-views';
+
+interface TextConfig {
+  content?: string;
+}
+
+export default function TextNode() {
+  const config = useBlockConfig<TextConfig>();
+  const data = useBlockData<unknown>();
+
+  return (
+    <div className="space-y-1.5">
+      <p className="text-foreground text-sm">{config.content ?? 'Set text in the config panel'}</p>
+      {data !== undefined && (
+        <code className="font-mono text-[10px]">
+          {typeof data === 'object' ? JSON.stringify(data) : String(data)}
+        </code>
+      )}
+    </div>
+  );
+}
+```
+
+### Views run in the host
+
+Unlike [bricks](bricks.md), block views are **real React running in the host UI, same-origin**. That means a view can:
+
+* `fetch()` hub APIs directly. The built-in `spark-receiver` view (`plugins/blocks-builtin/src/blocks/spark-receiver.view.tsx`) calls `fetch('/api/sparks')` and renders a dropdown grouped by plugin, replacing what used to be a hardcoded spark field on the host config panel:
+
+  ```tsx
+  useEffect(() => {
+    fetch('/api/sparks')
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data: RegisteredSpark[]) => setSparks(Array.isArray(data) ? data : []));
+  }, []);
+  ```
+
+* Call **plugin actions** via `useAction` / `useCallAction` from `@brika/sdk/ui-kit/hooks` (the same hooks pages and bricks use). The Matter `command` view drives its device picker from a `listDevices` action this way. There is **no** block-instance-scoped action hook: use the plugin's actions.
+
+Both `@brika/sdk/block-views` and `@brika/sdk/ui-kit/hooks` are wired through the `globalThis.__brika` bridge, so they resolve to the host's instances at load time. See [Externals Rewrite](../architecture/externals-rewrite.md).
+
 ## See also
 
 * **[Reactive Streams](reactive-streams.md)** — operators, combinators, sources.

@@ -20,9 +20,7 @@ import {
   ScrollArea,
   Select,
   SelectContent,
-  SelectGroup,
   SelectItem,
-  SelectLabel,
   SelectTrigger,
   SelectValue,
   Separator,
@@ -32,7 +30,6 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@brika/clay';
-import { useQuery } from '@tanstack/react-query';
 import type { Node } from '@xyflow/react';
 import {
   ArrowDownToLine,
@@ -44,29 +41,20 @@ import {
   Plus,
   Sparkles,
   Trash2,
-  Zap,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useCapture } from '@/features/analytics/hooks';
-import { fetcher } from '@/lib/query';
 import { useLocale } from '@/lib/use-locale';
 import type { BlockNodeData, BlockPort } from './BlockNode';
+import { ClientBlockView } from './ClientBlockView';
 import { usePortTypeName } from './WorkflowTypeContext';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Type Markers
 // ─────────────────────────────────────────────────────────────────────────────
 
-type TypeMarker =
-  | 'expression'
-  | 'duration'
-  | 'color'
-  | 'code'
-  | 'secret'
-  | 'url'
-  | 'json'
-  | 'spark';
+type TypeMarker = 'expression' | 'duration' | 'color' | 'code' | 'secret' | 'url' | 'json';
 
 const TYPE_MARKERS: TypeMarker[] = [
   'expression',
@@ -76,7 +64,6 @@ const TYPE_MARKERS: TypeMarker[] = [
   'secret',
   'url',
   'json',
-  'spark',
 ];
 
 function getTypeMarker(description?: string): {
@@ -168,6 +155,10 @@ interface ConfigPanelProps {
   onUpdateBlock: (nodeId: string, config: Record<string, unknown>) => void;
   availableVariables: Variable[];
   blockSchema?: BlockSchema;
+  /** When the block ships a custom React view, its compiled module URL. */
+  viewModuleUrl?: string;
+  /** Owning plugin process UID (present alongside viewModuleUrl). */
+  pluginUid?: string;
   onCollapse?: () => void;
   className?: string;
 }
@@ -464,16 +455,6 @@ function SecretField({ value, onChange, cleanDescription, label }: Readonly<Reso
   );
 }
 
-function SparkField({ value, onChange, cleanDescription }: Readonly<ResolvedFieldInfo>) {
-  return (
-    <SparkTypeInput
-      value={toDisplayString(value)}
-      onChange={(v) => onChange(v)}
-      placeholder={cleanDescription || 'Select spark type...'}
-    />
-  );
-}
-
 function BooleanField({
   value,
   onChange,
@@ -598,7 +579,6 @@ const markerRenderers: Record<TypeMarker, (info: ResolvedFieldInfo) => ReactNode
   color: (info) => <ColorField {...info} />,
   expression: (info) => <ExpressionMarkerField {...info} />,
   secret: (info) => <SecretField {...info} />,
-  spark: (info) => <SparkField {...info} />,
   url: (info) => <StringField {...info} />,
   json: (info) => <StringField {...info} />,
   code: (info) => <StringField {...info} />,
@@ -786,87 +766,6 @@ function DurationInput({ value, onChange, placeholder }: Readonly<DurationInputP
     </div>
   );
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Spark Type Input with Autocomplete
-// ─────────────────────────────────────────────────────────────────────────────
-
-interface RegisteredSpark {
-  type: string;
-  id: string;
-  pluginId: string;
-  name?: string;
-  description?: string;
-  schema?: Record<string, unknown>;
-}
-
-interface SparkTypeInputProps {
-  value: string;
-  onChange: (value: string) => void;
-  placeholder?: string;
-}
-
-function SparkTypeInput({ value, onChange, placeholder }: Readonly<SparkTypeInputProps>) {
-  const { data: sparks = [] } = useQuery({
-    queryKey: ['sparks'],
-    queryFn: () => fetcher<RegisteredSpark[]>('/api/sparks'),
-    staleTime: 30000,
-  });
-
-  // Group sparks by plugin
-  const sparksByPlugin = useMemo(() => {
-    const grouped = new Map<string, RegisteredSpark[]>();
-    for (const spark of sparks) {
-      const existing = grouped.get(spark.pluginId) || [];
-      grouped.set(spark.pluginId, [...existing, spark]);
-    }
-    return grouped;
-  }, [sparks]);
-
-  if (sparks.length === 0) {
-    return (
-      <div className="flex items-center gap-2 rounded-md border bg-muted/50 px-3 py-2 text-muted-foreground text-sm">
-        <Zap className="size-4" />
-        <span>No sparks registered</span>
-      </div>
-    );
-  }
-
-  return (
-    <Select value={value} onValueChange={onChange}>
-      <SelectTrigger className="bg-background">
-        <SelectValue placeholder={placeholder || 'Select spark type...'}>
-          {value && (
-            <span className="flex items-center gap-2">
-              <Zap className="size-4 text-amber-500" />
-              <span className="font-mono">{value}</span>
-            </span>
-          )}
-        </SelectValue>
-      </SelectTrigger>
-      <SelectContent>
-        {[...sparksByPlugin.entries()].map(([pluginId, pluginSparks]) => (
-          <SelectGroup key={pluginId}>
-            <SelectLabel className="font-mono text-xs">{pluginId}</SelectLabel>
-            {pluginSparks.map((spark) => (
-              <SelectItem key={spark.type} value={spark.type}>
-                <span className="flex items-center gap-2">
-                  <Zap className="size-3 text-amber-500" />
-                  <span>{spark.name || spark.id}</span>
-                  <span className="font-mono text-muted-foreground text-xs">({spark.type})</span>
-                </span>
-              </SelectItem>
-            ))}
-          </SelectGroup>
-        ))}
-      </SelectContent>
-    </Select>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Trigger Config
-// ─────────────────────────────────────────────────────────────────────────────
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Block Config (Schema-Driven)
@@ -1186,6 +1085,8 @@ export function ConfigPanel({
   onUpdateBlock,
   availableVariables,
   blockSchema,
+  viewModuleUrl,
+  pluginUid,
   onCollapse,
   className,
 }: Readonly<ConfigPanelProps>) {
@@ -1210,13 +1111,27 @@ export function ConfigPanel({
 
       <ScrollArea className="min-h-0 flex-1 overflow-hidden">
         <div className="p-4">
-          <BlockConfig
-            data={blockData}
-            schema={blockSchema}
-            onUpdate={(config) => onUpdateBlock(node.id, config)}
-            availableVariables={availableVariables}
-            pluginId={blockData.pluginId}
-          />
+          {viewModuleUrl && pluginUid && blockData.pluginId ? (
+            <ClientBlockView
+              blockId={node.id}
+              blockType={blockType}
+              pluginName={blockData.pluginId}
+              pluginUid={pluginUid}
+              moduleUrl={viewModuleUrl}
+              scopeId={`${blockData.pluginId}:blocks/${blockKey}.view`}
+              config={blockData.config}
+              variables={availableVariables}
+              onUpdateConfig={(config) => onUpdateBlock(node.id, config)}
+            />
+          ) : (
+            <BlockConfig
+              data={blockData}
+              schema={blockSchema}
+              onUpdate={(config) => onUpdateBlock(node.id, config)}
+              availableVariables={availableVariables}
+              pluginId={blockData.pluginId}
+            />
+          )}
         </div>
 
         <VariablesReference variables={availableVariables} />

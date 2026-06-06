@@ -2,7 +2,7 @@
  * Service-worker proxy bridge.
  *
  * When the UI is loaded via the remote-access bootstrap, `import()`
- * calls for plugin/brick modules at `/api/bricks/modules/...` go
+ * calls for plugin client modules at `/api/modules/...` go
  * through the browser's module loader → SW → cache miss → network →
  * SPA-fallback HTML on the CF Worker. The bootstrap can't pre-cache
  * those modules because they're loaded on-demand based on the board's
