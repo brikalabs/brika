@@ -9,7 +9,13 @@ import { log, onInit, onStop, onUninstall } from '@brika/sdk/lifecycle';
 import { clearAllData } from '@brika/sdk/storage';
 import { getMatterController } from './matter-controller';
 import { serializeDevice } from './serialize';
-import { deviceDiscovered, deviceStateChanged } from './sparks';
+import {
+  attributeChanged,
+  deviceDiscovered,
+  deviceOffline,
+  deviceOnline,
+  deviceStateChanged,
+} from './sparks';
 
 // ─── Actions (server-side, called from pages and client bricks) ─────────────
 
@@ -19,11 +25,18 @@ import './actions';
 
 // ─── Sparks ──────────────────────────────────────────────────────────────────
 
-export { deviceDiscovered, deviceStateChanged } from './sparks';
+export {
+  attributeChanged,
+  deviceDiscovered,
+  deviceOffline,
+  deviceOnline,
+  deviceStateChanged,
+} from './sparks';
 
 // ─── Blocks ──────────────────────────────────────────────────────────────────
 
 export { matterCommand } from './blocks/command';
+export { deviceEvent } from './blocks/device-event';
 
 // ─── Bricks ──────────────────────────────────────────────────────────────────
 
@@ -70,19 +83,39 @@ onInit(async () => {
   const controller = getMatterController();
   await controller.start();
 
-  // Wire device state changes to spark emissions + brick data push
+  // Wire device state changes to spark emissions + brick data push. We diff
+  // each real event against the last snapshot to emit granular, typed sparks
+  // (online/offline + per-attribute) on top of the catch-all state spark.
+  const prevByNode = new Map<string, { online: boolean; state: Record<string, string> }>();
+
   controller.onDeviceStateChanged((device) => {
+    const now = Date.now();
     const state: Record<string, string> = {};
     for (const [k, v] of Object.entries(device.state)) {
       state[k] = String(v);
     }
-    deviceStateChanged.emit({
-      nodeId: device.nodeId,
-      name: device.name,
-      deviceType: device.deviceType,
-      online: device.online,
-      state,
-    });
+
+    const prev = prevByNode.get(device.nodeId);
+    const base = { nodeId: device.nodeId, name: device.name, deviceType: device.deviceType };
+
+    // Online/offline transitions.
+    if (prev && prev.online !== device.online) {
+      (device.online ? deviceOnline : deviceOffline).emit({ ...base, timestamp: now });
+    }
+
+    // Per-attribute changes (skip the very first snapshot, nothing to diff).
+    if (prev) {
+      for (const [attribute, value] of Object.entries(state)) {
+        if (prev.state[attribute] !== value) {
+          attributeChanged.emit({ ...base, attribute, value, timestamp: now });
+        }
+      }
+    }
+
+    prevByNode.set(device.nodeId, { online: device.online, state });
+
+    // Catch-all spark (kept for back-compat / "any change" consumers).
+    deviceStateChanged.emit({ ...base, online: device.online, state });
 
     // Push updated data to client bricks
     pushAllBrickData();

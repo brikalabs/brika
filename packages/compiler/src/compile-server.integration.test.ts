@@ -100,15 +100,20 @@ describe('compileServerEntry', () => {
 
   // ── 4. Build failure ───────────────────────────────────────────────
 
-  test('build failure throws when entrypoint has unresolvable imports', async () => {
-    // Bun.build throws on unresolvable imports in the current Bun version.
-    // compileServerEntry propagates this error to the caller.
+  test('build failure returns errors when entrypoint has unresolvable imports', async () => {
+    // Bun.build is configured with `throw: false`, so compileServerEntry returns
+    // a failed result carrying the actual build errors rather than throwing an
+    // opaque AggregateError the caller cannot inspect.
     await writeFile(
       join(pluginRoot, 'src', 'index.ts'),
       "import { missing } from './does-not-exist';\nexport { missing };\n"
     );
 
-    await expect(compileServerEntry(opts())).rejects.toThrow();
+    const result = await compileServerEntry(opts());
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.errors.length).toBeGreaterThan(0);
+    }
   });
 
   // ── 5. Clean old outputs ──────────────────────────────────────────
