@@ -7,10 +7,10 @@ import { describe, expect, test } from 'bun:test';
 import {
   FetchArgsSchema,
   FetchResultSchema,
-  netFetch,
-  netSocket,
   NetScopeSchema,
   NetSocketScopeSchema,
+  netFetch,
+  netSocket,
 } from './net';
 
 const stubHandlerCtx = {
@@ -199,6 +199,8 @@ describe('netSocket spec', () => {
   });
 
   test('handler always throws: the grant is realised at the lockdown, never dispatched', () => {
-    expect(() => netSocket.handler(stubHandlerCtx, {})).toThrow(/never dispatched over IPC/);
+    // net.socket's scope is the empty object, not net.fetch's { allow }.
+    const ctx = { ...stubHandlerCtx, grantedScope: {} };
+    expect(() => netSocket.handler(ctx, {})).toThrow(/never dispatched over IPC/);
   });
 });
