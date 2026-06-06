@@ -8,6 +8,10 @@ const BRIDGE: Record<string, string> = {
   react: 'React',
   'react/jsx-runtime': 'jsx',
   'react/jsx-dev-runtime': 'jsx',
+  // Bare @brika/sdk in client code resolves to a small client-safe surface
+  // (e.g. `capture`). Importing the full SDK into a browser bundle would pull
+  // in zod + server-only deps and fail to build.
+  '@brika/sdk': 'sdk',
   '@brika/sdk/ui-kit': 'ui',
   '@brika/sdk/ui-kit/icons': 'icons',
   'lucide-react': 'icons',

@@ -5,6 +5,7 @@
 
 import * as React from 'react';
 import * as jsxRuntime from 'react/jsx-runtime';
+import { analyticsApi } from '@/features/analytics/api';
 import {
   useBrickConfig,
   useBrickData,
@@ -19,6 +20,7 @@ import {
   useBlockVariables,
   useUpdateBlockConfig,
 } from '@/features/workflows/block-view-hooks';
+import type { Json } from '@/types';
 import {
   usePluginAction as useAction,
   useCallAction,
@@ -26,6 +28,11 @@ import {
   usePluginRouteUrl,
   usePluginUid,
 } from './plugin-hooks';
+
+/** Client-safe subset of @brika/sdk for browser-compiled plugin modules. */
+const sdk = {
+  capture: (name: string, props?: Record<string, Json>) => analyticsApi.capture(name, props),
+};
 
 const [icons, ui, cva, { clsx: clsxFn }] = await Promise.all([
   import('lucide-react'),
@@ -55,6 +62,7 @@ const bridge = {
         : jsxRuntime.jsx(type, props, key);
     },
   },
+  sdk,
   hooks: { useLocale, useAction, useCallAction, usePluginUid, usePluginRouteUrl },
   brickHooks: { useBrickData, useBrickConfig, useBrickSize, useCallBrickAction },
   blockHooks: {
