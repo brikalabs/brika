@@ -59,6 +59,15 @@ describe('buildMacosProfile — default stance', () => {
     // The bare `(allow network*)` should NOT appear when allowNetwork=false.
     expect(out.split('\n')).not.toContain('(allow network*)');
   });
+
+  test('allowNetwork on: full network plus explicit bind + inbound (mDNS needs them)', () => {
+    const out = buildMacosProfile({ ...BASE, allowNetwork: true });
+    expect(out).toContain('(allow network*)');
+    expect(out).toContain('(allow network-bind)');
+    expect(out).toContain('(allow network-inbound)');
+    // The unix-only fallback must not appear when full network is granted.
+    expect(out).not.toContain('(allow network* (local unix))');
+  });
 });
 
 describe('buildMacosProfile — scope-derived allows', () => {
