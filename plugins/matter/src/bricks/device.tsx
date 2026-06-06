@@ -12,16 +12,17 @@
  */
 
 import { capture } from '@brika/sdk';
-import { useBrickConfig, useBrickData, useBrickSize } from '@brika/sdk/brick-views';
+import { useBrickConfig, useBrickSize } from '@brika/sdk/brick-views';
 import { useLocale } from '@brika/sdk/ui-kit/hooks';
 import clsx from 'clsx';
 import { Loader2, Settings } from 'lucide-react';
 import { useCallback } from 'react';
+import { deviceData } from '../brick-data';
 import { AmbientGlow, DeviceIcon, StatusBadge } from './components';
 import { DeviceControls } from './controls';
 import { useSendCommand } from './controls/send-command';
 import { getDeviceTheme } from './theme';
-import type { DeviceData, DeviceState } from './types';
+import type { DeviceState } from './types';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -124,7 +125,7 @@ function StripLayout({ device, theme, isActive, typeLabel, onTap }: Readonly<Dev
 export default function DeviceBrick() {
   const { width, height } = useBrickSize();
   const config = useBrickConfig();
-  const data = useBrickData<DeviceData>();
+  const data = deviceData.use();
   const { t } = useLocale();
   const sendCommand = useSendCommand();
 

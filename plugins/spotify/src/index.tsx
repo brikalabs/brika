@@ -1,5 +1,6 @@
-import { defineOAuth, definePreferenceOptions, setBrickData } from '@brika/sdk';
+import { defineOAuth, definePreferenceOptions } from '@brika/sdk';
 import { log, onStop } from '@brika/sdk/lifecycle';
+import { playerData, playSongData } from './brick-data';
 
 // ─── OAuth ────────────────────────────────────────────────────────────────────
 
@@ -73,7 +74,7 @@ const releasePolling = acquirePolling();
 // Push player state to client bricks whenever the store changes
 usePlayerStore.subscribe(() => {
   const state = usePlayerStore.get();
-  setBrickData('player', {
+  playerData.set({
     playback: state.playback,
     recentTrack: state.recentTrack,
     isAuthed: state.isAuthed,
@@ -82,7 +83,7 @@ usePlayerStore.subscribe(() => {
     authUrl: spotify.getAuthUrl(),
   });
   // The "Play a Song" card only needs auth state; search runs via actions.
-  setBrickData('play-song', {
+  playSongData.set({
     isAuthed: state.isAuthed,
     authUrl: spotify.getAuthUrl(),
   });

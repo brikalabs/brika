@@ -1,4 +1,4 @@
-import { capture, getDeviceLocation, getPreferences, setBrickData } from '@brika/sdk';
+import { capture, getDeviceLocation, getPreferences } from '@brika/sdk';
 import {
   log,
   onBrickConfigChange,
@@ -6,6 +6,7 @@ import {
   onPreferencesChange,
   onStop,
 } from '@brika/sdk/lifecycle';
+import { compactData, currentData, forecastData } from './brick-data';
 import { getConditionColor, getGradient, getWeatherMeta } from './utils';
 import { acquirePolling, useWeatherMap } from './weather-store';
 
@@ -126,9 +127,9 @@ function pushBrickData() {
   }
 
   const shared = { defaultCity, unit: currentUnit, cityErrors };
-  setBrickData('compact', { ...shared, cities: compactCities });
-  setBrickData('current', { ...shared, cities: currentCities });
-  setBrickData('forecast', { ...shared, cities: forecastCities });
+  compactData.set({ ...shared, cities: compactCities });
+  currentData.set({ ...shared, cities: currentCities });
+  forecastData.set({ ...shared, cities: forecastCities });
 }
 
 // Subscribe to weather store changes and push data to all client bricks

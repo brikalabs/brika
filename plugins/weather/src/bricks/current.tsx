@@ -6,10 +6,11 @@
  * Data is pushed from the plugin process via setBrickData().
  */
 
-import { useBrickConfig, useBrickData, useBrickSize } from '@brika/sdk/brick-views';
+import { useBrickConfig, useBrickSize } from '@brika/sdk/brick-views';
 import { useLocale } from '@brika/sdk/ui-kit/hooks';
 import { Droplets, Gauge, MapPin, Thermometer, Wind } from 'lucide-react';
 import type { ComponentType } from 'react';
+import { currentData } from '../brick-data';
 import {
   CityError,
   formatTemp,
@@ -39,7 +40,7 @@ interface CurrentCityData {
   lastUpdated: number | null;
 }
 
-interface CurrentWeatherData {
+export interface CurrentWeatherData {
   defaultCity: string;
   unit: string;
   cities: Record<string, CurrentCityData>;
@@ -85,7 +86,7 @@ function WeatherStat({
 // ─── Component ──────────────────────────────────────────────────────────────
 
 export default function CurrentWeather() {
-  const data = useBrickData<CurrentWeatherData>();
+  const data = currentData.use();
   const config = useBrickConfig();
   const { width, height } = useBrickSize();
   const { t } = useLocale();

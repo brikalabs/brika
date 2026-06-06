@@ -6,17 +6,13 @@
  * plugin actions (useCallAction), so no API keys live in the browser.
  */
 
-import { useBrickConfig, useBrickData } from '@brika/sdk/brick-views';
+import { useBrickConfig } from '@brika/sdk/brick-views';
 import { useCallAction } from '@brika/sdk/ui-kit/hooks';
 import { LogIn, Music, Play, Search } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { playTrack, searchTracks } from '../actions';
+import { playSongData } from '../brick-data';
 import type { TrackResult } from '../spotify-api';
-
-interface PlaySongData {
-  isAuthed: boolean;
-  authUrl: string;
-}
 
 function formatMs(ms: number): string {
   const totalSec = Math.floor(ms / 1000);
@@ -26,7 +22,7 @@ function formatMs(ms: number): string {
 
 export default function PlaySong() {
   const config = useBrickConfig();
-  const data = useBrickData<PlaySongData>();
+  const data = playSongData.use();
   const callAction = useCallAction();
 
   const deviceId = typeof config.device === 'string' && config.device ? config.device : undefined;

@@ -6,25 +6,14 @@
  * Compact layout (≤2×2) shows cover art with overlay buttons.
  */
 
-import { useBrickConfig, useBrickData, useBrickSize } from '@brika/sdk/brick-views';
+import { useBrickConfig, useBrickSize } from '@brika/sdk/brick-views';
 import { useCallAction, useLocale } from '@brika/sdk/ui-kit/hooks';
 import { LogIn, Music, SkipBack, SkipForward } from 'lucide-react';
 import { useCallback } from 'react';
 import { doNext, doPause, doPlay, doPrevious } from '../actions';
-import type { PlaybackState, RecentTrack } from '../spotify-api';
+import { playerData } from '../brick-data';
 import { AlbumCover, PlayPauseButton, ScrollText, TransportButton } from './components';
 import { useProgress } from './use-progress';
-
-// ─── Types ───────────────────────────────────────────────────────────────────
-
-interface SpotifyPlayerData {
-  playback: PlaybackState | null;
-  recentTrack: RecentTrack | null;
-  isAuthed: boolean;
-  loaded: boolean;
-  anchor: { progressMs: number; timestamp: number };
-  authUrl: string;
-}
 
 function formatMs(ms: number) {
   const totalSec = Math.floor(ms / 1000);
@@ -37,7 +26,7 @@ function formatMs(ms: number) {
 export default function SpotifyPlayer() {
   const { width, height } = useBrickSize();
   const config = useBrickConfig();
-  const data = useBrickData<SpotifyPlayerData>();
+  const data = playerData.use();
   const { t } = useLocale();
   const callAction = useCallAction();
 

@@ -6,9 +6,10 @@
  * Data is pushed from the plugin process via setBrickData().
  */
 
-import { useBrickConfig, useBrickData, useBrickSize } from '@brika/sdk/brick-views';
+import { useBrickConfig, useBrickSize } from '@brika/sdk/brick-views';
 import { useLocale } from '@brika/sdk/ui-kit/hooks';
 import { MapPin } from 'lucide-react';
+import { forecastData } from '../brick-data';
 import { dayKey } from '../utils';
 import {
   CityError,
@@ -36,7 +37,7 @@ interface ForecastCityData {
   city: string;
 }
 
-interface ForecastWeatherData {
+export interface ForecastWeatherData {
   defaultCity: string;
   unit: string;
   cities: Record<string, ForecastCityData>;
@@ -88,7 +89,7 @@ function DayCell({ day, unit }: Readonly<{ day: ForecastDay; unit: string }>) {
 // ─── Component ──────────────────────────────────────────────────────────────
 
 export default function WeatherForecast() {
-  const data = useBrickData<ForecastWeatherData>();
+  const data = forecastData.use();
   const config = useBrickConfig();
   const { width, height } = useBrickSize();
   const { t } = useLocale();

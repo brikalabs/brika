@@ -1,9 +1,9 @@
-import { useBrickData } from '@brika/sdk/brick-views';
 import { useLocale } from '@brika/sdk/ui-kit/hooks';
 import { Activity, Zap } from 'lucide-react';
 import { useMemo } from 'react';
 import { Area, AreaChart, ResponsiveContainer, Tooltip, type TooltipContentProps } from 'recharts';
-import type { ConsumptionPoint, ElectricityState } from '../types';
+import { liveData } from '../brick-data';
+import type { ConsumptionPoint } from '../types';
 import {
   formatKwh,
   formatPower,
@@ -65,7 +65,7 @@ function NoCredentials() {
 }
 
 export default function LiveConsumption() {
-  const state = useBrickData<ElectricityState>();
+  const state = liveData.use();
   const { t, locale } = useLocale();
 
   const periodState = state?.periods?.['24h'];

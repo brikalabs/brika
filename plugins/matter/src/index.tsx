@@ -4,9 +4,10 @@
  * Provides Matter smart home device integration with persistent fabric storage.
  */
 
-import { definePreferenceOptions, setBrickData } from '@brika/sdk';
+import { definePreferenceOptions } from '@brika/sdk';
 import { log, onInit, onStop, onUninstall } from '@brika/sdk/lifecycle';
 import { clearAllData } from '@brika/sdk/storage';
+import { deviceData, devicesData } from './brick-data';
 import { getMatterController } from './matter-controller';
 import { serializeDevice } from './serialize';
 import {
@@ -56,7 +57,7 @@ definePreferenceOptions('deviceId', () => {
 function pushDevicesData() {
   const controller = getMatterController();
   const devices = controller.getDevices().map(serializeDevice);
-  setBrickData('devices', { devices });
+  devicesData.set({ devices });
 }
 
 /** Push the device map to the "device" brick (all devices keyed by nodeId) */
@@ -67,7 +68,7 @@ function pushDeviceData() {
   for (const d of devices) {
     deviceMap[d.nodeId] = serializeDevice(d);
   }
-  setBrickData('device', { deviceMap });
+  deviceData.set({ deviceMap });
 }
 
 /** Push data for both brick types */

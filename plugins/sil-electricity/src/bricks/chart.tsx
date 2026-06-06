@@ -1,15 +1,16 @@
-import { useBrickConfig, useBrickData } from '@brika/sdk/brick-views';
+import { useBrickConfig } from '@brika/sdk/brick-views';
 import { useLocale } from '@brika/sdk/ui-kit/hooks';
 import { Zap } from 'lucide-react';
 import { useId, useMemo } from 'react';
 import { ResponsiveContainer } from 'recharts';
-import type { ElectricityState, Granularity } from '../types';
+import { chartData } from '../brick-data';
+import type { Granularity } from '../types';
 import { buildRows, resolvePeriod, resolveStyle } from '../ui/chart-helpers';
 import { AreaVariant, BarVariant, LineVariant, type RenderProps } from '../ui/chart-variants';
 import { Loader, Message, PeriodPlaceholder, useSizeTier } from '../ui/states';
 
 export default function ConsumptionChart() {
-  const state = useBrickData<ElectricityState>();
+  const state = chartData.use();
   const config = useBrickConfig();
   const { t, locale } = useLocale();
   const gradId = useId();

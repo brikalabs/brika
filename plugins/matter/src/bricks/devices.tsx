@@ -8,12 +8,13 @@
  * Data is pushed from the plugin process via setBrickData('devices', ...).
  */
 
-import { useBrickData, useBrickSize } from '@brika/sdk/brick-views';
+import { useBrickSize } from '@brika/sdk/brick-views';
 import { useLocale } from '@brika/sdk/ui-kit/hooks';
 import clsx from 'clsx';
 import { Loader2, Network } from 'lucide-react';
+import { devicesData } from '../brick-data';
 import { DeviceIcon } from './components';
-import type { DeviceSummary, DevicesData } from './types';
+import type { DeviceSummary } from './types';
 
 const OVERVIEW_GRADIENT = 'linear-gradient(135deg, #1a1e38 0%, #252a48 50%, #303658 100%)';
 
@@ -49,7 +50,7 @@ function DeviceCard({ device }: Readonly<{ device: DeviceSummary }>) {
 
 export default function DevicesBrick() {
   const { width, height } = useBrickSize();
-  const data = useBrickData<DevicesData>();
+  const data = devicesData.use();
   const { t } = useLocale();
 
   // ─── Loading ─────────────────────────────────────────────────────────

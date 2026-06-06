@@ -1,7 +1,7 @@
-import { useBrickData } from '@brika/sdk/brick-views';
 import { useLocale } from '@brika/sdk/ui-kit/hooks';
 import { Zap } from 'lucide-react';
-import type { ConsumptionPoint, ElectricityState } from '../types';
+import { summaryData } from '../brick-data';
+import type { ConsumptionPoint } from '../types';
 import {
   CompactStat,
   formatChf,
@@ -47,7 +47,7 @@ function Sparkline({ points }: Readonly<{ points: ConsumptionPoint[] }>) {
 }
 
 export default function ElectricitySummary() {
-  const state = useBrickData<ElectricityState>();
+  const state = summaryData.use();
   const { t, locale } = useLocale();
   const tier = useSizeTier();
 

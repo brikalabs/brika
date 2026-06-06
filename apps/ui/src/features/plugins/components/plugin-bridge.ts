@@ -46,6 +46,21 @@ const clsxWrapper = Object.assign((...args: Parameters<typeof clsxFn>) => clsxFn
   clsx: clsxFn,
 });
 
+/**
+ * Client side of `defineBrickData`: `use()` reads this brick instance's pushed
+ * data via the host hook; `set()` is plugin-process-only and never runs here
+ * (the brick view only ever calls `use()`).
+ */
+function defineBrickData<T>(id: string) {
+  return {
+    id,
+    set: () => {
+      throw new Error('BrickDataChannel.set() is only available in the plugin process');
+    },
+    use: () => useBrickData<T>(),
+  };
+}
+
 const bridge = {
   React,
   jsx: {
@@ -64,7 +79,7 @@ const bridge = {
   },
   sdk,
   hooks: { useLocale, useAction, useCallAction, usePluginUid, usePluginRouteUrl },
-  brickHooks: { useBrickData, useBrickConfig, useBrickSize, useCallBrickAction },
+  brickHooks: { useBrickData, useBrickConfig, useBrickSize, useCallBrickAction, defineBrickData },
   blockHooks: {
     useBlockConfig,
     useUpdateBlockConfig,

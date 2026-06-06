@@ -6,18 +6,11 @@
  * The uptime counter and chart history are maintained as local client state.
  */
 
-import { useBrickConfig, useBrickData, useBrickSize } from '@brika/sdk/brick-views';
+import { useBrickConfig, useBrickSize } from '@brika/sdk/brick-views';
 import clsx from 'clsx';
 import { Activity, Box, Clock, Eye, EyeOff, Loader2, Timer, Zap } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
-
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-interface DashboardData {
-  blockCount: number;
-  sparkCount: number;
-  startedAt: number;
-}
+import { dashboardData } from '../brick-data';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -108,7 +101,7 @@ function MiniChart({ history, color }: Readonly<{ history: number[]; color: stri
 export default function TimersDashboard() {
   const { width, height } = useBrickSize();
   const config = useBrickConfig();
-  const data = useBrickData<DashboardData>();
+  const data = dashboardData.use();
 
   const refreshInterval =
     typeof config.refreshInterval === 'number' ? config.refreshInterval : 5000;
