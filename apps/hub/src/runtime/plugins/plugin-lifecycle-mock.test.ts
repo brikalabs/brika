@@ -194,6 +194,7 @@ describe('PluginLifecycle (with mocked spawn)', () => {
       remove: mock().mockResolvedValue(undefined),
       setHealth: mock().mockResolvedValue(undefined),
       loadMetadataCache: mock().mockResolvedValue(undefined),
+      getGrantedPermissions: mock().mockReturnValue([]),
     };
     mockEvents = {
       dispatch: mock().mockResolvedValue(undefined),

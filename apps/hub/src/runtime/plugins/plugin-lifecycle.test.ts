@@ -48,6 +48,7 @@ describe('PluginLifecycle', () => {
     remove: ReturnType<typeof mock>;
     setHealth: ReturnType<typeof mock>;
     loadMetadataCache: ReturnType<typeof mock>;
+    getGrantedPermissions: ReturnType<typeof mock>;
   };
   let mockEvents: {
     dispatch: ReturnType<typeof mock>;
@@ -129,6 +130,7 @@ describe('PluginLifecycle', () => {
       remove: mock().mockResolvedValue(undefined),
       setHealth: mock().mockResolvedValue(undefined),
       loadMetadataCache: mock().mockResolvedValue(undefined),
+      getGrantedPermissions: mock().mockReturnValue([]),
     };
     mockEvents = {
       dispatch: mock().mockResolvedValue(undefined),
