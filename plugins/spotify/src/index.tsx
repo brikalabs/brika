@@ -11,7 +11,7 @@ import { log, onStop } from '@brika/sdk/lifecycle';
  * When this is empty the plugin falls back to the optional per-user `clientId`
  * preference, so existing self-hosted setups keep working.
  */
-const BRIKA_SPOTIFY_CLIENT_ID = '';
+const BRIKA_SPOTIFY_CLIENT_ID = 'efa61a6207684525a1bdc3f6b0be4ee2';
 
 export const spotify = defineOAuth({
   id: 'spotify',
