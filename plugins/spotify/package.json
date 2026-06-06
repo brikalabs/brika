@@ -35,9 +35,9 @@
     {
       "name": "clientId",
       "type": "text",
-      "label": "Client ID",
-      "description": "Spotify Developer App client ID",
-      "required": true
+      "label": "Client ID (optional)",
+      "description": "Only needed for self-hosted setups. Leave empty to use Brika's built-in Spotify app.",
+      "required": false
     },
     {
       "name": "connect",
@@ -83,6 +83,22 @@
           "min": 1000,
           "max": 30000,
           "step": 1000
+        }
+      ]
+    },
+    {
+      "id": "play-song",
+      "name": "Play a Song",
+      "description": "Search Spotify and play any track with one tap",
+      "category": "media",
+      "icon": "search",
+      "color": "#1DB954",
+      "config": [
+        {
+          "type": "dynamic-dropdown",
+          "name": "device",
+          "label": "Device",
+          "description": "Device to play searched songs on"
         }
       ]
     }

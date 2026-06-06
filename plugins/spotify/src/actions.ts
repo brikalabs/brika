@@ -19,6 +19,7 @@ import {
   usePlayerStore,
 } from './playback-store';
 import { getApi, resolveDeviceId } from './shared';
+import type { TrackResult } from './spotify-api';
 
 function resolveTarget(deviceId?: string): string | undefined {
   const id = resolveDeviceId(deviceId);
@@ -70,6 +71,28 @@ export const listDevices = defineAction(async (): Promise<DeviceOption[]> => {
     value: device.id,
     label: `${device.name} (${device.type})`,
   }));
+});
+
+/**
+ * Search Spotify's catalog for tracks. Consumed by the "Play a Song" card via
+ * useCallAction(searchTracks, { query }).
+ */
+export const searchTracks = defineAction(
+  async (input: { query: string }): Promise<TrackResult[]> => {
+    const results = await getApi().searchTracks(input.query);
+    capture('spotify.search', { hasQuery: input.query.trim().length > 0, count: results.length });
+    return results;
+  }
+);
+
+/**
+ * Start playback of a specific track URI on the resolved device. Used by the
+ * "Play a Song" card when the user picks a search result.
+ */
+export const playTrack = defineAction(async (input: { uri: string; deviceId?: string }) => {
+  const target = resolveTarget(input.deviceId);
+  await getApi().play(target, input.uri);
+  capture('spotify.track_played', { hasTarget: target !== undefined });
 });
 
 export const doPlay = defineAction(async (input?: { deviceId?: string }) => {
