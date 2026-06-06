@@ -5,8 +5,8 @@ import { injectCallSites } from './scanner';
 /**
  * Inject build-time call-site metadata into `t('...')` and `tp(...)` calls
  * so the i18n devtools overlay can show the *source* file/line for plugin
- * code at runtime — even though plugin code is bundled and served at
- * `/api/bricks/modules/...`.
+ * code at runtime, even though plugin code is bundled and served at
+ * `/api/modules/...`.
  *
  * Without this, the only signal the overlay has is `Error.stack`, which in
  * compiled output points at the bundle URL (and a single concatenated line

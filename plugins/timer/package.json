@@ -33,7 +33,9 @@
       "description": "Set a one-shot timer that fires after a duration",
       "category": "trigger",
       "icon": "timer",
-      "color": "#22c55e"
+      "color": "#22c55e",
+      "view": true,
+      "nodeView": true
     },
     {
       "id": "countdown",
@@ -41,7 +43,9 @@
       "description": "Countdown with progress ticks",
       "category": "trigger",
       "icon": "clock",
-      "color": "#3b82f6"
+      "color": "#3b82f6",
+      "view": true,
+      "nodeView": true
     }
   ],
   "bricks": [

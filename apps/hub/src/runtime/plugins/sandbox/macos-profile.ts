@@ -54,9 +54,14 @@ export function buildMacosProfile(profile: SandboxProfile): string {
     (dir) => `(allow file-write* (subpath ${quote(dir)}))`
   );
   // Unix sockets are always allowed (hub IPC needs them); `allowNetwork`
-  // controls whether we additionally open outbound IP traffic.
-  const networkRule = profile.allowNetwork ? '(allow network*)' : '(allow network* (local unix))';
-  return [...STATIC_RULES, ...writeRules, networkRule].join('\n');
+  // controls whether we additionally open IP traffic. `network-bind` and
+  // `network-inbound` are spelled out explicitly: sandbox-exec treats them as
+  // distinct operations that the `network*` glob does not reliably cover, and
+  // plugins like Matter must bind the mDNS multicast socket (0.0.0.0:5353).
+  const networkRules = profile.allowNetwork
+    ? ['(allow network*)', '(allow network-bind)', '(allow network-inbound)']
+    : ['(allow network* (local unix))'];
+  return [...STATIC_RULES, ...writeRules, ...networkRules].join('\n');
 }
 
 /**

@@ -49,6 +49,33 @@ export function getLockdownMode(): LockdownMode {
   return MODE;
 }
 
+/**
+ * Opt-in raw-socket capability. Plugins implementing a wire protocol that needs
+ * UDP/TCP directly (e.g. Matter's mDNS commissioning) cannot use the
+ * grant-mediated `ctx.net.fetch` request/response surface. When a plugin
+ * requests the `dev.brika.net.socket` grant and the operator consents to it,
+ * the hub forwards `BRIKA_PLUGIN_RAW_SOCKETS=1` (allowlisted env prefix) and we
+ * keep the raw network primitives available. The env var is the boot-time
+ * mechanism because this scrub runs before the grant vector arrives over IPC;
+ * the authorization lives in the grant (see `netSocket` in
+ * `packages/sdk/src/grants/net.ts`), not a bespoke manifest flag. All other
+ * scrubs (fs, spawn, ffi, vm, ...) stay enforced, so this only widens the
+ * network surface, not the filesystem/exec one.
+ */
+const RAW_SOCKETS = process.env.BRIKA_PLUGIN_RAW_SOCKETS === '1';
+
+/** Bun namespace keys re-enabled under the raw-sockets capability. */
+const RAW_SOCKET_BUN_KEYS: ReadonlySet<string> = new Set(['connect', 'listen', 'udpSocket']);
+
+/** Native modules re-enabled under the raw-sockets capability. */
+const RAW_SOCKET_MODULES: ReadonlySet<string> = new Set([
+  'node:net',
+  'node:tls',
+  'node:dgram',
+  'node:dns',
+  'node:dns/promises',
+]);
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Capture references the prelude itself needs after scrub
 //
@@ -59,9 +86,14 @@ export function getLockdownMode(): LockdownMode {
 
 type ProcessSend = NonNullable<typeof process.send>;
 type ProcessOn = typeof process.on;
+type ProcessKill = typeof process.kill;
 
 const capturedSend: ProcessSend | undefined = process.send?.bind(process);
 const capturedOn: ProcessOn = process.on.bind(process);
+// Captured BEFORE the scrub replaces `process.kill` with a deny stub, so the
+// signal-0 liveness guard below can still reach the real implementation.
+const capturedKill: ProcessKill | undefined =
+  typeof process.kill === 'function' ? process.kill.bind(process) : undefined;
 
 export function getSafeProcessSend(): ProcessSend {
   if (!capturedSend) {
@@ -157,6 +189,13 @@ const SCRUBBED_BUN_KEYS = [
  * versions, …) is informational and stays available — `bun-runner`
  * already filters env to remove operator secrets before the plugin
  * subprocess starts.
+ *
+ * `kill` gets a guarded stub rather than a blanket deny: the POSIX signal-0
+ * probe (`process.kill(pid, 0)`) delivers NO signal — it only reports whether
+ * a pid exists / is signalable — and libraries depend on it for liveness
+ * checks (e.g. matter.js reclaiming a storage lock left by a crashed process).
+ * The guard forwards signal 0 to the real impl and denies every real signal,
+ * so a plugin still can't SIGKILL the hub or its siblings. See `makeKillGuard`.
  */
 const SCRUBBED_PROCESS_KEYS = ['kill', 'dlopen'] as const;
 
@@ -234,6 +273,30 @@ function deny(name: string): never {
   );
 }
 
+/**
+ * Replacement for `process.kill`: forwards the signal-0 liveness probe to the
+ * real implementation (it sends nothing — only reports pid existence) and
+ * denies every real signal. In `warn` mode it logs and still delegates so the
+ * migration window keeps working. Returns the deny stub when the real kill
+ * wasn't captured (shouldn't happen — captured at module load).
+ */
+function makeKillGuard(): ProcessKill {
+  const guard = (pid: number, signal?: string | number): true => {
+    if (signal === 0 && capturedKill) {
+      // Signal 0 delivers nothing — it throws on a missing pid and returns
+      // true otherwise. Safe to forward: a plugin learns only whether a pid
+      // exists, never the ability to signal it.
+      return capturedKill(pid, signal);
+    }
+    if (MODE === 'warn' && capturedKill) {
+      logViolation('warn', 'process.kill');
+      return capturedKill(pid, signal);
+    }
+    return deny('process.kill');
+  };
+  return guard;
+}
+
 type MutableTarget = Record<string, unknown>;
 
 function replaceMember(owner: object, ownerName: string, key: string): void {
@@ -308,6 +371,9 @@ if (MODE !== 'off') {
   const bunNs = (globalThis as unknown as { Bun?: MutableTarget }).Bun;
   if (bunNs) {
     for (const key of SCRUBBED_BUN_KEYS) {
+      if (RAW_SOCKETS && RAW_SOCKET_BUN_KEYS.has(key)) {
+        continue;
+      }
       if (key in bunNs) {
         replaceMember(bunNs, 'Bun', key);
       }
@@ -331,9 +397,18 @@ if (MODE !== 'off') {
   const processNs = (globalThis as unknown as { process?: MutableTarget }).process;
   if (processNs) {
     for (const key of SCRUBBED_PROCESS_KEYS) {
-      if (key in processNs) {
-        replaceMember(processNs, 'process', key);
+      if (!(key in processNs)) {
+        continue;
       }
+      // `kill` keeps the signal-0 liveness probe (see makeKillGuard); every
+      // other scrubbed process member gets the blanket deny/warn stub.
+      if (key === 'kill') {
+        if (!tryReplace(processNs, key, makeKillGuard())) {
+          logViolation('scrub-skipped', 'process.kill');
+        }
+        continue;
+      }
+      replaceMember(processNs, 'process', key);
     }
   }
 
@@ -386,6 +461,9 @@ if (MODE !== 'off') {
     // through" branch to mishandle.
     const escaped: string[] = [];
     for (const mod of DENIED_NATIVE_MODULES) {
+      if (RAW_SOCKETS && RAW_SOCKET_MODULES.has(mod)) {
+        continue;
+      }
       escaped.push(escapeRegex(mod));
     }
     const denyFilter = new RegExp(`^(?:${escaped.join('|')})$`);

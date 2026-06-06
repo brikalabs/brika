@@ -4,11 +4,22 @@ import { inject, singleton } from '@brika/di';
 import { brikaContext } from '@/runtime/context/brika-context';
 import { Logger } from '@/runtime/logs/log-router';
 import { type CacheEntry, ModuleCache } from './module-cache';
+import { type ManifestModules, moduleKindList } from './module-kinds';
 import { TailwindCompiler } from './tailwind';
 
 /** Compute the per-plugin cache directory. */
 function pluginCacheDir(rootDirectory: string): string {
   return join(rootDirectory, 'node_modules', '.cache', 'brika');
+}
+
+/** A single client module to compile (page, brick or block view). */
+interface ModuleSpec {
+  /** Module id used for logging (e.g. brick/page/block id). */
+  id: string;
+  /** Cache key relative to the plugin (e.g. `bricks/player`, `blocks/x.view`). */
+  cacheKey: string;
+  /** Entry path relative to `<root>/src` (e.g. `bricks/player.tsx`). */
+  entryRel: string;
 }
 
 @singleton()
@@ -17,27 +28,42 @@ export class ModuleCompiler {
   readonly #cache = new ModuleCache();
   readonly #tailwind = new TailwindCompiler();
 
+  /**
+   * Prune cache entries no longer declared in the manifest, then compile every
+   * client module (page, brick, block view) the manifest declares. Kind-agnostic:
+   * driven entirely by the module-kind registry.
+   */
+  async syncManifest(
+    pluginName: string,
+    rootDirectory: string,
+    metadata: ManifestModules
+  ): Promise<void> {
+    const currentKeys = new Set(
+      moduleKindList.flatMap((kind) => kind.select(metadata).map((id) => kind.cacheKey(id)))
+    );
+    this.prune(pluginName, currentKeys, rootDirectory);
+    await this.compile(pluginName, rootDirectory, metadata);
+  }
+
   async compile(
     pluginName: string,
     rootDirectory: string,
-    opts: {
-      pages?: Array<{ id: string }>;
-      bricks?: Array<{ id: string }>;
-    }
+    metadata: ManifestModules
   ): Promise<void> {
-    const modules = [
-      ...(opts.pages ?? []).map((m) => ({ id: m.id, sourceDir: 'pages' })),
-      ...(opts.bricks ?? []).map((m) => ({ id: m.id, sourceDir: 'bricks' })),
-    ];
+    const modules: ModuleSpec[] = moduleKindList.flatMap((kind) =>
+      kind.select(metadata).map((id) => ({
+        id,
+        cacheKey: kind.cacheKey(id),
+        entryRel: kind.entryRel(id),
+      }))
+    );
 
     // Hash all sources once — shared across all modules so dependency
     // changes (e.g. action files) invalidate every client module.
     const hash = await hashPluginSources(rootDirectory);
 
     await Promise.all(
-      modules.map((mod) =>
-        this.#compileModule(pluginName, mod.id, rootDirectory, mod.sourceDir, hash)
-      )
+      modules.map((mod) => this.#compileModule(pluginName, mod, rootDirectory, hash))
     );
   }
 
@@ -57,13 +83,13 @@ export class ModuleCompiler {
 
   async #compileModule(
     pluginName: string,
-    moduleId: string,
+    mod: ModuleSpec,
     rootDirectory: string,
-    sourceDir: string,
     hash: string
   ): Promise<void> {
-    const entrypoint = join(rootDirectory, 'src', sourceDir, `${moduleId}.tsx`);
-    const cacheKey = `${sourceDir}/${moduleId}`;
+    const moduleId = mod.id;
+    const entrypoint = join(rootDirectory, 'src', mod.entryRel);
+    const cacheKey = mod.cacheKey;
     const memKey = `${pluginName}:${cacheKey}`;
     const cacheDir = pluginCacheDir(rootDirectory);
 

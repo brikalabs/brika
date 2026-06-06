@@ -18,6 +18,7 @@ import { type Edge, MarkerType, type Node } from '@xyflow/react';
 import type { Workflow, WorkflowBlock } from '../api';
 import type { BlockNodeData } from './BlockNode';
 import type { BlockDefinition } from './BlockToolbar';
+import { expandDynamicPorts } from './dynamic-ports';
 
 export type BlockStatus = 'idle' | 'running' | 'completed' | 'error';
 
@@ -159,6 +160,8 @@ export function workflowToFlow(
         icon: def?.icon,
         color: def?.color,
         pluginId: def?.pluginId,
+        pluginUid: def?.pluginUid,
+        nodeModuleUrl: def?.nodeModuleUrl,
         inputs: def?.inputs?.map((p) => ({
           id: p.id,
           name: p.name || p.id,
@@ -166,13 +169,16 @@ export function workflowToFlow(
           typeName: p.typeName || 'generic<T>',
           type: p.type,
         })),
-        outputs: def?.outputs?.map((p) => ({
-          id: p.id,
-          name: p.name || p.id,
-          direction: 'output' as const,
-          typeName: p.typeName || 'generic<T>',
-          type: p.type,
-        })),
+        outputs: expandDynamicPorts(
+          (def?.outputs ?? []).map((p) => ({
+            id: p.id,
+            name: p.name || p.id,
+            typeName: p.typeName || 'generic<T>',
+            type: p.type,
+            dynamic: p.dynamic,
+          })),
+          block.config || {}
+        ),
         status: 'idle',
       } as BlockNodeData,
     });

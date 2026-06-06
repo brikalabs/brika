@@ -8,8 +8,8 @@ import { boardsRoutes } from './boards';
 import { bricksRoutes } from './bricks';
 import { i18nRoutes, i18nWriteRoutes } from './i18n';
 import { logsRoutes } from './logs';
+import { modulesRoutes } from './modules';
 import { oauthRoutes } from './oauth';
-import { pageRoutes } from './pages';
 import { pluginRoutesHandler } from './plugin-routes';
 import { pluginsRoutes } from './plugins';
 import { registryRoutes } from './registry';
@@ -57,6 +57,10 @@ export const allRoutes = combineRoutes(
   healthRoute,
   i18nRoutes,
   hubSetupPublicRoutes,
+  // OAuth authorize/callback are self-secured by a single-use `state` + PKCE
+  // verifier, so they must be public: the provider redirects the callback to
+  // 127.0.0.1 (loopback requirement), which carries no app session cookie.
+  oauthRoutes,
   group({
     middleware: [requireAuth()],
     routes: [
@@ -70,8 +74,7 @@ export const allRoutes = combineRoutes(
         middleware: [requireScope(Scope.ADMIN_ALL)],
         routes: [i18nWriteRoutes, updateAdminRoutes, systemAdminRoutes, settingsAdminRoutes],
       }),
-      oauthRoutes,
-      pageRoutes,
+      modulesRoutes,
       pluginRoutesHandler,
       pluginsRoutes,
       remoteAccessRoutes,

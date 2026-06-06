@@ -8,7 +8,13 @@
 import { defineSharedStore, log } from '@brika/sdk';
 import { spotify } from './index';
 import { getApi } from './shared';
-import { trackChanged } from './sparks';
+import {
+  deviceChanged,
+  playbackPaused,
+  playbackStarted,
+  trackChanged,
+  volumeChanged,
+} from './sparks';
 import type { PlaybackState, RecentTrack, SpotifyDevice } from './spotify-api';
 import { SpotifyAuthError } from './spotify-api';
 
@@ -43,7 +49,16 @@ const POLL_MS = 3000;
 
 let refCount = 0;
 let timer: ReturnType<typeof setInterval> | null = null;
-let lastTrack = '';
+
+/** Snapshot of the last seen playback, used to diff and emit change sparks. */
+interface PlaybackSnapshot {
+  trackName: string;
+  artistName: string;
+  isPlaying: boolean;
+  volume: number;
+  deviceName: string;
+}
+let prevSnapshot: PlaybackSnapshot | null = null;
 
 /** Reset the polling interval so the next poll is a full POLL_MS away. */
 function resetPollTimer(): void {
@@ -60,18 +75,67 @@ function pollNow(): void {
   resetPollTimer();
 }
 
-function emitTrackChanged(state: PlaybackState): void {
-  if (state.trackName === lastTrack) {
+/**
+ * Diff the latest playback against the previous snapshot and emit a spark for
+ * each thing that changed: track, play/pause, volume, and device. First sample
+ * only emits track-changed (no prior state to compare transitions against).
+ */
+function emitPlaybackEvents(state: PlaybackState | null): void {
+  const now = Date.now();
+
+  if (!state) {
+    // Playback stopped or no active device: surface a pause once.
+    if (prevSnapshot?.isPlaying) {
+      playbackPaused.emit({
+        trackName: prevSnapshot.trackName,
+        artistName: prevSnapshot.artistName,
+        deviceName: prevSnapshot.deviceName,
+        timestamp: now,
+      });
+    }
+    prevSnapshot = null;
     return;
   }
-  lastTrack = state.trackName;
-  trackChanged.emit({
+
+  if (prevSnapshot?.trackName !== state.trackName) {
+    trackChanged.emit({
+      trackName: state.trackName,
+      artistName: state.artistName,
+      albumName: state.albumName,
+      albumArt: state.albumArt,
+      timestamp: now,
+    });
+  }
+
+  if (prevSnapshot && prevSnapshot.isPlaying !== state.isPlaying) {
+    const payload = {
+      trackName: state.trackName,
+      artistName: state.artistName,
+      deviceName: state.deviceName,
+      timestamp: now,
+    };
+    if (state.isPlaying) {
+      playbackStarted.emit(payload);
+    } else {
+      playbackPaused.emit(payload);
+    }
+  }
+
+  if (prevSnapshot && prevSnapshot.volume !== state.volume) {
+    volumeChanged.emit({ volume: state.volume, deviceName: state.deviceName, timestamp: now });
+  }
+
+  if (prevSnapshot && prevSnapshot.deviceName !== state.deviceName) {
+    deviceChanged.emit({ deviceName: state.deviceName, timestamp: now });
+  }
+
+  prevSnapshot = {
     trackName: state.trackName,
     artistName: state.artistName,
-    albumName: state.albumName,
-    albumArt: state.albumArt,
-    timestamp: Date.now(),
-  });
+    isPlaying: state.isPlaying,
+    volume: state.volume,
+    deviceName: state.deviceName,
+  };
 }
 
 async function poll(): Promise<void> {
@@ -84,6 +148,7 @@ async function poll(): Promise<void> {
       loaded: true,
       anchor: { progressMs: 0, timestamp: Date.now() },
     });
+    prevSnapshot = null;
     return;
   }
 
@@ -110,9 +175,7 @@ async function poll(): Promise<void> {
       anchor,
     });
 
-    if (state) {
-      emitTrackChanged(state);
-    }
+    emitPlaybackEvents(state);
   } catch (err) {
     if (err instanceof SpotifyAuthError) {
       usePlayerStore.set((prev) => ({ ...prev, playback: null, isAuthed: false, loaded: true }));

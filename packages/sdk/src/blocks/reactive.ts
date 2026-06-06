@@ -28,6 +28,12 @@ export interface PortMeta {
   name: string;
   /** Description for tooltip */
   description?: string;
+  /**
+   * Mark an output as a dynamic template: the editor repeats it once per item of
+   * the named config array (e.g. `repeat: 'cases'`), creating ports `<id>-<index>`.
+   * Emit to them at runtime with the raw `emit(\`<id>-\${i}\`, data)` context method.
+   */
+  repeat?: string;
 }
 
 /**
@@ -134,6 +140,13 @@ export interface BlockContext<
   /** Typed configuration */
   readonly config: z.infer<TConfig>;
 
+  /**
+   * Raw emit to any output port id, including dynamic template ports
+   * (e.g. `emit(\`case-\${i}\`, data)`). Bypasses per-port schema validation, so
+   * prefer the typed `outputs` emitters for statically-declared ports.
+   */
+  emit(portId: string, data: unknown): void;
+
   /** Self-returning context */
   readonly context: this;
 
@@ -155,18 +168,12 @@ export interface ReactiveBlockSpec<
   TOutputs extends Record<string, OutputDef<OutputSchema>>,
   TConfig extends z.ZodObject<z.ZodRawShape>,
 > {
-  /** Unique block ID */
+  /**
+   * Unique block ID. Display metadata (name, description, category, icon,
+   * color) lives in the plugin manifest `blocks[]` entry, not here: the host
+   * registers it from there, so duplicating it in code has no effect.
+   */
   id: string;
-  /** Display name */
-  name?: string;
-  /** Description */
-  description?: string;
-  /** Category for grouping */
-  category?: string;
-  /** Lucide icon name */
-  icon?: string;
-  /** Hex color */
-  color?: string;
   /** Typed input port definitions */
   inputs: TInputs;
   /** Typed output port definitions */

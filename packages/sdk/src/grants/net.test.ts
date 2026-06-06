@@ -4,7 +4,14 @@
  */
 
 import { describe, expect, test } from 'bun:test';
-import { FetchArgsSchema, FetchResultSchema, NetScopeSchema, netFetch } from './net';
+import {
+  FetchArgsSchema,
+  FetchResultSchema,
+  NetScopeSchema,
+  NetSocketScopeSchema,
+  netFetch,
+  netSocket,
+} from './net';
 
 const stubHandlerCtx = {
   pluginUid: 'plugin-x',
@@ -177,5 +184,23 @@ describe('netFetch spec', () => {
   test('spec carries net permission with globe icon', () => {
     expect(netFetch.spec.permission?.name).toBe('net');
     expect(netFetch.spec.permission?.icon).toBe('globe');
+  });
+});
+
+describe('netSocket spec', () => {
+  test('empty scope schema accepts {}', () => {
+    expect(NetSocketScopeSchema.safeParse({}).success).toBe(true);
+  });
+
+  test('declares the dev.brika.net.socket id under the rawSocket family', () => {
+    expect(netSocket.spec.id).toBe('dev.brika.net.socket');
+    expect(netSocket.spec.permission?.name).toBe('rawSocket');
+    expect(netSocket.spec.permission?.icon).toBe('ethernet-port');
+  });
+
+  test('handler always throws: the grant is realised at the lockdown, never dispatched', () => {
+    // net.socket's scope is the empty object, not net.fetch's { allow }.
+    const ctx = { ...stubHandlerCtx, grantedScope: {} };
+    expect(() => netSocket.handler(ctx, {})).toThrow(/never dispatched over IPC/);
   });
 });

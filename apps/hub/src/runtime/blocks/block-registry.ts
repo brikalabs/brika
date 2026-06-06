@@ -52,7 +52,7 @@ export interface PluginInfo {
   homepage?: string;
 }
 
-interface RegisteredBlock extends BlockDefinition {
+export interface RegisteredBlock extends BlockDefinition {
   pluginId: string;
   name?: string;
   description?: string;
@@ -148,7 +148,7 @@ export class BlockRegistry {
     return this.#blocks.has(type);
   }
 
-  list(): BlockDefinition[] {
+  list(): RegisteredBlock[] {
     return Array.from(this.#blocks.values()).sort((a, b) => a.id.localeCompare(b.id));
   }
 

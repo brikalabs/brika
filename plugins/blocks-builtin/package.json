@@ -64,7 +64,26 @@
       "description": "Branch based on a condition",
       "category": "flow",
       "icon": "git-branch",
-      "color": "#f59e0b"
+      "color": "#f59e0b",
+      "view": true
+    },
+    {
+      "id": "text",
+      "name": "Text",
+      "description": "Display text on the canvas and pass values through",
+      "category": "transform",
+      "icon": "type",
+      "color": "#0ea5e9",
+      "nodeView": true
+    },
+    {
+      "id": "image",
+      "name": "Image",
+      "description": "Display an image on the canvas and pass values through",
+      "category": "transform",
+      "icon": "image",
+      "color": "#a855f7",
+      "nodeView": true
     },
     {
       "id": "switch",
@@ -72,7 +91,8 @@
       "description": "Multi-way branch based on a value",
       "category": "flow",
       "icon": "shuffle",
-      "color": "#8b5cf6"
+      "color": "#8b5cf6",
+      "view": true
     },
     {
       "id": "delay",
@@ -128,7 +148,8 @@
       "description": "Receives typed spark events",
       "category": "trigger",
       "icon": "zap",
-      "color": "#f59e0b"
+      "color": "#f59e0b",
+      "view": true
     }
   ],
   "dependencies": {

@@ -1,9 +1,11 @@
 import { Analytics } from '@brika/analytics';
+import { isValidPermission, PERMISSIONS } from '@brika/permissions';
 import type { Plugin } from '@brika/plugin';
 import { group, route, UnprocessableEntity } from '@brika/router';
 import { z } from 'zod';
 import { getProcessMetrics, MetricsStore } from '@/runtime/metrics';
 import { ModuleCompiler } from '@/runtime/modules';
+import { MODULE_KINDS, resolveModuleUrl } from '@/runtime/modules/module-kinds';
 import { PluginConfigService } from '@/runtime/plugins/plugin-config';
 import { PluginLifecycle } from '@/runtime/plugins/plugin-lifecycle';
 import { PluginManager } from '@/runtime/plugins/plugin-manager';
@@ -19,13 +21,10 @@ function enrichPages(plugin: Plugin, compiler: ModuleCompiler) {
   if (!plugin.pages.length) {
     return plugin.pages;
   }
-  return plugin.pages.map((page) => {
-    const entry = compiler.get(`${plugin.name}:pages/${page.id}`);
-    return {
-      ...page,
-      moduleUrl: entry ? `/api/plugins/${plugin.uid}/pages/${page.id}.${entry.hash}.js` : undefined,
-    };
-  });
+  return plugin.pages.map((page) => ({
+    ...page,
+    moduleUrl: resolveModuleUrl(compiler, plugin.name, plugin.uid, MODULE_KINDS.page, page.id),
+  }));
 }
 
 function enrichPlugin(plugin: Plugin, compiler: ModuleCompiler) {
@@ -315,15 +314,24 @@ export const pluginsRoutes = group({
         permission: z.string(),
         granted: z.boolean(),
       }),
-      handler: ({ params, body, inject }) => {
+      handler: async ({ params, body, inject }) => {
         const plugin = getOrThrow(inject(PluginManager).get(params.uid), 'Plugin not found');
         const permService = inject(PluginPermissionService);
 
         const updated = permService.setPermission(plugin.name, body.permission, body.granted);
-        // Invalidate the running process's cached grant vector so the
-        // toggle takes effect on the very next `ctx.*` call — no plugin
-        // restart needed for the hub-side check.
-        inject(PluginLifecycle).getProcess(plugin.name)?.invalidateVector();
+        // Most grants are checked per-call against the cached vector, so
+        // invalidating it makes the toggle take effect on the next `ctx.*`
+        // call with no restart. Spawn-time permissions (e.g. rawSocket, whose
+        // env the sandbox lockdown reads at boot) can't be applied to a live
+        // process, so those reload the plugin instead.
+        const requiresRestart =
+          isValidPermission(body.permission) &&
+          PERMISSIONS[body.permission].requiresRestart === true;
+        if (requiresRestart) {
+          await inject(PluginManager).reload(plugin.uid);
+        } else {
+          inject(PluginLifecycle).getProcess(plugin.name)?.invalidateVector();
+        }
         inject(Analytics).capture('plugin.permission_toggled', {
           uid: plugin.uid,
           permission: body.permission,

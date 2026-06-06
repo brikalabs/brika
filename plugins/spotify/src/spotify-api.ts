@@ -43,6 +43,17 @@ export interface SpotifyDevice {
   volumePercent: number;
 }
 
+/** A single track returned by search. */
+export interface TrackResult {
+  id: string;
+  uri: string;
+  name: string;
+  artistName: string;
+  albumName: string;
+  albumArt: string | null;
+  durationMs: number;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // API Factory
 // ─────────────────────────────────────────────────────────────────────────────
@@ -201,6 +212,40 @@ export function createSpotifyApi(oauth: OAuthClient) {
         albumArt: pickArt(track.album.images),
         uri: context?.uri ?? track.uri,
       };
+    },
+
+    async searchTracks(query: string, limit = 20): Promise<TrackResult[]> {
+      const q = query.trim();
+      if (!q) {
+        return [];
+      }
+      const params = new URLSearchParams({ q, type: 'track', limit: String(limit) });
+      const data = await api<{
+        tracks: {
+          items: Array<{
+            id: string;
+            uri: string;
+            name: string;
+            duration_ms: number;
+            artists: { name: string }[];
+            album: { name: string; images: SpotifyImage[] };
+          }>;
+        };
+      }>(`/search?${params.toString()}`);
+
+      if (!data?.tracks?.items) {
+        return [];
+      }
+
+      return data.tracks.items.map((t) => ({
+        id: t.id,
+        uri: t.uri,
+        name: t.name,
+        artistName: t.artists.map((a) => a.name).join(', '),
+        albumName: t.album.name,
+        albumArt: pickArt(t.album.images),
+        durationMs: t.duration_ms,
+      }));
     },
 
     async getDevices(): Promise<SpotifyDevice[]> {

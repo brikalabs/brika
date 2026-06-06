@@ -5,8 +5,8 @@
  * and dashboard bricks.
  */
 
-import { setBrickData } from '@brika/sdk';
 import { log, onStop } from '@brika/sdk/lifecycle';
+import { dashboardData } from './brick-data';
 
 // Blocks (workflow nodes)
 export { countdown } from './blocks/countdown';
@@ -22,7 +22,7 @@ export { countdownCompleted, countdownTick, timerCompleted, timerStarted } from 
 const startedAt = Date.now();
 
 function pushDashboardData() {
-  setBrickData('timers-dashboard', {
+  dashboardData.set({
     blockCount: 2,
     sparkCount: 4,
     startedAt,

@@ -34,6 +34,7 @@
  * ```
  */
 
+import { z } from 'zod';
 import { getContext } from '../context';
 import { htmlEscape } from '../internal/html-escape';
 import { singleFlight } from '../internal/single-flight';
@@ -136,39 +137,45 @@ function base64url(bytes: Uint8Array): string {
 // Shared Helpers
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** Read a string preference, returning undefined if not a string. */
+/** A stored token: access + expiry are required; token_type defaults to Bearer. */
+const OAuthTokenSchema = z.object({
+  access_token: z.string(),
+  refresh_token: z.string().optional(),
+  expires_at: z.number(),
+  token_type: z.string().default('Bearer'),
+});
+
+/** The raw token-endpoint payload. `expires_in` is seconds-from-now. */
+const TokenResponseSchema = z.object({
+  access_token: z.string(),
+  refresh_token: z.string().optional(),
+  expires_in: z.number().default(3600),
+  token_type: z.string().default('Bearer'),
+});
+
+/** Read a string preference, returning undefined if absent or not a string. */
 function getStringPreference(key: string): string | undefined {
-  const val = getContext().getPreferences()[key];
-  return typeof val === 'string' ? val : undefined;
+  return z.string().safeParse(getContext().getPreferences()[key]).data;
 }
 
 /** Parse an OAuth token response into our OAuthToken shape. */
 function parseTokenResponse(json: unknown, existingRefreshToken?: string): OAuthToken | null {
-  if (!json || typeof json !== 'object') {
+  const parsed = TokenResponseSchema.safeParse(json);
+  if (!parsed.success) {
     return null;
   }
-  const data = json as Record<string, unknown>;
-  const accessToken = data.access_token;
-  if (typeof accessToken !== 'string') {
-    return null;
-  }
+  const data = parsed.data;
   return {
-    access_token: accessToken,
-    refresh_token:
-      (typeof data.refresh_token === 'string' ? data.refresh_token : undefined) ??
-      existingRefreshToken,
-    expires_at: Date.now() + (typeof data.expires_in === 'number' ? data.expires_in : 3600) * 1000,
-    token_type: typeof data.token_type === 'string' ? data.token_type : 'Bearer',
+    access_token: data.access_token,
+    refresh_token: data.refresh_token ?? existingRefreshToken,
+    expires_at: Date.now() + data.expires_in * 1000,
+    token_type: data.token_type,
   };
 }
 
-/** Type guard: check if a stored value looks like an OAuthToken. */
+/** Check if a stored value looks like an OAuthToken. */
 function isOAuthToken(value: unknown): value is OAuthToken {
-  if (!value || typeof value !== 'object') {
-    return false;
-  }
-  const obj = value as Record<string, unknown>;
-  return typeof obj.access_token === 'string' && typeof obj.expires_at === 'number';
+  return OAuthTokenSchema.safeParse(value).success;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

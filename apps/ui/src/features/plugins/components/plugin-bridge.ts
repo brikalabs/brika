@@ -5,6 +5,7 @@
 
 import * as React from 'react';
 import * as jsxRuntime from 'react/jsx-runtime';
+import { analyticsApi } from '@/features/analytics/api';
 import {
   useBrickConfig,
   useBrickData,
@@ -12,12 +13,26 @@ import {
   useCallBrickAction,
 } from '@/features/boards/brick-view-hooks';
 import {
+  useBlockConfig,
+  useBlockData,
+  useBlockId,
+  useBlockType,
+  useBlockVariables,
+  useUpdateBlockConfig,
+} from '@/features/workflows/block-view-hooks';
+import type { Json } from '@/types';
+import {
   usePluginAction as useAction,
   useCallAction,
   usePluginLocale as useLocale,
   usePluginRouteUrl,
   usePluginUid,
 } from './plugin-hooks';
+
+/** Client-safe subset of @brika/sdk for browser-compiled plugin modules. */
+const sdk = {
+  capture: (name: string, props?: Record<string, Json>) => analyticsApi.capture(name, props),
+};
 
 const [icons, ui, cva, { clsx: clsxFn }] = await Promise.all([
   import('lucide-react'),
@@ -30,6 +45,21 @@ const [icons, ui, cva, { clsx: clsxFn }] = await Promise.all([
 const clsxWrapper = Object.assign((...args: Parameters<typeof clsxFn>) => clsxFn(...args), {
   clsx: clsxFn,
 });
+
+/**
+ * Client side of `defineBrickData`: `use()` reads this brick instance's pushed
+ * data via the host hook; `set()` is plugin-process-only and never runs here
+ * (the brick view only ever calls `use()`).
+ */
+function defineBrickData<T>(id: string) {
+  return {
+    id,
+    set: () => {
+      throw new Error('BrickDataChannel.set() is only available in the plugin process');
+    },
+    use: () => useBrickData<T>(),
+  };
+}
 
 const bridge = {
   React,
@@ -47,8 +77,17 @@ const bridge = {
         : jsxRuntime.jsx(type, props, key);
     },
   },
+  sdk,
   hooks: { useLocale, useAction, useCallAction, usePluginUid, usePluginRouteUrl },
-  brickHooks: { useBrickData, useBrickConfig, useBrickSize, useCallBrickAction },
+  brickHooks: { useBrickData, useBrickConfig, useBrickSize, useCallBrickAction, defineBrickData },
+  blockHooks: {
+    useBlockConfig,
+    useUpdateBlockConfig,
+    useBlockId,
+    useBlockType,
+    useBlockData,
+    useBlockVariables,
+  },
   icons,
   ui,
   cva,

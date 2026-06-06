@@ -55,6 +55,9 @@ export async function compileServerEntry(opts: ServerCompileOptions): Promise<Se
     splitting: opts.splitting ?? true,
     minify: true,
     external: opts.external,
+    // Return a failed result with logs instead of throwing an opaque
+    // AggregateError, so callers can surface the actual build errors.
+    throw: false,
     // Compose every build-time transform into a single Bun plugin —
     // see `plugins/compose.ts` for why this can't be three separate
     // plugins. Order is significant: shims rewrite import specifiers,

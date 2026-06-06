@@ -217,7 +217,7 @@ if (detectRemote()) {
   console.log('[brika-api] remote mode — installing transport + SW proxy');
   const transport = getTransport();
   // Wire up the bootstrap SW → page bridge so dynamic `import()` of
-  // plugin/brick modules under `/api/bricks/modules/...` round-trip
+  // plugin client modules under `/api/modules/...` round-trip
   // through the WebRTC data channel instead of falling through to the
   // CF Worker (which returns SPA-fallback HTML).
   const { installSwProxyListener } = await import('./sw-proxy');

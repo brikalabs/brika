@@ -16,6 +16,7 @@ import {
   BaseNodeHeaderTitle,
 } from '@/components/base-node';
 import { useLocale } from '@/lib/use-locale';
+import { ClientBlockView } from './ClientBlockView';
 import type { BlockStatus } from './useWorkflowEditor';
 import { usePortTypeName } from './WorkflowTypeContext';
 
@@ -30,6 +31,8 @@ export interface BlockPort {
   typeName?: string;
   /** Structural type descriptor (JSON, from @brika/type-system) */
   type?: Record<string, unknown>;
+  /** Config array key this port templates over (expanded per item in the editor). */
+  dynamic?: string;
 }
 
 // Note: Colors now use CSS variables from theme system
@@ -48,6 +51,9 @@ export interface BlockNodeData {
   icon?: string;
   color?: string;
   pluginId?: string;
+  pluginUid?: string;
+  /** URL of the plugin's compiled node-body display module, when it ships one. */
+  nodeModuleUrl?: string;
   inputs?: BlockPort[];
   outputs?: BlockPort[];
   // Execution state
@@ -320,7 +326,7 @@ export const BlockNode = memo(function BlockNode(props: NodeProps) {
   return (
     <BaseNode
       className={cn(
-        'relative min-w-[200px] transition-all duration-200',
+        'relative w-64 transition-all duration-200',
         statusStyles[status] || '',
         selected && 'ring-2 ring-primary ring-offset-2'
       )}
@@ -347,25 +353,42 @@ export const BlockNode = memo(function BlockNode(props: NodeProps) {
       </BaseNodeHeader>
 
       <BaseNodeContent className="space-y-2 pt-1 pb-2">
-        {/* Block type badge */}
-        <div className="flex items-center gap-2">
-          <Badge
-            variant="secondary"
-            className="px-1.5 py-0 font-medium text-[10px]"
-            style={{
-              backgroundColor: `${color}15`,
-              color,
-            }}
-          >
-            {(blockType || 'block').split(':').pop()}
-          </Badge>
-        </div>
+        {data.nodeModuleUrl && data.pluginUid && data.pluginId ? (
+          // Plugin-authored node-body display owns the content entirely.
+          <ClientBlockView
+            blockId={data.id}
+            blockType={blockType}
+            pluginName={data.pluginId}
+            pluginUid={data.pluginUid}
+            moduleUrl={data.nodeModuleUrl}
+            scopeId={`${data.pluginId}:blocks/${blockKey}.node`}
+            config={config}
+            data={data.output}
+            compact
+          />
+        ) : (
+          <>
+            {/* Block type badge */}
+            <div className="flex items-center gap-2">
+              <Badge
+                variant="secondary"
+                className="px-1.5 py-0 font-medium text-[10px]"
+                style={{
+                  backgroundColor: `${color}15`,
+                  color,
+                }}
+              >
+                {(blockType || 'block').split(':').pop()}
+              </Badge>
+            </div>
 
-        {/* Config summary */}
-        {renderConfigSummary(config)}
+            {/* Config summary */}
+            {renderConfigSummary(config)}
 
-        {/* Execution result */}
-        <ExecutionResult status={status} output={data.output} />
+            {/* Execution result */}
+            <ExecutionResult status={status} output={data.output} />
+          </>
+        )}
       </BaseNodeContent>
 
       {/* Output Handles */}

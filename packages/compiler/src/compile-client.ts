@@ -54,6 +54,9 @@ export async function compileClientModule(
     format: 'esm',
     minify: true,
     plugins,
+    // Return a failed result with logs instead of throwing an opaque
+    // AggregateError, so callers can surface the actual build errors.
+    throw: false,
   });
 
   if (!result.success) {

@@ -20,5 +20,5 @@
     "jsxImportSource": "react"
   },
   "include": ["src/**/*.ts", "src/**/*.tsx"],
-  "exclude": ["src/pages/**/*.tsx"]
+  "exclude": ["src/pages/**/*.tsx", "src/blocks/**/*.view.tsx", "src/blocks/**/*.node.tsx"]
 }

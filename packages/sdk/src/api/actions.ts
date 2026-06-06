@@ -34,6 +34,7 @@
  * ```
  */
 
+import { z } from 'zod';
 import { getContext } from '../context';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -153,18 +154,11 @@ export function binaryResponse(bytes: Uint8Array, contentType = 'application/oct
 /**
  * Shared guard for "object literal with a `tag: true` marker on it".
  * Both binary + stream envelopes are structurally identical at the
- * tag-check level — keeping the logic in one place dedupes the
- * typeof / null / in / value check chain and the one type assertion
- * involved in indexing a tagged record.
+ * tag-check level, so a single zod schema (built per tag) discriminates
+ * either one without a hand-rolled typeof/in/index chain.
  */
 function hasEnvelopeTag(value: unknown, tag: string): boolean {
-  if (typeof value !== 'object' || value === null) {
-    return false;
-  }
-  if (!(tag in value)) {
-    return false;
-  }
-  return (value as Record<string, unknown>)[tag] === true;
+  return z.object({ [tag]: z.literal(true) }).safeParse(value).success;
 }
 
 export function isBinaryResponse(value: unknown): value is BinaryActionResponse {

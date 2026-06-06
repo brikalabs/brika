@@ -70,7 +70,9 @@
       "description": "Echoes input to output with optional prefix/suffix",
       "category": "transform",
       "icon": "message-circle",
-      "color": "#3b82f6"
+      "color": "#3b82f6",
+      "view": true,
+      "nodeView": true
     }
   ],
   "sparks": [

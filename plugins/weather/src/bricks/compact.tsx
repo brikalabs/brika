@@ -6,12 +6,13 @@
  * Imports are resolved by the bridge (globalThis.__brika) at build time.
  */
 
-import { useBrickConfig, useBrickData } from '@brika/sdk/brick-views';
+import { useBrickConfig } from '@brika/sdk/brick-views';
 import { useLocale } from '@brika/sdk/ui-kit/hooks';
 import { MapPin, Thermometer } from 'lucide-react';
+import { compactData } from '../brick-data';
 import { CityError, formatTempWithUnit, LoadingSpinner, resolveCity, resolveUnit } from './shared';
 
-// ─── Types (inlined — can't import from plugin runtime code) ────────────────
+// ─── Types ──────────────────────────────────────────────────────────────────
 
 interface CompactCityData {
   temperature: number;
@@ -21,7 +22,7 @@ interface CompactCityData {
   gradient: string;
 }
 
-interface CompactWeatherData {
+export interface CompactWeatherData {
   defaultCity: string;
   unit: string;
   cities: Record<string, CompactCityData>;
@@ -31,7 +32,7 @@ interface CompactWeatherData {
 // ─── Component ──────────────────────────────────────────────────────────────
 
 export default function CompactWeather() {
-  const data = useBrickData<CompactWeatherData>();
+  const data = compactData.use();
   const config = useBrickConfig();
   const { t } = useLocale();
 

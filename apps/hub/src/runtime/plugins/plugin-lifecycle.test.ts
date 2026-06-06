@@ -48,6 +48,7 @@ describe('PluginLifecycle', () => {
     remove: ReturnType<typeof mock>;
     setHealth: ReturnType<typeof mock>;
     loadMetadataCache: ReturnType<typeof mock>;
+    getGrantedPermissions: ReturnType<typeof mock>;
   };
   let mockEvents: {
     dispatch: ReturnType<typeof mock>;
@@ -79,6 +80,7 @@ describe('PluginLifecycle', () => {
   };
   let mockModuleCompiler: {
     compile: ReturnType<typeof mock>;
+    syncManifest: ReturnType<typeof mock>;
     get: ReturnType<typeof mock>;
     prune: ReturnType<typeof mock>;
     remove: ReturnType<typeof mock>;
@@ -128,6 +130,7 @@ describe('PluginLifecycle', () => {
       remove: mock().mockResolvedValue(undefined),
       setHealth: mock().mockResolvedValue(undefined),
       loadMetadataCache: mock().mockResolvedValue(undefined),
+      getGrantedPermissions: mock().mockReturnValue([]),
     };
     mockEvents = {
       dispatch: mock().mockResolvedValue(undefined),
@@ -161,6 +164,7 @@ describe('PluginLifecycle', () => {
     };
     mockModuleCompiler = {
       compile: mock().mockResolvedValue(undefined),
+      syncManifest: mock().mockResolvedValue(undefined),
       get: mock().mockReturnValue(undefined),
       prune: mock(),
       remove: mock(),

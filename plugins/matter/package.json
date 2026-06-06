@@ -16,6 +16,9 @@
   "engines": {
     "brika": "^0.3.0"
   },
+  "grants": {
+    "dev.brika.net.socket": {}
+  },
   "type": "module",
   "main": "./src/index.tsx",
   "exports": {
@@ -36,6 +39,21 @@
       "id": "device-discovered",
       "name": "Device Discovered",
       "description": "Emitted when a new Matter device is found on the network"
+    },
+    {
+      "id": "device-online",
+      "name": "Device Online",
+      "description": "Emitted when a device connects"
+    },
+    {
+      "id": "device-offline",
+      "name": "Device Offline",
+      "description": "Emitted when a device disconnects"
+    },
+    {
+      "id": "attribute-changed",
+      "name": "Attribute Changed",
+      "description": "Emitted for each device attribute that changes"
     }
   ],
   "blocks": [
@@ -45,7 +63,19 @@
       "description": "Send a command to a Matter device (on/off, level, color)",
       "category": "action",
       "icon": "cpu",
-      "color": "#6366f1"
+      "color": "#6366f1",
+      "view": true,
+      "nodeView": true
+    },
+    {
+      "id": "device-event",
+      "name": "When Device Changes",
+      "description": "Fires when a Matter device's watched attributes change (real-time)",
+      "category": "trigger",
+      "icon": "radio",
+      "color": "#6366f1",
+      "view": true,
+      "nodeView": true
     }
   ],
   "pages": [
@@ -78,6 +108,14 @@
           "description": "Select a commissioned Matter device"
         }
       ]
+    },
+    {
+      "id": "commission",
+      "name": "Add a Matter Device",
+      "description": "Pair a new Matter device from a dashboard with its setup code",
+      "category": "control",
+      "icon": "plus",
+      "color": "#6366f1"
     }
   ],
   "preferences": [

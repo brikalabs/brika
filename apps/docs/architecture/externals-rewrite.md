@@ -18,6 +18,7 @@ const BRIDGE: Record<string, string> = {
   'lucide-react': 'icons',
   '@brika/sdk/ui-kit/hooks': 'hooks',
   '@brika/sdk/brick-views': 'brickHooks',
+  '@brika/sdk/block-views': 'blockHooks',
   clsx: 'clsx',
   'class-variance-authority': 'cva',
 };
@@ -49,7 +50,7 @@ The filter is **exact** — `^(?:react|react/jsx-runtime|…)$`. In Bun, returni
 `apps/ui/src/features/plugins/components/plugin-bridge.ts` builds the global before any brick is loaded:
 
 1. The file's top-level body has a top-level `await` that lazy-loads `lucide-react`, `@brika/clay`, `class-variance-authority`, `clsx`.
-2. It builds an object with 8 properties: `React`, `jsx`, `hooks`, `brickHooks`, `icons`, `ui`, `cva`, `clsx`.
+2. It builds an object with 9 properties: `React`, `jsx`, `hooks`, `brickHooks`, `blockHooks`, `icons`, `ui`, `cva`, `clsx`.
 3. It assigns it to `globalThis.__brika ??= bridge` — idempotent so re-imports don't double-populate.
 
 `useModuleImport(url)` imports the bridge as a side effect *before* doing the dynamic `import(url)`. The browser's module graph guarantees the bridge is populated by the time the brick's first line runs.

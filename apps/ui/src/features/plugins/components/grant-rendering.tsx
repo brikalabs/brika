@@ -8,6 +8,7 @@
 
 import { Badge } from '@brika/clay';
 import {
+  EthernetPort,
   Folder,
   Globe,
   Globe2,
@@ -24,6 +25,7 @@ import { z } from 'zod';
 
 export const PERMISSION_ICON_MAP: Record<string, LucideIcon> = {
   dns: Globe2,
+  'ethernet-port': EthernetPort,
   folder: Folder,
   globe: Globe,
   'globe-2': Globe2,

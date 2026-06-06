@@ -33,11 +33,6 @@ const HttpResponseSchema = z.object({
 export const httpRequest = defineReactiveBlock(
   {
     id: 'http-request',
-    name: 'HTTP Request',
-    description: 'Make HTTP requests to external APIs',
-    category: 'action',
-    icon: 'globe',
-    color: '#3b82f6',
     inputs: {
       trigger: input(z.generic(), { name: 'Trigger' }),
     },
@@ -98,11 +93,6 @@ export const httpRequest = defineReactiveBlock(
 export const condition = defineReactiveBlock(
   {
     id: 'condition',
-    name: 'Condition',
-    description: 'Branch based on a condition',
-    category: 'flow',
-    icon: 'git-branch',
-    color: '#f59e0b',
     inputs: {
       in: input(z.generic(), { name: 'Input' }),
     },
@@ -201,41 +191,30 @@ function evaluate(fieldValue: unknown, operator: string, compareValue: unknown):
 export const switchBlock = defineReactiveBlock(
   {
     id: 'switch',
-    name: 'Switch',
-    description: 'Multi-way branch based on a value',
-    category: 'flow',
-    icon: 'shuffle',
-    color: '#8b5cf6',
     inputs: {
       in: input(z.generic(), { name: 'Input' }),
     },
     outputs: {
-      case1: output(z.passthrough('in'), { name: 'Case 1' }),
-      case2: output(z.passthrough('in'), { name: 'Case 2' }),
-      case3: output(z.passthrough('in'), { name: 'Case 3' }),
+      // `case` is a template: the editor renders one output per configured case
+      // (`case-0`, `case-1`, ...). The block emits to them with the raw `emit`.
+      case: output(z.passthrough('in'), { name: 'Case', repeat: 'cases' }),
       default: output(z.passthrough('in'), { name: 'Default' }),
     },
     config: z.object({
       field: z.string().describe('Field path to check'),
-      case1: z.any().optional().describe('Value for case 1'),
-      case2: z.any().optional().describe('Value for case 2'),
-      case3: z.any().optional().describe('Value for case 3'),
+      cases: z
+        .array(z.object({ value: z.string(), id: z.string() }))
+        .default([])
+        .describe('Values to match, in order; each adds its own output port'),
     }),
   },
-  ({ inputs, outputs, config }) => {
+  ({ inputs, config, emit }) => {
     inputs.in.on((data) => {
-      const value = resolveFieldValue(data, config.field);
-      log.debug(`Switch value: ${JSON.stringify(value)}`);
-
-      if (value === config.case1) {
-        outputs.case1.emit(data);
-      } else if (value === config.case2) {
-        outputs.case2.emit(data);
-      } else if (value === config.case3) {
-        outputs.case3.emit(data);
-      } else {
-        outputs.default.emit(data);
-      }
+      const value = String(resolveFieldValue(data, config.field));
+      const index = (config.cases ?? []).findIndex((c) => c.value === value);
+      const target = index >= 0 ? `case-${index}` : 'default';
+      log.debug(`Switch value: ${value} -> ${target}`);
+      emit(target, data);
     });
   }
 );
@@ -247,11 +226,6 @@ export const switchBlock = defineReactiveBlock(
 export const delay = defineReactiveBlock(
   {
     id: 'delay',
-    name: 'Delay',
-    description: 'Wait for a duration before continuing',
-    category: 'flow',
-    icon: 'timer',
-    color: '#6b7280',
     inputs: {
       in: input(z.generic(), { name: 'Input' }),
     },
@@ -277,11 +251,6 @@ export const delay = defineReactiveBlock(
 export const clock = defineReactiveBlock(
   {
     id: 'clock',
-    name: 'Clock',
-    description: 'Emit periodic ticks on an interval',
-    category: 'trigger',
-    icon: 'clock',
-    color: '#22c55e',
     inputs: {},
     outputs: {
       tick: output(z.object({ count: z.number(), ts: z.number() }), { name: 'Tick' }),
@@ -309,11 +278,6 @@ export const clock = defineReactiveBlock(
 export const transform = defineReactiveBlock(
   {
     id: 'transform',
-    name: 'Transform',
-    description: 'Transform or extract data',
-    category: 'transform',
-    icon: 'edit',
-    color: '#ec4899',
     inputs: {
       in: input(z.generic(), { name: 'Input' }),
     },
@@ -402,11 +366,6 @@ function interpolate(
 export const logBlock = defineReactiveBlock(
   {
     id: 'log',
-    name: 'Log',
-    description: 'Log a message with variable interpolation',
-    category: 'action',
-    icon: 'file-text',
-    color: '#78716c',
     inputs: {
       in: input(z.generic(), { name: 'Input' }),
     },
@@ -443,11 +402,6 @@ export const logBlock = defineReactiveBlock(
 export const merge = defineReactiveBlock(
   {
     id: 'merge',
-    name: 'Merge',
-    description: 'Wait for both inputs before continuing',
-    category: 'flow',
-    icon: 'git-merge',
-    color: '#06b6d4',
     inputs: {
       a: input(z.generic(), { name: 'Input A' }),
       b: input(z.generic(), { name: 'Input B' }),
@@ -483,11 +437,6 @@ export const merge = defineReactiveBlock(
 export const split = defineReactiveBlock(
   {
     id: 'split',
-    name: 'Split',
-    description: 'Send data to multiple branches',
-    category: 'flow',
-    icon: 'git-fork',
-    color: '#a855f7',
     inputs: {
       in: input(z.generic(), { name: 'Input' }),
     },
@@ -513,11 +462,6 @@ export const split = defineReactiveBlock(
 export const end = defineReactiveBlock(
   {
     id: 'end',
-    name: 'End',
-    description: 'End the workflow branch',
-    category: 'flow',
-    icon: 'square',
-    color: '#dc2626',
     inputs: {
       in: input(z.generic(), { name: 'Input' }),
     },
@@ -554,11 +498,6 @@ export const end = defineReactiveBlock(
 export const sparkReceiver = defineReactiveBlock(
   {
     id: 'spark-receiver',
-    name: 'Spark Receiver',
-    description: 'Receives typed spark events',
-    category: 'trigger',
-    icon: 'zap',
-    color: '#f59e0b',
     inputs: {},
     outputs: {
       // Output type is resolved from spark's schema via config.sparkType
@@ -581,6 +520,52 @@ export const sparkReceiver = defineReactiveBlock(
     start(subscribeSpark(config.sparkType))
       .pipe(map((event) => event.payload))
       .to(outputs.out);
+  }
+);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Text Block - Display text / annotate the canvas (custom node view)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const text = defineReactiveBlock(
+  {
+    id: 'text',
+    inputs: {
+      in: input(z.generic(), { name: 'Input' }),
+    },
+    outputs: {
+      out: output(z.passthrough('in'), { name: 'Output' }),
+    },
+    config: z.object({
+      content: z.string().optional().describe('Markdown text to display on the node'),
+    }),
+  },
+  ({ inputs, outputs }) => {
+    // Pure passthrough: the value is displayed by the node view, not transformed.
+    inputs.in.on((data) => outputs.out.emit(data));
+  }
+);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Image Block - Display an image (custom node view)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const image = defineReactiveBlock(
+  {
+    id: 'image',
+    inputs: {
+      in: input(z.generic(), { name: 'Input' }),
+    },
+    outputs: {
+      out: output(z.passthrough('in'), { name: 'Output' }),
+    },
+    config: z.object({
+      url: z.string().optional().describe('Image URL to display'),
+      alt: z.string().optional().describe('Alternative text'),
+    }),
+  },
+  ({ inputs, outputs }) => {
+    inputs.in.on((data) => outputs.out.emit(data));
   }
 );
 

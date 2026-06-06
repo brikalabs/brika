@@ -35,9 +35,9 @@
     {
       "name": "clientId",
       "type": "text",
-      "label": "Client ID",
-      "description": "Spotify Developer App client ID",
-      "required": true
+      "label": "Client ID (optional)",
+      "description": "Only needed for self-hosted setups. Leave empty to use Brika's built-in Spotify app.",
+      "required": false
     },
     {
       "name": "connect",
@@ -85,6 +85,22 @@
           "step": 1000
         }
       ]
+    },
+    {
+      "id": "play-song",
+      "name": "Play a Song",
+      "description": "Search Spotify and play any track with one tap",
+      "category": "media",
+      "icon": "search",
+      "color": "#1DB954",
+      "config": [
+        {
+          "type": "dynamic-dropdown",
+          "name": "device",
+          "label": "Device",
+          "description": "Device to play searched songs on"
+        }
+      ]
     }
   ],
   "blocks": [
@@ -94,7 +110,9 @@
       "description": "Start playback on a Spotify device",
       "category": "action",
       "icon": "play",
-      "color": "#1DB954"
+      "color": "#1DB954",
+      "view": true,
+      "nodeView": true
     }
   ],
   "sparks": [
@@ -102,6 +120,26 @@
       "id": "track-changed",
       "name": "Track Changed",
       "description": "Emitted when the playing track changes"
+    },
+    {
+      "id": "playback-started",
+      "name": "Playback Started",
+      "description": "Emitted when playback resumes"
+    },
+    {
+      "id": "playback-paused",
+      "name": "Playback Paused",
+      "description": "Emitted when playback pauses or stops"
+    },
+    {
+      "id": "volume-changed",
+      "name": "Volume Changed",
+      "description": "Emitted when the active device volume changes"
+    },
+    {
+      "id": "device-changed",
+      "name": "Device Changed",
+      "description": "Emitted when playback moves to a different device"
     }
   ],
   "dependencies": {

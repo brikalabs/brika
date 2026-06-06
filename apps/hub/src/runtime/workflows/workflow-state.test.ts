@@ -5,9 +5,8 @@
 import 'reflect-metadata';
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { get, provide, reset, stub, useTestBed } from '@brika/di/testing';
-import type { BlockDefinition } from '@brika/sdk';
 import { waitFor } from '@brika/testing';
-import { BlockRegistry } from '@/runtime/blocks/block-registry';
+import { BlockRegistry, type RegisteredBlock } from '@/runtime/blocks/block-registry';
 import { EventSystem } from '@/runtime/events/event-system';
 import { Logger } from '@/runtime/logs/log-router';
 import { PluginEventHandler } from '@/runtime/plugins/plugin-events';
@@ -283,13 +282,14 @@ describe('WorkflowEngine - State Management', () => {
 
 describe('WorkflowEngine - Block Registry Passthrough', () => {
   let engine: WorkflowEngine;
-  let mockBlocks: BlockDefinition[];
+  let mockBlocks: RegisteredBlock[];
 
   beforeEach(() => {
     mockBlocks = [
       {
         id: 'timer',
         type: 'plugin:timer',
+        pluginId: 'plugin',
         inputs: [],
         outputs: [],
         schema: {
@@ -300,6 +300,7 @@ describe('WorkflowEngine - Block Registry Passthrough', () => {
       {
         id: 'logger',
         type: 'plugin:logger',
+        pluginId: 'plugin',
         inputs: [],
         outputs: [],
         schema: {

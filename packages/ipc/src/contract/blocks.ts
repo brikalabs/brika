@@ -23,6 +23,11 @@ export const BlockPort = z.object({
   typeName: z.string().optional(),
   /** Structural type descriptor (JSON-serialized TypeDescriptor from @brika/type-system) */
   type: Json.optional(),
+  /**
+   * When set, this port is a template that the editor repeats once per item of
+   * the named config array (e.g. `cases`), producing ports `<id>-<index>`.
+   */
+  dynamic: z.string().optional(),
 });
 export type BlockPort = z.infer<typeof BlockPort>;
 

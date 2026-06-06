@@ -76,10 +76,6 @@ export interface BlockInstance {
  *
  * export const comfortBlock = defineReactiveBlock({
  *   id: "comfort-index",
- *   name: "Comfort Index",
- *   category: "sensors",
- *   icon: "thermometer",
- *   color: "#10b981",
  *
  *   inputs: {
  *     temperature: input(z.number(), { name: "Temperature °C" }),
@@ -234,6 +230,7 @@ export function defineReactiveBlock<
             typeName: linkedInput.typeName,
             type: linkedInput.type,
             jsonSchema: linkedInput.jsonSchema,
+            dynamic: def.meta.repeat,
           };
         }
         // Linked input is generic/unresolved — preserve passthrough for dynamic inference
@@ -247,6 +244,7 @@ export function defineReactiveBlock<
       typeName: baseTypeName,
       type: typeDesc,
       jsonSchema: getJsonSchema(def.schema),
+      dynamic: def.meta.repeat,
     };
   });
 
@@ -304,6 +302,9 @@ export function defineReactiveBlock<
         outputs: outputEmitters,
         config,
         start,
+        // Launder unknown -> Serializable without a cast; the value is already
+        // serialized downstream. Used for dynamic template ports (emit `case-N`).
+        emit: (portId: string, data: unknown) => ctx.emit(portId, z.any().parse(data)),
         get context() {
           return this;
         },

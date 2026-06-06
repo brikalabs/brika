@@ -1,8 +1,5 @@
 import 'reflect-metadata';
-import { afterAll, beforeAll, describe, expect, mock, test } from 'bun:test';
-import { mkdir, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { describe, expect, mock, test } from 'bun:test';
 import { stub, useTestBed } from '@brika/di/testing';
 import { TestApp } from '@brika/router/testing';
 import type { RegisteredBrickType } from '@/runtime/bricks';
@@ -10,18 +7,6 @@ import { BrickTypeRegistry } from '@/runtime/bricks';
 import { bricksRoutes } from '@/runtime/http/routes/bricks';
 import { ModuleCompiler } from '@/runtime/modules';
 import { PluginLifecycle } from '@/runtime/plugins/plugin-lifecycle';
-
-const TEST_DIR = join(tmpdir(), `brika-test-bricks-${Date.now()}`);
-const MOCK_JS_PATH = join(TEST_DIR, 'clock.abc123.js');
-
-beforeAll(async () => {
-  await mkdir(TEST_DIR, { recursive: true });
-  await Bun.write(MOCK_JS_PATH, 'export default {}');
-});
-
-afterAll(async () => {
-  await rm(TEST_DIR, { recursive: true, force: true });
-});
 
 const BRICK_TYPE: RegisteredBrickType = {
   fullId: 'timer:clock',
@@ -144,36 +129,8 @@ describe('bricks routes', () => {
     expect(res.body.options).toEqual(opts);
   });
 
-  // ─── Module Serving ─────────────────────────────────────────────────────────
-
-  test('GET /api/bricks/modules/:pluginUid/:file returns compiled module', async () => {
-    mockLifecycle.resolvePluginNameByUid.mockReturnValue('@brika/plugin-timer');
-    mockCompiler.get.mockReturnValue({
-      hash: 'abc123',
-      filePath: MOCK_JS_PATH,
-    });
-
-    const res = await app.get('/api/bricks/modules/plg-1/clock.abc123.js');
-
-    expect(res.status).toBe(200);
-  });
-
-  test('GET /api/bricks/modules/:pluginUid/:file returns 404 for unknown plugin', async () => {
-    mockLifecycle.resolvePluginNameByUid.mockReturnValue(null);
-
-    const res = await app.get('/api/bricks/modules/unknown-uid/clock.abc.js');
-
-    expect(res.status).toBe(404);
-  });
-
-  test('GET /api/bricks/modules/:pluginUid/:file returns 404 for unknown module', async () => {
-    mockLifecycle.resolvePluginNameByUid.mockReturnValue('@brika/plugin-timer');
-    mockCompiler.get.mockReturnValue(null);
-
-    const res = await app.get('/api/bricks/modules/plg-1/missing.abc.js');
-
-    expect(res.status).toBe(404);
-  });
+  // Brick view modules are served by the generic /api/modules route
+  // (see modules-routes.integration.test.ts).
 
   // ─── Action ───────────────────────────────────────────────────────────────
 

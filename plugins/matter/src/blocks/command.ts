@@ -15,7 +15,20 @@ export const matterCommand = defineReactiveBlock(
     config: z.object({
       nodeId: z.string().describe('Matter device node ID'),
       command: z
-        .enum(['on', 'off', 'toggle', 'setBrightness', 'setColorTemp'])
+        .enum([
+          'on',
+          'off',
+          'toggle',
+          'setBrightness',
+          'setColorTemp',
+          'setHueSaturation',
+          'lock',
+          'unlock',
+          'coverOpen',
+          'coverClose',
+          'coverStop',
+          'setTargetTemp',
+        ])
         .describe('Command to send'),
       params: z.record(z.string(), z.string()).optional().describe('Command parameters'),
     }),

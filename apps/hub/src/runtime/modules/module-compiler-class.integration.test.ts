@@ -144,3 +144,21 @@ describe('ModuleCache - store', () => {
     expect(entry?.filePath).toBe(join(writeDir, 'mod.hash1.js'));
   });
 });
+
+// ─── syncManifest() ──────────────────────────────────────────────────────────
+
+describe('ModuleCompiler - syncManifest()', () => {
+  let compiler: ModuleCompiler;
+
+  useTestBed({ autoStub: false }, () => {
+    stub(Logger);
+    compiler = get(ModuleCompiler);
+  });
+
+  test('manifest with no client modules prunes and compiles nothing', async () => {
+    // Empty manifest: every module kind selects [], so currentKeys is empty,
+    // prune removes nothing for a fresh plugin, and compile is a no-op loop.
+    await expect(compiler.syncManifest('sync-test', TEST_DIR, {})).resolves.toBeUndefined();
+    expect(compiler.get('sync-test:anything')).toBeUndefined();
+  });
+});

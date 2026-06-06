@@ -43,6 +43,7 @@ export class PluginLoader implements Loader {
           {
             pluginName: entry.name,
             version: entry.version,
+            reason: err instanceof Error ? err.message : String(err),
           },
           {
             error: err,
