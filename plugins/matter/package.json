@@ -16,6 +16,9 @@
   "engines": {
     "brika": "^0.3.0"
   },
+  "grants": {
+    "dev.brika.net.socket": {}
+  },
   "type": "module",
   "main": "./src/index.tsx",
   "exports": {

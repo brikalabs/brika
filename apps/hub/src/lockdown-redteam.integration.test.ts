@@ -153,18 +153,32 @@ describe('lockdown enforce mode — ambient I/O globals', () => {
     expect(out.stdout).not.toContain('LEAKED:');
   });
 
-  // `process.kill` would let a plugin signal any pid it can guess — most
-  // dangerously the hub process itself (`process.kill(parentPid, 'SIGTERM')`).
+  // `process.kill` with a real signal would let a plugin signal any pid it can
+  // guess — most dangerously the hub process itself
+  // (`process.kill(parentPid, 'SIGTERM')`) — so real signals stay denied.
   // `process.dlopen` loads arbitrary native libraries, bypassing the
   // `bun:ffi` module deny-list. Both are out-of-band capabilities that
   // are NOT reachable through the grant vector.
-  test('process.kill is scrubbed', async () => {
+  test('process.kill denies real signals', async () => {
     const out = await runAttack(`
-      process.kill(process.pid, 0);
+      process.kill(process.pid, 'SIGTERM');
       console.log('LEAKED:kill ran');
     `);
     expect(out.stdout).toMatch(/CAUGHT:.*process\.kill is not available/);
     expect(out.stdout).not.toContain('LEAKED:');
+  });
+
+  // Signal 0 delivers nothing — it only reports whether a pid exists. Libraries
+  // depend on it for liveness checks (e.g. matter.js reclaiming a storage lock
+  // left by a crashed process), so the guard forwards it to the real impl. A
+  // plugin learns only that a pid exists, never the ability to signal it.
+  test('process.kill allows the signal-0 liveness probe', async () => {
+    const out = await runAttack(`
+      const alive = process.kill(process.pid, 0);
+      console.log('PROBE:' + alive);
+    `);
+    expect(out.stdout).toContain('PROBE:true');
+    expect(out.stdout).not.toContain('CAUGHT:');
   });
 
   test('process.dlopen is scrubbed', async () => {

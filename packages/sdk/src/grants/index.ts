@@ -94,8 +94,15 @@ export {
   LocationScopeSchema,
   locationGet,
 } from './location';
-export type { FetchArgs, FetchResult, NetScope } from './net';
-export { FetchArgsSchema, FetchResultSchema, NetScopeSchema, netFetch } from './net';
+export type { FetchArgs, FetchResult, NetScope, NetSocketScope } from './net';
+export {
+  FetchArgsSchema,
+  FetchResultSchema,
+  NetScopeSchema,
+  NetSocketScopeSchema,
+  netFetch,
+  netSocket,
+} from './net';
 export type {
   SecretsDeleteArgs,
   SecretsDeleteResult,

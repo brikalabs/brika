@@ -174,3 +174,51 @@ declare module '../ctx' {
     };
   }
 }
+
+/**
+ * Scope for the raw-socket capability. There is nothing to parameterise:
+ * granting it opens the door to direct UDP/TCP, so the scope is an empty
+ * object (consent is the whole decision). Modelled the same way as the
+ * location / secrets always-empty scopes.
+ */
+export const NetSocketScopeSchema = z.object({});
+
+export type NetSocketScope = z.infer<typeof NetSocketScopeSchema>;
+
+/**
+ * `dev.brika.net.socket` — direct raw-socket capability.
+ *
+ * Unlike every other grant, this one is NOT dispatched over IPC and has no
+ * `ctx.*` surface. A request/response broker cannot model a long-lived,
+ * bidirectional UDP/TCP socket (e.g. Matter's mDNS multicast on 5353), so
+ * raw sockets are realised at the sandbox LOCKDOWN layer instead: when this
+ * grant is present and consented, the hub forwards `BRIKA_PLUGIN_RAW_SOCKETS=1`
+ * and the prelude leaves `Bun.connect/listen/udpSocket` + `node:net/tls/dgram/dns`
+ * intact so the plugin opens sockets itself, in-process.
+ *
+ * It lives in the grant registry purely so it rides the existing manifest +
+ * consent machinery: the operator approves "raw socket access" with the same
+ * toggle UX as any other family, rather than via a bespoke manifest boolean.
+ * The handler throws because it must never be reached — the capability is the
+ * lockdown opt-out, not a call. This mirrors `location` / `secrets`, whose
+ * spec handlers are likewise never invoked (they dispatch via dedicated RPCs).
+ */
+export const netSocket = defineGrant(
+  {
+    id: 'dev.brika.net.socket',
+    args: z.object({}),
+    result: z.object({}),
+    permission: {
+      name: 'rawSocket',
+      scope: NetSocketScopeSchema,
+      defaultScope: {},
+      icon: 'ethernet-port',
+    },
+    description: 'Open raw TCP/UDP sockets directly (needed for wire protocols like Matter mDNS)',
+  },
+  () => {
+    throw new Error(
+      'net.socket: realised at the sandbox lockdown layer (raw-socket opt-in), never dispatched over IPC.'
+    );
+  }
+);

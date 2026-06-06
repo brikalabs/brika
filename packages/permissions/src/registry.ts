@@ -3,6 +3,14 @@ export interface PermissionDefinition {
   readonly icon: string;
   readonly labelKey: string;
   readonly descriptionKey: string;
+  /**
+   * When true, toggling this permission only takes effect after the plugin
+   * process is restarted (the capability is wired at spawn time, e.g. the
+   * raw-socket env the sandbox lockdown reads at boot, rather than checked
+   * per-call against the grant vector). The hub reloads the plugin on toggle
+   * so the change applies without the operator restarting it manually.
+   */
+  readonly requiresRestart?: boolean;
 }
 
 export function createRegistry<
@@ -10,6 +18,7 @@ export function createRegistry<
     string,
     {
       icon: string;
+      requiresRestart?: boolean;
     }
   >,
 >(map: T) {

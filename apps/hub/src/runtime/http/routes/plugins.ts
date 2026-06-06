@@ -1,4 +1,5 @@
 import { Analytics } from '@brika/analytics';
+import { isValidPermission, PERMISSIONS } from '@brika/permissions';
 import type { Plugin } from '@brika/plugin';
 import { group, route, UnprocessableEntity } from '@brika/router';
 import { z } from 'zod';
@@ -313,15 +314,24 @@ export const pluginsRoutes = group({
         permission: z.string(),
         granted: z.boolean(),
       }),
-      handler: ({ params, body, inject }) => {
+      handler: async ({ params, body, inject }) => {
         const plugin = getOrThrow(inject(PluginManager).get(params.uid), 'Plugin not found');
         const permService = inject(PluginPermissionService);
 
         const updated = permService.setPermission(plugin.name, body.permission, body.granted);
-        // Invalidate the running process's cached grant vector so the
-        // toggle takes effect on the very next `ctx.*` call — no plugin
-        // restart needed for the hub-side check.
-        inject(PluginLifecycle).getProcess(plugin.name)?.invalidateVector();
+        // Most grants are checked per-call against the cached vector, so
+        // invalidating it makes the toggle take effect on the next `ctx.*`
+        // call with no restart. Spawn-time permissions (e.g. rawSocket, whose
+        // env the sandbox lockdown reads at boot) can't be applied to a live
+        // process, so those reload the plugin instead.
+        const requiresRestart =
+          isValidPermission(body.permission) &&
+          PERMISSIONS[body.permission].requiresRestart === true;
+        if (requiresRestart) {
+          await inject(PluginManager).reload(plugin.uid);
+        } else {
+          inject(PluginLifecycle).getProcess(plugin.name)?.invalidateVector();
+        }
         inject(Analytics).capture('plugin.permission_toggled', {
           uid: plugin.uid,
           permission: body.permission,

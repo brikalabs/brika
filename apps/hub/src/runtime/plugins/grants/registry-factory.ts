@@ -20,6 +20,7 @@ import {
   fsStat,
   fsWriteFile,
   locationGet,
+  netSocket,
   secretsDelete,
   secretsGet,
   secretsSet,
@@ -100,6 +101,10 @@ export function buildHubGrants(cb: HubGrantCallbacks, opts?: HubGrantOptions): G
   // invoked. They live in the registry so manifest consent + vector
   // construction see them like any other grant family.
   reg.register(locationGet);
+  // net.socket is the raw-socket capability — realised at the L1 lockdown
+  // (the hub forwards BRIKA_PLUGIN_RAW_SOCKETS=1 when it's consented), never
+  // dispatched. Registered so the manifest request + consent toggle resolve.
+  reg.register(netSocket);
   reg.register(secretsGet);
   reg.register(secretsSet);
   reg.register(secretsDelete);

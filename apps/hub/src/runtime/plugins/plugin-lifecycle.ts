@@ -17,7 +17,7 @@ import { MODULE_KINDS, resolveModuleUrl } from '@/runtime/modules/module-kinds';
 import { SecretStore } from '@/runtime/secrets/secret-store';
 import { type PluginStateWithMetadata, StateStore } from '@/runtime/state/state-store';
 import { buildHubGrants } from './grants/registry-factory';
-import { familiesForManifestGrants } from './grants/vector';
+import { buildVectorWithUserConsent, familiesForManifestGrants } from './grants/vector';
 import { compileServerEntry, PluginProcess, spawnPlugin } from './lifecycle-deps';
 import { PluginConfigService } from './plugin-config';
 import { PluginErrors } from './plugin-errors';
@@ -40,6 +40,29 @@ const PRELUDE_PATH = join(import.meta.dir, 'prelude', 'index.ts');
 const sharedGrantRegistry = buildHubGrants({
   fetch: () => Promise.reject(new Error('shared registry: fetch is not wired')),
 });
+
+/**
+ * Grant id for the raw-socket capability. Realised at the L1 lockdown (not
+ * dispatched): when this grant is in the plugin's consented vector, the hub
+ * forwards `BRIKA_PLUGIN_RAW_SOCKETS=1` so the prelude leaves UDP/TCP
+ * primitives intact. See `packages/sdk/src/grants/net.ts` (`netSocket`).
+ */
+const RAW_SOCKET_GRANT_ID = 'dev.brika.net.socket';
+
+/**
+ * True when the plugin both requests `net.socket` in its manifest and the
+ * operator has consented to the `rawSocket` family — i.e. the grant survives
+ * vector construction. Gates the `BRIKA_PLUGIN_RAW_SOCKETS` env the lockdown
+ * reads at process boot (the vector itself arrives over IPC only after boot,
+ * so the decision must be compiled to an env var here).
+ */
+function rawSocketsConsented(
+  manifestGrants: Readonly<Record<string, unknown>> | undefined,
+  grantedFamilies: ReadonlyArray<string>
+): boolean {
+  const vector = buildVectorWithUserConsent(sharedGrantRegistry, manifestGrants, grantedFamilies);
+  return vector.grants.some((grant) => grant.id === RAW_SOCKET_GRANT_ID);
+}
 
 /**
  * Manages plugin lifecycle: loading, unloading, and restart handling.
@@ -345,11 +368,20 @@ export class PluginLifecycle {
       }
     );
 
+    const rawSockets = rawSocketsConsented(
+      metadata.grants,
+      this.#state.getGrantedPermissions(pluginName)
+    );
+
     const channel = spawnPlugin(sandboxPlan.cmd, [...sandboxPlan.args], {
       cwd: rootDirectory,
       env: this.#bunRunner.pluginEnv({
         BRIKA_PLUGIN_NAME: metadata.name,
         BRIKA_PLUGIN_UID: uid,
+        // Raw-socket capability: forwarded only when the plugin requests the
+        // `dev.brika.net.socket` grant AND the operator consented to it. The
+        // lockdown reads this at boot to keep UDP/TCP primitives intact.
+        ...(rawSockets ? { BRIKA_PLUGIN_RAW_SOCKETS: '1' } : {}),
       }),
       processName: `brika:${metadata.name}`,
       defaultTimeoutMs: this.#config.callTimeoutMs,
