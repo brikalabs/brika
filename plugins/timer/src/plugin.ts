@@ -6,11 +6,11 @@
  */
 
 import { log, onStop } from '@brika/sdk/lifecycle';
-import { dashboardData } from './brick-data';
+import { timersDashboard } from './bricks/timers-dashboard.brick';
 
 const startedAt = Date.now();
 
-dashboardData.set({
+timersDashboard.data.set({
   blockCount: 2,
   sparkCount: 4,
   startedAt,

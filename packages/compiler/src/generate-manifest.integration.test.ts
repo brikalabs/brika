@@ -176,6 +176,63 @@ export default function GaugeBrick() {
     expect(entry.trim().endsWith("import '../plugin';")).toBe(true);
   });
 
+  test('defineBrick descriptor lowers config; legacy .tsx still works alongside', async () => {
+    await mkdir(join(root, 'src', 'bricks'), { recursive: true });
+    // New model: a react-free descriptor + a view file at <id>.tsx.
+    await writeFile(
+      join(root, 'src', 'bricks', 'dial.brick.ts'),
+      [
+        "import { defineBrick } from '@brika/sdk/brick';",
+        "import { z } from '@brika/sdk';",
+        'export const dial = defineBrick({',
+        "  id: 'dial',",
+        "  meta: { name: 'Dial', category: 'monitoring', icon: 'gauge' },",
+        "  config: z.object({ max: z.number().min(0).max(100).default(60).meta({ label: 'Max' }) }),",
+        '  data: z.object({ value: z.number() }),',
+        '});',
+      ].join('\n')
+    );
+    await writeFile(
+      join(root, 'src', 'bricks', 'dial.tsx'),
+      "import { dial } from './dial.brick';\nexport default function Dial() { return null; }\n"
+    );
+
+    const result = await generateManifest(root);
+
+    expect(result.ok).toBe(true);
+    expect(result.diagnostics).toEqual([]);
+    expect(result.bricks).toEqual([
+      {
+        id: 'dial',
+        name: 'Dial',
+        category: 'monitoring',
+        icon: 'gauge',
+        config: [{ type: 'number', name: 'max', label: 'Max', default: 60, min: 0, max: 100 }],
+      },
+    ]);
+  });
+
+  test('a descriptor without a matching view file is an error', async () => {
+    await mkdir(join(root, 'src', 'bricks'), { recursive: true });
+    await writeFile(
+      join(root, 'src', 'bricks', 'orphan.brick.ts'),
+      [
+        "import { defineBrick } from '@brika/sdk/brick';",
+        "import { z } from '@brika/sdk';",
+        "export const orphan = defineBrick({ id: 'orphan', meta: { name: 'Orphan' }, config: z.object({}), data: z.object({}) });",
+      ].join('\n')
+    );
+
+    const result = await generateManifest(root);
+
+    expect(result.ok).toBe(false);
+    expect(
+      result.diagnostics.some(
+        (d) => d.level === 'error' && d.message.includes('orphan') && d.message.includes('view')
+      )
+    ).toBe(true);
+  });
+
   test('pages get id from filename + icon from meta (ui-kit stubbed)', async () => {
     await mkdir(join(root, 'src', 'pages'), { recursive: true });
     // Imports @brika/sdk/ui-kit to exercise the ui-kit stub path.

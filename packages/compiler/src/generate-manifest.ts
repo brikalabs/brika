@@ -1,15 +1,13 @@
 /**
  * Manifest generation for `brika build`.
  *
- * Blocks and sparks are server modules: importing them runs their
- * `defineReactiveBlock` / `defineSpark` calls under an installed collector.
- * Bricks are browser modules (JSX + `react`, which plugins do not depend on),
- * so each is bundled with `Bun.build` first, stubbing `react` and keeping
- * `@brika/sdk` external (so its `z` is the same instance this module uses),
- * then imported to read its `meta` + `config` exports without rendering. All
- * three are lowered into the `blocks[]` / `sparks[]` / `bricks[]` shapes the hub
- * reads from `package.json`. The hub contract is unchanged: this only generates
- * the arrays that are committed back to `package.json`.
+ * Blocks, sparks, and `defineBrick` descriptors are react-free server modules:
+ * importing them runs their `define*` calls under an installed collector. Legacy
+ * bricks that co-locate `meta`/`config` exports in the `.tsx` view (no
+ * descriptor) are still supported via a `Bun.build` pass that stubs react and
+ * keeps `@brika/sdk` external. All are lowered into the `blocks[]` / `sparks[]` /
+ * `bricks[]` / `pages[]` shapes the hub reads from `package.json`. The hub
+ * contract is unchanged: this only generates the committed arrays.
  */
 
 import { rm } from 'node:fs/promises';
@@ -18,6 +16,7 @@ import { pathToFileURL } from 'node:url';
 import {
   type BrickMetaInput,
   type CollectedBlock,
+  type CollectedBrick,
   type CollectedManifest,
   type CollectedSpark,
   drainCollector,
@@ -116,7 +115,12 @@ async function sparkFiles(pluginRoot: string): Promise<string[]> {
   return Array.from(new Set([...single, ...dir]));
 }
 
-/** Bricks are browser modules at `src/bricks/<id>.tsx`. */
+/** Brick descriptors are react-free modules at `src/bricks/<id>.brick.ts`. */
+function brickDescriptorFiles(pluginRoot: string): Promise<string[]> {
+  return scanGlob(pluginRoot, 'src/bricks/*.brick.ts');
+}
+
+/** Legacy brick views with co-located meta/config exports at `src/bricks/<id>.tsx`. */
 function brickFiles(pluginRoot: string): Promise<string[]> {
   return scanGlob(pluginRoot, 'src/bricks/*.tsx');
 }
@@ -467,6 +471,41 @@ async function buildBricks(
 }
 
 /**
+ * Build `bricks[]` entries from `defineBrick` descriptors captured by the
+ * collector. The descriptor is react-free, so no Bun.build/import-stub dance is
+ * needed: its config zod lowers straight through zodToPreferences. The brick's
+ * view must exist at `src/bricks/<id>.tsx`.
+ */
+async function buildDescriptorBricks(
+  pluginRoot: string,
+  bricks: readonly CollectedBrick[],
+  diagnostics: ValidationDiagnostic[]
+): Promise<GeneratedBrick[]> {
+  const out: GeneratedBrick[] = [];
+  for (const brick of dedupeById(bricks)) {
+    const viewPath = join(pluginRoot, 'src', 'bricks', `${brick.id}.tsx`);
+    if (!(await Bun.file(viewPath).exists())) {
+      diagnostics.push({
+        level: 'error',
+        message: `Brick "${brick.id}" descriptor has no view at src/bricks/${brick.id}.tsx`,
+        file: viewPath,
+      });
+      continue;
+    }
+    const { preferences, warnings } = zodToPreferences(brick.config);
+    for (const warning of warnings) {
+      diagnostics.push({
+        level: 'warning',
+        message: `Brick "${brick.id}": ${warning}`,
+        file: viewPath,
+      });
+    }
+    out.push(toBrickEntry(brick.id, brick.meta, preferences.length > 0 ? preferences : undefined));
+  }
+  return out;
+}
+
+/**
  * Build the `pages[]` entries. A page contributes `{ id, icon? }`; the optional
  * icon comes from an `export const meta = { icon }`. Pages need no other
  * metadata, so a missing `meta` export is fine (not an error).
@@ -516,13 +555,14 @@ const byId = (a: { id: string }, b: { id: string }): number => a.id.localeCompar
  */
 export async function generateManifest(pluginRoot: string): Promise<GeneratedManifest> {
   const root = resolve(pluginRoot);
-  const [blocks, sparks, brickPaths, pagePaths] = await Promise.all([
+  const [blocks, sparks, descriptorPaths, legacyBrickPaths, pagePaths] = await Promise.all([
     blockFiles(root),
     sparkFiles(root),
+    brickDescriptorFiles(root),
     brickFiles(root),
     pageFiles(root),
   ]);
-  const { collected, errors } = await importModules([...blocks, ...sparks]);
+  const { collected, errors } = await importModules([...blocks, ...sparks, ...descriptorPaths]);
   const diagnostics: ValidationDiagnostic[] = [...errors];
 
   const managedBlocks: GeneratedBlock[] = [];
@@ -538,7 +578,14 @@ export async function generateManifest(pluginRoot: string): Promise<GeneratedMan
   }
 
   const generatedSparks = dedupeById(collected.sparks).map(toSparkEntry).sort(byId);
-  const generatedBricks = (await buildBricks(brickPaths, diagnostics)).sort(byId);
+
+  // Descriptor bricks (defineBrick) win; legacy `.tsx`-export bricks fill in any
+  // id without a descriptor (back-compat).
+  const descriptorBricks = await buildDescriptorBricks(root, collected.bricks, diagnostics);
+  const descriptorIds = new Set(descriptorBricks.map((b) => b.id));
+  const legacyBrickFiles = legacyBrickPaths.filter((f) => !descriptorIds.has(basename(f, '.tsx')));
+  const legacyBricks = await buildBricks(legacyBrickFiles, diagnostics);
+  const generatedBricks = [...descriptorBricks, ...legacyBricks].sort(byId);
   const generatedPages = (await buildPages(pagePaths, diagnostics)).sort(byId);
 
   return {

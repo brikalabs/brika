@@ -6,32 +6,11 @@
  * The uptime counter and chart history are maintained as local client state.
  */
 
-import { z } from '@brika/sdk';
 import { useBrickConfig, useBrickSize } from '@brika/sdk/brick-views';
 import clsx from 'clsx';
 import { Activity, Box, Clock, Eye, EyeOff, Loader2, Timer, Zap } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
-import { dashboardData } from '../brick-data';
-
-// Manifest metadata + per-instance config, lowered into package.json by `brika build`.
-export const meta = {
-  name: 'Timers Dashboard',
-  description: 'Overview of active timers and countdowns',
-  category: 'monitoring',
-  icon: 'timer',
-  color: '#22c55e',
-};
-
-export const config = z.object({
-  refreshInterval: z
-    .number()
-    .min(1000)
-    .max(30000)
-    .multipleOf(1000)
-    .default(5000)
-    .meta({ label: 'Refresh Interval (ms)' })
-    .describe('How often to update uptime'),
-});
+import { timersDashboard } from './timers-dashboard.brick';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -121,8 +100,8 @@ function MiniChart({ history, color }: Readonly<{ history: number[]; color: stri
 
 export default function TimersDashboard() {
   const { width, height } = useBrickSize();
-  const { refreshInterval } = useBrickConfig(config);
-  const data = dashboardData.use();
+  const { refreshInterval } = useBrickConfig(timersDashboard.config);
+  const data = timersDashboard.data.use();
 
   const [monitoring, setMonitoring] = useState(true);
   const [uptime, setUptime] = useState(0);
