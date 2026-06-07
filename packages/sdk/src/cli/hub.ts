@@ -82,6 +82,25 @@ function hubFetch(path: string, init?: RequestInit): Promise<Response> {
   return fetch(new URL(path, hubOrigin()), { ...init, headers });
 }
 
+/** The running hub's advertised opaque instanceId (from public /api/health), or null. */
+export async function hubInstanceId(): Promise<string | null> {
+  try {
+    const res = await fetch(`${hubOrigin()}/api/health`, { signal: AbortSignal.timeout(1000) });
+    if (!res.ok) {
+      return null;
+    }
+    const body: unknown = await res.json();
+    return typeof body === 'object' &&
+      body !== null &&
+      'instanceId' in body &&
+      typeof body.instanceId === 'string'
+      ? body.instanceId
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 interface InstallProgress {
   phase?: string;
   message?: string;

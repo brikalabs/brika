@@ -11,6 +11,7 @@ import { createCli } from '@brika/cli';
 import build from './commands/build';
 import check from './commands/check';
 import dev from './commands/dev';
+import doctor from './commands/doctor';
 import install from './commands/install';
 import verify from './commands/verify';
 
@@ -20,5 +21,6 @@ await createCli({ name: 'brika' })
   .addCommand(verify)
   .addCommand(dev)
   .addCommand(install)
+  .addCommand(doctor)
   .addHelp()
   .run();

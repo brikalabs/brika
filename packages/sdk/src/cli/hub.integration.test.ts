@@ -9,7 +9,7 @@ import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { hubOrigin, installViaRegistry, pingHub } from './hub';
+import { hubInstanceId, hubOrigin, installViaRegistry, pingHub } from './hub';
 
 const TOKEN = 'deadbeefcafef00d';
 
@@ -46,7 +46,7 @@ beforeAll(async () => {
     async fetch(req) {
       const url = new URL(req.url);
       if (url.pathname === '/api/health') {
-        return Response.json({ ok: true });
+        return Response.json({ ok: true, instanceId: 'hub-abc12345' });
       }
       if (url.pathname === '/api/registry/install' && req.method === 'POST') {
         const body: { package?: string; version?: string } = await req.json();
@@ -83,6 +83,17 @@ describe('hub client', () => {
 
   test('pingHub is true when a hub answers /api/health', async () => {
     expect(await pingHub()).toBe(true);
+  });
+
+  test('hubInstanceId returns the advertised id, null when unreachable', async () => {
+    expect(await hubInstanceId()).toBe('hub-abc12345');
+    const port = process.env.BRIKA_PORT;
+    process.env.BRIKA_PORT = '1';
+    try {
+      expect(await hubInstanceId()).toBeNull();
+    } finally {
+      process.env.BRIKA_PORT = port;
+    }
   });
 
   test('pingHub is false when nothing is listening', async () => {
