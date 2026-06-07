@@ -121,11 +121,8 @@ function MiniChart({ history, color }: Readonly<{ history: number[]; color: stri
 
 export default function TimersDashboard() {
   const { width, height } = useBrickSize();
-  const config = useBrickConfig();
+  const { refreshInterval } = useBrickConfig(config);
   const data = dashboardData.use();
-
-  const refreshInterval =
-    typeof config.refreshInterval === 'number' ? config.refreshInterval : 5000;
 
   const [monitoring, setMonitoring] = useState(true);
   const [uptime, setUptime] = useState(0);

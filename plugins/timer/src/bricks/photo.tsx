@@ -44,10 +44,7 @@ const PHOTOS = [
 
 export default function PhotoBrick() {
   const { width, height } = useBrickSize();
-  const config = useBrickConfig();
-
-  const autoRotate = typeof config.autoRotate === 'boolean' ? config.autoRotate : true;
-  const interval = typeof config.interval === 'number' ? config.interval : 8000;
+  const { autoRotate, interval } = useBrickConfig(config);
 
   const [index, setIndex] = useState(0);
   const photo = PHOTOS[index % PHOTOS.length];

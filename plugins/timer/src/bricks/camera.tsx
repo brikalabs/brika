@@ -66,11 +66,7 @@ const STREAMS = [
 
 export default function CameraBrick() {
   const { width, height } = useBrickSize();
-  const config = useBrickConfig();
-
-  const defaultStreamName =
-    typeof config.defaultStream === 'string' ? config.defaultStream : STREAMS[0].name;
-  const muted = typeof config.muted === 'boolean' ? config.muted : true;
+  const { defaultStream: defaultStreamName, muted } = useBrickConfig(config);
 
   const defaultIndex = Math.max(
     0,

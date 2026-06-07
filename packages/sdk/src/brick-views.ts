@@ -1,5 +1,6 @@
 // Build-time: brick module compiler replaces with globalThis.__brika.brickHooks
 
+import type { z } from 'zod';
 import { setBrickData } from './api/push-brick-data';
 
 /**
@@ -49,8 +50,20 @@ export function defineBrickData<T>(id: string): BrickDataChannel<T> {
 
 /**
  * Read the per-instance config for this brick.
+ *
+ * Pass the brick's own zod `config` schema to get a typed, defaulted, validated
+ * object back (the host parses the raw config through it), so the view reads the
+ * exact same schema it declares for the manifest. Call with no argument for the
+ * untyped `Record<string, unknown>` (kept for back-compat).
+ *
+ * ```ts
+ * export const config = z.object({ refreshInterval: z.number().default(5000) });
+ * const { refreshInterval } = useBrickConfig(config); // number, default applied
+ * ```
  */
-export function useBrickConfig(): Record<string, unknown> {
+export function useBrickConfig(): Record<string, unknown>;
+export function useBrickConfig<S extends z.ZodType>(schema: S): z.infer<S>;
+export function useBrickConfig(_schema?: z.ZodType): unknown {
   throw new Error('useBrickConfig() is only available in client-rendered bricks');
 }
 

@@ -5,6 +5,7 @@
 
 import * as React from 'react';
 import * as jsxRuntime from 'react/jsx-runtime';
+import { z } from 'zod';
 import { analyticsApi } from '@/features/analytics/api';
 import {
   useBrickConfig,
@@ -32,6 +33,9 @@ import {
 /** Client-safe subset of @brika/sdk for browser-compiled plugin modules. */
 const sdk = {
   capture: (name: string, props?: Record<string, Json>) => analyticsApi.capture(name, props),
+  // Bricks declare `export const config = z.object(...)` and pass it to
+  // useBrickConfig(); that schema is built at runtime with this z.
+  z,
 };
 
 const [icons, ui, cva, { clsx: clsxFn }] = await Promise.all([
