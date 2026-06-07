@@ -28,9 +28,11 @@ import brix from './commands/brix';
 import build from './commands/build';
 import check from './commands/check';
 import completions from './commands/completions';
+import create from './commands/create';
 import dashboard from './commands/dashboard';
 import dev from './commands/dev';
 import hub from './commands/hub';
+import install from './commands/install';
 import open from './commands/open';
 import start from './commands/start';
 import status from './commands/status';
@@ -74,10 +76,12 @@ export const cli = createCli({ name: 'brika', defaultCommand: 'dashboard', helpF
   .addCommand(status)
   .addCommand(open)
   .addCommand(hub)
+  .addCommand(create)
   .addCommand(build)
   .addCommand(check)
   .addCommand(verify)
   .addCommand(dev)
+  .addCommand(install)
   .addCommand(version)
   .addCommand(update)
   .addCommand(completions)

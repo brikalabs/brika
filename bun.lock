@@ -42,6 +42,7 @@
         "@brika/schema": "workspace:*",
         "@brika/sdk": "workspace:*",
         "@brika/tui": "workspace:*",
+        "create-brika": "workspace:*",
         "ink": "^7.0.3",
         "picocolors": "^1.1.1",
         "react": "^19.2.3",
