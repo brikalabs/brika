@@ -13,7 +13,7 @@
  */
 
 import { readFile } from 'node:fs/promises';
-import { basename, join, resolve } from 'node:path';
+import { basename, dirname, join, resolve } from 'node:path';
 import { defineCommand } from '@brika/cli';
 import { browserAllowedSpecifiers } from '@brika/compiler';
 import { verifyPlugin } from '@brika/sdk/verify-plugin';
@@ -59,6 +59,38 @@ export async function scanBoundary(root: string): Promise<Violation[]> {
   return perFile.flat();
 }
 
+/**
+ * Type-check the plugin with the repo's `tsgo` (resolved from the plugin's own
+ * deps, since a CLI doesn't inherit node_modules/.bin on PATH). Returns ok=true
+ * and skips with a warning if no typechecker is installed, so `brika check`
+ * stays usable in environments that don't ship one.
+ */
+async function runTypecheck(root: string): Promise<boolean> {
+  let tsgoBin: string | undefined;
+  try {
+    const pkgJsonPath = Bun.resolveSync('@typescript/native-preview/package.json', root);
+    const pkg: { bin?: string | Record<string, string> } = await Bun.file(pkgJsonPath).json();
+    const binRel = typeof pkg.bin === 'string' ? pkg.bin : pkg.bin?.tsgo;
+    if (binRel) {
+      tsgoBin = join(dirname(pkgJsonPath), binRel);
+    }
+  } catch {
+    // No typechecker resolvable from the plugin — fall through to the skip.
+  }
+  if (!tsgoBin) {
+    process.stderr.write(
+      `  ${pc.yellow('warn')} typecheck skipped: @typescript/native-preview not found\n`
+    );
+    return true;
+  }
+  const proc = Bun.spawn(['bun', tsgoBin, '--noEmit'], {
+    cwd: root,
+    stdout: 'inherit',
+    stderr: 'inherit',
+  });
+  return (await proc.exited) === 0;
+}
+
 async function resolveSdkVersion(): Promise<string> {
   const here = new URL('../../../../packages/sdk/package.json', import.meta.url);
   try {
@@ -71,16 +103,32 @@ async function resolveSdkVersion(): Promise<string> {
 
 export default defineCommand({
   name: 'check',
-  description: 'Validate a plugin: manifest checks + server/browser import-boundary scan',
+  description: 'Validate a plugin: types + manifest checks + server/browser import-boundary scan',
   details:
-    'Runs the static manifest checks and flags any brick/page importing a server-only ' +
-    '@brika/sdk subpath. Run alongside `brika build --check` (the source/manifest drift gate) in CI.',
+    'The single static gate: type-checks the plugin, runs the manifest checks, and flags any ' +
+    'brick/page importing a server-only @brika/sdk subpath. Use --types for a types-only pass ' +
+    '(what the `typecheck` script runs). Pair with `brika build --check` (the manifest drift gate) in CI.',
   options: {
     dir: { type: 'string', description: 'Plugin directory (default: current directory)' },
+    types: {
+      type: 'boolean',
+      description: 'Type-check only (skip manifest + import-boundary checks)',
+    },
   },
-  examples: ['brika check', 'brika check --dir plugins/timer'],
+  examples: ['brika check', 'brika check --types', 'brika check --dir plugins/timer'],
   async handler({ values }) {
     const root = resolve(values.dir ?? process.cwd());
+
+    const typesOk = await runTypecheck(root);
+    if (values.types) {
+      if (!typesOk) {
+        process.exitCode = 1;
+        return;
+      }
+      process.stdout.write(`${pc.green('✓')} types OK\n`);
+      return;
+    }
+
     const [result, violations] = await Promise.all([
       verifyPlugin(root, await resolveSdkVersion()),
       scanBoundary(root),
@@ -98,7 +146,7 @@ export default defineCommand({
       );
     }
 
-    if (!result.passed || violations.length > 0) {
+    if (!typesOk || !result.passed || violations.length > 0) {
       process.stderr.write(pc.red('\nbrika check failed.\n'));
       process.exitCode = 1;
       return;

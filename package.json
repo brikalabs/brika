@@ -46,6 +46,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "2.4.15",
+    "@brika/console": "workspace:*",
     "@brika/hub": "workspace:*",
     "@brika/i18n-devtools": "workspace:*",
     "@brika/mortar": "workspace:*",

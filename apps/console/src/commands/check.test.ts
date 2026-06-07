@@ -28,11 +28,12 @@ describe('scanBoundary', () => {
     expect(violations[0]?.specifier).toBe('@brika/sdk/lifecycle');
   });
 
-  test('allows bridged specifiers (brick-views, ui-kit, react, lucide)', async () => {
+  test('allows bridged specifiers + the react-free @brika/sdk/brick descriptor', async () => {
     await writeFile(
       join(root, 'src', 'bricks', 'good.tsx'),
       [
         "import { z } from '@brika/sdk';",
+        "import { defineBrick } from '@brika/sdk/brick';",
         "import { useBrickConfig } from '@brika/sdk/brick-views';",
         "import { Card } from '@brika/sdk/ui-kit';",
         "import { Timer } from 'lucide-react';",

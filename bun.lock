@@ -6,6 +6,7 @@
       "name": "brika",
       "devDependencies": {
         "@biomejs/biome": "2.4.15",
+        "@brika/console": "workspace:*",
         "@brika/hub": "workspace:*",
         "@brika/i18n-devtools": "workspace:*",
         "@brika/mortar": "workspace:*",
@@ -545,9 +546,6 @@
     "packages/sdk": {
       "name": "@brika/sdk",
       "version": "0.3.1",
-      "bin": {
-        "brika-verify-plugin": "./src/verify.ts",
-      },
       "dependencies": {
         "@brika/errors": "workspace:*",
         "@brika/grants": "workspace:*",

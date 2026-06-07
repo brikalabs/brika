@@ -59,8 +59,10 @@
   },
   "files": ["src", "locales", "README.md"],
   "scripts": {
-    "link": "bun link",
-    "typecheck": "tsgo --noEmit",
+    "dev": "brika dev",
+    "build": "brika build",
+    "typecheck": "brika check --types",
+    "check": "brika check",
     "prepublishOnly": "brika verify"
   },
   "blocks": [
