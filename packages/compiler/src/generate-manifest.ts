@@ -1,13 +1,17 @@
 /**
  * Manifest generation for `brika build`.
  *
- * Blocks, sparks, and `defineBrick` descriptors are react-free server modules:
- * importing them runs their `define*` calls under an installed collector. Legacy
- * bricks that co-locate `meta`/`config` exports in the `.tsx` view (no
- * descriptor) are still supported via a `Bun.build` pass that stubs react and
- * keeps `@brika/sdk` external. All are lowered into the `blocks[]` / `sparks[]` /
- * `bricks[]` / `pages[]` shapes the hub reads from `package.json`. The hub
- * contract is unchanged: this only generates the committed arrays.
+ * Blocks, sparks, and react-free `*.brick.ts` descriptors are server modules:
+ * importing them runs their `define*` calls under an installed collector. Bricks
+ * can also live in a single `*.tsx` that exports both a `defineBrick` descriptor
+ * and the default view, or (legacy) co-locate plain `meta`/`config` exports;
+ * both are read via a `Bun.build` pass that stubs react and keeps `@brika/sdk`
+ * external. A single-file `.tsx` brick is only safe when no server module
+ * imports its descriptor (otherwise react leaks into the plugin subprocess), so
+ * bricks that push data keep the descriptor in a `*.brick.ts`. All are lowered
+ * into the `blocks[]` / `sparks[]` / `bricks[]` / `pages[]` shapes the hub reads
+ * from `package.json`. The hub contract is unchanged: this only generates the
+ * committed arrays.
  */
 
 import { rm } from 'node:fs/promises';
@@ -426,10 +430,47 @@ function brickConfig(
   return preferences.length > 0 ? preferences : undefined;
 }
 
+/** A `defineBrick` descriptor surfaced as a module export of a single-file brick. */
+interface ExportedBrickDescriptor {
+  id: string;
+  meta: unknown;
+  config: unknown;
+}
+
 /**
- * Build the `bricks[]` entries by reading each brick's `meta` (required) and
- * `config` (optional zod) exports. A brick without `meta` is an error so
- * `brika build` refuses rather than silently dropping it.
+ * Find a `defineBrick` descriptor among a `.tsx` module's exports (the named
+ * export beside the default view in a single-file brick). Identified by shape:
+ * a string `id`, a `meta` object, a zod `config`, and a `data` channel with
+ * `set`/`use`. Returns the first match, or undefined for a legacy view.
+ */
+function findBrickDescriptor(ns: Record<string, unknown>): ExportedBrickDescriptor | undefined {
+  for (const value of Object.values(ns)) {
+    if (typeof value !== 'object' || value === null) {
+      continue;
+    }
+    const candidate = value as Record<string, unknown>;
+    const data = candidate.data;
+    const isDescriptor =
+      typeof candidate.id === 'string' &&
+      typeof candidate.meta === 'object' &&
+      candidate.meta !== null &&
+      isZodSchema(candidate.config) &&
+      typeof data === 'object' &&
+      data !== null &&
+      typeof (data as Record<string, unknown>).set === 'function' &&
+      typeof (data as Record<string, unknown>).use === 'function';
+    if (isDescriptor) {
+      return { id: candidate.id as string, meta: candidate.meta, config: candidate.config };
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Build the `bricks[]` entries from `.tsx` files. A single-file brick exports a
+ * `defineBrick` descriptor (preferred); a legacy view co-locates plain `meta`
+ * (required) and `config` (optional zod) exports. A brick with neither is an
+ * error so `brika build` refuses rather than silently dropping it.
  */
 async function buildBricks(
   files: readonly string[],
@@ -437,35 +478,50 @@ async function buildBricks(
 ): Promise<GeneratedBrick[]> {
   const bricks: GeneratedBrick[] = [];
   for (const file of files) {
-    const id = basename(file, '.tsx');
+    const fileId = basename(file, '.tsx');
     const loaded = await readBrowserModule(file);
     if ('error' in loaded) {
       diagnostics.push({
         level: 'error',
-        message: `Failed to read brick "${id}": ${loaded.error}`,
+        message: `Failed to read brick "${fileId}": ${loaded.error}`,
         file,
       });
       continue;
     }
     const { ns } = loaded;
-    if (ns.meta === undefined) {
+    const descriptor = findBrickDescriptor(ns);
+    // A descriptor's id is authoritative and must match the file, since the host
+    // loads the view by manifest id from `<id>.tsx`.
+    if (descriptor && descriptor.id !== fileId) {
       diagnostics.push({
         level: 'error',
-        message: `Brick "${id}" has no meta export; add \`export const meta = { ... }\` so brika build can manage its manifest entry`,
+        message: `Brick "${descriptor.id}" descriptor lives in ${fileId}.tsx; rename the file to ${descriptor.id}.tsx so the host can load the view`,
         file,
       });
       continue;
     }
-    const parsed = parseBrickMeta(ns.meta);
+    const metaSource = descriptor ? descriptor.meta : ns.meta;
+    const configSource = descriptor ? descriptor.config : ns.config;
+    if (metaSource === undefined) {
+      diagnostics.push({
+        level: 'error',
+        message: `Brick "${fileId}" has no defineBrick descriptor or meta export; export \`defineBrick({ ... })\` (or \`export const meta = { ... }\`) so brika build can manage its manifest entry`,
+        file,
+      });
+      continue;
+    }
+    const parsed = parseBrickMeta(metaSource);
     if (!parsed.ok) {
       diagnostics.push({
         level: 'error',
-        message: `Brick "${id}" meta is invalid: ${parsed.error}`,
+        message: `Brick "${fileId}" meta is invalid: ${parsed.error}`,
         file,
       });
       continue;
     }
-    bricks.push(toBrickEntry(id, parsed.meta, brickConfig(id, file, ns.config, diagnostics)));
+    bricks.push(
+      toBrickEntry(fileId, parsed.meta, brickConfig(fileId, file, configSource, diagnostics))
+    );
   }
   return bricks;
 }

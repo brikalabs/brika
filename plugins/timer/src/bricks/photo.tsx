@@ -1,14 +1,42 @@
 /**
- * Photo brick — client-side rendered.
+ * Photo brick — descriptor + view in one file.
  *
- * A photo carousel with auto-rotation. All state is local —
- * no server data push needed. Uses hardcoded picsum.photos URLs.
+ * A photo carousel with auto-rotation. Config-only (no server-pushed data), so
+ * the descriptor lives beside the view; nothing on the server imports it.
  */
 
+import { z } from '@brika/sdk';
+import { defineBrick } from '@brika/sdk/brick';
 import { useBrickConfig, useBrickSize } from '@brika/sdk/brick-views';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
-import { photoBrick } from './photo.brick';
+
+export const photoBrick = defineBrick({
+  id: 'photo',
+  meta: {
+    name: 'Photo',
+    description: 'Photo showcase with auto-rotation',
+    category: 'media',
+    icon: 'image',
+    color: '#8b5cf6',
+  },
+  config: z.object({
+    autoRotate: z
+      .boolean()
+      .default(true)
+      .meta({ label: 'Auto-rotate' })
+      .describe('Automatically cycle through photos'),
+    interval: z
+      .number()
+      .min(1000)
+      .max(60000)
+      .multipleOf(1000)
+      .default(8000)
+      .meta({ label: 'Interval (ms)' })
+      .describe('Time between photo changes'),
+  }),
+  data: z.object({}),
+});
 
 const PHOTOS = [
   { src: 'https://picsum.photos/seed/brika1/800/600', caption: 'Mountain sunrise' },

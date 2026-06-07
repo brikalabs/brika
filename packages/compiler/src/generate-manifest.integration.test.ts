@@ -212,6 +212,61 @@ export default function GaugeBrick() {
     ]);
   });
 
+  test('single-file brick: defineBrick + default view in one .tsx', async () => {
+    await mkdir(join(root, 'src', 'bricks'), { recursive: true });
+    // Config-only brick: the descriptor lives beside the view, no .brick.ts.
+    await writeFile(
+      join(root, 'src', 'bricks', 'clock.tsx'),
+      [
+        "import { z } from '@brika/sdk';",
+        "import { defineBrick } from '@brika/sdk/brick';",
+        'export const clock = defineBrick({',
+        "  id: 'clock',",
+        "  meta: { name: 'Clock', category: 'time', icon: 'clock' },",
+        "  config: z.object({ tz: z.string().default('UTC').meta({ label: 'Timezone' }) }),",
+        '  data: z.object({}),',
+        '});',
+        'export default function Clock() { return null; }',
+      ].join('\n')
+    );
+
+    const result = await generateManifest(root);
+
+    expect(result.ok).toBe(true);
+    expect(result.diagnostics).toEqual([]);
+    expect(result.bricks).toEqual([
+      {
+        id: 'clock',
+        name: 'Clock',
+        category: 'time',
+        icon: 'clock',
+        config: [{ type: 'text', name: 'tz', label: 'Timezone', default: 'UTC' }],
+      },
+    ]);
+  });
+
+  test('single-file brick whose descriptor id mismatches the filename is an error', async () => {
+    await mkdir(join(root, 'src', 'bricks'), { recursive: true });
+    await writeFile(
+      join(root, 'src', 'bricks', 'wrong-name.tsx'),
+      [
+        "import { z } from '@brika/sdk';",
+        "import { defineBrick } from '@brika/sdk/brick';",
+        "export const x = defineBrick({ id: 'clock', meta: { name: 'Clock' }, config: z.object({}), data: z.object({}) });",
+        'export default function X() { return null; }',
+      ].join('\n')
+    );
+
+    const result = await generateManifest(root);
+
+    expect(result.ok).toBe(false);
+    expect(
+      result.diagnostics.some(
+        (d) => d.level === 'error' && d.message.includes('clock') && d.message.includes('rename')
+      )
+    ).toBe(true);
+  });
+
   test('a descriptor without a matching view file is an error', async () => {
     await mkdir(join(root, 'src', 'bricks'), { recursive: true });
     await writeFile(
