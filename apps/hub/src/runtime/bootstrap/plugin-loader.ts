@@ -26,15 +26,24 @@ export class PluginLoader implements Loader {
       pluginCount: config.plugins.length,
     });
 
-    // Sync registry — creates symlinks for workspace plugins, installs npm plugins
+    // Sync registry: creates symlinks for workspace plugins, installs npm plugins
     await this.registry.syncToConfig(config.plugins);
     const validNames = new Set(config.plugins.map((e) => e.name));
     this.state.syncToConfig(validNames);
 
     this.logs.info('Plugin synchronization completed successfully');
 
-    // Load all plugins via registry (all plugins are in pluginsDir/node_modules/)
+    // Load all plugins via registry (all plugins are in pluginsDir/node_modules/).
     for (const entry of config.plugins) {
+      // Honor the operator's enable/disable choice: a plugin the operator
+      // disabled must NOT be spawned at boot. Previously every config plugin was
+      // loaded unconditionally, so a disabled plugin still ran its code on every
+      // restart. A plugin with no state row yet (a fresh config entry) has made
+      // no explicit choice and loads as before.
+      if (this.state.get(entry.name)?.enabled === false) {
+        this.logs.info('Skipping disabled plugin at boot', { pluginName: entry.name });
+        continue;
+      }
       try {
         await this.pm.load(entry.name, this.registry.pluginsDir);
       } catch (err) {
