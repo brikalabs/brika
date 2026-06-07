@@ -2,7 +2,7 @@
  * Compact weather brick — client-side rendered.
  *
  * This brick runs in the browser as a real React component.
- * Weather data is pushed from the plugin process via setBrickData().
+ * Weather data is pushed from the plugin process via the brick's `data.set()` channel.
  * Imports are resolved by the bridge (globalThis.__brika) at build time.
  */
 

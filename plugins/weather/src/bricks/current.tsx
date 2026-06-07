@@ -3,7 +3,7 @@
  *
  * Displays live weather conditions with temperature, feels-like,
  * humidity, wind, pressure, and a gradient background matching the condition.
- * Data is pushed from the plugin process via setBrickData().
+ * Data is pushed from the plugin process via the brick's `data.set()` channel.
  */
 
 import { useBrickConfig, useBrickSize } from '@brika/sdk/brick-views';

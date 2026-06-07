@@ -3,7 +3,7 @@
  *
  * Displays a multi-day weather forecast with highs, lows, and condition icons.
  * Responsive: grid layout when wide, list layout when narrow.
- * Data is pushed from the plugin process via setBrickData().
+ * Data is pushed from the plugin process via the brick's `data.set()` channel.
  */
 
 import { useBrickConfig, useBrickSize } from '@brika/sdk/brick-views';

@@ -148,7 +148,9 @@ export { defineAction } from './api/actions';
 
 export type { BrickConfigChangeHandler } from './api/brick-config';
 export { onBrickConfigChange } from './api/brick-config';
-export { setBrickData } from './api/push-brick-data';
+// `setBrickData` is intentionally not re-exported: bricks push data through a
+// `defineBrick` descriptor's typed `data.set()`. The raw function remains in
+// ./api/push-brick-data as the channel implementation.
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Shared Store (reactive pub/sub state for plugin processes)

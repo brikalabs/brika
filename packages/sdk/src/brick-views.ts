@@ -4,9 +4,11 @@ import type { z } from 'zod';
 import { setBrickData } from './api/push-brick-data';
 
 /**
- * Subscribe to data pushed from the plugin process. Prefer {@link defineBrick}'s
- * typed `descriptor.data.use()`, which is built on this hook.
+ * Subscribe to data pushed from the plugin process.
  *
+ * @internal The author-facing API is {@link defineBrick}'s typed
+ *   `descriptor.data.use()`, which is built on this hook. This bridged primitive
+ *   stays exported because the compiler rewrites it to the host hook in the browser.
  * @returns The latest pushed data, or undefined until the first push.
  */
 export function useBrickData<T>(): T | undefined {
@@ -40,10 +42,10 @@ export interface BrickDataChannel<T> {
 /**
  * Declare a typed brick-data channel by string id.
  *
- * Prefer {@link defineBrick}: it declares id, meta, config, and a zod `data`
- * schema once, validates the payload against that schema before it crosses IPC,
- * and shares the id with the manifest so they cannot drift. This lower-level
- * channel remains for bricks not yet migrated to a descriptor.
+ * @internal The author-facing API is {@link defineBrick}, which declares id,
+ *   meta, config, and a zod `data` schema once, validates the payload before it
+ *   crosses IPC, and shares the id with the manifest so they cannot drift.
+ *   `defineBrick`'s `data` channel is built on this function.
  *
  * @param id The brick id this channel pushes to.
  * @returns A channel whose `set` runs in the plugin process and `use` in the view.
