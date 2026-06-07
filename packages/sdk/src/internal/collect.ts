@@ -114,20 +114,13 @@ function scalarDefault(value: unknown): string | number | boolean | undefined {
   return undefined;
 }
 
-function toPreference(
-  name: string,
+/** Map a field's base + type-specific shape onto a manifest preference entry. */
+function preferenceField<B extends { name: string }>(
   prop: Property,
-  jsonRequired: boolean,
+  base: B,
+  name: string,
   warnings: string[]
 ): PreferenceEntry | undefined {
-  const def = scalarDefault(prop.default);
-  const base = {
-    name,
-    ...(prop.label !== undefined ? { label: prop.label } : {}),
-    ...(prop.description !== undefined ? { description: prop.description } : {}),
-    ...(jsonRequired && prop.default === undefined ? { required: true } : {}),
-    ...(def !== undefined ? { default: def } : {}),
-  };
   // A string field whose options are fetched at runtime via
   // definePreferenceOptions(name) — marked with `.meta({ format })` (z.dynamicDropdown()).
   if (prop.format === 'dynamic-dropdown') {
@@ -140,9 +133,9 @@ function toPreference(
     return {
       type: 'number',
       ...base,
-      ...(prop.minimum !== undefined ? { min: prop.minimum } : {}),
-      ...(prop.maximum !== undefined ? { max: prop.maximum } : {}),
-      ...(prop.multipleOf !== undefined ? { step: prop.multipleOf } : {}),
+      ...(prop.minimum === undefined ? {} : { min: prop.minimum }),
+      ...(prop.maximum === undefined ? {} : { max: prop.maximum }),
+      ...(prop.multipleOf === undefined ? {} : { step: prop.multipleOf }),
     };
   }
   if (prop.type === 'boolean') {
@@ -153,6 +146,23 @@ function toPreference(
   }
   warnings.push(`field "${name}" has unsupported type "${prop.type ?? 'unknown'}"; skipped`);
   return undefined;
+}
+
+function toPreference(
+  name: string,
+  prop: Property,
+  jsonRequired: boolean,
+  warnings: string[]
+): PreferenceEntry | undefined {
+  const def = scalarDefault(prop.default);
+  const base = {
+    name,
+    ...(prop.label === undefined ? {} : { label: prop.label }),
+    ...(prop.description === undefined ? {} : { description: prop.description }),
+    ...(jsonRequired && prop.default === undefined ? { required: true } : {}),
+    ...(def === undefined ? {} : { default: def }),
+  };
+  return preferenceField(prop, base, name, warnings);
 }
 
 /**

@@ -260,8 +260,9 @@ export async function runBuild(root: string, check: boolean): Promise<boolean> {
 
   const applied = applyArrayDrift(raw, driftedEntries);
   if ('missing' in applied) {
+    const addHint = pc.bold(`"${applied.missing}": []`);
     process.stderr.write(
-      `  ${pc.red('error')} could not locate "${applied.missing}" in package.json; add ${pc.bold(`"${applied.missing}": []`)} and re-run\n`
+      `  ${pc.red('error')} could not locate "${applied.missing}" in package.json; add ${addHint} and re-run\n`
     );
     return false;
   }

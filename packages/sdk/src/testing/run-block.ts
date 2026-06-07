@@ -177,7 +177,7 @@ export function runBlock(
         sink.filter((e) => e.id === spark.id).map((e) => spark.schema.parse(e.payload)),
       last: (spark) => {
         const matches = sink.filter((e) => e.id === spark.id);
-        const lastMatch = matches[matches.length - 1];
+        const lastMatch = matches.at(-1);
         return lastMatch === undefined ? undefined : spark.schema.parse(lastMatch.payload);
       },
     },

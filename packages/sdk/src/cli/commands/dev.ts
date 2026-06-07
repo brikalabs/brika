@@ -54,7 +54,8 @@ export default defineCommand({
     if (!(await pingHub())) {
       noHubReachable('dev');
     }
-    process.stdout.write(`  ${pc.dim(`→ ${hubOrigin()}`)}\n`);
+    const target = pc.dim(`→ ${hubOrigin()}`);
+    process.stdout.write(`  ${target}\n`);
     await installViaRegistry(name, `file:${dir}`);
 
     process.stdout.write(

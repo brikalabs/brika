@@ -124,27 +124,9 @@ function parseProgressLine(line: string): InstallProgress | null {
   }
 }
 
-/** POST a registry install to the running hub and stream its SSE progress. */
-export async function installViaRegistry(pkg: string, version?: string): Promise<void> {
-  const res = await hubFetch('/api/registry/install', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(version ? { package: pkg, version } : { package: pkg }),
-  });
-  if (!res.ok || !res.body) {
-    const detail = await res.text();
-    if (res.status === 401 || res.status === 403) {
-      // Names the exact origin + data dir so a multi-hub mismatch is obvious:
-      // the hub at this origin uses a different data dir than the token we sent.
-      throw new CliError(
-        `the hub at ${hubOrigin()} rejected the install (${res.status}): this CLI authenticated with the token in ${cliDataDir()}, which that hub does not accept.\n` +
-          `  Point at the right hub with BRIKA_HOST / BRIKA_PORT and BRIKA_HOME, or use the full \`brika\` app.`
-      );
-    }
-    throw new CliError(`install request failed: ${res.status} ${detail}`);
-  }
-
-  const reader = res.body.getReader();
+/** Read the registry SSE stream, echo progress, and return the failure (if any). */
+async function drainInstallStream(body: ReadableStream<Uint8Array>): Promise<string | undefined> {
+  const reader = body.getReader();
   const decoder = new TextDecoder();
   let buffer = '';
   let failure: string | undefined;
@@ -169,6 +151,35 @@ export async function installViaRegistry(pkg: string, version?: string): Promise
       }
     }
   }
+  return failure;
+}
+
+/** The 401/403 message naming the exact origin + data dir, so a multi-hub
+ * mismatch (the hub at this origin uses a different data dir than our token) is obvious. */
+function authMismatchMessage(status: number): string {
+  return (
+    `the hub at ${hubOrigin()} rejected the install (${status}): this CLI authenticated with the token in ${cliDataDir()}, which that hub does not accept.\n` +
+    `  Point at the right hub with BRIKA_HOST / BRIKA_PORT and BRIKA_HOME, or use the full \`brika\` app.`
+  );
+}
+
+/** POST a registry install to the running hub and stream its SSE progress. */
+export async function installViaRegistry(pkg: string, version?: string): Promise<void> {
+  const res = await hubFetch('/api/registry/install', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(version ? { package: pkg, version } : { package: pkg }),
+  });
+  if (!res.ok || !res.body) {
+    const detail = await res.text();
+    throw new CliError(
+      res.status === 401 || res.status === 403
+        ? authMismatchMessage(res.status)
+        : `install request failed: ${res.status} ${detail}`
+    );
+  }
+
+  const failure = await drainInstallStream(res.body);
   if (failure) {
     throw new CliError(`install failed: ${failure}`);
   }

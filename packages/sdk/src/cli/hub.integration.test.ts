@@ -51,6 +51,9 @@ beforeAll(async () => {
       if (url.pathname === '/api/registry/install' && req.method === 'POST') {
         const body: { package?: string; version?: string } = await req.json();
         received = { auth: req.headers.get('authorization'), body };
+        if (body.package === 'unauth') {
+          return new Response('unauthorized', { status: 401 });
+        }
         if (body.package === 'boom') {
           return sseFrames([{ phase: 'installing' }, { phase: 'error', error: 'kaboom' }]);
         }
@@ -119,5 +122,17 @@ describe('hub client', () => {
 
   test('installViaRegistry throws on an error SSE frame', async () => {
     await expect(installViaRegistry('boom')).rejects.toThrow(/kaboom/);
+  });
+
+  test('a 401 names the origin and the data dir (multi-hub mismatch)', async () => {
+    let message = '';
+    try {
+      await installViaRegistry('unauth');
+    } catch (error) {
+      message = error instanceof Error ? error.message : String(error);
+    }
+    expect(message).toContain('401');
+    expect(message).toContain(hubOrigin());
+    expect(message).toContain(home);
   });
 });

@@ -40,18 +40,9 @@ function parseProgressLine(
   }
 }
 
-/** POST a registry install and surface its SSE progress, line by line. */
-export async function installViaRegistry(pkg: string, version?: string): Promise<void> {
-  const res = await hubFetch('/api/registry/install', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(version ? { package: pkg, version } : { package: pkg }),
-  });
-  if (!res.ok || !res.body) {
-    throw new CliError(`install request failed: ${res.status} ${await res.text()}`);
-  }
-
-  const reader = res.body.getReader();
+/** Read the registry SSE stream, echo progress, and return the failure (if any). */
+async function drainInstallStream(body: ReadableStream<Uint8Array>): Promise<string | undefined> {
+  const reader = body.getReader();
   const decoder = new TextDecoder();
   let buffer = '';
   let failure: string | undefined;
@@ -76,6 +67,21 @@ export async function installViaRegistry(pkg: string, version?: string): Promise
       }
     }
   }
+  return failure;
+}
+
+/** POST a registry install and surface its SSE progress, line by line. */
+export async function installViaRegistry(pkg: string, version?: string): Promise<void> {
+  const res = await hubFetch('/api/registry/install', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(version ? { package: pkg, version } : { package: pkg }),
+  });
+  if (!res.ok || !res.body) {
+    throw new CliError(`install request failed: ${res.status} ${await res.text()}`);
+  }
+
+  const failure = await drainInstallStream(res.body);
   if (failure) {
     throw new CliError(`install failed: ${failure}`);
   }

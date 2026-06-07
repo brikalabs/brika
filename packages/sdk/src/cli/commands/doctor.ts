@@ -52,7 +52,8 @@ export default defineCommand({
     let out = `\n${pc.bold('brika doctor')} ${pc.dim('(plugin CLI)')}\n\n`;
     out += row('distribution', 'lean-bin (@brika/sdk)');
     out += row('binary', process.execPath);
-    out += row('data dir', `${dataDir.path} ${pc.dim(`(${dataDir.source})`)}`);
+    const sourceTag = pc.dim(`(${dataDir.source})`);
+    out += row('data dir', `${dataDir.path} ${sourceTag}`);
     out += row('instance', localId ?? pc.dim('(none yet)'));
     out += row(
       'hub',

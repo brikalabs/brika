@@ -69,8 +69,9 @@ function printPassing(result: VerifyResult, sdkVersion: string): void {
     process.stdout.write(`  ${pc.green('✓')}  schema validation passed\n`);
   }
   if (result.enginesBrika && !result.errors.some((e) => e.startsWith('engines.brika'))) {
+    const enginesValue = pc.dim(`"${result.enginesBrika}"`);
     process.stdout.write(
-      `  ${pc.green('✓')}  engines.brika ${pc.dim(`"${result.enginesBrika}"`)} covers SDK ${pc.cyan(sdkVersion)}\n`
+      `  ${pc.green('✓')}  engines.brika ${enginesValue} covers SDK ${pc.cyan(sdkVersion)}\n`
     );
   }
   if (!result.errors.some((e) => e.startsWith('Schema: main:') || e.startsWith('main path "'))) {
@@ -89,7 +90,8 @@ function printPassing(result: VerifyResult, sdkVersion: string): void {
 
 /** Render the human-readable report; returns true when verification passed. */
 function printReport(result: VerifyResult, sdkVersion: string): boolean {
-  process.stdout.write(pc.bold(`\n  Verifying ${pc.cyan(`${result.name}@${result.version}`)}\n\n`));
+  const nameVersion = pc.cyan(`${result.name}@${result.version}`);
+  process.stdout.write(pc.bold(`\n  Verifying ${nameVersion}\n\n`));
   printPassing(result, sdkVersion);
   if (result.warnings.length > 0) {
     process.stdout.write('\n');

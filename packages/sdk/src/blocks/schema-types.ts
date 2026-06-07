@@ -214,7 +214,7 @@ export function jsonSchema(description?: string) {
  * ```
  */
 export function dynamicDropdown(meta?: { label?: string; description?: string }) {
-  return z.string().meta({ ...(meta ?? {}), format: 'dynamic-dropdown' });
+  return z.string().meta({ ...meta, format: 'dynamic-dropdown' });
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

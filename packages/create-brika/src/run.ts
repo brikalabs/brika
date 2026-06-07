@@ -28,7 +28,8 @@ export async function runCreate(opts: CreateOptions = {}): Promise<void> {
     install: opts.install !== false,
   });
 
-  p.outro(`${pc.green('Success!')} Your plugin is ready at ${pc.cyan(`./${config.name}`)}`);
+  const location = pc.cyan(`./${config.name}`);
+  p.outro(`${pc.green('Success!')} Your plugin is ready at ${location}`);
 
   console.log();
   console.log(pc.bold('Next steps:'));

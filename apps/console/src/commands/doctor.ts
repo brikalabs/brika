@@ -83,7 +83,8 @@ export default defineCommand({
     out += row('mode', `${runtimeMode}${compiled ? ' (compiled)' : ' (source)'}`);
     out += row('self-update', canSelfUpdate ? pc.green('yes') : pc.dim('no'));
     out += row('binary', process.execPath);
-    out += row('data dir', `${dataDir.path} ${pc.dim(`(${dataDir.source})`)}`);
+    const sourceTag = pc.dim(`(${dataDir.source})`);
+    out += row('data dir', `${dataDir.path} ${sourceTag}`);
     out += row('instance', localInstanceId ?? pc.dim('(none yet)'));
     out += row(
       'hub',

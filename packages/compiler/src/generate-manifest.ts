@@ -654,9 +654,10 @@ export async function generateManifest(pluginRoot: string): Promise<GeneratedMan
   const legacyBricks = await buildBricks(legacyBrickFiles, diagnostics);
   const generatedBricks = [...descriptorBricks, ...legacyBricks].sort(byId);
   const generatedPages = (await buildPages(pagePaths, diagnostics)).sort(byId);
+  const generatedBlocks = managedBlocks.sort(byId);
 
   return {
-    blocks: managedBlocks.sort(byId),
+    blocks: generatedBlocks,
     sparks: generatedSparks,
     pages: generatedPages,
     bricks: generatedBricks,

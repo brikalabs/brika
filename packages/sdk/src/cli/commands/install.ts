@@ -40,8 +40,9 @@ export async function resolveTarget(target: string): Promise<{ pkg: string; vers
 
 /** Explain that a hub is needed and exit, shared by `install` and `dev`. */
 export function noHubReachable(verb: string): never {
+  const label = pc.yellow(`brika ${verb}`);
   process.stderr.write(
-    `${pc.yellow(`brika ${verb}`)} needs a running Brika hub, and this CLI cannot start one.\n` +
+    `${label} needs a running Brika hub, and this CLI cannot start one.\n` +
       `  ${pc.dim('Start one with the full Brika app (`brika start`), or set BRIKA_HOST / BRIKA_PORT to reach an existing hub.')}\n`
   );
   process.exit(1);
@@ -70,7 +71,8 @@ export default defineCommand({
     }
     // Show which hub we are driving: with several hubs (a mortar dev hub, an
     // installed one) this is how you confirm the target before it acts.
-    process.stdout.write(`  ${pc.dim(`→ ${hubOrigin()}`)}\n`);
+    const hubLine = pc.dim(`→ ${hubOrigin()}`);
+    process.stdout.write(`  ${hubLine}\n`);
     const { pkg, version } = await resolveTarget(target);
     await installViaRegistry(pkg, version);
     process.stdout.write(
