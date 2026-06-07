@@ -5,9 +5,35 @@
  * no server data push needed. Uses hardcoded picsum.photos URLs.
  */
 
+import { z } from '@brika/sdk';
 import { useBrickConfig, useBrickSize } from '@brika/sdk/brick-views';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
+
+// Manifest metadata + per-instance config, lowered into package.json by `brika build`.
+export const meta = {
+  name: 'Photo',
+  description: 'Photo showcase with auto-rotation',
+  category: 'media',
+  icon: 'image',
+  color: '#8b5cf6',
+};
+
+export const config = z.object({
+  autoRotate: z
+    .boolean()
+    .default(true)
+    .meta({ label: 'Auto-rotate' })
+    .describe('Automatically cycle through photos'),
+  interval: z
+    .number()
+    .min(1000)
+    .max(60000)
+    .multipleOf(1000)
+    .default(8000)
+    .meta({ label: 'Interval (ms)' })
+    .describe('Time between photo changes'),
+});
 
 const PHOTOS = [
   { src: 'https://picsum.photos/seed/brika1/800/600', caption: 'Mountain sunrise' },

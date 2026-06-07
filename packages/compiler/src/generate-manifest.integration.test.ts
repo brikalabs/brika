@@ -97,4 +97,63 @@ describe('generateManifest', () => {
 
     expect(result.blocks.map((b) => b.id)).toEqual(['alpha']);
   });
+
+  test('extracts brick meta + config (react/icons stubbed) into bricks[]', async () => {
+    await mkdir(join(root, 'src', 'bricks'), { recursive: true });
+    const brick = `import { z } from '@brika/sdk';
+import { Gauge } from 'lucide-react';
+export const meta = { name: 'Gauge', description: 'A gauge', category: 'monitoring', icon: 'gauge', color: '#abcdef' };
+export const config = z.object({
+  unit: z.enum(['c', 'f']).default('c').meta({ label: 'Unit' }),
+  refresh: z.number().min(1).max(10).default(5).describe('Refresh'),
+});
+export default function GaugeBrick() {
+  return <div><Gauge /></div>;
+}
+`;
+    await writeFile(join(root, 'src', 'bricks', 'gauge.tsx'), brick);
+
+    const result = await generateManifest(root);
+
+    expect(result.ok).toBe(true);
+    expect(result.diagnostics).toEqual([]);
+    expect(result.bricks).toEqual([
+      {
+        id: 'gauge',
+        name: 'Gauge',
+        description: 'A gauge',
+        category: 'monitoring',
+        icon: 'gauge',
+        color: '#abcdef',
+        config: [
+          {
+            type: 'dropdown',
+            name: 'unit',
+            label: 'Unit',
+            default: 'c',
+            options: [{ value: 'c' }, { value: 'f' }],
+          },
+          { type: 'number', name: 'refresh', description: 'Refresh', default: 5, min: 1, max: 10 },
+        ],
+      },
+    ]);
+  });
+
+  test('a brick without a meta export is an error', async () => {
+    await mkdir(join(root, 'src', 'bricks'), { recursive: true });
+    await writeFile(
+      join(root, 'src', 'bricks', 'nometa.tsx'),
+      'export default function NoMeta() {\n  return null;\n}\n'
+    );
+
+    const result = await generateManifest(root);
+
+    expect(result.ok).toBe(false);
+    expect(result.bricks).toEqual([]);
+    expect(
+      result.diagnostics.some(
+        (d) => d.level === 'error' && d.message.includes('nometa') && d.message.includes('meta')
+      )
+    ).toBe(true);
+  });
 });

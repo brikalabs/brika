@@ -171,6 +171,7 @@ export default defineCommand({
 
     const plans = {
       blocks: planKind(preserveOrder(result.blocks, pkg.blocks), pkg.blocks),
+      bricks: planKind(preserveOrder(result.bricks, pkg.bricks), pkg.bricks),
       sparks: planKind(preserveOrder(result.sparks, pkg.sparks), pkg.sparks),
     };
 
@@ -185,11 +186,10 @@ export default defineCommand({
     // Validate the candidate against the same schema the hub enforces, so a bad
     // meta (invalid category/color) fails locally instead of at install time.
     const candidate: Record<string, unknown> = { ...pkg };
-    if (plans.blocks.managed) {
-      candidate.blocks = plans.blocks.generated;
-    }
-    if (plans.sparks.managed) {
-      candidate.sparks = plans.sparks.generated;
+    for (const [kind, plan] of Object.entries(plans)) {
+      if (plan.managed) {
+        candidate[kind] = plan.generated;
+      }
     }
     const parsed = PluginPackageSchema.safeParse(candidate);
     if (!parsed.success) {

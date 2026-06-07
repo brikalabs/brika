@@ -7,11 +7,33 @@
  * for .m3u8 — for this demo we use MP4 fallback URLs.
  */
 
+import { z } from '@brika/sdk';
 import { useBrickConfig, useBrickSize } from '@brika/sdk/brick-views';
 import { cva } from 'class-variance-authority';
 import clsx from 'clsx';
 import { ChevronLeft, ChevronRight, Circle, Radio, Square, Video } from 'lucide-react';
 import { useCallback, useRef, useState } from 'react';
+
+// Manifest metadata + per-instance config, lowered into package.json by `brika build`.
+export const meta = {
+  name: 'Live Video',
+  description: 'HLS video stream with controls',
+  category: 'media',
+  icon: 'video',
+  color: '#ef4444',
+};
+
+export const config = z.object({
+  defaultStream: z
+    .enum(['Big Buck Bunny', 'Elephants Dream', 'Sintel'])
+    .default('Big Buck Bunny')
+    .meta({ label: 'Default Stream' }),
+  muted: z
+    .boolean()
+    .default(true)
+    .meta({ label: 'Muted by default' })
+    .describe('Start the stream muted'),
+});
 
 const recordButtonVariants = cva(
   'flex h-7 cursor-pointer items-center gap-1.5 rounded px-3 font-medium text-xs transition-colors',

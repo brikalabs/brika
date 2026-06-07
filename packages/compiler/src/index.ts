@@ -8,6 +8,7 @@ export { compileServerEntry } from './compile-server';
 // ── Manifest generation (brika build) ─────────────────────────────────────────
 export {
   type GeneratedBlock,
+  type GeneratedBrick,
   type GeneratedManifest,
   type GeneratedSpark,
   generateManifest,
