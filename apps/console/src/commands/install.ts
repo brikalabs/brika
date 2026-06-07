@@ -1,9 +1,9 @@
 /**
- * `brika install <target>` — install a plugin into the hub (no watch loop).
+ * `brika install <target>`: install a plugin into the hub (no watch loop).
  *
  * <target> is either a local path (linked as a `file:` dependency) or an npm
  * package (`name` or `name@version`). For live development with a build pass and
- * hot-reload, use `brika dev` instead — this is the one-shot install for
+ * hot-reload, use `brika dev` instead; this is the one-shot install for
  * sideloading, demos, and CI.
  */
 
@@ -62,7 +62,7 @@ export default defineCommand({
     await ensureHub();
     await installViaRegistry(pkg, version);
     process.stdout.write(
-      `\n  ${pc.green('✓')} ${pc.cyan(pkg)} installed — open ${pc.underline(hubUrl())}\n\n`
+      `\n  ${pc.green('✓')} ${pc.cyan(pkg)} installed, open ${pc.underline(hubUrl())}\n\n`
     );
   },
 });

@@ -8,6 +8,7 @@ import { mkdir, mkdtemp, readlink, realpath, rm, symlink, writeFile } from 'node
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { get, provide, stub, useTestBed } from '@brika/di/testing';
+import { BrikaError } from '@brika/errors';
 import { useBunMock } from '@brika/testing';
 import { BunRunner, ConfigLoader, HubConfig } from '@/runtime/config';
 import { Logger } from '@/runtime/logs/log-router';
@@ -216,6 +217,29 @@ describe('PluginRegistry', () => {
       const errorProgress = phases.find((p) => p.phase === 'error');
       expect(errorProgress).toBeDefined();
       expect(errorProgress?.error).toContain('exit code 1');
+      // Plain Error: no structured code/detail, only the string message.
+      expect(errorProgress?.errorCode).toBeUndefined();
+      expect(errorProgress?.errorDetail).toBeUndefined();
+    });
+
+    test('surfaces errorCode + errorDetail when the failure is a typed BrikaError', async () => {
+      bun.spawn({ exitCode: 0 }).apply();
+      mockPluginManager.load.mockRejectedValue(
+        new BrikaError('MANIFEST_MISSING_MAIN', 'plugin has no entry point', {
+          data: { manifestPath: '/x/package.json' },
+        })
+      );
+
+      const events: OperationProgress[] = [];
+      for await (const progress of registry.install('@test/plugin', '1.0.0')) {
+        events.push(progress);
+      }
+
+      const errorProgress = events.find((p) => p.phase === 'error');
+      expect(errorProgress?.error).toBe('plugin has no entry point');
+      expect(errorProgress?.errorCode).toBe('MANIFEST_MISSING_MAIN');
+      expect(errorProgress?.errorDetail?.code).toBe('MANIFEST_MISSING_MAIN');
+      expect(errorProgress?.errorDetail?._brikaError).toBe(true);
     });
   });
 
@@ -698,11 +722,11 @@ describe('PluginRegistry', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Local/workspace plugin tests — uses real temp directories for fs operations
+// Local/workspace plugin tests: uses real temp directories for fs operations
 // (mkdir, symlink, readlink, unlink) to avoid mock.module pollution.
 // ─────────────────────────────────────────────────────────────────────────────
 
-describe('PluginRegistry — local plugins', () => {
+describe('PluginRegistry: local plugins', () => {
   let tmpHome: string;
   let pluginsDir: string;
   let registry: PluginRegistry;

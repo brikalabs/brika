@@ -215,23 +215,23 @@ describe('PackageManager', () => {
     });
   });
 
-  // ─── phase detection ───────────────────────────────────────────────────────
+  // ─── coarse phase relay ──────────────────────────────────────────────────────
 
-  describe('phase detection', () => {
-    const cases: Array<[input: string, phase: OperationProgress['phase']]> = [
-      ['Resolving packages...', 'resolving'],
-      ['resolving dependencies', 'resolving'],
-      ['GET https://registry.npmjs.org/foo', 'downloading'],
-      ['downloading 1.2.3', 'downloading'],
-      ['fetch https://cdn.example.com', 'downloading'],
-      ['Saved lockfile', 'linking'],
-      ['installed @brika/plugin', 'linking'],
-      ['linking node_modules', 'linking'],
-      ['some other output', 'downloading'], // default falls back to downloading
+  describe('phase relay', () => {
+    // The package manager no longer scrapes bun's stderr for a phase (that was
+    // coupled to bun's output format). It relays every line verbatim under a
+    // single coarse 'downloading' phase; the authoritative resolving/linking/
+    // complete phases come from PluginRegistry.install.
+    const lines = [
+      'Resolving packages...',
+      'GET https://registry.npmjs.org/foo',
+      'Saved lockfile',
+      'installed @brika/plugin',
+      'some other output',
     ];
 
-    for (const [input, expected] of cases) {
-      test(`"${input}" → ${expected}`, async () => {
+    for (const input of lines) {
+      test(`"${input}" relays under the downloading phase, message preserved`, async () => {
         bun
           .spawn({
             exitCode: 0,
@@ -242,7 +242,8 @@ describe('PackageManager', () => {
         const events = await collect(pm.install('@brika/plugin'));
         const streamed = events.find((e) => e.message === input);
 
-        expect(streamed?.phase).toBe(expected);
+        expect(streamed?.phase).toBe('downloading');
+        expect(streamed?.message).toBe(input);
       });
     }
   });

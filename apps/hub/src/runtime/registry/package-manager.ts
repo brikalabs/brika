@@ -6,7 +6,7 @@ import type { OperationProgress } from './types';
  * High-level package manager backed by BunRunner.
  *
  * Instantiate with the working directory (e.g. pluginsDir). BunRunner handles
- * binary path resolution and BUN_BE_BUN=1 — callers never touch Bun.spawn or
+ * binary path resolution and BUN_BE_BUN=1; callers never touch Bun.spawn or
  * env vars directly.
  *
  * @example
@@ -84,8 +84,12 @@ export class PackageManager {
           if (!trimmed) {
             continue;
           }
+          // The authoritative phases (resolving -> linking -> complete) come
+          // from PluginRegistry.install; here we only relay bun's raw output as
+          // an opaque message under a single coarse phase, rather than scraping
+          // bun's stderr text (which drifts across bun versions).
           yield {
-            phase: detectPhase(trimmed),
+            phase: 'downloading',
             operation,
             package: packageName,
             message: trimmed,
@@ -96,7 +100,7 @@ export class PackageManager {
       const remaining = buffer.trim();
       if (remaining) {
         yield {
-          phase: detectPhase(remaining),
+          phase: 'downloading',
           operation,
           package: packageName,
           message: remaining,
@@ -109,18 +113,4 @@ export class PackageManager {
       throw new Error(`bun ${args.join(' ')} failed with exit code ${code}`);
     }
   }
-}
-
-function detectPhase(line: string): OperationProgress['phase'] {
-  const l = line.toLowerCase();
-  if (l.includes('resolving')) {
-    return 'resolving';
-  }
-  if (l.includes('downloading') || l.includes('get ') || l.includes('fetch')) {
-    return 'downloading';
-  }
-  if (l.includes('linking') || l.includes('installed') || l.includes('saved')) {
-    return 'linking';
-  }
-  return 'downloading';
 }

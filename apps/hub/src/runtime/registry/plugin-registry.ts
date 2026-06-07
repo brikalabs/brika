@@ -4,6 +4,7 @@ import { inject, singleton } from '@brika/di';
 import { BunRunner, ConfigLoader, HubConfig } from '@/runtime/config';
 import { Logger } from '@/runtime/logs/log-router';
 import { PackageManager } from './package-manager';
+import { errorFields } from './progress';
 import type { InstalledPackage, OperationProgress, UpdateInfo } from './types';
 
 function normalizeVersion(version?: string): string | undefined {
@@ -82,7 +83,7 @@ export class PluginRegistry {
 
       yield this.#msg('complete', 'install', name, version, 'Installed successfully');
     } catch (error) {
-      yield this.#msg('error', 'install', name, version, String(error), String(error));
+      yield this.#errorMsg('install', name, version, error);
     }
   }
 
@@ -97,11 +98,11 @@ export class PluginRegistry {
     );
 
     if (isSymlink) {
-      // Workspace plugin — remove symlink and package.json entry
+      // Workspace plugin: remove symlink and package.json entry
       await unlink(linkPath).catch(() => undefined);
       await this.#removeDependency(name);
     } else if (await Bun.file(join(linkPath, 'package.json')).exists()) {
-      // NPM plugin — use package manager
+      // NPM plugin: use package manager
       await this.#pm.remove(name);
     }
 
@@ -162,7 +163,7 @@ export class PluginRegistry {
       yield* this.#pm.update(name);
       yield this.#msg('complete', 'update', name ?? 'all', undefined, 'Updated successfully');
     } catch (error) {
-      yield this.#msg('error', 'update', name ?? 'all', undefined, String(error), String(error));
+      yield this.#errorMsg('update', name ?? 'all', undefined, error);
     }
   }
 
@@ -422,6 +423,24 @@ export class PluginRegistry {
       targetVersion: version,
       message: message ?? `${phase} ${packageName}@${version}`,
       error,
+    };
+  }
+
+  /** Build an `error` progress event, carrying a typed BrikaError's code/detail when present. */
+  #errorMsg(
+    operation: OperationProgress['operation'],
+    packageName: string,
+    version: string | undefined,
+    error: unknown
+  ): OperationProgress {
+    const fields = errorFields(error);
+    return {
+      phase: 'error',
+      operation,
+      package: packageName,
+      targetVersion: version,
+      message: fields.error,
+      ...fields,
     };
   }
 }

@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { HUB_VERSION } from '@/hub';
 import { Logger } from '@/runtime/logs/log-router';
 import { PluginRegistry } from '@/runtime/registry';
+import { errorFields } from '@/runtime/registry/progress';
 import type { OperationProgress } from '@/runtime/registry/types';
 import { StoreService } from '@/runtime/store';
 
@@ -28,13 +29,8 @@ function streamProgress(
         }
       }
     } catch (error) {
-      send(
-        {
-          phase: 'error',
-          message: String(error),
-        },
-        'progress'
-      );
+      const fields = errorFields(error);
+      send({ phase: 'error', message: fields.error, ...fields }, 'progress');
       close();
     }
   })();
