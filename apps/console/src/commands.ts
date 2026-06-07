@@ -11,6 +11,7 @@
  *   brika start            detached background hub (TUI Ctrl+S equivalent)
  *   brika stop             SIGTERM the running hub
  *   brika status           one-line state + pid + url
+ *   brika doctor           mode, data dir, and the hub this CLI targets
  *   brika open             open the UI in the default browser
  *   brika hub              foreground hub boot (TUI spawn target, CI/Docker)
  *   brika build            generate the plugin manifest from source (--check for CI)
@@ -32,6 +33,7 @@ import completions from './commands/completions';
 import create from './commands/create';
 import dashboard from './commands/dashboard';
 import dev from './commands/dev';
+import doctor from './commands/doctor';
 import hub from './commands/hub';
 import install from './commands/install';
 import open from './commands/open';
@@ -74,6 +76,7 @@ export const cli = createCli({ name: 'brika', defaultCommand: 'dashboard', helpF
   .addCommand(start)
   .addCommand(stop)
   .addCommand(status)
+  .addCommand(doctor)
   .addCommand(open)
   .addCommand(hub)
   .addCommand(create)
