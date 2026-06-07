@@ -18,7 +18,7 @@ export default function template(data: TemplateData): string {
       tsc: 'bunx --bun tsc --noEmit',
       'i18n:types': 'bunx @brika/i18n-devtools types --locales ./locales/en --out ./dist/types',
       'i18n:check': 'bunx @brika/i18n-devtools check --locales ./locales',
-      prepublishOnly: 'brika-verify-plugin',
+      prepublishOnly: 'brika verify',
     },
   };
 

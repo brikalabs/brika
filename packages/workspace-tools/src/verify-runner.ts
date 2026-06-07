@@ -88,7 +88,8 @@ async function runVerify(
   output: string;
   payload?: VerifyJsonPayload;
 }> {
-  const args = json ? ['bun', verifyScript, pluginDir, '--json'] : ['bun', verifyScript, pluginDir];
+  // `verifyScript` is the brika CLI entry; verification is the `verify` subcommand.
+  const args = ['bun', verifyScript, 'verify', '--dir', pluginDir, ...(json ? ['--json'] : [])];
   const proc = Bun.spawn(args, {
     cwd,
     stdout: 'pipe',

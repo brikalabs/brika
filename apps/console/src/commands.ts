@@ -35,6 +35,7 @@ import start from './commands/start';
 import status from './commands/status';
 import stop from './commands/stop';
 import update from './commands/update';
+import verify from './commands/verify';
 import version from './commands/version';
 
 /** Pool of hint lines hung off `brika help` — the framework strips hidden
@@ -74,6 +75,7 @@ export const cli = createCli({ name: 'brika', defaultCommand: 'dashboard', helpF
   .addCommand(hub)
   .addCommand(build)
   .addCommand(check)
+  .addCommand(verify)
   .addCommand(version)
   .addCommand(update)
   .addCommand(completions)

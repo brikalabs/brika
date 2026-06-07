@@ -178,7 +178,7 @@ try {
   );
 
   const pluginPkgs = selectedPackages.filter((pkg) => isPluginPackage(pkg));
-  const verifyScript = join(ROOT, 'packages/sdk/src/verify.ts');
+  const verifyScript = join(ROOT, 'apps/console/src/main.ts');
   const pluginWarningsMap = new Map<string, string[]>();
   if (pluginPkgs.length > 0) {
     const pluginLabel = plurals(pluginForms, pluginPkgs.length);

@@ -327,7 +327,7 @@ describe('scaffold', () => {
     expect(pkg.bricks).toBeUndefined();
     expect(pkg.sparks).toBeUndefined();
     expect(pkg.keywords).toContain('brika-plugin');
-    expect(pkg.scripts.prepublishOnly).toBe('brika-verify-plugin');
+    expect(pkg.scripts.prepublishOnly).toBe('brika verify');
     expect(pkg.main).toBe('./src/index.ts');
   });
 

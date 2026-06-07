@@ -25,7 +25,7 @@
     "link": "bun link",
     "typecheck": "tsgo --noEmit",
     "test": "bun test",
-    "prepublishOnly": "brika-verify-plugin"
+    "prepublishOnly": "brika verify"
   },
   "blocks": [
     {

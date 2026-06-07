@@ -27,7 +27,7 @@
   "scripts": {
     "link": "bun link",
     "typecheck": "tsgo --noEmit",
-    "prepublishOnly": "brika-verify-plugin"
+    "prepublishOnly": "brika verify"
   },
   "sparks": [
     {

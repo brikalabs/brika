@@ -39,9 +39,6 @@
     "./verify-plugin": "./src/verify-plugin.ts",
     "./tsconfig.plugin.json": "./tsconfig.plugin.json"
   },
-  "bin": {
-    "brika-verify-plugin": "./src/verify.ts"
-  },
   "files": ["src", "tsconfig.plugin.json"],
   "scripts": {
     "test": "bun test --parallel",
