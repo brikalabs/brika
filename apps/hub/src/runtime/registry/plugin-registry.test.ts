@@ -15,6 +15,7 @@ import { Logger } from '@/runtime/logs/log-router';
 import { PluginManager } from '@/runtime/plugins/plugin-manager';
 import { PluginRegistry } from '@/runtime/registry/plugin-registry';
 import type { OperationProgress } from '@/runtime/registry/types';
+import { StateStore } from '@/runtime/state/state-store';
 
 useTestBed({
   autoStub: false,
@@ -39,6 +40,7 @@ describe('PluginRegistry', () => {
     unload: ReturnType<typeof mock>;
     list: ReturnType<typeof mock>;
   };
+  let mockStateGet: ReturnType<typeof mock>;
 
   beforeEach(() => {
     mockHubConfig = {
@@ -71,6 +73,9 @@ describe('PluginRegistry', () => {
     provide(HubConfig, mockHubConfig);
     provide(ConfigLoader, mockConfigLoader);
     provide(PluginManager, mockPluginManager);
+    // No state row by default: installs report a plain success, not "dormant".
+    mockStateGet = mock().mockReturnValue(undefined);
+    provide(StateStore, { get: mockStateGet });
 
     registry = get(PluginRegistry);
   });
@@ -126,6 +131,22 @@ describe('PluginRegistry', () => {
 
       expect(phases).toContain('resolving');
       expect(phases).toContain('complete');
+    });
+
+    test('reports a dormant (consent-pending) install in the complete message', async () => {
+      bun.spawn({ exitCode: 0 }).apply();
+      // After load, the plugin is registered dormant (a grant-requesting remote
+      // plugin under consent-before-code).
+      mockStateGet.mockReturnValue({ enabled: false });
+
+      const events: OperationProgress[] = [];
+      for await (const progress of registry.install('@test/plugin', '1.0.0')) {
+        events.push(progress);
+      }
+
+      const complete = events.find((p) => p.phase === 'complete');
+      expect(complete?.message).toContain('disabled');
+      expect(complete?.message).toContain('enable');
     });
 
     test('adds plugin to config after install', async () => {
@@ -782,6 +803,7 @@ describe('PluginRegistry: local plugins', () => {
       unload: mock().mockResolvedValue(undefined),
       list: mock().mockReturnValue([]),
     });
+    provide(StateStore, { get: mock().mockReturnValue(undefined) });
 
     registry = get(PluginRegistry);
   });

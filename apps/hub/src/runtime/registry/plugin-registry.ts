@@ -5,6 +5,7 @@ import { errors } from '@brika/errors';
 import { z } from 'zod';
 import { BunRunner, ConfigLoader, HubConfig } from '@/runtime/config';
 import { Logger } from '@/runtime/logs/log-router';
+import { StateStore } from '@/runtime/state/state-store';
 import { PackageManager } from './package-manager';
 import { errorFields } from './progress';
 import type { InstalledPackage, OperationProgress, UpdateInfo } from './types';
@@ -33,6 +34,7 @@ export class PluginRegistry {
   private readonly logs = inject(Logger).withSource('registry');
   private readonly configLoader = inject(ConfigLoader);
   private readonly bunRunner = inject(BunRunner);
+  private readonly state = inject(StateStore);
   readonly pluginsDir: string;
   readonly #pm: PackageManager;
 
@@ -91,7 +93,10 @@ export class PluginRegistry {
       }
 
       yield this.#msg('linking', 'install', name, version, 'Loading plugin...');
-      await this.#loadPlugin(rootDirectory ?? name);
+      // Local/dev plugins are the operator's own code: start them immediately.
+      // A remote (npm) plugin that requests grants installs dormant until the
+      // operator reviews and enables it (consent-before-code).
+      await this.#loadPlugin(rootDirectory ?? name, local ? true : undefined);
       loaded = true;
 
       // Record in brika.yml LAST, only after the load attempt: a THROWN install
@@ -101,7 +106,18 @@ export class PluginRegistry {
       // those plugins are legitimately recorded.)
       await this.configLoader.addPlugin(name, version ?? 'latest');
 
-      yield this.#msg('complete', 'install', name, version, 'Installed successfully');
+      // A grant-requesting remote plugin installs dormant (consent-before-code);
+      // tell the operator it needs review rather than reporting a plain success.
+      const dormant = this.state.get(name)?.enabled === false;
+      yield this.#msg(
+        'complete',
+        'install',
+        name,
+        version,
+        dormant
+          ? 'Installed (disabled): review its requested permissions, then enable it'
+          : 'Installed successfully'
+      );
     } catch (error) {
       if (!preExisting) {
         await this.#rollbackInstall(name, local, loaded);
@@ -306,11 +322,11 @@ export class PluginRegistry {
   // Private Helpers
   // ─────────────────────────────────────────────────────────────────────────────
 
-  async #loadPlugin(name: string): Promise<void> {
+  async #loadPlugin(name: string, defaultEnabled?: boolean): Promise<void> {
     const { PluginManager } = await import('@/runtime/plugins/plugin-manager');
     const pm = inject(PluginManager);
     // All plugins (npm + workspace) are in pluginsDir/node_modules/
-    await pm.load(name, this.pluginsDir);
+    await pm.load(name, this.pluginsDir, { defaultEnabled });
   }
 
   /**

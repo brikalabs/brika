@@ -187,6 +187,20 @@ describe('PluginLoader', () => {
       expect(pmLoadMock).not.toHaveBeenCalledWith('@test/disabled', '/mock/plugins-dir');
     });
 
+    test('starts a local/workspace plugin enabled (operator own code), npm without that hint', async () => {
+      await loader.load(
+        createMockConfig([
+          { name: '@test/local', version: 'workspace:*' },
+          { name: '@test/remote', version: '1.0.0' },
+        ])
+      );
+
+      expect(pmLoadMock).toHaveBeenCalledWith('@test/local', '/mock/plugins-dir', {
+        defaultEnabled: true,
+      });
+      expect(pmLoadMock).toHaveBeenCalledWith('@test/remote', '/mock/plugins-dir');
+    });
+
     test('handles empty plugin list', async () => {
       const config = createMockConfig([]);
 

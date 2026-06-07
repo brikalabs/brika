@@ -45,7 +45,15 @@ export class PluginLoader implements Loader {
         continue;
       }
       try {
-        await this.pm.load(entry.name, this.registry.pluginsDir);
+        // Local/workspace plugins are the operator's own code: start a first-time
+        // one immediately. A remote (npm) plugin that requests grants installs
+        // dormant on first sight until the operator reviews and enables it.
+        const local = entry.version.startsWith('workspace:') || entry.version.startsWith('file:');
+        if (local) {
+          await this.pm.load(entry.name, this.registry.pluginsDir, { defaultEnabled: true });
+        } else {
+          await this.pm.load(entry.name, this.registry.pluginsDir);
+        }
       } catch (err) {
         this.logs.error(
           'Failed to load plugin',
