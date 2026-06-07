@@ -523,6 +523,9 @@ function DeviceInfoDialog({
 
 // ─── Page ───────────────────────────────────────────────────────────────────
 
+/** Manifest metadata for this page (read by brika build). */
+export const meta = { icon: 'cpu' };
+
 export default function DevicesPage() {
   const { t } = useLocale();
   const callAction = useCallAction();

@@ -7,7 +7,8 @@
 import { definePreferenceOptions } from '@brika/sdk';
 import { log, onInit, onStop, onUninstall } from '@brika/sdk/lifecycle';
 import { clearAllData } from '@brika/sdk/storage';
-import { deviceData, devicesData } from './brick-data';
+import { deviceBrick } from './bricks/device.brick';
+import { devicesBrick } from './bricks/devices.brick';
 import { getMatterController } from './matter-controller';
 import { serializeDevice } from './serialize';
 import {
@@ -57,7 +58,7 @@ definePreferenceOptions('deviceId', () => {
 function pushDevicesData() {
   const controller = getMatterController();
   const devices = controller.getDevices().map(serializeDevice);
-  devicesData.set({ devices });
+  devicesBrick.data.set({ devices });
 }
 
 /** Push the device map to the "device" brick (all devices keyed by nodeId) */
@@ -68,7 +69,7 @@ function pushDeviceData() {
   for (const d of devices) {
     deviceMap[d.nodeId] = serializeDevice(d);
   }
-  deviceData.set({ deviceMap });
+  deviceBrick.data.set({ deviceMap });
 }
 
 /** Push data for both brick types */

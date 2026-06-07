@@ -21,11 +21,13 @@ function toStringState(device: MatterDevice): Record<string, string> {
 
 export const deviceEvent = defineBlock({
   id: 'device-event',
-  name: 'When Device Changes',
-  description: "Fires when a Matter device's watched attributes change",
-  category: 'trigger',
-  icon: 'radio',
-  color: '#6366f1',
+  meta: {
+    name: 'When Device Changes',
+    description: "Fires when a Matter device's watched attributes change (real-time)",
+    category: 'trigger',
+    icon: 'radio',
+    color: '#6366f1',
+  },
   inputs: {},
   outputs: {
     // Template port: the editor renders one output per watched attribute.

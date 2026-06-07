@@ -96,7 +96,7 @@
     {
       "id": "device",
       "name": "Matter Device",
-      "description": "Control any Matter device — adapts to lights, locks, covers, thermostats and more",
+      "description": "Control any Matter device, adapting to lights, locks, covers, thermostats and more",
       "category": "control",
       "icon": "cpu",
       "color": "#6366f1",

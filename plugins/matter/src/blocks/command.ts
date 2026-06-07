@@ -4,6 +4,13 @@ import { getMatterController, type MatterCommand } from '../matter-controller';
 
 export const matterCommand = defineBlock({
   id: 'command',
+  meta: {
+    name: 'Matter Command',
+    description: 'Send a command to a Matter device (on/off, level, color)',
+    category: 'action',
+    icon: 'cpu',
+    color: '#6366f1',
+  },
   inputs: {
     trigger: input(z.generic(), { name: 'Trigger' }),
   },

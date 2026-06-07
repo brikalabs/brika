@@ -3,7 +3,7 @@
  */
 
 import { Activity } from 'lucide-react';
-import { StatCard } from '../components';
+import { StatCard } from '../_components';
 import { getDeviceTheme } from '../theme';
 import type { DeviceState } from '../types';
 

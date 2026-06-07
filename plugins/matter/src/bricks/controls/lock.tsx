@@ -5,7 +5,7 @@
 import { capture } from '@brika/sdk';
 import { Lock, LockOpen } from 'lucide-react';
 import { useCallback } from 'react';
-import { GlassButton } from '../components';
+import { GlassButton } from '../_components';
 import { getDeviceTheme } from '../theme';
 import type { DeviceState } from '../types';
 import { useSendCommand } from './send-command';

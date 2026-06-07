@@ -7,7 +7,7 @@
  *   1×N  — narrow: vertical icon + name + controls with tight padding
  *   else — full: header + divider + controls, compact styling at ≤2×2
  *
- * Data is pushed from the plugin process via setBrickData('device', ...).
+ * Data is pushed from the plugin process via deviceBrick.data.set(...).
  * Commands are sent via callAction(doDeviceCommand, ...).
  */
 
@@ -17,10 +17,10 @@ import { useLocale } from '@brika/sdk/ui-kit/hooks';
 import clsx from 'clsx';
 import { Loader2, Settings } from 'lucide-react';
 import { useCallback } from 'react';
-import { deviceData } from '../brick-data';
-import { AmbientGlow, DeviceIcon, StatusBadge } from './components';
+import { AmbientGlow, DeviceIcon, StatusBadge } from './_components';
 import { DeviceControls } from './controls';
 import { useSendCommand } from './controls/send-command';
+import { deviceBrick } from './device.brick';
 import { getDeviceTheme } from './theme';
 import type { DeviceState } from './types';
 
@@ -124,8 +124,8 @@ function StripLayout({ device, theme, isActive, typeLabel, onTap }: Readonly<Dev
 
 export default function DeviceBrick() {
   const { width, height } = useBrickSize();
-  const config = useBrickConfig();
-  const data = deviceData.use();
+  const config = useBrickConfig(deviceBrick.config);
+  const data = deviceBrick.data.use();
   const { t } = useLocale();
   const sendCommand = useSendCommand();
 

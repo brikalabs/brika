@@ -8,8 +8,8 @@
 import { capture } from '@brika/sdk';
 import { Sun } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { PowerToggle } from '../_components';
 import { hsvToHex, miredsToHex } from '../color-utils';
-import { PowerToggle } from '../components';
 import { getDeviceTheme } from '../theme';
 import type { DeviceState } from '../types';
 import { useSendCommand } from './send-command';
