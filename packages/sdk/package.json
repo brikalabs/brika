@@ -48,6 +48,7 @@
     "test": "bun test --parallel",
     "typecheck": "tsgo --noEmit",
     "build:bin": "bun build-bin.ts",
+    "smoke:bin": "bun smoke-bin.ts",
     "prepare": "bun run build:bin"
   },
   "dependencies": {
