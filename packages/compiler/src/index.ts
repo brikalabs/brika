@@ -10,6 +10,7 @@ export {
   type GeneratedBlock,
   type GeneratedBrick,
   type GeneratedManifest,
+  type GeneratedPage,
   type GeneratedSpark,
   generateManifest,
 } from './generate-manifest';

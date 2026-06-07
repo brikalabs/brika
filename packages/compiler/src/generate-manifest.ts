@@ -61,10 +61,17 @@ export interface GeneratedBrick {
   config?: PreferenceEntry[];
 }
 
+/** A generated manifest `pages[]` entry (mirrors `@brika/schema` PageSchema). */
+export interface GeneratedPage {
+  id: string;
+  icon?: string;
+}
+
 export interface GeneratedManifest {
   blocks: GeneratedBlock[];
   sparks: GeneratedSpark[];
   bricks: GeneratedBrick[];
+  pages: GeneratedPage[];
   diagnostics: ValidationDiagnostic[];
   /** False when any diagnostic is an error. */
   ok: boolean;
@@ -113,6 +120,11 @@ function brickFiles(pluginRoot: string): Promise<string[]> {
   return scanGlob(pluginRoot, 'src/bricks/*.tsx');
 }
 
+/** Pages are browser modules at `src/pages/<id>.tsx`. */
+function pageFiles(pluginRoot: string): Promise<string[]> {
+  return scanGlob(pluginRoot, 'src/pages/*.tsx');
+}
+
 interface ImportResult {
   collected: CollectedManifest;
   errors: ValidationDiagnostic[];
@@ -159,25 +171,21 @@ async function toBlockEntry(
     Bun.file(join(pluginRoot, 'src', 'blocks', `${id}.view.tsx`)).exists(),
     Bun.file(join(pluginRoot, 'src', 'blocks', `${id}.node.tsx`)).exists(),
   ]);
+  // undefined fields drop out of the manifest (JSON.stringify omits them).
   return {
     id,
-    ...(meta.name !== undefined ? { name: meta.name } : {}),
-    ...(meta.description !== undefined ? { description: meta.description } : {}),
+    name: meta.name,
+    description: meta.description,
     category: meta.category,
-    ...(meta.icon !== undefined ? { icon: meta.icon } : {}),
-    ...(meta.color !== undefined ? { color: meta.color } : {}),
-    ...(hasView ? { view: true } : {}),
-    ...(hasNode ? { nodeView: true } : {}),
+    icon: meta.icon,
+    color: meta.color,
+    view: hasView || undefined,
+    nodeView: hasNode || undefined,
   };
 }
 
 function toSparkEntry(spark: CollectedSpark): GeneratedSpark {
-  const { id, meta } = spark;
-  return {
-    id,
-    ...(meta?.name !== undefined ? { name: meta.name } : {}),
-    ...(meta?.description !== undefined ? { description: meta.description } : {}),
-  };
+  return { id: spark.id, name: spark.meta?.name, description: spark.meta?.description };
 }
 
 function toBrickEntry(
@@ -187,13 +195,13 @@ function toBrickEntry(
 ): GeneratedBrick {
   return {
     id,
-    ...(meta.name !== undefined ? { name: meta.name } : {}),
-    ...(meta.description !== undefined ? { description: meta.description } : {}),
-    ...(meta.category !== undefined ? { category: meta.category } : {}),
-    ...(meta.icon !== undefined ? { icon: meta.icon } : {}),
-    ...(meta.color !== undefined ? { color: meta.color } : {}),
-    ...(meta.families !== undefined ? { families: meta.families } : {}),
-    ...(config !== undefined ? { config } : {}),
+    name: meta.name,
+    description: meta.description,
+    category: meta.category,
+    icon: meta.icon,
+    color: meta.color,
+    families: meta.families,
+    config,
   };
 }
 
@@ -245,19 +253,19 @@ export const compose = cva;
 export const twMerge = cx;
 `;
 
-const brickBuildPlugin: BunPlugin = {
-  name: 'brika-brick-extract',
+const browserBuildPlugin: BunPlugin = {
+  name: 'brika-browser-extract',
   setup(build) {
-    // Keep @brika/sdk external so the brick's `z` is the same instance this
-    // module's zodToPreferences uses (cross-instance toJSONSchema is unsafe).
-    build.onResolve({ filter: /^@brika\/sdk(\/.*)?$/ }, (args) => ({
-      path: args.path,
-      external: true,
-    }));
     // react is referenced only inside the unrun view; stub it and its runtimes.
     build.onResolve({ filter: /^react(-dom)?($|\/)/ }, (args) => ({
       path: args.path,
       namespace: 'brika-react-stub',
+    }));
+    // @brika/sdk/ui-kit (components + hooks + icons) pulls react, so stub it.
+    // Must precede the general @brika/sdk rule below.
+    build.onResolve({ filter: /^@brika\/sdk\/ui-kit(\/.*)?$/ }, (args) => ({
+      path: args.path,
+      namespace: 'brika-proxy-stub',
     }));
     // lucide-react: arbitrary icon names, referenced only inside the view.
     build.onResolve({ filter: /^lucide-react$/ }, (args) => ({
@@ -268,6 +276,12 @@ const brickBuildPlugin: BunPlugin = {
     build.onResolve({ filter: /^(clsx|class-variance-authority)$/ }, (args) => ({
       path: args.path,
       namespace: 'brika-util-stub',
+    }));
+    // Everything else under @brika/sdk is import-safe; keep it external so its
+    // `z` is the same instance zodToPreferences uses (cross-instance is unsafe).
+    build.onResolve({ filter: /^@brika\/sdk(\/.*)?$/ }, (args) => ({
+      path: args.path,
+      external: true,
     }));
     build.onLoad({ filter: /.*/, namespace: 'brika-react-stub' }, () => ({
       loader: 'js',
@@ -285,11 +299,11 @@ const brickBuildPlugin: BunPlugin = {
 };
 
 /**
- * Bundle a brick (react stubbed, @brika/sdk external), import the result, and
- * read its `meta` + `config` exports. The temp file is written beside the brick
- * so its `@brika/sdk` import resolves exactly as the brick's would.
+ * Bundle a browser module (brick or page) with react/ui stubbed and @brika/sdk
+ * external, import the result, and return its exports. The temp file is written
+ * beside the source so its `@brika/sdk` import resolves exactly as it would.
  */
-async function readBrickModule(
+async function readBrowserModule(
   file: string
 ): Promise<{ ns: Record<string, unknown> } | { error: string }> {
   let built: Awaited<ReturnType<typeof Bun.build>>;
@@ -297,7 +311,7 @@ async function readBrickModule(
     built = await Bun.build({
       entrypoints: [file],
       target: 'bun',
-      plugins: [brickBuildPlugin],
+      plugins: [browserBuildPlugin],
     });
   } catch (err) {
     return { error: errorMessage(err) };
@@ -359,7 +373,7 @@ async function buildBricks(
   const bricks: GeneratedBrick[] = [];
   for (const file of files) {
     const id = basename(file, '.tsx');
-    const loaded = await readBrickModule(file);
+    const loaded = await readBrowserModule(file);
     if ('error' in loaded) {
       diagnostics.push({
         level: 'error',
@@ -391,20 +405,61 @@ async function buildBricks(
   return bricks;
 }
 
+/**
+ * Build the `pages[]` entries. A page contributes `{ id, icon? }`; the optional
+ * icon comes from an `export const meta = { icon }`. Pages need no other
+ * metadata, so a missing `meta` export is fine (not an error).
+ */
+async function buildPages(
+  files: readonly string[],
+  diagnostics: ValidationDiagnostic[]
+): Promise<GeneratedPage[]> {
+  const pages: GeneratedPage[] = [];
+  for (const file of files) {
+    const id = basename(file, '.tsx');
+    const loaded = await readBrowserModule(file);
+    if ('error' in loaded) {
+      diagnostics.push({
+        level: 'error',
+        message: `Failed to read page "${id}": ${loaded.error}`,
+        file,
+      });
+      continue;
+    }
+    if (loaded.ns.meta === undefined) {
+      pages.push({ id });
+      continue;
+    }
+    const parsed = parseBrickMeta(loaded.ns.meta);
+    if (!parsed.ok) {
+      diagnostics.push({
+        level: 'error',
+        message: `Page "${id}" meta is invalid: ${parsed.error}`,
+        file,
+      });
+      continue;
+    }
+    pages.push({ id, icon: parsed.meta.icon });
+  }
+  return pages;
+}
+
 const byId = (a: { id: string }, b: { id: string }): number => a.id.localeCompare(b.id);
 
 /**
- * Generate the `blocks[]`, `sparks[]`, and `bricks[]` manifest arrays from
- * plugin source. Blocks must carry `meta` (the manifest requires a category);
- * a block without `meta` is an error so a capability is never silently dropped.
- * Sparks may omit `meta`; bricks must export `meta`.
+ * Generate the `blocks[]`, `sparks[]`, `bricks[]`, and `pages[]` manifest arrays
+ * from plugin source. Blocks must carry `meta` (the manifest requires a
+ * category); a block without `meta` is an error so a capability is never
+ * silently dropped. Sparks may omit `meta`; bricks must export `meta`; pages may
+ * omit it (only `icon` is optional metadata).
  */
 export async function generateManifest(pluginRoot: string): Promise<GeneratedManifest> {
   const root = resolve(pluginRoot);
-  const [blocks, sparks, brickPaths] = await Promise.all([
+  const [blocks, sparks, brickPaths, pagePaths] = await Promise.all([
     blockFiles(root),
     sparkFiles(root),
     brickFiles(root),
+    pageFiles(root),
   ]);
   const { collected, errors } = await importModules([...blocks, ...sparks]);
   const diagnostics: ValidationDiagnostic[] = [...errors];
@@ -423,10 +478,12 @@ export async function generateManifest(pluginRoot: string): Promise<GeneratedMan
 
   const generatedSparks = dedupeById(collected.sparks).map(toSparkEntry).sort(byId);
   const generatedBricks = (await buildBricks(brickPaths, diagnostics)).sort(byId);
+  const generatedPages = (await buildPages(pagePaths, diagnostics)).sort(byId);
 
   return {
     blocks: managedBlocks.sort(byId),
     sparks: generatedSparks,
+    pages: generatedPages,
     bricks: generatedBricks,
     diagnostics,
     ok: diagnostics.every((d) => d.level !== 'error'),

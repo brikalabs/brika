@@ -1,13 +1,13 @@
 /**
  * `brika build` — generate the plugin manifest from source.
  *
- * Reads the plugin's block and spark definitions, lowers their `meta` into the
- * `blocks[]` / `sparks[]` arrays the hub reads from `package.json`, and writes
- * them back. `--check` compares instead of writing and exits non-zero on drift,
- * so CI can guarantee the committed manifest matches the source.
+ * Reads the plugin's block, brick, page, and spark definitions, lowers their
+ * `meta` (and brick zod `config`) into the matching `package.json` arrays the
+ * hub reads, and writes them back. `--check` compares instead of writing and
+ * exits non-zero on drift, so CI can guarantee the manifest matches the source.
  *
- * Only kinds that have definitions in source are managed: if no block files are
- * found, the existing `blocks[]` is left untouched (with a warning) rather than
+ * Only kinds that have definitions in source are managed: if no files of a kind
+ * are found, the existing array is left untouched (with a warning) rather than
  * wiped, so a plugin that has not adopted `meta` yet is never damaged.
  */
 
@@ -140,10 +140,11 @@ function printDiagnostics(result: GeneratedManifest): void {
 
 export default defineCommand({
   name: 'build',
-  description: 'Generate the plugin manifest (blocks/sparks) in package.json from source',
+  description:
+    'Generate the plugin manifest (blocks/bricks/pages/sparks) in package.json from source',
   details:
-    'Lowers each block/spark `meta` into the package.json arrays the hub reads. ' +
-    'Use --check in CI to fail when the committed manifest is out of date.',
+    "Lowers each capability's `meta` (and brick zod `config`) into the package.json " +
+    'arrays the hub reads. Use --check in CI to fail when the committed manifest is out of date.',
   options: {
     check: {
       type: 'boolean',
@@ -172,6 +173,7 @@ export default defineCommand({
     const plans = {
       blocks: planKind(preserveOrder(result.blocks, pkg.blocks), pkg.blocks),
       bricks: planKind(preserveOrder(result.bricks, pkg.bricks), pkg.bricks),
+      pages: planKind(preserveOrder(result.pages, pkg.pages), pkg.pages),
       sparks: planKind(preserveOrder(result.sparks, pkg.sparks), pkg.sparks),
     };
 

@@ -156,4 +156,24 @@ export default function GaugeBrick() {
       )
     ).toBe(true);
   });
+
+  test('pages get id from filename + icon from meta (ui-kit stubbed)', async () => {
+    await mkdir(join(root, 'src', 'pages'), { recursive: true });
+    // Imports @brika/sdk/ui-kit to exercise the ui-kit stub path.
+    await writeFile(
+      join(root, 'src', 'pages', 'devices.tsx'),
+      "import { Card } from '@brika/sdk/ui-kit';\nexport const meta = { icon: 'cpu' };\nexport default function DevicesPage() {\n  return <Card>x</Card>;\n}\n"
+    );
+    // A page with no meta export is valid; it contributes just its id.
+    await writeFile(
+      join(root, 'src', 'pages', 'plain.tsx'),
+      'export default function PlainPage() {\n  return null;\n}\n'
+    );
+
+    const result = await generateManifest(root);
+
+    expect(result.ok).toBe(true);
+    expect(result.diagnostics).toEqual([]);
+    expect(result.pages).toEqual([{ id: 'devices', icon: 'cpu' }, { id: 'plain' }]);
+  });
 });
