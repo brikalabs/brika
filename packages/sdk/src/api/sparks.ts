@@ -117,19 +117,21 @@ export function defineSpark<TSchema extends z.ZodType>(spec: {
  *
  * @example
  * ```typescript
- * export const sparkReceiver = defineReactiveBlock({
+ * export const sparkReceiver = defineBlock({
  *   id: 'spark-receiver',
+ *   meta: { name: 'Spark Receiver', category: 'trigger' },
  *   outputs: {
  *     out: output(z.resolved('spark', 'sparkType'), { name: 'Payload' }),
  *   },
  *   config: z.object({
  *     sparkType: z.sparkType('Spark type to listen for'),
  *   }),
- * }, ({ config, outputs, start }) => {
- *   // Subscribe to sparks and emit payload to output
- *   start(subscribeSpark(config.sparkType))
- *     .pipe(map(event => event.payload))
- *     .to(outputs.out);
+ *   run({ config, outputs, start }) {
+ *     // Subscribe to sparks and emit payload to output
+ *     start(subscribeSpark(config.sparkType))
+ *       .pipe(map(event => event.payload))
+ *       .to(outputs.out);
+ *   },
  * });
  * ```
  */

@@ -196,10 +196,10 @@ export interface ReactiveBlockSpec<
    * block carries `meta`, `brika build` owns its manifest entry.
    */
   meta?: BlockMeta;
-  /** Typed input port definitions */
-  inputs: TInputs;
-  /** Typed output port definitions */
-  outputs: TOutputs;
+  /** Typed input port definitions. Omit for source/trigger blocks with no inputs. */
+  inputs?: TInputs;
+  /** Typed output port definitions. Omit for sink/action blocks with no outputs. */
+  outputs?: TOutputs;
   /** Zod config schema */
   config: TConfig;
 }

@@ -1,30 +1,28 @@
-import { capture, defineReactiveBlock, input, log, output, z } from '@brika/sdk';
+import { capture, defineBlock, input, log, output, z } from '@brika/sdk';
 import { getApi, resolveDevice, toSpotifyUri } from '../shared';
 
-export const playBlock = defineReactiveBlock(
-  {
-    id: 'play',
-    inputs: {
-      trigger: input(z.generic(), { name: 'Trigger' }),
-    },
-    outputs: {
-      started: output(z.object({ deviceId: z.string(), contextUri: z.string().optional() }), {
-        name: 'Started',
-      }),
-      error: output(z.object({ message: z.string() }), { name: 'Error' }),
-    },
-    config: z.object({
-      contextUri: z
-        .string()
-        .optional()
-        .describe('Spotify URI or URL (playlist, album, or track). Empty = resume last played'),
-      deviceId: z
-        .string()
-        .optional()
-        .describe('Device name or ID. Empty = use plugin default device'),
-    }),
+export const playBlock = defineBlock({
+  id: 'play',
+  inputs: {
+    trigger: input(z.generic(), { name: 'Trigger' }),
   },
-  ({ inputs, outputs, config }) => {
+  outputs: {
+    started: output(z.object({ deviceId: z.string(), contextUri: z.string().optional() }), {
+      name: 'Started',
+    }),
+    error: output(z.object({ message: z.string() }), { name: 'Error' }),
+  },
+  config: z.object({
+    contextUri: z
+      .string()
+      .optional()
+      .describe('Spotify URI or URL (playlist, album, or track). Empty = resume last played'),
+    deviceId: z
+      .string()
+      .optional()
+      .describe('Device name or ID. Empty = use plugin default device'),
+  }),
+  run: ({ inputs, outputs, config }) => {
     inputs.trigger.on(async () => {
       try {
         const deviceId = await resolveDevice(config.deviceId);
@@ -50,5 +48,5 @@ export const playBlock = defineReactiveBlock(
         outputs.error.emit({ message });
       }
     });
-  }
-);
+  },
+});

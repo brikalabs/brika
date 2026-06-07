@@ -8,7 +8,7 @@
  * the block stops.
  */
 
-import { defineReactiveBlock, output, z } from '@brika/sdk';
+import { defineBlock, output, z } from '@brika/sdk';
 import { getMatterController, type MatterDevice } from '../matter-controller';
 
 function toStringState(device: MatterDevice): Record<string, string> {
@@ -19,46 +19,44 @@ function toStringState(device: MatterDevice): Record<string, string> {
   return state;
 }
 
-export const deviceEvent = defineReactiveBlock(
-  {
-    id: 'device-event',
-    name: 'When Device Changes',
-    description: "Fires when a Matter device's watched attributes change",
-    category: 'trigger',
-    icon: 'radio',
-    color: '#6366f1',
-    inputs: {},
-    outputs: {
-      // Template port: the editor renders one output per watched attribute.
-      changed: output(
-        z.object({
-          attribute: z.string(),
-          value: z.string(),
-          nodeId: z.string(),
-          name: z.string(),
-        }),
-        { name: 'Changed', repeat: 'attributes' }
-      ),
-      any: output(
-        z.object({
-          nodeId: z.string(),
-          name: z.string(),
-          deviceType: z.string(),
-          online: z.boolean(),
-          state: z.record(z.string(), z.string()),
-        }),
-        { name: 'Any change' }
-      ),
-    },
-    config: z.object({
-      nodeId: z.string().describe('Matter device to watch'),
-      attributes: z
-        .array(z.object({ name: z.string() }))
-        .default([])
-        .describe('Attributes to watch; each adds its own output'),
-    }),
+export const deviceEvent = defineBlock({
+  id: 'device-event',
+  name: 'When Device Changes',
+  description: "Fires when a Matter device's watched attributes change",
+  category: 'trigger',
+  icon: 'radio',
+  color: '#6366f1',
+  inputs: {},
+  outputs: {
+    // Template port: the editor renders one output per watched attribute.
+    changed: output(
+      z.object({
+        attribute: z.string(),
+        value: z.string(),
+        nodeId: z.string(),
+        name: z.string(),
+      }),
+      { name: 'Changed', repeat: 'attributes' }
+    ),
+    any: output(
+      z.object({
+        nodeId: z.string(),
+        name: z.string(),
+        deviceType: z.string(),
+        online: z.boolean(),
+        state: z.record(z.string(), z.string()),
+      }),
+      { name: 'Any change' }
+    ),
   },
-  ({ config, emit, start }) => {
+  config: z.object({
+    nodeId: z.string().describe('Matter device to watch'),
+    attributes: z
+      .array(z.object({ name: z.string() }))
+      .default([])
+      .describe('Attributes to watch; each adds its own output'),
+  }),
+  run: ({ config, emit, start }) => {
     const controller = getMatterController();
     let prev: Record<string, string> = {};
 
@@ -91,5 +89,5 @@ export const deviceEvent = defineReactiveBlock(
         state,
       });
     });
-  }
-);
+  },
+});

@@ -13,11 +13,11 @@ function blockSrc(id: string, withMeta: boolean): string {
   const meta = withMeta
     ? `meta: { name: '${id}', description: 'd', category: 'action', icon: 'zap', color: '#112233' }, `
     : '';
-  return `import { defineReactiveBlock, input, output, z } from '@brika/sdk';
-export default defineReactiveBlock(
-  { id: '${id}', ${meta}inputs: { trigger: input(z.generic(), { name: 'Trigger' }) }, outputs: { out: output(z.object({ value: z.number() }), { name: 'Out' }) }, config: z.object({}) },
-  () => {}
-);
+  return `import { defineBlock, input, output, z } from '@brika/sdk';
+export default defineBlock({
+  id: '${id}', ${meta}inputs: { trigger: input(z.generic()) }, outputs: { out: output(z.object({ value: z.number() })) }, config: z.object({}),
+  run() {},
+});
 `;
 }
 

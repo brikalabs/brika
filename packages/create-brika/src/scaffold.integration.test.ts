@@ -423,7 +423,7 @@ describe('scaffold', () => {
       path.join(testDir, 'test-plugin', 'src', 'blocks', 'test-plugin.ts'),
       'utf-8'
     );
-    expect(content).toContain('defineReactiveBlock');
+    expect(content).toContain('defineBlock');
     expect(content).toContain('testPlugin');
   });
 

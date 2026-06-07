@@ -45,12 +45,9 @@ let capturedSetup: SetupFn | null = null;
 let capturedConfigSchema: z.ZodObject<z.ZodRawShape> | null = null;
 
 mock.module('@brika/sdk', () => ({
-  defineReactiveBlock: (
-    spec: { id: string; config: z.ZodObject<z.ZodRawShape> },
-    setup: SetupFn
-  ) => {
+  defineBlock: (spec: { id: string; config: z.ZodObject<z.ZodRawShape>; run: SetupFn }) => {
     if (spec.id === 'http-request') {
-      capturedSetup = setup;
+      capturedSetup = spec.run;
       capturedConfigSchema = spec.config;
     }
     return { id: spec.id, inputs: [], outputs: [], schema: {} };

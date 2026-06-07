@@ -197,7 +197,7 @@ function compileBlock<
       jsonSchema?: Record<string, unknown>;
     }
   >();
-  for (const [id, def] of Object.entries(spec.inputs)) {
+  for (const [id, def] of Object.entries(spec.inputs ?? {})) {
     inputMap.set(id, {
       typeName: getBaseTypeName(def.schema),
       type: getTypeDescriptor(def.schema),
@@ -206,7 +206,7 @@ function compileBlock<
   }
 
   // Convert input definitions to BlockPort[]
-  const inputs: BlockPort[] = Object.entries(spec.inputs).map(([id, def]) => ({
+  const inputs: BlockPort[] = Object.entries(spec.inputs ?? {}).map(([id, def]) => ({
     id,
     name: def.meta?.name ?? portDisplayName(id),
     direction: 'input' as const,
@@ -216,7 +216,7 @@ function compileBlock<
   }));
 
   // Convert output definitions to BlockPort[] - resolve passthrough to input type
-  const outputs: BlockPort[] = Object.entries(spec.outputs).map(([id, def]) => {
+  const outputs: BlockPort[] = Object.entries(spec.outputs ?? {}).map(([id, def]) => {
     const baseTypeName = getBaseTypeName(def.schema);
     const typeDesc = getTypeDescriptor(def.schema);
 
@@ -279,13 +279,13 @@ function compileBlock<
 
       // Create flows for each input
       const flows = new Map<string, FlowImpl<unknown>>();
-      for (const id of Object.keys(spec.inputs)) {
+      for (const id of Object.keys(spec.inputs ?? {})) {
         flows.set(id, createFlow<unknown>(setTimeoutWrapper, cleanup));
       }
 
       // Create emitters for each output
       const outputEmitters = {} as Record<string, Emitter<unknown>>;
-      for (const [id, def] of Object.entries(spec.outputs)) {
+      for (const [id, def] of Object.entries(spec.outputs ?? {})) {
         outputEmitters[id] = createEmitter<unknown>(id, getRuntimeSchema(def.schema), ctx.emit);
       }
 
@@ -326,7 +326,7 @@ function compileBlock<
       return {
         pushInput(portId: string, data: Serializable): void {
           // Always validate input data
-          const inputDef = spec.inputs[portId];
+          const inputDef = spec.inputs?.[portId];
           if (inputDef) {
             const runtimeSchema = getRuntimeSchema(inputDef.schema);
             const result = runtimeSchema.safeParse(data);
@@ -407,8 +407,11 @@ export function defineBlock<
 }
 
 /**
- * Transitional two-argument form. Prefer {@link defineBlock} with a `run` method;
- * this adapter is kept only while the remaining plugins migrate, then removed.
+ * Two-argument block definition.
+ *
+ * @internal Not part of the public `@brika/sdk` surface (not re-exported from the
+ *   package index): plugin authors use {@link defineBlock}. Retained for the SDK's
+ *   own block tests, which exercise the compiler against the historical shape.
  */
 export function defineReactiveBlock<
   TInputs extends Record<string, InputDef<z.ZodType | GenericRef<string>>>,

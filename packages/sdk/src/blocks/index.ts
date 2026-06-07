@@ -28,7 +28,7 @@ export {
 } from './reactive';
 // Compiled reactive block
 export type { BlockInstance, BlockRuntimeContext, CompiledReactiveBlock } from './reactive-define';
-export { defineBlock, defineReactiveBlock, isCompiledReactiveBlock } from './reactive-define';
+export { defineBlock, isCompiledReactiveBlock } from './reactive-define';
 export type { ZodInfer, ZodObject, ZodRawShape, ZodType } from './schema';
 // Custom schema module (safe subset of Zod + BRIKA types)
 // ❌ Use this instead of importing 'zod' directly

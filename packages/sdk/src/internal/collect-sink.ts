@@ -1,7 +1,7 @@
 /**
  * Build-time capability collector sink (zod-free).
  *
- * At plugin runtime this is dormant: `defineReactiveBlock` / `defineSpark` /
+ * At plugin runtime this is dormant: `defineBlock` / `defineSpark` /
  * `defineBrick` call the `collect*` helpers, which are no-ops because no sink is
  * installed. `brika build` calls `installCollector()`, imports the plugin's
  * server modules so their `define*` calls run, then reads the captured records
