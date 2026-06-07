@@ -69,6 +69,13 @@ function brikaHome(): string {
   return join(findWorkspaceRoot() ?? process.cwd(), '.brika');
 }
 
+/** The data dir this CLI authenticates from (its cli-token lives here). Exposed
+ * for diagnostics: with multiple hubs, this is how you see which one a command
+ * targets. */
+export function cliDataDir(): string {
+  return brikaHome();
+}
+
 /** The local-trust CLI token the hub supervisor wrote, or null when absent. */
 function readCliToken(): string | null {
   try {
@@ -132,9 +139,11 @@ export async function installViaRegistry(pkg: string, version?: string): Promise
   if (!res.ok || !res.body) {
     const detail = await res.text();
     if (res.status === 401 || res.status === 403) {
+      // Names the exact origin + data dir so a multi-hub mismatch is obvious:
+      // the hub at this origin uses a different data dir than the token we sent.
       throw new CliError(
-        `the hub rejected the install (${res.status}): this CLI could not authenticate.\n` +
-          `  Run install through the full \`brika\` app, or set BRIKA_HOME to the hub's data dir.`
+        `the hub at ${hubOrigin()} rejected the install (${res.status}): this CLI authenticated with the token in ${cliDataDir()}, which that hub does not accept.\n` +
+          `  Point at the right hub with BRIKA_HOST / BRIKA_PORT and BRIKA_HOME, or use the full \`brika\` app.`
       );
     }
     throw new CliError(`install request failed: ${res.status} ${detail}`);

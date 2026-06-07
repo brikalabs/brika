@@ -68,6 +68,9 @@ export default defineCommand({
     if (!(await pingHub())) {
       noHubReachable('install');
     }
+    // Show which hub we are driving: with several hubs (a mortar dev hub, an
+    // installed one) this is how you confirm the target before it acts.
+    process.stdout.write(`  ${pc.dim(`→ ${hubOrigin()}`)}\n`);
     const { pkg, version } = await resolveTarget(target);
     await installViaRegistry(pkg, version);
     process.stdout.write(
