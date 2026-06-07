@@ -12,7 +12,7 @@ describe('waitForHub', () => {
   const bun = useBunMock();
 
   test('returns true when the hub answers immediately', async () => {
-    bun.fetch(async () => new Response('ok', { status: 200 }));
+    bun.fetch(async () => Response.json({ ok: true }));
     expect(await waitForHub(100, 5)).toBe(true);
   });
 
@@ -23,7 +23,7 @@ describe('waitForHub', () => {
       if (calls < 3) {
         throw new Error('connection refused');
       }
-      return new Response('ok', { status: 200 });
+      return Response.json({ ok: true });
     });
     expect(await waitForHub(500, 5)).toBe(true);
     expect(calls).toBeGreaterThanOrEqual(3);
@@ -50,7 +50,7 @@ describe('openHubUiWhenReady', () => {
   const bun = useBunMock();
 
   test('opens the UI once the hub is ready', async () => {
-    bun.fetch(async () => new Response('ok', { status: 200 }));
+    bun.fetch(async () => Response.json({ ok: true }));
     bun.spawn({ exitCode: 0 });
     expect(await openHubUiWhenReady()).toBe(true);
   });

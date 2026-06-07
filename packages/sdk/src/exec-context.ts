@@ -59,6 +59,23 @@ export function findWorkspaceRoot(opts: { cwd: string; maxDepth?: number }): str
   return undefined;
 }
 
+const INSTANCE_ID_RE = /^[0-9a-f]{8}$/;
+
+/**
+ * Read `<dataDir>/instance.id` WITHOUT generating one. The hub's own
+ * readOrGenerateInstanceId mints a fresh id (and warns about orphaned keychain
+ * entries) on a miss, which is wrong for read-only diagnostics. Returns null if
+ * the file is missing or malformed.
+ */
+export function peekInstanceId(dataDir: string): string | null {
+  try {
+    const raw = readFileSync(join(dataDir, 'instance.id'), 'utf8').trim();
+    return INSTANCE_ID_RE.test(raw) ? raw : null;
+  } catch {
+    return null;
+  }
+}
+
 /** Which rule decided the data dir. Lets `brika doctor` explain the resolution. */
 export type DataDirSource = 'env' | 'compiled-parent' | 'workspace' | 'cwd';
 

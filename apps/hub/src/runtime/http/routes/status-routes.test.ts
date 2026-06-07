@@ -36,6 +36,8 @@ describe('status routes', () => {
     expect(res.body.build.commit).toBeDefined();
     expect(res.body.build.branch).toBeDefined();
     expect(res.body.build.date).toBeDefined();
+    // Opaque instance id for CLI hub-identity checks (never a path).
+    expect(res.body.instanceId).toMatch(/^[0-9a-f]{8}$/);
   });
 
   test('system route returns system info', async () => {

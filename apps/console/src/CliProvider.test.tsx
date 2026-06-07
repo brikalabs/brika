@@ -364,7 +364,7 @@ describe('<CliProvider>', () => {
     // No pid file → checkPid falls through to pingHub. Override fetch
     // to make the probe succeed, which yields { state: 'running', pid: null }.
     await clearPid();
-    bun.fetch(async (): Promise<Response> => new Response('ok', { status: 200 }));
+    bun.fetch(async (): Promise<Response> => Response.json({ ok: true }));
     const latest: { current: CliState | null } = { current: null };
     const { unmount } = mount(latest);
     await flush(30);
@@ -426,7 +426,7 @@ describe('<CliProvider>', () => {
 
   test('restartHub() with externally-started hub (pid=null) refuses', async () => {
     await clearPid();
-    bun.fetch(async (): Promise<Response> => new Response('ok', { status: 200 }));
+    bun.fetch(async (): Promise<Response> => Response.json({ ok: true }));
     const latest: { current: CliState | null } = { current: null };
     const { unmount } = mount(latest);
     await waitFor(() => latest.current?.hub.state === 'running');

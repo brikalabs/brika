@@ -5,6 +5,7 @@ import { HUB_VERSION, hub } from '@/hub';
 import { BlockRegistry } from '@/runtime/blocks';
 import { BrickTypeRegistry } from '@/runtime/bricks';
 import { ConfigLoader } from '@/runtime/config';
+import { brikaContext } from '@/runtime/context/brika-context';
 import { PluginManager } from '@/runtime/plugins/plugin-manager';
 import { isHubReady } from '@/runtime/readiness';
 import { SparkRegistry } from '@/runtime/sparks/spark-registry';
@@ -23,6 +24,10 @@ export const healthRoute = route.get({
     ready: isHubReady(),
     version: HUB_VERSION,
     build: buildInfo,
+    // Opaque per-data-dir id (NOT a path): lets a CLI confirm it is talking to
+    // the hub for its own data dir before a 401. /api/health is public and
+    // tunnel-reachable, so NEVER add the data-dir path here.
+    instanceId: brikaContext.instanceId,
   }),
 });
 

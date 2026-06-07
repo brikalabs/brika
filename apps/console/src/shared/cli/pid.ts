@@ -46,16 +46,20 @@ export async function readPid(): Promise<number | null> {
 }
 
 /**
- * Probe `/api/health` (public, no auth) with a short timeout. Any HTTP
- * response — even 4xx — means *something* is listening; what we care
- * about here is liveness, not whether we're authenticated. URL is
- * built inline rather than going through `hubFetch` to avoid an
- * import cycle.
+ * Probe `/api/health` (public, no auth) with a short timeout and confirm it is a
+ * real Brika hub. URL is built inline rather than going through `hubFetch` to
+ * avoid an import cycle.
  */
 export async function pingHub(): Promise<boolean> {
   try {
     const res = await fetch(healthUrl(), { signal: AbortSignal.timeout(500) });
-    return res.status >= 0;
+    // Was `res.status >= 0` (a tautology: true for ANY resolved fetch, including
+    // a 401 or an unrelated server on this port). Require the Brika health body.
+    if (!res.ok) {
+      return false;
+    }
+    const body: unknown = await res.json().catch(() => null);
+    return typeof body === 'object' && body !== null && 'ok' in body && body.ok === true;
   } catch {
     return false;
   }

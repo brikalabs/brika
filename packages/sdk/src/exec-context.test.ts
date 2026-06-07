@@ -1,8 +1,9 @@
 import { afterEach, describe, expect, test } from 'bun:test';
+import { existsSync } from 'node:fs';
 import { mkdir, mkdtemp, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { findWorkspaceRoot, isCompiledFrom, resolveDataDir } from './exec-context';
+import { findWorkspaceRoot, isCompiledFrom, peekInstanceId, resolveDataDir } from './exec-context';
 
 describe('isCompiledFrom', () => {
   test('true only for the bunfs virtual path', () => {
@@ -77,6 +78,26 @@ describe('resolveDataDir matrix', () => {
       cwd: outside,
     });
     expect(r).toEqual({ path: join(outside, '.brika'), source: 'cwd' });
+  });
+});
+
+describe('peekInstanceId', () => {
+  const tmp: string[] = [];
+  afterEach(async () => {
+    await Promise.all(tmp.splice(0).map((d) => rm(d, { recursive: true, force: true })));
+  });
+
+  test('reads a valid id, never generates, null on miss/corrupt', async () => {
+    const dir = await realpath(await mkdtemp(join(tmpdir(), 'brika-iid-')));
+    tmp.push(dir);
+    expect(peekInstanceId(dir)).toBeNull(); // missing -> null, and NOT created
+    expect(existsSync(join(dir, 'instance.id'))).toBe(false);
+
+    await writeFile(join(dir, 'instance.id'), 'deadbeef');
+    expect(peekInstanceId(dir)).toBe('deadbeef');
+
+    await writeFile(join(dir, 'instance.id'), 'NOT-HEX');
+    expect(peekInstanceId(dir)).toBeNull();
   });
 });
 

@@ -56,11 +56,17 @@ function readCliToken(): string | null {
   }
 }
 
-/** True when a hub answers `/api/health` (public, no auth) on the loopback origin. */
+/** True when a real Brika hub answers `/api/health` (public) on the loopback origin. */
 export async function pingHub(): Promise<boolean> {
   try {
     const res = await fetch(`${hubOrigin()}/api/health`, { signal: AbortSignal.timeout(500) });
-    return res.status >= 0;
+    // Not `res.status >= 0` (a tautology). Require the Brika health body so a
+    // 401 or an unrelated server on this port is not mistaken for our hub.
+    if (!res.ok) {
+      return false;
+    }
+    const body: unknown = await res.json().catch(() => null);
+    return typeof body === 'object' && body !== null && 'ok' in body && body.ok === true;
   } catch {
     return false;
   }

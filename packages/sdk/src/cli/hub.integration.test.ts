@@ -46,7 +46,7 @@ beforeAll(async () => {
     async fetch(req) {
       const url = new URL(req.url);
       if (url.pathname === '/api/health') {
-        return new Response('ok');
+        return Response.json({ ok: true });
       }
       if (url.pathname === '/api/registry/install' && req.method === 'POST') {
         const body: { package?: string; version?: string } = await req.json();
