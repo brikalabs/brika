@@ -4,10 +4,10 @@
 
 import 'reflect-metadata';
 import { afterEach, describe, expect, test } from 'bun:test';
-import { join } from 'node:path';
 import { get, provide, useTestBed } from '@brika/di/testing';
 import { HubConfig, PluginManagerConfig } from '@/runtime/config/config';
 import { ConfigLoader } from '@/runtime/config/config-loader';
+import { brikaContext } from '@/runtime/context/brika-context';
 
 // autoStub: false because these tests verify real config behavior
 useTestBed({
@@ -59,7 +59,9 @@ describe('HubConfig', () => {
 
     expect(config.host).toBe('127.0.0.1');
     expect(config.port).toBe(3001);
-    expect(config.homeDir).toBe(join(process.cwd(), '.brika'));
+    // homeDir defaults to the resolved brika data dir (workspace-root/.brika in
+    // dev, so the hub and the CLIs share one dir; see brika-context).
+    expect(config.homeDir).toBe(brikaContext.brikaDir);
     expect(config.staticDir).toBe('');
   });
 

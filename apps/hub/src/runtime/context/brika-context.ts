@@ -1,11 +1,11 @@
 /**
- * BrikaContext — single source of truth for "facts about this Brika
+ * BrikaContext - single source of truth for "facts about this Brika
  * instance" available before any plugin or service is wired.
  *
  * Resolved once at module load:
  *
  *   - filesystem layout (brikaDir, rootDir, installDir, dbDir, …)
- *   - identity (instanceId, serviceName) — persisted to instance.id
+ *   - identity (instanceId, serviceName) - persisted to instance.id
  *   - build info (version, gitSha, isCompiled)
  *   - host info (platform)
  *
@@ -14,7 +14,7 @@
  * the value is stable across the process lifetime (no surprise drift
  * if `process.cwd()` changes mid-run).
  *
- * `instance.id` is generated on first access — wiping `${brikaDir}` and
+ * `instance.id` is generated on first access - wiping `${brikaDir}` and
  * restarting yields a fresh UID and therefore a fresh Keychain bucket.
  */
 
@@ -34,9 +34,55 @@ const INSTANCE_ID_RE = /^[0-9a-f]{8}$/;
 /** Reverse-DNS bundle ID base for Keychain entries. */
 const KEYCHAIN_SERVICE_BASE = 'dev.brika.hub';
 
+/**
+ * Walk up from cwd for the workspace-root package.json (the one with a
+ * `workspaces` field). Lets the dev hub resolve the SAME `.brika` regardless of
+ * which package dir it was launched from (mortar runs it with `cwd: apps/hub`).
+ * Safety-capped at 12 levels. Keep in sync with
+ * apps/console/src/shared/cli/paths.ts and packages/sdk/src/cli/hub.ts.
+ */
+function findWorkspaceRoot(): string | undefined {
+  let dir = process.cwd();
+  for (let i = 0; i < 12; i += 1) {
+    const pkg = join(dir, 'package.json');
+    if (existsSync(pkg)) {
+      try {
+        const parsed: unknown = JSON.parse(readFileSync(pkg, 'utf8'));
+        if (
+          parsed !== null &&
+          typeof parsed === 'object' &&
+          'workspaces' in parsed &&
+          parsed.workspaces !== undefined
+        ) {
+          return dir;
+        }
+      } catch {
+        // Malformed package.json: keep climbing.
+      }
+    }
+    const parent = dirname(dir);
+    if (parent === dir) {
+      return undefined;
+    }
+    dir = parent;
+  }
+  return undefined;
+}
+
 function resolveBrikaDir(): string {
-  const autoDetected = isCompiled ? dirname(installDir) : join(process.cwd(), '.brika');
-  return process.env.BRIKA_HOME ?? autoDetected;
+  if (process.env.BRIKA_HOME) {
+    return process.env.BRIKA_HOME;
+  }
+  if (isCompiled) {
+    return dirname(installDir);
+  }
+  // Dev: the workspace root's `.brika`, so the hub and the CLIs (apps/console
+  // paths.ts, the @brika/sdk lean bin) share ONE data dir and `brika install` /
+  // `brika dev` can drive a `mortar up` hub. Mortar launches the hub with
+  // `cwd: apps/hub`, so a raw `cwd/.brika` would diverge from where the CLIs
+  // (which walk to the workspace root) look for the cli-token. Falls back to
+  // `<cwd>/.brika` outside any workspace.
+  return join(findWorkspaceRoot() ?? process.cwd(), '.brika');
 }
 
 function readOrGenerateInstanceId(brikaDir: string): string {
@@ -47,21 +93,21 @@ function readOrGenerateInstanceId(brikaDir: string): string {
     if (INSTANCE_ID_RE.test(raw)) {
       return raw;
     }
-    // Corrupt contents — fall through to regenerate.
+    // Corrupt contents - fall through to regenerate.
     staleId = raw || null;
   }
   const fresh = randomBytes(INSTANCE_ID_BYTES).toString('hex');
   mkdirSync(brikaDir, { recursive: true });
   writeFileSync(path, fresh, { encoding: 'utf8', mode: 0o600 });
-  // The structured Logger isn't wired yet at module load — and this is the
-  // module that gives the logger its serviceName — so warn via console. The
+  // The structured Logger isn't wired yet at module load - and this is the
+  // module that gives the logger its serviceName - so warn via console. The
   // user is otherwise blind to the fact that they just orphaned a whole
   // keychain namespace.
   const stalePart = staleId ? ` (previous file held "${staleId}")` : ' (no previous instance.id)';
   console.warn(
     `[brika] Generated a fresh instance.id "${fresh}" in ${brikaDir}${stalePart}. ` +
       `Any keychain entries under "${KEYCHAIN_SERVICE_BASE}.<previous>" are now orphaned ` +
-      `and won't be read by this hub — clean them up via Keychain Access or ` +
+      `and won't be read by this hub - clean them up via Keychain Access or ` +
       `\`security delete-generic-password -s ${KEYCHAIN_SERVICE_BASE}.<previous>\`.`
   );
   return fresh;
@@ -74,13 +120,13 @@ export interface BrikaContext {
   // ─── Filesystem ──────────────────────────────────────────────────
   /** Per-install data directory. `${BRIKA_HOME}` or auto-detected. */
   readonly brikaDir: string;
-  /** Parent of `brikaDir` — workspace root (dev) or binary parent (compiled). */
+  /** Parent of `brikaDir` - workspace root (dev) or binary parent (compiled). */
   readonly rootDir: string;
   /** Directory containing the running binary. */
   readonly installDir: string;
-  /** `${brikaDir}/plugins/node_modules` — registry-installed plugins. */
+  /** `${brikaDir}/plugins/node_modules` - registry-installed plugins. */
   readonly pluginsDir: string;
-  /** `${brikaDir}/db` — SQLite databases (cache, logs, auth, …). */
+  /** `${brikaDir}/db` - SQLite databases (cache, logs, auth, …). */
   readonly dbDir: string;
 
   // ─── Identity ────────────────────────────────────────────────────
