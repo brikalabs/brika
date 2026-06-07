@@ -1,4 +1,4 @@
-import { mkdir, readlink, symlink, unlink } from 'node:fs/promises';
+import { mkdir, readlink, rename, symlink, unlink } from 'node:fs/promises';
 import { dirname, join, relative, resolve } from 'node:path';
 import { inject, singleton } from '@brika/di';
 import { errors } from '@brika/errors';
@@ -467,21 +467,51 @@ export class PluginRegistry {
     }
   }
 
-  async #addDependency(name: string, version: string): Promise<void> {
-    const pkgPath = join(this.pluginsDir, 'package.json');
-    const pkg = await Bun.file(pkgPath).json();
-    pkg.dependencies ??= {};
-    pkg.dependencies[name] = version;
-    await Bun.write(pkgPath, JSON.stringify(pkg, null, 2));
+  /**
+   * Serialize every read-modify-write of pluginsDir/package.json. Two concurrent
+   * installs would otherwise each read the file, add their own dependency, and
+   * write back, losing one entry (a lost-update race). The chain runs the next
+   * mutation regardless of whether the previous one resolved or rejected.
+   */
+  #pkgMutation: Promise<unknown> = Promise.resolve();
+
+  #withPkgLock<T>(fn: () => Promise<T>): Promise<T> {
+    const run = this.#pkgMutation.then(fn, fn);
+    this.#pkgMutation = run.then(
+      () => undefined,
+      () => undefined
+    );
+    return run;
   }
 
-  async #removeDependency(name: string): Promise<void> {
+  /** Write package.json atomically (temp file + rename) so a failed write never
+   * leaves a truncated/partial manifest behind. */
+  async #writePackageJson(pkg: unknown): Promise<void> {
     const pkgPath = join(this.pluginsDir, 'package.json');
-    const pkg = await Bun.file(pkgPath).json();
-    if (pkg.dependencies) {
-      delete pkg.dependencies[name];
-      await Bun.write(pkgPath, JSON.stringify(pkg, null, 2));
-    }
+    const tmpPath = `${pkgPath}.tmp`;
+    await Bun.write(tmpPath, JSON.stringify(pkg, null, 2));
+    await rename(tmpPath, pkgPath);
+  }
+
+  #addDependency(name: string, version: string): Promise<void> {
+    return this.#withPkgLock(async () => {
+      const pkgPath = join(this.pluginsDir, 'package.json');
+      const pkg = await Bun.file(pkgPath).json();
+      pkg.dependencies ??= {};
+      pkg.dependencies[name] = version;
+      await this.#writePackageJson(pkg);
+    });
+  }
+
+  #removeDependency(name: string): Promise<void> {
+    return this.#withPkgLock(async () => {
+      const pkgPath = join(this.pluginsDir, 'package.json');
+      const pkg = await Bun.file(pkgPath).json();
+      if (pkg.dependencies) {
+        delete pkg.dependencies[name];
+        await this.#writePackageJson(pkg);
+      }
+    });
   }
 
   async #unloadPlugin(name: string): Promise<void> {

@@ -16,8 +16,12 @@ function stripSourcePrefix(id: string): string {
 
 function streamProgress(
   generator: AsyncGenerator<OperationProgress>,
-  send: (data: unknown, event?: string) => void,
-  close: () => void
+  // Typed as OperationProgress (not unknown) so the compiler enforces the full
+  // shape on the error fallback below, where the generator threw before yielding.
+  send: (data: OperationProgress, event?: string) => void,
+  close: () => void,
+  operation: OperationProgress['operation'],
+  packageName: string
 ): void {
   (async () => {
     try {
@@ -29,8 +33,13 @@ function streamProgress(
         }
       }
     } catch (error) {
+      // The generator threw before yielding any progress, so carry the caller's
+      // operation/package: the error event must still be a complete OperationProgress.
       const fields = errorFields(error);
-      send({ phase: 'error', message: fields.error, ...fields }, 'progress');
+      send(
+        { phase: 'error', operation, package: packageName, message: fields.error, ...fields },
+        'progress'
+      );
       close();
     }
   })();
@@ -55,7 +64,9 @@ export const registryRoutes = group({
           pinned: body.version !== undefined,
         });
         const generator = registry.install(body.package, body.version);
-        return createSSEStream((send, close) => streamProgress(generator, send, close));
+        return createSSEStream((send, close) =>
+          streamProgress(generator, send, close, 'install', body.package)
+        );
       },
     }),
 
@@ -71,7 +82,9 @@ export const registryRoutes = group({
           allPackages: body.package === undefined,
         });
         const generator = registry.update(body.package);
-        return createSSEStream((send, close) => streamProgress(generator, send, close));
+        return createSSEStream((send, close) =>
+          streamProgress(generator, send, close, 'update', body.package ?? 'all')
+        );
       },
     }),
 

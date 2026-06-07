@@ -1,7 +1,8 @@
+import type { BrikaErrorWire } from '@brika/errors';
 import { fetcher } from '@/lib/query';
 import { fetchProgressStream } from '@/lib/sse-stream';
 
-// Types matching the backend
+// Types matching the backend (apps/hub/src/runtime/registry/types.ts).
 export interface OperationProgress {
   phase: 'resolving' | 'downloading' | 'linking' | 'complete' | 'error';
   operation: 'install' | 'update' | 'uninstall';
@@ -11,6 +12,10 @@ export interface OperationProgress {
   progress?: number;
   message: string;
   error?: string;
+  /** Machine-readable code, present only when the failure was a typed BrikaError. */
+  errorCode?: string;
+  /** Full structured error envelope, for rich error rendering (hint, cause, data). */
+  errorDetail?: BrikaErrorWire;
 }
 
 export interface UpdateInfo {

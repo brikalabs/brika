@@ -839,6 +839,37 @@ describe('PluginRegistry: local plugins', () => {
     expect(pkg.dependencies['@test/ws-plugin']).toBe('workspace:*');
   });
 
+  test('concurrent local installs both persist their dependency (no lost update)', async () => {
+    const dirA = join(tmpHome, 'plugin-a');
+    const dirB = join(tmpHome, 'plugin-b');
+    await mkdir(dirA, { recursive: true });
+    await mkdir(dirB, { recursive: true });
+    await writeFile(join(dirA, 'package.json'), JSON.stringify({ name: '@test/a' }));
+    await writeFile(join(dirB, 'package.json'), JSON.stringify({ name: '@test/b' }));
+
+    const dirByName: Record<string, string> = { '@test/a': dirA, '@test/b': dirB };
+    mockConfigLoader.resolvePluginEntry.mockImplementation((entry: { name: string }) =>
+      Promise.resolve({ rootDirectory: dirByName[entry.name] })
+    );
+
+    const drain = async (gen: AsyncGenerator<OperationProgress>): Promise<void> => {
+      for await (const _ of gen) {
+        // consume progress
+      }
+    };
+
+    // Run both installs concurrently: the read-modify-write of package.json must
+    // be serialized, or one dependency entry is lost.
+    await Promise.all([
+      drain(registry.install('@test/a', 'workspace:*')),
+      drain(registry.install('@test/b', 'workspace:*')),
+    ]);
+
+    const pkg = await Bun.file(join(pluginsDir, 'package.json')).json();
+    expect(pkg.dependencies['@test/a']).toBe('workspace:*');
+    expect(pkg.dependencies['@test/b']).toBe('workspace:*');
+  });
+
   test('normalizes bare absolute path to file: specifier', async () => {
     const pluginSrc = join(tmpHome, 'abs-plugin');
     await mkdir(pluginSrc, { recursive: true });
