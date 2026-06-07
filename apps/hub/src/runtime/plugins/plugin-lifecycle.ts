@@ -51,7 +51,7 @@ const RAW_SOCKET_GRANT_ID = 'dev.brika.net.socket';
 
 /**
  * True when the plugin both requests `net.socket` in its manifest and the
- * operator has consented to the `rawSocket` family — i.e. the grant survives
+ * operator has consented to the `rawSocket` family, i.e. the grant survives
  * vector construction. Gates the `BRIKA_PLUGIN_RAW_SOCKETS` env the lockdown
  * reads at process boot (the vector itself arrives over IPC only after boot,
  * so the decision must be compiled to an env var here).
@@ -89,6 +89,11 @@ function allocateFsDirs(
   mkdirSync(dirs.cache, { recursive: true });
   mkdirSync(dirs.tmp, { recursive: true });
   return dirs;
+}
+
+/** True when a plugin's manifest requests one or more grants (capabilities). */
+function pluginRequestsGrants(metadata: { grants?: Record<string, unknown> }): boolean {
+  return metadata.grants !== undefined && Object.keys(metadata.grants).length > 0;
 }
 
 @singleton()
@@ -305,6 +310,18 @@ export class PluginLifecycle {
 
     const existingState = this.#state.get(pluginName);
     const uid = existingState?.uid ?? generateUid(metadata.name);
+
+    // Consent-before-code: a plugin that requests grants must not execute until
+    // the operator has reviewed those capabilities and enabled it. A first-time
+    // load of such a plugin (no state row yet) registers it dormant instead of
+    // spawning; enable() then flips `enabled` and re-loads to actually start it.
+    // A plugin that requests nothing, or one already enabled, proceeds to spawn.
+    const enabled = existingState?.enabled ?? !pluginRequestsGrants(metadata);
+    if (!enabled) {
+      await this.#registerDormant(pluginName, rootDirectory, entryPoint, uid, metadata);
+      return;
+    }
+
     const locales = await this.#i18n.registerPluginTranslations(metadata.name, rootDirectory);
 
     await this.#compilePluginModules(metadata, rootDirectory);
@@ -315,7 +332,7 @@ export class PluginLifecycle {
       uid,
     });
 
-    // Build the server-side entry — action IDs are injected at compile time
+    // Build the server-side entry: action IDs are injected at compile time
     const outdir = join(rootDirectory, 'node_modules', '.cache', 'brika', 'server');
     const serverExternals = computeServerExternals(metadata);
     const buildResult = await compileServerEntry({
@@ -413,7 +430,7 @@ export class PluginLifecycle {
           // Validate preferences before letting the plugin do real work.
           // On failure we transition to `awaiting-config` (not `crashed`)
           // so the UI can render a "Configure" CTA instead of a generic
-          // error. The plugin process is gracefully unloaded — when the
+          // error. The plugin process is gracefully unloaded; when the
           // operator submits valid preferences the lifecycle will boot
           // it again (see #autoStartOnPreferencesSave).
           const prefs = await this.#pluginConfig.getConfig(p.name);
@@ -887,6 +904,34 @@ export class PluginLifecycle {
     }
 
     return true;
+  }
+
+  /**
+   * Register a plugin in state WITHOUT spawning it (consent-before-code). The
+   * installed-but-not-yet-enabled plugin is recorded (enabled:false, health
+   * 'stopped') so it appears in the UI for grant review, but none of its code
+   * runs until the operator enables it. Mirrors {@link #registerIncompatible}.
+   */
+  async #registerDormant(
+    pluginName: string,
+    rootDirectory: string,
+    entryPoint: string,
+    uid: string,
+    metadata: { name: string }
+  ): Promise<void> {
+    await this.#state.registerPlugin({
+      name: pluginName,
+      rootDirectory,
+      entryPoint,
+      uid,
+      enabled: false,
+    });
+    await this.#i18n.registerPluginTranslations(metadata.name, rootDirectory);
+    this.#state.setHealth(pluginName, 'stopped');
+    this.#logs.info('Plugin installed but not started: awaiting operator consent', {
+      pluginName,
+      uid,
+    });
   }
 
   async #registerIncompatible(
