@@ -1,6 +1,5 @@
 import { useLocale } from '@brika/sdk/ui-kit/hooks';
 import { Zap } from 'lucide-react';
-import { summaryData } from '../brick-data';
 import type { ConsumptionPoint } from '../types';
 import {
   CompactStat,
@@ -14,6 +13,7 @@ import {
   trendPercent,
   useSizeTier,
 } from '../ui/states';
+import { summaryBrick } from './summary.brick';
 
 function currentAndPreviousMonth(points: ConsumptionPoint[]): {
   current: number;
@@ -47,7 +47,7 @@ function Sparkline({ points }: Readonly<{ points: ConsumptionPoint[] }>) {
 }
 
 export default function ElectricitySummary() {
-  const state = summaryData.use();
+  const state = summaryBrick.data.use();
   const { t, locale } = useLocale();
   const tier = useSizeTier();
 

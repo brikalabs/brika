@@ -9,8 +9,8 @@
 import { useBrickConfig } from '@brika/sdk/brick-views';
 import { useLocale } from '@brika/sdk/ui-kit/hooks';
 import { MapPin, Thermometer } from 'lucide-react';
-import { compactData } from '../brick-data';
-import { CityError, formatTempWithUnit, LoadingSpinner, resolveCity, resolveUnit } from './shared';
+import { CityError, formatTempWithUnit, LoadingSpinner, resolveCity, resolveUnit } from './_shared';
+import { compactBrick } from './compact.brick';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -32,8 +32,8 @@ export interface CompactWeatherData {
 // ─── Component ──────────────────────────────────────────────────────────────
 
 export default function CompactWeather() {
-  const data = compactData.use();
-  const config = useBrickConfig();
+  const data = compactBrick.data.use();
+  const config = useBrickConfig(compactBrick.config);
   const { t } = useLocale();
 
   if (!data) {

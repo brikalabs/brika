@@ -1,6 +1,5 @@
 import { useLocale } from '@brika/sdk/ui-kit/hooks';
 import { Banknote } from 'lucide-react';
-import { costData } from '../brick-data';
 import type { ConsumptionPoint, Prices } from '../types';
 import {
   CompactStat,
@@ -13,6 +12,7 @@ import {
   trendPercent,
   useSizeTier,
 } from '../ui/states';
+import { costBrick } from './cost.brick';
 
 function lastTwoCosts(
   points: ConsumptionPoint[],
@@ -27,7 +27,7 @@ function lastTwoCosts(
 }
 
 export default function ElectricityCost() {
-  const state = costData.use();
+  const state = costBrick.data.use();
   const { t, locale } = useLocale();
   const tier = useSizeTier();
 

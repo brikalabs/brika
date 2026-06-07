@@ -9,7 +9,6 @@
 import { useBrickConfig, useBrickSize } from '@brika/sdk/brick-views';
 import { useLocale } from '@brika/sdk/ui-kit/hooks';
 import { MapPin } from 'lucide-react';
-import { forecastData } from '../brick-data';
 import { dayKey } from '../utils';
 import {
   CityError,
@@ -18,7 +17,8 @@ import {
   resolveCity,
   resolveUnit,
   WeatherIcon,
-} from './shared';
+} from './_shared';
+import { forecastBrick } from './forecast.brick';
 
 // ─── Types (inlined — can't import from plugin runtime code) ────────────────
 
@@ -89,8 +89,8 @@ function DayCell({ day, unit }: Readonly<{ day: ForecastDay; unit: string }>) {
 // ─── Component ──────────────────────────────────────────────────────────────
 
 export default function WeatherForecast() {
-  const data = forecastData.use();
-  const config = useBrickConfig();
+  const data = forecastBrick.data.use();
+  const config = useBrickConfig(forecastBrick.config);
   const { width, height } = useBrickSize();
   const { t } = useLocale();
 

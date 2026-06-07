@@ -6,7 +6,10 @@ import {
   onPreferencesChange,
   onStop,
 } from '@brika/sdk/lifecycle';
-import { chartData, costData, liveData, summaryData } from './brick-data';
+import { chartBrick } from './bricks/chart.brick';
+import { costBrick } from './bricks/cost.brick';
+import { liveBrick } from './bricks/live.brick';
+import { summaryBrick } from './bricks/summary.brick';
 import { acquirePeriod, setCredentials, setPrices, stopAll, useElectricityStore } from './store';
 import type { ElectricityState, Period } from './types';
 
@@ -60,10 +63,10 @@ function pushState(): void {
   if (!isInformative(state)) {
     return;
   }
-  chartData.set(state);
-  summaryData.set(state);
-  liveData.set(state);
-  costData.set(state);
+  chartBrick.data.set(state);
+  summaryBrick.data.set(state);
+  liveBrick.data.set(state);
+  costBrick.data.set(state);
 }
 
 // ─── Per-instance subscriptions for the chart brick ─────────────────────────

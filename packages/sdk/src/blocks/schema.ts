@@ -157,6 +157,15 @@ export const z = {
    */
   any: zod.any,
 
+  /**
+   * Custom schema: a typed pass-through that accepts any value at runtime but is
+   * typed as `T`. Use for a `defineBrick` `data` payload whose shape is complex
+   * and validated at its source, where a full schema would add risk without
+   * value (e.g. `data: z.custom<WeatherData>()`). Prefer a real schema
+   * (`z.object({...})`) when the shape is small enough to describe.
+   */
+  custom: zod.custom,
+
   // ═══════════════════════════════════════════════════════════════════════════
   // Advanced
   // ═══════════════════════════════════════════════════════════════════════════

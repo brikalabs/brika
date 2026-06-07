@@ -2,7 +2,6 @@ import { useLocale } from '@brika/sdk/ui-kit/hooks';
 import { Activity, Zap } from 'lucide-react';
 import { useMemo } from 'react';
 import { Area, AreaChart, ResponsiveContainer, Tooltip, type TooltipContentProps } from 'recharts';
-import { liveData } from '../brick-data';
 import type { ConsumptionPoint } from '../types';
 import {
   formatKwh,
@@ -12,6 +11,7 @@ import {
   PeriodPlaceholder,
   useSizeTier,
 } from '../ui/states';
+import { liveBrick } from './live.brick';
 
 const ACCENT = 'var(--color-data-3)';
 
@@ -65,7 +65,7 @@ function NoCredentials() {
 }
 
 export default function LiveConsumption() {
-  const state = liveData.use();
+  const state = liveBrick.data.use();
   const { t, locale } = useLocale();
 
   const periodState = state?.periods?.['24h'];
