@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { generateManifest } from './generate-manifest';
+import { generateEntry, generateManifest } from './generate-manifest';
 
 // Temp plugins live INSIDE the compiler package so the block/spark modules
 // we import can resolve `@brika/sdk` through the workspace node_modules.
@@ -155,6 +155,25 @@ export default function GaugeBrick() {
         (d) => d.level === 'error' && d.message.includes('nometa') && d.message.includes('meta')
       )
     ).toBe(true);
+  });
+
+  test('generateEntry imports server modules + lifecycle, skipping tests and helpers', async () => {
+    await writeFile(join(root, 'src', 'blocks', 'alpha.ts'), blockSrc('alpha', true));
+    await writeFile(join(root, 'src', 'blocks', '_helper.ts'), 'export const x = 1;\n');
+    await writeFile(join(root, 'src', 'blocks', 'alpha.test.ts'), 'export const t = 1;\n');
+    await writeFile(join(root, 'src', 'sparks.ts'), SPARK_SRC);
+    await writeFile(join(root, 'src', 'actions.ts'), 'export const noop = () => undefined;\n');
+    await writeFile(join(root, 'src', 'plugin.ts'), 'export const lifecycle = true;\n');
+
+    const entry = await generateEntry(root);
+
+    expect(entry).toContain("import '../blocks/alpha';");
+    expect(entry).toContain("import '../sparks';");
+    expect(entry).toContain("import '../actions';");
+    expect(entry).toContain("import '../plugin';"); // lifecycle last
+    expect(entry).not.toContain('_helper');
+    expect(entry).not.toContain('alpha.test');
+    expect(entry.trim().endsWith("import '../plugin';")).toBe(true);
   });
 
   test('pages get id from filename + icon from meta (ui-kit stubbed)', async () => {

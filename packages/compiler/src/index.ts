@@ -12,6 +12,7 @@ export {
   type GeneratedManifest,
   type GeneratedPage,
   type GeneratedSpark,
+  generateEntry,
   generateManifest,
 } from './generate-manifest';
 export { hashPluginSources } from './hash-sources';

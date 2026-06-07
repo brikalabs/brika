@@ -11,12 +11,20 @@
  * wiped, so a plugin that has not adopted `meta` yet is never damaged.
  */
 
-import { readFile, writeFile } from 'node:fs/promises';
-import { join, resolve } from 'node:path';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { dirname, join, resolve } from 'node:path';
 import { defineCommand } from '@brika/cli';
-import { type GeneratedManifest, generateManifest } from '@brika/compiler';
+import { type GeneratedManifest, generateEntry, generateManifest } from '@brika/compiler';
 import { PluginPackageSchema } from '@brika/schema';
 import pc from 'picocolors';
+
+async function readFileOrNull(path: string): Promise<string | null> {
+  try {
+    return await readFile(path, 'utf8');
+  } catch {
+    return null;
+  }
+}
 
 /** Recursively sort object keys so two manifests compare regardless of key order. */
 function canonical(value: unknown): unknown {
@@ -138,6 +146,59 @@ function printDiagnostics(result: GeneratedManifest): void {
   }
 }
 
+type Plans = Record<string, KindPlan>;
+
+/** Warn (without failing) about kinds present in package.json but absent from source. */
+function warnUnmanaged(plans: Plans, pkg: Record<string, unknown>): void {
+  for (const [kind, plan] of Object.entries(plans)) {
+    if (!plan.managed && arrayLength(pkg[kind]) > 0) {
+      process.stderr.write(
+        `  ${pc.yellow('warn')} no ${kind} found in source; leaving package.json ${kind} untouched\n`
+      );
+    }
+  }
+}
+
+/** The package.json with managed arrays swapped in, for schema validation. */
+function buildCandidate(pkg: Record<string, unknown>, plans: Plans): Record<string, unknown> {
+  const candidate: Record<string, unknown> = { ...pkg };
+  for (const [kind, plan] of Object.entries(plans)) {
+    if (plan.managed) {
+      candidate[kind] = plan.generated;
+    }
+  }
+  return candidate;
+}
+
+/** Print schema issues and return true when the candidate is invalid. */
+function reportInvalid(candidate: Record<string, unknown>): boolean {
+  const parsed = PluginPackageSchema.safeParse(candidate);
+  if (parsed.success) {
+    return false;
+  }
+  process.stderr.write(pc.red('\nGenerated manifest is invalid:\n'));
+  for (const issue of parsed.error.issues) {
+    process.stderr.write(`  ${pc.red('error')} ${issue.path.join('.')}: ${issue.message}\n`);
+  }
+  return true;
+}
+
+/** Surgically apply drifted arrays to raw text, or report the first missing key. */
+function applyArrayDrift(
+  raw: string,
+  driftedEntries: Array<[string, KindPlan]>
+): { text: string } | { missing: string } {
+  let next = raw;
+  for (const [kind, plan] of driftedEntries) {
+    const replaced = replaceTopLevelArray(next, kind, plan.generated);
+    if (replaced === null) {
+      return { missing: kind };
+    }
+    next = replaced;
+  }
+  return { text: next };
+}
+
 export default defineCommand({
   name: 'build',
   description:
@@ -177,65 +238,59 @@ export default defineCommand({
       sparks: planKind(preserveOrder(result.sparks, pkg.sparks), pkg.sparks),
     };
 
-    for (const [kind, plan] of Object.entries(plans)) {
-      if (!plan.managed && arrayLength(pkg[kind]) > 0) {
-        process.stderr.write(
-          `  ${pc.yellow('warn')} no ${kind} found in source; leaving package.json ${kind} untouched\n`
-        );
-      }
-    }
+    warnUnmanaged(plans, pkg);
 
-    // Validate the candidate against the same schema the hub enforces, so a bad
-    // meta (invalid category/color) fails locally instead of at install time.
-    const candidate: Record<string, unknown> = { ...pkg };
-    for (const [kind, plan] of Object.entries(plans)) {
-      if (plan.managed) {
-        candidate[kind] = plan.generated;
-      }
-    }
-    const parsed = PluginPackageSchema.safeParse(candidate);
-    if (!parsed.success) {
-      process.stderr.write(pc.red('\nGenerated manifest is invalid:\n'));
-      for (const issue of parsed.error.issues) {
-        process.stderr.write(`  ${pc.red('error')} ${issue.path.join('.')}: ${issue.message}\n`);
-      }
+    // Validate against the same schema the hub enforces, so a bad meta (invalid
+    // category/color) fails locally instead of at install time.
+    if (reportInvalid(buildCandidate(pkg, plans))) {
       process.exitCode = 1;
       return;
     }
 
     const driftedEntries = Object.entries(plans).filter(([, p]) => p.drifted);
-    const drifted = driftedEntries.map(([k]) => k);
+
+    // The generated entry is opt-in: a plugin adopts it by pointing
+    // package.json "main" at src/_generated/entry.ts (replacing a hand barrel).
+    const managesEntry = typeof pkg.main === 'string' && pkg.main.endsWith('_generated/entry.ts');
+    const entryPath = join(root, 'src', '_generated', 'entry.ts');
+    const entryContent = managesEntry ? await generateEntry(root) : null;
+    const entryDrifted =
+      entryContent !== null && entryContent !== (await readFileOrNull(entryPath));
+
+    const drifted = [...driftedEntries.map(([k]) => k), ...(entryDrifted ? ['entry'] : [])];
 
     if (values.check) {
       if (drifted.length === 0) {
-        process.stdout.write(`${pc.green('✓')} package.json manifest is up to date\n`);
+        process.stdout.write(`${pc.green('✓')} plugin is up to date\n`);
         return;
       }
       process.stderr.write(
-        `${pc.red('✗')} package.json is out of date (${drifted.join(', ')}). Run ${pc.bold('brika build')}.\n`
+        `${pc.red('✗')} plugin is out of date (${drifted.join(', ')}). Run ${pc.bold('brika build')}.\n`
       );
       process.exitCode = 1;
       return;
     }
 
     if (drifted.length === 0) {
-      process.stdout.write(`${pc.green('✓')} package.json manifest already up to date\n`);
+      process.stdout.write(`${pc.green('✓')} plugin already up to date\n`);
       return;
     }
 
-    let next = raw;
-    for (const [kind, plan] of driftedEntries) {
-      const replaced = replaceTopLevelArray(next, kind, plan.generated);
-      if (replaced === null) {
-        process.stderr.write(
-          `  ${pc.red('error')} could not locate "${kind}" in package.json; add ${pc.bold(`"${kind}": []`)} and re-run\n`
-        );
-        process.exitCode = 1;
-        return;
-      }
-      next = replaced;
+    const applied = applyArrayDrift(raw, driftedEntries);
+    if ('missing' in applied) {
+      process.stderr.write(
+        `  ${pc.red('error')} could not locate "${applied.missing}" in package.json; add ${pc.bold(`"${applied.missing}": []`)} and re-run\n`
+      );
+      process.exitCode = 1;
+      return;
     }
-    await writeFile(pkgPath, next);
-    process.stdout.write(`${pc.green('✓')} updated package.json (${drifted.join(', ')})\n`);
+    if (applied.text !== raw) {
+      await writeFile(pkgPath, applied.text);
+    }
+    if (entryDrifted && entryContent !== null) {
+      await mkdir(dirname(entryPath), { recursive: true });
+      await writeFile(entryPath, entryContent);
+    }
+    process.stdout.write(`${pc.green('✓')} updated ${drifted.join(', ')}\n`);
   },
 });
