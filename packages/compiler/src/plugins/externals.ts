@@ -22,6 +22,16 @@ const BRIDGE: Record<string, string> = {
   'class-variance-authority': 'cva',
 };
 
+/**
+ * The exact set of import specifiers a browser-compiled plugin module (brick or
+ * page) may use: everything the host bridges to globalThis.__brika.*. Anything
+ * else under @brika/sdk is server-only and importing it into a browser module is
+ * a boundary violation (`brika check` scans for this). Single source of truth.
+ */
+export function browserAllowedSpecifiers(): ReadonlySet<string> {
+  return new Set(Object.keys(BRIDGE));
+}
+
 /** Escape a string for use as a literal inside a RegExp. */
 function escapeRegExp(s: string): string {
   return s.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);

@@ -35,6 +35,7 @@
     "./grants/fs-runtime": "./src/grants/fs-runtime.ts",
     "./actions": "./src/actions.ts",
     "./collect": "./src/internal/collect.ts",
+    "./verify-plugin": "./src/verify-plugin.ts",
     "./tsconfig.plugin.json": "./tsconfig.plugin.json"
   },
   "bin": {

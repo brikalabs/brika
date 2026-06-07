@@ -14,6 +14,7 @@
  *   brika open             open the UI in the default browser
  *   brika hub              foreground hub boot (TUI spawn target, CI/Docker)
  *   brika build            generate the plugin manifest from source (--check for CI)
+ *   brika check            manifest checks + server/browser import-boundary scan
  *   brika version          short non-TUI version line
  *   brika update           check for a new release and apply it
  *   brika completions      shell tab-completion install
@@ -25,6 +26,7 @@ import pc from 'picocolors';
 import supervisor from './commands/__supervisor';
 import brix from './commands/brix';
 import build from './commands/build';
+import check from './commands/check';
 import completions from './commands/completions';
 import dashboard from './commands/dashboard';
 import hub from './commands/hub';
@@ -71,6 +73,7 @@ export const cli = createCli({ name: 'brika', defaultCommand: 'dashboard', helpF
   .addCommand(open)
   .addCommand(hub)
   .addCommand(build)
+  .addCommand(check)
   .addCommand(version)
   .addCommand(update)
   .addCommand(completions)
