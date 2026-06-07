@@ -51,6 +51,7 @@ describe('PluginLoader', () => {
   let syncToConfigMock: ReturnType<typeof mock>;
   let stateSyncMock: ReturnType<typeof mock>;
   let stateGetMock: ReturnType<typeof mock>;
+  let stateLoadMetaMock: ReturnType<typeof mock>;
   let pmLoadMock: ReturnType<typeof mock>;
   let pmStopAllMock: ReturnType<typeof mock>;
 
@@ -62,6 +63,7 @@ describe('PluginLoader', () => {
     // No state row by default: a fresh config entry has made no enable/disable
     // choice and should load as before.
     stateGetMock = mock().mockReturnValue(undefined);
+    stateLoadMetaMock = mock().mockResolvedValue(undefined);
     pmLoadMock = mock().mockResolvedValue(undefined);
     pmStopAllMock = mock().mockResolvedValue(undefined);
 
@@ -70,6 +72,7 @@ describe('PluginLoader', () => {
       init: stateInitMock,
       syncToConfig: stateSyncMock,
       get: stateGetMock,
+      loadMetadataCache: stateLoadMetaMock,
     });
     stub(PluginRegistry, {
       init: registryInitMock,
@@ -168,6 +171,13 @@ describe('PluginLoader', () => {
       expect(pmLoadMock).toHaveBeenCalledTimes(2);
       expect(pmLoadMock).toHaveBeenCalledWith('@test/plugin-a', '/mock/plugins-dir');
       expect(pmLoadMock).toHaveBeenCalledWith('@test/plugin-b', '/mock/plugins-dir');
+    });
+
+    test('caches metadata for all installed plugins so disabled ones stay visible', async () => {
+      await loader.load(createMockConfig([{ name: '@test/plugin', version: '1.0.0' }]));
+      // loadMetadataCache runs regardless of enabled state, so a skipped disabled
+      // plugin still has metadata and shows up in the plugin list.
+      expect(stateLoadMetaMock).toHaveBeenCalled();
     });
 
     test('skips a disabled plugin at boot, still loads enabled ones', async () => {

@@ -33,6 +33,12 @@ export class PluginLoader implements Loader {
 
     this.logs.info('Plugin synchronization completed successfully');
 
+    // Cache metadata for EVERY installed plugin, enabled or not. A disabled
+    // plugin is skipped by the spawn loop below, but it must still appear in the
+    // plugin list (manager.list() drops state rows that have no cached metadata)
+    // so the operator can see it and re-enable it.
+    await this.state.loadMetadataCache();
+
     // Load all plugins via registry (all plugins are in pluginsDir/node_modules/).
     for (const entry of config.plugins) {
       // Honor the operator's enable/disable choice: a plugin the operator
