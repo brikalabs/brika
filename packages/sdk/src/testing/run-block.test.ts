@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { defineSpark } from '../api/sparks';
-import { defineReactiveBlock, input, output, z } from '../blocks';
+import { defineBlock, input, output, z } from '../blocks';
 import { runBlock } from './run-block';
 
 const fired = defineSpark({
@@ -10,16 +10,15 @@ const fired = defineSpark({
 });
 
 // A time-based block: on trigger, after config.ms, emit a spark + output. Uses
-// the global setTimeout + Date.now() that the fake clock replaces.
-const delay = defineReactiveBlock(
-  {
-    id: 'delay',
-    meta: { name: 'Delay', category: 'flow' },
-    inputs: { trigger: input(z.generic(), { name: 'Trigger' }) },
-    outputs: { done: output(z.object({ at: z.number() }), { name: 'Done' }) },
-    config: z.object({ ms: z.number().default(1000) }),
-  },
-  ({ inputs, outputs, config }) => {
+// the global setTimeout + Date.now() that the fake clock replaces. Port display
+// names default from the keys ("trigger" -> "Trigger", "done" -> "Done").
+const delay = defineBlock({
+  id: 'delay',
+  meta: { name: 'Delay', category: 'flow' },
+  inputs: { trigger: input(z.generic()) },
+  outputs: { done: output(z.object({ at: z.number() })) },
+  config: z.object({ ms: z.number().default(1000) }),
+  run({ inputs, outputs, config }) {
     inputs.trigger.on(() => {
       setTimeout(() => {
         const at = Date.now();
@@ -27,22 +26,20 @@ const delay = defineReactiveBlock(
         outputs.done.emit({ at });
       }, config.ms);
     });
-  }
-);
+  },
+});
 
 // A pure transform: doubles each number pushed to `in` onto `out`.
-const double = defineReactiveBlock(
-  {
-    id: 'double',
-    meta: { name: 'Double', category: 'transform' },
-    inputs: { in: input(z.number(), { name: 'In' }) },
-    outputs: { out: output(z.number(), { name: 'Out' }) },
-    config: z.object({}),
-  },
-  ({ inputs, outputs }) => {
+const double = defineBlock({
+  id: 'double',
+  meta: { name: 'Double', category: 'transform' },
+  inputs: { in: input(z.number()) },
+  outputs: { out: output(z.number()) },
+  config: z.object({}),
+  run({ inputs, outputs }) {
     inputs.in.on((value) => outputs.out.emit(value * 2));
-  }
-);
+  },
+});
 
 describe('runBlock', () => {
   test('fires output + spark after the configured delay, deterministically', async () => {

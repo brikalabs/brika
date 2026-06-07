@@ -119,7 +119,12 @@ export interface BlockInstance {
  */
 type OutputDefSchema = z.ZodType | PassthroughRef | GenericRef<string> | ResolvedRef;
 
-export function defineReactiveBlock<
+/** Title-case a port key for its default display name (`trigger` -> `Trigger`). */
+function portDisplayName(key: string): string {
+  return key.charAt(0).toUpperCase() + key.slice(1);
+}
+
+function compileBlock<
   TInputs extends Record<string, InputDef<z.ZodType | GenericRef<string>>>,
   TOutputs extends Record<string, OutputDef<OutputDefSchema>>,
   TConfig extends z.ZodObject<z.ZodRawShape>,
@@ -203,7 +208,7 @@ export function defineReactiveBlock<
   // Convert input definitions to BlockPort[]
   const inputs: BlockPort[] = Object.entries(spec.inputs).map(([id, def]) => ({
     id,
-    name: def.meta.name,
+    name: def.meta?.name ?? portDisplayName(id),
     direction: 'input' as const,
     typeName: getBaseTypeName(def.schema),
     type: getTypeDescriptor(def.schema),
@@ -229,12 +234,12 @@ export function defineReactiveBlock<
           // Linked input is concrete — resolve statically
           return {
             id,
-            name: def.meta.name,
+            name: def.meta?.name ?? portDisplayName(id),
             direction: 'output' as const,
             typeName: linkedInput.typeName,
             type: linkedInput.type,
             jsonSchema: linkedInput.jsonSchema,
-            dynamic: def.meta.repeat,
+            dynamic: def.meta?.repeat,
           };
         }
         // Linked input is generic/unresolved — preserve passthrough for dynamic inference
@@ -243,12 +248,12 @@ export function defineReactiveBlock<
 
     return {
       id,
-      name: def.meta.name,
+      name: def.meta?.name ?? portDisplayName(id),
       direction: 'output' as const,
       typeName: baseTypeName,
       type: typeDesc,
       jsonSchema: getJsonSchema(def.schema),
-      dynamic: def.meta.repeat,
+      dynamic: def.meta?.repeat,
     };
   });
 
@@ -359,6 +364,61 @@ export function defineReactiveBlock<
   }
 
   return blockDef;
+}
+
+/**
+ * Define a reactive workflow block.
+ *
+ * Inputs/outputs are typed Zod ports (a port's display name defaults to its key,
+ * so `input(z.generic())` is enough), `config` is a Zod object, and `run` holds
+ * the reactive setup. `brika build` lowers `meta` into the manifest.
+ *
+ * @param spec The block definition: `id`, `meta`, `inputs`, `outputs`, `config`,
+ *   and `run` (the reactive setup, called once when the block starts).
+ * @returns A compiled block the hub can instantiate.
+ * @example
+ * ```ts
+ * import { defineBlock, input, output, z } from '@brika/sdk';
+ *
+ * export const gate = defineBlock({
+ *   id: 'gate',
+ *   meta: { name: 'Gate', category: 'transform' },
+ *   inputs: { in: input(z.generic()) },          // name "In" from the key
+ *   outputs: { out: output(z.generic()) },
+ *   config: z.object({ open: z.boolean().default(true) }),
+ *   run({ inputs, outputs, config }) {
+ *     inputs.in.on((value) => {
+ *       if (config.open) outputs.out.emit(value);
+ *     });
+ *   },
+ * });
+ * ```
+ */
+export function defineBlock<
+  TInputs extends Record<string, InputDef<z.ZodType | GenericRef<string>>>,
+  TOutputs extends Record<string, OutputDef<OutputDefSchema>>,
+  TConfig extends z.ZodObject<z.ZodRawShape>,
+>(
+  spec: ReactiveBlockSpec<TInputs, TOutputs, TConfig> & {
+    run: BlockSetup<TInputs, TOutputs, TConfig>;
+  }
+): CompiledReactiveBlock {
+  return compileBlock(spec, spec.run);
+}
+
+/**
+ * Transitional two-argument form. Prefer {@link defineBlock} with a `run` method;
+ * this adapter is kept only while the remaining plugins migrate, then removed.
+ */
+export function defineReactiveBlock<
+  TInputs extends Record<string, InputDef<z.ZodType | GenericRef<string>>>,
+  TOutputs extends Record<string, OutputDef<OutputDefSchema>>,
+  TConfig extends z.ZodObject<z.ZodRawShape>,
+>(
+  spec: ReactiveBlockSpec<TInputs, TOutputs, TConfig>,
+  setup: BlockSetup<TInputs, TOutputs, TConfig>
+): CompiledReactiveBlock {
+  return compileBlock(spec, setup);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -59,6 +59,7 @@ export type {
 export {
   createEmitter,
   createFlowFromInput,
+  defineBlock,
   defineReactiveBlock,
   input,
   isCompiledReactiveBlock,

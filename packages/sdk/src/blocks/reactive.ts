@@ -24,8 +24,8 @@ export type { GenericRef, PassthroughRef, ResolvedRef } from './schema-types';
 
 /** Port metadata */
 export interface PortMeta {
-  /** Display name */
-  name: string;
+  /** Display name. Defaults to the title-cased port key when omitted. */
+  name?: string;
   /** Description for tooltip */
   description?: string;
   /**
@@ -42,7 +42,7 @@ export interface PortMeta {
 export interface InputDef<T extends z.ZodType | GenericRef<string>> {
   readonly __type: 'input';
   readonly schema: T;
-  readonly meta: PortMeta;
+  readonly meta?: PortMeta;
 }
 
 /** Schema types accepted for output ports */
@@ -54,7 +54,7 @@ type OutputSchema = z.ZodType | PassthroughRef<string> | GenericRef<string> | Re
 export interface OutputDef<T extends OutputSchema> {
   readonly __type: 'output';
   readonly schema: T;
-  readonly meta: PortMeta;
+  readonly meta?: PortMeta;
 }
 
 /**
@@ -62,7 +62,7 @@ export interface OutputDef<T extends OutputSchema> {
  */
 export function input<T extends z.ZodType | GenericRef<string>>(
   schema: T,
-  meta: PortMeta
+  meta?: PortMeta
 ): InputDef<T> {
   return {
     __type: 'input',
@@ -73,8 +73,9 @@ export function input<T extends z.ZodType | GenericRef<string>>(
 
 /**
  * Create a typed output port with Zod schema, passthrough, generic, or resolved.
+ * The display name defaults to the title-cased port key; pass `meta` to override.
  */
-export function output<T extends OutputSchema>(schema: T, meta: PortMeta): OutputDef<T> {
+export function output<T extends OutputSchema>(schema: T, meta?: PortMeta): OutputDef<T> {
   return {
     __type: 'output',
     schema,
@@ -167,8 +168,8 @@ export interface BlockContext<
  * the artifact the host reads.
  */
 export interface BlockMeta {
-  /** Display name shown in the workflow editor. Defaults to the id. */
-  name?: string;
+  /** Display name shown in the workflow editor. */
+  name: string;
   /** One-line description. */
   description?: string;
   /** Manifest category bucket. */
