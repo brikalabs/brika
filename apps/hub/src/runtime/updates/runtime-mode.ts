@@ -21,6 +21,7 @@
  */
 
 import { existsSync } from 'node:fs';
+import { isCompiledFrom } from '@brika/sdk/exec-context';
 import { z } from 'zod';
 
 const RuntimeModeSchema = z.enum([
@@ -88,7 +89,7 @@ export function computeRuntimeMode(input: DetectInput): RuntimeMode {
 
 export function detectRuntimeMode(): RuntimeMode {
   return computeRuntimeMode({
-    isCompiled: import.meta.path.startsWith('/$bunfs/'),
+    isCompiled: isCompiledFrom(import.meta.path),
     execPath: process.execPath,
     env: process.env,
     dockerEnvExists: () => existsSync('/.dockerenv'),

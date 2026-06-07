@@ -10,10 +10,11 @@
  * how to get one. Keep in sync with the console copy.
  */
 
-import { existsSync, readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { CliError } from '@brika/cli';
 import pc from 'picocolors';
+import { resolveDataDir } from '../exec-context';
 
 const DEFAULT_HOST = '127.0.0.1';
 const DEFAULT_PORT = 3001;
@@ -25,48 +26,17 @@ export function hubOrigin(): string {
   return new URL(`http://${host}:${port}`).origin;
 }
 
-/** Walk up from cwd for the workspace-root package.json (the one with `workspaces`). */
-function findWorkspaceRoot(): string | undefined {
-  let dir = process.cwd();
-  for (let i = 0; i < 12; i += 1) {
-    const pkg = join(dir, 'package.json');
-    if (existsSync(pkg)) {
-      try {
-        const parsed: unknown = JSON.parse(readFileSync(pkg, 'utf8'));
-        if (
-          parsed !== null &&
-          typeof parsed === 'object' &&
-          'workspaces' in parsed &&
-          parsed.workspaces !== undefined
-        ) {
-          return dir;
-        }
-      } catch {
-        // Malformed package.json: keep climbing.
-      }
-    }
-    const parent = dirname(dir);
-    if (parent === dir) {
-      return undefined;
-    }
-    dir = parent;
-  }
-  return undefined;
-}
-
 /**
- * The brika data dir, resolved the way the hub and the console CLI do: $BRIKA_HOME,
- * else the workspace root's .brika (dev), else <cwd>/.brika. The console additionally
- * has a compiled-binary branch; the lean bin is always a `bun`-run script, never the
- * compiled app, so that branch never applies here. Keep in sync with
- * apps/console/src/shared/cli/paths.ts.
+ * The brika data dir, via the shared resolver. The lean bin is always a
+ * `bun`-run script (never the compiled app), so isCompiled is fixed false.
  */
 function brikaHome(): string {
-  const fromEnv = process.env.BRIKA_HOME;
-  if (fromEnv) {
-    return fromEnv;
-  }
-  return join(findWorkspaceRoot() ?? process.cwd(), '.brika');
+  return resolveDataDir({
+    env: process.env,
+    isCompiled: false,
+    execPath: process.execPath,
+    cwd: process.cwd(),
+  }).path;
 }
 
 /** The data dir this CLI authenticates from (its cli-token lives here). Exposed

@@ -21,9 +21,10 @@
 import { randomBytes } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
+import { isCompiledFrom, resolveDataDir } from '@brika/sdk/exec-context';
 import { buildInfo } from '../../build-info';
 
-const isCompiled = import.meta.path.startsWith('/$bunfs/');
+const isCompiled = isCompiledFrom(import.meta.path);
 const installDir = dirname(process.execPath);
 
 /** 8 hex chars = 4 bytes of randomness, ~4 billion buckets. Plenty. */
@@ -35,54 +36,18 @@ const INSTANCE_ID_RE = /^[0-9a-f]{8}$/;
 const KEYCHAIN_SERVICE_BASE = 'dev.brika.hub';
 
 /**
- * Walk up from cwd for the workspace-root package.json (the one with a
- * `workspaces` field). Lets the dev hub resolve the SAME `.brika` regardless of
- * which package dir it was launched from (mortar runs it with `cwd: apps/hub`).
- * Safety-capped at 12 levels. Keep in sync with
- * apps/console/src/shared/cli/paths.ts and packages/sdk/src/cli/hub.ts.
+ * The data dir, via the shared @brika/sdk/exec-context resolver (the single
+ * source of truth shared with the console CLI and the lean bin). Dev resolves to
+ * the workspace-root `.brika` regardless of launch cwd, so a `mortar up` hub
+ * (cwd: apps/hub) and `brika install` agree on one dir.
  */
-function findWorkspaceRoot(): string | undefined {
-  let dir = process.cwd();
-  for (let i = 0; i < 12; i += 1) {
-    const pkg = join(dir, 'package.json');
-    if (existsSync(pkg)) {
-      try {
-        const parsed: unknown = JSON.parse(readFileSync(pkg, 'utf8'));
-        if (
-          parsed !== null &&
-          typeof parsed === 'object' &&
-          'workspaces' in parsed &&
-          parsed.workspaces !== undefined
-        ) {
-          return dir;
-        }
-      } catch {
-        // Malformed package.json: keep climbing.
-      }
-    }
-    const parent = dirname(dir);
-    if (parent === dir) {
-      return undefined;
-    }
-    dir = parent;
-  }
-  return undefined;
-}
-
 function resolveBrikaDir(): string {
-  if (process.env.BRIKA_HOME) {
-    return process.env.BRIKA_HOME;
-  }
-  if (isCompiled) {
-    return dirname(installDir);
-  }
-  // Dev: the workspace root's `.brika`, so the hub and the CLIs (apps/console
-  // paths.ts, the @brika/sdk lean bin) share ONE data dir and `brika install` /
-  // `brika dev` can drive a `mortar up` hub. Mortar launches the hub with
-  // `cwd: apps/hub`, so a raw `cwd/.brika` would diverge from where the CLIs
-  // (which walk to the workspace root) look for the cli-token. Falls back to
-  // `<cwd>/.brika` outside any workspace.
-  return join(findWorkspaceRoot() ?? process.cwd(), '.brika');
+  return resolveDataDir({
+    env: process.env,
+    isCompiled,
+    execPath: process.execPath,
+    cwd: process.cwd(),
+  }).path;
 }
 
 function readOrGenerateInstanceId(brikaDir: string): string {
