@@ -1,5 +1,5 @@
 /**
- * Manifest error codes — plugin-package validation failures the hub
+ * Manifest error codes: plugin-package validation failures the hub
  * surfaces during install / load.
  */
 
@@ -68,5 +68,23 @@ export const ManifestCatalog = {
       manifestPath: z.string(),
     }),
     message: (data) => `Plugin manifest at "${data.manifestPath}" has no "main" entry point.`,
+  }),
+  PLUGIN_DEPS_INSTALL_FAILED: entry({
+    title: 'Plugin dependency install failed',
+    description: "Installing a standalone plugin's dependencies failed the frozen-lockfile check.",
+    typeUri: `${TYPE_BASE}plugin-deps-install-failed`,
+    status: 422,
+    severity: 'error',
+    category: 'manifest',
+    retryable: false,
+    transient: false,
+    developerHint: 'Run `bun install` in the plugin directory to refresh its lockfile, then retry.',
+    data: z.object({
+      pluginName: z.string(),
+      directory: z.string(),
+      exitCode: z.number(),
+    }),
+    message: (data) =>
+      `Dependency install for "${data.pluginName}" failed (exit ${data.exitCode}). Run \`bun install\` in ${data.directory}, then retry.`,
   }),
 } as const;

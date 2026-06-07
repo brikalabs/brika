@@ -101,6 +101,9 @@ export const errors = {
   manifestMissingMain: (data: DataForCode<'MANIFEST_MISSING_MAIN'>, opts?: FactoryOpts) =>
     buildError<'MANIFEST_MISSING_MAIN'>('MANIFEST_MISSING_MAIN', data, opts),
 
+  pluginDepsInstallFailed: (data: DataForCode<'PLUGIN_DEPS_INSTALL_FAILED'>, opts?: FactoryOpts) =>
+    buildError<'PLUGIN_DEPS_INSTALL_FAILED'>('PLUGIN_DEPS_INSTALL_FAILED', data, opts),
+
   // ─── grants ──────────────────────────────────────────────────────────
   alreadyRegistered: (data: DataForCode<'ALREADY_REGISTERED'>, opts?: FactoryOpts) =>
     buildError<'ALREADY_REGISTERED'>('ALREADY_REGISTERED', data, opts),
@@ -182,7 +185,7 @@ type CoveredCodes = FactoryCodeFromKey<FactoryKey>;
 /**
  * Compile-time coverage proof. If a throwable code is missing from `errors`,
  * `CoveredCodes` won't include it and `true` is no longer assignable to the
- * conditional — the file fails to compile, pointing at the gap.
+ * conditional, so the file fails to compile, pointing at the gap.
  *
  * Exported (not just a local const) so it counts as used by lint rules.
  */

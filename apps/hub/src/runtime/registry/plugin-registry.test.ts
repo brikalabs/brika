@@ -240,6 +240,9 @@ describe('PluginRegistry', () => {
       expect(errorProgress?.errorCode).toBe('MANIFEST_MISSING_MAIN');
       expect(errorProgress?.errorDetail?.code).toBe('MANIFEST_MISSING_MAIN');
       expect(errorProgress?.errorDetail?._brikaError).toBe(true);
+      // brika.yml is written only after a successful load, so a load failure
+      // never records the plugin in config (no config/filesystem split).
+      expect(mockConfigLoader.addPlugin).not.toHaveBeenCalled();
     });
   });
 
@@ -851,19 +854,46 @@ describe('PluginRegistry: local plugins', () => {
     expect(errorProgress?.error).toContain('No package.json');
   });
 
-  test('workspace install continues when dependency install returns non-zero', async () => {
+  test('standalone plugin install fails when frozen-lockfile install returns non-zero', async () => {
+    // A standalone plugin (no workspace parent) with a broken/stale lockfile
+    // must NOT silently continue: it would crash at load. Surface a real error.
     const pluginSrc = join(tmpHome, 'failing-deps');
     await mkdir(pluginSrc, { recursive: true });
     await writeFile(join(pluginSrc, 'package.json'), JSON.stringify({ name: '@test/failing' }));
 
-    mockConfigLoader.resolvePluginEntry.mockResolvedValue({
-      rootDirectory: pluginSrc,
-    });
-    // Non-zero exit code for bun install --frozen-lockfile
+    mockConfigLoader.resolvePluginEntry.mockResolvedValue({ rootDirectory: pluginSrc });
+    spawnExitCode = 1;
+
+    const events: OperationProgress[] = [];
+    for await (const progress of registry.install('@test/failing', 'workspace:*')) {
+      events.push(progress);
+    }
+
+    const errorProgress = events.find((p) => p.phase === 'error');
+    expect(errorProgress).toBeDefined();
+    expect(errorProgress?.errorCode).toBe('PLUGIN_DEPS_INSTALL_FAILED');
+    expect(events.map((e) => e.phase)).not.toContain('complete');
+    // brika.yml is written last, so a failed install never records the plugin.
+    expect(mockConfigLoader.addPlugin).not.toHaveBeenCalled();
+  });
+
+  test('workspace member install continues when dependency install returns non-zero', async () => {
+    // A genuine workspace member has its deps installed at the workspace root,
+    // so a frozen-lockfile non-zero in the member dir is expected and tolerated.
+    const wsRoot = join(tmpHome, 'ws-root');
+    const pluginSrc = join(wsRoot, 'plugins', 'member');
+    await mkdir(pluginSrc, { recursive: true });
+    await writeFile(
+      join(wsRoot, 'package.json'),
+      JSON.stringify({ name: 'ws-root', private: true, workspaces: ['plugins/*'] })
+    );
+    await writeFile(join(pluginSrc, 'package.json'), JSON.stringify({ name: '@test/member' }));
+
+    mockConfigLoader.resolvePluginEntry.mockResolvedValue({ rootDirectory: pluginSrc });
     spawnExitCode = 1;
 
     const phases: OperationProgress['phase'][] = [];
-    for await (const progress of registry.install('@test/failing', 'workspace:*')) {
+    for await (const progress of registry.install('@test/member', 'workspace:*')) {
       phases.push(progress.phase);
     }
 

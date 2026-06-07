@@ -1,11 +1,19 @@
 import { mkdir, readlink, symlink, unlink } from 'node:fs/promises';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, join, relative, resolve } from 'node:path';
 import { inject, singleton } from '@brika/di';
+import { errors } from '@brika/errors';
+import { z } from 'zod';
 import { BunRunner, ConfigLoader, HubConfig } from '@/runtime/config';
 import { Logger } from '@/runtime/logs/log-router';
 import { PackageManager } from './package-manager';
 import { errorFields } from './progress';
 import type { InstalledPackage, OperationProgress, UpdateInfo } from './types';
+
+/** A package.json `workspaces` field: a glob array, or `{ packages: [...] }`. */
+const WorkspacesSchema = z.union([
+  z.array(z.string()),
+  z.object({ packages: z.array(z.string()) }).transform((o) => o.packages),
+]);
 
 function normalizeVersion(version?: string): string | undefined {
   // Bare absolute paths → file: specifier
@@ -65,6 +73,12 @@ export class PluginRegistry {
 
   async *install(name: string, version?: string): AsyncGenerator<OperationProgress> {
     version = normalizeVersion(version);
+    const local = isLocalVersion(version);
+
+    // Only roll back state THIS install created: never tear down a working
+    // prior install when a re-install/upgrade fails midway.
+    const preExisting = await this.has(name);
+    let loaded = false;
 
     try {
       yield this.#msg('resolving', 'install', name, version);
@@ -76,14 +90,48 @@ export class PluginRegistry {
         yield* this.#pm.install(name, version);
       }
 
-      await this.configLoader.addPlugin(name, version ?? 'latest');
-
       yield this.#msg('linking', 'install', name, version, 'Loading plugin...');
       await this.#loadPlugin(rootDirectory ?? name);
+      loaded = true;
+
+      // Record in brika.yml LAST, only after the load attempt: a THROWN install
+      // failure then leaves no config/filesystem split. (Note this is NOT
+      // "config only references healthy plugins": #loadResolved returns rather
+      // than throws on build-failure / incompatibility / awaiting-config, and
+      // those plugins are legitimately recorded.)
+      await this.configLoader.addPlugin(name, version ?? 'latest');
 
       yield this.#msg('complete', 'install', name, version, 'Installed successfully');
     } catch (error) {
+      if (!preExisting) {
+        await this.#rollbackInstall(name, local, loaded);
+      }
       yield this.#errorMsg('install', name, version, error);
+    }
+  }
+
+  /**
+   * Best-effort teardown of the filesystem (and load) state a failed install
+   * created, so it leaves no half-installed plugin behind. Never throws (a
+   * rollback failure must not mask the original error) and is only called for
+   * plugins this install introduced (see the preExisting guard in install()).
+   */
+  async #rollbackInstall(name: string, local: boolean, loaded: boolean): Promise<void> {
+    try {
+      if (loaded) {
+        await this.#unloadPlugin(name);
+      }
+      if (local) {
+        await unlink(join(this.pluginsDir, 'node_modules', name)).catch(() => undefined);
+      } else {
+        // `bun remove` clears node_modules; #removeDependency below covers the
+        // case where it could not run, so a half-installed npm package does not
+        // get skipped by #ensureSyncedPlugins' has()-check on the next boot.
+        await this.#pm.remove(name).catch(() => undefined);
+      }
+      await this.#removeDependency(name);
+    } catch (error) {
+      this.logs.warn('Install rollback failed', { pluginName: name }, { error });
     }
   }
 
@@ -291,24 +339,93 @@ export class PluginRegistry {
   }
 
   async #installDepsInSource(name: string, rootDirectory: string): Promise<void> {
+    let code: number;
     try {
-      const code = await this.bunRunner.spawn(['install', '--frozen-lockfile'], {
+      code = await this.bunRunner.spawn(['install', '--frozen-lockfile'], {
         cwd: rootDirectory,
         stdout: 'ignore',
         stderr: 'ignore',
       }).exited;
-      if (code !== 0) {
-        this.logs.warn(
-          'Dependency install returned non-zero exit code, plugin may still work if part of a workspace',
-          {
-            pluginName: name,
-            exitCode: code,
-          }
-        );
-      }
     } catch (error) {
-      this.logs.warn('Failed to install plugin dependencies', { pluginName: name }, { error });
+      // The spawn itself could not run (bun missing, etc.). A workspace member's
+      // deps live at the workspace root, so tolerate it; otherwise it is fatal.
+      if (await this.#isWorkspaceMember(rootDirectory)) {
+        this.logs.warn(
+          'Dependency install could not run; plugin is a workspace member, continuing',
+          { pluginName: name },
+          { error }
+        );
+        return;
+      }
+      throw errors.pluginDepsInstallFailed(
+        { pluginName: name, directory: rootDirectory, exitCode: -1 },
+        { cause: error }
+      );
     }
+    if (code === 0) {
+      return;
+    }
+    // A workspace member's dependencies are already installed at the workspace
+    // root, so a frozen-lockfile non-zero here is expected and safe to ignore.
+    // A standalone plugin with a stale/broken lockfile, though, would crash at
+    // load: surface it as a real, actionable error instead of warn-and-continue.
+    if (await this.#isWorkspaceMember(rootDirectory)) {
+      this.logs.warn(
+        'Frozen-lockfile install returned non-zero for a workspace member; continuing',
+        { pluginName: name, exitCode: code }
+      );
+      return;
+    }
+    throw errors.pluginDepsInstallFailed({
+      pluginName: name,
+      directory: rootDirectory,
+      exitCode: code,
+    });
+  }
+
+  /**
+   * True when `dir` is a member of a bun/npm/yarn workspace: walk up for a
+   * parent package.json whose `workspaces` globs actually MATCH `dir` (not
+   * merely "a parent has a workspaces key", which would misclassify an
+   * unrelated monorepo plugin). Capped at 12 levels.
+   */
+  async #isWorkspaceMember(dir: string): Promise<boolean> {
+    let current = dirname(dir);
+    for (let i = 0; i < 12; i += 1) {
+      const pkgPath = join(current, 'package.json');
+      if (await Bun.file(pkgPath).exists()) {
+        const globs = await this.#workspaceGlobs(pkgPath);
+        if (globs && this.#dirMatchesWorkspaceGlobs(current, dir, globs)) {
+          return true;
+        }
+      }
+      const parent = dirname(current);
+      if (parent === current) {
+        break;
+      }
+      current = parent;
+    }
+    return false;
+  }
+
+  /** Read a package.json's `workspaces` globs, or null if it has none. */
+  async #workspaceGlobs(pkgPath: string): Promise<string[] | null> {
+    try {
+      const pkg = await Bun.file(pkgPath).json();
+      const parsed = WorkspacesSchema.safeParse(pkg.workspaces);
+      return parsed.success ? parsed.data : null;
+    } catch {
+      return null;
+    }
+  }
+
+  /** True when `dir`, relative to the workspace root, matches any workspace glob. */
+  #dirMatchesWorkspaceGlobs(root: string, dir: string, globs: readonly string[]): boolean {
+    const rel = relative(root, dir);
+    if (rel.startsWith('..')) {
+      return false;
+    }
+    return globs.some((glob) => new Bun.Glob(glob).match(rel));
   }
 
   async #ensureSymlink(name: string, rootDirectory: string): Promise<void> {
