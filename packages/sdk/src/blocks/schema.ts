@@ -30,6 +30,7 @@ import {
   code,
   color,
   duration,
+  dynamicDropdown,
   expression,
   filePath,
   generic,
@@ -243,6 +244,12 @@ export const z = {
    * UI renders a spark picker dropdown with available sparks.
    */
   sparkType,
+
+  /**
+   * Brick `config` dropdown whose options are fetched at runtime from
+   * `definePreferenceOptions(name)` (name = the field key).
+   */
+  dynamicDropdown,
 
   /**
    * Code snippet.

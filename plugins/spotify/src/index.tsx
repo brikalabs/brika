@@ -1,33 +1,14 @@
-import { defineOAuth, definePreferenceOptions } from '@brika/sdk';
+import { definePreferenceOptions } from '@brika/sdk';
 import { log, onStop } from '@brika/sdk/lifecycle';
-import { playerData, playSongData } from './brick-data';
+import { playSongBrick } from './bricks/play-song.brick';
+import { playerBrick } from './bricks/player.brick';
+import { spotify } from './spotify-client';
 
 // ─── OAuth ────────────────────────────────────────────────────────────────────
 
-/**
- * Brika-registered public Spotify app client id. With PKCE (the SDK default)
- * no client secret is needed, so shipping a public client id makes Spotify
- * fully automatic: the user only clicks "Connect" once, never registers an app.
- *
- * When this is empty the plugin falls back to the optional per-user `clientId`
- * preference, so existing self-hosted setups keep working.
- */
-const BRIKA_SPOTIFY_CLIENT_ID = 'efa61a6207684525a1bdc3f6b0be4ee2';
-
-export const spotify = defineOAuth({
-  id: 'spotify',
-  authorizeUrl: 'https://accounts.spotify.com/authorize',
-  tokenUrl: 'https://accounts.spotify.com/api/token',
-  scopes: [
-    'user-read-playback-state',
-    'user-modify-playback-state',
-    'user-read-currently-playing',
-    'user-read-recently-played',
-  ],
-  ...(BRIKA_SPOTIFY_CLIENT_ID
-    ? { clientId: BRIKA_SPOTIFY_CLIENT_ID }
-    : { clientIdPreference: 'clientId' }),
-});
+// The OAuth client lives in ./spotify-client so it can be imported without the
+// entry's polling/lifecycle. Re-export it for back-compat with `from './index'`.
+export { spotify } from './spotify-client';
 
 // ─── Dynamic Preferences ─────────────────────────────────────────────────────
 
@@ -74,7 +55,7 @@ const releasePolling = acquirePolling();
 // Push player state to client bricks whenever the store changes
 usePlayerStore.subscribe(() => {
   const state = usePlayerStore.get();
-  playerData.set({
+  playerBrick.data.set({
     playback: state.playback,
     recentTrack: state.recentTrack,
     isAuthed: state.isAuthed,
@@ -83,7 +64,7 @@ usePlayerStore.subscribe(() => {
     authUrl: spotify.getAuthUrl(),
   });
   // The "Play a Song" card only needs auth state; search runs via actions.
-  playSongData.set({
+  playSongBrick.data.set({
     isAuthed: state.isAuthed,
     authUrl: spotify.getAuthUrl(),
   });

@@ -6,7 +6,6 @@
  */
 
 import { defineSharedStore, log } from '@brika/sdk';
-import { spotify } from './index';
 import { getApi } from './shared';
 import {
   deviceChanged,
@@ -17,6 +16,7 @@ import {
 } from './sparks';
 import type { PlaybackState, RecentTrack, SpotifyDevice } from './spotify-api';
 import { SpotifyAuthError } from './spotify-api';
+import { spotify } from './spotify-client';
 
 // ─── Store ───────────────────────────────────────────────────────────────────
 

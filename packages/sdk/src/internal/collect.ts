@@ -70,7 +70,7 @@ export function isZodSchema(value: unknown): value is z.ZodType {
 
 /** A generated manifest config entry (mirrors `@brika/schema` PreferenceSchema). */
 export interface PreferenceEntry {
-  type: 'text' | 'password' | 'number' | 'checkbox' | 'dropdown';
+  type: 'text' | 'password' | 'number' | 'checkbox' | 'dropdown' | 'dynamic-dropdown';
   name: string;
   label?: string;
   description?: string;
@@ -128,6 +128,11 @@ function toPreference(
     ...(jsonRequired && prop.default === undefined ? { required: true } : {}),
     ...(def !== undefined ? { default: def } : {}),
   };
+  // A string field whose options are fetched at runtime via
+  // definePreferenceOptions(name) — marked with `.meta({ format })` (z.dynamicDropdown()).
+  if (prop.format === 'dynamic-dropdown') {
+    return { type: 'dynamic-dropdown', ...base };
+  }
   if (prop.enum) {
     return { type: 'dropdown', ...base, options: prop.enum.map((v) => ({ value: String(v) })) };
   }

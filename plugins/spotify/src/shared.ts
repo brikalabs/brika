@@ -1,14 +1,14 @@
 /**
  * Shared helpers for the Spotify plugin.
  *
- * Uses lazy initialization to avoid circular imports — `spotify` (the OAuth
- * client) is exported from `index.tsx`, which re-exports bricks/blocks/sparks
- * that also need the API.
+ * The API singleton is built lazily on first use. `spotify` (the OAuth client)
+ * is imported from `./spotify-client`, which has no plugin entry/lifecycle, so
+ * blocks and bricks can import these helpers without pulling `index.tsx`.
  */
 
 import { getPreferences } from '@brika/sdk';
-import { spotify } from './index';
 import { createSpotifyApi } from './spotify-api';
+import { spotify } from './spotify-client';
 
 // ─── Lazy API singleton ───────────────────────────────────────────────────────
 

@@ -3,6 +3,13 @@ import { getApi, resolveDevice, toSpotifyUri } from '../shared';
 
 export const playBlock = defineBlock({
   id: 'play',
+  meta: {
+    name: 'Play Spotify',
+    description: 'Start playback on a Spotify device',
+    category: 'action',
+    icon: 'play',
+    color: '#1DB954',
+  },
   inputs: {
     trigger: input(z.generic(), { name: 'Trigger' }),
   },

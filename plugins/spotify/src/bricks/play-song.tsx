@@ -11,8 +11,14 @@ import { useCallAction } from '@brika/sdk/ui-kit/hooks';
 import { LogIn, Music, Play, Search } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { playTrack, searchTracks } from '../actions';
-import { playSongData } from '../brick-data';
 import type { TrackResult } from '../spotify-api';
+import { playSongBrick } from './play-song.brick';
+
+/** Data pushed from the plugin process to every "Play a Song" brick instance. */
+export interface PlaySongData {
+  isAuthed: boolean;
+  authUrl: string;
+}
 
 function formatMs(ms: number): string {
   const totalSec = Math.floor(ms / 1000);
@@ -21,8 +27,8 @@ function formatMs(ms: number): string {
 }
 
 export default function PlaySong() {
-  const config = useBrickConfig();
-  const data = playSongData.use();
+  const config = useBrickConfig(playSongBrick.config);
+  const data = playSongBrick.data.use();
   const callAction = useCallAction();
 
   const deviceId = typeof config.device === 'string' && config.device ? config.device : undefined;

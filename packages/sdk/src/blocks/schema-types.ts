@@ -195,6 +195,29 @@ export function jsonSchema(description?: string) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Dynamic Dropdown (brick config)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * A brick `config` field rendered as a dropdown whose options are fetched at
+ * runtime. The hub resolves the options from `definePreferenceOptions(name)`,
+ * where `name` is this field's key, so the field key must match the registered
+ * provider.
+ *
+ * `brika build` lowers it to a `{ type: 'dynamic-dropdown' }` manifest entry.
+ *
+ * @example
+ * ```ts
+ * config: z.object({
+ *   device: z.dynamicDropdown({ label: 'Device' }).optional(),
+ * })
+ * ```
+ */
+export function dynamicDropdown(meta?: { label?: string; description?: string }) {
+  return z.string().meta({ ...(meta ?? {}), format: 'dynamic-dropdown' });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Spark Type (Event Type Picker)
 // ─────────────────────────────────────────────────────────────────────────────
 
