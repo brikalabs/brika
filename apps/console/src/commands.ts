@@ -29,6 +29,7 @@ import build from './commands/build';
 import check from './commands/check';
 import completions from './commands/completions';
 import dashboard from './commands/dashboard';
+import dev from './commands/dev';
 import hub from './commands/hub';
 import open from './commands/open';
 import start from './commands/start';
@@ -76,6 +77,7 @@ export const cli = createCli({ name: 'brika', defaultCommand: 'dashboard', helpF
   .addCommand(build)
   .addCommand(check)
   .addCommand(verify)
+  .addCommand(dev)
   .addCommand(version)
   .addCommand(update)
   .addCommand(completions)

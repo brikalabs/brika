@@ -199,6 +199,83 @@ function applyArrayDrift(
   return { text: next };
 }
 
+/**
+ * Generate (or, with `check`, verify) the plugin manifest in `root`'s
+ * package.json. Writes progress to stdout/stderr. Returns false on any error
+ * or, under `check`, on drift — callers set the process exit code.
+ */
+export async function runBuild(root: string, check: boolean): Promise<boolean> {
+  const result = await generateManifest(root);
+  printDiagnostics(result);
+  if (!result.ok) {
+    process.stderr.write(pc.red('\nbrika build failed: fix the errors above.\n'));
+    return false;
+  }
+
+  const pkgPath = join(root, 'package.json');
+  const raw = await readFile(pkgPath, 'utf8');
+  const pkg: Record<string, unknown> = JSON.parse(raw);
+
+  const plans = {
+    blocks: planKind(preserveOrder(result.blocks, pkg.blocks), pkg.blocks),
+    bricks: planKind(preserveOrder(result.bricks, pkg.bricks), pkg.bricks),
+    pages: planKind(preserveOrder(result.pages, pkg.pages), pkg.pages),
+    sparks: planKind(preserveOrder(result.sparks, pkg.sparks), pkg.sparks),
+  };
+
+  warnUnmanaged(plans, pkg);
+
+  // Validate against the same schema the hub enforces, so a bad meta (invalid
+  // category/color) fails locally instead of at install time.
+  if (reportInvalid(buildCandidate(pkg, plans))) {
+    return false;
+  }
+
+  const driftedEntries = Object.entries(plans).filter(([, p]) => p.drifted);
+
+  // The generated entry is opt-in: a plugin adopts it by pointing
+  // package.json "main" at src/_generated/entry.ts (replacing a hand barrel).
+  const managesEntry = typeof pkg.main === 'string' && pkg.main.endsWith('_generated/entry.ts');
+  const entryPath = join(root, 'src', '_generated', 'entry.ts');
+  const entryContent = managesEntry ? await generateEntry(root) : null;
+  const entryDrifted = entryContent !== null && entryContent !== (await readFileOrNull(entryPath));
+
+  const drifted = [...driftedEntries.map(([k]) => k), ...(entryDrifted ? ['entry'] : [])];
+
+  if (check) {
+    if (drifted.length === 0) {
+      process.stdout.write(`${pc.green('✓')} plugin is up to date\n`);
+      return true;
+    }
+    process.stderr.write(
+      `${pc.red('✗')} plugin is out of date (${drifted.join(', ')}). Run ${pc.bold('brika build')}.\n`
+    );
+    return false;
+  }
+
+  if (drifted.length === 0) {
+    process.stdout.write(`${pc.green('✓')} plugin already up to date\n`);
+    return true;
+  }
+
+  const applied = applyArrayDrift(raw, driftedEntries);
+  if ('missing' in applied) {
+    process.stderr.write(
+      `  ${pc.red('error')} could not locate "${applied.missing}" in package.json; add ${pc.bold(`"${applied.missing}": []`)} and re-run\n`
+    );
+    return false;
+  }
+  if (applied.text !== raw) {
+    await writeFile(pkgPath, applied.text);
+  }
+  if (entryDrifted && entryContent !== null) {
+    await mkdir(dirname(entryPath), { recursive: true });
+    await writeFile(entryPath, entryContent);
+  }
+  process.stdout.write(`${pc.green('✓')} updated ${drifted.join(', ')}\n`);
+  return true;
+}
+
 export default defineCommand({
   name: 'build',
   description:
@@ -218,79 +295,9 @@ export default defineCommand({
   },
   examples: ['brika build', 'brika build --check', 'brika build --dir plugins/timer'],
   async handler({ values }) {
-    const root = resolve(values.dir ?? process.cwd());
-    const result = await generateManifest(root);
-    printDiagnostics(result);
-    if (!result.ok) {
-      process.stderr.write(pc.red('\nbrika build failed: fix the errors above.\n'));
+    const ok = await runBuild(resolve(values.dir ?? process.cwd()), values.check ?? false);
+    if (!ok) {
       process.exitCode = 1;
-      return;
     }
-
-    const pkgPath = join(root, 'package.json');
-    const raw = await readFile(pkgPath, 'utf8');
-    const pkg: Record<string, unknown> = JSON.parse(raw);
-
-    const plans = {
-      blocks: planKind(preserveOrder(result.blocks, pkg.blocks), pkg.blocks),
-      bricks: planKind(preserveOrder(result.bricks, pkg.bricks), pkg.bricks),
-      pages: planKind(preserveOrder(result.pages, pkg.pages), pkg.pages),
-      sparks: planKind(preserveOrder(result.sparks, pkg.sparks), pkg.sparks),
-    };
-
-    warnUnmanaged(plans, pkg);
-
-    // Validate against the same schema the hub enforces, so a bad meta (invalid
-    // category/color) fails locally instead of at install time.
-    if (reportInvalid(buildCandidate(pkg, plans))) {
-      process.exitCode = 1;
-      return;
-    }
-
-    const driftedEntries = Object.entries(plans).filter(([, p]) => p.drifted);
-
-    // The generated entry is opt-in: a plugin adopts it by pointing
-    // package.json "main" at src/_generated/entry.ts (replacing a hand barrel).
-    const managesEntry = typeof pkg.main === 'string' && pkg.main.endsWith('_generated/entry.ts');
-    const entryPath = join(root, 'src', '_generated', 'entry.ts');
-    const entryContent = managesEntry ? await generateEntry(root) : null;
-    const entryDrifted =
-      entryContent !== null && entryContent !== (await readFileOrNull(entryPath));
-
-    const drifted = [...driftedEntries.map(([k]) => k), ...(entryDrifted ? ['entry'] : [])];
-
-    if (values.check) {
-      if (drifted.length === 0) {
-        process.stdout.write(`${pc.green('✓')} plugin is up to date\n`);
-        return;
-      }
-      process.stderr.write(
-        `${pc.red('✗')} plugin is out of date (${drifted.join(', ')}). Run ${pc.bold('brika build')}.\n`
-      );
-      process.exitCode = 1;
-      return;
-    }
-
-    if (drifted.length === 0) {
-      process.stdout.write(`${pc.green('✓')} plugin already up to date\n`);
-      return;
-    }
-
-    const applied = applyArrayDrift(raw, driftedEntries);
-    if ('missing' in applied) {
-      process.stderr.write(
-        `  ${pc.red('error')} could not locate "${applied.missing}" in package.json; add ${pc.bold(`"${applied.missing}": []`)} and re-run\n`
-      );
-      process.exitCode = 1;
-      return;
-    }
-    if (applied.text !== raw) {
-      await writeFile(pkgPath, applied.text);
-    }
-    if (entryDrifted && entryContent !== null) {
-      await mkdir(dirname(entryPath), { recursive: true });
-      await writeFile(entryPath, entryContent);
-    }
-    process.stdout.write(`${pc.green('✓')} updated ${drifted.join(', ')}\n`);
   },
 });
