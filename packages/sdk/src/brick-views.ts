@@ -4,8 +4,10 @@ import type { z } from 'zod';
 import { setBrickData } from './api/push-brick-data';
 
 /**
- * Subscribe to data pushed from the plugin process via setBrickData().
- * Returns undefined until data arrives.
+ * Subscribe to data pushed from the plugin process. Prefer {@link defineBrick}'s
+ * typed `descriptor.data.use()`, which is built on this hook.
+ *
+ * @returns The latest pushed data, or undefined until the first push.
  */
 export function useBrickData<T>(): T | undefined {
   throw new Error('useBrickData() is only available in client-rendered bricks');
@@ -36,9 +38,16 @@ export interface BrickDataChannel<T> {
 }
 
 /**
- * Declare a typed brick-data channel. Replaces the stringly-typed
- * `setBrickData('id', …)` / `useBrickData<T>()` pair with one binding that
- * shares the id and payload type across the process boundary.
+ * Declare a typed brick-data channel by string id.
+ *
+ * Prefer {@link defineBrick}: it declares id, meta, config, and a zod `data`
+ * schema once, validates the payload against that schema before it crosses IPC,
+ * and shares the id with the manifest so they cannot drift. This lower-level
+ * channel remains for bricks not yet migrated to a descriptor.
+ *
+ * @param id The brick id this channel pushes to.
+ * @returns A channel whose `set` runs in the plugin process and `use` in the view.
+ * @see {@link defineBrick}
  */
 export function defineBrickData<T>(id: string): BrickDataChannel<T> {
   return {
@@ -76,7 +85,7 @@ export function useBrickSize(): { width: number; height: number } {
 
 /**
  * Returns a stable callback to send an action to the current brick instance.
- * Reads instanceId from BrickViewContext — safe across concurrent bricks.
+ * Reads instanceId from BrickViewContext (safe across concurrent bricks).
  */
 export function useCallBrickAction(): (actionId: string, payload?: unknown) => Promise<void> {
   throw new Error('useCallBrickAction() is only available in client-rendered bricks');

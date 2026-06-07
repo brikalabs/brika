@@ -1,16 +1,14 @@
 /**
- * `defineBrick` — one react-free descriptor per brick, tying its id, display
- * meta, zod `config`, and zod `data` together so the manifest, the runtime
- * config read, the typed+validated data channel, and tests all derive from one
- * source. Replaces the hand-maintained `brick-data.ts` sidecar.
+ * The `defineBrick` descriptor: one react-free module per brick.
  *
- * This module is deliberately NOT in the compiler's externals BRIDGE map, so it
- * bundles as real code in BOTH the plugin subprocess and the browser. It imports
- * zero react. The data channel is built from `defineBrickData`, imported via the
- * BARE `@brika/sdk/brick-views` specifier so the compiler rewrites it to the host
+ * @internal Implementation notes (not author-facing): this module is
+ * deliberately NOT in the compiler's externals BRIDGE map, so it bundles as real
+ * code in BOTH the plugin subprocess and the browser, and imports zero react. The
+ * data channel is built from `defineBrickData`, imported via the BARE
+ * `@brika/sdk/brick-views` specifier so the compiler rewrites it to the host
  * bridge in the browser (where `.use()` reads pushed data) while resolving to the
  * real server module in the subprocess (where `.set()` pushes it). The build-time
- * collector hook is imported relatively from the zod-free sink, so no zod or
+ * collector hook is imported relatively from the zod-free sink, so neither zod nor
  * server code crosses into the browser bundle.
  */
 
@@ -33,6 +31,39 @@ export interface BrickDescriptor<
   };
 }
 
+/**
+ * Define a brick: one react-free descriptor tying a widget's id, display meta,
+ * typed config, and a validated data channel into a single source, so the
+ * manifest, the view config read, the data push, and tests all derive from it.
+ *
+ * @param spec The brick descriptor.
+ * @param spec.id Persistent key in saved boards. Conventionally equals the
+ *   `*.brick.ts` filename; keep it explicit so a file rename never silently
+ *   re-keys a deployed widget.
+ * @param spec.meta Display metadata lowered into the manifest `bricks[]` entry by
+ *   `brika build` (name, description, category, lucide icon, color).
+ * @param spec.config Zod object read in the view via `useBrickConfig(descriptor.config)`.
+ * @param spec.data Zod schema for the push channel. `descriptor.data.set()`
+ *   validates against it in the plugin process; `descriptor.data.use()` reads it
+ *   in the browser view (undefined until the first set).
+ * @returns A {@link BrickDescriptor} exposing `id`, `meta`, `config`, and a typed
+ *   `data` channel with `set` and `use`.
+ * @example
+ * ```ts
+ * import { z } from '@brika/sdk';
+ * import { defineBrick } from '@brika/sdk/brick';
+ *
+ * export const weather = defineBrick({
+ *   id: 'weather',
+ *   meta: { name: 'Current Weather', category: 'weather', icon: 'cloud' },
+ *   config: z.object({ city: z.string().default('Lausanne') }),
+ *   data: z.object({ tempC: z.number(), conditions: z.string() }),
+ * });
+ * // plugin process: weather.data.set({ tempC: 21, conditions: 'Clear' });
+ * // view:           const current = weather.data.use();
+ * ```
+ * @see {@link BrickDescriptor} for the returned shape.
+ */
 export function defineBrick<TConfig extends z.ZodObject<z.ZodRawShape>, TData extends z.ZodType>(
   spec: Readonly<{ id: string; meta: BrickMeta; config: TConfig; data: TData }>
 ): BrickDescriptor<TConfig, TData> {
