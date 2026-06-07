@@ -24,6 +24,7 @@ import {
   type CollectedManifest,
   type CollectedSpark,
   drainCollector,
+  installBuildContext,
   installCollector,
   isZodSchema,
   type PreferenceEntry,
@@ -202,6 +203,9 @@ interface ImportResult {
 /** Import each module under an installed collector and return what it captured. */
 async function importModules(files: readonly string[]): Promise<ImportResult> {
   const errors: ValidationDiagnostic[] = [];
+  // A no-op prelude bridge so modules that reach getContext() at import time
+  // (e.g. defineOAuth registering routes) run their define* calls without a hub.
+  installBuildContext();
   installCollector();
   for (const file of files) {
     importSalt += 1;
@@ -338,6 +342,13 @@ const browserBuildPlugin: BunPlugin = {
     }));
     // lucide-react: arbitrary icon names, referenced only inside the view.
     build.onResolve({ filter: /^lucide-react$/ }, (args) => ({
+      path: args.path,
+      namespace: 'brika-proxy-stub',
+    }));
+    // node:/bun: builtins are reachable only through a server module the view
+    // imports (e.g. a store pulling node:sqlite). The view never runs in this
+    // build, so resolve them to a no-op proxy instead of failing to bundle.
+    build.onResolve({ filter: /^(node|bun):/ }, (args) => ({
       path: args.path,
       namespace: 'brika-proxy-stub',
     }));

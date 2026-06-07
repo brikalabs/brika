@@ -9,6 +9,7 @@
 
 import { z } from 'zod';
 
+export { installBuildContext } from './build-context';
 export type {
   BrickMeta,
   CollectedBlock,

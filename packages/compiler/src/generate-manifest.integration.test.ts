@@ -267,6 +267,43 @@ export default function GaugeBrick() {
     ).toBe(true);
   });
 
+  test('collects a block whose module reaches getContext() at import time', async () => {
+    // Mirrors defineOAuth: an SDK call at module top level. The build-time
+    // context stub makes it a no-op instead of throwing "SDK only works...".
+    await writeFile(
+      join(root, 'src', 'blocks', 'ctxy.ts'),
+      [
+        "import { defineBlock, getPreferences, input, z } from '@brika/sdk';",
+        'getPreferences();',
+        "export default defineBlock({ id: 'ctxy', meta: { name: 'Ctxy', category: 'action' }, inputs: { trigger: input(z.generic()) }, config: z.object({}), run() {} });",
+      ].join('\n')
+    );
+
+    const result = await generateManifest(root);
+
+    expect(result.ok).toBe(true);
+    expect(result.blocks.map((b) => b.id)).toContain('ctxy');
+  });
+
+  test('reads a brick view whose import graph reaches a node: builtin', async () => {
+    await mkdir(join(root, 'src', 'bricks'), { recursive: true });
+    // A server-only import (node:sqlite) leaks into the view's graph; the view
+    // never runs in the build, so the bundler stubs it instead of failing.
+    await writeFile(
+      join(root, 'src', 'bricks', 'db.tsx'),
+      [
+        "import 'node:sqlite';",
+        "export const meta = { name: 'Db', category: 'monitoring', icon: 'database' };",
+        'export default function Db() { return null; }',
+      ].join('\n')
+    );
+
+    const result = await generateManifest(root);
+
+    expect(result.ok).toBe(true);
+    expect(result.bricks.map((b) => b.id)).toContain('db');
+  });
+
   test('a descriptor without a matching view file is an error', async () => {
     await mkdir(join(root, 'src', 'bricks'), { recursive: true });
     await writeFile(
