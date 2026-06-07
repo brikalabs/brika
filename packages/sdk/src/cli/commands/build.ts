@@ -1,5 +1,5 @@
 /**
- * `brika build` — generate the plugin manifest from source.
+ * `brika build`: generate the plugin manifest from source.
  *
  * Reads the plugin's block, brick, page, and spark definitions, lowers their
  * `meta` (and brick zod `config`) into the matching `package.json` arrays the
@@ -202,7 +202,7 @@ function applyArrayDrift(
 /**
  * Generate (or, with `check`, verify) the plugin manifest in `root`'s
  * package.json. Writes progress to stdout/stderr. Returns false on any error
- * or, under `check`, on drift — callers set the process exit code.
+ * or, under `check`, on drift; callers set the process exit code.
  */
 export async function runBuild(root: string, check: boolean): Promise<boolean> {
   const result = await generateManifest(root);

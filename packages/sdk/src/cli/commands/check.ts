@@ -1,5 +1,5 @@
 /**
- * `brika check` — validate a plugin without publishing.
+ * `brika check`: validate a plugin without publishing.
  *
  * Runs the static manifest checks (formerly the standalone brika-verify-plugin
  * bin) plus a server/browser import-boundary scan: browser modules (bricks,
@@ -75,7 +75,7 @@ async function runTypecheck(root: string): Promise<boolean> {
       tsgoBin = join(dirname(pkgJsonPath), binRel);
     }
   } catch {
-    // No typechecker resolvable from the plugin — fall through to the skip.
+    // No typechecker resolvable from the plugin; fall through to the skip.
   }
   if (!tsgoBin) {
     process.stderr.write(

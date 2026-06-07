@@ -1,5 +1,5 @@
 /**
- * `brika verify` — validate a plugin's package.json before publishing.
+ * `brika verify`: validate a plugin's package.json before publishing.
  *
  * Checks schema validity (@brika/schema), that `engines.brika` covers the SDK
  * version, the `$schema` URL, the `main` entrypoint, required keywords, and
@@ -104,7 +104,7 @@ function printReport(result: VerifyResult, sdkVersion: string): boolean {
     }
     const count = result.errors.length;
     process.stdout.write(
-      pc.red(`\n  Verification failed — ${count} error${count === 1 ? '' : 's'}\n\n`)
+      pc.red(`\n  Verification failed: ${count} error${count === 1 ? '' : 's'}\n\n`)
     );
     return false;
   }

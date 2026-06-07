@@ -1,5 +1,5 @@
 /**
- * Integration test for `brika verify` — spawns the CLI against temp plugin dirs.
+ * Integration test for `brika verify`: spawns the CLI against temp plugin dirs.
  * The validation core (verifyPlugin) is unit-tested in @brika/sdk; this covers
  * the command wiring: exit codes, human output, and --json.
  */
