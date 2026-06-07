@@ -22,7 +22,9 @@
   "dependencies": {
     "@brika/brix": "workspace:*",
     "@brika/cli": "workspace:*",
+    "@brika/compiler": "workspace:*",
     "@brika/hub": "workspace:*",
+    "@brika/schema": "workspace:*",
     "@brika/tui": "workspace:*",
     "ink": "^7.0.3",
     "picocolors": "^1.1.1",

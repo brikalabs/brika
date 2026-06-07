@@ -44,6 +44,7 @@ export type { Serializable } from '@brika/serializable';
 export type {
   BlockContext,
   BlockInstance,
+  BlockMeta,
   BlockRuntimeContext,
   BlockSetup,
   CompiledReactiveBlock,

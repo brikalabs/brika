@@ -5,6 +5,13 @@ import { countdownCompleted, countdownTick } from '../sparks';
 export const countdown = defineReactiveBlock(
   {
     id: 'countdown',
+    meta: {
+      name: 'Countdown',
+      description: 'Countdown with progress ticks',
+      category: 'trigger',
+      icon: 'clock',
+      color: '#3b82f6',
+    },
     inputs: {
       start: input(z.generic(), { name: 'Start' }),
       cancel: input(z.generic(), { name: 'Cancel' }),

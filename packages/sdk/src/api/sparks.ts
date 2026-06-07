@@ -8,6 +8,7 @@ import type { Source } from '@brika/flow';
 import type { z } from 'zod';
 import { zodToJsonSchema } from '../blocks/reactive';
 import { getContext } from '../context';
+import { collectSpark, type SparkMeta } from '../internal/collect';
 import type { Json, SparkEvent } from '../types';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -59,8 +60,13 @@ export interface CompiledSpark<T extends z.ZodType> {
  */
 export function defineSpark<TSchema extends z.ZodType>(spec: {
   id: string;
+  /** Display metadata lowered into the manifest `sparks[]` entry by `brika build`. */
+  meta?: SparkMeta;
   schema: TSchema;
 }): CompiledSpark<TSchema> {
+  // Capture id + display metadata for `brika build`. No-op at plugin runtime.
+  collectSpark({ id: spec.id, meta: spec.meta });
+
   const spark: CompiledSpark<TSchema> = {
     id: spec.id,
     schema: spec.schema,

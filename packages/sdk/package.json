@@ -34,6 +34,7 @@
     "./grants": "./src/grants/index.ts",
     "./grants/fs-runtime": "./src/grants/fs-runtime.ts",
     "./actions": "./src/actions.ts",
+    "./collect": "./src/internal/collect.ts",
     "./tsconfig.plugin.json": "./tsconfig.plugin.json"
   },
   "bin": {

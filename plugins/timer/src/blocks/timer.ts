@@ -5,6 +5,13 @@ import { timerCompleted, timerStarted } from '../sparks';
 export const timer = defineReactiveBlock(
   {
     id: 'timer',
+    meta: {
+      name: 'Timer',
+      description: 'Set a one-shot timer that fires after a duration',
+      category: 'trigger',
+      icon: 'timer',
+      color: '#22c55e',
+    },
     inputs: {
       trigger: input(z.generic(), { name: 'Trigger' }),
     },

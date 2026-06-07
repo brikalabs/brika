@@ -161,6 +161,25 @@ export interface BlockContext<
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
+ * Human-facing block metadata. `brika build` lowers this into the plugin
+ * manifest `blocks[]` entry, so co-locating it on the definition makes the
+ * source the single source of truth and the generated, committed manifest
+ * the artifact the host reads.
+ */
+export interface BlockMeta {
+  /** Display name shown in the workflow editor. Defaults to the id. */
+  name?: string;
+  /** One-line description. */
+  description?: string;
+  /** Manifest category bucket. */
+  category: 'trigger' | 'flow' | 'action' | 'transform';
+  /** Lucide icon name. */
+  icon?: string;
+  /** Accent color as `#RRGGBB`. */
+  color?: string;
+}
+
+/**
  * Block specification with typed ports.
  */
 export interface ReactiveBlockSpec<
@@ -168,12 +187,14 @@ export interface ReactiveBlockSpec<
   TOutputs extends Record<string, OutputDef<OutputSchema>>,
   TConfig extends z.ZodObject<z.ZodRawShape>,
 > {
-  /**
-   * Unique block ID. Display metadata (name, description, category, icon,
-   * color) lives in the plugin manifest `blocks[]` entry, not here: the host
-   * registers it from there, so duplicating it in code has no effect.
-   */
+  /** Unique block ID (local to the plugin). */
   id: string;
+  /**
+   * Display metadata lowered into the manifest by `brika build`. Optional so
+   * existing plugins that still hand-author `blocks[]` keep compiling; once a
+   * block carries `meta`, `brika build` owns its manifest entry.
+   */
+  meta?: BlockMeta;
   /** Typed input port definitions */
   inputs: TInputs;
   /** Typed output port definitions */

@@ -9,6 +9,7 @@ export * from '@brika/flow';
 // Reactive block API
 export type {
   BlockContext,
+  BlockMeta,
   BlockSetup,
   InputDef,
   InputFlows,

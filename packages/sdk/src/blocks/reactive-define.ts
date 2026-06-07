@@ -9,6 +9,7 @@ import type { Serializable } from '@brika/serializable';
 import { z } from 'zod';
 import { log } from '../api/logging';
 import { getContext } from '../context';
+import { collectBlock } from '../internal/collect';
 import type { Json } from '../types';
 import {
   type BlockContext,
@@ -126,6 +127,9 @@ export function defineReactiveBlock<
   spec: ReactiveBlockSpec<TInputs, TOutputs, TConfig>,
   setup: BlockSetup<TInputs, TOutputs, TConfig>
 ): CompiledReactiveBlock {
+  // Capture id + display metadata for `brika build`. No-op at plugin runtime.
+  collectBlock({ id: spec.id, meta: spec.meta });
+
   const configJsonSchema = zodToBlockSchema(spec.config);
 
   // Get TypeScript-like type name from schema (not resolving passthrough/resolved)
