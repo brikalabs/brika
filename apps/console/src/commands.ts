@@ -22,11 +22,12 @@
  */
 
 import { type Command, createCli, generateHelp } from '@brika/cli';
+// The author verbs (build/check/verify) live in @brika/sdk so a plugin needs
+// only @brika/sdk to run them; the full hub CLI re-registers the same modules.
+import { build, check, verify } from '@brika/sdk/cli';
 import pc from 'picocolors';
 import supervisor from './commands/__supervisor';
 import brix from './commands/brix';
-import build from './commands/build';
-import check from './commands/check';
 import completions from './commands/completions';
 import create from './commands/create';
 import dashboard from './commands/dashboard';
@@ -38,7 +39,6 @@ import start from './commands/start';
 import status from './commands/status';
 import stop from './commands/stop';
 import update from './commands/update';
-import verify from './commands/verify';
 import version from './commands/version';
 
 /** Pool of hint lines hung off `brika help` — the framework strips hidden

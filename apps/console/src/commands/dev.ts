@@ -11,11 +11,11 @@
 import { readFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { defineCommand } from '@brika/cli';
+import { runBuild } from '@brika/sdk/cli';
 import pc from 'picocolors';
 import { CliError } from '../shared/cli/errors';
 import { hubUrl } from '../shared/cli/hub-client';
 import { ensureHub, installViaRegistry } from '../shared/cli/plugin-install';
-import { runBuild } from './build';
 
 /** Read the plugin's package name, or fail with guidance if this isn't a plugin dir. */
 export async function readPluginName(dir: string): Promise<string> {

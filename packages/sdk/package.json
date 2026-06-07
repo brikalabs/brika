@@ -37,12 +37,18 @@
     "./actions": "./src/actions.ts",
     "./collect": "./src/internal/collect.ts",
     "./verify-plugin": "./src/verify-plugin.ts",
+    "./cli": "./src/cli/index.ts",
     "./tsconfig.plugin.json": "./tsconfig.plugin.json"
   },
-  "files": ["src", "tsconfig.plugin.json"],
+  "bin": {
+    "brika": "./dist/bin/brika.js"
+  },
+  "files": ["src", "dist/bin", "tsconfig.plugin.json"],
   "scripts": {
     "test": "bun test --parallel",
-    "typecheck": "tsgo --noEmit"
+    "typecheck": "tsgo --noEmit",
+    "build:bin": "bun build-bin.ts",
+    "prepare": "bun run build:bin"
   },
   "dependencies": {
     "@brika/errors": "workspace:*",
@@ -60,6 +66,8 @@
     }
   },
   "devDependencies": {
+    "@brika/cli": "workspace:*",
+    "@brika/compiler": "workspace:*",
     "@brika/flow": "workspace:*",
     "@brika/schema": "workspace:*",
     "@brika/serializable": "workspace:*",

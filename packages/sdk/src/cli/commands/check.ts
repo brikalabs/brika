@@ -16,8 +16,8 @@ import { readFile } from 'node:fs/promises';
 import { basename, dirname, join, resolve } from 'node:path';
 import { defineCommand } from '@brika/cli';
 import { browserAllowedSpecifiers } from '@brika/compiler';
-import { verifyPlugin } from '@brika/sdk/verify-plugin';
 import pc from 'picocolors';
+import { verifyPlugin } from '../../verify-plugin';
 
 export interface Violation {
   file: string;

@@ -9,7 +9,7 @@ import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-const MAIN = join(import.meta.dir, '..', 'main.ts');
+const MAIN = join(import.meta.dir, '..', 'brika.ts');
 const SDK_VERSION = (
   (await Bun.file(Bun.resolveSync('@brika/sdk/package.json', import.meta.dir)).json()) as {
     version: string;

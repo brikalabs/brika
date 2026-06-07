@@ -10,13 +10,13 @@
 
 import { resolve } from 'node:path';
 import { defineCommand } from '@brika/cli';
+import pc from 'picocolors';
 import {
   isRecord,
   readDependencyVersion,
   type VerifyResult,
   verifyPlugin,
-} from '@brika/sdk/verify-plugin';
-import pc from 'picocolors';
+} from '../../verify-plugin';
 
 async function readVersion(pkgJsonPath: string | URL): Promise<string | null> {
   try {
