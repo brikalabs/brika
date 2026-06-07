@@ -229,6 +229,8 @@ describe('PluginRegistry', () => {
           exitCode: 1,
         })
         .apply();
+      // Online: the connectivity probe resolves, so the raw failure is kept.
+      bun.fetch(async () => new Response(null, { status: 200 }));
 
       const phases: OperationProgress[] = [];
       for await (const progress of registry.install('@test/broken', '1.0.0')) {
@@ -241,6 +243,26 @@ describe('PluginRegistry', () => {
       // Plain Error: no structured code/detail, only the string message.
       expect(errorProgress?.errorCode).toBeUndefined();
       expect(errorProgress?.errorDetail).toBeUndefined();
+    });
+
+    test('reclassifies an npm install failure as offline when the registry is unreachable', async () => {
+      bun.spawn({ exitCode: 1 }).apply();
+      // The connectivity probe fails with a DNS error -> offline.
+      bun.fetch(async () => {
+        throw Object.assign(new Error('getaddrinfo ENOTFOUND registry.npmjs.org'), {
+          code: 'ENOTFOUND',
+        });
+      });
+
+      const events: OperationProgress[] = [];
+      for await (const progress of registry.install('@test/remote', '1.0.0')) {
+        events.push(progress);
+      }
+
+      const errorProgress = events.find((p) => p.phase === 'error');
+      expect(errorProgress?.errorCode).toBe('UNAVAILABLE');
+      expect(errorProgress?.error).toContain('offline');
+      expect(errorProgress?.error).toContain('brika install <path>');
     });
 
     test('surfaces errorCode + errorDetail when the failure is a typed BrikaError', async () => {

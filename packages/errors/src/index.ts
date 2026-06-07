@@ -58,6 +58,9 @@ export { brikaErrorToResponse } from './http';
 // ─── Match ───
 export type { Handler, MatchHandlers } from './match';
 export { matchBrikaError } from './match';
+// ─── Network classification ───
+export type { NetworkErrorKind } from './network';
+export { classifyNetworkError } from './network';
 
 // ─── Locales ───
 // Translation strings ship at `packages/errors/locales/{lang}/errors.json`

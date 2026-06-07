@@ -1,7 +1,7 @@
 import { mkdir, readlink, rename, symlink, unlink } from 'node:fs/promises';
 import { dirname, join, relative, resolve } from 'node:path';
 import { inject, singleton } from '@brika/di';
-import { errors } from '@brika/errors';
+import { classifyNetworkError, errors } from '@brika/errors';
 import { z } from 'zod';
 import { BunRunner, ConfigLoader, HubConfig } from '@/runtime/config';
 import { Logger } from '@/runtime/logs/log-router';
@@ -89,7 +89,7 @@ export class PluginRegistry {
       if (isLocalVersion(version)) {
         rootDirectory = await this.#linkLocalPlugin(name, version);
       } else {
-        yield* this.#pm.install(name, version);
+        yield* this.#installNpm(name, version);
       }
 
       yield this.#msg('linking', 'install', name, version, 'Loading plugin...');
@@ -321,6 +321,40 @@ export class PluginRegistry {
   // ─────────────────────────────────────────────────────────────────────────────
   // Private Helpers
   // ─────────────────────────────────────────────────────────────────────────────
+
+  /**
+   * Install an npm plugin, reclassifying a failure as a connectivity error when
+   * the machine appears offline, so the operator gets "you may be offline, use a
+   * local path" instead of an opaque `bun install` exit code. The coded error
+   * rides the existing OperationProgress.errorCode/errorDetail fields.
+   */
+  async *#installNpm(name: string, version?: string): AsyncGenerator<OperationProgress> {
+    try {
+      yield* this.#pm.install(name, version);
+    } catch (error) {
+      if (await this.#online()) {
+        throw error;
+      }
+      throw errors.unavailable({
+        cause: error,
+        message: `Could not install "${name}": the npm registry is unreachable (you may be offline). For a local plugin, use \`brika install <path>\`, which needs no network.`,
+      });
+    }
+  }
+
+  /** Best-effort connectivity check: false only on a classified network failure. */
+  async #online(): Promise<boolean> {
+    try {
+      await fetch('https://registry.npmjs.org/', {
+        method: 'HEAD',
+        signal: AbortSignal.timeout(2500),
+      });
+      return true;
+    } catch (error) {
+      // Unknown (non-network) errors must NOT be misread as offline.
+      return classifyNetworkError(error) === null;
+    }
+  }
 
   async #loadPlugin(name: string, defaultEnabled?: boolean): Promise<void> {
     const { PluginManager } = await import('@/runtime/plugins/plugin-manager');
