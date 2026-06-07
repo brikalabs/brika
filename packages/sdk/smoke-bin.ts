@@ -28,8 +28,17 @@ function fail(message: string): never {
 }
 
 /** Spawn a command, capture combined output, and return { code, output }. */
-async function run(cmd: string[], cwd: string): Promise<{ code: number; output: string }> {
-  const proc = Bun.spawn(cmd, { cwd, stdout: 'pipe', stderr: 'pipe' });
+async function run(
+  cmd: string[],
+  cwd: string,
+  env?: Record<string, string>
+): Promise<{ code: number; output: string }> {
+  const proc = Bun.spawn(cmd, {
+    cwd,
+    stdout: 'pipe',
+    stderr: 'pipe',
+    env: { ...process.env, ...env },
+  });
   const [stdout, stderr, code] = await Promise.all([
     new Response(proc.stdout).text(),
     new Response(proc.stderr).text(),
@@ -176,6 +185,18 @@ try {
   const verify = await run(['bun', 'node_modules/.bin/brika', 'verify'], pluginDir);
   if (verify.code !== 0 || !verify.output.includes('Verification passed')) {
     fail(`brika verify failed:\n${verify.output}`);
+  }
+
+  // 6. The hub-driving verbs are bundled too. Point at an unused port so no hub
+  //    is reachable: `install` must exercise the bundled loopback client and
+  //    fall back with the clear message (not crash on a missing dependency).
+  console.log('• running brika install with no hub (exercises the bundled hub client)');
+  const noHub = await run(['bun', 'node_modules/.bin/brika', 'install', '.'], pluginDir, {
+    BRIKA_HOST: '127.0.0.1',
+    BRIKA_PORT: '59999',
+  });
+  if (noHub.code !== 1 || !noHub.output.includes('needs a running Brika hub')) {
+    fail(`brika install no-hub fallback misbehaved:\n${noHub.output}`);
   }
 
   console.log('\n✓ smoke: packed @brika/sdk ships a working, self-contained `brika` bin\n');
