@@ -3,9 +3,9 @@
  * Heavy deps (icons, ui, cva, clsx) are lazy-loaded with top-level await.
  */
 
+import { z } from '@brika/sdk/schema';
 import * as React from 'react';
 import * as jsxRuntime from 'react/jsx-runtime';
-import { z } from 'zod';
 import { analyticsApi } from '@/features/analytics/api';
 import {
   useBrickConfig,
@@ -34,7 +34,10 @@ import {
 const sdk = {
   capture: (name: string, props?: Record<string, Json>) => analyticsApi.capture(name, props),
   // Bricks declare `export const config = z.object(...)` and pass it to
-  // useBrickConfig(); that schema is built at runtime with this z.
+  // useBrickConfig(); that schema is built at runtime with this z. It MUST be
+  // the SDK's curated z (not raw `zod`): bricks call BRIKA-only helpers like
+  // z.dynamicDropdown()/z.generic() at module-eval time, and a raw zod here
+  // throws "z.dynamicDropdown is not a function" → "Failed to load brick".
   z,
 };
 

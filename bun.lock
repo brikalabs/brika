@@ -5,16 +5,16 @@
     "": {
       "name": "brika",
       "devDependencies": {
-        "@biomejs/biome": "latest",
+        "@biomejs/biome": "2.4.16",
         "@brika/hub": "workspace:*",
         "@brika/i18n-devtools": "workspace:*",
         "@brika/mortar": "workspace:*",
         "@brika/sdk": "workspace:*",
         "@brika/testing": "workspace:*",
         "@brika/workspace-tools": "workspace:*",
-        "@typescript/native-preview": "latest",
-        "bun-types": "latest",
-        "typescript": "latest",
+        "@typescript/native-preview": "^7.0.0-dev.20260608.1",
+        "bun-types": "^1.3.14",
+        "typescript": "^6.0.3",
       },
     },
     "apps/build": {
@@ -135,6 +135,7 @@
         "@brika/plugin": "workspace:*",
         "@brika/registry": "workspace:*",
         "@brika/remote-access-protocol": "workspace:*",
+        "@brika/sdk": "workspace:*",
         "@brika/type-system": "workspace:*",
         "@dnd-kit/core": "^6.3.1",
         "@dnd-kit/sortable": "^10.0.0",
