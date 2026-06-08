@@ -1,4 +1,13 @@
-import { Badge, Card, CardContent, CardHeader, CardTitle, cn } from '@brika/clay';
+import {
+  Badge,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Status,
+  StatusIndicator,
+  StatusLabel,
+} from '@brika/clay';
 import { Server } from 'lucide-react';
 import { useLocale } from '@/lib/use-locale';
 
@@ -34,12 +43,12 @@ export function SystemStatusCard({
       <CardContent className="flex flex-col gap-2.5">
         <div className="flex items-center justify-between rounded-lg border bg-card p-3">
           <span className="font-medium text-sm">{t('common:labels.status')}</span>
-          <Badge
-            variant={health?.ok ? 'default' : 'destructive'}
-            className={cn(health?.ok && 'border-success/20 bg-success/10 text-success')}
-          >
-            {health?.ok ? t('common:status.running') : t('common:status.stopped')}
-          </Badge>
+          <Status variant={health?.ok ? 'success' : 'destructive'}>
+            <StatusIndicator pulse={health?.ok === true} />
+            <StatusLabel>
+              {health?.ok ? t('common:status.running') : t('common:status.stopped')}
+            </StatusLabel>
+          </Status>
         </div>
         <div className="flex items-center justify-between rounded-lg border bg-card p-3">
           <span className="font-medium text-sm">{t('dashboard:stats.plugins')}</span>

@@ -1,5 +1,4 @@
 import {
-  Badge,
   Button,
   Card,
   cn,
@@ -8,6 +7,9 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  Status,
+  StatusIndicator,
+  StatusLabel,
   Switch,
   Tooltip,
   TooltipContent,
@@ -114,23 +116,20 @@ export function WorkflowCard({
         {isError ? (
           <Tooltip>
             <TooltipTrigger asChild>
-              <Badge variant="destructive" className="shrink-0 cursor-help gap-1.5 text-[11px]">
-                <AlertCircle className="size-3" />
-                {t('common:status.error')}
-              </Badge>
+              <Status variant="destructive" className="shrink-0 cursor-help text-[11px]">
+                <StatusIndicator pulse={false} />
+                <StatusLabel>{t('common:status.error')}</StatusLabel>
+              </Status>
             </TooltipTrigger>
             <TooltipContent className="max-w-xs">
               <p className="text-xs">{workflow.error || 'Unknown error'}</p>
             </TooltipContent>
           </Tooltip>
         ) : (
-          <Badge
-            variant={isRunning ? 'default' : 'secondary'}
-            className={cn('shrink-0 gap-1.5 text-[11px]', status.badge)}
-          >
-            <status.icon className={cn('size-3', status.iconClass)} />
-            {t(`common:status.${workflow.status ?? 'stopped'}`)}
-          </Badge>
+          <Status variant={isRunning ? 'success' : 'neutral'} className="shrink-0 text-[11px]">
+            <StatusIndicator pulse={isRunning} />
+            <StatusLabel>{t(`common:status.${workflow.status ?? 'stopped'}`)}</StatusLabel>
+          </Status>
         )}
 
         <div className="flex items-center gap-1">

@@ -1,5 +1,4 @@
-import { Badge } from '@brika/clay';
-import { ArrowUpCircle, CheckCircle2, Code2, FlaskConical } from 'lucide-react';
+import { Status, StatusIndicator, StatusLabel } from '@brika/clay';
 import { useLocale } from '@/lib/use-locale';
 
 interface UpdateBadgeProps {
@@ -21,13 +20,15 @@ export function UpdateBadge({
 
   if (updateAvailable) {
     return (
-      <Badge variant="default">
-        <ArrowUpCircle className="size-3" />
-        {t('common:updates.versionChange', {
-          from: currentVersion,
-          to: latestVersion,
-        })}
-      </Badge>
+      <Status variant="info">
+        <StatusIndicator />
+        <StatusLabel>
+          {t('common:updates.versionChange', {
+            from: currentVersion,
+            to: latestVersion,
+          })}
+        </StatusLabel>
+      </Status>
     );
   }
   // channelMismatch is checked *before* devBuild so the more specific copy
@@ -35,24 +36,24 @@ export function UpdateBadge({
   // exclusive but defense-in-depth costs nothing here.
   if (channelMismatch) {
     return (
-      <Badge variant="outline">
-        <FlaskConical className="size-3" />
-        {t('common:updates.canaryBuild')}
-      </Badge>
+      <Status variant="warning">
+        <StatusIndicator pulse={false} />
+        <StatusLabel>{t('common:updates.canaryBuild')}</StatusLabel>
+      </Status>
     );
   }
   if (devBuild) {
     return (
-      <Badge variant="outline">
-        <Code2 className="size-3" />
-        {t('common:updates.devBuild')}
-      </Badge>
+      <Status variant="neutral">
+        <StatusIndicator pulse={false} />
+        <StatusLabel>{t('common:updates.devBuild')}</StatusLabel>
+      </Status>
     );
   }
   return (
-    <Badge variant="secondary">
-      <CheckCircle2 className="size-3" />
-      {t('common:updates.upToDate')}
-    </Badge>
+    <Status variant="success">
+      <StatusIndicator pulse={false} />
+      <StatusLabel>{t('common:updates.upToDate')}</StatusLabel>
+    </Status>
   );
 }
