@@ -12,7 +12,7 @@ import { chartBrick } from './chart.brick';
 export default function ConsumptionChart() {
   const state = chartBrick.data.use();
   const config = useBrickConfig(chartBrick.config);
-  const { t, locale } = useLocale();
+  const { t, formatDate, formatTime } = useLocale();
   const gradId = useId();
   const tier = useSizeTier();
 
@@ -24,8 +24,9 @@ export default function ConsumptionChart() {
     if (!periodState?.data || !prices) {
       return [];
     }
-    return buildRows(periodState.data.points, periodState.data.granularity, locale, prices);
-  }, [periodState?.data, locale, prices]);
+    const fmt = { formatDate, formatTime };
+    return buildRows(periodState.data.points, periodState.data.granularity, fmt, prices);
+  }, [periodState?.data, formatDate, formatTime, prices]);
 
   if (!state) {
     return <Loader />;

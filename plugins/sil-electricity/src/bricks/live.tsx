@@ -1,7 +1,14 @@
-import { useLocale } from '@brika/sdk/ui-kit/hooks';
+import { type PluginLocale, useLocale } from '@brika/sdk/ui-kit/hooks';
 import { Activity, Zap } from 'lucide-react';
 import { useMemo } from 'react';
-import { Area, AreaChart, ResponsiveContainer, Tooltip, type TooltipContentProps } from 'recharts';
+import {
+  Area,
+  AreaChart,
+  ResponsiveContainer,
+  Tooltip,
+  type TooltipContentProps,
+  XAxis,
+} from 'recharts';
 import type { ConsumptionPoint } from '../types';
 import {
   formatKwh,
@@ -15,9 +22,7 @@ import { liveBrick } from './live.brick';
 
 const ACCENT = 'var(--color-data-3)';
 
-function formatTime(timestamp: string, locale: string): string {
-  return new Date(timestamp).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
-}
+type FormatTime = PluginLocale['formatTime'];
 
 function isToday(timestamp: string): boolean {
   const d = new Date(timestamp);
@@ -30,14 +35,14 @@ function isToday(timestamp: string): boolean {
 }
 
 interface Row {
-  ts: number;
   watts: number;
+  label: string;
 }
 
-function buildRows(points: ConsumptionPoint[]): Row[] {
+function buildRows(points: ConsumptionPoint[], formatTime: FormatTime): Row[] {
   return points.map((p) => ({
-    ts: new Date(p.timestamp).getTime(),
     watts: kwhToWatts(p.total - p.injection),
+    label: formatTime(new Date(p.timestamp)),
   }));
 }
 
@@ -48,7 +53,7 @@ function LiveTooltip({ active, payload, label }: TooltipContentProps<number, str
   const watts = payload[0]?.value ?? 0;
   return (
     <div className="rounded-md border border-border bg-popover px-2 py-1 text-popover-foreground text-xs shadow-md">
-      <div className="text-muted-foreground">{new Date(Number(label)).toLocaleTimeString()}</div>
+      <div className="text-muted-foreground">{label}</div>
       <div className="font-medium text-data-3">{formatPower(Number(watts))}</div>
     </div>
   );
@@ -66,11 +71,11 @@ function NoCredentials() {
 
 export default function LiveConsumption() {
   const state = liveBrick.data.use();
-  const { t, locale } = useLocale();
+  const { t, formatTime } = useLocale();
 
   const periodState = state?.periods?.['24h'];
   const data = periodState?.data;
-  const rows = useMemo(() => (data ? buildRows(data.points) : []), [data]);
+  const rows = useMemo(() => (data ? buildRows(data.points, formatTime) : []), [data, formatTime]);
   const tier = useSizeTier();
 
   if (!state) {
@@ -100,6 +105,7 @@ export default function LiveConsumption() {
             <stop offset="95%" stopColor={ACCENT} stopOpacity={0} />
           </linearGradient>
         </defs>
+        <XAxis dataKey="label" hide />
         <Tooltip content={LiveTooltip} cursor={{ stroke: ACCENT, strokeOpacity: 0.3 }} />
         <Area
           type="monotone"
@@ -156,7 +162,7 @@ export default function LiveConsumption() {
             {t('ui.live')}
           </p>
           <p className="truncate text-[10px] text-muted-foreground/70">
-            {t('ui.lastReading')} {formatTime(last.timestamp, locale)}
+            {t('ui.lastReading')} {formatTime(new Date(last.timestamp))}
           </p>
         </div>
         <Activity className="size-4 shrink-0 text-data-3" />
