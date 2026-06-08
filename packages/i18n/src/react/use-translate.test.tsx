@@ -65,6 +65,42 @@ async function buildInstance(
   return instance;
 }
 
+/** Namespaces the recording backend was asked to load, in order. */
+const backendReads: string[] = [];
+
+/**
+ * Like {@link buildInstance} but wired to a backend that records every
+ * namespace read and returns an empty bundle. Lets a test observe the
+ * lazy `loadNamespaces` that `tp` fires for an unloaded namespace without
+ * depending on object identity (react-i18next hands the hook a derived
+ * clone, but all clones share this one backend connector).
+ */
+async function buildInstanceWithBackend(language: string): Promise<typeof i18next> {
+  const recordingBackend = {
+    type: 'backend' as const,
+    init: () => undefined,
+    read: (_lng: string, ns: string, cb: (err: unknown, data: object) => void) => {
+      backendReads.push(ns);
+      cb(null, {});
+    },
+  };
+  const instance = i18next.createInstance();
+  await instance
+    .use(recordingBackend)
+    .use(initReactI18next)
+    .init({
+      lng: language,
+      fallbackLng: false,
+      defaultNS: 'common',
+      ns: ['common'],
+      partialBundledLanguages: true,
+      resources: { [language]: { common: { hi: 'Hi' } } },
+      interpolation: { escapeValue: false },
+      react: { useSuspense: true },
+    });
+  return instance;
+}
+
 describe('useTranslate — basics', () => {
   test('exposes locale, t, tp, changeLocale', async () => {
     const inst = await buildInstance('en', { en: { common: { hello: 'Hello' } } });
@@ -147,6 +183,29 @@ describe('useTranslate — tp', () => {
     const inst = await buildInstance('en', { en: { dash: { wave: 'Hi!' } } });
     const { result } = renderProbe(inst);
     expect(result?.tp('dash', 'wave', undefined, 'src/file.tsx:12')).toBe('Hi!');
+  });
+
+  test('tp kicks off a lazy namespace load when the namespace is not in the store yet', async () => {
+    // The "click the tab twice to see the translation" fix: a plugin namespace
+    // that hasn't loaded must trigger a fire-and-forget `loadNamespaces`, so the
+    // react-i18next `loaded` binding re-renders with the bundle. We observe the
+    // load through a recording backend — react-i18next hands the hook a derived
+    // clone, but every clone shares the one backend connector.
+    const inst = await buildInstanceWithBackend('en');
+    const { result } = renderProbe(inst);
+    backendReads.length = 0;
+    result?.tp('plugin-x', 'title', 'Fallback');
+    await new Promise((r) => setTimeout(r, 10));
+    expect(backendReads).toContain('plugin-x');
+  });
+
+  test('tp does not trigger a load in cimode', async () => {
+    const inst = await buildInstanceWithBackend('cimode');
+    const { result } = renderProbe(inst);
+    backendReads.length = 0;
+    result?.tp('plugin-y', 'title', 'Fallback');
+    await new Promise((r) => setTimeout(r, 10));
+    expect(backendReads).not.toContain('plugin-y');
   });
 });
 

@@ -149,4 +149,44 @@ describe('streamWriteFile', () => {
     expect(result.bytesWritten).toBe(next.byteLength);
     expect(readFileSync(join(dirs.data, 'doc.txt'), 'utf8')).toBe('brand new content');
   });
+
+  test('rejects when the write would exceed the per-plugin quota and leaves no file', async () => {
+    const { dirs, rootDir } = setupDirs();
+    roots.push(rootDir);
+    // A 4-byte `/data` quota; the 16-byte payload blows past it. The write
+    // must never publish, and the atomic temp sibling must be cleaned up.
+    const deps = { dirs, quotas: new QuotaTracker({ data: 4, cache: 4, tmp: 4 }) };
+    let thrown: BrikaError | undefined;
+    try {
+      await streamWriteFile(deps, {
+        scope: WRITE_SCOPE,
+        virtualPath: '/data/over-quota.bin',
+        body: streamOf(new TextEncoder().encode('sixteen bytes!!!')),
+      });
+    } catch (e) {
+      if (e instanceof BrikaError) {
+        thrown = e;
+      }
+    }
+    expect(thrown?.code).toBe('FS_QUOTA_EXCEEDED');
+    expect(existsSync(join(dirs.data, 'over-quota.bin'))).toBe(false);
+    expect(readdirSync(dirs.data)).toHaveLength(0);
+  });
+
+  test('debits the quota counter when an overwrite shrinks the file', async () => {
+    const { dirs, rootDir } = setupDirs();
+    roots.push(rootDir);
+    const quotas = new QuotaTracker(DEFAULT_FS_QUOTAS);
+    writeFileSync(join(dirs.data, 'doc.txt'), 'a much larger original payload');
+    // Prime the counter from disk so the shrink actually decrements it.
+    const before = await quotas.usage('data', dirs);
+    const small = new TextEncoder().encode('tiny');
+    const result = await streamWriteFile(
+      { dirs, quotas },
+      { scope: WRITE_SCOPE, virtualPath: '/data/doc.txt', body: streamOf(small) }
+    );
+    expect(result.bytesWritten).toBe(small.byteLength);
+    expect(readFileSync(join(dirs.data, 'doc.txt'), 'utf8')).toBe('tiny');
+    expect(await quotas.usage('data', dirs)).toBeLessThan(before);
+  });
 });
