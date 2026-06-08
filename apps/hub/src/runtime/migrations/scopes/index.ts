@@ -5,7 +5,7 @@
  * Order matters: a later scope can rely on earlier scopes having
  * already migrated. Today the ordering is conservative — plugin-data
  * (filesystem) before secrets (filesystem-adjacent, may eventually
- * write to plugins-data).
+ * write to plugins/data).
  */
 
 import type { MigrationScope } from '../types';

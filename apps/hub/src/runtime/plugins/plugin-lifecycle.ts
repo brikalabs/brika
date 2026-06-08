@@ -91,7 +91,7 @@ function networkConsented(
 /**
  * Allocate the four host directories that back a plugin's virtual fs roots
  * and ensure they exist. Bundle is the install dir (read-only); data/cache/tmp
- * live under `<brikaDir>/plugins-data/<uid>/`.
+ * live under `<brikaDir>/plugins/data/<uid>/`.
  */
 function allocateFsDirs(
   brikaDir: string,

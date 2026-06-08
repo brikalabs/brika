@@ -38,7 +38,7 @@ const TTL_MS = 10_000;
  * expiry is the only eviction needed.
  *
  * Works whether or not the plugin is running: the backing dirs resolve
- * deterministically from `<brikaDir>/plugins-data/<uid>/`. Quota limits come
+ * deterministically from `<brikaDir>/plugins/data/<uid>/`. Quota limits come
  * from the running process's manifest when available, else the hub defaults.
  */
 @singleton()

@@ -17,7 +17,7 @@ let dbPath: string;
 
 beforeEach(() => {
   brikaDir = mkdtempSync(join(tmpdir(), 'brika-pd-'));
-  dataRoot = join(brikaDir, 'plugins-data');
+  dataRoot = join(brikaDir, 'plugins', 'data');
   dbPath = join(brikaDir, 'db', 'state.db');
   mkdirSync(dataRoot, { recursive: true });
   mkdirSync(join(brikaDir, 'db'), { recursive: true });
@@ -61,7 +61,7 @@ describe('plugin-data prune-orphans migration', () => {
     expect(existsSync(join(dataRoot, 'orphan-2'))).toBe(false);
   });
 
-  test('is a no-op when plugins-data dir does not exist (fresh install)', async () => {
+  test('is a no-op when the plugin-data dir does not exist (fresh install)', async () => {
     rmSync(dataRoot, { recursive: true, force: true });
     seedDb(['anything']);
 
