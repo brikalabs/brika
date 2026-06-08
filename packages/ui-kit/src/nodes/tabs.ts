@@ -43,7 +43,7 @@ export function Tabs(props: {
     tabs: tabs.map((tab) => ({
       key: tab.key,
       label: tab.label,
-      icon: tab.icon,
+      ...(tab.icon !== undefined && { icon: tab.icon }),
       children: normalizeChildren(tab.children),
     })),
     onChange: resolveAction(onChange),

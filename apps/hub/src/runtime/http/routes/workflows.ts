@@ -7,6 +7,16 @@ import { nonEmptyRecord, PositionSchema } from '@/runtime/workflows/schemas';
 import type { Json } from '@/types';
 import { getOrThrow } from '../utils/resource-helpers';
 
+/**
+ * Workflow id is used to build the on-disk file path (`<dir>/<id>.yaml`), so it
+ * must never contain path separators or dots that could escape the data dir.
+ * Matches the generated `workflow-<slug>` / UUID forms.
+ */
+const workflowIdSchema = z
+  .string()
+  .min(1)
+  .regex(/^[A-Za-z0-9_-]+$/, 'id may only contain letters, digits, "-" and "_"');
+
 const blockSchema = z.object({
   id: z.string(),
   type: z.string(),
@@ -22,7 +32,7 @@ const connectionSchema = z.object({
 });
 
 const workflowSchema = z.object({
-  id: z.string(),
+  id: workflowIdSchema,
   name: z.string(),
   description: z.string().optional(),
   blocks: z.array(blockSchema),
@@ -168,7 +178,7 @@ export const workflowsRoutes = group({
     route.delete({
       path: '/:id',
       params: z.object({
-        id: z.string(),
+        id: workflowIdSchema,
       }),
       handler: async ({ params, inject }) => {
         const ok = await inject(WorkflowLoader).deleteWorkflow(params.id);

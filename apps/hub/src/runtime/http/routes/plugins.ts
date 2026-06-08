@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { getProcessMetrics, MetricsStore } from '@/runtime/metrics';
 import { ModuleCompiler } from '@/runtime/modules';
 import { MODULE_KINDS, resolveModuleUrl } from '@/runtime/modules/module-kinds';
+import { DiskUsageCache } from '@/runtime/plugins/disk-usage';
 import { PluginConfigService } from '@/runtime/plugins/plugin-config';
 import { PluginLifecycle } from '@/runtime/plugins/plugin-lifecycle';
 import { PluginManager } from '@/runtime/plugins/plugin-manager';
@@ -370,6 +371,19 @@ export const pluginsRoutes = group({
           current,
           history: metricsStore.get(plugin.name),
         };
+      },
+    }),
+
+    // Get plugin disk usage (per fs root: data / cache / tmp + total).
+    // Cached + works for stopped plugins — see DiskUsageCache.
+    route.get({
+      path: '/:uid/disk-usage',
+      params: z.object({
+        uid: z.string(),
+      }),
+      handler: async ({ params, inject }) => {
+        const plugin = getOrThrow(inject(PluginManager).get(params.uid), 'Plugin not found');
+        return await inject(DiskUsageCache).get(plugin);
       },
     }),
 

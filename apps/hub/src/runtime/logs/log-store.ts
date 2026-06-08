@@ -1,12 +1,20 @@
 import {
   and, asc, type BrikaDatabase, count, cursorFilter, desc, endTsFilter,
-  eq, isNotNull, like, lt, oneOrMany, startTsFilter,
+  eq, isNotNull, lt, oneOrMany, sql, startTsFilter,
 } from "@brika/db";
 import { singleton } from "@brika/di";
 import type { Json } from "@/types";
 import { logsDb } from "./database";
 import { logs as logsTable } from "./schema";
 import type { LogEvent, LogLevel, LogSource } from "./types";
+
+/**
+ * Escape SQLite LIKE wildcards (`%`, `_`) and the escape char itself so a
+ * search term is matched literally. Pair with `ESCAPE '\\'` in the query.
+ */
+function escapeLike(value: string): string {
+  return value.replace(/[\\%_]/g, (m) => `\\${m}`);
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -211,7 +219,9 @@ export class LogStore {
         oneOrMany(logsTable.level, level),
         oneOrMany(logsTable.source, source),
         pluginName ? eq(logsTable.pluginName, pluginName) : undefined,
-        search ? like(logsTable.message, `%${search}%`) : undefined,
+        search
+          ? sql`${logsTable.message} LIKE ${`%${escapeLike(search)}%`} ESCAPE '\\'`
+          : undefined,
         startTsFilter(logsTable.ts, startTs),
         endTsFilter(logsTable.ts, endTs),
         cursorFilter(logsTable.id, cursor, order),

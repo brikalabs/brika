@@ -43,7 +43,11 @@
     "package": "Paquet",
     "currentVersion": "Version actuelle",
     "cpu": "CPU",
-    "memory": "Mémoire"
+    "memory": "Mémoire",
+    "diskUsage": "Espace disque",
+    "diskData": "Données",
+    "diskCache": "Cache",
+    "diskTmp": "Temporaire"
   },
   "actions": {
     "load": "Charger un plugin",

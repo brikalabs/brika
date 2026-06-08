@@ -4,9 +4,6 @@
 
 import type { StreamEventType } from '@brika/ipc/contract';
 
-/** Re-export under a local name so callers don't need to know the wire-type suffix. */
-export type StreamEvent = StreamEventType;
-
 /** Maximum simultaneously-open WebSocket connections per plugin. */
 export const DEFAULT_MAX_OPEN_SOCKETS = 8;
 

@@ -33,6 +33,22 @@ export interface WireMessage {
 /** Send function */
 export type SendFn = (msg: WireMessage) => void;
 
+/**
+ * A wire frame from an untrusted peer must be a plain object carrying a string
+ * `t` discriminator. Validating before destructuring stops a malformed frame
+ * ({t:123}, an array, null) from throwing inside `handle` and escalating to an
+ * unhandledRejection that restarts the hub.
+ */
+function isValidEnvelope(raw: unknown): raw is WireMessage {
+  return (
+    typeof raw === 'object' &&
+    raw !== null &&
+    !Array.isArray(raw) &&
+    't' in raw &&
+    typeof raw.t === 'string'
+  );
+}
+
 /** Message handler */
 export type MessageHandler<T extends MessageDef> = (payload: PayloadOf<T>) => void | Promise<void>;
 
@@ -307,6 +323,11 @@ export class Channel {
    */
   async handle(raw: WireMessage): Promise<void> {
     if (this.#closed) {
+      return;
+    }
+
+    // Drop malformed frames before any field access (untrusted peer input).
+    if (!isValidEnvelope(raw)) {
       return;
     }
 

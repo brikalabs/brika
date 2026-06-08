@@ -16,6 +16,7 @@ import { ModuleCompiler } from '@/runtime/modules';
 import { MODULE_KINDS, resolveModuleUrl } from '@/runtime/modules/module-kinds';
 import { SecretStore } from '@/runtime/secrets/secret-store';
 import { type PluginStateWithMetadata, StateStore } from '@/runtime/state/state-store';
+import { pluginFsDirs } from './fs-dirs';
 import { buildHubGrants } from './grants/registry-factory';
 import { buildVectorWithUserConsent, familiesForManifestGrants } from './grants/vector';
 import { compileServerEntry, PluginProcess, spawnPlugin } from './lifecycle-deps';
@@ -64,6 +65,25 @@ function rawSocketsConsented(
   return vector.grants.some((grant) => grant.id === RAW_SOCKET_GRANT_ID);
 }
 
+/** Grant-id prefixes that imply the plugin legitimately needs IP egress. */
+const NETWORK_GRANT_PREFIXES = ['dev.brika.net.', 'dev.brika.ws.', 'dev.brika.dns.'];
+
+/**
+ * True when the plugin holds any network-capable grant (net.fetch/socket, ws,
+ * dns) after operator consent. Drives the kernel sandbox's `allowNetwork`: a
+ * grant-less plugin gets IP egress denied at the kernel (unix IPC still allowed),
+ * restoring the DNS-rebind and bare-import backstops that assume that deny.
+ */
+function networkConsented(
+  manifestGrants: Readonly<Record<string, unknown>> | undefined,
+  grantedFamilies: ReadonlyArray<string>
+): boolean {
+  const vector = buildVectorWithUserConsent(sharedGrantRegistry, manifestGrants, grantedFamilies);
+  return vector.grants.some((grant) =>
+    NETWORK_GRANT_PREFIXES.some((prefix) => grant.id.startsWith(prefix))
+  );
+}
+
 /**
  * Manages plugin lifecycle: loading, unloading, and restart handling.
  * Simplified by delegating to focused helper classes.
@@ -78,13 +98,7 @@ function allocateFsDirs(
   uid: string,
   rootDirectory: string
 ): { bundle: string; data: string; cache: string; tmp: string } {
-  const base = join(brikaDir, 'plugins-data', uid);
-  const dirs = {
-    bundle: rootDirectory,
-    data: join(base, 'data'),
-    cache: join(base, 'cache'),
-    tmp: join(base, 'tmp'),
-  };
+  const dirs = pluginFsDirs(brikaDir, uid, rootDirectory);
   mkdirSync(dirs.data, { recursive: true });
   mkdirSync(dirs.cache, { recursive: true });
   mkdirSync(dirs.tmp, { recursive: true });
@@ -395,6 +409,12 @@ export class PluginLifecycle {
     // emits an SBPL profile (macOS) / no-op (Linux + Windows pending
     // landlock/AppContainer) so the kernel refuses writes outside
     // scope even if L1+L2 break.
+    // Derive kernel egress from grants (mirrors the raw-socket gate): a plugin
+    // with no net/ws/dns grant gets IP traffic denied at the kernel, so a
+    // grant-less plugin that escapes L1 still can't reach the network.
+    const grantedPermissions = this.#state.getGrantedPermissions(pluginName);
+    const allowNetwork = networkConsented(metadata.grants, grantedPermissions);
+
     const sandboxPlan = this.#sandboxLauncher.wrap(
       this.#bunRunner.bin,
       [`--preload=${PRELUDE_PATH}`, buildResult.entryPath],
@@ -402,14 +422,11 @@ export class PluginLifecycle {
         pluginUid: uid,
         readableDirs: [rootDirectory, fsDirs.data, fsDirs.cache, fsDirs.tmp],
         writableDirs: [rootDirectory, fsDirs.data, fsDirs.cache, fsDirs.tmp],
-        allowNetwork: true,
+        allowNetwork,
       }
     );
 
-    const rawSockets = rawSocketsConsented(
-      metadata.grants,
-      this.#state.getGrantedPermissions(pluginName)
-    );
+    const rawSockets = rawSocketsConsented(metadata.grants, grantedPermissions);
 
     const channel = spawnPlugin(sandboxPlan.cmd, [...sandboxPlan.args], {
       cwd: rootDirectory,

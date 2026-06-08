@@ -1,6 +1,6 @@
 {
   "name": "@brika/grants",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "description": "Typed capability/grant registry — the single primitive every plugin uses to call the hub",
   "type": "module",
   "license": "MIT",

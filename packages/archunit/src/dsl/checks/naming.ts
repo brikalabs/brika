@@ -14,10 +14,11 @@ declare module '../file-rule' {
 registerCheck('bePascalCase', () => ({
   name: 'PascalCase',
   check: (_, file) => {
-    const name = file
-      .split('/')
-      .pop()
-      ?.replace(/\.\w+$/, '');
+    const name =
+      file
+        .split('/')
+        .pop()
+        ?.replace(/\.\w+$/, '') ?? '';
     if (!/^[A-Z][a-zA-Z0-9]*$/.test(name)) {
       return {
         file,
@@ -30,10 +31,11 @@ registerCheck('bePascalCase', () => ({
 registerCheck('beCamelCase', () => ({
   name: 'camelCase',
   check: (_, file) => {
-    const name = file
-      .split('/')
-      .pop()
-      ?.replace(/\.\w+$/, '');
+    const name =
+      file
+        .split('/')
+        .pop()
+        ?.replace(/\.\w+$/, '') ?? '';
     if (!/^[a-z][a-zA-Z0-9]*$/.test(name)) {
       return {
         file,
@@ -46,10 +48,11 @@ registerCheck('beCamelCase', () => ({
 registerCheck('beKebabCase', () => ({
   name: 'kebab-case',
   check: (_, file) => {
-    const name = file
-      .split('/')
-      .pop()
-      ?.replace(/\.\w+$/, '');
+    const name =
+      file
+        .split('/')
+        .pop()
+        ?.replace(/\.\w+$/, '') ?? '';
     if (!/^[a-z][a-z0-9]*(-[a-z0-9]+)*$/.test(name)) {
       return {
         file,

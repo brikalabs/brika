@@ -24,8 +24,6 @@ import { VIRTUAL_ROOTS, type VirtualRoot } from '@brika/sdk/grants';
 import type { EphemeralRoots } from './ephemeral';
 import type { FsBackingDirs, ResolvedPath } from './types';
 
-const VIRTUAL_ROOT_SET: ReadonlySet<string> = new Set(VIRTUAL_ROOTS);
-
 /**
  * Parse a virtual path and produce a `ResolvedPath`. Throws
  * `FS_PATH_OUTSIDE_ROOT` for inputs that escape the virtual roots.
@@ -137,6 +135,3 @@ export function isWithinBackingDir(hostPath: string, backingDir: string): boolea
   }
   return hostPath.startsWith(backingDir + sep);
 }
-
-/** Re-exported so the lockup helper can be unit-tested without circular imports. */
-export { VIRTUAL_ROOT_SET };

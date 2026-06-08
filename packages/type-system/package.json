@@ -1,6 +1,6 @@
 {
   "name": "@brika/type-system",
-  "version": "0.1.1",
+  "version": "0.4.0",
   "description": "Unified type system for BRIKA workflow port types",
   "type": "module",
   "license": "MIT",

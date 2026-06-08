@@ -19,6 +19,7 @@ export function NotFoundPage({
       title={t('common:errors.404.title')}
       description={t('common:errors.404.description')}
       iconClassName="bg-muted text-muted-foreground"
+      accentClassName="text-muted-foreground"
       variant={variant}
     />
   );

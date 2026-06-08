@@ -5,10 +5,12 @@ const CAMEL_CASE = /^[a-z][a-zA-Z0-9]*$/;
 const KEBAB_CASE = /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/;
 
 function getFileName(path: string): string {
-  return path
-    .split('/')
-    .pop()
-    ?.replace(/\.\w+$/, '');
+  return (
+    path
+      .split('/')
+      .pop()
+      ?.replace(/\.\w+$/, '') ?? ''
+  );
 }
 
 /** Files matching pattern must use PascalCase naming */

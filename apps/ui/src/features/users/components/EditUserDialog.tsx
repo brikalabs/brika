@@ -72,11 +72,6 @@ export function EditUserDialog({ open, onOpenChange, user }: Readonly<EditUserDi
     setError('');
   }, [open, user.id, user.name, user.role, user.isActive, user.scopes]);
 
-  // Reset scopes to role defaults when role changes
-  useEffect(() => {
-    setScopes(ROLE_SCOPES_MAP[role] ?? []);
-  }, [role]);
-
   const roleScopes = ROLE_SCOPES_MAP[role] ?? [];
   const isAdmin = role === 'admin';
 
@@ -143,6 +138,9 @@ export function EditUserDialog({ open, onOpenChange, user }: Readonly<EditUserDi
               onValueChange={(value) => {
                 capture('users.edit_role_changed', { role: value });
                 setRole(value);
+                // Reset scopes to the new role's defaults only on an actual role
+                // change (never via a mount effect, which clobbered custom scopes).
+                setScopes(ROLE_SCOPES_MAP[value] ?? []);
               }}
             >
               <SelectTrigger id="edit-role">

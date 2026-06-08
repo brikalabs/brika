@@ -3,7 +3,9 @@
  */
 import 'reflect-metadata';
 import { afterEach, describe, expect, mock, spyOn, test } from 'bun:test';
+import { Scope } from '@brika/auth';
 import { provide, stub, useTestBed } from '@brika/di/testing';
+import type { Middleware } from '@brika/router';
 import { TestApp } from '@brika/router/testing';
 import { useBunMock } from '@brika/testing';
 import { registryRoutes } from '@/runtime/http/routes/registry';
@@ -11,6 +13,22 @@ import { Logger } from '@/runtime/logs/log-router';
 import { PluginRegistry } from '@/runtime/registry';
 import type { OperationProgress } from '@/runtime/registry/types';
 import { StoreService } from '@/runtime/store';
+
+// Stand-in for the auth middleware: install/update/delete run under
+// requireScope(PLUGIN_MANAGE) in production, so seed a session that holds it.
+function sessionMiddleware(scopes: Scope[]): Middleware {
+  return async (c, next) => {
+    c.set('session', {
+      id: 'sess',
+      userId: 'user-42',
+      userEmail: 'u@example.com',
+      userName: 'U',
+      userRole: 'admin',
+      scopes,
+    });
+    await next();
+  };
+}
 
 describe('registry routes', () => {
   let app: ReturnType<typeof TestApp.create>;
@@ -74,7 +92,7 @@ describe('registry routes', () => {
     stub(StoreService, mockStore);
     stub(Logger, mockLogger);
 
-    app = TestApp.create(registryRoutes);
+    app = TestApp.create(registryRoutes, [sessionMiddleware([Scope.PLUGIN_MANAGE])]);
   });
 
   // ─── Packages ─────────────────────────────────────────────────────────────

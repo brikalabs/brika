@@ -1,6 +1,6 @@
 {
   "name": "@brika/router",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "type": "module",
   "license": "MIT",
   "repository": {
@@ -20,7 +20,7 @@
   "dependencies": {
     "@brika/di": "workspace:*",
     "@brika/errors": "workspace:*",
-    "hono": "^4.12.2",
+    "hono": "^4.12.24",
     "zod": "^4.3.4"
   },
   "devDependencies": {

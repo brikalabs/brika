@@ -2,11 +2,12 @@ import { Badge, Card, CardContent, CardHeader, CardTitle } from '@brika/clay';
 import { useParams } from '@tanstack/react-router';
 import { FileText } from 'lucide-react';
 import { useLocale } from '@/lib/use-locale';
-import { usePlugin, usePluginMetrics, usePluginReadme } from '../hooks';
+import { usePlugin, usePluginDiskUsage, usePluginMetrics, usePluginReadme } from '../hooks';
 import { Markdown } from './Markdown';
 import { PluginBlocksList } from './PluginBlocksList';
 import { PluginBricksList } from './PluginBricksList';
 import { PluginConfigForm } from './PluginConfigForm';
+import { PluginDiskUsage } from './PluginDiskUsage';
 import { PluginInstallInfo } from './PluginInstallInfo';
 import { PluginMetrics } from './PluginMetrics';
 import { PluginPermissions } from './PluginPermissions';
@@ -20,6 +21,7 @@ export function PluginOverviewTab() {
   const { data: plugin } = usePlugin(params.uid ?? '');
   const { data: readmeData } = usePluginReadme(params.uid ?? '');
   const { data: metrics } = usePluginMetrics(params.uid ?? '', plugin?.status === 'running');
+  const { data: diskUsage } = usePluginDiskUsage(params.uid ?? '');
   const { t } = useLocale();
 
   if (!plugin) {
@@ -30,6 +32,7 @@ export function PluginOverviewTab() {
     <div className="space-y-6">
       <PluginStats plugin={plugin} />
       <PluginMetrics metrics={metrics} />
+      <PluginDiskUsage usage={diskUsage} />
       <PluginBlocksList plugin={plugin} />
       <PluginSparksList plugin={plugin} />
       <PluginBricksList plugin={plugin} />

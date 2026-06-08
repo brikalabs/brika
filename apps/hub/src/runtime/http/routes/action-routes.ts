@@ -16,39 +16,42 @@ const actionParams = z.object({
 
 const ACTION_META_HEADER = 'x-brika-action-meta';
 
+// Meta arrives base64-encoded (the client encodes UTF-8 JSON so the header
+// stays ISO-8859-1 safe — paths may carry non-Latin1 code points such as
+// macOS NFD combining marks). Decode, then validate it is a plain object.
+const ActionMetaSchema = z.record(z.string(), z.unknown());
+
+function decodeActionMeta(headerValue: string): Record<string, unknown> {
+  const json = Buffer.from(headerValue, 'base64').toString('utf8');
+  return ActionMetaSchema.parse(JSON.parse(json));
+}
+
 /**
- * Decode an action input. The router already parsed JSON bodies; for
- * any other Content-Type we pull the raw bytes and forward them as a
- * `Uint8Array` so plugin handlers can accept binary input natively.
+ * Decode an action input. The router already parsed JSON bodies; for a
+ * binary Content-Type we deliberately do NOT read the body here — the bytes
+ * stay in the request so the route can stream them straight to disk when the
+ * handler returns a `streamWrite` sink (see `writeStreamResponse`), never
+ * buffering them or sending them over the capped IPC channel.
  *
- * When the caller attaches an `X-Brika-Action-Meta` header (JSON), we
- * merge it with the binary body so the handler sees a single object:
- * `{ ...meta, body: <bytes> }`. This is how `writeEntry({ path }, file)`
- * stays base64-free — `path` rides the header, bytes ride the body.
+ * The handler instead receives the decoded `X-Brika-Action-Meta` object
+ * (e.g. `{ path }`), which the client base64-encodes so the header survives
+ * paths with non-Latin1 code points (accents, macOS NFD combining marks).
  */
-async function readActionInput(req: Request, parsedBody: unknown): Promise<Json | undefined> {
+function readActionInput(req: Request, parsedBody: unknown): Json | undefined {
   const contentType = req.headers.get('content-type') ?? '';
   if (contentType.startsWith('application/json')) {
     return parsedBody as Json | undefined;
   }
-  if (!contentType) {
-    return undefined;
-  }
-  const bytes = new Uint8Array(await req.arrayBuffer());
   const metaHeader = req.headers.get(ACTION_META_HEADER);
   if (!metaHeader) {
-    return bytes as unknown as Json;
+    return undefined;
   }
-  let meta: Record<string, unknown> = {};
   try {
-    const parsed: unknown = JSON.parse(metaHeader);
-    if (parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed)) {
-      meta = parsed as Record<string, unknown>;
-    }
+    return decodeActionMeta(metaHeader) as unknown as Json;
   } catch {
-    // Malformed header → ignore, treat as pure binary.
+    // Malformed header → no input.
+    return undefined;
   }
-  return { ...meta, body: bytes } as unknown as Json;
 }
 
 /** Build the error response when the action call failed end-to-end. */
@@ -98,6 +101,51 @@ async function streamResponse(
     const hostPath = await process.resolveStreamPath(stream.virtualPath);
     const file = Bun.file(hostPath);
     return binaryHttpResponse(file.stream(), stream.contentType ?? file.type, timing);
+  } catch (err) {
+    const envelope = serialiseStreamError(err);
+    return Response.json(
+      { error: envelope },
+      {
+        status: envelope.code === 'PERMISSION_DENIED' ? 403 : 500,
+        headers: { 'server-timing': timing },
+      }
+    );
+  }
+}
+
+/**
+ * Stream the request body straight to disk for a `streamWrite` action. The
+ * hub resolves the virtual path against the plugin's granted fs scope and
+ * runs the full `writeFile` validation pipeline (scope, symlink guard, size
+ * cap, quota) — the upload bytes never enter the plugin process or hit the
+ * IPC payload cap. Mirrors `streamResponse`'s error shaping (403 on
+ * permission failure, 500 otherwise) so the page-side `ActionError` works.
+ */
+async function writeStreamResponse(
+  process: PluginProcess,
+  writeStream: { virtualPath: string },
+  req: Request,
+  timing: string
+): Promise<Response> {
+  if (!req.body) {
+    return Response.json(
+      { error: { message: 'Stream-write action requires a request body', code: 'BAD_REQUEST' } },
+      { status: 400, headers: { 'server-timing': timing } }
+    );
+  }
+  const lengthHeader = req.headers.get('content-length');
+  const declared = lengthHeader === null ? Number.NaN : Number(lengthHeader);
+  const declaredBytes = Number.isFinite(declared) ? declared : undefined;
+  try {
+    const bytesWritten = await process.streamWriteToGrantedPath(
+      writeStream.virtualPath,
+      req.body,
+      declaredBytes
+    );
+    return Response.json(
+      { data: { path: writeStream.virtualPath, bytesWritten } },
+      { headers: { 'server-timing': timing } }
+    );
   } catch (err) {
     const envelope = serialiseStreamError(err);
     return Response.json(
@@ -160,11 +208,10 @@ export const actionRoutes = group({
           throw new NotFound('Plugin not running');
         }
 
-        // Binary input: the router only parses JSON, so for any other
-        // Content-Type we pull the raw bytes ourselves and pass them
-        // through as a Uint8Array. Bun's structured-clone IPC carries
-        // them straight to the plugin handler — no base64 in the loop.
-        const input = await readActionInput(req, body);
+        // For a binary upload the body is left unread: the handler is called
+        // with the meta header only (e.g. `{ path }`), and if it returns a
+        // `streamWrite` sink the route streams the body straight to disk.
+        const input = readActionInput(req, body);
 
         // Surface the IPC round-trip duration as a Server-Timing entry so
         // an operator can inspect where slowness is coming from straight
@@ -175,6 +222,9 @@ export const actionRoutes = group({
 
         if (!result.ok) {
           return errorResponse(result, timing);
+        }
+        if (result.writeStream) {
+          return writeStreamResponse(process, result.writeStream, req, timing);
         }
         if (result.stream) {
           return streamResponse(process, result.stream, timing);

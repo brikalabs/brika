@@ -40,5 +40,101 @@
         "error": "Error"
       }
     }
+  },
+  "fileBrowser": {
+    "columns": { "name": "Name", "size": "Size", "modified": "Modified" },
+    "tree": { "label": "Directory tree" },
+    "kind": {
+      "folder": "Folder",
+      "image": "Image",
+      "video": "Video",
+      "audio": "Audio",
+      "code": "Code",
+      "document": "Document",
+      "spreadsheet": "Spreadsheet",
+      "archive": "Archive",
+      "other": "File"
+    },
+    "summary": {
+      "loading": "Loading…",
+      "empty": "Empty",
+      "folderOne": "{{count}} folder",
+      "folderOther": "{{count}} folders",
+      "fileOne": "{{count}} file",
+      "fileOther": "{{count}} files"
+    },
+    "time": {
+      "justNow": "Just now",
+      "minAgo": "{{count}} min ago",
+      "hrAgo": "{{count}} hr ago",
+      "yesterday": "Yesterday"
+    },
+    "toolbar": {
+      "pathLabel": "File path",
+      "actionsLabel": "File actions",
+      "newFolder": "New folder",
+      "upload": "Upload"
+    },
+    "sort": {
+      "nameAsc": "Name (A to Z)",
+      "nameDesc": "Name (Z to A)",
+      "newest": "Newest first",
+      "oldest": "Oldest first",
+      "largest": "Largest first",
+      "smallest": "Smallest first"
+    },
+    "newFolder": {
+      "placeholder": "Folder name",
+      "ariaLabel": "New folder name",
+      "create": "Create"
+    },
+    "empty": { "title": "Drag files here", "hint": "or click to upload" },
+    "dropzone": {
+      "regionLabel": "File list and upload drop zone",
+      "title": "Drop to upload",
+      "hint": "Release to add files to this folder"
+    },
+    "upload": {
+      "uploading": "Uploading…",
+      "uploaded": "Uploaded",
+      "queued": "Queued",
+      "failedTitle": "Upload failed"
+    },
+    "actions": { "cancel": "Cancel", "delete": "Delete", "download": "Download" },
+    "delete": {
+      "titleFile": "Delete file?",
+      "titleFolder": "Delete folder?",
+      "descriptionFile": "{{name}} will be permanently deleted.",
+      "descriptionFolder": "{{name}} and everything inside it will be permanently deleted."
+    },
+    "permission": {
+      "title": "Filesystem access required",
+      "description": "Enable the Filesystem permission in the Permissions card to browse and manage files."
+    },
+    "preview": {
+      "kind": "Kind",
+      "type": "Type",
+      "size": "Size",
+      "modified": "Modified",
+      "path": "Path",
+      "format": "Format",
+      "open": "Open",
+      "copy": "Copy {{label}}",
+      "copied": "{{label}} copied",
+      "audioLabel": "Audio preview for {{name}}",
+      "videoLabel": "Video preview for {{name}}",
+      "lines": "{{count}} lines",
+      "noPreview": "No inline preview available",
+      "downloadToInspect": "Download to inspect"
+    },
+    "page": {
+      "title": "File browser",
+      "description": "Browse, upload, and manage files in the plugin's virtual /data directory. All filesystem access is gated by the consent UI and jailed to the plugin's data dir."
+    }
+  },
+  "pages": {
+    "file-browser": {
+      "name": "File browser"
+    }
   }
 }

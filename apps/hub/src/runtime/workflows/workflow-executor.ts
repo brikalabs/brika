@@ -52,6 +52,12 @@ export class WorkflowExecutor {
   readonly #instanceIds = new Set<string>(); // Block instance IDs
   #connections = new Map<string, BlockConnection[]>(); // "blockId.port" -> targets
   readonly #buffers = new Map<string, PortBuffer>(); // "blockId:port" -> last value
+  // This executor's own emit/log handlers, kept so stop() removes exactly its
+  // own (the plugin event handler now fans out to every running workflow).
+  #blockEmitHandler: ((instanceId: string, port: string, data: Json) => void) | null = null;
+  #blockLogHandler:
+    | ((instanceId: string, workflowId: string, level: string, message: string) => void)
+    | null = null;
   readonly #blockDefCache = new Map<
     string,
     { block: WorkflowBlock; def: import('@brika/sdk').BlockDefinition } | null
@@ -77,17 +83,22 @@ export class WorkflowExecutor {
     this.#blockDefCache.clear();
     this.#buildBlockDefCache(workflow);
 
-    // Set up the block emit handler
-    this.#plugins.setBlockEmitHandler((instanceId: string, port: string, data: Json) => {
+    // Register this workflow's own emit/log handlers (kept as refs so stop()
+    // removes exactly these, not every workflow's).
+    this.#blockEmitHandler = (instanceId: string, port: string, data: Json) => {
       this.#onBlockEmit(instanceId, port, data);
-    });
+    };
+    this.#plugins.setBlockEmitHandler(this.#blockEmitHandler);
 
-    // Set up the block log handler
-    this.#plugins.setBlockLogHandler(
-      (instanceId: string, workflowId: string, level: string, message: string) => {
-        this.#onBlockLog(instanceId, workflowId, level, message);
-      }
-    );
+    this.#blockLogHandler = (
+      instanceId: string,
+      workflowId: string,
+      level: string,
+      message: string
+    ) => {
+      this.#onBlockLog(instanceId, workflowId, level, message);
+    };
+    this.#plugins.setBlockLogHandler(this.#blockLogHandler);
 
     // Start all blocks
     for (const block of workflow.blocks) {
@@ -127,9 +138,16 @@ export class WorkflowExecutor {
     this.#blockDefCache.clear();
     this.#workflow = null;
 
-    // Clear the block emit handler
-    this.#plugins.clearBlockEmitHandler();
-    this.#plugins.clearBlockLogHandler();
+    // Remove only THIS workflow's handlers, leaving other running workflows'
+    // routing intact.
+    if (this.#blockEmitHandler) {
+      this.#plugins.clearBlockEmitHandler(this.#blockEmitHandler);
+      this.#blockEmitHandler = null;
+    }
+    if (this.#blockLogHandler) {
+      this.#plugins.clearBlockLogHandler(this.#blockLogHandler);
+      this.#blockLogHandler = null;
+    }
 
     this.#emit({
       type: 'workflow.stopped',
@@ -264,6 +282,12 @@ export class WorkflowExecutor {
    */
   #onBlockEmit(blockId: string, port: string, data: Json): void {
     if (!this.#workflow) {
+      return;
+    }
+
+    // The plugin event handler broadcasts every block emit to all running
+    // workflows; ignore blocks this workflow does not own.
+    if (!this.#instanceIds.has(blockId)) {
       return;
     }
 

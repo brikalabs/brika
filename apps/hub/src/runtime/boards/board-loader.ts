@@ -287,6 +287,18 @@ export class BoardLoader {
         return;
       }
 
+      // Reject a second file reusing an id another file already owns (would let
+      // one file's unload tear down the other's board). First file on disk wins.
+      const owner = this.#idToFile.get(board.id);
+      if (owner !== undefined && owner !== filePath) {
+        this.logs.warn('Duplicate board id across files; ignoring the second', {
+          boardId: board.id,
+          keptFile: basename(owner),
+          ignoredFile: basename(filePath),
+        });
+        return;
+      }
+
       this.#boards.set(board.id, board);
       this.#loaded.set(filePath, board.id);
       this.#idToFile.set(board.id, filePath);
@@ -318,12 +330,15 @@ export class BoardLoader {
       return;
     }
 
-    this.#boards.delete(boardId);
     this.#loaded.delete(filePath);
-    this.#idToFile.delete(boardId);
-
-    for (const l of this.#changeListeners) {
-      l(boardId, 'unload');
+    // Only tear down the board if THIS file owns the id, so unloading one file
+    // never removes (or fires a spurious 'unload' for) another file's board.
+    if (this.#idToFile.get(boardId) === filePath) {
+      this.#boards.delete(boardId);
+      this.#idToFile.delete(boardId);
+      for (const l of this.#changeListeners) {
+        l(boardId, 'unload');
+      }
     }
   }
 

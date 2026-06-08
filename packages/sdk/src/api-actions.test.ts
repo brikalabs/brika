@@ -14,11 +14,14 @@ mock.module('./context', () => ({
 const {
   BINARY_RESPONSE_TAG,
   STREAM_FILE_TAG,
+  STREAM_WRITE_TAG,
   binaryResponse,
   defineAction,
   isBinaryResponse,
   isStreamFileResponse,
+  isStreamWriteResponse,
   streamFile,
+  streamWrite,
 } = await import('./api/actions');
 
 describe('defineAction', () => {
@@ -159,5 +162,29 @@ describe('streamFile', () => {
 
   test('isBinaryResponse rejects stream envelopes', () => {
     expect(isBinaryResponse(streamFile('/x'))).toBe(false);
+  });
+});
+
+describe('streamWrite', () => {
+  test('produces a tagged envelope carrying virtualPath', () => {
+    const result = streamWrite('/data/upload.dmg');
+    expect(isStreamWriteResponse(result)).toBe(true);
+    const envelope = result as unknown as Record<string, unknown>;
+    expect(envelope[STREAM_WRITE_TAG]).toBe(true);
+    expect(envelope.virtualPath).toBe('/data/upload.dmg');
+  });
+
+  test('isStreamWriteResponse rejects unrelated values and other envelopes', () => {
+    expect(isStreamWriteResponse(null)).toBe(false);
+    expect(isStreamWriteResponse('hello')).toBe(false);
+    expect(isStreamWriteResponse({ [STREAM_WRITE_TAG]: false })).toBe(false);
+    expect(isStreamWriteResponse({ virtualPath: '/x' })).toBe(false);
+    expect(isStreamWriteResponse(streamFile('/x'))).toBe(false);
+    expect(isStreamWriteResponse(binaryResponse(new Uint8Array()))).toBe(false);
+  });
+
+  test('the discriminators do not cross-match', () => {
+    expect(isStreamFileResponse(streamWrite('/x'))).toBe(false);
+    expect(isBinaryResponse(streamWrite('/x'))).toBe(false);
   });
 });

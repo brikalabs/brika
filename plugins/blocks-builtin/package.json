@@ -2,7 +2,7 @@
   "$schema": "https://schema.brika.dev/plugin.schema.json",
   "name": "@brika/blocks-builtin",
   "displayName": "Core Blocks",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "description": "Core workflow blocks for BRIKA automations",
   "author": "BRIKA Team",
   "license": "MIT",
@@ -28,14 +28,24 @@
     "brika-plugin"
   ],
   "engines": {
-    "brika": "^0.3.0"
+    "brika": "^0.4.0"
   },
   "type": "module",
   "main": "./src/main.ts",
   "exports": {
     ".": "./src/main.ts"
   },
-  "files": ["src", "locales", "icon.svg", "README.md"],
+  "files": [
+    "src",
+    "locales",
+    "icon.svg",
+    "README.md",
+    "!src/**/*.test.ts",
+    "!src/**/*.test.tsx",
+    "!src/**/*.spec.ts",
+    "!src/**/*.spec.tsx",
+    "!src/**/*_test-utils.ts"
+  ],
   "scripts": {
     "dev": "brika dev",
     "build": "brika build",

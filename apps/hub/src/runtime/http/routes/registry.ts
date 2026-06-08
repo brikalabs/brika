@@ -1,4 +1,6 @@
 import { Analytics } from '@brika/analytics';
+import { Scope } from '@brika/auth';
+import { requireScope } from '@brika/auth/server';
 import { createSSEStream, group, NotFound, route } from '@brika/router';
 import { z } from 'zod';
 import { HUB_VERSION } from '@/hub';
@@ -52,6 +54,7 @@ export const registryRoutes = group({
 
     route.post({
       path: '/install',
+      middleware: [requireScope(Scope.PLUGIN_MANAGE)],
       body: z.object({
         package: z.string(),
         version: z.string().optional(),
@@ -72,6 +75,7 @@ export const registryRoutes = group({
 
     route.post({
       path: '/update',
+      middleware: [requireScope(Scope.PLUGIN_MANAGE)],
       body: z.object({
         package: z.string().optional(),
       }),
@@ -126,6 +130,7 @@ export const registryRoutes = group({
 
     route.delete({
       path: '/packages/:name',
+      middleware: [requireScope(Scope.PLUGIN_MANAGE)],
       params: z.object({
         name: z.string(),
       }),

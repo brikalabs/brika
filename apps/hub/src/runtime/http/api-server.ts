@@ -73,6 +73,16 @@ export function createConfiguredOriginMatcher(
  * everything a developer or LAN device would legitimately use to reach
  * the hub.
  */
+/** Loopback origins only (localhost / 127.0.0.1 / [::1]). Always CORS-allowed. */
+export function isLoopbackOrigin(origin: string): boolean {
+  try {
+    const host = new URL(origin).hostname.toLowerCase();
+    return host === 'localhost' || host === '127.0.0.1' || host === '[::1]';
+  } catch {
+    return false;
+  }
+}
+
 export function isPrivateNetworkOrigin(origin: string): boolean {
   try {
     const url = new URL(origin);
@@ -280,11 +290,18 @@ export class ApiServer {
    * is empty it matches nothing, so local/dev behaviour is unchanged.
    */
   #corsAllowlist(): CorsOriginMatcher {
-    return [
+    const matchers: Array<(origin: string) => boolean> = [
       createConfiguredOriginMatcher(this.#config.corsAllowlist),
       isBrikaSubdomainOrigin,
-      isPrivateNetworkOrigin,
+      isLoopbackOrigin,
     ];
+    // Broad RFC1918 / link-local / `.local` trust is opt-in (default off): it
+    // reflects every LAN and mDNS origin for credentialed CORS. Loopback (above)
+    // is always allowed; direct LAN access to the hub is same-origin anyway.
+    if (this.#config.corsAllowPrivateNetwork) {
+      matchers.push(isPrivateNetworkOrigin);
+    }
+    return matchers;
   }
 
   #setupStaticFiles(): void {

@@ -11,7 +11,7 @@ import { defineRoute } from '@brika/sdk';
 
 defineRoute('GET', '/status', () => ({
   status: 200,
-  body: { ok: true, version: '0.3.1' },
+  body: { ok: true, version: '0.4.0' },
 }));
 
 defineRoute('POST', '/webhook', async (req) => {

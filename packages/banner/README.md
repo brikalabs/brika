@@ -16,7 +16,7 @@ console.log(createBanner({
   title: 'BRIKA',
   subtitle: 'Build. Run. Integrate. Keep Automating.',
   metadata: {
-    Version: '0.3.1',
+    Version: '0.4.0',
     Package: '@brika/hub',
   },
 }));

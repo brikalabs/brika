@@ -28,7 +28,10 @@ services:
   # dev tools that print their URL to stdout.
   api:
     label: Example API
-    command: echo "replace me — your backend dev command" && sleep 999999
+    # Single long-running command (commands are argv-split, NOT run in a shell,
+    # so '&&', '|' and subshells do not work). Replace with your backend dev
+    # command, e.g. 'bun run dev' or 'cargo watch -x run'.
+    command: sleep 999999
     port: 3000  # the authoritative answer; used for health + URL
 
   # Per-service working dir + dep ordering. The \`cwd\` is resolved
@@ -36,7 +39,8 @@ services:
   web:
     label: Example Frontend
     cwd: ./
-    command: echo "replace me — e.g. npm run dev / vite / etc." && sleep 999999
+    # Replace with your frontend dev command, e.g. 'npm run dev' or 'vite'.
+    command: sleep 999999
     port: 5173
     dependsOn: [api]
 

@@ -1,6 +1,6 @@
 {
   "name": "@brika/ipc",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "description": "Type-safe IPC communication layer for BRIKA plugins using Bun's native IPC",
   "type": "module",
   "license": "MIT",
@@ -19,7 +19,15 @@
     ".": "./src/index.ts",
     "./contract": "./src/contract/index.ts"
   },
-  "files": ["src", "README.md"],
+  "files": [
+    "src",
+    "README.md",
+    "!src/**/*.test.ts",
+    "!src/**/*.test.tsx",
+    "!src/**/*.spec.ts",
+    "!src/**/*.spec.tsx",
+    "!src/**/*_test-utils.ts"
+  ],
   "scripts": {
     "test": "bun test",
     "typecheck": "tsgo --noEmit",

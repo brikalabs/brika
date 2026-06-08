@@ -203,7 +203,10 @@ export function defineOAuth(config: OAuthProviderConfig): OAuthClient {
   // size — without these limits the map would grow on every /authorize hit
   // and only shrink on successful /callback, leaking memory and giving an
   // unauthenticated attacker a trivial DoS by hammering /authorize.
-  const pendingVerifiers = new Map<string, { verifier: string; expiresAt: number }>();
+  // Every /authorize records its `state` here so the /callback can prove the
+  // state was hub-issued and unused (CSRF / login-fixation defence), not just
+  // the PKCE flows. `verifier` is only present for PKCE.
+  const pendingVerifiers = new Map<string, { verifier?: string; expiresAt: number }>();
   const PKCE_TTL_MS = 10 * 60 * 1000; // 10 minutes — well above any sane auth flow
   const PKCE_MAX_ENTRIES = 64;
 
@@ -303,14 +306,20 @@ export function defineOAuth(config: OAuthProviderConfig): OAuthClient {
       state,
     });
 
+    const entry: { verifier?: string; expiresAt: number } = {
+      expiresAt: Date.now() + PKCE_TTL_MS,
+    };
     if (usePkce) {
       const verifier = generateCodeVerifier();
       const challenge = await generateCodeChallenge(verifier);
-      evictPkceEntries();
-      pendingVerifiers.set(state, { verifier, expiresAt: Date.now() + PKCE_TTL_MS });
+      entry.verifier = verifier;
       params.set('code_challenge_method', 'S256');
       params.set('code_challenge', challenge);
     }
+    // Record the state for EVERY flow (PKCE or not) so the callback can reject
+    // any state this hub did not just issue.
+    evictPkceEntries();
+    pendingVerifiers.set(state, entry);
 
     return {
       status: 302,
@@ -323,11 +332,12 @@ export function defineOAuth(config: OAuthProviderConfig): OAuthClient {
   // ─── Callback helpers ───────────────────────────────────────────────────
 
   /**
-   * Resolve the PKCE code verifier for the given state, cleaning up the
-   * pending map. Re-checks the entry's expiry on lookup — even if
-   * eviction hasn't run yet, a stored-but-expired entry is rejected.
+   * Consume the pending entry for a callback `state`, single-use: deletes it and
+   * rejects an unknown or expired state (the CSRF / login-fixation gate). Returns
+   * the entry (whose `verifier` is set only for PKCE flows) or null if invalid.
+   * Re-checks expiry on lookup even if eviction hasn't run yet.
    */
-  function resolvePkceVerifier(state: string | undefined): string | null {
+  function consumePendingState(state: string | undefined): { verifier?: string } | null {
     if (!state) {
       return null;
     }
@@ -339,7 +349,7 @@ export function defineOAuth(config: OAuthProviderConfig): OAuthClient {
     if (entry.expiresAt <= Date.now()) {
       return null;
     }
-    return entry.verifier;
+    return entry;
   }
 
   /** Exchange an authorization code for tokens, returning an HTML RouteResponse. */
@@ -358,16 +368,25 @@ export function defineOAuth(config: OAuthProviderConfig): OAuthClient {
       client_id: clientId,
     });
 
+    // Validate state on EVERY callback (single-use, hub-issued) regardless of
+    // PKCE: a missing/expired/forged state is a CSRF or login-fixation attempt.
+    const pending = consumePendingState(state);
+    if (!pending) {
+      return htmlPage({
+        status: 400,
+        heading: 'Invalid or expired state',
+        bodyHtml: '<p>Try authorizing again.</p>',
+      });
+    }
     if (usePkce) {
-      const verifier = resolvePkceVerifier(state);
-      if (!verifier) {
+      if (!pending.verifier) {
         return htmlPage({
           status: 400,
           heading: 'Invalid state — PKCE verifier not found',
           bodyHtml: '<p>Try authorizing again.</p>',
         });
       }
-      body.set('code_verifier', verifier);
+      body.set('code_verifier', pending.verifier);
     }
 
     const response = await fetch(config.tokenUrl, {

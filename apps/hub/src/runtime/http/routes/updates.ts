@@ -225,9 +225,3 @@ export const updateAdminRoutes = group({
     }),
   ],
 });
-
-// ─── Back-compat aliases (existing imports) ──────────────────────────────────
-// Some callers may still import `systemRoutes` / `updateRoutes`; route them
-// to the admin-only groups so they remain protected when used as-is.
-export const systemRoutes = systemAdminRoutes;
-export const updateRoutes = updateAdminRoutes;

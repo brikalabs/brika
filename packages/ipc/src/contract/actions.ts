@@ -73,6 +73,20 @@ export const callAction = rpc(
         contentType: z.string().optional(),
       })
       .optional(),
+    /**
+     * Stream-write directive: the mirror of `stream`. The action handler
+     * asks the hub to write the incoming HTTP request body to
+     * `virtualPath`. The hub resolves the path through the plugin's
+     * granted fs scope and streams the body to disk (overwrite) — the
+     * uploaded bytes never round-trip through IPC, so they never hit the
+     * channel's payload cap. The hub replies to the page with
+     * `{ path, bytesWritten }`.
+     */
+    writeStream: z
+      .object({
+        virtualPath: z.string(),
+      })
+      .optional(),
     error: z
       .object({
         message: z.string(),

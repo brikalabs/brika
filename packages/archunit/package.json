@@ -1,6 +1,6 @@
 {
   "name": "@brika/archunit",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "private": true,
   "type": "module",
   "exports": {
@@ -12,7 +12,8 @@
     "archunit": "./src/cli.ts"
   },
   "scripts": {
-    "test": "bun test"
+    "test": "bun test",
+    "typecheck": "tsgo --noEmit"
   },
   "dependencies": {
     "chalk": "^5.6.2"

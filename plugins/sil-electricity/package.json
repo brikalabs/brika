@@ -2,7 +2,7 @@
   "$schema": "https://schema.brika.dev/plugin.schema.json",
   "name": "@brika/plugin-sil-electricity",
   "displayName": "SIL Electricity",
-  "version": "0.1.0",
+  "version": "0.4.0",
   "description": "Monitor your electricity consumption from Services Industriels de Lausanne",
   "author": "Maxime Scharwath",
   "license": "MIT",
@@ -14,7 +14,7 @@
     ".": "./src/index.tsx"
   },
   "engines": {
-    "brika": "^0.3.0"
+    "brika": "^0.4.0"
   },
   "grants": {
     "dev.brika.net.fetch": {

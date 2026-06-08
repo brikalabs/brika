@@ -52,6 +52,24 @@ const slowSpec = defineGrant(
   }
 );
 
+/** Deliberately ignores `ctx.signal`: models a handler that won't honour the abort. */
+const uncooperativeSpec = defineGrant(
+  {
+    id: 'dev.brika.test.uncooperative',
+    ctxPath: 'test.uncooperative',
+    args: z.object({}),
+    result: z.object({}),
+  },
+  async () => {
+    await new Promise<void>((resolve) => {
+      const t = setTimeout(resolve, 2_000);
+      // Don't keep the test process alive for the full hang once the watchdog wins.
+      t.unref();
+    });
+    return {};
+  }
+);
+
 function makeDeps(
   opts: { vector: GrantVector; registry?: GrantRegistry } & Partial<{
     lifetimeSignal: AbortSignal;
@@ -63,6 +81,7 @@ function makeDeps(
   if (!opts.registry) {
     reg.register(echoSpec);
     reg.register(slowSpec);
+    reg.register(uncooperativeSpec);
   }
   return {
     registry: reg,
@@ -149,6 +168,32 @@ describe('dispatchGrantRequest', () => {
     if (thrown instanceof Error) {
       expect(thrown.message.toLowerCase()).toMatch(/abort|timed out|timeout|signal/);
     }
+  });
+
+  test('watchdog force-rejects an uncooperative handler that ignores the abort signal', async () => {
+    // The handler never honours ctx.signal; without racing the deadline this
+    // would resolve after 2s instead of rejecting promptly at the timeout.
+    const start = Date.now();
+    let thrown: unknown;
+    try {
+      await dispatchGrantRequest(
+        makeDeps({
+          vector: {
+            grants: [{ id: 'dev.brika.test.uncooperative', ctxPath: 'test.uncooperative' }],
+          },
+        }),
+        { id: 'dev.brika.test.uncooperative', args: {} },
+        { skipJitter: true, timeoutMs: 50 }
+      );
+    } catch (e) {
+      thrown = e;
+    }
+    expect(thrown).toBeInstanceOf(BrikaError);
+    if (thrown instanceof BrikaError) {
+      expect(thrown.code).toBe('TIMEOUT');
+    }
+    // Rejected at the deadline, not after the handler's 2s hang.
+    expect(Date.now() - start).toBeLessThan(1_000);
   });
 
   test('lifetime abort short-circuits dispatch', async () => {

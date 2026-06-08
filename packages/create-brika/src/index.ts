@@ -45,13 +45,15 @@ const { positionals, values } = parseArgs({
       short: 'h',
       default: false,
     },
-    git: {
+    // Node's parseArgs has no `--no-x` negation, so declare the negated flags
+    // directly (matching the `brika create` console command) and invert them.
+    'no-git': {
       type: 'boolean',
-      default: true,
+      default: false,
     },
-    install: {
+    'no-install': {
       type: 'boolean',
-      default: true,
+      default: false,
     },
   },
 });
@@ -62,8 +64,8 @@ if (values.help) {
   try {
     await runCreate({
       name: positionals[0],
-      git: values.git !== false,
-      install: values.install !== false,
+      git: !values['no-git'],
+      install: !values['no-install'],
     });
   } catch (error) {
     if (error instanceof Error && error.message === 'cancelled') {

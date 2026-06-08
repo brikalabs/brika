@@ -8,7 +8,6 @@ import type { CacheAdapter } from './cache';
 import { generateCacheKey, MemoryCache } from './cache';
 import {
   DeduplicationInterceptor,
-  DeduplicationSkipError,
   InterceptorChain,
   RetryInterceptor,
   TimeoutInterceptor,
@@ -163,12 +162,6 @@ export class HttpClient {
 
       return await this.#executeRequest<T>(processedConfig);
     } catch (error) {
-      // Skip deduplication errors
-      if (error instanceof DeduplicationSkipError) {
-        // This shouldn't happen due to the check above, but just in case
-        throw new Error('Unexpected deduplication error');
-      }
-
       if (isHttpError(error)) {
         return (await this.#interceptorChain.executeError(error, config)) as HttpResponse<T>;
       }
@@ -412,11 +405,14 @@ export class HttpClient {
       this.#interceptorChain.addRequestInterceptor(new TimeoutInterceptor(this.#config.timeout));
     }
 
-    // Add deduplication interceptor
+    // Deduplication is handled by the manual pending-request path in request()
+    // (which correctly returns the in-flight result). The interceptor object is
+    // kept only for its pending-request map; it is intentionally NOT added to the
+    // chain: doing so made it `throw` mid-chain and duplicate GETs surfaced as a
+    // spurious "Unexpected deduplication error".
     this.#deduplicationInterceptor = new DeduplicationInterceptor((config) =>
       this.#executeRequest(config)
     );
-    this.#interceptorChain.addRequestInterceptor(this.#deduplicationInterceptor);
 
     // Add retry interceptor
     if (this.#config.retry) {

@@ -3,8 +3,28 @@ import { safeParseCorsAllowlist } from '@/runtime/config/config-loader';
 import {
   createConfiguredOriginMatcher,
   isBrikaSubdomainOrigin,
+  isLoopbackOrigin,
   isPrivateNetworkOrigin,
 } from './api-server';
+
+describe('isLoopbackOrigin', () => {
+  it('accepts only loopback origins (always CORS-allowed)', () => {
+    expect(isLoopbackOrigin('http://localhost:5173')).toBe(true);
+    expect(isLoopbackOrigin('http://127.0.0.1:3001')).toBe(true);
+    expect(isLoopbackOrigin('http://[::1]:8080')).toBe(true);
+  });
+
+  it('rejects LAN / mDNS origins (those are gated behind the opt-in)', () => {
+    expect(isLoopbackOrigin('http://192.168.1.42:8080')).toBe(false);
+    expect(isLoopbackOrigin('http://brikahub.local')).toBe(false);
+    expect(isLoopbackOrigin('https://attacker.example.com')).toBe(false);
+  });
+
+  it('rejects malformed origins without throwing', () => {
+    expect(isLoopbackOrigin('not a url')).toBe(false);
+    expect(isLoopbackOrigin('')).toBe(false);
+  });
+});
 
 describe('isBrikaSubdomainOrigin', () => {
   it('accepts the canonical https://hub.brika.dev shell', () => {

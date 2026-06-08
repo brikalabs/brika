@@ -1,0 +1,5 @@
+# test files (kept out of the published tarball)
+__tests__/
+*.test.*
+*.spec.*
+*_test-utils.*

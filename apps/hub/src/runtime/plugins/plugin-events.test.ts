@@ -134,6 +134,32 @@ describe('PluginEventHandler', () => {
       // Should not throw
       expect(() => handler.onBlockEmit('instance-1', 'output', {})).not.toThrow();
     });
+
+    test('fans out to every registered handler (concurrent workflows)', () => {
+      const a = mock();
+      const b = mock();
+      handler.setBlockEmitHandler(a);
+      handler.setBlockEmitHandler(b);
+
+      handler.onBlockEmit('instance-1', 'output', { value: 1 });
+
+      expect(a.mock.calls.length).toBe(1);
+      expect(b.mock.calls.length).toBe(1);
+    });
+
+    test('clearBlockEmitHandler(handler) removes only that handler', () => {
+      const a = mock();
+      const b = mock();
+      handler.setBlockEmitHandler(a);
+      handler.setBlockEmitHandler(b);
+
+      // Workflow A stops: only A's handler must be removed; B keeps receiving.
+      handler.clearBlockEmitHandler(a);
+      handler.onBlockEmit('instance-1', 'output', { value: 1 });
+
+      expect(a.mock.calls.length).toBe(0);
+      expect(b.mock.calls.length).toBe(1);
+    });
   });
 
   describe('block log handler', () => {

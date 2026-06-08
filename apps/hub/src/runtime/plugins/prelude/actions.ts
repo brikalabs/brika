@@ -9,7 +9,7 @@ import {
   callAction as callActionRpc,
   registerAction as registerActionMsg,
 } from '@brika/ipc/contract';
-import { isBinaryResponse, isStreamFileResponse } from '@brika/sdk/actions';
+import { isBinaryResponse, isStreamFileResponse, isStreamWriteResponse } from '@brika/sdk/actions';
 
 // `unknown` already covers `Promise<…>` and every other return shape;
 // the explicit union would just trip Sonar's S6571 without buying us
@@ -86,6 +86,7 @@ interface ActionResponse {
   bytes?: Uint8Array;
   contentType?: string;
   stream?: { virtualPath: string; contentType?: string };
+  writeStream?: { virtualPath: string };
   error?: SerializedActionError;
 }
 
@@ -115,6 +116,12 @@ export function setupActions(channel: Channel) {
           ok: true,
           stream: { virtualPath: result.virtualPath, contentType: result.contentType },
         };
+      }
+      // Mirror directive from `streamWrite()` — the hub writes the incoming
+      // request body to `virtualPath` itself, so the upload bytes never
+      // enter the plugin process or hit the IPC payload cap.
+      if (isStreamWriteResponse(result)) {
+        return { ok: true, writeStream: { virtualPath: result.virtualPath } };
       }
       // Binary actions return a tagged envelope from `binaryResponse()`.
       // Pass the bytes through Bun's structured-clone IPC; the hub's

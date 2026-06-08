@@ -222,13 +222,12 @@ schedules: []
       expect(config1).toBe(config2); // Same reference
     });
 
-    test('handles invalid YAML gracefully', async () => {
+    test('fails closed on a malformed config (does not fall back to insecure defaults)', async () => {
       await Bun.write(join(BRIKA_DIR, 'brika.yml'), 'invalid: yaml: content: [}');
 
-      const config = await loader.load();
-
-      // Should fall back to defaults
-      expect(config.hub.port).toBe(3001);
+      // A present-but-malformed config must throw rather than silently binding
+      // the permissive defaults (host 0.0.0.0, empty CORS allow-list).
+      await expect(loader.load()).rejects.toThrow();
     });
 
     test('parses plugins with config', async () => {

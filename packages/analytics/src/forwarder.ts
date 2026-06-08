@@ -110,7 +110,9 @@ function redactProps(
   }
   const out: Record<string, Json> = {};
   for (const [key, value] of Object.entries(props)) {
-    out[key] = redactValue(value, redact, 1);
+    // Redact the KEY too: a plugin can smuggle a path/username/secret into a
+    // prop key, and only values were being scrubbed before.
+    out[redact(key)] = redactValue(value, redact, 1);
   }
   return out;
 }
@@ -185,7 +187,10 @@ export class EventForwarder {
     this.#queue.push({
       instanceId: host.instanceId,
       ts: event.ts,
-      name: event.name,
+      // The event name is plugin-controllable on plugin-origin captures; run it
+      // through the same redactor as values so a secret/path embedded in the
+      // name can't be forwarded verbatim. Structural names are unaffected.
+      name: redact(event.name),
       source: event.source,
       pluginName: event.pluginName,
       distinctId: event.distinctId,

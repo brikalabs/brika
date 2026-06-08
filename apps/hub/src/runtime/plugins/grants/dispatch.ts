@@ -95,14 +95,35 @@ export async function dispatchGrantRequest(
   if (!entry) {
     throw errors.permissionDenied({ permission: call.id });
   }
-  const watchdog = AbortSignal.timeout(opts.timeoutMs ?? GRANT_REQUEST_TIMEOUT_MS);
+  const timeoutMs = opts.timeoutMs ?? GRANT_REQUEST_TIMEOUT_MS;
+  const watchdog = AbortSignal.timeout(timeoutMs);
   const signal = AbortSignal.any([deps.lifetimeSignal, watchdog]);
-  const result = await deps.registry.dispatch(call.id, call.args, {
+  const dispatched = deps.registry.dispatch(call.id, call.args, {
     pluginUid: deps.pluginUid,
     pluginRoot: deps.pluginRoot,
     grantedScope: entry.scope,
     log: deps.log,
     signal,
   });
+  // Race the handler against the deadline: the signal above is only advisory
+  // (a handler that ignores it would otherwise tie up an async slot forever),
+  // so force-reject at the deadline instead of relying on cooperation.
+  // Promise.race attaches a reaction to `dispatched`, so a later rejection from
+  // an uncooperative handler is consumed rather than left unhandled.
+  const result = await Promise.race([
+    dispatched,
+    rejectOnAbort(signal, () => errors.timeout({ operation: 'grant.request', timeoutMs })),
+  ]);
   return { result };
+}
+
+/** A promise that rejects (never resolves) the moment `signal` aborts. */
+function rejectOnAbort(signal: AbortSignal, makeError: () => Error): Promise<never> {
+  return new Promise<never>((_, reject) => {
+    if (signal.aborted) {
+      reject(makeError());
+      return;
+    }
+    signal.addEventListener('abort', () => reject(makeError()), { once: true });
+  });
 }

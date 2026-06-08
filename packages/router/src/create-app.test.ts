@@ -211,7 +211,7 @@ describe('createApp request body parsing', () => {
     expect(await res.json()).toEqual({ bodyType: 'undefined', value: null });
   });
 
-  test('skips body parsing on DELETE requests even with a body', async () => {
+  test('parses the body on DELETE requests (filtered clears carry their filter in the body)', async () => {
     const app = createApp([
       route.delete({
         path: '/api/resource/:id',
@@ -224,12 +224,33 @@ describe('createApp request body parsing', () => {
       new Request('http://localhost/api/resource/42', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ shouldBeIgnored: true }),
+        body: JSON.stringify({ scope: 'logs' }),
       })
     );
 
+    // Previously the body was dropped (undefined), which turned a scoped clear
+    // into a full-table wipe. It must now reach the handler.
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ id: '42', body: null });
+    expect(await res.json()).toEqual({ id: '42', body: { scope: 'logs' } });
+  });
+
+  test('returns 400 (not 500) on a malformed JSON body', async () => {
+    const app = createApp([
+      route.post({
+        path: '/api/resource',
+        handler: () => ({ ok: true }),
+      }),
+    ]);
+
+    const res = await app.fetch(
+      new Request('http://localhost/api/resource', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{bad json',
+      })
+    );
+
+    expect(res.status).toBe(400);
   });
 });
 

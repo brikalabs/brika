@@ -1,6 +1,6 @@
 {
   "name": "@brika/i18n-devtools",
-  "version": "0.1.1",
+  "version": "0.4.0",
   "type": "module",
   "license": "MIT",
   "description": "i18n developer tools: Vite plugin + browser overlay for translation key validation, coverage tracking, and in-app editing. Works with any React + i18next project.",
@@ -33,7 +33,17 @@
   "bin": {
     "brika-i18n": "./src/cli.ts"
   },
-  "files": ["src", "README.md", "CHANGELOG.md", "LICENSE"],
+  "files": [
+    "src",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE",
+    "!src/**/*.test.ts",
+    "!src/**/*.test.tsx",
+    "!src/**/*.spec.ts",
+    "!src/**/*.spec.tsx",
+    "!src/**/*_test-utils.ts"
+  ],
   "sideEffects": ["./src/overlay/index.tsx", "./src/entry.ts", "./src/hmr-events.ts"],
   "scripts": {
     "test": "bun test --parallel",
@@ -43,25 +53,25 @@
   },
   "peerDependencies": {
     "@brika/i18n": ">=0.3.0",
-    "i18next": "^26.2.0",
-    "lucide-react": "^1.16.0",
-    "react": "^18.2.0 || ^19.0.0",
-    "react-dom": "^18.2.0 || ^19.0.0",
+    "i18next": "^26.3.1",
+    "lucide-react": "^1.17.0",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
     "tailwindcss": ">=4.0.0",
-    "vite": "^8.0.14",
+    "vite": "^8.0.16",
     "zod": ">=4.0.0"
   },
   "devDependencies": {
     "@brika/i18n": "workspace:*",
     "@brika/testing": "workspace:*",
-    "@types/react": "^19.2.15",
+    "@types/react": "^19.2.17",
     "@types/react-dom": "^19.0.0",
-    "i18next": "^26.2.0",
-    "lucide-react": "^1.16.0",
-    "react": "^19.2.3",
-    "react-dom": "^19.2.3",
+    "i18next": "^26.3.1",
+    "lucide-react": "^1.17.0",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
     "tailwindcss": "^4.1.0",
-    "vite": "^8.0.14",
+    "vite": "^8.0.16",
     "zod": "^4.3.4"
   }
 }

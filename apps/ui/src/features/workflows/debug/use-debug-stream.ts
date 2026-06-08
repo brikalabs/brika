@@ -4,7 +4,8 @@
  * Shared hook for connecting to the workflow debug SSE stream.
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { subscribeSharedEvents } from '@/lib/shared-event-source';
 import type { DebugEvent } from './types';
 
 export interface UseDebugStreamOptions {
@@ -43,54 +44,50 @@ export function useDebugStream({
 }: UseDebugStreamOptions = {}): UseDebugStreamResult {
   const [events, setEvents] = useState<DebugEvent[]>([]);
   const [connected, setConnected] = useState(false);
-  const eventSourceRef = useRef<EventSource | null>(null);
 
   // Clear events
   const clear = useCallback(() => {
     setEvents([]);
   }, []);
 
-  // Connect to SSE
+  // Subscribe via the shared SSE pool so two concurrent mounts of this hook
+  // (e.g. the editor + the debug side-panel) share ONE `/api/workflows/debug`
+  // connection instead of each opening their own (Chrome's 6-per-origin cap).
   useEffect(() => {
     if (!enabled) {
-      // Clean up when disabled
-      eventSourceRef.current?.close();
-      eventSourceRef.current = null;
       setConnected(false);
       return;
     }
 
-    // Clear previous events when connecting
+    // Clear previous events when (re)connecting.
     setEvents([]);
+    setConnected(true);
 
-    // Connect to SSE
-    const es = new EventSource('/api/workflows/debug');
-    eventSourceRef.current = es;
+    const unsubscribe = subscribeSharedEvents(
+      '/api/workflows/debug',
+      (e) => {
+        try {
+          const data = JSON.parse(e.data) as DebugEvent;
 
-    es.addEventListener('debug', (e) => {
-      try {
-        const data = JSON.parse(e.data) as DebugEvent;
+          // Filter by workflow ID if specified.
+          if (workflowId && data.workflowId !== workflowId && data.type !== 'init') {
+            return;
+          }
 
-        // Filter by workflow ID if specified
-        if (workflowId && data.workflowId !== workflowId && data.type !== 'init') {
-          return;
+          setEvents((prev) => {
+            const next = [...prev, data];
+            return next.length > maxEvents ? next.slice(-maxEvents) : next;
+          });
+        } catch {
+          // Ignore parse errors.
         }
-
-        setEvents((prev) => {
-          const next = [...prev, data];
-          return next.length > maxEvents ? next.slice(-maxEvents) : next;
-        });
-      } catch {
-        // Ignore parse errors
-      }
-    });
-
-    es.onopen = () => setConnected(true);
-    es.onerror = () => setConnected(false);
+      },
+      'debug'
+    );
 
     return () => {
-      es.close();
-      eventSourceRef.current = null;
+      unsubscribe();
+      setConnected(false);
     };
   }, [enabled, workflowId, maxEvents]);
 

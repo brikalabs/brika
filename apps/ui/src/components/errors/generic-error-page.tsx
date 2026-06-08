@@ -22,6 +22,7 @@ export function GenericErrorPage({
       title={t('common:errors.generic.title')}
       description={t('common:errors.generic.description')}
       iconClassName="bg-amber-500/10 text-amber-500"
+      accentClassName="text-amber-500"
       variant={variant}
       onRetry={onRetry}
       error={error}

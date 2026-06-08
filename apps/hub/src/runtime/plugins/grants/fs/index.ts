@@ -22,6 +22,7 @@ import { QuotaTracker } from './quotas';
 import { DEFAULT_FS_QUOTAS, type FsBackingDirs, type FsQuotas } from './types';
 
 export { EphemeralRoots } from './ephemeral';
+export { QuotaTracker } from './quotas';
 export type { FsBackingDirs, FsQuotas } from './types';
 
 export interface FsGrantOptions {
@@ -45,10 +46,17 @@ export interface FsGrantOptions {
    * throws `FS_PATH_OUTSIDE_ROOT`).
    */
   readonly ephemeral?: EphemeralRoots;
+  /**
+   * Pre-built quota tracker to reuse. `plugin-process` constructs the
+   * tracker once and passes it here so the buffered `ctx.fs.writeFile`
+   * grant and the hub's stream-write path share one counter. Omit (e.g.
+   * in tests) to let `buildFsGrants` mint its own from `quotas`.
+   */
+  readonly quotaTracker?: QuotaTracker;
 }
 
 export function buildFsGrants(opts: FsGrantOptions): ReadonlyArray<Grant> {
-  const quotas = new QuotaTracker(opts.quotas ?? DEFAULT_FS_QUOTAS);
+  const quotas = opts.quotaTracker ?? new QuotaTracker(opts.quotas ?? DEFAULT_FS_QUOTAS);
   const ephemeral = opts.ephemeral;
   return [
     buildReadFileGrant({ dirs: opts.dirs, ephemeral, maxFileBytes: opts.maxFileBytes }),

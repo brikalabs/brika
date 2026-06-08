@@ -1,9 +1,14 @@
+import { Scope } from '@brika/auth';
+import { requireScope } from '@brika/auth/server';
 import { group, route } from '@brika/router';
 import { z } from 'zod';
 import { Logger } from '@/runtime/logs/log-router';
 import { LogStore } from '@/runtime/logs/log-store';
 import { LOG_LEVELS, LOG_SOURCES } from '@/runtime/logs/types';
 import { PluginManager } from '@/runtime/plugins/plugin-manager';
+
+/** Cap free-text search length to bound the LIKE scan (mirrors the analytics route). */
+const MAX_SEARCH_LEN = 200;
 
 const LogLevelSchema = z.enum(['debug', 'info', 'warn', 'error']);
 const LogSourceSchema = z.enum([
@@ -51,7 +56,7 @@ const LogQuerySchema = z.object({
     ])
     .optional(),
   pluginName: z.string().optional(),
-  search: z.string().optional(),
+  search: z.string().max(MAX_SEARCH_LEN).optional(),
   startTs: z.coerce.number().optional(),
   endTs: z.coerce.number().optional(),
   cursor: z.coerce.number().optional(),
@@ -150,9 +155,10 @@ export const logsRoutes = group({
       },
     }),
 
-    // DELETE /api/logs - Clear logs with optional filters
+    // DELETE /api/logs - Clear logs with optional filters (destructive: admin-only)
     route.delete({
       path: '/',
+      middleware: [requireScope(Scope.ADMIN_ALL)],
       body: LogClearSchema.optional(),
       handler: ({ body, inject }) => {
         const store = inject(LogStore);

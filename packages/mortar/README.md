@@ -181,7 +181,7 @@ mortar [<command>] [options]
 └────────────────────┘└──────────────────────────────────────────────┘
  → http://localhost:8787/   [o] open
  [tab] switch  [r] restart  [/] search  [d] deps  [?] help  [q] quit
- mortar v0.3.1 · built by the Brika Labs team
+ mortar v0.4.0 · built by the Brika Labs team
 ```
 
 ### Keybinds

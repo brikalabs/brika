@@ -18,6 +18,14 @@ import { YAMLSerializer } from './yaml-serializer';
 const isYAMLFile = (name: string) => name.endsWith('.yaml') || name.endsWith('.yml');
 const WATCH_EVENT_DEBOUNCE_MS = 50;
 
+/** Workflow id becomes a file name; reject anything that could escape the dir. */
+const SAFE_ID_RE = /^[A-Za-z0-9_-]+$/;
+function assertSafeId(id: string): void {
+  if (!SAFE_ID_RE.test(id)) {
+    throw new Error(`Unsafe workflow id: ${JSON.stringify(id)}`);
+  }
+}
+
 @singleton()
 export class WorkflowLoader {
   private readonly logs = inject(Logger).withSource('workflow');
@@ -83,6 +91,7 @@ export class WorkflowLoader {
       throw new Error('Call loadDir() first');
     }
 
+    assertSafeId(workflow.id);
     const filePath = this.#idToFile.get(workflow.id) ?? `${this.#dir}/${workflow.id}.yaml`;
     const yaml = YAMLSerializer.toYAML(
       workflow,
@@ -106,6 +115,7 @@ export class WorkflowLoader {
       throw new Error('Call loadDir() first');
     }
 
+    assertSafeId(id);
     const filePath = this.#idToFile.get(id) ?? `${this.#dir}/${id}.yaml`;
     if (!(await Bun.file(filePath).exists())) {
       return false;
@@ -140,6 +150,19 @@ export class WorkflowLoader {
         return;
       }
 
+      // Reject a second file that reuses an id another file already owns: it
+      // would overwrite #idToFile and let one file's unload tear down the other's
+      // workflow. First file on disk wins.
+      const owner = this.#idToFile.get(workflow.id);
+      if (owner !== undefined && owner !== filePath) {
+        this.logs.warn('Duplicate workflow id across files; ignoring the second', {
+          workflowId: workflow.id,
+          keptFile: basename(owner),
+          ignoredFile: basename(filePath),
+        });
+        return;
+      }
+
       this.engine.register(workflow);
       this.#loaded.set(filePath, workflow.id);
       this.#idToFile.set(workflow.id, filePath);
@@ -168,9 +191,13 @@ export class WorkflowLoader {
       return;
     }
 
-    this.engine.unregister(workflowId);
     this.#loaded.delete(filePath);
-    this.#idToFile.delete(workflowId);
+    // Only tear down the engine registration / id mapping if THIS file owns the
+    // id, so unloading one file never unregisters a different file's workflow.
+    if (this.#idToFile.get(workflowId) === filePath) {
+      this.engine.unregister(workflowId);
+      this.#idToFile.delete(workflowId);
+    }
   }
 
   async #handleWatchEvent(dir: string, filename: string | Buffer | null): Promise<void> {

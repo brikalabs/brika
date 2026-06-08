@@ -113,6 +113,17 @@ export function useTranslate(): UseTranslateResult {
   const tp = useMemo<I18nTp>(
     () =>
       function tp(namespace: string, key: string, defaultValue?: string, __cs?: string): string {
+        // Plugin namespaces load lazily through the HTTP backend. If this one
+        // isn't in the store yet, kick off the load (fire-and-forget, deduped
+        // by i18next) — react-i18next's `loaded` binding then re-renders this
+        // component with the populated bundle. Without this, `tp` returns the
+        // `defaultValue` fallback until some unrelated re-render happens to run
+        // after the namespace loaded elsewhere (the "click the tab twice to see
+        // the translation" bug). A 404 registers the namespace as `{}`, so
+        // `hasResourceBundle` stays true afterwards and this never re-fires.
+        if (locale !== 'cimode' && !i18n.hasResourceBundle(locale, namespace)) {
+          void i18n.loadNamespaces(namespace);
+        }
         // Forward `__cs` into the options bag so the i18n-devtools `t()`
         // wrapper picks up the build-time call site for the runtime usage
         // map. Compiler call-site injection wraps `tp()` with the same
@@ -123,7 +134,7 @@ export function useTranslate(): UseTranslateResult {
           : { ns: namespace, defaultValue };
         return baseT(key, options);
       },
-    [baseT]
+    [baseT, locale, i18n]
   );
 
   const changeLocale = useCallback(async (loc: string) => {

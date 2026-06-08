@@ -289,12 +289,15 @@ function compileBlock<
         outputEmitters[id] = createEmitter<unknown>(id, getRuntimeSchema(def.schema), ctx.emit);
       }
 
-      // Parse and validate config
+      // Parse and validate config. Abort the block start on failure rather than
+      // running setup() with an all-undefined `{}` config (which silently starts
+      // a misconfigured block); the runtime then marks the block failed.
       const configResult = spec.config.safeParse(ctx.config);
       if (!configResult.success) {
         log.error(`Config validation failed: ${configResult.error.message}`);
+        throw new Error(`Block config validation failed: ${configResult.error.message}`);
       }
-      const config = configResult.success ? configResult.data : ({} as z.infer<TConfig>);
+      const config = configResult.data;
 
       // Build input flows object
       const inputFlows = Object.fromEntries([...flows.entries()].map(([id, flow]) => [id, flow]));

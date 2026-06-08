@@ -12,7 +12,7 @@
  * Counterpart on the CLI side: `apps/console/src/shared/cli/auth-token.ts`.
  */
 import { randomBytes } from 'node:crypto';
-import { chmodSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { brikaContext } from '@/runtime/context/brika-context';
 
@@ -58,9 +58,4 @@ export function readCliToken(): string | null {
   } catch {
     return null;
   }
-}
-
-/** Remove the token file. Safe to call when it doesn't exist. */
-export function removeCliToken(): void {
-  rmSync(tokenPath(), { force: true });
 }

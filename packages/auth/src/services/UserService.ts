@@ -124,6 +124,17 @@ export class UserService {
       throw new Error('User not found');
     }
 
+    // Guard against locking everyone out: never demote or deactivate the last
+    // remaining active admin. (Stored scopes don't matter here: admin access is
+    // granted by role at session time regardless of the persisted scope list.)
+    if (user.role === Role.ADMIN && user.isActive) {
+      const losesAdmin =
+        (updates.role !== undefined && updates.role !== Role.ADMIN) || updates.isActive === false;
+      if (losesAdmin && this.countActiveAdmins() <= 1) {
+        throw new Error('Cannot demote or deactivate the last active admin');
+      }
+    }
+
     const now = Date.now();
     const name = updates.name ?? user.name;
 
@@ -240,5 +251,13 @@ export class UserService {
 
   hasAdmin(): boolean {
     return this.db.prepare("SELECT 1 FROM users WHERE role = 'admin' LIMIT 1").get() !== null;
+  }
+
+  /** Count active (non-deactivated) admin users, used to prevent admin lockout. */
+  countActiveAdmins(): number {
+    const row = this.db
+      .prepare("SELECT COUNT(*) AS n FROM users WHERE role = 'admin' AND is_active = 1")
+      .get() as { n: number };
+    return row.n;
   }
 }

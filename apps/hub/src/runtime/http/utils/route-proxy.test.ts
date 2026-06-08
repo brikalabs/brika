@@ -97,7 +97,8 @@ describe('extractHeaders', () => {
 
     expect(result['content-type']).toBe('application/json');
     expect(result['accept']).toBe('text/html');
-    expect(result['authorization']).toBe('Bearer tok');
+    // The session Bearer token must NOT be forwarded into the plugin subprocess.
+    expect(result['authorization']).toBeUndefined();
     expect(result['user-agent']).toBe('TestAgent/1.0');
     expect(result['host']).toBe('example.com');
     expect(result['x-forwarded-proto']).toBe('https');

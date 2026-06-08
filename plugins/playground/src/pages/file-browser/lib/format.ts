@@ -3,6 +3,8 @@
  * and friendly mtime labels.
  */
 
+import type { Translate } from './i18n';
+
 export function formatSize(bytes: number, isDirectory: boolean): string {
   if (isDirectory) {
     return '—';
@@ -22,23 +24,23 @@ export function formatSize(bytes: number, isDirectory: boolean): string {
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 /** Format an epoch-ms timestamp as a short relative/absolute label. */
-export function formatRelativeTime(epochMs: number): string {
+export function formatRelativeTime(epochMs: number, t: Translate): string {
   if (epochMs === 0) {
     return '—';
   }
 
   const diffSec = Math.round((Date.now() - epochMs) / 1_000);
   if (diffSec < 60) {
-    return 'Just now';
+    return t('fileBrowser.time.justNow');
   }
   if (diffSec < 3_600) {
-    return `${Math.round(diffSec / 60)} min ago`;
+    return t('fileBrowser.time.minAgo', { count: Math.round(diffSec / 60) });
   }
   if (diffSec < 86_400) {
-    return `${Math.round(diffSec / 3_600)} hr ago`;
+    return t('fileBrowser.time.hrAgo', { count: Math.round(diffSec / 3_600) });
   }
   if (diffSec < 2 * 86_400) {
-    return 'Yesterday';
+    return t('fileBrowser.time.yesterday');
   }
 
   const d = new Date(epochMs);

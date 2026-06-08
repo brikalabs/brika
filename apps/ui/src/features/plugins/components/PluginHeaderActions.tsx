@@ -6,6 +6,9 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  Status,
+  StatusIndicator,
+  StatusLabel,
 } from '@brika/clay';
 import { ArrowUp, EllipsisVertical, Power, RotateCcw, Skull, Trash2 } from 'lucide-react';
 import { useState } from 'react';
@@ -49,20 +52,21 @@ export function PluginHeaderActions({
     onUpdate();
   };
 
-  let statusBadgeVariant: 'default' | 'destructive' | 'secondary';
+  let statusVariant: 'success' | 'destructive' | 'neutral';
   if (status === 'running') {
-    statusBadgeVariant = 'default';
+    statusVariant = 'success';
   } else if (status === 'crashed') {
-    statusBadgeVariant = 'destructive';
+    statusVariant = 'destructive';
   } else {
-    statusBadgeVariant = 'secondary';
+    statusVariant = 'neutral';
   }
 
   return (
     <div className="flex items-center gap-2">
-      <Badge variant={statusBadgeVariant} className="px-3 py-1">
-        {t(`common:status.${status}`)}
-      </Badge>
+      <Status variant={statusVariant} className="px-3 py-1">
+        <StatusIndicator pulse={status === 'running'} />
+        <StatusLabel>{t(`common:status.${status}`)}</StatusLabel>
+      </Status>
 
       <Button variant="outline" size="sm" onClick={onReload} disabled={isBusy} className="gap-1.5">
         <RotateCcw className="size-3.5" />

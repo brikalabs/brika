@@ -55,6 +55,12 @@ interface InternalService {
   spec: ServiceSpec;
   state: MutableServiceState;
   proc: Subprocess | null;
+  /**
+   * Monotonic spawn generation. Bumped on every (re)start so a late exit (or
+   * port-probe) from a superseded process can be recognised and ignored,
+   * instead of clobbering the freshly-restarted process's status.
+   */
+  epoch: number;
   healthAbort: AbortController | null;
   /**
    * Authoritative "this service has been stopped" flag, set explicitly
@@ -89,6 +95,7 @@ export class Supervisor {
           detectedPort: null,
         },
         proc: null,
+        epoch: 0,
         healthAbort: null,
         terminated: false,
       });
@@ -307,10 +314,11 @@ export class Supervisor {
   private startOne(svc: InternalService): void {
     svc.state.status = { kind: 'starting' };
     this.bumpState(svc);
+    const epoch = ++svc.epoch;
     try {
       svc.proc = spawnService(svc.spec, this.projectRoot, {
         onLog: (line) => this.appendLog(svc, line),
-        onExit: (exitCode, error) => this.onExit(svc, exitCode, error),
+        onExit: (exitCode, error) => this.onExit(svc, epoch, exitCode, error),
       });
     } catch (err) {
       svc.state.status = {
@@ -405,7 +413,17 @@ export class Supervisor {
     this.scheduleReady();
   }
 
-  private onExit(svc: InternalService, exitCode: number | null, error: Error | undefined): void {
+  private onExit(
+    svc: InternalService,
+    epoch: number,
+    exitCode: number | null,
+    error: Error | undefined
+  ): void {
+    // Ignore the exit of a process this service has already superseded (e.g. a
+    // restart respawned before the old process's exit event landed).
+    if (epoch !== svc.epoch) {
+      return;
+    }
     svc.healthAbort?.abort();
     if (this.shuttingDown) {
       // Don't mutate status during shutdown — the user shouldn't see
@@ -421,7 +439,7 @@ export class Supervisor {
     // exit cleanly while leaving the runtime they supervised still
     // bound — the user sees the service working and would (correctly)
     // be confused by a "crashed" badge.
-    void this.classifyExit(svc, exitCode, error);
+    void this.classifyExit(svc, epoch, exitCode, error);
   }
 
   /**
@@ -435,12 +453,17 @@ export class Supervisor {
    */
   private async classifyExit(
     svc: InternalService,
+    epoch: number,
     exitCode: number | null,
     error: Error | undefined
   ): Promise<void> {
     const port = svc.state.detectedPort;
     if (port !== null) {
       const stillListening = await isPortListening(port);
+      // A restart during the (async) port probe supersedes this exit.
+      if (epoch !== svc.epoch) {
+        return;
+      }
       if (stillListening && !this.shuttingDown) {
         // Service is still up via another process — likely the actual
         // runtime that `bun --watch` (or similar) was supervising. Make
@@ -452,7 +475,7 @@ export class Supervisor {
         return;
       }
     }
-    if (this.shuttingDown) {
+    if (this.shuttingDown || epoch !== svc.epoch) {
       return;
     }
     svc.state.status = {

@@ -61,9 +61,12 @@ function parseQuery(url: URL): Record<string, string> {
 
 /**
  * Parse JSON body if present and content-type is application/json.
+ *
+ * DELETE is parsed too: filtered-clear routes carry their filter in the body,
+ * and dropping it silently turned a scoped clear into a full-table wipe.
  */
 async function parseBody(req: Request): Promise<unknown> {
-  if (req.method === 'GET' || req.method === 'DELETE') {
+  if (req.method === 'GET') {
     return undefined;
   }
 
@@ -73,7 +76,14 @@ async function parseBody(req: Request): Promise<unknown> {
   }
 
   const text = await req.text();
-  return text ? JSON.parse(text) : {};
+  if (!text) {
+    return {};
+  }
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new HttpException(400, 'Invalid JSON body');
+  }
 }
 
 /**

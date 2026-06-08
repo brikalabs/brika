@@ -2,7 +2,7 @@
   "$schema": "https://schema.brika.dev/plugin.schema.json",
   "name": "@brika/plugin-timer",
   "displayName": "Timer",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "description": "Timer and countdown blocks for BRIKA workflows",
   "author": "BRIKA Team",
   "license": "MIT",
@@ -14,7 +14,7 @@
   "icon": "./icon.svg",
   "keywords": ["brika", "brika-plugin", "timer", "countdown", "delay"],
   "engines": {
-    "brika": "^0.3.0"
+    "brika": "^0.4.0"
   },
   "type": "module",
   "main": "./src/_generated/entry.ts",
@@ -164,5 +164,15 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1"
   },
-  "files": ["src", "locales", "icon.svg", "README.md"]
+  "files": [
+    "src",
+    "locales",
+    "icon.svg",
+    "README.md",
+    "!src/**/*.test.ts",
+    "!src/**/*.test.tsx",
+    "!src/**/*.spec.ts",
+    "!src/**/*.spec.tsx",
+    "!src/**/*_test-utils.ts"
+  ]
 }

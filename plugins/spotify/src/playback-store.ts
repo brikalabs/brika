@@ -291,14 +291,6 @@ export function setVolume(percent: number): void {
   resetPollTimer();
 }
 
-export function transferPlayback(deviceId: string): void {
-  silent(
-    getApi()
-      .transferPlayback(deviceId)
-      .then(() => pollNow())
-  );
-}
-
 export async function startPlayback(deviceId?: string): Promise<void> {
   if (deviceId) {
     await getApi().transferPlayback(deviceId);

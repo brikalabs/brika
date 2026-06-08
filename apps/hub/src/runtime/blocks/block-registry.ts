@@ -103,7 +103,19 @@ export class BlockRegistry {
       type,
       pluginId: plugin.id,
     });
-    this.#shortNames.set(block.id, type);
+    // Short-name resolution is first-registration-wins. If another plugin already
+    // claimed this bare id, do NOT repoint it (that silently hijacked the name and
+    // both full types coexist); callers must use the qualified `plugin:id` instead.
+    const existingShort = this.#shortNames.get(block.id);
+    if (existingShort === undefined || existingShort === type) {
+      this.#shortNames.set(block.id, type);
+    } else {
+      this.logs.warn('Block short-name collision; keeping the first registration', {
+        shortName: block.id,
+        owner: existingShort,
+        ignored: type,
+      });
+    }
 
     this.logs.info('Block registered', {
       type,
@@ -118,7 +130,11 @@ export class BlockRegistry {
     for (const [type, block] of this.#blocks) {
       if (block.pluginId === pluginId) {
         this.#blocks.delete(type);
-        this.#shortNames.delete(block.id);
+        // Only drop the short name if THIS block currently owns it; otherwise we
+        // would delete a short name another plugin legitimately holds.
+        if (this.#shortNames.get(block.id) === type) {
+          this.#shortNames.delete(block.id);
+        }
         count++;
       }
     }
