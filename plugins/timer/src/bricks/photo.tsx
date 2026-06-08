@@ -1,13 +1,42 @@
 /**
- * Photo brick — client-side rendered.
+ * Photo brick — descriptor + view in one file.
  *
- * A photo carousel with auto-rotation. All state is local —
- * no server data push needed. Uses hardcoded picsum.photos URLs.
+ * A photo carousel with auto-rotation. Config-only (no server-pushed data), so
+ * the descriptor lives beside the view; nothing on the server imports it.
  */
 
+import { z } from '@brika/sdk';
+import { defineBrick } from '@brika/sdk/brick';
 import { useBrickConfig, useBrickSize } from '@brika/sdk/brick-views';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
+
+export const photoBrick = defineBrick({
+  id: 'photo',
+  meta: {
+    name: 'Photo',
+    description: 'Photo showcase with auto-rotation',
+    category: 'media',
+    icon: 'image',
+    color: '#8b5cf6',
+  },
+  config: z.object({
+    autoRotate: z
+      .boolean()
+      .default(true)
+      .meta({ label: 'Auto-rotate' })
+      .describe('Automatically cycle through photos'),
+    interval: z
+      .number()
+      .min(1000)
+      .max(60000)
+      .multipleOf(1000)
+      .default(8000)
+      .meta({ label: 'Interval (ms)' })
+      .describe('Time between photo changes'),
+  }),
+  data: z.object({}),
+});
 
 const PHOTOS = [
   { src: 'https://picsum.photos/seed/brika1/800/600', caption: 'Mountain sunrise' },
@@ -18,10 +47,7 @@ const PHOTOS = [
 
 export default function PhotoBrick() {
   const { width, height } = useBrickSize();
-  const config = useBrickConfig();
-
-  const autoRotate = typeof config.autoRotate === 'boolean' ? config.autoRotate : true;
-  const interval = typeof config.interval === 'number' ? config.interval : 8000;
+  const { autoRotate, interval } = useBrickConfig(photoBrick.config);
 
   const [index, setIndex] = useState(0);
   const photo = PHOTOS[index % PHOTOS.length];

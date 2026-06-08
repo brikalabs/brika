@@ -3,15 +3,15 @@ import { useLocale } from '@brika/sdk/ui-kit/hooks';
 import { Zap } from 'lucide-react';
 import { useId, useMemo } from 'react';
 import { ResponsiveContainer } from 'recharts';
-import { chartData } from '../brick-data';
 import type { Granularity } from '../types';
 import { buildRows, resolvePeriod, resolveStyle } from '../ui/chart-helpers';
 import { AreaVariant, BarVariant, LineVariant, type RenderProps } from '../ui/chart-variants';
 import { Loader, Message, PeriodPlaceholder, useSizeTier } from '../ui/states';
+import { chartBrick } from './chart.brick';
 
 export default function ConsumptionChart() {
-  const state = chartData.use();
-  const config = useBrickConfig();
+  const state = chartBrick.data.use();
+  const config = useBrickConfig(chartBrick.config);
   const { t, locale } = useLocale();
   const gradId = useId();
   const tier = useSizeTier();

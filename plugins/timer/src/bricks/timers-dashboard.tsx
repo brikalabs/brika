@@ -1,16 +1,17 @@
 /**
- * Timers Dashboard brick — client-side rendered.
+ * Timers Dashboard brick view (browser-rendered).
  *
  * Displays plugin uptime, block/spark counts, and a simple activity chart.
- * Block and spark counts are pushed from the plugin process via setBrickData().
- * The uptime counter and chart history are maintained as local client state.
+ * Block and spark counts are pushed from the plugin process through the brick's
+ * typed data channel (`timersDashboard.data.set(...)` in plugin.ts) and read here
+ * via `timersDashboard.data.use()`. Uptime and chart history are local state.
  */
 
 import { useBrickConfig, useBrickSize } from '@brika/sdk/brick-views';
 import clsx from 'clsx';
 import { Activity, Box, Clock, Eye, EyeOff, Loader2, Timer, Zap } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
-import { dashboardData } from '../brick-data';
+import { timersDashboard } from './timers-dashboard.brick';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -100,11 +101,8 @@ function MiniChart({ history, color }: Readonly<{ history: number[]; color: stri
 
 export default function TimersDashboard() {
   const { width, height } = useBrickSize();
-  const config = useBrickConfig();
-  const data = dashboardData.use();
-
-  const refreshInterval =
-    typeof config.refreshInterval === 'number' ? config.refreshInterval : 5000;
+  const { refreshInterval } = useBrickConfig(timersDashboard.config);
+  const data = timersDashboard.data.use();
 
   const [monitoring, setMonitoring] = useState(true);
   const [uptime, setUptime] = useState(0);

@@ -11,8 +11,7 @@
 import { parseArgs } from 'node:util';
 import * as p from '@brika/cli/prompts';
 import pc from 'picocolors';
-import { promptForConfig } from './prompts';
-import { scaffold } from './scaffold';
+import { runCreate } from './run';
 
 const HELP = `
 ${pc.bold('create-brika')} - Create a new BRIKA plugin
@@ -61,22 +60,11 @@ if (values.help) {
   console.log(HELP);
 } else {
   try {
-    const config = await promptForConfig(positionals[0]);
-
-    await scaffold({
-      ...config,
+    await runCreate({
+      name: positionals[0],
       git: values.git !== false,
       install: values.install !== false,
     });
-
-    const pluginPath = pc.cyan(`./${config.name}`);
-    p.outro(`${pc.green('Success!')} Your plugin is ready at ${pluginPath}`);
-
-    console.log();
-    console.log(pc.bold('Next steps:'));
-    console.log(`  ${pc.cyan('cd')} ${config.name}`);
-    console.log(`  ${pc.cyan('bun')} link`);
-    console.log();
   } catch (error) {
     if (error instanceof Error && error.message === 'cancelled') {
       process.exit(0);

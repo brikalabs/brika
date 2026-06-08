@@ -8,6 +8,13 @@
 import type { I18nRef } from '@brika/ui-kit';
 import { i18nRef } from '@brika/ui-kit';
 
+// One import path for plugin tests: the block harness, the fetch mock, and the
+// translation mock all come from @brika/sdk/testing.
+export { useBunMock } from '@brika/testing';
+export type { TestClock } from './testing/clock';
+export type { BlockHarness, RunBlockOptions } from './testing/run-block';
+export { runBlock } from './testing/run-block';
+
 /**
  * Create a mock translation function that returns I18nRef markers
  * without requiring a real plugin context.

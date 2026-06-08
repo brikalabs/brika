@@ -37,9 +37,11 @@
   },
   "files": ["src", "locales", "icon.svg", "README.md"],
   "scripts": {
-    "link": "bun link",
-    "typecheck": "tsgo --noEmit",
-    "prepublishOnly": "brika-verify-plugin"
+    "dev": "brika dev",
+    "build": "brika build",
+    "typecheck": "brika check --types",
+    "check": "brika check",
+    "prepublishOnly": "brika verify"
   },
   "blocks": [
     {

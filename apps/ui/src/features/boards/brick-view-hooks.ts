@@ -4,6 +4,7 @@
  */
 
 import { useCallback, useContext } from 'react';
+import type { z } from 'zod';
 import { brickInstancesApi } from './api';
 import { BrickViewContext, type BrickViewContextValue } from './components/BrickViewContext';
 import { useBoardStore } from './store';
@@ -26,10 +27,15 @@ export function useBrickData<T>(): T | undefined {
 }
 
 /**
- * Read the per-instance config for this brick.
+ * Read the per-instance config for this brick. When the brick passes its own
+ * zod `config` schema, the raw config is parsed through it so defaults are
+ * applied and the result is typed; otherwise the raw record is returned.
  */
-export function useBrickConfig(): Record<string, unknown> {
-  return useRequiredContext().config;
+export function useBrickConfig(): Record<string, unknown>;
+export function useBrickConfig<S extends z.ZodType>(schema: S): z.infer<S>;
+export function useBrickConfig(schema?: z.ZodType): unknown {
+  const raw = useRequiredContext().config;
+  return schema ? schema.parse(raw) : raw;
 }
 
 /**

@@ -30,6 +30,7 @@ import {
   code,
   color,
   duration,
+  dynamicDropdown,
   expression,
   filePath,
   generic,
@@ -157,6 +158,15 @@ export const z = {
    */
   any: zod.any,
 
+  /**
+   * Custom schema: a typed pass-through that accepts any value at runtime but is
+   * typed as `T`. Use for a `defineBrick` `data` payload whose shape is complex
+   * and validated at its source, where a full schema would add risk without
+   * value (e.g. `data: z.custom<WeatherData>()`). Prefer a real schema
+   * (`z.object({...})`) when the shape is small enough to describe.
+   */
+  custom: zod.custom,
+
   // ═══════════════════════════════════════════════════════════════════════════
   // Advanced
   // ═══════════════════════════════════════════════════════════════════════════
@@ -234,6 +244,12 @@ export const z = {
    * UI renders a spark picker dropdown with available sparks.
    */
   sparkType,
+
+  /**
+   * Brick `config` dropdown whose options are fetched at runtime from
+   * `definePreferenceOptions(name)` (name = the field key).
+   */
+  dynamicDropdown,
 
   /**
    * Code snippet.

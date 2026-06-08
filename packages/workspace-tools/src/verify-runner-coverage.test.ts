@@ -54,7 +54,13 @@ describe('runVerifyForPackages', () => {
 
     // Verify the spawn call did NOT include --json
     const call = bun.spawnCalls[0];
-    expect(call.cmd).toEqual(['bun', '/scripts/verify.ts', '/workspace/plugins/test-plugin']);
+    expect(call.cmd).toEqual([
+      'bun',
+      '/scripts/verify.ts',
+      'verify',
+      '--dir',
+      '/workspace/plugins/test-plugin',
+    ]);
     expect(call.cmd).not.toContain('--json');
   });
 
@@ -78,6 +84,8 @@ describe('runVerifyForPackages', () => {
     expect(call.cmd).toEqual([
       'bun',
       '/scripts/verify.ts',
+      'verify',
+      '--dir',
       '/workspace/plugins/test-plugin',
       '--json',
     ]);
@@ -577,6 +585,8 @@ describe('runVerifyForPackages', () => {
     expect(bun.spawnCalls[0].cmd).toEqual([
       'bun',
       '/scripts/verify.ts',
+      'verify',
+      '--dir',
       '/workspace/deep/nested/plugins/my-plugin',
     ]);
   });

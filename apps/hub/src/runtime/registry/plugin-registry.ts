@@ -1,10 +1,20 @@
-import { mkdir, readlink, symlink, unlink } from 'node:fs/promises';
-import { dirname, join, resolve } from 'node:path';
+import { mkdir, readlink, rename, symlink, unlink } from 'node:fs/promises';
+import { dirname, join, relative, resolve } from 'node:path';
 import { inject, singleton } from '@brika/di';
+import { classifyNetworkError, errors } from '@brika/errors';
+import { z } from 'zod';
 import { BunRunner, ConfigLoader, HubConfig } from '@/runtime/config';
 import { Logger } from '@/runtime/logs/log-router';
+import { StateStore } from '@/runtime/state/state-store';
 import { PackageManager } from './package-manager';
+import { errorFields } from './progress';
 import type { InstalledPackage, OperationProgress, UpdateInfo } from './types';
+
+/** A package.json `workspaces` field: a glob array, or `{ packages: [...] }`. */
+const WorkspacesSchema = z.union([
+  z.array(z.string()),
+  z.object({ packages: z.array(z.string()) }).transform((o) => o.packages),
+]);
 
 function normalizeVersion(version?: string): string | undefined {
   // Bare absolute paths → file: specifier
@@ -24,6 +34,7 @@ export class PluginRegistry {
   private readonly logs = inject(Logger).withSource('registry');
   private readonly configLoader = inject(ConfigLoader);
   private readonly bunRunner = inject(BunRunner);
+  private readonly state = inject(StateStore);
   readonly pluginsDir: string;
   readonly #pm: PackageManager;
 
@@ -64,6 +75,12 @@ export class PluginRegistry {
 
   async *install(name: string, version?: string): AsyncGenerator<OperationProgress> {
     version = normalizeVersion(version);
+    const local = isLocalVersion(version);
+
+    // Only roll back state THIS install created: never tear down a working
+    // prior install when a re-install/upgrade fails midway.
+    const preExisting = await this.has(name);
+    let loaded = false;
 
     try {
       yield this.#msg('resolving', 'install', name, version);
@@ -72,17 +89,65 @@ export class PluginRegistry {
       if (isLocalVersion(version)) {
         rootDirectory = await this.#linkLocalPlugin(name, version);
       } else {
-        yield* this.#pm.install(name, version);
+        yield* this.#installNpm(name, version);
       }
 
+      yield this.#msg('linking', 'install', name, version, 'Loading plugin...');
+      // Local/dev plugins are the operator's own code: start them immediately.
+      // A remote (npm) plugin that requests grants installs dormant until the
+      // operator reviews and enables it (consent-before-code).
+      await this.#loadPlugin(rootDirectory ?? name, local ? true : undefined);
+      loaded = true;
+
+      // Record in brika.yml LAST, only after the load attempt: a THROWN install
+      // failure then leaves no config/filesystem split. (Note this is NOT
+      // "config only references healthy plugins": #loadResolved returns rather
+      // than throws on build-failure / incompatibility / awaiting-config, and
+      // those plugins are legitimately recorded.)
       await this.configLoader.addPlugin(name, version ?? 'latest');
 
-      yield this.#msg('linking', 'install', name, version, 'Loading plugin...');
-      await this.#loadPlugin(rootDirectory ?? name);
-
-      yield this.#msg('complete', 'install', name, version, 'Installed successfully');
+      // A grant-requesting remote plugin installs dormant (consent-before-code);
+      // tell the operator it needs review rather than reporting a plain success.
+      const dormant = this.state.get(name)?.enabled === false;
+      yield this.#msg(
+        'complete',
+        'install',
+        name,
+        version,
+        dormant
+          ? 'Installed (disabled): review its requested permissions, then enable it'
+          : 'Installed successfully'
+      );
     } catch (error) {
-      yield this.#msg('error', 'install', name, version, String(error), String(error));
+      if (!preExisting) {
+        await this.#rollbackInstall(name, local, loaded);
+      }
+      yield this.#errorMsg('install', name, version, error);
+    }
+  }
+
+  /**
+   * Best-effort teardown of the filesystem (and load) state a failed install
+   * created, so it leaves no half-installed plugin behind. Never throws (a
+   * rollback failure must not mask the original error) and is only called for
+   * plugins this install introduced (see the preExisting guard in install()).
+   */
+  async #rollbackInstall(name: string, local: boolean, loaded: boolean): Promise<void> {
+    try {
+      if (loaded) {
+        await this.#unloadPlugin(name);
+      }
+      if (local) {
+        await unlink(join(this.pluginsDir, 'node_modules', name)).catch(() => undefined);
+      } else {
+        // `bun remove` clears node_modules; #removeDependency below covers the
+        // case where it could not run, so a half-installed npm package does not
+        // get skipped by #ensureSyncedPlugins' has()-check on the next boot.
+        await this.#pm.remove(name).catch(() => undefined);
+      }
+      await this.#removeDependency(name);
+    } catch (error) {
+      this.logs.warn('Install rollback failed', { pluginName: name }, { error });
     }
   }
 
@@ -97,11 +162,11 @@ export class PluginRegistry {
     );
 
     if (isSymlink) {
-      // Workspace plugin — remove symlink and package.json entry
+      // Workspace plugin: remove symlink and package.json entry
       await unlink(linkPath).catch(() => undefined);
       await this.#removeDependency(name);
     } else if (await Bun.file(join(linkPath, 'package.json')).exists()) {
-      // NPM plugin — use package manager
+      // NPM plugin: use package manager
       await this.#pm.remove(name);
     }
 
@@ -162,7 +227,7 @@ export class PluginRegistry {
       yield* this.#pm.update(name);
       yield this.#msg('complete', 'update', name ?? 'all', undefined, 'Updated successfully');
     } catch (error) {
-      yield this.#msg('error', 'update', name ?? 'all', undefined, String(error), String(error));
+      yield this.#errorMsg('update', name ?? 'all', undefined, error);
     }
   }
 
@@ -257,11 +322,45 @@ export class PluginRegistry {
   // Private Helpers
   // ─────────────────────────────────────────────────────────────────────────────
 
-  async #loadPlugin(name: string): Promise<void> {
+  /**
+   * Install an npm plugin, reclassifying a failure as a connectivity error when
+   * the machine appears offline, so the operator gets "you may be offline, use a
+   * local path" instead of an opaque `bun install` exit code. The coded error
+   * rides the existing OperationProgress.errorCode/errorDetail fields.
+   */
+  async *#installNpm(name: string, version?: string): AsyncGenerator<OperationProgress> {
+    try {
+      yield* this.#pm.install(name, version);
+    } catch (error) {
+      if (await this.#online()) {
+        throw error;
+      }
+      throw errors.unavailable({
+        cause: error,
+        message: `Could not install "${name}": the npm registry is unreachable (you may be offline). For a local plugin, use \`brika install <path>\`, which needs no network.`,
+      });
+    }
+  }
+
+  /** Best-effort connectivity check: false only on a classified network failure. */
+  async #online(): Promise<boolean> {
+    try {
+      await fetch('https://registry.npmjs.org/', {
+        method: 'HEAD',
+        signal: AbortSignal.timeout(2500),
+      });
+      return true;
+    } catch (error) {
+      // Unknown (non-network) errors must NOT be misread as offline.
+      return classifyNetworkError(error) === null;
+    }
+  }
+
+  async #loadPlugin(name: string, defaultEnabled?: boolean): Promise<void> {
     const { PluginManager } = await import('@/runtime/plugins/plugin-manager');
     const pm = inject(PluginManager);
     // All plugins (npm + workspace) are in pluginsDir/node_modules/
-    await pm.load(name, this.pluginsDir);
+    await pm.load(name, this.pluginsDir, { defaultEnabled });
   }
 
   /**
@@ -290,24 +389,93 @@ export class PluginRegistry {
   }
 
   async #installDepsInSource(name: string, rootDirectory: string): Promise<void> {
+    let code: number;
     try {
-      const code = await this.bunRunner.spawn(['install', '--frozen-lockfile'], {
+      code = await this.bunRunner.spawn(['install', '--frozen-lockfile'], {
         cwd: rootDirectory,
         stdout: 'ignore',
         stderr: 'ignore',
       }).exited;
-      if (code !== 0) {
-        this.logs.warn(
-          'Dependency install returned non-zero exit code, plugin may still work if part of a workspace',
-          {
-            pluginName: name,
-            exitCode: code,
-          }
-        );
-      }
     } catch (error) {
-      this.logs.warn('Failed to install plugin dependencies', { pluginName: name }, { error });
+      // The spawn itself could not run (bun missing, etc.). A workspace member's
+      // deps live at the workspace root, so tolerate it; otherwise it is fatal.
+      if (await this.#isWorkspaceMember(rootDirectory)) {
+        this.logs.warn(
+          'Dependency install could not run; plugin is a workspace member, continuing',
+          { pluginName: name },
+          { error }
+        );
+        return;
+      }
+      throw errors.pluginDepsInstallFailed(
+        { pluginName: name, directory: rootDirectory, exitCode: -1 },
+        { cause: error }
+      );
     }
+    if (code === 0) {
+      return;
+    }
+    // A workspace member's dependencies are already installed at the workspace
+    // root, so a frozen-lockfile non-zero here is expected and safe to ignore.
+    // A standalone plugin with a stale/broken lockfile, though, would crash at
+    // load: surface it as a real, actionable error instead of warn-and-continue.
+    if (await this.#isWorkspaceMember(rootDirectory)) {
+      this.logs.warn(
+        'Frozen-lockfile install returned non-zero for a workspace member; continuing',
+        { pluginName: name, exitCode: code }
+      );
+      return;
+    }
+    throw errors.pluginDepsInstallFailed({
+      pluginName: name,
+      directory: rootDirectory,
+      exitCode: code,
+    });
+  }
+
+  /**
+   * True when `dir` is a member of a bun/npm/yarn workspace: walk up for a
+   * parent package.json whose `workspaces` globs actually MATCH `dir` (not
+   * merely "a parent has a workspaces key", which would misclassify an
+   * unrelated monorepo plugin). Capped at 12 levels.
+   */
+  async #isWorkspaceMember(dir: string): Promise<boolean> {
+    let current = dirname(dir);
+    for (let i = 0; i < 12; i += 1) {
+      const pkgPath = join(current, 'package.json');
+      if (await Bun.file(pkgPath).exists()) {
+        const globs = await this.#workspaceGlobs(pkgPath);
+        if (globs && this.#dirMatchesWorkspaceGlobs(current, dir, globs)) {
+          return true;
+        }
+      }
+      const parent = dirname(current);
+      if (parent === current) {
+        break;
+      }
+      current = parent;
+    }
+    return false;
+  }
+
+  /** Read a package.json's `workspaces` globs, or null if it has none. */
+  async #workspaceGlobs(pkgPath: string): Promise<string[] | null> {
+    try {
+      const pkg = await Bun.file(pkgPath).json();
+      const parsed = WorkspacesSchema.safeParse(pkg.workspaces);
+      return parsed.success ? parsed.data : null;
+    } catch {
+      return null;
+    }
+  }
+
+  /** True when `dir`, relative to the workspace root, matches any workspace glob. */
+  #dirMatchesWorkspaceGlobs(root: string, dir: string, globs: readonly string[]): boolean {
+    const rel = relative(root, dir);
+    if (rel.startsWith('..')) {
+      return false;
+    }
+    return globs.some((glob) => new Bun.Glob(glob).match(rel));
   }
 
   async #ensureSymlink(name: string, rootDirectory: string): Promise<void> {
@@ -333,21 +501,51 @@ export class PluginRegistry {
     }
   }
 
-  async #addDependency(name: string, version: string): Promise<void> {
-    const pkgPath = join(this.pluginsDir, 'package.json');
-    const pkg = await Bun.file(pkgPath).json();
-    pkg.dependencies ??= {};
-    pkg.dependencies[name] = version;
-    await Bun.write(pkgPath, JSON.stringify(pkg, null, 2));
+  /**
+   * Serialize every read-modify-write of pluginsDir/package.json. Two concurrent
+   * installs would otherwise each read the file, add their own dependency, and
+   * write back, losing one entry (a lost-update race). The chain runs the next
+   * mutation regardless of whether the previous one resolved or rejected.
+   */
+  #pkgMutation: Promise<unknown> = Promise.resolve();
+
+  #withPkgLock<T>(fn: () => Promise<T>): Promise<T> {
+    const run = this.#pkgMutation.then(fn, fn);
+    this.#pkgMutation = run.then(
+      () => undefined,
+      () => undefined
+    );
+    return run;
   }
 
-  async #removeDependency(name: string): Promise<void> {
+  /** Write package.json atomically (temp file + rename) so a failed write never
+   * leaves a truncated/partial manifest behind. */
+  async #writePackageJson(pkg: unknown): Promise<void> {
     const pkgPath = join(this.pluginsDir, 'package.json');
-    const pkg = await Bun.file(pkgPath).json();
-    if (pkg.dependencies) {
-      delete pkg.dependencies[name];
-      await Bun.write(pkgPath, JSON.stringify(pkg, null, 2));
-    }
+    const tmpPath = `${pkgPath}.tmp`;
+    await Bun.write(tmpPath, JSON.stringify(pkg, null, 2));
+    await rename(tmpPath, pkgPath);
+  }
+
+  #addDependency(name: string, version: string): Promise<void> {
+    return this.#withPkgLock(async () => {
+      const pkgPath = join(this.pluginsDir, 'package.json');
+      const pkg = await Bun.file(pkgPath).json();
+      pkg.dependencies ??= {};
+      pkg.dependencies[name] = version;
+      await this.#writePackageJson(pkg);
+    });
+  }
+
+  #removeDependency(name: string): Promise<void> {
+    return this.#withPkgLock(async () => {
+      const pkgPath = join(this.pluginsDir, 'package.json');
+      const pkg = await Bun.file(pkgPath).json();
+      if (pkg.dependencies) {
+        delete pkg.dependencies[name];
+        await this.#writePackageJson(pkg);
+      }
+    });
   }
 
   async #unloadPlugin(name: string): Promise<void> {
@@ -422,6 +620,24 @@ export class PluginRegistry {
       targetVersion: version,
       message: message ?? `${phase} ${packageName}@${version}`,
       error,
+    };
+  }
+
+  /** Build an `error` progress event, carrying a typed BrikaError's code/detail when present. */
+  #errorMsg(
+    operation: OperationProgress['operation'],
+    packageName: string,
+    version: string | undefined,
+    error: unknown
+  ): OperationProgress {
+    const fields = errorFields(error);
+    return {
+      phase: 'error',
+      operation,
+      package: packageName,
+      targetVersion: version,
+      message: fields.error,
+      ...fields,
     };
   }
 }

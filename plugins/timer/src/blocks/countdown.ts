@@ -1,32 +1,36 @@
-import { capture, defineReactiveBlock, input, output, z } from '@brika/sdk';
+import { capture, defineBlock, input, output, z } from '@brika/sdk';
 import { log } from '@brika/sdk/lifecycle';
 import { countdownCompleted, countdownTick } from '../sparks';
 
-export const countdown = defineReactiveBlock(
-  {
-    id: 'countdown',
-    inputs: {
-      start: input(z.generic(), { name: 'Start' }),
-      cancel: input(z.generic(), { name: 'Cancel' }),
-    },
-    outputs: {
-      tick: output(
-        z.object({
-          remaining: z.number(),
-          total: z.number(),
-          progress: z.number(),
-        }),
-        { name: 'Tick' }
-      ),
-      completed: output(z.object({ total: z.number() }), { name: 'Completed' }),
-      cancelled: output(z.object({ remaining: z.number() }), { name: 'Cancelled' }),
-    },
-    config: z.object({
-      duration: z.duration(undefined, 'Total countdown duration'),
-      tickInterval: z.duration(undefined, 'Interval between ticks').default(1000),
-    }),
+export const countdown = defineBlock({
+  id: 'countdown',
+  meta: {
+    name: 'Countdown',
+    description: 'Countdown with progress ticks',
+    category: 'trigger',
+    icon: 'clock',
+    color: '#3b82f6',
   },
-  ({ inputs, outputs, config }) => {
+  inputs: {
+    start: input(z.generic()),
+    cancel: input(z.generic()),
+  },
+  outputs: {
+    tick: output(
+      z.object({
+        remaining: z.number(),
+        total: z.number(),
+        progress: z.number(),
+      })
+    ),
+    completed: output(z.object({ total: z.number() })),
+    cancelled: output(z.object({ remaining: z.number() })),
+  },
+  config: z.object({
+    duration: z.duration(undefined, 'Total countdown duration'),
+    tickInterval: z.duration(undefined, 'Interval between ticks').default(1000),
+  }),
+  run({ inputs, outputs, config }) {
     let intervalId: ReturnType<typeof setInterval> | null = null;
     let endTime = 0;
 
@@ -79,5 +83,5 @@ export const countdown = defineReactiveBlock(
     });
 
     return stop;
-  }
-);
+  },
+});

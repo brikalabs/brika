@@ -91,7 +91,7 @@ export interface BlockInstance {
 
 /**
  * A compiled block ready for use in workflows.
- * Created by defineReactiveBlock in the SDK.
+ * Created by defineBlock in the SDK.
  */
 export interface CompiledBlock extends BlockTypeDefinition {
   /** Start the block - creates reactive context and runs setup */

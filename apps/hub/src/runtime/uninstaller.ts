@@ -8,7 +8,8 @@
 import { existsSync } from 'node:fs';
 import { readFile, rm, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
-import { dirname, resolve } from 'node:path';
+import { dirname } from 'node:path';
+import { isCompiledFrom, resolveDataDir } from '@brika/sdk/exec-context';
 import pc from 'picocolors';
 import { HUB_REPO_URL, hub } from '@/hub';
 
@@ -25,7 +26,15 @@ export async function selfUninstall(options?: { purge?: boolean }): Promise<void
   const installDir = dirname(process.execPath);
   const isWindows = process.platform === 'win32';
   const purge = options?.purge ?? false;
-  const brikaHome = resolve(process.env.BRIKA_HOME ?? '.brika');
+  // Resolve via the SHARED resolver (same logic the hub used to create the dir),
+  // not a raw cwd-relative `.brika`: --purge `rm -rf`s this path, so a divergent
+  // guess could delete the wrong directory or miss the real one.
+  const brikaHome = resolveDataDir({
+    env: process.env,
+    isCompiled: isCompiledFrom(import.meta.path),
+    execPath: process.execPath,
+    cwd: process.cwd(),
+  }).path;
 
   const versionLabel = pc.dim(`v${hub.version}`);
   console.log(`${pc.cyan('brika')} ${versionLabel}`);

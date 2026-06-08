@@ -1,30 +1,34 @@
-import { capture, defineReactiveBlock, input, output, z } from '@brika/sdk';
+import { capture, defineBlock, input, output, z } from '@brika/sdk';
 import { log } from '@brika/sdk/lifecycle';
 import { timerCompleted, timerStarted } from '../sparks';
 
-export const timer = defineReactiveBlock(
-  {
-    id: 'timer',
-    inputs: {
-      trigger: input(z.generic(), { name: 'Trigger' }),
-    },
-    outputs: {
-      completed: output(
-        z.object({
-          name: z.string(),
-          duration: z.number(),
-          triggeredAt: z.number(),
-          completedAt: z.number(),
-        }),
-        { name: 'Completed' }
-      ),
-    },
-    config: z.object({
-      name: z.string().optional().describe('Timer name'),
-      duration: z.duration(undefined, 'Duration to wait'),
-    }),
+export const timer = defineBlock({
+  id: 'timer',
+  meta: {
+    name: 'Timer',
+    description: 'Set a one-shot timer that fires after a duration',
+    category: 'trigger',
+    icon: 'timer',
+    color: '#22c55e',
   },
-  ({ inputs, outputs, config }) => {
+  inputs: {
+    trigger: input(z.generic()),
+  },
+  outputs: {
+    completed: output(
+      z.object({
+        name: z.string(),
+        duration: z.number(),
+        triggeredAt: z.number(),
+        completedAt: z.number(),
+      })
+    ),
+  },
+  config: z.object({
+    name: z.string().optional().describe('Timer name'),
+    duration: z.duration(undefined, 'Duration to wait'),
+  }),
+  run({ inputs, outputs, config }) {
     let activeTimer: ReturnType<typeof setTimeout> | null = null;
 
     inputs.trigger.on(() => {
@@ -73,5 +77,5 @@ export const timer = defineReactiveBlock(
         activeTimer = null;
       }
     };
-  }
-);
+  },
+});

@@ -5,15 +5,15 @@
  * device type icons, and names in a responsive grid. Uses a deep indigo
  * gradient background with per-device accent colors.
  *
- * Data is pushed from the plugin process via setBrickData('devices', ...).
+ * Data is pushed from the plugin process via devicesBrick.data.set(...).
  */
 
 import { useBrickSize } from '@brika/sdk/brick-views';
 import { useLocale } from '@brika/sdk/ui-kit/hooks';
 import clsx from 'clsx';
 import { Loader2, Network } from 'lucide-react';
-import { devicesData } from '../brick-data';
-import { DeviceIcon } from './components';
+import { DeviceIcon } from './_components';
+import { devicesBrick } from './devices.brick';
 import type { DeviceSummary } from './types';
 
 const OVERVIEW_GRADIENT = 'linear-gradient(135deg, #1a1e38 0%, #252a48 50%, #303658 100%)';
@@ -50,7 +50,7 @@ function DeviceCard({ device }: Readonly<{ device: DeviceSummary }>) {
 
 export default function DevicesBrick() {
   const { width, height } = useBrickSize();
-  const data = devicesData.use();
+  const data = devicesBrick.data.use();
   const { t } = useLocale();
 
   // ─── Loading ─────────────────────────────────────────────────────────

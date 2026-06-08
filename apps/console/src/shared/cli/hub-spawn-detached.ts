@@ -23,6 +23,7 @@
 import { existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { isCompiledFrom } from '@brika/sdk/exec-context';
 import { CliError } from './errors';
 import { checkPid } from './pid';
 
@@ -32,7 +33,7 @@ const SETTLE_TIMEOUT_MS = 1500;
 const POLL_INTERVAL_MS = 50;
 
 /** `true` when this module is loaded from inside a `bun build --compile` binary. */
-const IS_COMPILED = import.meta.path.startsWith('/$bunfs/');
+const IS_COMPILED = isCompiledFrom(import.meta.path);
 
 /**
  * Build the argv used to re-invoke this binary as `brika hub`.

@@ -8,12 +8,14 @@ import { mkdir, mkdtemp, readlink, realpath, rm, symlink, writeFile } from 'node
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { get, provide, stub, useTestBed } from '@brika/di/testing';
+import { BrikaError } from '@brika/errors';
 import { useBunMock } from '@brika/testing';
 import { BunRunner, ConfigLoader, HubConfig } from '@/runtime/config';
 import { Logger } from '@/runtime/logs/log-router';
 import { PluginManager } from '@/runtime/plugins/plugin-manager';
 import { PluginRegistry } from '@/runtime/registry/plugin-registry';
 import type { OperationProgress } from '@/runtime/registry/types';
+import { StateStore } from '@/runtime/state/state-store';
 
 useTestBed({
   autoStub: false,
@@ -38,6 +40,7 @@ describe('PluginRegistry', () => {
     unload: ReturnType<typeof mock>;
     list: ReturnType<typeof mock>;
   };
+  let mockStateGet: ReturnType<typeof mock>;
 
   beforeEach(() => {
     mockHubConfig = {
@@ -70,6 +73,9 @@ describe('PluginRegistry', () => {
     provide(HubConfig, mockHubConfig);
     provide(ConfigLoader, mockConfigLoader);
     provide(PluginManager, mockPluginManager);
+    // No state row by default: installs report a plain success, not "dormant".
+    mockStateGet = mock().mockReturnValue(undefined);
+    provide(StateStore, { get: mockStateGet });
 
     registry = get(PluginRegistry);
   });
@@ -125,6 +131,22 @@ describe('PluginRegistry', () => {
 
       expect(phases).toContain('resolving');
       expect(phases).toContain('complete');
+    });
+
+    test('reports a dormant (consent-pending) install in the complete message', async () => {
+      bun.spawn({ exitCode: 0 }).apply();
+      // After load, the plugin is registered dormant (a grant-requesting remote
+      // plugin under consent-before-code).
+      mockStateGet.mockReturnValue({ enabled: false });
+
+      const events: OperationProgress[] = [];
+      for await (const progress of registry.install('@test/plugin', '1.0.0')) {
+        events.push(progress);
+      }
+
+      const complete = events.find((p) => p.phase === 'complete');
+      expect(complete?.message).toContain('disabled');
+      expect(complete?.message).toContain('enable');
     });
 
     test('adds plugin to config after install', async () => {
@@ -207,6 +229,8 @@ describe('PluginRegistry', () => {
           exitCode: 1,
         })
         .apply();
+      // Online: the connectivity probe resolves, so the raw failure is kept.
+      bun.fetch(async () => new Response(null, { status: 200 }));
 
       const phases: OperationProgress[] = [];
       for await (const progress of registry.install('@test/broken', '1.0.0')) {
@@ -216,6 +240,52 @@ describe('PluginRegistry', () => {
       const errorProgress = phases.find((p) => p.phase === 'error');
       expect(errorProgress).toBeDefined();
       expect(errorProgress?.error).toContain('exit code 1');
+      // Plain Error: no structured code/detail, only the string message.
+      expect(errorProgress?.errorCode).toBeUndefined();
+      expect(errorProgress?.errorDetail).toBeUndefined();
+    });
+
+    test('reclassifies an npm install failure as offline when the registry is unreachable', async () => {
+      bun.spawn({ exitCode: 1 }).apply();
+      // The connectivity probe fails with a DNS error -> offline.
+      bun.fetch(async () => {
+        throw Object.assign(new Error('getaddrinfo ENOTFOUND registry.npmjs.org'), {
+          code: 'ENOTFOUND',
+        });
+      });
+
+      const events: OperationProgress[] = [];
+      for await (const progress of registry.install('@test/remote', '1.0.0')) {
+        events.push(progress);
+      }
+
+      const errorProgress = events.find((p) => p.phase === 'error');
+      expect(errorProgress?.errorCode).toBe('UNAVAILABLE');
+      expect(errorProgress?.error).toContain('offline');
+      expect(errorProgress?.error).toContain('brika install <path>');
+    });
+
+    test('surfaces errorCode + errorDetail when the failure is a typed BrikaError', async () => {
+      bun.spawn({ exitCode: 0 }).apply();
+      mockPluginManager.load.mockRejectedValue(
+        new BrikaError('MANIFEST_MISSING_MAIN', 'plugin has no entry point', {
+          data: { manifestPath: '/x/package.json' },
+        })
+      );
+
+      const events: OperationProgress[] = [];
+      for await (const progress of registry.install('@test/plugin', '1.0.0')) {
+        events.push(progress);
+      }
+
+      const errorProgress = events.find((p) => p.phase === 'error');
+      expect(errorProgress?.error).toBe('plugin has no entry point');
+      expect(errorProgress?.errorCode).toBe('MANIFEST_MISSING_MAIN');
+      expect(errorProgress?.errorDetail?.code).toBe('MANIFEST_MISSING_MAIN');
+      expect(errorProgress?.errorDetail?._brikaError).toBe(true);
+      // brika.yml is written only after a successful load, so a load failure
+      // never records the plugin in config (no config/filesystem split).
+      expect(mockConfigLoader.addPlugin).not.toHaveBeenCalled();
     });
   });
 
@@ -698,11 +768,11 @@ describe('PluginRegistry', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Local/workspace plugin tests — uses real temp directories for fs operations
+// Local/workspace plugin tests: uses real temp directories for fs operations
 // (mkdir, symlink, readlink, unlink) to avoid mock.module pollution.
 // ─────────────────────────────────────────────────────────────────────────────
 
-describe('PluginRegistry — local plugins', () => {
+describe('PluginRegistry: local plugins', () => {
   let tmpHome: string;
   let pluginsDir: string;
   let registry: PluginRegistry;
@@ -755,6 +825,7 @@ describe('PluginRegistry — local plugins', () => {
       unload: mock().mockResolvedValue(undefined),
       list: mock().mockReturnValue([]),
     });
+    provide(StateStore, { get: mock().mockReturnValue(undefined) });
 
     registry = get(PluginRegistry);
   });
@@ -788,6 +859,37 @@ describe('PluginRegistry — local plugins', () => {
     // package.json should have the dependency
     const pkg = await Bun.file(join(pluginsDir, 'package.json')).json();
     expect(pkg.dependencies['@test/ws-plugin']).toBe('workspace:*');
+  });
+
+  test('concurrent local installs both persist their dependency (no lost update)', async () => {
+    const dirA = join(tmpHome, 'plugin-a');
+    const dirB = join(tmpHome, 'plugin-b');
+    await mkdir(dirA, { recursive: true });
+    await mkdir(dirB, { recursive: true });
+    await writeFile(join(dirA, 'package.json'), JSON.stringify({ name: '@test/a' }));
+    await writeFile(join(dirB, 'package.json'), JSON.stringify({ name: '@test/b' }));
+
+    const dirByName: Record<string, string> = { '@test/a': dirA, '@test/b': dirB };
+    mockConfigLoader.resolvePluginEntry.mockImplementation((entry: { name: string }) =>
+      Promise.resolve({ rootDirectory: dirByName[entry.name] })
+    );
+
+    const drain = async (gen: AsyncGenerator<OperationProgress>): Promise<void> => {
+      for await (const _ of gen) {
+        // consume progress
+      }
+    };
+
+    // Run both installs concurrently: the read-modify-write of package.json must
+    // be serialized, or one dependency entry is lost.
+    await Promise.all([
+      drain(registry.install('@test/a', 'workspace:*')),
+      drain(registry.install('@test/b', 'workspace:*')),
+    ]);
+
+    const pkg = await Bun.file(join(pluginsDir, 'package.json')).json();
+    expect(pkg.dependencies['@test/a']).toBe('workspace:*');
+    expect(pkg.dependencies['@test/b']).toBe('workspace:*');
   });
 
   test('normalizes bare absolute path to file: specifier', async () => {
@@ -827,19 +929,46 @@ describe('PluginRegistry — local plugins', () => {
     expect(errorProgress?.error).toContain('No package.json');
   });
 
-  test('workspace install continues when dependency install returns non-zero', async () => {
+  test('standalone plugin install fails when frozen-lockfile install returns non-zero', async () => {
+    // A standalone plugin (no workspace parent) with a broken/stale lockfile
+    // must NOT silently continue: it would crash at load. Surface a real error.
     const pluginSrc = join(tmpHome, 'failing-deps');
     await mkdir(pluginSrc, { recursive: true });
     await writeFile(join(pluginSrc, 'package.json'), JSON.stringify({ name: '@test/failing' }));
 
-    mockConfigLoader.resolvePluginEntry.mockResolvedValue({
-      rootDirectory: pluginSrc,
-    });
-    // Non-zero exit code for bun install --frozen-lockfile
+    mockConfigLoader.resolvePluginEntry.mockResolvedValue({ rootDirectory: pluginSrc });
+    spawnExitCode = 1;
+
+    const events: OperationProgress[] = [];
+    for await (const progress of registry.install('@test/failing', 'workspace:*')) {
+      events.push(progress);
+    }
+
+    const errorProgress = events.find((p) => p.phase === 'error');
+    expect(errorProgress).toBeDefined();
+    expect(errorProgress?.errorCode).toBe('PLUGIN_DEPS_INSTALL_FAILED');
+    expect(events.map((e) => e.phase)).not.toContain('complete');
+    // brika.yml is written last, so a failed install never records the plugin.
+    expect(mockConfigLoader.addPlugin).not.toHaveBeenCalled();
+  });
+
+  test('workspace member install continues when dependency install returns non-zero', async () => {
+    // A genuine workspace member has its deps installed at the workspace root,
+    // so a frozen-lockfile non-zero in the member dir is expected and tolerated.
+    const wsRoot = join(tmpHome, 'ws-root');
+    const pluginSrc = join(wsRoot, 'plugins', 'member');
+    await mkdir(pluginSrc, { recursive: true });
+    await writeFile(
+      join(wsRoot, 'package.json'),
+      JSON.stringify({ name: 'ws-root', private: true, workspaces: ['plugins/*'] })
+    );
+    await writeFile(join(pluginSrc, 'package.json'), JSON.stringify({ name: '@test/member' }));
+
+    mockConfigLoader.resolvePluginEntry.mockResolvedValue({ rootDirectory: pluginSrc });
     spawnExitCode = 1;
 
     const phases: OperationProgress['phase'][] = [];
-    for await (const progress of registry.install('@test/failing', 'workspace:*')) {
+    for await (const progress of registry.install('@test/member', 'workspace:*')) {
       phases.push(progress.phase);
     }
 

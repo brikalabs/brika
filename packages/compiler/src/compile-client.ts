@@ -66,8 +66,16 @@ export async function compileClientModule(
     };
   }
 
+  const [output] = result.outputs;
+  if (!output) {
+    return {
+      success: false,
+      errors: ['Build succeeded but produced no output'],
+    };
+  }
+
   return {
     success: true,
-    js: await result.outputs[0].text(),
+    js: await output.text(),
   };
 }

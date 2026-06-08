@@ -334,7 +334,7 @@ describe('PluginManager', () => {
       });
 
       test('resolves cleanly on config-invalid event (plugin lands in awaiting-config)', async () => {
-        // `configInvalid` is no longer a fatal failure for `enable()` —
+        // `configInvalid` is no longer a fatal failure for `enable()`:
         // the lifecycle transitions the plugin to `awaiting-config` and
         // the UI renders a Configure CTA. Callers learn the new state
         // via the plugin record, not by catching a 400.
@@ -354,7 +354,7 @@ describe('PluginManager', () => {
         });
 
         // Resolves (does not throw); plugin's `awaiting-config` state
-        // is the public signal — verified separately at the lifecycle
+        // is the public signal, verified separately at the lifecycle
         // layer.
         await manager.enable('uid-123');
       });
@@ -469,7 +469,25 @@ describe('PluginManager', () => {
       test('load delegates to lifecycle', async () => {
         await manager.load('/path/to/module', '@parent/plugin');
 
-        expect(mockLifecycle.load).toHaveBeenCalledWith('/path/to/module', false, '@parent/plugin');
+        expect(mockLifecycle.load).toHaveBeenCalledWith(
+          '/path/to/module',
+          false,
+          '@parent/plugin',
+          undefined
+        );
+      });
+
+      test('load forwards defaultEnabled through to lifecycle', async () => {
+        await manager.load('/path/to/module', '@parent/plugin', { defaultEnabled: true });
+
+        expect(mockLifecycle.load).toHaveBeenCalledWith(
+          '/path/to/module',
+          false,
+          '@parent/plugin',
+          {
+            defaultEnabled: true,
+          }
+        );
       });
 
       test('unload delegates to lifecycle', async () => {

@@ -17,14 +17,17 @@
     "brika": "^0.3.0"
   },
   "type": "module",
-  "main": "./src/index.tsx",
+  "main": "./src/_generated/entry.ts",
   "exports": {
-    ".": "./src/index.tsx"
+    ".": "./src/_generated/entry.ts"
   },
   "scripts": {
-    "link": "bun link",
-    "typecheck": "tsgo --noEmit",
-    "prepublishOnly": "brika-verify-plugin"
+    "dev": "brika dev",
+    "build": "brika build",
+    "typecheck": "brika check --types",
+    "check": "brika check",
+    "test": "bun test",
+    "prepublishOnly": "brika verify"
   },
   "blocks": [
     {

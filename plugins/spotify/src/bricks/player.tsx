@@ -11,9 +11,20 @@ import { useCallAction, useLocale } from '@brika/sdk/ui-kit/hooks';
 import { LogIn, Music, SkipBack, SkipForward } from 'lucide-react';
 import { useCallback } from 'react';
 import { doNext, doPause, doPlay, doPrevious } from '../actions';
-import { playerData } from '../brick-data';
-import { AlbumCover, PlayPauseButton, ScrollText, TransportButton } from './components';
-import { useProgress } from './use-progress';
+import type { PlaybackState, RecentTrack } from '../spotify-api';
+import { AlbumCover, PlayPauseButton, ScrollText, TransportButton } from './_components';
+import { useProgress } from './_use-progress';
+import { playerBrick } from './player.brick';
+
+/** Data pushed from the plugin process to every Spotify player brick instance. */
+export interface SpotifyPlayerData {
+  playback: PlaybackState | null;
+  recentTrack: RecentTrack | null;
+  isAuthed: boolean;
+  loaded: boolean;
+  anchor: { progressMs: number; timestamp: number };
+  authUrl: string;
+}
 
 function formatMs(ms: number) {
   const totalSec = Math.floor(ms / 1000);
@@ -25,8 +36,8 @@ function formatMs(ms: number) {
 
 export default function SpotifyPlayer() {
   const { width, height } = useBrickSize();
-  const config = useBrickConfig();
-  const data = playerData.use();
+  const config = useBrickConfig(playerBrick.config);
+  const data = playerBrick.data.use();
   const { t } = useLocale();
   const callAction = useCallAction();
 

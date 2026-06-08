@@ -274,6 +274,55 @@ describe('PluginLifecycle (with mocked spawn)', () => {
       expect(mockState.registerPlugin).not.toHaveBeenCalled();
     });
 
+    test('consent-before-code: a first-time grant-requesting plugin registers dormant, never spawns', async () => {
+      resolverSpy.mockResolvedValueOnce({
+        ...defaultResolverResult,
+        metadata: {
+          ...defaultResolverResult.metadata,
+          grants: { 'dev.brika.net.fetch': { allow: ['api.example.com'] } },
+        },
+      });
+      // Fresh install: no state row yet.
+      mockState.get.mockReturnValue(undefined);
+
+      await lifecycle.load('/mock/path');
+
+      // Registered dormant (enabled:false), health stopped, and NO process spawned.
+      expect(mockState.registerPlugin).toHaveBeenCalledWith(
+        expect.objectContaining({ name: '@test/plugin', enabled: false })
+      );
+      expect(mockState.setHealth).toHaveBeenCalledWith('@test/plugin', 'stopped');
+      expect(capturedCallbacks).toBeNull();
+      expect(lifecycle.getProcess('@test/plugin')).toBeUndefined();
+    });
+
+    test('a first-time grant-LESS plugin spawns immediately (nothing to consent to)', async () => {
+      // Default fixture declares no grants; a fresh load should spawn as before.
+      mockState.get.mockReturnValue(undefined);
+
+      const callbacks = await loadPlugin();
+
+      expect(callbacks).not.toBeNull();
+      expect(lifecycle.getProcess('@test/plugin')).toBeDefined();
+    });
+
+    test('an already-enabled grant-requesting plugin spawns (operator consented)', async () => {
+      resolverSpy.mockResolvedValueOnce({
+        ...defaultResolverResult,
+        metadata: {
+          ...defaultResolverResult.metadata,
+          grants: { 'dev.brika.net.fetch': { allow: ['api.example.com'] } },
+        },
+      });
+      // Existing state with enabled:true models a plugin the operator enabled.
+      mockState.get.mockReturnValue({ enabled: true, uid: 'uid-existing' });
+
+      const callbacks = await loadPlugin();
+
+      expect(callbacks).not.toBeNull();
+      expect(lifecycle.getProcess('@test/plugin')).toBeDefined();
+    });
+
     test('getProcessByUid returns process by uid after load', async () => {
       await loadPlugin();
 
@@ -542,7 +591,7 @@ describe('PluginLifecycle (with mocked spawn)', () => {
         '"oauth-blob"'
       );
 
-      // Plugin tries to read those names directly — must not find them.
+      // Plugin tries to read those names directly: must not find them.
       expect(await callbacks.onGetPluginSecret('@test/plugin', 'apiKey')).toBeNull();
       expect(
         await callbacks.onGetPluginSecret('@test/plugin', '__secret_oauth_test_token')
@@ -646,12 +695,13 @@ describe('PluginLifecycle (with mocked spawn)', () => {
     });
 
     test('does not restart when plugin is disabled', async () => {
-      mockState.get.mockReturnValue({
-        enabled: false,
-      });
-
+      // Spawn it as a normal running plugin first (a disabled plugin never
+      // spawns under consent-before-code, so it must start enabled)...
+      mockState.get.mockReturnValue({ enabled: true });
       const callbacks = await loadPlugin();
       const process = mockProcessInstance as unknown as PluginProcess;
+      // ...then the operator disables it; a later crash must NOT auto-restart.
+      mockState.get.mockReturnValue({ enabled: false });
       callbacks.onDisconnect(process, new Error('crash'));
       // Negative assertion: confirm no restart scheduled when disabled
       await sleep(20);
@@ -758,7 +808,7 @@ describe('PluginLifecycle (with mocked spawn)', () => {
     });
 
     test('swallows a rejected post-breach unload without crashing', async () => {
-      // Force unload() to reject — it calls metrics.clear(name) internally.
+      // Force unload() to reject: it calls metrics.clear(name) internally.
       // The breach handler must catch it (log + continue) rather than throw
       // an unhandled rejection.
       mockMetrics.clear.mockImplementation(() => {
@@ -786,7 +836,7 @@ describe('PluginLifecycle (with mocked spawn)', () => {
 
       callbacks.onRssSoftLimitBreached?.(process, 700 * MB, 512 * MB);
 
-      // After the graceful unload, the RestartPolicy schedules a restart —
+      // After the graceful unload, the RestartPolicy schedules a restart,
       // a leaking plugin that keeps tripping the limit is handled like a crash.
       await waitFor(() =>
         mockState.setHealth.mock.calls.some(

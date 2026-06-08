@@ -95,6 +95,30 @@ jobs:
       - name: Fail PR if release version regresses below latest tag
         run: bun scripts/check-version-monotonic.ts
 
+  smoke-bin:
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ needs.setup.outputs.bun_version }}
+      - uses: actions/cache@v5
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: bun-${{ runner.os }}-
+      - run: bun install --frozen-lockfile
+      # Pack @brika/sdk and install it into a fixture plugin that depends on ONLY
+      # @brika/sdk, proving the bundled `brika` bin is self-contained (no toolchain
+      # devDeps leak into a plugin's install closure). This is the gate the whole
+      # single-dependency design protects.
+      - name: Packed-tarball smoke test
+        run: bun run --filter @brika/sdk smoke:bin
+
   test:
     needs: setup
     runs-on: ubuntu-latest

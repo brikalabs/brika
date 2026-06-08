@@ -26,7 +26,7 @@ describe('input', () => {
       name: 'Test Input',
     });
     expect(def.__type).toBe('input');
-    expect(def.meta.name).toBe('Test Input');
+    expect(def.meta?.name).toBe('Test Input');
   });
 
   test('creates InputDef with GenericRef', () => {
@@ -42,7 +42,7 @@ describe('input', () => {
       name: 'Count',
       description: 'A count value',
     });
-    expect(def.meta.description).toBe('A count value');
+    expect(def.meta?.description).toBe('A count value');
   });
 });
 
@@ -52,7 +52,7 @@ describe('output', () => {
       name: 'Test Output',
     });
     expect(def.__type).toBe('output');
-    expect(def.meta.name).toBe('Test Output');
+    expect(def.meta?.name).toBe('Test Output');
   });
 
   test('creates OutputDef with PassthroughRef', () => {

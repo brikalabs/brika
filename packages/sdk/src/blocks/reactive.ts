@@ -24,8 +24,8 @@ export type { GenericRef, PassthroughRef, ResolvedRef } from './schema-types';
 
 /** Port metadata */
 export interface PortMeta {
-  /** Display name */
-  name: string;
+  /** Display name. Defaults to the title-cased port key when omitted. */
+  name?: string;
   /** Description for tooltip */
   description?: string;
   /**
@@ -42,7 +42,7 @@ export interface PortMeta {
 export interface InputDef<T extends z.ZodType | GenericRef<string>> {
   readonly __type: 'input';
   readonly schema: T;
-  readonly meta: PortMeta;
+  readonly meta?: PortMeta;
 }
 
 /** Schema types accepted for output ports */
@@ -54,7 +54,7 @@ type OutputSchema = z.ZodType | PassthroughRef<string> | GenericRef<string> | Re
 export interface OutputDef<T extends OutputSchema> {
   readonly __type: 'output';
   readonly schema: T;
-  readonly meta: PortMeta;
+  readonly meta?: PortMeta;
 }
 
 /**
@@ -62,7 +62,7 @@ export interface OutputDef<T extends OutputSchema> {
  */
 export function input<T extends z.ZodType | GenericRef<string>>(
   schema: T,
-  meta: PortMeta
+  meta?: PortMeta
 ): InputDef<T> {
   return {
     __type: 'input',
@@ -73,8 +73,9 @@ export function input<T extends z.ZodType | GenericRef<string>>(
 
 /**
  * Create a typed output port with Zod schema, passthrough, generic, or resolved.
+ * The display name defaults to the title-cased port key; pass `meta` to override.
  */
-export function output<T extends OutputSchema>(schema: T, meta: PortMeta): OutputDef<T> {
+export function output<T extends OutputSchema>(schema: T, meta?: PortMeta): OutputDef<T> {
   return {
     __type: 'output',
     schema,
@@ -161,6 +162,25 @@ export interface BlockContext<
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
+ * Human-facing block metadata. `brika build` lowers this into the plugin
+ * manifest `blocks[]` entry, so co-locating it on the definition makes the
+ * source the single source of truth and the generated, committed manifest
+ * the artifact the host reads.
+ */
+export interface BlockMeta {
+  /** Display name shown in the workflow editor. */
+  name: string;
+  /** One-line description. */
+  description?: string;
+  /** Manifest category bucket. */
+  category: 'trigger' | 'flow' | 'action' | 'transform';
+  /** Lucide icon name. */
+  icon?: string;
+  /** Accent color as `#RRGGBB`. */
+  color?: string;
+}
+
+/**
  * Block specification with typed ports.
  */
 export interface ReactiveBlockSpec<
@@ -168,16 +188,18 @@ export interface ReactiveBlockSpec<
   TOutputs extends Record<string, OutputDef<OutputSchema>>,
   TConfig extends z.ZodObject<z.ZodRawShape>,
 > {
-  /**
-   * Unique block ID. Display metadata (name, description, category, icon,
-   * color) lives in the plugin manifest `blocks[]` entry, not here: the host
-   * registers it from there, so duplicating it in code has no effect.
-   */
+  /** Unique block ID (local to the plugin). */
   id: string;
-  /** Typed input port definitions */
-  inputs: TInputs;
-  /** Typed output port definitions */
-  outputs: TOutputs;
+  /**
+   * Display metadata lowered into the manifest by `brika build`. Optional so
+   * existing plugins that still hand-author `blocks[]` keep compiling; once a
+   * block carries `meta`, `brika build` owns its manifest entry.
+   */
+  meta?: BlockMeta;
+  /** Typed input port definitions. Omit for source/trigger blocks with no inputs. */
+  inputs?: TInputs;
+  /** Typed output port definitions. Omit for sink/action blocks with no outputs. */
+  outputs?: TOutputs;
   /** Zod config schema */
   config: TConfig;
 }

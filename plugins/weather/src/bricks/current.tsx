@@ -3,14 +3,13 @@
  *
  * Displays live weather conditions with temperature, feels-like,
  * humidity, wind, pressure, and a gradient background matching the condition.
- * Data is pushed from the plugin process via setBrickData().
+ * Data is pushed from the plugin process via the brick's `data.set()` channel.
  */
 
 import { useBrickConfig, useBrickSize } from '@brika/sdk/brick-views';
 import { useLocale } from '@brika/sdk/ui-kit/hooks';
 import { Droplets, Gauge, MapPin, Thermometer, Wind } from 'lucide-react';
 import type { ComponentType } from 'react';
-import { currentData } from '../brick-data';
 import {
   CityError,
   formatTemp,
@@ -20,7 +19,8 @@ import {
   resolveUnit,
   tempUnit,
   WeatherIcon,
-} from './shared';
+} from './_shared';
+import { currentBrick } from './current.brick';
 
 // ─── Types (inlined — can't import from plugin runtime code) ────────────────
 
@@ -86,8 +86,8 @@ function WeatherStat({
 // ─── Component ──────────────────────────────────────────────────────────────
 
 export default function CurrentWeather() {
-  const data = currentData.use();
-  const config = useBrickConfig();
+  const data = currentBrick.data.use();
+  const config = useBrickConfig(currentBrick.config);
   const { width, height } = useBrickSize();
   const { t } = useLocale();
 

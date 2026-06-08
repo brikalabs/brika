@@ -2,8 +2,7 @@
  * Tests for Flow Sources
  */
 
-import { describe, expect, test } from 'bun:test';
-import { wait } from './fixtures';
+import { afterEach, beforeEach, describe, expect, jest, test } from 'bun:test';
 import { interval, isSource, timer } from './sources';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -69,6 +68,12 @@ describe('isSource', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('interval', () => {
+  // Fake timers make the cadence deterministic: a real setInterval under heavy
+  // parallel CPU load fires fewer times than its nominal rate (it does not
+  // replay missed ticks), which used to flake the emission-count assertions.
+  beforeEach(() => jest.useFakeTimers());
+  afterEach(() => jest.useRealTimers());
+
   test('creates source with __source marker', () => {
     const source = interval(100);
 
@@ -76,75 +81,60 @@ describe('interval', () => {
     expect(typeof source.start).toBe('function');
   });
 
-  test('emits incrementing numbers starting at 0', async () => {
-    expect.hasAssertions();
+  test('emits incrementing numbers starting at 0', () => {
     const source = interval(20);
     const values: number[] = [];
 
     const cleanup = source.start((v) => values.push(v));
-
-    await wait(70);
+    jest.advanceTimersByTime(70); // ticks at 20/40/60ms
     cleanup();
 
-    expect(values.length).toBeGreaterThan(0);
-    for (let i = 0; i < values.length; i++) {
-      expect(values[i]).toBe(i);
-    }
+    expect(values).toEqual([0, 1, 2]);
   });
 
-  test('emits at specified interval', async () => {
-    expect.hasAssertions();
+  test('emits at specified interval', () => {
     const source = interval(30);
-    const values: number[] = [];
-    const timestamps: number[] = [];
-    const startTime = Date.now();
-
-    const cleanup = source.start((v) => {
-      values.push(v);
-      timestamps.push(Date.now() - startTime);
-    });
-
-    await wait(100);
-    cleanup();
-
-    // Should have at least 2-3 emissions in 100ms with 30ms interval
-    expect(values.length).toBeGreaterThanOrEqual(2);
-    // First emission should be around 30ms
-    expect(timestamps[0]).toBeGreaterThanOrEqual(25);
-    expect(timestamps[0]).toBeLessThan(50);
-  });
-
-  test('cleanup stops interval', async () => {
-    expect.hasAssertions();
-    const source = interval(10);
     const values: number[] = [];
 
     const cleanup = source.start((v) => values.push(v));
 
-    await wait(35);
-    const countBeforeCleanup = values.length;
-    cleanup();
-    await wait(50);
+    expect(values).toEqual([]); // nothing before the first tick
+    jest.advanceTimersByTime(29);
+    expect(values).toEqual([]); // not yet at 30ms
+    jest.advanceTimersByTime(1);
+    expect(values).toEqual([0]); // first emission exactly at 30ms
+    jest.advanceTimersByTime(60);
+    expect(values).toEqual([0, 1, 2]); // further ticks at 60/90ms
 
-    expect(values.length).toBe(countBeforeCleanup);
+    cleanup();
   });
 
-  test('multiple starts create independent intervals', async () => {
-    expect.hasAssertions();
+  test('cleanup stops interval', () => {
+    const source = interval(10);
+    const values: number[] = [];
+
+    const cleanup = source.start((v) => values.push(v));
+    jest.advanceTimersByTime(35); // ticks at 10/20/30ms
+    cleanup();
+    jest.advanceTimersByTime(50);
+
+    expect(values).toEqual([0, 1, 2]);
+  });
+
+  test('multiple starts create independent intervals', () => {
     const source = interval(20);
     const values1: number[] = [];
     const values2: number[] = [];
 
     const cleanup1 = source.start((v) => values1.push(v));
     const cleanup2 = source.start((v) => values2.push(v));
-
-    await wait(50);
+    jest.advanceTimersByTime(50); // ticks at 20/40ms
     cleanup1();
     cleanup2();
 
-    // Both should have emitted independently
-    expect(values1.length).toBeGreaterThan(0);
-    expect(values2.length).toBeGreaterThan(0);
+    // Both emitted independently and identically.
+    expect(values1).toEqual([0, 1]);
+    expect(values2).toEqual([0, 1]);
   });
 });
 
@@ -153,6 +143,11 @@ describe('interval', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('timer', () => {
+  // Same wall-clock flakiness class as `interval`: drive the one-shot delay
+  // deterministically instead of racing real setTimeout against real waits.
+  beforeEach(() => jest.useFakeTimers());
+  afterEach(() => jest.useRealTimers());
+
   test('creates source with __source marker', () => {
     const source = timer(100);
 
@@ -160,69 +155,62 @@ describe('timer', () => {
     expect(typeof source.start).toBe('function');
   });
 
-  test('emits 0 after specified delay', async () => {
-    expect.hasAssertions();
+  test('emits 0 after specified delay', () => {
     const source = timer(30);
     const values: number[] = [];
 
     const cleanup = source.start((v) => values.push(v));
 
     expect(values).toHaveLength(0);
-    await wait(50);
-    cleanup();
+    jest.advanceTimersByTime(29);
+    expect(values).toHaveLength(0); // not before the delay
+    jest.advanceTimersByTime(1);
+    expect(values).toEqual([0]); // fires exactly at 30ms
 
-    expect(values).toEqual([0]);
+    cleanup();
   });
 
-  test('emits only once', async () => {
-    expect.hasAssertions();
+  test('emits only once', () => {
     const source = timer(20);
     const values: number[] = [];
 
     const cleanup = source.start((v) => values.push(v));
-
-    await wait(100);
+    jest.advanceTimersByTime(100);
     cleanup();
 
     expect(values).toEqual([0]);
   });
 
-  test('cleanup cancels timer if not fired', async () => {
-    expect.hasAssertions();
+  test('cleanup cancels timer if not fired', () => {
     const source = timer(100);
     const values: number[] = [];
 
     const cleanup = source.start((v) => values.push(v));
     cleanup(); // Cancel immediately
-
-    await wait(150);
+    jest.advanceTimersByTime(150);
 
     expect(values).toHaveLength(0);
   });
 
-  test('cleanup after firing has no effect', async () => {
-    expect.hasAssertions();
+  test('cleanup after firing has no effect', () => {
     const source = timer(20);
     const values: number[] = [];
 
     const cleanup = source.start((v) => values.push(v));
-
-    await wait(50);
+    jest.advanceTimersByTime(50);
     cleanup(); // Should be safe to call after timer fired
 
     expect(values).toEqual([0]);
   });
 
-  test('multiple starts create independent timers', async () => {
-    expect.hasAssertions();
+  test('multiple starts create independent timers', () => {
     const source = timer(30);
     const values1: number[] = [];
     const values2: number[] = [];
 
     const cleanup1 = source.start((v) => values1.push(v));
     const cleanup2 = source.start((v) => values2.push(v));
-
-    await wait(50);
+    jest.advanceTimersByTime(50);
     cleanup1();
     cleanup2();
 

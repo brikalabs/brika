@@ -68,9 +68,10 @@ export function parseCondition(name: string): {
 } {
   const match = /^\[(\w+)\](.+)$/.exec(name);
   if (match) {
+    const [, condition, inner] = match;
     return {
-      name: match[2],
-      condition: match[1],
+      name: inner ?? name,
+      condition,
     };
   }
   return {

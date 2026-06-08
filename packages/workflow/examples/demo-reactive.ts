@@ -1,7 +1,7 @@
 /**
- * Demo: Reactive Block System with Pipe-based API
+ * Demo: Block System with Pipe-based API
  *
- * Uses defineReactiveBlock from @brika/sdk with Zod-typed ports.
+ * Uses defineBlock from @brika/sdk with Zod-typed ports.
  * Demonstrates:
  *   - pipe(op1, op2, ...) for composing operators
  *   - .to() for routing flows to outputs
@@ -9,15 +9,12 @@
  *   - start(interval(...)) for creating source flows
  *   - combine(), map(), filter(), throttle() operators
  *
- * Note: Block metadata (name, description, icon, color, category)
- * is now stored in package.json, not in the block definition.
- *
  * Run with: bun packages/workflow/examples/demo-reactive.ts
  */
 
 import {
   combine,
-  defineReactiveBlock,
+  defineBlock,
   filter,
   input,
   interval,
@@ -28,32 +25,27 @@ import {
 } from '../../sdk/src';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Define Blocks using Reactive API
+// Define Blocks
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
  * Timer Block - uses start(interval(...)) to emit ticks
  */
-const timerBlock = defineReactiveBlock(
-  {
-    id: 'timer',
-    inputs: {},
-    outputs: {
-      tick: output(
-        z.object({
-          count: z.number(),
-          timestamp: z.number(),
-        }),
-        {
-          name: 'Tick',
-        }
-      ),
-    },
-    config: z.object({
-      interval: z.number().default(1000),
-    }),
+const timerBlock = defineBlock({
+  id: 'timer',
+  meta: { name: 'Timer', category: 'trigger' },
+  outputs: {
+    tick: output(
+      z.object({
+        count: z.number(),
+        timestamp: z.number(),
+      })
+    ),
   },
-  ({ outputs, config, start, log }) => {
+  config: z.object({
+    interval: z.number().default(1000),
+  }),
+  run({ outputs, config, start, log }) {
     log('info', `Timer started (${config.interval}ms)`);
 
     start(interval(config.interval))
@@ -64,28 +56,26 @@ const timerBlock = defineReactiveBlock(
         }))
       )
       .to(outputs.tick);
-  }
-);
+  },
+});
 
 /**
  * Temperature Sensor Simulator
  */
-const tempSensorBlock = defineReactiveBlock(
-  {
-    id: 'temp-sensor',
-    inputs: {},
-    outputs: {
-      temperature: output(z.number(), {
-        name: 'Temperature °C',
-      }),
-    },
-    config: z.object({
-      interval: z.number().default(2000),
-      baseTemp: z.number().default(22),
-      variance: z.number().default(5),
+const tempSensorBlock = defineBlock({
+  id: 'temp-sensor',
+  meta: { name: 'Temp Sensor', category: 'trigger' },
+  outputs: {
+    temperature: output(z.number(), {
+      name: 'Temperature °C',
     }),
   },
-  ({ outputs, config, start, log }) => {
+  config: z.object({
+    interval: z.number().default(2000),
+    baseTemp: z.number().default(22),
+    variance: z.number().default(5),
+  }),
+  run({ outputs, config, start, log }) {
     log('info', `Temp sensor started (base: ${config.baseTemp}°C)`);
 
     start((emit) => {
@@ -95,45 +85,35 @@ const tempSensorBlock = defineReactiveBlock(
       }, config.interval);
       return () => clearInterval(id);
     }).to(outputs.temperature);
-  }
-);
+  },
+});
 
 /**
  * Comfort Calculator - uses combine() with pipe()
  */
-const comfortBlock = defineReactiveBlock(
-  {
-    id: 'comfort-calc',
-    inputs: {
-      temperature: input(z.number(), {
-        name: 'Temperature',
-      }),
-      humidity: input(z.number(), {
-        name: 'Humidity',
-      }),
-    },
-    outputs: {
-      comfort: output(
-        z.object({
-          score: z.number(),
-          label: z.string(),
-          temp: z.number(),
-          humidity: z.number(),
-        }),
-        {
-          name: 'Comfort',
-        }
-      ),
-      alert: output(z.string(), {
-        name: 'Alert',
-      }),
-    },
-    config: z.object({
-      optimalTemp: z.number().default(22),
-      optimalHumidity: z.number().default(50),
-    }),
+const comfortBlock = defineBlock({
+  id: 'comfort-calc',
+  meta: { name: 'Comfort Calculator', category: 'transform' },
+  inputs: {
+    temperature: input(z.number()),
+    humidity: input(z.number()),
   },
-  ({ inputs, outputs, config, log }) => {
+  outputs: {
+    comfort: output(
+      z.object({
+        score: z.number(),
+        label: z.string(),
+        temp: z.number(),
+        humidity: z.number(),
+      })
+    ),
+    alert: output(z.string()),
+  },
+  config: z.object({
+    optimalTemp: z.number().default(22),
+    optimalHumidity: z.number().default(50),
+  }),
+  run({ inputs, outputs, config, log }) {
     log('info', 'Comfort calculator initialized');
 
     combine(inputs.temperature, inputs.humidity)
@@ -172,37 +152,30 @@ const comfortBlock = defineReactiveBlock(
         outputs.alert.emit(`⚠️ Humidity alert: ${humidity}%`);
       }
     });
-  }
-);
+  },
+});
 
 /**
  * Logger Block - consumes data and logs it
  */
-const loggerBlock = defineReactiveBlock(
-  {
-    id: 'logger',
-    inputs: {
-      comfort: input(
-        z.object({
-          score: z.number(),
-          label: z.string(),
-          temp: z.number(),
-          humidity: z.number(),
-        }),
-        {
-          name: 'Comfort',
-        }
-      ),
-      alert: input(z.string(), {
-        name: 'Alert',
-      }),
-    },
-    outputs: {},
-    config: z.object({
-      prefix: z.string().default('[ENV]'),
-    }),
+const loggerBlock = defineBlock({
+  id: 'logger',
+  meta: { name: 'Logger', category: 'action' },
+  inputs: {
+    comfort: input(
+      z.object({
+        score: z.number(),
+        label: z.string(),
+        temp: z.number(),
+        humidity: z.number(),
+      })
+    ),
+    alert: input(z.string()),
   },
-  ({ inputs, config, log }) => {
+  config: z.object({
+    prefix: z.string().default('[ENV]'),
+  }),
+  run({ inputs, config, log }) {
     log('info', `Logger initialized with prefix: ${config.prefix}`);
 
     inputs.comfort.pipe(filter((c) => c.score < 70)).on((c) => {
@@ -215,8 +188,8 @@ const loggerBlock = defineReactiveBlock(
     inputs.alert.on((msg) => {
       log('warn', `${config.prefix} ${msg}`);
     });
-  }
-);
+  },
+});
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Run Demo
@@ -227,7 +200,7 @@ try {
   console.log('║       BRIKA Reactive Block Demo with Pipe-based API           ║');
   console.log('║                                                               ║');
   console.log('║  Features demonstrated:                                       ║');
-  console.log('║  • defineReactiveBlock with Zod schemas                       ║');
+  console.log('║  • defineBlock with Zod schemas                               ║');
   console.log('║  • pipe(op1, op2, ...) for composing operators                ║');
   console.log('║  • start(interval(...)) for source flows                      ║');
   console.log('║  • start(factory) for custom sources                          ║');

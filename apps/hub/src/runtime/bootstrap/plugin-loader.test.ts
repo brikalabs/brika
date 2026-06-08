@@ -50,6 +50,8 @@ describe('PluginLoader', () => {
   let registryInitMock: ReturnType<typeof mock>;
   let syncToConfigMock: ReturnType<typeof mock>;
   let stateSyncMock: ReturnType<typeof mock>;
+  let stateGetMock: ReturnType<typeof mock>;
+  let stateLoadMetaMock: ReturnType<typeof mock>;
   let pmLoadMock: ReturnType<typeof mock>;
   let pmStopAllMock: ReturnType<typeof mock>;
 
@@ -58,6 +60,10 @@ describe('PluginLoader', () => {
     registryInitMock = mock().mockResolvedValue(undefined);
     syncToConfigMock = mock().mockResolvedValue(undefined);
     stateSyncMock = mock().mockResolvedValue(undefined);
+    // No state row by default: a fresh config entry has made no enable/disable
+    // choice and should load as before.
+    stateGetMock = mock().mockReturnValue(undefined);
+    stateLoadMetaMock = mock().mockResolvedValue(undefined);
     pmLoadMock = mock().mockResolvedValue(undefined);
     pmStopAllMock = mock().mockResolvedValue(undefined);
 
@@ -65,6 +71,8 @@ describe('PluginLoader', () => {
     stub(StateStore, {
       init: stateInitMock,
       syncToConfig: stateSyncMock,
+      get: stateGetMock,
+      loadMetadataCache: stateLoadMetaMock,
     });
     stub(PluginRegistry, {
       init: registryInitMock,
@@ -163,6 +171,44 @@ describe('PluginLoader', () => {
       expect(pmLoadMock).toHaveBeenCalledTimes(2);
       expect(pmLoadMock).toHaveBeenCalledWith('@test/plugin-a', '/mock/plugins-dir');
       expect(pmLoadMock).toHaveBeenCalledWith('@test/plugin-b', '/mock/plugins-dir');
+    });
+
+    test('caches metadata for all installed plugins so disabled ones stay visible', async () => {
+      await loader.load(createMockConfig([{ name: '@test/plugin', version: '1.0.0' }]));
+      // loadMetadataCache runs regardless of enabled state, so a skipped disabled
+      // plugin still has metadata and shows up in the plugin list.
+      expect(stateLoadMetaMock).toHaveBeenCalled();
+    });
+
+    test('skips a disabled plugin at boot, still loads enabled ones', async () => {
+      const plugins = [
+        { name: '@test/enabled', version: '1.0.0' },
+        { name: '@test/disabled', version: '1.0.0' },
+      ];
+      // Only the disabled plugin has an explicit state row with enabled: false.
+      stateGetMock.mockImplementation((name: string) =>
+        name === '@test/disabled' ? { enabled: false } : undefined
+      );
+
+      await loader.load(createMockConfig(plugins));
+
+      expect(pmLoadMock).toHaveBeenCalledTimes(1);
+      expect(pmLoadMock).toHaveBeenCalledWith('@test/enabled', '/mock/plugins-dir');
+      expect(pmLoadMock).not.toHaveBeenCalledWith('@test/disabled', '/mock/plugins-dir');
+    });
+
+    test('starts a local/workspace plugin enabled (operator own code), npm without that hint', async () => {
+      await loader.load(
+        createMockConfig([
+          { name: '@test/local', version: 'workspace:*' },
+          { name: '@test/remote', version: '1.0.0' },
+        ])
+      );
+
+      expect(pmLoadMock).toHaveBeenCalledWith('@test/local', '/mock/plugins-dir', {
+        defaultEnabled: true,
+      });
+      expect(pmLoadMock).toHaveBeenCalledWith('@test/remote', '/mock/plugins-dir');
     });
 
     test('handles empty plugin list', async () => {

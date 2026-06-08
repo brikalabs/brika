@@ -9,7 +9,7 @@ import { EventSystem } from '@/runtime/events/event-system';
 import { StateStore } from '@/runtime/state/state-store';
 import { PluginErrors } from './plugin-errors';
 import { PluginEventHandler } from './plugin-events';
-import { PluginLifecycle } from './plugin-lifecycle';
+import { type LoadOptions, PluginLifecycle } from './plugin-lifecycle';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PluginManager - Public API for plugin operations
@@ -215,8 +215,8 @@ export class PluginManager {
     await this.#lifecycle.unload(name);
   }
 
-  load(moduleId: string, parent?: string): Promise<void> {
-    return this.#lifecycle.load(moduleId, false, parent);
+  load(moduleId: string, parent?: string, options?: LoadOptions): Promise<void> {
+    return this.#lifecycle.load(moduleId, false, parent, options);
   }
 
   unload(name: string, skipRestartReset = false): Promise<void> {

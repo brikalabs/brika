@@ -1,17 +1,42 @@
 /**
- * Camera brick — client-side rendered.
+ * Camera brick — descriptor + view in one file.
  *
- * HLS video player with stream switching. All state is local —
- * no server data push needed. Uses a native <video> element.
+ * HLS video player with stream switching. Config-only (no server-pushed data),
+ * so the descriptor lives beside the view; nothing on the server imports it.
  * Safari supports HLS natively; other browsers may need an HLS library
- * for .m3u8 — for this demo we use MP4 fallback URLs.
+ * for .m3u8, so for this demo we use MP4 fallback URLs.
  */
 
+import { z } from '@brika/sdk';
+import { defineBrick } from '@brika/sdk/brick';
 import { useBrickConfig, useBrickSize } from '@brika/sdk/brick-views';
 import { cva } from 'class-variance-authority';
 import clsx from 'clsx';
 import { ChevronLeft, ChevronRight, Circle, Radio, Square, Video } from 'lucide-react';
 import { useCallback, useRef, useState } from 'react';
+
+export const cameraBrick = defineBrick({
+  id: 'camera',
+  meta: {
+    name: 'Live Video',
+    description: 'HLS video stream with controls',
+    category: 'media',
+    icon: 'video',
+    color: '#ef4444',
+  },
+  config: z.object({
+    defaultStream: z
+      .enum(['Big Buck Bunny', 'Elephants Dream', 'Sintel'])
+      .default('Big Buck Bunny')
+      .meta({ label: 'Default Stream' }),
+    muted: z
+      .boolean()
+      .default(true)
+      .meta({ label: 'Muted by default' })
+      .describe('Start the stream muted'),
+  }),
+  data: z.object({}),
+});
 
 const recordButtonVariants = cva(
   'flex h-7 cursor-pointer items-center gap-1.5 rounded px-3 font-medium text-xs transition-colors',
@@ -44,11 +69,7 @@ const STREAMS = [
 
 export default function CameraBrick() {
   const { width, height } = useBrickSize();
-  const config = useBrickConfig();
-
-  const defaultStreamName =
-    typeof config.defaultStream === 'string' ? config.defaultStream : STREAMS[0].name;
-  const muted = typeof config.muted === 'boolean' ? config.muted : true;
+  const { defaultStream: defaultStreamName, muted } = useBrickConfig(cameraBrick.config);
 
   const defaultIndex = Math.max(
     0,

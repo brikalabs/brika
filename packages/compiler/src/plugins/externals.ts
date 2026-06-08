@@ -22,6 +22,24 @@ const BRIDGE: Record<string, string> = {
   'class-variance-authority': 'cva',
 };
 
+/**
+ * @brika/sdk subpaths that a browser module may import directly even though they
+ * are NOT bridged: they bundle as real, react-free code. `@brika/sdk/brick`
+ * (the `defineBrick` descriptor) is imported by a single-file brick's view.
+ */
+const BROWSER_SAFE = ['@brika/sdk/brick'] as const;
+
+/**
+ * The exact set of import specifiers a browser-compiled plugin module (brick or
+ * page) may use: everything the host bridges to globalThis.__brika.*, plus the
+ * react-free browser-safe descriptor modules. Anything else under @brika/sdk is
+ * server-only and importing it into a browser module is a boundary violation
+ * (`brika check` scans for this). Single source of truth.
+ */
+export function browserAllowedSpecifiers(): ReadonlySet<string> {
+  return new Set([...Object.keys(BRIDGE), ...BROWSER_SAFE]);
+}
+
 /** Escape a string for use as a literal inside a RegExp. */
 function escapeRegExp(s: string): string {
   return s.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);

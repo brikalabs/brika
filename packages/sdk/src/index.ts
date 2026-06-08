@@ -3,24 +3,26 @@
  *
  * Reactive, type-safe API for building home automation blocks and tools.
  *
- * @example Reactive Block
+ * @example Block
  * ```typescript
- * import { defineReactiveBlock, input, output, combine, map, z } from "@brika/sdk";
+ * import { defineBlock, input, output, combine, map, z } from "@brika/sdk";
  *
- * export const sensorBlock = defineReactiveBlock({
+ * export const sensorBlock = defineBlock({
  *   id: "sensor-processor",
+ *   meta: { name: "Sensor Processor", category: "transform" },
  *   inputs: {
- *     temperature: input(z.number(), { name: "Temperature" }),
- *     humidity: input(z.number(), { name: "Humidity" }),
+ *     temperature: input(z.number()),
+ *     humidity: input(z.number()),
  *   },
  *   outputs: {
- *     comfort: output(z.object({ score: z.number() }), { name: "Comfort" }),
+ *     comfort: output(z.object({ score: z.number() })),
  *   },
  *   config: z.object({ threshold: z.number() }),
- * }, ({ inputs, outputs, config }) => {
- *   combine(inputs.temperature, inputs.humidity)
- *     .pipe(map(([t, h]) => ({ score: (t + h) / 2 })))
- *     .to(outputs.comfort);
+ *   run({ inputs, outputs, config }) {
+ *     combine(inputs.temperature, inputs.humidity)
+ *       .pipe(map(([t, h]) => ({ score: (t + h) / 2 })))
+ *       .to(outputs.comfort);
+ *   },
  * });
  * ```
  */
@@ -44,6 +46,7 @@ export type { Serializable } from '@brika/serializable';
 export type {
   BlockContext,
   BlockInstance,
+  BlockMeta,
   BlockRuntimeContext,
   BlockSetup,
   CompiledReactiveBlock,
@@ -58,7 +61,7 @@ export type {
 export {
   createEmitter,
   createFlowFromInput,
-  defineReactiveBlock,
+  defineBlock,
   input,
   isCompiledReactiveBlock,
   output,
@@ -145,7 +148,9 @@ export { defineAction } from './api/actions';
 
 export type { BrickConfigChangeHandler } from './api/brick-config';
 export { onBrickConfigChange } from './api/brick-config';
-export { setBrickData } from './api/push-brick-data';
+// `setBrickData` is intentionally not re-exported: bricks push data through a
+// `defineBrick` descriptor's typed `data.set()`. The raw function remains in
+// ./api/push-brick-data as the channel implementation.
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Shared Store (reactive pub/sub state for plugin processes)

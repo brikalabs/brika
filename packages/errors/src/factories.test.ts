@@ -19,6 +19,9 @@ describe('errors.* factories', () => {
     produced.add(errors.pluginConfigInvalid({ pluginId: 'x' }).code);
     produced.add(errors.manifestInvalid({ manifestPath: '/x' }).code);
     produced.add(errors.manifestMissingMain({ manifestPath: '/x' }).code);
+    produced.add(
+      errors.pluginDepsInstallFailed({ pluginName: 'x', directory: '/x', exitCode: 1 }).code
+    );
     produced.add(errors.alreadyRegistered({ grantId: 'x' }).code);
     produced.add(errors.notRegistered({ grantId: 'x' }).code);
     produced.add(errors.invalidOutput({ grantId: 'x' }).code);

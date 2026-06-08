@@ -9,6 +9,7 @@ import type { Serializable } from '@brika/serializable';
 import { z } from 'zod';
 import { log } from '../api/logging';
 import { getContext } from '../context';
+import { collectBlock } from '../internal/collect';
 import type { Json } from '../types';
 import {
   type BlockContext,
@@ -118,7 +119,12 @@ export interface BlockInstance {
  */
 type OutputDefSchema = z.ZodType | PassthroughRef | GenericRef<string> | ResolvedRef;
 
-export function defineReactiveBlock<
+/** Title-case a port key for its default display name (`trigger` -> `Trigger`). */
+function portDisplayName(key: string): string {
+  return key.charAt(0).toUpperCase() + key.slice(1);
+}
+
+function compileBlock<
   TInputs extends Record<string, InputDef<z.ZodType | GenericRef<string>>>,
   TOutputs extends Record<string, OutputDef<OutputDefSchema>>,
   TConfig extends z.ZodObject<z.ZodRawShape>,
@@ -126,6 +132,9 @@ export function defineReactiveBlock<
   spec: ReactiveBlockSpec<TInputs, TOutputs, TConfig>,
   setup: BlockSetup<TInputs, TOutputs, TConfig>
 ): CompiledReactiveBlock {
+  // Capture id + display metadata for `brika build`. No-op at plugin runtime.
+  collectBlock({ id: spec.id, meta: spec.meta });
+
   const configJsonSchema = zodToBlockSchema(spec.config);
 
   // Get TypeScript-like type name from schema (not resolving passthrough/resolved)
@@ -188,7 +197,7 @@ export function defineReactiveBlock<
       jsonSchema?: Record<string, unknown>;
     }
   >();
-  for (const [id, def] of Object.entries(spec.inputs)) {
+  for (const [id, def] of Object.entries(spec.inputs ?? {})) {
     inputMap.set(id, {
       typeName: getBaseTypeName(def.schema),
       type: getTypeDescriptor(def.schema),
@@ -197,9 +206,9 @@ export function defineReactiveBlock<
   }
 
   // Convert input definitions to BlockPort[]
-  const inputs: BlockPort[] = Object.entries(spec.inputs).map(([id, def]) => ({
+  const inputs: BlockPort[] = Object.entries(spec.inputs ?? {}).map(([id, def]) => ({
     id,
-    name: def.meta.name,
+    name: def.meta?.name ?? portDisplayName(id),
     direction: 'input' as const,
     typeName: getBaseTypeName(def.schema),
     type: getTypeDescriptor(def.schema),
@@ -207,7 +216,7 @@ export function defineReactiveBlock<
   }));
 
   // Convert output definitions to BlockPort[] - resolve passthrough to input type
-  const outputs: BlockPort[] = Object.entries(spec.outputs).map(([id, def]) => {
+  const outputs: BlockPort[] = Object.entries(spec.outputs ?? {}).map(([id, def]) => {
     const baseTypeName = getBaseTypeName(def.schema);
     const typeDesc = getTypeDescriptor(def.schema);
 
@@ -225,12 +234,12 @@ export function defineReactiveBlock<
           // Linked input is concrete — resolve statically
           return {
             id,
-            name: def.meta.name,
+            name: def.meta?.name ?? portDisplayName(id),
             direction: 'output' as const,
             typeName: linkedInput.typeName,
             type: linkedInput.type,
             jsonSchema: linkedInput.jsonSchema,
-            dynamic: def.meta.repeat,
+            dynamic: def.meta?.repeat,
           };
         }
         // Linked input is generic/unresolved — preserve passthrough for dynamic inference
@@ -239,12 +248,12 @@ export function defineReactiveBlock<
 
     return {
       id,
-      name: def.meta.name,
+      name: def.meta?.name ?? portDisplayName(id),
       direction: 'output' as const,
       typeName: baseTypeName,
       type: typeDesc,
       jsonSchema: getJsonSchema(def.schema),
-      dynamic: def.meta.repeat,
+      dynamic: def.meta?.repeat,
     };
   });
 
@@ -270,13 +279,13 @@ export function defineReactiveBlock<
 
       // Create flows for each input
       const flows = new Map<string, FlowImpl<unknown>>();
-      for (const id of Object.keys(spec.inputs)) {
+      for (const id of Object.keys(spec.inputs ?? {})) {
         flows.set(id, createFlow<unknown>(setTimeoutWrapper, cleanup));
       }
 
       // Create emitters for each output
       const outputEmitters = {} as Record<string, Emitter<unknown>>;
-      for (const [id, def] of Object.entries(spec.outputs)) {
+      for (const [id, def] of Object.entries(spec.outputs ?? {})) {
         outputEmitters[id] = createEmitter<unknown>(id, getRuntimeSchema(def.schema), ctx.emit);
       }
 
@@ -317,7 +326,7 @@ export function defineReactiveBlock<
       return {
         pushInput(portId: string, data: Serializable): void {
           // Always validate input data
-          const inputDef = spec.inputs[portId];
+          const inputDef = spec.inputs?.[portId];
           if (inputDef) {
             const runtimeSchema = getRuntimeSchema(inputDef.schema);
             const result = runtimeSchema.safeParse(data);
@@ -355,6 +364,64 @@ export function defineReactiveBlock<
   }
 
   return blockDef;
+}
+
+/**
+ * Define a reactive workflow block.
+ *
+ * Inputs/outputs are typed Zod ports (a port's display name defaults to its key,
+ * so `input(z.generic())` is enough), `config` is a Zod object, and `run` holds
+ * the reactive setup. `brika build` lowers `meta` into the manifest.
+ *
+ * @param spec The block definition: `id`, `meta`, `inputs`, `outputs`, `config`,
+ *   and `run` (the reactive setup, called once when the block starts).
+ * @returns A compiled block the hub can instantiate.
+ * @example
+ * ```ts
+ * import { defineBlock, input, output, z } from '@brika/sdk';
+ *
+ * export const gate = defineBlock({
+ *   id: 'gate',
+ *   meta: { name: 'Gate', category: 'transform' },
+ *   inputs: { in: input(z.generic()) },          // name "In" from the key
+ *   outputs: { out: output(z.generic()) },
+ *   config: z.object({ open: z.boolean().default(true) }),
+ *   run({ inputs, outputs, config }) {
+ *     inputs.in.on((value) => {
+ *       if (config.open) outputs.out.emit(value);
+ *     });
+ *   },
+ * });
+ * ```
+ */
+export function defineBlock<
+  TInputs extends Record<string, InputDef<z.ZodType | GenericRef<string>>>,
+  TOutputs extends Record<string, OutputDef<OutputDefSchema>>,
+  TConfig extends z.ZodObject<z.ZodRawShape>,
+>(
+  spec: ReactiveBlockSpec<TInputs, TOutputs, TConfig> & {
+    run: BlockSetup<TInputs, TOutputs, TConfig>;
+  }
+): CompiledReactiveBlock {
+  return compileBlock(spec, spec.run);
+}
+
+/**
+ * Two-argument block definition.
+ *
+ * @internal Not part of the public `@brika/sdk` surface (not re-exported from the
+ *   package index): plugin authors use {@link defineBlock}. Retained for the SDK's
+ *   own block tests, which exercise the compiler against the historical shape.
+ */
+export function defineReactiveBlock<
+  TInputs extends Record<string, InputDef<z.ZodType | GenericRef<string>>>,
+  TOutputs extends Record<string, OutputDef<OutputDefSchema>>,
+  TConfig extends z.ZodObject<z.ZodRawShape>,
+>(
+  spec: ReactiveBlockSpec<TInputs, TOutputs, TConfig>,
+  setup: BlockSetup<TInputs, TOutputs, TConfig>
+): CompiledReactiveBlock {
+  return compileBlock(spec, setup);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

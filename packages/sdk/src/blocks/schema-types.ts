@@ -195,6 +195,29 @@ export function jsonSchema(description?: string) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Dynamic Dropdown (brick config)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * A brick `config` field rendered as a dropdown whose options are fetched at
+ * runtime. The hub resolves the options from `definePreferenceOptions(name)`,
+ * where `name` is this field's key, so the field key must match the registered
+ * provider.
+ *
+ * `brika build` lowers it to a `{ type: 'dynamic-dropdown' }` manifest entry.
+ *
+ * @example
+ * ```ts
+ * config: z.object({
+ *   device: z.dynamicDropdown({ label: 'Device' }).optional(),
+ * })
+ * ```
+ */
+export function dynamicDropdown(meta?: { label?: string; description?: string }) {
+  return z.string().meta({ ...meta, format: 'dynamic-dropdown' });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Spark Type (Event Type Picker)
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -241,20 +264,19 @@ export interface PassthroughRef<K extends string = string> {
  *
  * @example
  * ```typescript
- * defineReactiveBlock({
- *   inputs: {
- *     in: input(z.number(), { name: 'in' }),
- *   },
+ * defineBlock({
+ *   inputs: { in: input(z.number()) },
  *   outputs: {
  *     // 'out' will have type Emitter<number> (inferred from 'in')
- *     out: output(passthrough('in'), { name: 'out' }),
+ *     out: output(passthrough('in')),
  *   },
  *   config: z.object({}),
- * }, ({ inputs, outputs }) => {
- *   inputs.in.on((num) => {
- *     outputs.out.emit(num);      // ✓ Correctly typed as number
- *     outputs.out.emit("hello");  // ✗ Type error!
- *   });
+ *   run({ inputs, outputs }) {
+ *     inputs.in.on((num) => {
+ *       outputs.out.emit(num);      // ok: correctly typed as number
+ *       outputs.out.emit("hello");  // type error!
+ *     });
+ *   },
  * });
  * ```
  */
@@ -311,22 +333,23 @@ export interface GenericRef<T extends string = 'T'> {
  *
  * @example
  * ```typescript
- * defineReactiveBlock({
+ * defineBlock({
  *   inputs: {
  *     // Generic input - type inferred from what connects to it
- *     in: input(generic(), { name: 'in' }),
+ *     in: input(generic()),
  *   },
  *   outputs: {
  *     // Passthrough - same type as 'in'
- *     out: output(passthrough('in'), { name: 'out' }),
+ *     out: output(passthrough('in')),
  *   },
  *   config: z.object({}),
- * }, ({ inputs, outputs }) => {
- *   // In TypeScript, 'data' is unknown
- *   // In UI, type is inferred from connections
- *   inputs.in.on((data) => {
- *     outputs.out.emit(data);
- *   });
+ *   run({ inputs, outputs }) {
+ *     // In TypeScript, 'data' is unknown
+ *     // In UI, type is inferred from connections
+ *     inputs.in.on((data) => {
+ *       outputs.out.emit(data);
+ *     });
+ *   },
  * });
  * ```
  */

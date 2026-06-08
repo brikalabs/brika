@@ -1,68 +1,23 @@
 /**
  * Filesystem layout the CLI needs to interact with the running hub.
  *
- * The CLI deliberately does NOT import `@/runtime/context/brika-context`
- * (that lives inside the hub binary and pulls in the full runtime).
- * Instead we resolve the same convention here so the CLI stays lean:
- *
- *   - `$BRIKA_HOME` if set
- *   - else compiled mode: parent of the install directory
- *   - else dev mode: climb from cwd to the workspace root (the
- *     ancestor `package.json` with a `workspaces` field) and use its
- *     `.brika`. This lets `bun run dev:hot` from `apps/console/` share
- *     the data dir mortar spawned the hub with. Falls back to
- *     `<cwd>/.brika` outside any workspace.
- *
- * Keep this in sync with `apps/hub/src/runtime/context/brika-context.ts`.
+ * The data dir is resolved by the shared @brika/sdk/exec-context resolver (the
+ * single source of truth shared with the hub's brika-context and the lean bin),
+ * so the CLI and the hub never disagree about which `.brika` to use. The CLI
+ * still does NOT import the hub's brika-context (that pulls in the full runtime);
+ * exec-context is a leaf module (node:fs/node:path only).
  */
 
-import { existsSync, readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-
-const isCompiled = import.meta.path.startsWith('/$bunfs/');
-const installDir = dirname(process.execPath);
+import { join } from 'node:path';
+import { isCompiledFrom, resolveDataDir } from '@brika/sdk/exec-context';
 
 export function brikaHome(): string {
-  const fromEnv = process.env.BRIKA_HOME;
-  if (fromEnv) {
-    return fromEnv;
-  }
-  if (isCompiled) {
-    return dirname(installDir);
-  }
-  return join(findWorkspaceRoot() ?? process.cwd(), '.brika');
-}
-
-/**
- * Walk up from cwd looking for a `package.json` with a `workspaces`
- * field — the bun/npm/yarn monorepo root. Safety-capped at 12 levels.
- */
-function findWorkspaceRoot(): string | undefined {
-  let dir = process.cwd();
-  for (let i = 0; i < 12; i += 1) {
-    const pkg = join(dir, 'package.json');
-    if (existsSync(pkg)) {
-      try {
-        const parsed: unknown = JSON.parse(readFileSync(pkg, 'utf8'));
-        if (
-          parsed !== null &&
-          typeof parsed === 'object' &&
-          'workspaces' in parsed &&
-          parsed.workspaces !== undefined
-        ) {
-          return dir;
-        }
-      } catch {
-        // Malformed package.json — keep climbing.
-      }
-    }
-    const parent = dirname(dir);
-    if (parent === dir) {
-      return undefined;
-    }
-    dir = parent;
-  }
-  return undefined;
+  return resolveDataDir({
+    env: process.env,
+    isCompiled: isCompiledFrom(import.meta.path),
+    execPath: process.execPath,
+    cwd: process.cwd(),
+  }).path;
 }
 
 export function pidFile(): string {

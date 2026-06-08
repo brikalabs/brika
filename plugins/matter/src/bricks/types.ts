@@ -15,7 +15,7 @@ export type DeviceType =
   | 'bridge'
   | 'unknown';
 
-/** Full device state as pushed to the "device" brick via setBrickData */
+/** Full device state as pushed to the "device" brick via deviceBrick.data.set */
 export interface DeviceState {
   nodeId: string;
   name: string;

@@ -8,6 +8,7 @@ import type { Source } from '@brika/flow';
 import type { z } from 'zod';
 import { zodToJsonSchema } from '../blocks/reactive';
 import { getContext } from '../context';
+import { collectSpark, type SparkMeta } from '../internal/collect';
 import type { Json, SparkEvent } from '../types';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -32,16 +33,22 @@ export interface CompiledSpark<T extends z.ZodType> {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Define a typed spark (event) with Zod schema validation.
- * Sparks must be declared in package.json under the "sparks" array.
+ * Define a typed spark (event) with Zod schema validation. `brika build`
+ * discovers sparks from source and lowers `meta` into the manifest `sparks[]`
+ * array; do not hand-edit that array.
  *
+ * @param spec The spark definition.
+ * @param spec.id Stable event id (persistent across restarts).
+ * @param spec.meta Optional display metadata (name, description) for the manifest.
+ * @param spec.schema Zod schema validating every emitted payload.
+ * @returns A {@link CompiledSpark} with a typed `emit`.
  * @example
  * ```typescript
  * import { defineSpark, z } from "@brika/sdk";
  *
- * // Define a typed spark
  * export const switchPressed = defineSpark({
  *   id: "pressed",
+ *   meta: { name: "Switch Pressed" },
  *   schema: z.object({
  *     switchId: z.string(),
  *     state: z.enum(["on", "off"]),
@@ -59,8 +66,13 @@ export interface CompiledSpark<T extends z.ZodType> {
  */
 export function defineSpark<TSchema extends z.ZodType>(spec: {
   id: string;
+  /** Display metadata lowered into the manifest `sparks[]` entry by `brika build`. */
+  meta?: SparkMeta;
   schema: TSchema;
 }): CompiledSpark<TSchema> {
+  // Capture id + display metadata for `brika build`. No-op at plugin runtime.
+  collectSpark({ id: spec.id, meta: spec.meta });
+
   const spark: CompiledSpark<TSchema> = {
     id: spec.id,
     schema: spec.schema,
@@ -105,19 +117,21 @@ export function defineSpark<TSchema extends z.ZodType>(spec: {
  *
  * @example
  * ```typescript
- * export const sparkReceiver = defineReactiveBlock({
+ * export const sparkReceiver = defineBlock({
  *   id: 'spark-receiver',
+ *   meta: { name: 'Spark Receiver', category: 'trigger' },
  *   outputs: {
  *     out: output(z.resolved('spark', 'sparkType'), { name: 'Payload' }),
  *   },
  *   config: z.object({
  *     sparkType: z.sparkType('Spark type to listen for'),
  *   }),
- * }, ({ config, outputs, start }) => {
- *   // Subscribe to sparks and emit payload to output
- *   start(subscribeSpark(config.sparkType))
- *     .pipe(map(event => event.payload))
- *     .to(outputs.out);
+ *   run({ config, outputs, start }) {
+ *     // Subscribe to sparks and emit payload to output
+ *     start(subscribeSpark(config.sparkType))
+ *       .pipe(map(event => event.payload))
+ *       .to(outputs.out);
+ *   },
  * });
  * ```
  */
