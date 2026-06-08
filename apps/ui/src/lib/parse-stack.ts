@@ -33,7 +33,10 @@ function stripQuery(url: string): string {
 }
 
 function basename(file: string): string {
-  const segments = file.replace(/[\\/]+$/, '').split(/[\\/]/);
+  // Split on path separators and drop empty segments (which also absorbs any
+  // trailing slash) — avoids a `/[\\/]+$/` strip that the SAST flags as a
+  // backtracking-prone pattern.
+  const segments = file.split(/[\\/]/).filter((segment) => segment.length > 0);
   return segments.at(-1) ?? file;
 }
 
@@ -84,11 +87,14 @@ function parseFrameLine(raw: string): StackFrame | null {
       .slice(3)
       .replace(/^async\s+/, '')
       .trim();
+    // Split "fn (loc)" into name + location with string ops rather than a
+    // `(.*?)…(.*)` regex (flagged for super-linear backtracking): the first
+    // "(" opens the location group, the trailing ")" closes it.
     let fn: string | null = null;
-    const paren = /^(.*?)\s*\((.*)\)$/.exec(rest);
-    if (paren) {
-      fn = paren[1].trim() || null;
-      rest = paren[2];
+    const open = rest.indexOf('(');
+    if (open !== -1 && rest.endsWith(')')) {
+      fn = rest.slice(0, open).trim() || null;
+      rest = rest.slice(open + 1, -1);
     }
     return buildFrame(fn, rest, false);
   }

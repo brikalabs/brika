@@ -134,4 +134,50 @@ describe('MetricsStore', () => {
     // First sample should be from index 5 (65 - 60)
     expect(samples[0].cpu).toBe(5);
   });
+
+  test('snapshot returns the retained samples for every plugin', () => {
+    store.record('@a/x', { ts: 1, cpu: 5, memory: 10 });
+    store.record('@a/x', { ts: 2, cpu: 6, memory: 11 });
+    store.record('@b/y', { ts: 3, cpu: 1, memory: 2 });
+
+    const snap = store.snapshot();
+
+    expect(snap['@a/x']).toHaveLength(2);
+    expect(snap['@b/y']).toEqual([{ ts: 3, cpu: 1, memory: 2 }]);
+  });
+
+  test('restore seeds the ring buffers from a persisted snapshot', () => {
+    store.restore({
+      '@a/x': [
+        { ts: 1, cpu: 5, memory: 10 },
+        { ts: 2, cpu: 6, memory: 11 },
+      ],
+    });
+
+    expect(store.get('@a/x')).toEqual([
+      { ts: 1, cpu: 5, memory: 10 },
+      { ts: 2, cpu: 6, memory: 11 },
+    ]);
+  });
+
+  test('restore caps an oversized snapshot to the ring size', () => {
+    const samples = Array.from({ length: 70 }, (_, i) => ({ ts: i, cpu: i, memory: i }));
+    store.restore({ '@a/x': samples });
+
+    const restored = store.get('@a/x');
+    expect(restored).toHaveLength(60);
+    // Keeps the newest 60 — first retained is index 10 (70 - 60).
+    expect(restored[0].ts).toBe(10);
+  });
+
+  test('snapshot then restore round-trips the data', () => {
+    store.record('@a/x', { ts: 1, cpu: 5, memory: 10 });
+    const snap = store.snapshot();
+
+    store.clearAll();
+    expect(store.get('@a/x')).toEqual([]);
+
+    store.restore(snap);
+    expect(store.get('@a/x')).toEqual([{ ts: 1, cpu: 5, memory: 10 }]);
+  });
 });
