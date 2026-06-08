@@ -123,8 +123,17 @@ function isValidSemverRange(s: string): boolean {
   return s.split(/\s+/).every((t) => semverRangeToken.test(t));
 }
 
+/**
+ * A plugin-local identifier (block/brick/page/spark/tool id). These ids are
+ * interpolated into served file paths (e.g. `bricks/<id>.tsx`), so they must
+ * never contain path separators or dots that could escape the plugin root.
+ */
+const localId = z
+  .string()
+  .regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]*$/, 'id may only contain letters, digits, "-" and "_"');
+
 const ToolSchema = z.object({
-  id: z.string().describe('Tool identifier (local to plugin)'),
+  id: localId.describe('Tool identifier (local to plugin)'),
   description: z.optional(z.string().describe('Human-readable description')),
   icon: z.optional(z.string().describe('Lucide icon name')),
   color: z.optional(
@@ -136,7 +145,7 @@ const ToolSchema = z.object({
 });
 
 const BlockSchema = z.object({
-  id: z.string().describe('Block identifier (local to plugin)'),
+  id: localId.describe('Block identifier (local to plugin)'),
   name: z.optional(z.string().describe('Display name')),
   description: z.optional(z.string().describe('Human-readable description')),
   category: z.literal(['trigger', 'flow', 'action', 'transform']).describe('Block category'),
@@ -164,7 +173,7 @@ const BlockSchema = z.object({
 });
 
 const SparkSchema = z.object({
-  id: z.string().describe('Spark identifier (local to plugin)'),
+  id: localId.describe('Spark identifier (local to plugin)'),
   name: z.optional(z.string().describe('Display name')),
   description: z.optional(z.string().describe('Human-readable description')),
 });
@@ -177,6 +186,10 @@ const SparkSchema = z.object({
 const BasePreference = z.object({
   name: z.string().describe('Preference key (also used as i18n key base)'),
   required: z.optional(z.boolean().default(false).describe('Whether this preference must be set')),
+  label: z.optional(
+    z.string().describe('Human-readable label (falls back to the i18n title, then the key)')
+  ),
+  description: z.optional(z.string().describe('Help text shown beneath the field')),
 });
 
 /** Text input preference */
@@ -252,7 +265,7 @@ export type PreferenceSchema = z.infer<typeof PreferenceSchema>;
 const BrickFamilySchema = z.literal(['sm', 'md', 'lg']);
 
 const BrickSchema = z.object({
-  id: z.string().describe('Brick identifier (local to plugin)'),
+  id: localId.describe('Brick identifier (local to plugin)'),
   name: z.optional(z.string().describe('Display name')),
   description: z.optional(z.string().describe('Human-readable description')),
   category: z.optional(z.string().describe('Brick category for grouping')),
@@ -272,7 +285,7 @@ const BrickSchema = z.object({
 // ============================================================================
 
 const PageSchema = z.object({
-  id: z.string().describe('Page identifier (local to plugin)'),
+  id: localId.describe('Page identifier (local to plugin)'),
   icon: z.optional(z.string().describe('Lucide icon name')),
 });
 

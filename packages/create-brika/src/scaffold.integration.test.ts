@@ -362,12 +362,20 @@ describe('scaffold', () => {
     });
 
     const content = await fs.readFile(
-      path.join(testDir, 'test-brick', 'src', 'bricks', 'board.tsx'),
+      path.join(testDir, 'test-brick', 'src', 'bricks', 'test-brick.tsx'),
       'utf-8'
     );
-    expect(content).toContain('useBrickData');
+    expect(content).toContain('.data.use()');
     expect(content).toContain('useBrickSize');
     expect(content).toContain('TestBrick');
+
+    // The data channel lives in a .brick.ts sidecar (no React in the plugin process).
+    const brick = await fs.readFile(
+      path.join(testDir, 'test-brick', 'src', 'bricks', 'test-brick.brick.ts'),
+      'utf-8'
+    );
+    expect(brick).toContain('defineBrick');
+    expect(brick).not.toContain('setBrickData');
   });
 
   test('all features: package.json has blocks, bricks, and sparks', async () => {
@@ -413,7 +421,7 @@ describe('scaffold', () => {
     const content = await fs.readFile(path.join(testDir, 'test-combo', 'src', 'index.ts'), 'utf-8');
     expect(content).toContain("from './blocks/test-combo'");
     expect(content).toContain("from './sparks/test-combo'");
-    expect(content).not.toContain('bricks/board');
+    expect(content).not.toContain('bricks/');
   });
 
   test('blocks-only: creates block file in blocks/ directory', async () => {
@@ -451,8 +459,10 @@ describe('scaffold', () => {
     });
 
     const content = await fs.readFile(path.join(testDir, 'test-both', 'src', 'index.ts'), 'utf-8');
-    expect(content).toContain('setBrickData');
+    expect(content).toContain('.data.set(');
+    expect(content).toContain("from './bricks/test-both.brick'");
     expect(content).toContain("from './blocks/test-both'");
+    expect(content).not.toContain('setBrickData');
   });
 
   test('blocks-only: tsconfig extends SDK base', async () => {

@@ -12,7 +12,7 @@
  * from scratch.
  */
 
-import { appendFile, stat, writeFile } from 'node:fs/promises';
+import { appendFile, rename, stat, unlink, writeFile } from 'node:fs/promises';
 import { errors } from '@brika/errors';
 import { defineGrant } from '@brika/grants';
 import {
@@ -79,6 +79,118 @@ export function buildWriteFileGrant(deps: WriteFileDeps) {
     }
     return { bytesWritten: bytes };
   });
+}
+
+export interface StreamWriteFileDeps {
+  readonly dirs: FsBackingDirs;
+  readonly ephemeral?: import('../ephemeral').EphemeralRoots;
+  readonly quotas: QuotaTracker;
+  readonly maxFileBytes?: number;
+}
+
+export interface StreamWriteFileArgs {
+  readonly scope: FsScope;
+  readonly virtualPath: string;
+  readonly body: ReadableStream<Uint8Array>;
+  /** Client-declared size (Content-Length) for an early cap rejection. */
+  readonly declaredBytes?: number;
+}
+
+/**
+ * Streaming sibling of the `writeFile` grant (overwrite mode), for the hub's
+ * stream-write action path. Runs the identical security pipeline — scope +
+ * read-only check, symlink-escape guard, per-call size cap, per-plugin quota
+ * — but pipes a `ReadableStream` straight to disk so the bytes never sit
+ * buffered in memory (and never cross the IPC payload cap). Writes to a temp
+ * sibling first, then atomically renames into place, so an aborted or
+ * over-cap upload can never clobber an existing file or leak past quota.
+ *
+ * Takes the *same* `QuotaTracker` instance as `buildWriteFileGrant` (wired in
+ * `plugin-process`), so streamed and buffered writes share one counter.
+ */
+export async function streamWriteFile(
+  deps: StreamWriteFileDeps,
+  args: StreamWriteFileArgs
+): Promise<FsWriteFileResult> {
+  const cap = deps.maxFileBytes ?? DEFAULT_MAX_FILE_BYTES;
+  const resolved = resolveVirtualPath(args.virtualPath, deps.dirs, deps.ephemeral);
+  assertAccess(resolved, args.scope, 'write');
+  if (args.declaredBytes !== undefined && args.declaredBytes > cap) {
+    throw errors.fsFileTooLarge({ limit: cap, requested: args.declaredBytes });
+  }
+  await assertWithinBackingDir(resolved, backingDirFor(resolved, deps.dirs), { missingOk: true });
+
+  const tempPath = `${resolved.hostPath}.brika-upload-${crypto.randomUUID()}`;
+  let written: number;
+  try {
+    written = await streamToFileWithCap(args.body, tempPath, cap);
+  } catch (err) {
+    await unlink(tempPath).catch(() => undefined);
+    throw err;
+  }
+
+  // Quota check before the file becomes real. Overwrite semantics: subtract
+  // the previous size so a same-size replace doesn't double-count. If the
+  // delta blows the quota, drop the temp and never publish.
+  const root = quotaRoot(resolved.root);
+  const previousSize = await fileSizeOrZero(resolved.hostPath);
+  const delta = written - previousSize;
+  if (root !== null && delta > 0) {
+    try {
+      await deps.quotas.assertCanAdd(root, delta, deps.dirs);
+    } catch (err) {
+      await unlink(tempPath).catch(() => undefined);
+      throw err;
+    }
+  }
+
+  await rename(tempPath, resolved.hostPath);
+  if (root !== null && delta !== 0) {
+    if (delta > 0) {
+      deps.quotas.add(root, delta);
+    } else {
+      deps.quotas.subtract(root, -delta);
+    }
+  }
+  return { bytesWritten: written };
+}
+
+/**
+ * Pipe a stream to `destPath`, returning the byte count. Aborts (and lets the
+ * caller clean up) the moment the running total exceeds `cap`, so an oversize
+ * upload never fully lands on disk.
+ */
+async function streamToFileWithCap(
+  body: ReadableStream<Uint8Array>,
+  destPath: string,
+  cap: number
+): Promise<number> {
+  const reader = body.getReader();
+  const sink = Bun.file(destPath).writer();
+  let total = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) {
+        break;
+      }
+      total += value.byteLength;
+      if (total > cap) {
+        throw errors.fsFileTooLarge({ limit: cap, requested: total });
+      }
+      sink.write(value);
+    }
+    await sink.end();
+    return total;
+  } catch (err) {
+    // Best-effort flush/close; surface the original failure.
+    try {
+      await sink.end();
+    } catch {
+      // ignore
+    }
+    throw err;
+  }
 }
 
 async function pathExists(path: string): Promise<boolean> {

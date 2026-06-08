@@ -3,6 +3,7 @@ import { Chart } from '@brika/clay/components/chart';
 import { Cpu, MemoryStick } from 'lucide-react';
 import { useLocale } from '@/lib/use-locale';
 import type { PluginMetrics as PluginMetricsType } from '../api';
+import { formatBytes } from '../format';
 
 interface PluginMetricsProps {
   metrics: PluginMetricsType | undefined;
@@ -32,7 +33,7 @@ export function PluginMetrics({ metrics }: Readonly<PluginMetricsProps>) {
             }
             color="oklch(0.765 0.177 163.223)"
             formatValue={(v) => `${v.toFixed(1)}%`}
-            className="mt-auto pt-3"
+            className="mt-auto h-20 pt-3"
           />
         </div>
       </Card>
@@ -57,23 +58,10 @@ export function PluginMetrics({ metrics }: Readonly<PluginMetricsProps>) {
             }
             color="oklch(0.714 0.203 305.504)"
             formatValue={formatBytes}
-            className="mt-auto pt-3"
+            className="mt-auto h-20 pt-3"
           />
         </div>
       </Card>
     </div>
   );
-}
-
-function formatBytes(bytes: number) {
-  if (bytes < 1024) {
-    return `${bytes} B`;
-  }
-  if (bytes < 1024 * 1024) {
-    return `${(bytes / 1024).toFixed(1)} KB`;
-  }
-  if (bytes < 1024 * 1024 * 1024) {
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  }
-  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
 }

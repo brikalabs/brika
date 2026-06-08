@@ -5,6 +5,7 @@ import { TestApp } from '@brika/router/testing';
 import { pluginsRoutes } from '@/runtime/http/routes/plugins';
 import { MetricsStore } from '@/runtime/metrics';
 import { ModuleCompiler } from '@/runtime/modules';
+import { DiskUsageCache } from '@/runtime/plugins/disk-usage';
 import { PluginConfigService } from '@/runtime/plugins/plugin-config';
 import { PluginLifecycle } from '@/runtime/plugins/plugin-lifecycle';
 import { PluginManager } from '@/runtime/plugins/plugin-manager';
@@ -96,6 +97,15 @@ describe('plugins routes', () => {
       get: mock().mockReturnValue(null),
     };
     stub(ModuleCompiler, mockCompiler);
+    stub(DiskUsageCache, {
+      get: mock().mockResolvedValue({
+        data: { used: 100, limit: 1000 },
+        cache: { used: 0, limit: 1000 },
+        tmp: { used: 0, limit: 1000 },
+        total: { used: 100, limit: 3000 },
+        running: false,
+      }),
+    });
     app = TestApp.create(pluginsRoutes);
   });
 
@@ -391,6 +401,25 @@ describe('plugins routes', () => {
     expect(res.status).toBe(200);
     expect(res.body.pid).toBe(1234);
     expect(res.body.history).toEqual([]);
+  });
+
+  test('GET /api/plugins/:uid/disk-usage returns the cached per-root usage', async () => {
+    const res = await app.get<{ total: { used: number; limit: number }; running: boolean }>(
+      '/api/plugins/plg-1/disk-usage'
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.body.total).toEqual({ used: 100, limit: 3000 });
+    expect(res.body.running).toBe(false);
+    expect(mockManager.get).toHaveBeenCalledWith('plg-1');
+  });
+
+  test('GET /api/plugins/:uid/disk-usage returns 404 for unknown plugin', async () => {
+    mockManager.get.mockReturnValue(null);
+
+    const res = await app.get('/api/plugins/nope/disk-usage');
+
+    expect(res.status).toBe(404);
   });
 
   // ─── Delete ───────────────────────────────────────────────────────────────

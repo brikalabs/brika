@@ -17,7 +17,7 @@ import {
   type DnsScope,
   dnsLookup as spec,
 } from '@brika/sdk/grants';
-import { classifyIp, type DnsResolver } from '../net/dns-guard';
+import { classifyIp } from '../net/dns-guard';
 import { assertHostAllowed } from '../net/host-allow';
 
 /**
@@ -61,21 +61,4 @@ export function buildLookupGrant(resolver: DnsLookupResolver = defaultLookupReso
     }
     return { addresses };
   });
-}
-
-/**
- * Resolver that also makes the DnsGuard (private-IP filter for net.fetch)
- * use the same source of records — wiring net + dns to share the same
- * underlying resolver makes the two grants behave consistently.
- */
-export function lookupResolverFromDnsResolver(resolver: DnsResolver): DnsLookupResolver {
-  return async (host) => {
-    const addresses = await resolver(host);
-    return addresses.map((address): DnsAddressRecord => {
-      // The net DnsResolver doesn't surface family, so we default to 4
-      // for dotted-quad addresses and 6 otherwise. Best-effort
-      // categorisation — the filter only cares about address strings.
-      return { address, family: address.includes(':') ? 6 : 4 };
-    });
-  };
 }

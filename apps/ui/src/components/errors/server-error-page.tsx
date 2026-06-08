@@ -23,6 +23,7 @@ export function ServerErrorPage({
       title={t('common:errors.500.title')}
       description={t('common:errors.500.description')}
       iconClassName="bg-orange-500/10 text-orange-500"
+      accentClassName="text-orange-500"
       variant={variant}
       onRetry={onRetry}
       error={error}

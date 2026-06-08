@@ -1,5 +1,5 @@
-import { Badge, Button, Card, CardContent } from "@brika/clay";
-import { Download, Pause, Play, Radio, RefreshCw, Trash2 } from "lucide-react";
+import { Badge, Button, Card, CardContent, Status, StatusIndicator, StatusLabel } from "@brika/clay";
+import { Download, Pause, Play, RefreshCw, Trash2 } from "lucide-react";
 import React from "react";
 import { useCapture } from "@/features/analytics/hooks";
 import { useLocale } from "@/lib/use-locale";
@@ -109,12 +109,17 @@ export function LogsPage() {
       <div className="flex gap-2">
         <Badge variant="secondary">{t("logs:displayed", { count: logs.length })}</Badge>
         {newLogsCount > 0 && <Badge variant="default">{t("logs:new", { count: newLogsCount })}</Badge>}
-        {paused && <Badge variant="outline">{t("logs:paused")}</Badge>}
+        {paused && (
+          <Status variant="neutral">
+            <StatusIndicator pulse={false} />
+            <StatusLabel>{t("logs:paused")}</StatusLabel>
+          </Status>
+        )}
         {!paused && (
-          <Badge variant="outline" className="animate-pulse">
-            <Radio className="mr-1 size-3" />
-            {t("logs:streaming")}
-          </Badge>
+          <Status variant="success">
+            <StatusIndicator />
+            <StatusLabel>{t("logs:streaming")}</StatusLabel>
+          </Status>
         )}
       </div>
 

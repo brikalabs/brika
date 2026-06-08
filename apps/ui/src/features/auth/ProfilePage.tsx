@@ -6,6 +6,14 @@ import {
   Badge,
   Button,
   Card,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+  Dropzone,
+  FileUpload,
+  FileUploadTrigger,
   Input,
   Label,
   Section,
@@ -27,7 +35,7 @@ import {
   Trash2,
   UserPen,
 } from 'lucide-react';
-import { type ChangeEvent, useRef, useState } from 'react';
+import { useState } from 'react';
 import { useCapture } from '@/features/analytics/hooks';
 import { useLocale } from '@/lib/use-locale';
 import { PasswordSection } from './password';
@@ -37,7 +45,6 @@ export function ProfilePage() {
   const { user, client, refreshSession } = useAuth();
   const { t, formatDate } = useLocale();
   const capture = useCapture();
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [name, setName] = useState(user?.name ?? '');
   const [saving, setSaving] = useState(false);
@@ -76,8 +83,8 @@ export function ProfilePage() {
     }
   };
 
-  const handleAvatarUpload = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
+  const handleAvatarFiles = async (files: File[]) => {
+    const file = files[0];
     if (!file) {
       return;
     }
@@ -88,9 +95,6 @@ export function ProfilePage() {
       await refreshSession();
     } finally {
       setUploading(false);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
     }
   };
 
@@ -123,39 +127,38 @@ export function ProfilePage() {
       {/* Identity header */}
       <Card className="fade-in-0 slide-in-from-bottom-3 animate-in fill-mode-both delay-75 duration-500">
         <div className="flex flex-col items-center gap-5 p-6 sm:flex-row sm:items-center sm:text-left">
-          {/* Avatar uploader */}
-          <button
-            type="button"
-            aria-label={t('auth:changeAvatar')}
-            className="group/avatar-btn corner-squircle relative shrink-0 cursor-pointer overflow-hidden rounded-3xl shadow-sm ring-1 ring-border transition-transform duration-200 hover:scale-[1.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            onClick={() => fileInputRef.current?.click()}
+          {/*
+            Avatar drop zone: the Dropzone itself is the upload trigger.
+            Clicking opens the native file picker; dragging an image onto
+            it uploads it directly. The overlay (camera icon / spinner)
+            appears on hover via the CSS group pattern.
+          */}
+          <Dropzone
+            accept="image/*"
             disabled={uploading}
+            onDrop={handleAvatarFiles}
+            aria-label={t('auth:changeAvatar')}
+            style={{ width: '5rem', height: '5rem' }}
+            className="corner-squircle group/avatar relative shrink-0 overflow-hidden rounded-3xl border-0 p-0 shadow-sm outline-none ring-1 ring-border transition-transform duration-200 hover:scale-[1.03] focus-visible:ring-2 focus-visible:ring-ring"
           >
-            <Avatar className="text-2xl [--avatar-radius:0px] [--avatar-size:5rem]">
+            <Avatar className="size-full text-2xl [--avatar-radius:0px]">
               <AvatarImage src={avatarUrl} alt={user.name} />
               <AvatarFallback className="text-2xl">{initials}</AvatarFallback>
             </Avatar>
-            <div className="absolute inset-0 flex items-center justify-center bg-black/55 opacity-0 backdrop-blur-[1px] transition-opacity group-hover/avatar-btn:opacity-100 group-disabled/avatar-btn:opacity-100">
+            <div className="absolute inset-0 flex items-center justify-center bg-black/55 opacity-0 backdrop-blur-[1px] transition-opacity group-hover/avatar:opacity-100 group-disabled/avatar:opacity-100">
               {uploading ? (
                 <Loader2 className="size-5 animate-spin text-white" />
               ) : (
                 <Camera className="size-5 text-white" />
               )}
             </div>
-          </button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={handleAvatarUpload}
-          />
+          </Dropzone>
 
           {/* Identity */}
           <div className="min-w-0 flex-1 text-center sm:text-left">
             <h2 className="truncate font-semibold text-xl tracking-tight">{user.name}</h2>
 
-            {/* Email — click to copy */}
+            {/* Email - click to copy */}
             <button
               type="button"
               onClick={handleCopyEmail}
@@ -178,34 +181,58 @@ export function ProfilePage() {
                 <CalendarDays className="size-3.5" />
                 {t('auth:memberSince')}
                 {' · '}
-                {user.createdAt ? formatDate(new Date(user.createdAt)) : '—'}
+                {user.createdAt ? formatDate(new Date(user.createdAt)) : null}
               </span>
             </div>
           </div>
 
-          {/* Avatar actions */}
+          {/* Avatar actions: dropdown with Change / Remove */}
           <div className="flex shrink-0 items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={uploading}
-            >
-              <Camera className="size-3.5" />
-              {t('auth:changeAvatar')}
-            </Button>
-            {user.avatarHash && (
-              <Button
-                variant="ghost"
-                size="sm"
-                aria-label={t('auth:removeAvatar')}
-                className="text-muted-foreground hover:text-destructive"
-                onClick={handleAvatarRemove}
-                disabled={uploading}
-              >
-                <Trash2 className="size-3.5" />
-              </Button>
-            )}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" disabled={uploading}>
+                  {uploading ? (
+                    <Loader2 className="size-3.5 animate-spin" />
+                  ) : (
+                    <Camera className="size-3.5" />
+                  )}
+                  {t('auth:changeAvatar')}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {/*
+                  FileUpload provides the context that wires FileUploadTrigger
+                  to a hidden native input. The trigger renders as the menu
+                  item so clicking it both selects a file AND satisfies the
+                  Radix item's onSelect (closing the menu).
+                */}
+                <FileUpload
+                  accept="image/*"
+                  disabled={uploading}
+                  onFilesSelected={handleAvatarFiles}
+                >
+                  <FileUploadTrigger asChild>
+                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                      <Camera className="size-4" />
+                      {t('auth:changeAvatar')}
+                    </DropdownMenuItem>
+                  </FileUploadTrigger>
+                </FileUpload>
+                {user.avatarHash && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      variant="destructive"
+                      onSelect={handleAvatarRemove}
+                      disabled={uploading}
+                    >
+                      <Trash2 className="size-4" />
+                      {t('auth:removeAvatar')}
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </Card>

@@ -1,5 +1,4 @@
-import { Badge, cn } from '@brika/clay';
-import { Activity } from 'lucide-react';
+import { Status, StatusIndicator, StatusLabel } from '@brika/clay';
 import { useLocale } from '@/lib/use-locale';
 
 export interface DashboardHeaderProps {
@@ -17,16 +16,12 @@ export function DashboardHeader({ health }: Readonly<DashboardHeaderProps>) {
         <h1 className="font-semibold text-2xl tracking-tight">{t('dashboard:title')}</h1>
         <p className="mt-1 text-muted-foreground">{t('dashboard:subtitle')}</p>
       </div>
-      <Badge
-        variant={health?.ok ? 'default' : 'destructive'}
-        className={cn(
-          'gap-2 px-3 py-1.5 text-sm',
-          health?.ok && 'border-success/20 bg-success/10 text-success'
-        )}
-      >
-        <Activity className={cn('size-4', health?.ok && 'animate-pulse')} />
-        {health?.ok ? t('common:status.running') : t('common:status.stopped')}
-      </Badge>
+      <Status variant={health?.ok ? 'success' : 'destructive'} className="px-3 py-1.5 text-sm">
+        <StatusIndicator pulse={health?.ok === true} />
+        <StatusLabel>
+          {health?.ok ? t('common:status.running') : t('common:status.stopped')}
+        </StatusLabel>
+      </Status>
     </div>
   );
 }

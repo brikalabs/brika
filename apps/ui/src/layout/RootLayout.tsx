@@ -25,6 +25,7 @@ import {
   SidebarRail,
   useSidebar,
 } from '@brika/clay/components/sidebar';
+import { Toaster } from '@brika/clay/components/toast';
 import { Link, Navigate, Outlet, useMatchRoute, useRouterState } from '@tanstack/react-router';
 import {
   BarChart3,
@@ -415,6 +416,10 @@ export function RootLayout() {
             dedicated UpdateStep, login/loading screens don't surface toasts. */}
         <UpdateNotification />
         <MigrationBanner />
+        {/* Toast viewport. Plugin pages and host actions trigger notifications
+            via the imperative `toast()` API; this is the single sink that
+            renders them on the authenticated chrome. */}
+        <Toaster />
       </SidebarProvider>
     </ThemeProvider>
   );

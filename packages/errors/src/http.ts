@@ -58,6 +58,28 @@ const UNCATALOGED_TYPE = 'about:blank';
 const UNCATALOGED_TITLE = 'Internal error';
 
 /**
+ * Apply the catalog's `publicDataShape` to `err.data` before it crosses the
+ * HTTP boundary, exactly as `toWire` does for IPC. Without this, redacted
+ * fields (net/fs allow-lists, blocked IPs, symlink-escape paths) leak verbatim
+ * to API consumers. A shape that fails to parse drops `data` (empty over
+ * over-shared); a code with no shape passes data through unchanged.
+ */
+function toPublicData(
+  entry: ReturnType<typeof lookupCatalogEntry>,
+  data: Readonly<Record<string, unknown>> | undefined
+): Record<string, unknown> | undefined {
+  if (!data) {
+    return undefined;
+  }
+  const publicShape = entry?.publicDataShape;
+  if (!publicShape) {
+    return { ...data };
+  }
+  const parsed = publicShape.safeParse(data);
+  return parsed.success ? parsed.data : undefined;
+}
+
+/**
  * Convert any thrown value to an HTTP `Response` shaped per RFC 9457
  * (Problem Details for HTTP APIs) plus Brika extensions. BrikaErrors emit
  * the catalog's `status`; everything else collapses to 500 INTERNAL with
@@ -69,6 +91,7 @@ export function brikaErrorToResponse(err: unknown, opts?: ResponseOptions): Resp
   if (err instanceof BrikaError) {
     const entry = lookupCatalogEntry(err.code);
     const status = entry?.status ?? 500;
+    const publicData = toPublicData(entry, err.data);
     const body: BrikaErrorResponseBody = {
       type: entry?.typeUri ?? UNCATALOGED_TYPE,
       title: entry?.title ?? UNCATALOGED_TITLE,
@@ -78,7 +101,7 @@ export function brikaErrorToResponse(err: unknown, opts?: ResponseOptions): Resp
       retryable: isRetryable(err.code),
       ...(opts?.instance ? { instance: opts.instance } : {}),
       ...(opts?.traceId ? { traceId: opts.traceId } : {}),
-      ...(err.data ? { data: err.data } : {}),
+      ...(publicData ? { data: publicData } : {}),
       ...(entry?.i18nKey ? { i18nKey: entry.i18nKey } : {}),
       ...(entry?.developerHint ? { developerHint: entry.developerHint } : {}),
     };

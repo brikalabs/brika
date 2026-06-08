@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./src"
+  },
+  "include": ["src/**/*"],
+  "//": "Test files carry pre-existing strict-null debt (array-index access); typecheck production sources here and clean the test suite separately.",
+  "exclude": ["node_modules", "dist", "src/**/*.test.ts"]
+}

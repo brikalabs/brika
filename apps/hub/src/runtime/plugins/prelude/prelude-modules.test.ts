@@ -148,6 +148,22 @@ describe('Prelude Actions', () => {
     });
   });
 
+  test('callAction RPC forwards streamWrite envelopes as { writeStream: { virtualPath } }', async () => {
+    const { streamWrite } = await import('@brika/sdk/actions');
+    const actions = setupActions(channel);
+    actions.registerAction('upload', () => streamWrite('/data/upload.bin'));
+
+    const result = await triggerRpc(channel, sent, callAction.name, {
+      actionId: 'upload',
+      input: undefined,
+    });
+
+    expect(result).toMatchObject({
+      ok: true,
+      writeStream: { virtualPath: '/data/upload.bin' },
+    });
+  });
+
   test('callAction RPC returns error for unknown action', async () => {
     setupActions(channel);
 

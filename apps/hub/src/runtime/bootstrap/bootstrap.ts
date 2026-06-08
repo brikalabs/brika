@@ -1,3 +1,5 @@
+import { readFileSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { ANALYTICS_HOST, Analytics, EventForwarder, EventStore } from '@brika/analytics';
 import { createBanner } from '@brika/banner';
 import { configureDatabases } from '@brika/db';
@@ -8,6 +10,7 @@ import { brikaContext } from '@/runtime/context/brika-context';
 import { ApiServer } from '@/runtime/http/api-server';
 import { Logger } from '@/runtime/logs/log-router';
 import { LogStore } from '@/runtime/logs/log-store';
+import { MetricsSnapshotSchema, MetricsStore } from '@/runtime/metrics';
 import { setHubReady, setHubStopping } from '@/runtime/readiness';
 import { redactPaths } from '@/runtime/updates/telemetry';
 import type { BootstrapPlugin } from './plugin';
@@ -44,6 +47,7 @@ export class Bootstrap {
   private readonly initializer = inject(BrikaInitializer);
   private readonly configLoader = inject(ConfigLoader);
   private readonly apiServer = inject(ApiServer);
+  private readonly metricsStore = inject(MetricsStore);
   private readonly plugins: BootstrapPlugin[] = [];
 
   use(plugin: BootstrapPlugin): this {
@@ -84,6 +88,9 @@ export class Bootstrap {
       p.setup?.(this);
     }
     await this.initializer.init();
+    // Seed the in-memory metrics ring buffers from the last run so the
+    // CPU/memory history charts survive a restart instead of resetting.
+    this.#restoreMetrics();
     const config = await this.configLoader.load();
     this.logStore.startRetention(config.hub.logs.retentionDays, config.hub.logs.pruneIntervalMs);
     this.eventStore.startRetention(
@@ -114,6 +121,31 @@ export class Bootstrap {
     this.eventForwarder.stop();
     this.eventStore.close();
     this.logStore.close();
+    this.#persistMetrics();
+  }
+
+  #metricsHistoryFile(): string {
+    return join(this.initializer.brikaDir, 'metrics-history.json');
+  }
+
+  /** Load the persisted CPU/memory history (best-effort) at boot. */
+  #restoreMetrics(): void {
+    try {
+      const raw = readFileSync(this.#metricsHistoryFile(), 'utf8');
+      this.metricsStore.restore(MetricsSnapshotSchema.parse(JSON.parse(raw)));
+    } catch {
+      // No prior history (first boot / wiped / corrupt) — charts start empty
+      // and refill as the heartbeat samples come in.
+    }
+  }
+
+  /** Snapshot the in-memory history to disk so a restart keeps the charts. */
+  #persistMetrics(): void {
+    try {
+      writeFileSync(this.#metricsHistoryFile(), JSON.stringify(this.metricsStore.snapshot()));
+    } catch (error) {
+      this.logs.warn('Failed to persist metrics history', { error: errorMessage(error) });
+    }
   }
 
   /**
@@ -157,6 +189,7 @@ export class Bootstrap {
       this.eventForwarder.stop();
       this.eventStore.close();
       this.logStore.close();
+      this.#persistMetrics();
     }
   }
 

@@ -573,7 +573,10 @@ export async function maybeVerifySignature(
   const sigFileName = `${basename(asset.name)}.minisig`;
   const sigPath = join(tmpDir, sigFileName);
   await downloadFile(sigAsset.browser_download_url, tmpDir, sigFileName, sigAsset.size);
-  const result = await verifyMinisignFile(archivePath, sigPath);
+  const result = await verifyMinisignFile(archivePath, sigPath, BRIKA_SIGNING_PUBKEY_B64, {
+    version: release.tag_name,
+    asset: asset.name,
+  });
   if (result.status === 'failed') {
     throw new Error(`Signature verification failed: ${result.reason}`);
   }

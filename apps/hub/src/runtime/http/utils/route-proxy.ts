@@ -2,14 +2,11 @@ import type { Json } from '@brika/ipc';
 import type { PluginProcess } from '@/runtime/plugins/plugin-process';
 import { filterPluginResponseHeaders } from './header-allowlist';
 
-const FORWARDED_HEADERS = [
-  'content-type',
-  'accept',
-  'authorization',
-  'user-agent',
-  'host',
-  'x-forwarded-proto',
-];
+// NOTE: 'authorization' is intentionally NOT forwarded. It would hand the
+// caller's live hub session Bearer token to a reviewed-but-untrusted plugin
+// subprocess, which could exfiltrate or replay it. Plugins get caller identity
+// via x-plugin-uid + the hub's own context, never the raw session credential.
+const FORWARDED_HEADERS = ['content-type', 'accept', 'user-agent', 'host', 'x-forwarded-proto'];
 
 /** Extract query params from a URL into a plain record. */
 export function extractQuery(url: URL): Record<string, string> {

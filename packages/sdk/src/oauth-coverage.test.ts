@@ -120,6 +120,17 @@ function makeReq(
   };
 }
 
+/**
+ * Drive the authorize route to mint and register a real `state` (and, for PKCE,
+ * its verifier). The callback now rejects any state the hub did not issue, so
+ * success-path callback tests must use a minted state rather than a literal.
+ */
+async function mintState(id: string): Promise<string> {
+  const authorizeRoute = findRoute('GET', `/oauth/${id}/authorize`);
+  const result = await authorizeRoute?.handler(makeReq());
+  return new URL(result.headers.Location).searchParams.get('state') ?? '';
+}
+
 // ─── Tests ──────────────────────────────────────────────────────────────────────
 
 describe('OAuth coverage: authorize route + PKCE', () => {
@@ -381,7 +392,7 @@ describe('OAuth coverage: callback route error cases', () => {
     );
 
     expect(result.status).toBe(400);
-    expect(result.body).toContain('PKCE verifier not found');
+    expect(result.body).toContain('Invalid or expired state');
   });
 
   test('callback returns 400 when PKCE and state is missing', async () => {
@@ -403,7 +414,7 @@ describe('OAuth coverage: callback route error cases', () => {
     );
 
     expect(result.status).toBe(400);
-    expect(result.body).toContain('PKCE verifier not found');
+    expect(result.body).toContain('Invalid or expired state');
   });
 
   test('callback handles token exchange HTTP failure', async () => {
@@ -429,7 +440,7 @@ describe('OAuth coverage: callback route error cases', () => {
       makeReq({
         query: {
           code: 'auth-code',
-          state: 'some-state',
+          state: await mintState(id),
         },
       })
     );
@@ -472,7 +483,7 @@ describe('OAuth coverage: callback route error cases', () => {
       makeReq({
         query: {
           code: 'auth-code',
-          state: 'some-state',
+          state: await mintState(id),
         },
       })
     );
@@ -528,7 +539,7 @@ describe('OAuth coverage: callback route error cases', () => {
       makeReq({ query: { code: 'c', state: firstState } })
     );
     expect(evictedResult.status).toBe(400);
-    expect(evictedResult.body).toContain('PKCE verifier not found');
+    expect(evictedResult.body).toContain('Invalid or expired state');
 
     // The most recent state should still resolve (fails downstream because
     // we don't mock fetch, but the verifier lookup itself succeeded).
@@ -567,7 +578,7 @@ describe('OAuth coverage: callback route error cases', () => {
         makeReq({ query: { code: 'c', state: state ?? '' } })
       );
       expect(callbackResult.status).toBe(400);
-      expect(callbackResult.body).toContain('PKCE verifier not found');
+      expect(callbackResult.body).toContain('Invalid or expired state');
     } finally {
       Date.now = realNow;
     }
@@ -589,7 +600,7 @@ describe('OAuth coverage: callback route error cases', () => {
 
     const callbackRoute = findRoute('GET', `/oauth/${id}/callback`);
     const result = await callbackRoute?.handler(
-      makeReq({ query: { code: 'auth-code', state: 's' } })
+      makeReq({ query: { code: 'auth-code', state: await mintState(id) } })
     );
 
     expect(result.status).toBe(502);
@@ -614,7 +625,7 @@ describe('OAuth coverage: callback route error cases', () => {
       makeReq({
         query: {
           code: 'auth-code',
-          state: 'some-state',
+          state: await mintState(id),
         },
       })
     );
@@ -656,7 +667,7 @@ describe('OAuth coverage: callback route error cases', () => {
       makeReq({
         query: {
           code: 'auth-code',
-          state: 'some-state',
+          state: await mintState(id),
         },
       })
     );
@@ -708,7 +719,7 @@ describe('OAuth coverage: callback route error cases', () => {
       makeReq({
         query: {
           code: 'auth-code',
-          state: 'state',
+          state: await mintState(id),
         },
       })
     );
@@ -901,7 +912,7 @@ describe('OAuth coverage: PKCE full authorize + callback flow', () => {
       })
     );
     expect(result2.status).toBe(400);
-    expect(result2.body).toContain('PKCE verifier not found');
+    expect(result2.body).toContain('Invalid or expired state');
   });
 });
 
@@ -950,7 +961,7 @@ describe('OAuth coverage: parseTokenResponse edge cases (via callback)', () => {
       makeReq({
         query: {
           code: 'code',
-          state: 'state',
+          state: await mintState(id),
         },
       })
     );
@@ -994,7 +1005,7 @@ describe('OAuth coverage: parseTokenResponse edge cases (via callback)', () => {
       makeReq({
         query: {
           code: 'code',
-          state: 'state',
+          state: await mintState(id),
         },
       })
     );
@@ -1036,7 +1047,7 @@ describe('OAuth coverage: parseTokenResponse edge cases (via callback)', () => {
       makeReq({
         query: {
           code: 'code',
-          state: 'state',
+          state: await mintState(id),
         },
       })
     );
@@ -1071,7 +1082,7 @@ describe('OAuth coverage: parseTokenResponse edge cases (via callback)', () => {
       makeReq({
         query: {
           code: 'code',
-          state: 'state',
+          state: await mintState(id),
         },
       })
     );
@@ -1111,7 +1122,7 @@ describe('OAuth coverage: parseTokenResponse edge cases (via callback)', () => {
       makeReq({
         query: {
           code: 'code',
-          state: 'state',
+          state: await mintState(id),
         },
       })
     );
@@ -1335,7 +1346,7 @@ describe('OAuth coverage: getStringPreference + getClientId/getClientSecret', ()
       makeReq({
         query: {
           code: 'code',
-          state: 'state',
+          state: await mintState(id),
         },
       })
     );
@@ -1361,7 +1372,7 @@ describe('OAuth coverage: getStringPreference + getClientId/getClientSecret', ()
       makeReq({
         query: {
           code: 'code',
-          state: 'state',
+          state: await mintState(id),
         },
       })
     );

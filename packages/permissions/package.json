@@ -1,6 +1,6 @@
 {
   "name": "@brika/permissions",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "description": "Plugin permission definitions and validation for BRIKA",
   "type": "module",
   "license": "MIT",

@@ -88,7 +88,14 @@ export type SignatureVerificationOutcome =
 export async function verifyMinisignFile(
   payloadPath: string,
   signaturePath: string,
-  pubkeyB64: string = BRIKA_SIGNING_PUBKEY_B64
+  pubkeyB64: string = BRIKA_SIGNING_PUBKEY_B64,
+  /**
+   * When provided, the signed trusted comment must bind to this version and
+   * asset name. CI signs the trusted comment as `brika <version> <file>`
+   * precisely so a valid signature can't be re-pointed at a different release's
+   * asset. Omitted in unit tests that exercise the parser with synthetic keys.
+   */
+  expected?: { version: string; asset: string }
 ): Promise<SignatureVerificationOutcome> {
   if (pubkeyB64.length === 0) {
     return { status: 'skipped', reason: 'no signing pubkey embedded in this build' };
@@ -122,6 +129,21 @@ export async function verifyMinisignFile(
   ]);
   if (!verifyEd25519(pubkey, globalMessage, parsed.globalSignature)) {
     return { status: 'failed', reason: 'global signature did not verify' };
+  }
+
+  // 1b. The global signature alone only proves SOME brika release signed SOME
+  //     archive. Bind it to the expected release: the trusted comment must name
+  //     both the version and the asset, defeating a re-point/downgrade between
+  //     two legitimately-signed releases.
+  if (expected) {
+    const tc = parsed.trustedComment;
+    const version = expected.version.replace(/^v/, '');
+    if (!tc.includes(version) || !tc.includes(expected.asset)) {
+      return {
+        status: 'failed',
+        reason: `trusted comment "${tc}" does not bind expected version ${version} / asset ${expected.asset}`,
+      };
+    }
   }
 
   // 2. Verify the payload signature. The signed message depends on mode:

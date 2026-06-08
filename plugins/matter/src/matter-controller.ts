@@ -311,7 +311,9 @@ export class MatterController {
       throw new Error('Controller not started');
     }
 
-    log.info(`Commissioning with pairing code: ${pairingCode}`);
+    // Never log the pairing code: it is the device commissioning secret and the
+    // hub persists log message text verbatim to logs.db.
+    log.info('Commissioning device from pairing code');
 
     try {
       const commissioning = {
@@ -323,9 +325,8 @@ export class MatterController {
 
       if (pairingCode.startsWith('MT:')) {
         const [qrData] = QrPairingCodeCodec.decode(pairingCode);
-        log.info(
-          `Decoded QR code — discriminator: ${qrData.discriminator}, passcode: ${qrData.passcode}`
-        );
+        // Log only the non-secret discriminator; the passcode is the device PIN.
+        log.info(`Decoded QR code, discriminator: ${qrData.discriminator}`);
         options = {
           commissioning,
           discovery: { identifierData: { longDiscriminator: qrData.discriminator } },
@@ -333,9 +334,8 @@ export class MatterController {
         };
       } else {
         const manualData = ManualPairingCodeCodec.decode(pairingCode);
-        log.info(
-          `Decoded manual code — discriminator: ${manualData.shortDiscriminator}, passcode: ${manualData.passcode}`
-        );
+        // Log only the non-secret discriminator; the passcode is the device PIN.
+        log.info(`Decoded manual code, discriminator: ${manualData.shortDiscriminator}`);
         options = {
           commissioning,
           discovery: { identifierData: { shortDiscriminator: manualData.shortDiscriminator } },

@@ -334,13 +334,18 @@ export class ConfigLoader {
       });
       return this.#config;
     } catch (err) {
+      // Fail closed. The file exists (absence is handled above) but is malformed,
+      // so falling back to defaultConfig() would silently bind host 0.0.0.0 with
+      // an empty CORS allow-list, discarding the operator's narrowed settings.
+      // Refuse to start instead, so the operator fixes the file.
       this.#logger.error(
-        'Failed to load configuration file, falling back to defaults',
+        'Failed to parse configuration file; refusing to start with insecure defaults',
         { configPath: this.configPath },
         { error: err }
       );
-      this.#config = defaultConfig();
-      return this.#config;
+      throw err instanceof Error
+        ? err
+        : new Error(`Failed to parse configuration file at ${this.configPath}`);
     }
   }
 

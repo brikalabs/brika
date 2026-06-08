@@ -46,10 +46,12 @@ import { FsScopeSchema } from '@brika/sdk/grants';
 import { getProcessMetrics, RssSoftLimitMonitor } from '@/runtime/metrics';
 import type { HubLocation } from '@/runtime/state/state-store';
 import { dispatchGrantRequest } from './grants/dispatch';
+import { streamWriteFile } from './grants/fs/handlers/write-file';
 import { backingDirFor, resolveVirtualPath } from './grants/fs/paths';
+import { QuotaTracker } from './grants/fs/quotas';
 import { assertAccess } from './grants/fs/scope';
 import { assertWithinBackingDir } from './grants/fs/symlinks';
-import { DEFAULT_FS_QUOTAS } from './grants/fs/types';
+import { resolveFsQuotas } from './grants/fs/types';
 import { buildHubGrants } from './grants/registry-factory';
 import { buildVectorWithUserConsent, familiesForManifestGrants } from './grants/vector';
 import { now } from './utils';
@@ -152,6 +154,12 @@ export class PluginProcess {
   readonly #sparkSubscriptions = new Map<string, () => void>(); // subscriptionId -> unsubscribe
   #stopped = false;
   #grants: GrantRegistry | undefined;
+  /**
+   * Per-plugin fs quota counter. Built alongside `#grants` and shared with
+   * the `dev.brika.fs.writeFile` grant so buffered (`ctx.fs.writeFile`) and
+   * streamed (stream-write action) writes debit one counter, never two.
+   */
+  #fsQuotaTracker: QuotaTracker | undefined;
   /**
    * Cached grant vector. Rebuilt only when permissions change or the
    * plugin restarts — every dispatch otherwise reads this directly,
@@ -437,6 +445,7 @@ export class PluginProcess {
     bytes?: Uint8Array;
     contentType?: string;
     stream?: { virtualPath: string; contentType?: string };
+    writeStream?: { virtualPath: string };
     error?: { message: string; name?: string; code?: string; data?: Json };
   }> {
     if (this.#stopped) {
@@ -490,6 +499,43 @@ export class PluginProcess {
     assertAccess(resolved, scope, 'read');
     await assertWithinBackingDir(resolved, backingDirFor(resolved, this.fsDirs));
     return resolved.hostPath;
+  }
+
+  /**
+   * Write-side mirror of {@link resolveStreamPath}: stream an HTTP request
+   * body straight to `virtualPath` on disk, enforcing the plugin's
+   * `dev.brika.fs.writeFile` grant. The bytes never enter the plugin process
+   * nor cross the IPC payload cap. Reuses the exact `writeFile` validation
+   * pipeline (scope, symlink guard, size cap, quota) via `streamWriteFile`,
+   * sharing this process's `#fsQuotaTracker` so quota accounting is unified.
+   *
+   * Returns the number of bytes written. Used by the action HTTP route when
+   * a handler returns a `streamWrite(...)` envelope.
+   */
+  async streamWriteToGrantedPath(
+    virtualPath: string,
+    body: ReadableStream<Uint8Array>,
+    declaredBytes?: number
+  ): Promise<number> {
+    const vector = this.#buildCurrentVector();
+    const entry = vector.grants.find((g) => g.id === 'dev.brika.fs.writeFile');
+    if (!entry) {
+      throw errors.permissionDenied({ permission: 'dev.brika.fs.writeFile' });
+    }
+    const scope = FsScopeSchema.parse(entry.scope);
+    // `#buildCurrentVector` builds `#grants` (and the tracker) on first call;
+    // the writeFile grant only exists in the vector when that ran, so the
+    // tracker is set here. Guard anyway to keep the type honest.
+    const quotas = this.#fsQuotaTracker;
+    if (!quotas) {
+      throw errors.permissionDenied({ permission: 'dev.brika.fs.writeFile' });
+    }
+    const maxFileBytes = this.metadata.resources?.fs?.maxFileBytes;
+    const { bytesWritten } = await streamWriteFile(
+      { dirs: this.fsDirs, quotas, maxFileBytes },
+      { scope, virtualPath, body, declaredBytes }
+    );
+    return bytesWritten;
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -764,6 +810,11 @@ export class PluginProcess {
       // can declare tighter values for defence in depth. Omitted
       // fields fall back to the hub-wide defaults.
       const fsResources = this.metadata.resources?.fs;
+      const fsQuotas = resolveFsQuotas(fsResources?.quotas);
+      // Own the quota tracker here so the buffered `ctx.fs.writeFile` grant
+      // (below) and the stream-write path (`streamWriteToGrantedPath`) debit
+      // the same counter.
+      this.#fsQuotaTracker = new QuotaTracker(fsQuotas);
       this.#grants = buildHubGrants(
         {
           // net.fetch — wire to the host runtime's fetch
@@ -773,13 +824,8 @@ export class PluginProcess {
           fs: {
             dirs: this.fsDirs,
             maxFileBytes: fsResources?.maxFileBytes,
-            quotas: fsResources?.quotas
-              ? {
-                  data: fsResources.quotas.data ?? DEFAULT_FS_QUOTAS.data,
-                  cache: fsResources.quotas.cache ?? DEFAULT_FS_QUOTAS.cache,
-                  tmp: fsResources.quotas.tmp ?? DEFAULT_FS_QUOTAS.tmp,
-                }
-              : undefined,
+            quotas: fsQuotas,
+            quotaTracker: this.#fsQuotaTracker,
           },
         }
       );

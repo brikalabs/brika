@@ -6,6 +6,9 @@ import {
   Button,
   Card,
   cn,
+  Status,
+  StatusIndicator,
+  StatusLabel,
   Tooltip,
   TooltipContent,
   TooltipTrigger,
@@ -32,41 +35,25 @@ interface PluginCardProps {
   onKill: (uid: string) => void;
 }
 
-function getStatusStyle(status: PluginHealth): {
-  variant: 'default' | 'destructive' | 'secondary' | 'outline';
-  className: string;
-} {
+type StatusVariant = 'neutral' | 'success' | 'info' | 'warning' | 'destructive';
+
+function getStatusVariant(status: PluginHealth): StatusVariant {
   switch (status) {
     case 'running':
-      return {
-        variant: 'default',
-        className: 'border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
-      };
+      return 'success';
     case 'crashed':
     case 'crash-loop':
-      return {
-        variant: 'destructive',
-        className: '',
-      };
+      return 'destructive';
     case 'degraded':
     case 'incompatible':
     case 'awaiting-config':
-      return {
-        variant: 'outline',
-        className: 'border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400',
-      };
+      return 'warning';
     case 'installing':
     case 'updating':
     case 'restarting':
-      return {
-        variant: 'outline',
-        className: 'border-blue-500/30 bg-blue-500/10 text-blue-600 dark:text-blue-400',
-      };
+      return 'info';
     default:
-      return {
-        variant: 'secondary',
-        className: '',
-      };
+      return 'neutral';
   }
 }
 
@@ -208,7 +195,7 @@ export function PluginCard({
   const capture = useCapture();
   const [updateDialogOpen, setUpdateDialogOpen] = React.useState(false);
 
-  const statusStyle = getStatusStyle(p.status);
+  const statusVariant = getStatusVariant(p.status);
   const hasUpdate = updateInfo?.updateAvailable === true;
   const hasCapabilities = p.blocks.length > 0 || p.sparks.length > 0 || p.bricks.length > 0;
 
@@ -261,14 +248,15 @@ export function PluginCard({
               )}
             </div>
 
-            {/* Status badge */}
-            <Badge
-              variant={statusStyle.variant}
-              className={cn('shrink-0 gap-1 text-[11px]', statusStyle.className)}
-            >
-              {isTransientStatus(p.status) && <Loader2 className="size-3 animate-spin" />}
-              {t(`common:status.${p.status}`)}
-            </Badge>
+            {/* Status indicator */}
+            <Status variant={statusVariant} className="shrink-0 text-[11px]">
+              {isTransientStatus(p.status) ? (
+                <Loader2 className="size-3 animate-spin" />
+              ) : (
+                <StatusIndicator pulse={p.status === 'running'} />
+              )}
+              <StatusLabel>{t(`common:status.${p.status}`)}</StatusLabel>
+            </Status>
 
             {/* Actions — visible on hover */}
             <ActionButtonsOverlay

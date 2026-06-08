@@ -515,7 +515,7 @@ describe('defineReactiveBlock', () => {
     instance.stop();
   });
 
-  test('handles invalid config gracefully', () => {
+  test('aborts the block start on invalid config (does not run setup with empty config)', () => {
     const block = defineReactiveBlock(
       {
         id: 'invalid-config-block',
@@ -528,16 +528,18 @@ describe('defineReactiveBlock', () => {
       () => undefined
     );
 
-    // Should not throw even with invalid config
-    const instance = block.start({
-      blockId: 'block-1',
-      workflowId: 'workflow-1',
-      config: {}, // Missing required field
-      emit: () => undefined,
-    });
+    // Invalid config must abort the start so the block is marked failed, rather
+    // than silently running setup() with an all-undefined `{}` config.
+    expect(() =>
+      block.start({
+        blockId: 'block-1',
+        workflowId: 'workflow-1',
+        config: {}, // Missing required field
+        emit: () => undefined,
+      })
+    ).toThrow();
 
     expect(mockLog.error).toHaveBeenCalled();
-    instance.stop();
   });
 
   test('context.start() creates flow from value', () => {

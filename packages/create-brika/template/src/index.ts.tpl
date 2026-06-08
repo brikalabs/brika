@@ -6,7 +6,8 @@
 
 import { log, onStop } from '@brika/sdk';
 {{#bricks}}
-import { setBrickData, onInit } from '@brika/sdk';
+import { onInit } from '@brika/sdk';
+import { {{camel}}Brick } from './bricks/{{id}}.brick';
 {{/bricks}}
 
 {{#blocks}}
@@ -17,14 +18,14 @@ export { {{camel}}Spark } from './sparks/{{id}}';
 {{/sparks}}
 {{#bricks}}
 
-// Push data to client-rendered bricks
+// Push data to the client-rendered brick via its typed data channel.
 let count = 0;
 let timer: Timer | null = null;
 
 onInit(() => {
   timer = setInterval(() => {
     count++;
-    setBrickData('{{id}}', { count, active: true });
+    {{camel}}Brick.data.set({ count, active: true });
   }, 1000);
 });
 {{/bricks}}

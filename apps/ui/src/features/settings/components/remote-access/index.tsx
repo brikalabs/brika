@@ -7,9 +7,11 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  Badge,
   Button,
   Input,
+  Status,
+  StatusIndicator,
+  StatusLabel,
 } from '@brika/clay';
 import {
   Check,
@@ -39,22 +41,27 @@ import {
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
-function stateVariant(state: SignalingState): 'default' | 'secondary' | 'outline' {
+function stateVariant(state: SignalingState): 'success' | 'info' | 'neutral' {
   if (state === 'connected') {
-    return 'default';
+    return 'success';
   }
   if (state === 'connecting' || state === 'reconnecting') {
-    return 'secondary';
+    return 'info';
   }
-  return 'outline';
+  return 'neutral';
 }
 
 function StatusBadge({ status }: Readonly<{ status: RemoteAccessStatus }>) {
   const { t } = useLocale();
+  const active =
+    status.state === 'connected' ||
+    status.state === 'connecting' ||
+    status.state === 'reconnecting';
   return (
-    <Badge variant={stateVariant(status.state)}>
-      {t(`settings:remoteAccess.status.${status.state}`)}
-    </Badge>
+    <Status variant={stateVariant(status.state)}>
+      <StatusIndicator pulse={active} />
+      <StatusLabel>{t(`settings:remoteAccess.status.${status.state}`)}</StatusLabel>
+    </Status>
   );
 }
 

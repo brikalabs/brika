@@ -4,12 +4,30 @@
 
 import 'reflect-metadata';
 import { describe, expect, mock, test } from 'bun:test';
+import { Scope } from '@brika/auth';
 import { stub, useTestBed } from '@brika/di/testing';
+import type { Middleware } from '@brika/router';
 import { TestApp } from '@brika/router/testing';
 import { logsRoutes } from '@/runtime/http/routes/logs';
 import { Logger } from '@/runtime/logs/log-router';
 import { LogStore } from '@/runtime/logs/log-store';
 import { PluginManager } from '@/runtime/plugins/plugin-manager';
+
+// The DELETE route runs under requireScope(ADMIN_ALL) in production; seed a
+// session holding it so the destructive clear is exercised.
+function sessionMiddleware(scopes: Scope[]): Middleware {
+  return async (c, next) => {
+    c.set('session', {
+      id: 'sess',
+      userId: 'user-42',
+      userEmail: 'u@example.com',
+      userName: 'U',
+      userRole: 'admin',
+      scopes,
+    });
+    await next();
+  };
+}
 
 describe('logs routes', () => {
   let app: ReturnType<typeof TestApp.create>;
@@ -47,7 +65,7 @@ describe('logs routes', () => {
     stub(LogStore, mockLogStore);
     stub(Logger, mockLogger);
     stub(PluginManager, mockPluginManager);
-    app = TestApp.create(logsRoutes);
+    app = TestApp.create(logsRoutes, [sessionMiddleware([Scope.ADMIN_ALL])]);
   });
 
   test('GET /api/logs returns logs', async () => {

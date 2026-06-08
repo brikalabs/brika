@@ -9,7 +9,7 @@ import { AuthService } from '../../services/AuthService';
 import { UserService } from '../../services/UserService';
 import { parseTransportHeader, type Session, TRANSPORT_HEADER } from '../../types';
 import { requireSession } from '../requireSession';
-import { sessionCookie } from './cookie';
+import { isSecureRequest, sessionCookie } from './cookie';
 
 /**
  * Per-username rate limit on login.
@@ -66,7 +66,7 @@ const login = route.post({
         {
           headers: {
             'Content-Type': 'application/json',
-            'Set-Cookie': sessionCookie(result.token, result.expiresIn),
+            'Set-Cookie': sessionCookie(result.token, result.expiresIn, isSecureRequest(ctx.req)),
           },
         }
       );
@@ -104,7 +104,7 @@ const logout = route.post({
       {
         headers: {
           'Content-Type': 'application/json',
-          'Set-Cookie': sessionCookie('', 0),
+          'Set-Cookie': sessionCookie('', 0, isSecureRequest(ctx.req)),
         },
       }
     );

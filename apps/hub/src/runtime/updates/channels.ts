@@ -11,14 +11,3 @@ export {
   type UpdateChannel,
   type UpdateChannelId,
 } from '@brika/ipc/contract';
-
-import type { UpdateChannelId } from '@brika/ipc/contract';
-
-/**
- * True when the channel is a "rolling" track that auto-applies. The
- * `pinned` channel is the only non-rolling option — the orchestrator
- * skips background apply when it's selected.
- */
-export function isAutoUpdateChannel(channel: UpdateChannelId): boolean {
-  return channel !== 'pinned';
-}

@@ -12,14 +12,15 @@
  *  - **Read** (`readEntry`) uses `streamFile(...)` — the handler hands
  *    the hub a virtual path and the hub pipes `Bun.file().stream()`
  *    straight into the HTTP response. No bytes ever sit buffered.
- *  - **Write** (`writeEntry`) accepts a `Uint8Array` over the wire
- *    (bytes ride the raw POST body, path comes via the
- *    `X-Brika-Action-Meta` header — see `readActionInput` in the hub's
- *    action route). One buffer copy on the write path, no base64.
+ *  - **Write** (`writeEntry`) returns a `streamWrite(...)` sink — the
+ *    handler hands the hub a virtual path (the bytes ride the raw POST
+ *    body, the path comes via the `X-Brika-Action-Meta` header) and the
+ *    hub streams the body straight to disk. No bytes enter the plugin
+ *    process, no IPC payload cap, no base64.
  */
 
-import { mkdir, readdir, rm, stat, writeFile } from 'node:fs/promises';
-import { defineAction, streamFile } from '@brika/sdk/actions';
+import { mkdir, readdir, rm, stat } from 'node:fs/promises';
+import { defineAction, streamFile, streamWrite } from '@brika/sdk/actions';
 import { assertUnderData } from '../../paths';
 import { contentTypeFor } from './lib/content-types';
 import type { FsEntry } from './types';
@@ -55,7 +56,10 @@ export const makeFolder = defineAction(
 export const deleteEntry = defineAction(
   async (input: { path: string }): Promise<{ path: string; deleted: true }> => {
     assertUnderData(input.path);
-    await rm(input.path);
+    // `recursive` so a folder (empty or not) deletes cleanly. Without it Bun's
+    // rm refuses a directory and surfaces a cryptic `EFAULT: bad address`
+    // rather than removing it; files are unaffected either way.
+    await rm(input.path, { recursive: true });
     return { path: input.path, deleted: true };
   }
 );
@@ -74,18 +78,14 @@ export const readEntry = defineAction((input: { path: string }) => {
 });
 
 /**
- * Write a file. Bytes ride the raw POST body; path comes via the
- * `X-Brika-Action-Meta` header. Plugin process receives the merged
- * `{ path, body: Uint8Array }` envelope — see `readActionInput` in
- * the hub's action route.
+ * Write a file. The path comes via the `X-Brika-Action-Meta` header; the
+ * bytes ride the raw POST body. Returning `streamWrite(path)` asks the hub
+ * to stream that body straight to disk (overwrite) under the plugin's
+ * granted fs scope — the bytes never enter the plugin process or hit the
+ * IPC payload cap, so uploads scale to the fs grant's file-size limit. The
+ * hub replies to the page with `{ path, bytesWritten }`.
  */
-export const writeEntry = defineAction(
-  async (input: {
-    path: string;
-    body: Uint8Array;
-  }): Promise<{ path: string; bytesWritten: number }> => {
-    assertUnderData(input.path);
-    await writeFile(input.path, input.body);
-    return { path: input.path, bytesWritten: input.body.byteLength };
-  }
-);
+export const writeEntry = defineAction((input: { path: string }) => {
+  assertUnderData(input.path);
+  return streamWrite(input.path);
+});

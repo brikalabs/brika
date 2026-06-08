@@ -37,20 +37,25 @@ src/
     └── file-browser/
         ├── actions.ts        plugin-process actions colocated with the page
         ├── types.ts          FsEntry, PreviewState, UploadItem, SortKey
-        ├── helpers.ts        path / size / time / sort utilities
-        ├── download.ts       base64 ↔ Blob / blob URL / FileReader helpers
         ├── FileBrowser.tsx   orchestrator: composes hooks + components
-        ├── EntryList.tsx     loading / empty / drag / list switch
-        ├── EntryRow.tsx      one row + delete confirmation
-        ├── Breadcrumb.tsx    clickable path segments
-        ├── PreviewPanel.tsx  image / pdf / text / generic preview
-        ├── UploadQueue.tsx   live status of in-flight uploads
-        ├── NewFolderInput.tsx  inline new-folder editor
-        ├── PermissionGate.tsx  consent gate when fs grants are denied
-        ├── SortMenu.tsx      sort dropdown
+        ├── components/
+        │   ├── EntryList.tsx     Clay table: skeleton / empty drop card /
+        │   │                     in-flight upload rows / entry rows
+        │   ├── EntryIcon.tsx     per-kind file + folder glyph
+        │   ├── Toolbar.tsx       breadcrumb + sort Select + actions ButtonGroup
+        │   ├── NewFolderInput.tsx  inline new-folder InputGroup
+        │   ├── DirectoryTree.tsx   Clay Tree sidebar (lazy children)
+        │   ├── PermissionGate.tsx  consent gate when fs grants are denied
+        │   └── preview/          image / pdf / text / generic preview panel
+        ├── lib/              path / size / time / sort / content-type helpers
         └── hooks/
             ├── use-directory.ts   entries / loading / permission state
-            ├── use-uploads.ts     queue + sequential writeEntry loop
+            ├── use-dir-tree.ts    lazy sidebar tree state
+            ├── use-uploads.ts     queue + sequential writeEntry loop;
+            │                      errors toast, in-flight files list inline
+            ├── use-delete.ts      delete + confirmation flow
+            ├── use-folder-create.ts  create-folder action
+            ├── use-download.ts    download an entry to disk
             └── use-preview.ts     read + materialise as blob URL / text
 ```
 

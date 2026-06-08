@@ -220,4 +220,32 @@ describe('UserService', () => {
       expect(hasAdmin).toBe(false);
     });
   });
+
+  describe('updateUser last-admin guard', () => {
+    it('blocks demoting the only active admin', () => {
+      const admin = service.createUser('admin@example.com', 'Admin', Role.ADMIN);
+      expect(() => service.updateUser(admin.id, { role: Role.USER })).toThrow(/last active admin/);
+    });
+
+    it('blocks deactivating the only active admin', () => {
+      const admin = service.createUser('admin@example.com', 'Admin', Role.ADMIN);
+      expect(() => service.updateUser(admin.id, { isActive: false })).toThrow(/last active admin/);
+    });
+
+    it('allows demoting an admin when another active admin remains', () => {
+      const a = service.createUser('a@example.com', 'A', Role.ADMIN);
+      service.createUser('b@example.com', 'B', Role.ADMIN);
+      expect(() => service.updateUser(a.id, { role: Role.USER })).not.toThrow();
+      expect(service.countActiveAdmins()).toBe(1);
+    });
+
+    it('does not count a deactivated admin toward the active-admin floor', () => {
+      const a = service.createUser('a@example.com', 'A', Role.ADMIN);
+      const b = service.createUser('b@example.com', 'B', Role.ADMIN);
+      service.updateUser(b.id, { isActive: false });
+      // a is now the only ACTIVE admin, so demoting it must be blocked.
+      expect(service.countActiveAdmins()).toBe(1);
+      expect(() => service.updateUser(a.id, { role: Role.USER })).toThrow(/last active admin/);
+    });
+  });
 });

@@ -6,15 +6,17 @@
  */
 
 import {
-  Badge,
   Button,
   cn,
   ScrollArea,
+  Status,
+  StatusIndicator,
+  StatusLabel,
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from '@brika/clay';
-import { ChevronRight, Radio, Trash2, Zap } from 'lucide-react';
+import { ChevronRight, Trash2, Zap } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useCapture } from '@/features/analytics/hooks';
 import { useLocale } from '@/lib/use-locale';
@@ -72,17 +74,15 @@ export function DebugPanel({ workflow, onCollapse, className }: Readonly<DebugPa
           <Zap className="size-4 text-yellow-500" />
           <span className="font-medium text-sm">{t('workflows:debug.title')}</span>
           {connected ? (
-            <Badge
-              variant="outline"
-              className="border-green-500/50 bg-green-500/10 px-1.5 py-0 text-[10px] text-green-600 dark:text-green-400"
-            >
-              <Radio className="mr-1 size-2 animate-pulse" />
-              {t('workflows:debug.connected')}
-            </Badge>
+            <Status variant="success" className="px-1.5 py-0 text-[10px]">
+              <StatusIndicator />
+              <StatusLabel>{t('workflows:debug.connected')}</StatusLabel>
+            </Status>
           ) : (
-            <Badge variant="outline" className="px-1.5 py-0 text-[10px]">
-              {t('workflows:debug.disconnected')}
-            </Badge>
+            <Status variant="neutral" className="px-1.5 py-0 text-[10px]">
+              <StatusIndicator pulse={false} />
+              <StatusLabel>{t('workflows:debug.disconnected')}</StatusLabel>
+            </Status>
           )}
         </div>
         <div className="flex items-center gap-1">

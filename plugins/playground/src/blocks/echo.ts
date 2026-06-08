@@ -27,6 +27,14 @@ function transform(data: unknown, prefix: string, suffix: string): unknown {
 
 export const echo = defineBlock({
   id: 'echo',
+  meta: {
+    name: 'Echo',
+    description:
+      'Pass input through to output, optionally adding a prefix/suffix to string payloads',
+    category: 'transform',
+    icon: 'megaphone',
+    color: '#6366f1',
+  },
   inputs: {
     in: input(z.generic(), { name: 'Input' }),
   },

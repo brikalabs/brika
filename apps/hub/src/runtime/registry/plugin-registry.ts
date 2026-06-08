@@ -2,6 +2,7 @@ import { mkdir, readlink, rename, symlink, unlink } from 'node:fs/promises';
 import { dirname, join, relative, resolve } from 'node:path';
 import { inject, singleton } from '@brika/di';
 import { classifyNetworkError, errors } from '@brika/errors';
+import { semver } from 'bun';
 import { z } from 'zod';
 import { BunRunner, ConfigLoader, HubConfig } from '@/runtime/config';
 import { Logger } from '@/runtime/logs/log-router';
@@ -26,6 +27,23 @@ function normalizeVersion(version?: string): string | undefined {
 
 function isLocalVersion(version?: string): version is string {
   return version?.startsWith('workspace:') === true || version?.startsWith('file:') === true;
+}
+
+/**
+ * True only when `candidate` is a strictly newer release than `installed`.
+ *
+ * The registry's "latest" can legitimately be *older* than what's installed
+ * (e.g. a locally-built plugin bumped ahead of the published npm version), so a
+ * plain `installed !== candidate` would offer a downgrade as an "update".
+ * `semver.order` throws on non-semver input; treat anything uncomparable as
+ * "no upgrade" rather than letting one bad version break the whole check.
+ */
+function isUpgrade(installed: string, candidate: string): boolean {
+  try {
+    return semver.order(candidate, installed) > 0;
+  } catch {
+    return false;
+  }
 }
 
 @singleton()
@@ -249,7 +267,7 @@ export class PluginRegistry {
           name,
           currentVersion: current,
           latestVersion: latest,
-          updateAvailable: current !== latest,
+          updateAvailable: isUpgrade(current, latest),
         });
       }
     }

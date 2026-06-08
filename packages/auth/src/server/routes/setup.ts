@@ -13,7 +13,7 @@ import { SetupSchema } from '../../schemas';
 import { AuthService } from '../../services/AuthService';
 import { UserService } from '../../services/UserService';
 import { parseTransportHeader, TRANSPORT_HEADER } from '../../types';
-import { sessionCookie } from './cookie';
+import { isSecureRequest, sessionCookie } from './cookie';
 
 /** POST / — Create the first admin account */
 const createAdmin = route.post({
@@ -43,7 +43,7 @@ const createAdmin = route.post({
       status: 201,
       headers: {
         'Content-Type': 'application/json',
-        'Set-Cookie': sessionCookie(result.token, result.expiresIn),
+        'Set-Cookie': sessionCookie(result.token, result.expiresIn, isSecureRequest(ctx.req)),
       },
     });
   },

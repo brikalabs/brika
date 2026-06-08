@@ -1,6 +1,6 @@
 {
   "name": "@brika/build",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "description": "Build orchestration for Brika binaries. Produces the `brika` (full) and `brika-hub` (headless) artifacts.",
   "type": "module",
   "private": true,

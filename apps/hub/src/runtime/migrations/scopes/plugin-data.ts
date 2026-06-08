@@ -1,5 +1,5 @@
 /**
- * `plugin-data` migration scope — keeps `${brikaDir}/plugins-data/` tidy.
+ * `plugin-data` migration scope: keeps `${brikaDir}/plugins/data/` tidy.
  *
  * The directory accumulates one subdir per *installed plugin UID*
  * (data/, cache/, tmp/). When a plugin is uninstalled, the row in
@@ -16,6 +16,7 @@
 import { Database } from 'bun:sqlite';
 import { existsSync, readdirSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
+import { pluginDataDir } from '../../plugins/fs-dirs';
 import {
   type Migration,
   type MigrationContext,
@@ -23,11 +24,10 @@ import {
   type MigrationScope,
 } from '../types';
 
-const PLUGIN_DATA_DIRNAME = 'plugins-data';
 const STATE_DB_FILENAME = 'state.db';
 
 /**
- * 0001 — Remove `plugins-data/<uid>/` dirs whose UID is not present
+ * 0001: Remove `plugins/data/<uid>/` dirs whose UID is not present
  * in `state.db`'s `plugins` table. Safe to re-run.
  *
  * We open the DB directly (read-only) so this can run before the
@@ -37,9 +37,9 @@ const STATE_DB_FILENAME = 'state.db';
  */
 const pruneOrphans: Migration = {
   id: '0001-prune-orphans',
-  description: 'Remove plugins-data dirs whose UID is no longer registered',
+  description: 'Remove plugin-data dirs whose UID is no longer registered',
   run(ctx: MigrationContext): Promise<void> {
-    const dataRoot = join(ctx.brikaDir, PLUGIN_DATA_DIRNAME);
+    const dataRoot = pluginDataDir(ctx.brikaDir);
     if (!existsSync(dataRoot)) {
       return Promise.resolve();
     }

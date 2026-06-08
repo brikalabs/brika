@@ -77,6 +77,113 @@ async function mergeLcov(): Promise<number> {
   return count;
 }
 
+/**
+ * Compute the set of 1-based line numbers in `relPath` that can never carry
+ * executable code: blank lines, `//` and `/* … *​/` comments (incl. JSDoc
+ * continuation `*` lines), and pure-punctuation lines (a lone `}`, `});`,
+ * `);`, …). Block-comment state is tracked across lines; a line that closes a
+ * block comment and then continues with real code is kept as code.
+ */
+const PUNCT_ONLY = /^[{}()[\];,]+$/;
+
+/** Whether the text trailing a block-comment close (`*​/`) holds real code. */
+function hasCodeAfterClose(rest: string): boolean {
+  const t = rest.trim();
+  return t.length > 0 && !t.startsWith('//') && !t.startsWith('/*');
+}
+
+async function nonCodeLines(relPath: string): Promise<Set<number>> {
+  const nc = new Set<number>();
+  let source: string;
+  try {
+    source = await Bun.file(relPath).text();
+  } catch {
+    return nc;
+  }
+  let inBlock = false;
+  source.split('\n').forEach((raw, i) => {
+    const ln = i + 1;
+    const s = raw.trim();
+    if (inBlock) {
+      const close = s.indexOf('*/');
+      inBlock = close === -1;
+      if (inBlock || !hasCodeAfterClose(s.slice(close + 2))) {
+        nc.add(ln);
+      }
+      return;
+    }
+    if (s.length === 0 || s.startsWith('//') || s.startsWith('*') || PUNCT_ONLY.test(s)) {
+      nc.add(ln);
+      return;
+    }
+    if (s.startsWith('/*')) {
+      const close = s.indexOf('*/');
+      inBlock = close === -1;
+      if (inBlock || !hasCodeAfterClose(s.slice(close + 2))) {
+        nc.add(ln);
+      }
+    }
+  });
+  return nc;
+}
+
+/**
+ * bun's `--parallel` coverage instrumentation spuriously emits `DA:line,0`
+ * records for non-executable lines (comments, blanks, lone closers) that a
+ * single-threaded run correctly omits. SonarCloud reads those as uncovered
+ * new lines, so heavily-commented new code reads as poorly covered even when
+ * every statement is exercised. Drop the 0-hit records on provably non-code
+ * lines and recompute each file's LF/LH; real uncovered code (0-hit on a
+ * statement line) is preserved untouched. Returns the count dropped.
+ */
+async function stripSpuriousZeroHits(dest: string): Promise<number> {
+  const text = await Bun.file(dest).text();
+  const cache = new Map<string, Set<number>>();
+  const out: string[] = [];
+  let currentFile: string | null = null;
+  let da: Array<[number, number]> = [];
+  let dropped = 0;
+  const flush = () => {
+    if (da.length > 0) {
+      out.push(`LF:${da.length}`, `LH:${da.filter(([, h]) => h > 0).length}`);
+    }
+    da = [];
+  };
+  for (const line of text.split('\n')) {
+    if (line.startsWith('SF:')) {
+      currentFile = line.slice(3);
+      out.push(line);
+    } else if (line.startsWith('DA:') && currentFile) {
+      const [lnStr, hitStr] = line.slice(3).split(',');
+      const ln = Number(lnStr);
+      const hits = Number(hitStr);
+      if (hits === 0) {
+        let nc = cache.get(currentFile);
+        if (!nc) {
+          nc = await nonCodeLines(currentFile);
+          cache.set(currentFile, nc);
+        }
+        if (nc.has(ln)) {
+          dropped++;
+          continue;
+        }
+      }
+      da.push([ln, hits]);
+      out.push(line);
+    } else if (line.startsWith('LF:') || line.startsWith('LH:')) {
+      // Recomputed from the surviving DA records at end_of_record.
+    } else if (line.startsWith('end_of_record')) {
+      flush();
+      out.push(line);
+      currentFile = null;
+    } else if (line.length > 0) {
+      out.push(line);
+    }
+  }
+  await Bun.write(dest, `${out.join('\n')}\n`);
+  return dropped;
+}
+
 const workspaces = await discoverWorkspaces();
 console.log(`running ${workspaces.length} workspaces with concurrency=${CONCURRENCY}`);
 
@@ -98,5 +205,8 @@ await Promise.all(workers);
 
 const merged = await mergeLcov();
 console.log(`merged ${merged} source files into coverage/lcov.info`);
+
+const stripped = await stripSpuriousZeroHits('coverage/lcov.info');
+console.log(`stripped ${stripped} spurious 0-hit non-code DA records`);
 
 process.exit(worstExit);

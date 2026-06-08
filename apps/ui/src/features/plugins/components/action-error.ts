@@ -189,4 +189,21 @@ export function encodeActionInput(input: unknown): EncodedActionInput {
   return { body: JSON.stringify(input), contentType: APPLICATION_JSON };
 }
 
+/**
+ * Encode action meta for the `X-Brika-Action-Meta` header. Header values are
+ * a ByteString (ISO-8859-1), but a file path can carry code points outside
+ * Latin-1: accents, smart quotes, CJK, emoji, or macOS NFD combining marks
+ * (e.g. "développeur" arrives as `développeur`). Base64 of the UTF-8
+ * bytes keeps the header transmissible; the hub decodes it in
+ * `readActionInput`.
+ */
+export function encodeMetaHeader(meta: Record<string, unknown>): string {
+  const utf8 = new TextEncoder().encode(JSON.stringify(meta));
+  let binary = '';
+  for (const byte of utf8) {
+    binary += String.fromCodePoint(byte);
+  }
+  return btoa(binary);
+}
+
 export { ACTION_META_HEADER, APPLICATION_JSON, BRIKA_BINARY_HEADER, OCTET_STREAM };

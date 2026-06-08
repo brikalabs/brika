@@ -19,6 +19,7 @@ export function ForbiddenPage({
       title={t('common:errors.403.title')}
       description={t('common:errors.403.description')}
       iconClassName="bg-destructive/10 text-destructive"
+      accentClassName="text-destructive"
       variant={variant}
     />
   );

@@ -191,7 +191,7 @@ The same schema applies to `bricks[*].config` and top-level `preferences`.
 
 ```json
 "engines": {
-  "brika": "^0.3.0"
+  "brika": "^0.4.0"
 }
 ```
 
@@ -204,7 +204,7 @@ The hub refuses to load a plugin whose `engines.brika` range does not include th
   "$schema": "https://schema.brika.dev/plugin.schema.json",
   "name": "@brika/plugin-timer",
   "displayName": "Timer",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "description": "Timer and countdown blocks for BRIKA workflows",
   "author": "BRIKA Team",
   "license": "MIT",
@@ -215,7 +215,7 @@ The hub refuses to load a plugin whose `engines.brika` range does not include th
   },
   "icon": "./icon.svg",
   "keywords": ["brika", "brika-plugin", "timer", "countdown"],
-  "engines": { "brika": "^0.3.0" },
+  "engines": { "brika": "^0.4.0" },
   "type": "module",
   "main": "./src/index.tsx",
   "blocks": [

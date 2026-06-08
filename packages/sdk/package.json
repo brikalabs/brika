@@ -1,6 +1,6 @@
 {
   "name": "@brika/sdk",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "description": "SDK for building BRIKA plugins and workflow blocks",
   "type": "module",
   "license": "MIT",
@@ -23,6 +23,7 @@
     "./brick-views": "./src/brick-views.ts",
     "./block-views": "./src/block-views.ts",
     "./brick": "./src/brick.ts",
+    "./schema": "./src/blocks/schema.ts",
     "./sparks": "./src/sparks.ts",
     "./lifecycle": "./src/lifecycle.ts",
     "./storage": "./src/storage.ts",
@@ -44,7 +45,16 @@
   "bin": {
     "brika": "./dist/bin/brika.js"
   },
-  "files": ["src", "dist/bin", "tsconfig.plugin.json"],
+  "files": [
+    "src",
+    "dist/bin",
+    "tsconfig.plugin.json",
+    "!src/**/*.test.ts",
+    "!src/**/*.test.tsx",
+    "!src/**/*.spec.ts",
+    "!src/**/*.spec.tsx",
+    "!src/**/*_test-utils.ts"
+  ],
   "scripts": {
     "test": "bun test --parallel",
     "typecheck": "tsgo --noEmit",
@@ -60,7 +70,7 @@
   },
   "peerDependencies": {
     "zod": "^4.0.0",
-    "lucide-react": "^1.16.0"
+    "lucide-react": "^1.17.0"
   },
   "peerDependenciesMeta": {
     "lucide-react": {

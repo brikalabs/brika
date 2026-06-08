@@ -48,6 +48,20 @@ export const DEFAULT_FS_QUOTAS: FsQuotas = {
 };
 
 /**
+ * Merge a plugin's declared per-root quotas (from package.json
+ * `resources.fs.quotas`) with the hub defaults — each omitted root falls
+ * back to {@link DEFAULT_FS_QUOTAS}. Shared by the grant registry (enforcement)
+ * and the disk-usage endpoint (display) so both report the same limits.
+ */
+export function resolveFsQuotas(quotas?: Partial<FsQuotas>): FsQuotas {
+  return {
+    data: quotas?.data ?? DEFAULT_FS_QUOTAS.data,
+    cache: quotas?.cache ?? DEFAULT_FS_QUOTAS.cache,
+    tmp: quotas?.tmp ?? DEFAULT_FS_QUOTAS.tmp,
+  };
+}
+
+/**
  * Per-call body cap on `readFile` / `writeFile`. Streamed reads land
  * in v2; for now we buffer the whole payload in memory, so this cap
  * is also the practical upload size for plugin file actions. Raised

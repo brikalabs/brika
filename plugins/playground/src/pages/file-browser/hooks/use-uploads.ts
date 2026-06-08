@@ -1,10 +1,9 @@
-import { useCallAction } from '@brika/sdk/ui-kit/hooks';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { toast } from '@brika/sdk/ui-kit';
+import { useCallAction, useLocale } from '@brika/sdk/ui-kit/hooks';
+import { useCallback, useState } from 'react';
 import { writeEntry } from '../actions';
 import { joinPath } from '../lib/path';
 import type { UploadItem } from '../types';
-
-const CLEAR_DONE_AFTER_MS = 2_000;
 
 interface UseUploadsOptions {
   onAllDone: () => void | Promise<void>;
@@ -15,43 +14,36 @@ interface UseUploadsResult {
   upload: (files: FileList | File[], targetDir: string) => Promise<void>;
 }
 
+// A tiny write completes in a few ms — too fast to register as "an upload
+// happened". Floor the visible "uploading" state and hold the "uploaded"
+// confirmation briefly so the ghost row reads as deliberate feedback.
+const MIN_UPLOAD_MS = 450;
+const DONE_LINGER_MS = 350;
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 function updateStatus(id: string, patch: Partial<UploadItem>) {
   return (prev: UploadItem[]): UploadItem[] =>
     prev.map((item) => (item.id === id ? { ...item, ...patch } : item));
 }
 
-function dropDone(prev: UploadItem[]): UploadItem[] {
-  return prev.filter((q) => q.status !== 'done');
-}
-
 /**
  * Owns the upload queue and drives a sequential `writeEntry` action call
- * per file. Each row walks `pending → uploading → done | error`. Done
- * rows are cleared after a short window so users see the confirmation
- * before they disappear.
+ * per file. Each in-flight file surfaces as a ghost row in the listing
+ * (`pending → uploading → done`); a failure raises a filename-scoped toast
+ * and drops the row. When a batch finishes and the directory reloads, the
+ * batch's rows retire so the freshly-listed real entries take over.
  *
  * `onAllDone` fires once per batch — typically a directory reload.
  */
 export function useUploads({ onAllDone }: UseUploadsOptions): UseUploadsResult {
-  // Suppress the default per-call toast: failed uploads already appear
-  // inline in the queue row with their error message, so a toast on top
-  // would spam the user (especially on multi-file batches).
+  const { t } = useLocale();
+  // We raise our own filename-scoped error toast below, so suppress the
+  // generic per-call action toast to avoid doubling up.
   const callAction = useCallAction({ toastOnError: false });
   const [queue, setQueue] = useState<UploadItem[]>([]);
-
-  // Track the pending "clear done rows" timer so unmount can cancel it;
-  // without this React warns about setState on an unmounted component
-  // when the user navigates away mid-batch.
-  const clearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(
-    () => () => {
-      if (clearTimerRef.current !== null) {
-        clearTimeout(clearTimerRef.current);
-        clearTimerRef.current = null;
-      }
-    },
-    []
-  );
 
   const upload = useCallback(
     async (files: FileList | File[], targetDir: string) => {
@@ -68,6 +60,7 @@ export function useUploads({ onAllDone }: UseUploadsOptions): UseUploadsResult {
         file,
         status: 'pending',
       }));
+      const batchIds = new Set(newItems.map((item) => item.id));
       setQueue((prev) => [...prev, ...newItems]);
 
       for (const item of newItems) {
@@ -75,26 +68,31 @@ export function useUploads({ onAllDone }: UseUploadsOptions): UseUploadsResult {
         try {
           // File goes as the raw POST body; path rides X-Brika-Action-Meta
           // header. Plugin handler receives `{ path, body: Uint8Array }`.
-          await callAction(writeEntry, item.file, {
-            meta: { path: joinPath(targetDir, item.file.name) },
-          });
+          // Race the write against a floor so a fast write still shows.
+          await Promise.all([
+            callAction(writeEntry, item.file, {
+              meta: { path: joinPath(targetDir, item.file.name) },
+            }),
+            delay(MIN_UPLOAD_MS),
+          ]);
           setQueue(updateStatus(item.id, { status: 'done' }));
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
-          setQueue(updateStatus(item.id, { status: 'error', error: message }));
+          toast.error(t('fileBrowser.upload.failedTitle'), {
+            description: `${item.file.name}: ${message}`,
+          });
+          // The toast is the record now — drop the failed row.
+          setQueue((prev) => prev.filter((q) => q.id !== item.id));
         }
       }
 
+      // Hold the "uploaded" confirmation, then retire this batch's ghost rows
+      // BEFORE reloading so a row never doubles with its incoming real entry.
+      await delay(DONE_LINGER_MS);
+      setQueue((prev) => prev.filter((q) => !batchIds.has(q.id)));
       await onAllDone();
-      if (clearTimerRef.current !== null) {
-        clearTimeout(clearTimerRef.current);
-      }
-      clearTimerRef.current = setTimeout(() => {
-        clearTimerRef.current = null;
-        setQueue(dropDone);
-      }, CLEAR_DONE_AFTER_MS);
     },
-    [callAction, onAllDone]
+    [callAction, onAllDone, t]
   );
 
   return { queue, upload };

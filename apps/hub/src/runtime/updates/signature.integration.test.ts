@@ -259,6 +259,68 @@ describe('verifyMinisignFile', () => {
     }
   });
 
+  test('binds a valid signature to the expected version and asset', async () => {
+    // The trusted comment baked into `makeSigFile` is "release brika v0.6.0".
+    const payload = join(dir, 'brika-linux-x64.tar.gz');
+    writeFileSync(payload, 'release bytes');
+    const keys = generateEd25519();
+    const sigPath = makeSigFile(payload, keys);
+    const result = await verifyMinisignFile(payload, sigPath, keys.pubkeyB64, {
+      version: 'v0.6.0',
+      asset: 'brika',
+    });
+    expect(result.status).toBe('verified');
+  });
+
+  test('rejects when the trusted comment does not name the expected version', async () => {
+    // A signature legitimately signed for v0.6.0 must not verify against a
+    // request that expects v9.9.9 — defeats a re-point/downgrade between two
+    // genuinely-signed releases.
+    const payload = join(dir, 'payload');
+    writeFileSync(payload, 'bytes');
+    const keys = generateEd25519();
+    const sigPath = makeSigFile(payload, keys);
+    const result = await verifyMinisignFile(payload, sigPath, keys.pubkeyB64, {
+      version: '9.9.9',
+      asset: 'brika',
+    });
+    expect(result.status).toBe('failed');
+    if (result.status === 'failed') {
+      expect(result.reason).toMatch(/does not bind expected version/);
+    }
+  });
+
+  test('rejects when the trusted comment does not name the expected asset', async () => {
+    const payload = join(dir, 'payload');
+    writeFileSync(payload, 'bytes');
+    const keys = generateEd25519();
+    const sigPath = makeSigFile(payload, keys);
+    const result = await verifyMinisignFile(payload, sigPath, keys.pubkeyB64, {
+      version: 'v0.6.0',
+      asset: 'some-other-artifact.zip',
+    });
+    expect(result.status).toBe('failed');
+    if (result.status === 'failed') {
+      expect(result.reason).toMatch(
+        /does not bind expected version.*asset some-other-artifact\.zip/
+      );
+    }
+  });
+
+  test('strips a leading "v" from the expected version before matching', async () => {
+    // CI tags are `vX.Y.Z` but the trusted comment carries the bare version;
+    // the binder strips the `v` so both spellings match.
+    const payload = join(dir, 'payload');
+    writeFileSync(payload, 'bytes');
+    const keys = generateEd25519();
+    const sigPath = makeSigFile(payload, keys);
+    const result = await verifyMinisignFile(payload, sigPath, keys.pubkeyB64, {
+      version: 'v0.6.0',
+      asset: 'brika',
+    });
+    expect(result.status).toBe('verified');
+  });
+
   test('normalises CRLF in the signature file', async () => {
     // A signature file that traveled through a Windows editor or a
     // misconfigured HTTP server with `--text` translation should

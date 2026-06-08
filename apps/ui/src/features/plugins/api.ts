@@ -24,6 +24,20 @@ export interface PluginMetrics {
   history: MetricsSample[];
 }
 
+/** Bytes used vs the quota ceiling for one fs root. */
+export interface DiskRootUsage {
+  used: number;
+  limit: number;
+}
+
+export interface PluginDiskUsage {
+  data: DiskRootUsage;
+  cache: DiskRootUsage;
+  tmp: DiskRootUsage;
+  total: DiskRootUsage;
+  running: boolean;
+}
+
 export const pluginsApi = {
   list: () => fetcher<Plugin[]>('/api/plugins'),
   getByUid: (uid: string) => fetcher<Plugin>(`/api/plugins/${uid}`),
@@ -122,6 +136,9 @@ export const pluginsApi = {
 
   /** Get plugin metrics (CPU, memory) */
   getMetrics: (uid: string) => fetcher<PluginMetrics>(`/api/plugins/${uid}/metrics`),
+
+  /** Get plugin disk usage (per fs root + total) */
+  getDiskUsage: (uid: string) => fetcher<PluginDiskUsage>(`/api/plugins/${uid}/disk-usage`),
 };
 
 export const pluginsKeys = {
@@ -130,4 +147,5 @@ export const pluginsKeys = {
   readme: (uid: string) => ['plugins', uid, 'readme'] as const,
   config: (uid: string) => ['plugins', uid, 'config'] as const,
   metrics: (uid: string) => ['plugins', uid, 'metrics'] as const,
+  diskUsage: (uid: string) => ['plugins', uid, 'disk-usage'] as const,
 };

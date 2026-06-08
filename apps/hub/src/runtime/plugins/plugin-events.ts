@@ -34,37 +34,55 @@ export class PluginEventHandler {
   readonly #pluginRoutes = inject(PluginRouteRegistry);
   readonly #boardLoader = inject(BoardLoader);
 
-  /** Block emit callback - set by PluginManager */
-  #onBlockEmit: ((instanceId: string, port: string, data: Json) => void) | null = null;
-  /** Block log callback - set by PluginManager */
-  #onBlockLog:
-    | ((instanceId: string, workflowId: string, level: string, message: string) => void)
-    | null = null;
+  // Each running workflow executor registers its own handler. A single slot
+  // here would let the most-recently-started workflow clobber the others'
+  // routing, so handlers are kept in a Set and every emit is fanned out to all
+  // (each executor ignores blocks it does not own).
+  readonly #blockEmitHandlers = new Set<(instanceId: string, port: string, data: Json) => void>();
+  readonly #blockLogHandlers = new Set<
+    (instanceId: string, workflowId: string, level: string, message: string) => void
+  >();
 
   setBlockEmitHandler(handler: (instanceId: string, port: string, data: Json) => void): void {
-    this.#onBlockEmit = handler;
+    this.#blockEmitHandlers.add(handler);
   }
 
-  clearBlockEmitHandler(): void {
-    this.#onBlockEmit = null;
+  /** Remove a specific handler, or all handlers when called with no argument. */
+  clearBlockEmitHandler(handler?: (instanceId: string, port: string, data: Json) => void): void {
+    if (handler) {
+      this.#blockEmitHandlers.delete(handler);
+    } else {
+      this.#blockEmitHandlers.clear();
+    }
   }
 
   setBlockLogHandler(
     handler: (instanceId: string, workflowId: string, level: string, message: string) => void
   ): void {
-    this.#onBlockLog = handler;
+    this.#blockLogHandlers.add(handler);
   }
 
-  clearBlockLogHandler(): void {
-    this.#onBlockLog = null;
+  /** Remove a specific handler, or all handlers when called with no argument. */
+  clearBlockLogHandler(
+    handler?: (instanceId: string, workflowId: string, level: string, message: string) => void
+  ): void {
+    if (handler) {
+      this.#blockLogHandlers.delete(handler);
+    } else {
+      this.#blockLogHandlers.clear();
+    }
   }
 
   onBlockEmit(instanceId: string, port: string, data: Json): void {
-    this.#onBlockEmit?.(instanceId, port, data);
+    for (const handler of this.#blockEmitHandlers) {
+      handler(instanceId, port, data);
+    }
   }
 
   onBlockLog(instanceId: string, workflowId: string, level: string, message: string): void {
-    this.#onBlockLog?.(instanceId, workflowId, level, message);
+    for (const handler of this.#blockLogHandlers) {
+      handler(instanceId, workflowId, level, message);
+    }
   }
 
   onPluginReady(process: PluginProcess): void {

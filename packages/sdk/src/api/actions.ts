@@ -220,6 +220,50 @@ export function isStreamFileResponse(value: unknown): value is StreamFileRespons
   return hasEnvelopeTag(value, STREAM_FILE_TAG);
 }
 
+// ─── Stream-write response ───────────────────────────────────────────────────
+
+export const STREAM_WRITE_TAG = '__brika_stream_write' as const;
+
+/**
+ * Stream-write response. The mirror image of {@link streamFile}: the
+ * handler hands the hub a virtual path and the hub writes the incoming
+ * request body straight to disk (resolved through the plugin's granted fs
+ * scope), so the uploaded bytes never enter the plugin process or sit
+ * buffered in hub memory — and never hit the IPC payload cap. Use it for
+ * "store this uploaded file on disk" actions.
+ */
+export interface StreamWriteResponse {
+  readonly [STREAM_WRITE_TAG]: true;
+  readonly virtualPath: string;
+}
+
+/**
+ * Build a stream-write envelope. The action handler returns this to ask
+ * the hub to write the request body to `virtualPath` (overwrite). The
+ * declared return type is `{ path; bytesWritten }` — what the page
+ * receives once the hub finishes the write — so `defineAction` populates
+ * the ref's phantom output and `await callAction(writeEntry, file, …)`
+ * resolves type-safely.
+ *
+ * @example
+ * ```ts
+ * import { defineAction, streamWrite } from '@brika/sdk/actions';
+ *
+ * export const writeEntry = defineAction(({ path }: { path: string }) => {
+ *   assertUnderData(path);
+ *   return streamWrite(path); // hub streams the body to disk
+ * });
+ * ```
+ */
+export function streamWrite(virtualPath: string): { path: string; bytesWritten: number } {
+  const envelope: StreamWriteResponse = { [STREAM_WRITE_TAG]: true, virtualPath };
+  return envelope as unknown as { path: string; bytesWritten: number };
+}
+
+export function isStreamWriteResponse(value: unknown): value is StreamWriteResponse {
+  return hasEnvelopeTag(value, STREAM_WRITE_TAG);
+}
+
 // ─── Build-time finalization ─────────────────────────────────────────────────
 
 /**

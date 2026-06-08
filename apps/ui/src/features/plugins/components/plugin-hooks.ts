@@ -8,6 +8,7 @@ import {
   APPLICATION_JSON,
   BRIKA_BINARY_HEADER,
   encodeActionInput,
+  encodeMetaHeader,
   handleActionError,
   parseActionError,
   type UseActionOptions,
@@ -160,7 +161,7 @@ export function useCallAction(defaults?: UseActionOptions) {
       // sending it alongside a JSON body would be redundant since
       // the caller can just include the field in the JSON object.
       if (opts?.meta && body && contentType !== APPLICATION_JSON) {
-        headers[ACTION_META_HEADER] = JSON.stringify(opts.meta);
+        headers[ACTION_META_HEADER] = encodeMetaHeader(opts.meta);
       }
       const res = await fetch(`/api/plugins/${uid}/actions/${ref.__actionId}`, {
         method: 'POST',

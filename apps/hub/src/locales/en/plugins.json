@@ -43,7 +43,11 @@
     "package": "Package",
     "currentVersion": "Current Version",
     "cpu": "CPU",
-    "memory": "Memory"
+    "memory": "Memory",
+    "diskUsage": "Disk usage",
+    "diskData": "Data",
+    "diskCache": "Cache",
+    "diskTmp": "Temp"
   },
   "actions": {
     "load": "Load Plugin",

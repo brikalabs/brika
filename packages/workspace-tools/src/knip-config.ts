@@ -150,12 +150,19 @@ async function addManifestEntries(ctx: BuildContext, entries: Set<string>): Prom
       entries.add(resolved);
     }
   }
+  if (await dirExists(join(ctx.absDir, 'src'))) {
+    // Co-located tests (and `.integration.test.*`) are entry roots: the test
+    // runner invokes them, nothing imports them.
+    entries.add('src/**/*.test.{ts,tsx}');
+    // Fixtures are loaded by path from tests, so knip can't see the reference.
+    entries.add('src/**/fixtures/**/*.{ts,tsx}');
+  }
   if (await dirExists(join(ctx.absDir, 'src/__tests__'))) {
     entries.add('src/__tests__/**/*.test.{ts,tsx}');
   }
   for (const extras of ['examples', 'scripts']) {
     if (await dirExists(join(ctx.absDir, extras))) {
-      entries.add(`${extras}/**/*.ts`);
+      entries.add(`${extras}/**/*.{ts,tsx}`);
     }
   }
 }
@@ -197,6 +204,13 @@ async function addAppUiEntries(ctx: BuildContext, entries: Set<string>): Promise
 async function addPackageQuirks(ctx: BuildContext, entries: Set<string>): Promise<void> {
   if (ctx.dir === 'packages/create-brika' && (await dirExists(join(ctx.absDir, 'src')))) {
     entries.add('src/**/*.ts');
+  }
+  // The SDK bin is `dist/bin/brika.js`, bundled from src/cli/brika.ts via a
+  // Bun.build string entrypoint (not an import knip can follow), so the dist->src
+  // mirror guess misses it. Register the real CLI entry so knip traverses into
+  // dev/doctor/install instead of flagging them as dead.
+  if (ctx.dir === 'packages/sdk' && (await pathExists(join(ctx.absDir, 'src/cli/brika.ts')))) {
+    entries.add('src/cli/brika.ts');
   }
   if (ctx.dir === 'packages/db' && (await pathExists(join(ctx.absDir, 'database.config.ts')))) {
     entries.add('database.config.ts');
@@ -248,6 +262,16 @@ async function buildWorkspaceConfig(
   if (dir === 'packages/create-brika' && (await dirExists(join(ctx.absDir, 'template')))) {
     ignore.add('template/**');
   }
+  if (dir === 'apps/signaling') {
+    // Optional persistence backends: node:sqlite (Bun/Node builtin) with a
+    // graceful better-sqlite3 fallback. Intentionally undeclared optional deps.
+    ignoreDependencies.add('node:sqlite');
+    ignoreDependencies.add('better-sqlite3');
+  }
+  if (dir === 'packages/i18n-dev') {
+    // Used only by the runnable example under examples/, not the published package.
+    ignoreDependencies.add('@vitejs/plugin-react');
+  }
 
   await addPackageQuirks(ctx, entries);
 
@@ -291,7 +315,7 @@ export async function buildKnipConfig(root: string): Promise<KnipConfig> {
   const workspaces: Record<string, KnipWorkspaceConfig> = {
     '.': {
       entry: ['scripts/*.ts'],
-      ignoreDependencies: ['@brika/hub', '@brika/i18n-devtools', '@brika/testing'],
+      ignoreDependencies: ['@brika/hub', '@brika/i18n-devtools', '@brika/sdk', '@brika/testing'],
     },
   };
 

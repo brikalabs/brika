@@ -1,5 +1,4 @@
 import {
-  Badge,
   Button,
   Dialog,
   DialogContent,
@@ -8,6 +7,9 @@ import {
   DialogHeader,
   DialogTitle,
   ScrollArea,
+  Status,
+  StatusIndicator,
+  StatusLabel,
 } from '@brika/clay';
 import { Bug } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
@@ -65,13 +67,15 @@ export function DebugDialog({
               <Bug className="size-5" />
               {t('workflows:debug.title')}
               {connected ? (
-                <Badge variant="default" className="bg-success text-[10px]">
-                  {t('workflows:debug.connected')}
-                </Badge>
+                <Status variant="success" className="text-[10px]">
+                  <StatusIndicator />
+                  <StatusLabel>{t('workflows:debug.connected')}</StatusLabel>
+                </Status>
               ) : (
-                <Badge variant="secondary" className="text-[10px]">
-                  {t('workflows:debug.disconnected')}
-                </Badge>
+                <Status variant="neutral" className="text-[10px]">
+                  <StatusIndicator pulse={false} />
+                  <StatusLabel>{t('workflows:debug.disconnected')}</StatusLabel>
+                </Status>
               )}
             </DialogTitle>
           </div>

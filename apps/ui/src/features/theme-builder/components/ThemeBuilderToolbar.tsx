@@ -10,7 +10,6 @@
  */
 
 import {
-  Badge,
   Button,
   DropdownMenu,
   DropdownMenuContent,
@@ -22,9 +21,11 @@ import {
   PageHeaderDescription,
   PageHeaderInfo,
   PageHeaderTitle,
+  Status,
+  StatusIndicator,
+  StatusLabel,
 } from '@brika/clay';
 import {
-  Check,
   ChevronDown,
   Clipboard,
   Copy,
@@ -113,19 +114,26 @@ export function ThemeBuilderToolbar({
   function statusBadge() {
     if (justSaved || (Boolean(savedId) && !isDirty)) {
       return (
-        <Badge variant="outline" className="gap-1 border-success/30 text-success">
-          <Check className="size-3" /> {t('toolbar.status.saved')}
-        </Badge>
+        <Status variant="success">
+          <StatusIndicator pulse={false} />
+          <StatusLabel>{t('toolbar.status.saved')}</StatusLabel>
+        </Status>
       );
     }
     if (savedId) {
       return (
-        <Badge variant="outline" className="gap-1 border-warning/30 text-warning">
-          {t('toolbar.status.unsavedChanges')}
-        </Badge>
+        <Status variant="warning">
+          <StatusIndicator pulse={false} />
+          <StatusLabel>{t('toolbar.status.unsavedChanges')}</StatusLabel>
+        </Status>
       );
     }
-    return <Badge variant="outline">{t('toolbar.status.draft')}</Badge>;
+    return (
+      <Status variant="neutral">
+        <StatusIndicator pulse={false} />
+        <StatusLabel>{t('toolbar.status.draft')}</StatusLabel>
+      </Status>
+    );
   }
 
   const idLabel = savedId
@@ -148,9 +156,10 @@ export function ThemeBuilderToolbar({
             <PageHeaderTitle>{draft.name || t('page.defaultName')}</PageHeaderTitle>
             {statusBadge()}
             {isActive && (
-              <Badge variant="default" className="gap-1">
-                <Eye className="size-3" /> {t('toolbar.status.active')}
-              </Badge>
+              <Status variant="info">
+                <StatusIndicator />
+                <StatusLabel>{t('toolbar.status.active')}</StatusLabel>
+              </Status>
             )}
           </div>
           <PageHeaderDescription>

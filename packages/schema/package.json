@@ -1,6 +1,6 @@
 {
   "name": "@brika/schema",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "description": "Unified schemas for BRIKA plugins and configuration",
   "type": "module",
   "license": "MIT",
@@ -10,7 +10,15 @@
     "directory": "packages/schema"
   },
   "keywords": ["brika", "schema", "zod", "validation"],
-  "files": ["dist", "src"],
+  "files": [
+    "dist",
+    "src",
+    "!src/**/*.test.ts",
+    "!src/**/*.test.tsx",
+    "!src/**/*.spec.ts",
+    "!src/**/*.spec.tsx",
+    "!src/**/*_test-utils.ts"
+  ],
   "exports": {
     ".": "./src/index.ts",
     "./plugin": "./src/plugin.ts",

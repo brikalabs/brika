@@ -40,5 +40,101 @@
         "error": "Erreur"
       }
     }
+  },
+  "fileBrowser": {
+    "columns": { "name": "Nom", "size": "Taille", "modified": "Modifié" },
+    "tree": { "label": "Arborescence des dossiers" },
+    "kind": {
+      "folder": "Dossier",
+      "image": "Image",
+      "video": "Vidéo",
+      "audio": "Audio",
+      "code": "Code",
+      "document": "Document",
+      "spreadsheet": "Feuille de calcul",
+      "archive": "Archive",
+      "other": "Fichier"
+    },
+    "summary": {
+      "loading": "Chargement…",
+      "empty": "Vide",
+      "folderOne": "{{count}} dossier",
+      "folderOther": "{{count}} dossiers",
+      "fileOne": "{{count}} fichier",
+      "fileOther": "{{count}} fichiers"
+    },
+    "time": {
+      "justNow": "À l'instant",
+      "minAgo": "il y a {{count}} min",
+      "hrAgo": "il y a {{count}} h",
+      "yesterday": "Hier"
+    },
+    "toolbar": {
+      "pathLabel": "Chemin du fichier",
+      "actionsLabel": "Actions de fichier",
+      "newFolder": "Nouveau dossier",
+      "upload": "Téléverser"
+    },
+    "sort": {
+      "nameAsc": "Nom (A à Z)",
+      "nameDesc": "Nom (Z à A)",
+      "newest": "Plus récents d'abord",
+      "oldest": "Plus anciens d'abord",
+      "largest": "Plus grands d'abord",
+      "smallest": "Plus petits d'abord"
+    },
+    "newFolder": {
+      "placeholder": "Nom du dossier",
+      "ariaLabel": "Nom du nouveau dossier",
+      "create": "Créer"
+    },
+    "empty": { "title": "Glissez des fichiers ici", "hint": "ou cliquez pour téléverser" },
+    "dropzone": {
+      "regionLabel": "Liste de fichiers et zone de dépôt",
+      "title": "Déposez pour téléverser",
+      "hint": "Relâchez pour ajouter des fichiers à ce dossier"
+    },
+    "upload": {
+      "uploading": "Téléversement…",
+      "uploaded": "Téléversé",
+      "queued": "En attente",
+      "failedTitle": "Échec du téléversement"
+    },
+    "actions": { "cancel": "Annuler", "delete": "Supprimer", "download": "Télécharger" },
+    "delete": {
+      "titleFile": "Supprimer le fichier ?",
+      "titleFolder": "Supprimer le dossier ?",
+      "descriptionFile": "{{name}} sera définitivement supprimé.",
+      "descriptionFolder": "{{name}} et tout son contenu seront définitivement supprimés."
+    },
+    "permission": {
+      "title": "Accès au système de fichiers requis",
+      "description": "Activez la permission Système de fichiers dans la carte Permissions pour parcourir et gérer les fichiers."
+    },
+    "preview": {
+      "kind": "Type",
+      "type": "Type MIME",
+      "size": "Taille",
+      "modified": "Modifié",
+      "path": "Chemin",
+      "format": "Format",
+      "open": "Ouvrir",
+      "copy": "Copier {{label}}",
+      "copied": "{{label}} copié",
+      "audioLabel": "Aperçu audio de {{name}}",
+      "videoLabel": "Aperçu vidéo de {{name}}",
+      "lines": "{{count}} lignes",
+      "noPreview": "Aucun aperçu en ligne disponible",
+      "downloadToInspect": "Télécharger pour inspecter"
+    },
+    "page": {
+      "title": "Explorateur de fichiers",
+      "description": "Parcourez, téléversez et gérez les fichiers dans le répertoire virtuel /data du plugin. Tout accès au système de fichiers passe par la fenêtre de consentement et reste cloisonné au dossier de données du plugin."
+    }
+  },
+  "pages": {
+    "file-browser": {
+      "name": "Explorateur de fichiers"
+    }
   }
 }

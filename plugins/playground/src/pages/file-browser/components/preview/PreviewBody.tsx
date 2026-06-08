@@ -6,6 +6,7 @@ import {
   CodeBlockHeader,
   CodeBlockInfo,
 } from '@brika/sdk/ui-kit';
+import { useLocale } from '@brika/sdk/ui-kit/hooks';
 import { FileQuestion, Music } from '@brika/sdk/ui-kit/icons';
 import { shikiLanguageFor } from '../../lib/file-kind';
 import type { PreviewState } from '../../types';
@@ -13,6 +14,7 @@ import type { PreviewState } from '../../types';
 type Rendered = Exclude<PreviewState, { kind: 'none' }>;
 
 export function PreviewBody({ preview }: Readonly<{ preview: Rendered }>) {
+  const { t } = useLocale();
   if (preview.kind === 'image') {
     return (
       <div className="flex items-center justify-center overflow-hidden rounded-md border border-border/60 bg-checkerboard">
@@ -47,7 +49,7 @@ export function PreviewBody({ preview }: Readonly<{ preview: Rendered }>) {
           controls
           src={preview.url}
           className="w-full"
-          aria-label={`Audio preview for ${preview.name}`}
+          aria-label={t('fileBrowser.preview.audioLabel', { name: preview.name })}
         >
           <track kind="captions" />
         </audio>
@@ -62,7 +64,7 @@ export function PreviewBody({ preview }: Readonly<{ preview: Rendered }>) {
           controls
           src={preview.url}
           className="max-h-80 w-full"
-          aria-label={`Video preview for ${preview.name}`}
+          aria-label={t('fileBrowser.preview.videoLabel', { name: preview.name })}
         >
           <track kind="captions" />
         </video>
@@ -79,7 +81,9 @@ export function PreviewBody({ preview }: Readonly<{ preview: Rendered }>) {
     return (
       <CodeBlock className="max-h-80">
         <CodeBlockHeader>
-          <CodeBlockInfo>{({ lineCount }) => `${lineCount} lines`}</CodeBlockInfo>
+          <CodeBlockInfo>
+            {({ lineCount }) => t('fileBrowser.preview.lines', { count: lineCount })}
+          </CodeBlockInfo>
           <CodeBlockActions>
             <CodeBlockCopyButton />
           </CodeBlockActions>
@@ -91,12 +95,14 @@ export function PreviewBody({ preview }: Readonly<{ preview: Rendered }>) {
     );
   }
 
-  // generic — opaque binary the browser can't show inline.
+  // generic: opaque binary the browser can't show inline.
   return (
     <div className="flex h-72 flex-col items-center justify-center gap-2 rounded-md border border-border/60 border-dashed bg-background/40 text-center">
       <FileQuestion className="size-10 text-muted-foreground/60" />
-      <p className="text-muted-foreground text-xs">No inline preview available</p>
-      <p className="font-mono text-[10px] text-muted-foreground/60">Download to inspect</p>
+      <p className="text-muted-foreground text-xs">{t('fileBrowser.preview.noPreview')}</p>
+      <p className="font-mono text-[10px] text-muted-foreground/60">
+        {t('fileBrowser.preview.downloadToInspect')}
+      </p>
     </div>
   );
 }

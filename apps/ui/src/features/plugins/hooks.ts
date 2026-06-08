@@ -135,3 +135,14 @@ export function usePluginMetrics(uid: string, enabled = true) {
     enabled: enabled && !!uid,
   });
 }
+
+export function usePluginDiskUsage(uid: string) {
+  return useQuery({
+    queryKey: pluginsKeys.diskUsage(uid),
+    queryFn: () => pluginsApi.getDiskUsage(uid),
+    // Server caches scans for ~10s; refetch a touch slower so the card stays
+    // current as files come and go without hammering the scan.
+    refetchInterval: 15_000,
+    enabled: !!uid,
+  });
+}

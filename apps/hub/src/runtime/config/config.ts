@@ -59,6 +59,15 @@ export function derivePublicOrigin(name: string, coordinatorOrigin: string): str
  * path. To bootstrap a hub for tests/CI, call the coordinator's claim API
  * directly and let SecretStore persist the result.
  */
+/** Read a boolean opt-in env var: `1`, `true`, `yes`, `on` (case-insensitive). */
+function isTruthyEnv(raw: string | undefined): boolean {
+  if (!raw) {
+    return false;
+  }
+  const v = raw.trim().toLowerCase();
+  return v === '1' || v === 'true' || v === 'yes' || v === 'on';
+}
+
 function stripTrailingSlashes(input: string): string {
   let end = input.length;
   while (end > 0 && input.codePointAt(end - 1) === 47) {
@@ -110,6 +119,16 @@ export class HubConfig {
    * default — local/dev keep their LAN-only behaviour.
    */
   readonly corsAllowlist: readonly string[];
+  /**
+   * Opt-in (default off): trust *any* RFC1918 / link-local / `.local` origin
+   * for credentialed CORS. Off by default because that reflects every LAN and
+   * mDNS origin (a compromised IoT device, any `*.local` page) cross-origin
+   * with credentials. Loopback is always allowed regardless. Enable with
+   * `BRIKA_CORS_ALLOW_PRIVATE_NETWORK=1` when a separate LAN web app must call
+   * the hub cross-origin. Direct LAN access (browser pointed at the hub's own
+   * IP) is same-origin and unaffected.
+   */
+  readonly corsAllowPrivateNetwork: boolean;
   /** Remote-access (P2P) configuration. */
   readonly remoteAccess: RemoteAccessConfig;
 
@@ -134,6 +153,7 @@ export class HubConfig {
       process.env.BRIKA_CORS_ALLOWLIST,
       configuredCorsAllowlist
     );
+    this.corsAllowPrivateNetwork = isTruthyEnv(process.env.BRIKA_CORS_ALLOW_PRIVATE_NETWORK);
     // Static file serving directory (empty = disabled, used in production Docker)
     this.staticDir = process.env.BRIKA_STATIC_DIR ?? '';
     // Dev-only UI proxy. Set to Vite's dev server (typically
