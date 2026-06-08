@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, test } from 'bun:test';
 import { z } from 'zod';
+import { dynamicDropdown } from '../blocks/schema-types';
 import {
   collectBlock,
   collectSpark,
@@ -101,6 +102,15 @@ describe('zodToPreferences', () => {
     const { preferences, warnings } = zodToPreferences(schema);
     expect(preferences).toEqual([]);
     expect(warnings.some((w) => w.includes('tags'))).toBe(true);
+  });
+
+  test('lowers a dynamicDropdown() field to a dynamic-dropdown entry', () => {
+    const schema = z.object({ device: dynamicDropdown({ label: 'Device' }) });
+    const { preferences, warnings } = zodToPreferences(schema);
+    expect(warnings).toEqual([]);
+    expect(preferences).toEqual([
+      { type: 'dynamic-dropdown', name: 'device', label: 'Device', required: true },
+    ]);
   });
 });
 

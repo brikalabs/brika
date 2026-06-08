@@ -122,4 +122,16 @@ describe('findWorkspaceRoot', () => {
     expect(findWorkspaceRoot({ cwd: deep })).toBe(root);
     expect(findWorkspaceRoot({ cwd: deep, maxDepth: 1 })).toBeUndefined();
   });
+
+  test('keeps climbing past a malformed package.json', async () => {
+    const root = await realpath(await mkdtemp(join(tmpdir(), 'brika-bad-')));
+    tmp.push(root);
+    await writeFile(join(root, 'package.json'), JSON.stringify({ workspaces: ['*'] }));
+    const child = join(root, 'pkg');
+    await mkdir(child, { recursive: true });
+    await writeFile(join(child, 'package.json'), '{ not valid json');
+    // The child's package.json throws on parse: the walk must swallow it and
+    // keep climbing to the real workspace root rather than aborting.
+    expect(findWorkspaceRoot({ cwd: child })).toBe(root);
+  });
 });

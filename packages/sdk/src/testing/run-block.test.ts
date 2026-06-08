@@ -71,4 +71,12 @@ describe('runBlock', () => {
     expect(h.outputs.out?.emitted).toEqual([42]);
     expect(seen).toEqual([42]);
   });
+
+  test('exposes the raw spark sink and tolerates a repeated stop', () => {
+    const h = runBlock(delay, { config: { ms: 1 } });
+    expect(h.sparks.all).toEqual([]); // the unfiltered sink, empty before any emit
+    h.stop();
+    h.stop(); // idempotent: the second stop is a no-op, not a double-uninstall
+    expect(h.sparks.all).toEqual([]);
+  });
 });
