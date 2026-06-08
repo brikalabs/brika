@@ -634,6 +634,48 @@ describe('PluginRegistry', () => {
       expect(result).toHaveLength(1);
       expect(result[0]?.updateAvailable).toBe(false);
     });
+
+    test('reports no update when the registry version is older (locally bumped ahead)', async () => {
+      bun
+        .fs({
+          '/test/home/plugins/package.json': {
+            dependencies: { '@test/plugin': '^0.4.0' },
+          },
+          '/test/home/plugins/node_modules/@test/plugin/package.json': {
+            version: '0.4.0',
+          },
+        })
+        .spawn({ exitCode: 0, stdout: '0.3.1\n' })
+        .apply();
+
+      const result = await registry.checkUpdates();
+
+      expect(result).toHaveLength(1);
+      expect(result[0]).toMatchObject({
+        currentVersion: '0.4.0',
+        latestVersion: '0.3.1',
+        updateAvailable: false,
+      });
+    });
+
+    test('treats an uncomparable registry version as no update', async () => {
+      bun
+        .fs({
+          '/test/home/plugins/package.json': {
+            dependencies: { '@test/plugin': '^1.0.0' },
+          },
+          '/test/home/plugins/node_modules/@test/plugin/package.json': {
+            version: '1.0.0',
+          },
+        })
+        .spawn({ exitCode: 0, stdout: 'not-a-version\n' })
+        .apply();
+
+      const result = await registry.checkUpdates();
+
+      expect(result).toHaveLength(1);
+      expect(result[0]?.updateAvailable).toBe(false);
+    });
   });
 
   describe('syncToConfig', () => {
