@@ -201,7 +201,7 @@ export function encodeMetaHeader(meta: Record<string, unknown>): string {
   const utf8 = new TextEncoder().encode(JSON.stringify(meta));
   let binary = '';
   for (const byte of utf8) {
-    binary += String.fromCharCode(byte);
+    binary += String.fromCodePoint(byte);
   }
   return btoa(binary);
 }

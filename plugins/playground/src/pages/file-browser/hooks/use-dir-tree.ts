@@ -64,7 +64,7 @@ export function useDirTree() {
     async (id: string) => {
       const node = nodes[id];
       // Only fetch if we have not loaded children yet
-      if (!node || node.children !== null) {
+      if (node?.children !== null) {
         return;
       }
       updateNode(id, { loading: true });

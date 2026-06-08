@@ -17,7 +17,7 @@ import {
   type DnsScope,
   dnsLookup as spec,
 } from '@brika/sdk/grants';
-import { classifyIp, type DnsResolver } from '../net/dns-guard';
+import { classifyIp } from '../net/dns-guard';
 import { assertHostAllowed } from '../net/host-allow';
 
 /**

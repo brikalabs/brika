@@ -211,6 +211,7 @@ export class LogStore {
     const { level, source, pluginName, search, startTs, endTs, cursor } = params;
     const limit = Math.min(params.limit ?? 100, 1000);
     const order = params.order ?? "desc";
+    const likePattern = search ? `%${escapeLike(search)}%` : undefined;
 
     const rows = this.db
       .select()
@@ -220,7 +221,7 @@ export class LogStore {
         oneOrMany(logsTable.source, source),
         pluginName ? eq(logsTable.pluginName, pluginName) : undefined,
         search
-          ? sql`${logsTable.message} LIKE ${`%${escapeLike(search)}%`} ESCAPE '\\'`
+          ? sql`${logsTable.message} LIKE ${likePattern} ESCAPE '\\'`
           : undefined,
         startTsFilter(logsTable.ts, startTs),
         endTsFilter(logsTable.ts, endTs),
