@@ -601,8 +601,8 @@ describe('Prelude Blocks', () => {
   function makeBlock(overrides: Partial<RegisterBlockSpec> = {}): RegisterBlockSpec {
     return {
       id: 'timer',
-      inputs: [{ id: 'in', typeName: 'number' }],
-      outputs: [{ id: 'out', typeName: 'string' }],
+      inputs: [{ id: 'in', type: { kind: 'primitive', type: 'number' } }],
+      outputs: [{ id: 'out', type: { kind: 'primitive', type: 'string' } }],
       schema: {},
       ...overrides,
     };

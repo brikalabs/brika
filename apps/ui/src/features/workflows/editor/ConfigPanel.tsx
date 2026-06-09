@@ -30,6 +30,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@brika/clay';
+import { displayType, parsePortType } from '@brika/type-system';
 import type { Node } from '@xyflow/react';
 import {
   ArrowDownToLine,
@@ -887,7 +888,7 @@ function PortTypeBadge({
   colorClasses: PortListProps['colorClasses'];
 }>) {
   const resolvedType = usePortTypeName(nodeId, port.id);
-  const displayType = resolvedType ?? port.typeName ?? 'any';
+  const typeLabel = resolvedType ?? displayType(parsePortType(port));
   return (
     <Badge
       variant="outline"
@@ -897,9 +898,9 @@ function PortTypeBadge({
         colorClasses.badgeBg,
         colorClasses.badgeText
       )}
-      title={displayType}
+      title={typeLabel}
     >
-      {displayType}
+      {typeLabel}
     </Badge>
   );
 }

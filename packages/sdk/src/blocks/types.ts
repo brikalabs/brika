@@ -24,8 +24,6 @@ export interface BlockPort {
   /** Display name for UI */
   name: string;
   direction: PortDirection;
-  /** @deprecated Use `type` (TypeDescriptor) instead */
-  typeName: string;
   /** Structural type descriptor from @brika/type-system (JSON-serializable) */
   type?: Record<string, unknown>;
   /** JSON Schema for this port (undefined for generic/passthrough) */

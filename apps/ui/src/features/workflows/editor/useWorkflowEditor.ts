@@ -3,7 +3,7 @@ import {
   inferTypes,
   isCompatible,
   type PortTypeMap,
-  parseTypeName,
+  parsePortType,
   portKey,
   type TypeDescriptor,
   type TypeResolver,
@@ -196,9 +196,9 @@ export function useWorkflowEditor(
 
       // Use resolved types from inference when available, fall back to declared types
       const outputType =
-        portTypeMap.get(portKey(sourceNode.id, sourcePortId)) ?? parseTypeName(sourcePort.typeName);
+        portTypeMap.get(portKey(sourceNode.id, sourcePortId)) ?? parsePortType(sourcePort);
       const inputType =
-        portTypeMap.get(portKey(targetNode.id, targetPortId)) ?? parseTypeName(targetPort.typeName);
+        portTypeMap.get(portKey(targetNode.id, targetPortId)) ?? parsePortType(targetPort);
 
       return isCompatible(outputType, inputType);
     },
@@ -324,7 +324,6 @@ export function useWorkflowEditor(
               def.outputs.map((p) => ({
                 id: p.id,
                 name: p.name || p.id,
-                typeName: p.typeName || 'generic<T>',
                 type: p.type,
                 dynamic: p.dynamic,
               })),

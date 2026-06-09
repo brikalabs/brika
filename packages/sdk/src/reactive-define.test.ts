@@ -63,7 +63,7 @@ describe('isCompiledReactiveBlock', () => {
           id: 'in',
           name: 'Input',
           direction: 'input',
-          typeName: 'number',
+          type: { kind: 'primitive', type: 'number' },
         },
       ],
       outputs: [
@@ -71,7 +71,7 @@ describe('isCompiledReactiveBlock', () => {
           id: 'out',
           name: 'Output',
           direction: 'output',
-          typeName: 'string',
+          type: { kind: 'primitive', type: 'string' },
         },
       ],
       schema: {
@@ -266,7 +266,7 @@ describe('defineReactiveBlock', () => {
       () => undefined
     );
 
-    expect(block.inputs[0]?.typeName).toBe('generic<T>');
+    expect(block.inputs[0]?.type).toEqual({ kind: 'generic', typeVar: 'T' });
   });
 
   test('creates block with passthrough output that resolves to input type', () => {
@@ -288,8 +288,8 @@ describe('defineReactiveBlock', () => {
       () => undefined
     );
 
-    // Passthrough output should have same typeName as linked input
-    expect(block.outputs[0]?.typeName).toBe(block.inputs[0]?.typeName);
+    // Passthrough output should resolve to the same type as the linked input
+    expect(block.outputs[0]?.type).toEqual(block.inputs[0]?.type);
   });
 
   test('creates block with resolved output', () => {
@@ -309,7 +309,11 @@ describe('defineReactiveBlock', () => {
       () => undefined
     );
 
-    expect(block.outputs[0]?.typeName).toBe('$resolve:spark:sparkType');
+    expect(block.outputs[0]?.type).toEqual({
+      kind: 'resolved',
+      source: 'spark',
+      configField: 'sparkType',
+    });
   });
 
   test('creates block with config schema', () => {
@@ -710,9 +714,9 @@ describe('defineReactiveBlock', () => {
       () => undefined
     );
 
-    // Should still create the block but with __passthrough marker
+    // Should still create the block but with passthrough descriptor
     expect(block.outputs).toHaveLength(1);
-    expect(block.outputs[0]?.typeName).toBe('__passthrough:nonexistent');
+    expect(block.outputs[0]?.type).toEqual({ kind: 'passthrough', sourcePortId: 'nonexistent' });
   });
 
   test('context.context returns self reference', () => {
@@ -882,7 +886,11 @@ describe('defineReactiveBlock', () => {
     );
 
     expect(block.inputs).toHaveLength(1);
-    expect(block.inputs[0]?.typeName).toBe('$resolve:spark:sparkType');
+    expect(block.inputs[0]?.type).toEqual({
+      kind: 'resolved',
+      source: 'spark',
+      configField: 'sparkType',
+    });
   });
 
   test('passthrough output with generic input resolves correctly', () => {
@@ -907,8 +915,8 @@ describe('defineReactiveBlock', () => {
     // Passthrough with generic input stays as passthrough for dynamic inference
     expect(block.inputs).toHaveLength(1);
     expect(block.outputs).toHaveLength(1);
-    expect(block.inputs[0]?.typeName).toBe('generic<T>');
-    expect(block.outputs[0]?.typeName).toBe('__passthrough:in');
+    expect(block.inputs[0]?.type).toEqual({ kind: 'generic', typeVar: 'T' });
+    expect(block.outputs[0]?.type).toEqual({ kind: 'passthrough', sourcePortId: 'in' });
   });
 
   test('handles block with no inputs or outputs', () => {
@@ -1020,7 +1028,7 @@ describe('typeDescriptor generation for complex output schemas', () => {
       },
       () => undefined
     );
-    expect(block.outputs[0]?.typeName).toBe('null');
+    expect(block.outputs[0]?.type).toEqual({ kind: 'primitive', type: 'null' });
   });
 
   test('union output (anyOf) generates union descriptor', () => {
@@ -1036,10 +1044,10 @@ describe('typeDescriptor generation for complex output schemas', () => {
       },
       () => undefined
     );
-    expect(block.outputs[0]?.typeName).toBeDefined();
+    expect(block.outputs[0]?.type).toBeDefined();
   });
 
-  test('enum output generates enum typeName', () => {
+  test('enum output generates enum type', () => {
     const block = defineReactiveBlock(
       {
         id: 'enum-output-block',
@@ -1051,7 +1059,7 @@ describe('typeDescriptor generation for complex output schemas', () => {
       },
       () => undefined
     );
-    expect(block.outputs[0]?.typeName).toBeDefined();
+    expect(block.outputs[0]?.type).toBeDefined();
   });
 
   test('array output with typed elements generates array descriptor', () => {
@@ -1066,7 +1074,10 @@ describe('typeDescriptor generation for complex output schemas', () => {
       },
       () => undefined
     );
-    expect(block.outputs[0]?.typeName).toBe('string[]');
+    expect(block.outputs[0]?.type).toEqual({
+      kind: 'array',
+      element: { kind: 'primitive', type: 'string' },
+    });
   });
 
   test('tuple output generates tuple descriptor', () => {
@@ -1082,7 +1093,7 @@ describe('typeDescriptor generation for complex output schemas', () => {
       },
       () => undefined
     );
-    expect(block.outputs[0]?.typeName).toBeDefined();
+    expect(block.outputs[0]?.type).toBeDefined();
   });
 
   test('record output generates record descriptor', () => {
@@ -1098,7 +1109,7 @@ describe('typeDescriptor generation for complex output schemas', () => {
       },
       () => undefined
     );
-    expect(block.outputs[0]?.typeName).toBeDefined();
+    expect(block.outputs[0]?.type).toBeDefined();
   });
 
   test('object output with required and optional fields', () => {
@@ -1115,7 +1126,7 @@ describe('typeDescriptor generation for complex output schemas', () => {
       },
       () => undefined
     );
-    expect(block.outputs[0]?.typeName).toBeDefined();
+    expect(block.outputs[0]?.type).toBeDefined();
   });
 
   test('literal output generates literal descriptor', () => {
@@ -1131,7 +1142,7 @@ describe('typeDescriptor generation for complex output schemas', () => {
       },
       () => undefined
     );
-    expect(block.outputs[0]?.typeName).toBeDefined();
+    expect(block.outputs[0]?.type).toBeDefined();
   });
 
   test('getTypeDescriptor falls back to unknown on zodToJsonSchema error', () => {
@@ -1188,7 +1199,7 @@ describe('typeDescriptor generation for complex output schemas', () => {
       },
       () => undefined
     );
-    expect(block.outputs[0]?.typeName).toBeDefined();
+    expect(block.outputs[0]?.type).toBeDefined();
   });
 
   test('tuple output generates tuple-based descriptor (prefixItems path)', () => {
@@ -1204,7 +1215,7 @@ describe('typeDescriptor generation for complex output schemas', () => {
       },
       () => undefined
     );
-    expect(block.outputs[0]?.typeName).toBeDefined();
+    expect(block.outputs[0]?.type).toBeDefined();
   });
 
   test('record output generates record descriptor with additionalProperties', () => {
@@ -1220,6 +1231,6 @@ describe('typeDescriptor generation for complex output schemas', () => {
       },
       () => undefined
     );
-    expect(block.outputs[0]?.typeName).toBeDefined();
+    expect(block.outputs[0]?.type).toBeDefined();
   });
 });

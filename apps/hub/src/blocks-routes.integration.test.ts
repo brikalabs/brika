@@ -15,7 +15,7 @@ const SPARK_RECEIVER: RegisteredBlock = {
   name: 'Spark Receiver',
   category: 'trigger',
   inputs: [],
-  outputs: [{ id: 'out', name: 'Payload', direction: 'output', typeName: 'unknown' }],
+  outputs: [{ id: 'out', name: 'Payload', direction: 'output', type: { kind: 'unknown' } }],
   schema: { type: 'object', properties: {} },
 };
 
@@ -25,7 +25,7 @@ const PLAIN_BLOCK: RegisteredBlock = {
   pluginId: '@brika/blocks-builtin',
   name: 'Log',
   category: 'action',
-  inputs: [{ id: 'in', name: 'In', direction: 'input', typeName: 'unknown' }],
+  inputs: [{ id: 'in', name: 'In', direction: 'input', type: { kind: 'unknown' } }],
   outputs: [],
   schema: { type: 'object', properties: {} },
 };
