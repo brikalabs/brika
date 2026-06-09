@@ -1,23 +1,14 @@
-import { defineBlock, getPreferences, input, type Json, log, output, z } from '@brika/sdk';
+import { defineBlock, input, type Json, log, output, z } from '@brika/sdk';
+import {
+  type ChatMessage,
+  type ChatTool,
+  getProvider,
+  providerConfig,
+  type ToolCall,
+  type ToolResult,
+} from '../providers';
 
-const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages';
-const ANTHROPIC_VERSION = '2023-06-01';
-
-// ── Json navigation (curated z lacks z.json; JSON.parse widens any -> Json) ──
-function parseJson(text: string): Json {
-  return JSON.parse(text);
-}
-function jsonObj(value: Json | undefined): Record<string, Json> | null {
-  return value !== null && typeof value === 'object' && !Array.isArray(value) ? value : null;
-}
-function jsonArr(value: Json | undefined): Json[] {
-  return Array.isArray(value) ? value : [];
-}
-function jsonStr(value: Json | undefined): string | undefined {
-  return typeof value === 'string' ? value : undefined;
-}
-
-/** Anthropic tool names must match ^[a-zA-Z0-9_-]{1,64}$; qualified ids don't. */
+/** Provider tool names must match ^[a-zA-Z0-9_-]{1,64}$; qualified ids don't. */
 function toToolName(id: string): string {
   return id.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 64);
 }
@@ -28,16 +19,18 @@ function stringInput(data: unknown): string {
 }
 
 type ToolInfo = { id: string; description?: string; inputSchema?: Json };
-type ToolResult = { ok: boolean; content?: string; data?: Json };
-type CallTool = (tool: string, args: Record<string, Json>) => Promise<ToolResult>;
+type CallTool = (
+  tool: string,
+  args: Record<string, Json>
+) => Promise<{ ok: boolean; content?: string; data?: Json }>;
 
-/** Build the Anthropic `tools[]` from the registry, scoped to the allowlist. */
+/** Build the provider tool set from the registry, scoped to the allowlist. */
 function buildToolSet(
   registered: ToolInfo[],
   allow: Set<string>
-): { tools: Json[]; nameToId: Map<string, string> } {
+): { tools: ChatTool[]; nameToId: Map<string, string> } {
   const nameToId = new Map<string, string>();
-  const tools: Json[] = [];
+  const tools: ChatTool[] = [];
   for (const tool of registered) {
     if (allow.size > 0 && !allow.has(tool.id)) {
       continue;
@@ -47,80 +40,51 @@ function buildToolSet(
     tools.push({
       name,
       description: tool.description ?? '',
-      input_schema: tool.inputSchema ?? { type: 'object', properties: {} },
+      inputSchema: tool.inputSchema ?? { type: 'object', properties: {} },
     });
   }
   return { tools, nameToId };
 }
 
-/** Concatenate the text of every `text` content block. */
-function textOf(content: Json[]): string {
-  return content
-    .map((block) => {
-      const b = jsonObj(block);
-      return b && jsonStr(b.type) === 'text' ? (jsonStr(b.text) ?? '') : '';
-    })
-    .join('');
-}
-
-/** Execute each `tool_use` block via ctx.callTool, returning the `tool_result` turns. */
-async function executeToolUses(
-  content: Json[],
+/** Execute each requested tool call via ctx.callTool, returning normalized results. */
+async function runToolCalls(
+  calls: ToolCall[],
   nameToId: Map<string, string>,
   callTool: CallTool,
   onToolCall: (tool: string, result: string) => void
-): Promise<Json[]> {
-  const results: Json[] = [];
-  for (const block of content) {
-    const b = jsonObj(block);
-    if (!b || jsonStr(b.type) !== 'tool_use') {
-      continue;
-    }
-    const qualifiedId = nameToId.get(jsonStr(b.name) ?? '');
-    let resultText: string;
+): Promise<ToolResult[]> {
+  const results: ToolResult[] = [];
+  for (const call of calls) {
+    const qualifiedId = nameToId.get(call.name);
+    let content: string;
     if (qualifiedId) {
-      const res = await callTool(qualifiedId, jsonObj(b.input) ?? {});
-      resultText = res.ok
+      const res = await callTool(qualifiedId, call.args);
+      content = res.ok
         ? (res.content ?? JSON.stringify(res.data ?? null))
         : (res.content ?? 'Tool call failed');
-      onToolCall(qualifiedId, resultText);
+      onToolCall(qualifiedId, content);
     } else {
-      resultText = `Unknown tool: ${jsonStr(b.name) ?? ''}`;
+      content = `Unknown tool: ${call.name}`;
     }
-    results.push({ type: 'tool_result', tool_use_id: jsonStr(b.id) ?? '', content: resultText });
+    results.push({ id: call.id, content });
   }
   return results;
-}
-
-async function callClaude(apiKey: string, body: Record<string, Json | undefined>): Promise<Json> {
-  const res = await fetch(ANTHROPIC_URL, {
-    method: 'POST',
-    headers: {
-      'x-api-key': apiKey,
-      'anthropic-version': ANTHROPIC_VERSION,
-      'content-type': 'application/json',
-    },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) {
-    throw new Error(`Claude request failed (${res.status}): ${await res.text()}`);
-  }
-  return parseJson(await res.text());
 }
 
 /**
  * AI Agent: a long-lived block that, on each prompt, runs a bounded
  * reason -> call-tool -> observe loop to completion (a run-to-completion island
  * in the reactive stream). It enumerates the hub tool registry via ctx.listTools
- * (scoped by the `tools` allowlist), gives them to Claude, executes each
- * `tool_use` via ctx.callTool, and loops until Claude answers or hits
- * `maxIterations`. The API key is the plugin-global `apiKey` preference.
+ * (scoped by the `tools` allowlist), gives them to the configured provider,
+ * executes each requested tool call via ctx.callTool, and loops until the model
+ * answers or hits `maxIterations`. Provider-agnostic (Anthropic or any
+ * OpenAI-compatible endpoint); keys come from the plugin-global preferences.
  */
 export const agentBlock = defineBlock({
   id: 'agent',
   meta: {
     name: 'AI Agent',
-    description: 'Claude agent that reasons and calls tools to answer each prompt',
+    description: 'LLM agent that reasons and calls tools to answer each prompt',
     category: 'action',
     icon: 'bot',
     color: '#d97757',
@@ -140,7 +104,11 @@ export const agentBlock = defineBlock({
       .describe(
         'Goal sent to the agent. Reference incoming data with {{ inputs.in }} or {{ inputs.in.field }}. Leave empty to use a string piped into the Input.'
       ),
-    model: z.enum(['claude-opus-4-8', 'claude-sonnet-4-6']).default('claude-opus-4-8'),
+    ...providerConfig,
+    model: z
+      .string()
+      .default('claude-opus-4-8')
+      .describe('Model id (provider-specific, e.g. claude-opus-4-8 or gpt-4o)'),
     systemPrompt: z.string().optional().describe('System prompt defining the agent persona/rules'),
     effort: z.enum(['low', 'medium', 'high']).default('high'),
     maxTokens: z.number().int().min(1).max(16000).default(4096),
@@ -152,8 +120,6 @@ export const agentBlock = defineBlock({
   }),
   run: ({ inputs, outputs, config, callTool, listTools }) => {
     inputs.in.on(async (data) => {
-      // `config.prompt` resolves against the live input scope when templated;
-      // an empty field falls back to a string piped into the Input.
       const templated = config.prompt?.trim();
       const prompt = templated && templated.length > 0 ? templated : stringInput(data);
       if (!prompt) {
@@ -163,42 +129,31 @@ export const agentBlock = defineBlock({
         return;
       }
 
-      const { apiKey } = getPreferences<{ apiKey?: string }>();
-      if (!apiKey) {
-        outputs.error.emit({
-          message: 'Set the Anthropic API key in the AI Agent plugin settings',
-        });
-        return;
-      }
-
       try {
+        const provider = getProvider({ provider: config.provider, baseUrl: config.baseUrl });
         const { tools, nameToId } = buildToolSet(await listTools(), new Set(config.tools));
-        const messages: Json[] = [{ role: 'user', content: prompt }];
+        const history: ChatMessage[] = [{ role: 'user', text: prompt }];
 
         for (let i = 0; i < config.maxIterations; i++) {
-          const data = await callClaude(apiKey, {
-            model: config.model,
-            max_tokens: config.maxTokens,
-            thinking: { type: 'adaptive' },
-            output_config: { effort: config.effort },
+          const turn = await provider.chat({
             system: config.systemPrompt,
-            messages,
-            tools: tools.length > 0 ? tools : undefined,
+            messages: history,
+            tools,
+            model: config.model,
+            maxTokens: config.maxTokens,
+            effort: config.effort,
           });
+          history.push({ role: 'assistant', text: turn.text, toolCalls: turn.toolCalls });
 
-          const content = jsonArr(jsonObj(data)?.content);
-          // Echo the assistant turn verbatim so tool_use blocks round-trip.
-          messages.push({ role: 'assistant', content });
-
-          if (jsonStr(jsonObj(data)?.stop_reason) !== 'tool_use') {
-            outputs.reply.emit(textOf(content));
+          if (turn.toolCalls.length === 0) {
+            outputs.reply.emit(turn.text);
             return;
           }
 
-          const results = await executeToolUses(content, nameToId, callTool, (tool, result) =>
+          const results = await runToolCalls(turn.toolCalls, nameToId, callTool, (tool, result) =>
             outputs.toolCall.emit({ tool, result })
           );
-          messages.push({ role: 'user', content: results });
+          history.push({ role: 'tool', results });
         }
 
         outputs.error.emit({
