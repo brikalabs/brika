@@ -119,6 +119,8 @@ interface Variable {
   name: string;
   source: string;
   type: string;
+  /** Short rendering of the value last seen on this path, when one has flowed. */
+  preview?: string;
 }
 
 interface SchemaProperty {
@@ -244,11 +246,18 @@ function ExpressionField({
               >
                 <button
                   type="button"
-                  className="flex flex-1 items-center gap-2 text-left"
+                  className="flex min-w-0 flex-1 flex-col gap-0.5 text-left"
                   onClick={() => insertVariable(v.name)}
                 >
-                  <code className="font-mono text-primary text-xs">{`{{ ${v.name} }}`}</code>
-                  <span className="text-muted-foreground text-xs">{v.type}</span>
+                  <span className="flex items-center gap-2">
+                    <code className="font-mono text-primary text-xs">{`{{ ${v.name} }}`}</code>
+                    <span className="text-muted-foreground text-xs">{v.type}</span>
+                  </span>
+                  {v.preview !== undefined && (
+                    <span className="truncate font-mono text-[10px] text-muted-foreground">
+                      {v.preview}
+                    </span>
+                  )}
                 </button>
                 <button
                   type="button"
@@ -1058,17 +1067,24 @@ function VariablesReference({ variables }: Readonly<VariablesReferenceProps>) {
             <button
               type="button"
               key={v.name}
-              className="flex w-full cursor-pointer items-center justify-between rounded-md border-none bg-muted/50 p-2 text-left font-inherit text-xs transition-colors hover:bg-muted"
+              className="flex w-full cursor-pointer flex-col gap-1 rounded-md border-none bg-muted/50 p-2 text-left font-inherit text-xs transition-colors hover:bg-muted"
               onClick={() => {
                 capture('workflow.config_variable_copied', { surface: 'reference_list' });
                 navigator.clipboard.writeText(`{{ ${v.name} }}`);
               }}
               title={t('workflows:editor.panels.clickToCopy')}
             >
-              <code className="font-mono text-primary">{`{{ ${v.name} }}`}</code>
-              <Badge variant="outline" className="h-5 text-[10px]">
-                {v.type}
-              </Badge>
+              <div className="flex w-full items-center justify-between gap-2">
+                <code className="font-mono text-primary">{`{{ ${v.name} }}`}</code>
+                <Badge variant="outline" className="h-5 text-[10px]">
+                  {v.type}
+                </Badge>
+              </div>
+              {v.preview !== undefined && (
+                <span className="truncate font-mono text-[10px] text-muted-foreground">
+                  {v.preview}
+                </span>
+              )}
             </button>
           ))}
         </div>

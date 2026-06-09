@@ -162,6 +162,15 @@
       "icon": "zap",
       "color": "#f59e0b",
       "view": true
+    },
+    {
+      "id": "button",
+      "name": "Button",
+      "description": "Manually trigger the workflow with a button click",
+      "category": "trigger",
+      "icon": "mouse-pointer-click",
+      "color": "#8b5cf6",
+      "nodeView": true
     }
   ],
   "dependencies": {

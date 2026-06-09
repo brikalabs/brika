@@ -55,6 +55,7 @@ import { installFsRuntime } from './proxies/fs-runtime';
 import { setupRoutes } from './routes';
 import { setupSecrets } from './secrets';
 import { setupSparks } from './sparks';
+import { setupTools } from './tools';
 
 // ---- Manifest ----
 
@@ -158,6 +159,7 @@ function capture(name: string, props?: Record<string, Json>, distinctId?: string
 
 const lifecycle = setupLifecycle(channel, log, vectorReady);
 const actions = setupActions(channel);
+const tools = setupTools(channel);
 const routes = setupRoutes(channel);
 const sparks = setupSparks(channel, log, declaredSparks);
 const blocks = setupBlocks(channel, log, declaredBlocks);
@@ -271,6 +273,9 @@ const bridge = {
 
   // Actions
   ...actions,
+
+  // Tools
+  ...tools,
 
   // Routes
   ...routes,

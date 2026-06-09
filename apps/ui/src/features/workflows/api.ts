@@ -39,6 +39,25 @@ export interface WorkflowRun {
   startedAt: number;
   finishedAt?: number;
   error?: string;
+  triggerBlockId?: string;
+  eventCount?: number;
+}
+
+export interface RunEvent {
+  id: number;
+  ts: number;
+  kind: string;
+  blockId?: string;
+  port?: string;
+  data?: unknown;
+  level?: string;
+  message?: string;
+  causationId?: string;
+}
+
+export interface WorkflowRunDetail {
+  run: WorkflowRun;
+  events: RunEvent[];
 }
 
 export interface BlockDefinition {
@@ -85,10 +104,19 @@ export async function fetchBlockTypes(): Promise<BlockDefinition[]> {
   return res.json();
 }
 
-export async function fetchWorkflowRuns(): Promise<WorkflowRun[]> {
-  const res = await fetch(`${API_BASE}/workflows/runs`);
+export async function fetchWorkflowRuns(workflowId?: string): Promise<WorkflowRun[]> {
+  const query = workflowId ? `?workflowId=${encodeURIComponent(workflowId)}` : '';
+  const res = await fetch(`${API_BASE}/workflows/runs${query}`);
   if (!res.ok) {
     return [];
+  }
+  return res.json();
+}
+
+export async function fetchWorkflowRun(runId: string): Promise<WorkflowRunDetail | null> {
+  const res = await fetch(`${API_BASE}/workflows/runs/${encodeURIComponent(runId)}`);
+  if (!res.ok) {
+    return null;
   }
   return res.json();
 }

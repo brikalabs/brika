@@ -8,3 +8,4 @@ export { routes } from './routes';
 export { sparks } from './sparks';
 export { type Signal, trapSignals } from './trap-signals';
 export { updates } from './updates';
+export { workflowRuns } from './workflow-runs';

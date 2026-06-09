@@ -16,6 +16,7 @@ import { ModuleCompiler } from '@/runtime/modules';
 import { MODULE_KINDS, resolveModuleUrl } from '@/runtime/modules/module-kinds';
 import { SecretStore } from '@/runtime/secrets/secret-store';
 import { type PluginStateWithMetadata, StateStore } from '@/runtime/state/state-store';
+import { ToolRegistry } from '@/runtime/tools/tool-registry';
 import { pluginFsDirs } from './fs-dirs';
 import { buildHubGrants } from './grants/registry-factory';
 import { buildVectorWithUserConsent, familiesForManifestGrants } from './grants/vector';
@@ -133,6 +134,7 @@ export class PluginLifecycle {
   readonly #events = inject(EventSystem);
   readonly #i18n = inject(I18nService);
   readonly #eventHandler = inject(PluginEventHandler);
+  readonly #tools = inject(ToolRegistry);
   readonly #pluginConfig = inject(PluginConfigService);
   readonly #metrics = inject(MetricsStore);
   readonly #moduleCompiler = inject(ModuleCompiler);
@@ -516,6 +518,13 @@ export class PluginLifecycle {
         onBrickDataPush: (brickTypeId, data) =>
           this.#eventHandler.pushBrickData(metadata.name, brickTypeId, data),
         onRoute: (method, path) => this.#eventHandler.registerRoute(metadata.name, method, path),
+        onRegisterTool: (tool, process) =>
+          this.#tools.register(metadata.name, tool, (args, ctx) =>
+            process.callPluginTool(tool.id, args, ctx)
+          ),
+        onInvokeTool: (tool, args) =>
+          this.#tools.call(tool, args, { traceId: crypto.randomUUID(), source: 'automation' }),
+        onListTools: () => this.#tools.list(),
         onUpdatePreference: async (key, value) => {
           const current = await this.#pluginConfig.getConfig(metadata.name);
           await this.#pluginConfig.setConfig(metadata.name, {
@@ -748,6 +757,7 @@ export class PluginLifecycle {
     );
     this.#state.setHealth(process.name, 'crashed', PluginErrors.heartbeatTimeout());
     this.#eventHandler.onPluginDisconnected(process.name);
+    this.#tools.unregisterPlugin(process.name);
     this.unload(process.name, true)
       .then(() => this.#attemptAutoRestart(process.name, 'heartbeat timeout'))
       .catch((e) =>
@@ -818,6 +828,7 @@ export class PluginLifecycle {
     );
     this.#state.setHealth(name, 'crashed', PluginErrors.crashed(reason));
     this.#eventHandler.onPluginDisconnected(name);
+    this.#tools.unregisterPlugin(name);
 
     this.#events.dispatch(
       PluginActions.error.create(

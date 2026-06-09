@@ -87,3 +87,25 @@ export const callTool = rpc(
   }),
   ToolResult
 );
+
+/**
+ * A block (running in a plugin) asks the hub to invoke a tool by id. The hub
+ * resolves the owning plugin via the global registry and dispatches `callTool`
+ * to it. This is the block-side leg of the round-trip (the `callTool` rpc above
+ * is the hub -> owning-plugin leg).
+ */
+export const invokeTool = rpc(
+  'invokeTool',
+  z.object({
+    tool: z.string(),
+    args: JsonRecord,
+  }),
+  ToolResult
+);
+
+/** A block enumerates the globally-registered tools (to give them to a model). */
+export const listTools = rpc(
+  'listTools',
+  z.object({}),
+  z.object({ tools: z.array(ToolDefinition) })
+);

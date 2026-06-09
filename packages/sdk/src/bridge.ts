@@ -90,6 +90,21 @@ export interface PreludeBridge {
   // -- Actions --
   registerAction(id: string, handler: (input?: Json) => Json | Promise<Json>): void;
 
+  // -- Tools (AI-discoverable, globally addressed by id) --
+  registerTool(
+    tool: {
+      id: string;
+      description?: string;
+      icon?: string;
+      color?: string;
+      inputSchema?: unknown;
+    },
+    handler: (
+      args: Record<string, Json>,
+      ctx: { traceId: string; source: string }
+    ) => Json | Promise<Json>
+  ): void;
+
   // -- Routes --
   registerRoute(
     method: RouteMethod,
@@ -108,6 +123,11 @@ export interface PreludeBridge {
       workflowId: string;
       config: Record<string, unknown>;
       emit(portId: string, data: unknown): void;
+      callTool(
+        tool: string,
+        args: Record<string, Json>
+      ): Promise<{ ok: boolean; content?: string; data?: Json }>;
+      listTools(): Promise<Array<{ id: string; description?: string; inputSchema?: Json }>>;
     }) => { pushInput(portId: string, data: unknown): void; stop(): void };
   }): { id: string };
 

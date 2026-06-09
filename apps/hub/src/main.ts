@@ -21,6 +21,7 @@ import {
   trapSignals,
   updates,
   WorkflowsLoader,
+  workflowRuns,
 } from './runtime/bootstrap';
 import { ApiServer } from './runtime/http/api-server';
 import { allRoutes } from './runtime/http/routes';
@@ -83,6 +84,9 @@ export async function startHub(): Promise<void> {
       })
     )
     .use(sparks())
+    // Subscribe run persistence before any loader so workflows that auto-start
+    // on boot have their first run recorded.
+    .use(workflowRuns())
     .use(routes(allRoutes))
     // Migrations run before any loader so filesystem reshapes
     // (plugin-data prune, future secrets re-encryption) don't race

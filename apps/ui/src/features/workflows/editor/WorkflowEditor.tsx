@@ -39,6 +39,7 @@ import { ConfigPanel } from './ConfigPanel';
 import { DebugPanel } from './DebugPanel';
 import { useWorkflowEditor } from './useWorkflowEditor';
 import { WorkflowTypeContext } from './WorkflowTypeContext';
+import type { BlockStatus } from './workflow-conversion';
 
 export interface RegisteredSpark {
   type: string;
@@ -76,13 +77,43 @@ function pingHandle(blockId: string, portId: string) {
   }
 }
 
-// Process new debug events: ping the relevant port handles and feed the latest
-// emitted value into node-body views (useBlockData) for live previews.
+// Drive a block's status ring from a run lifecycle / emit / error event.
+// block.start -> running (received input), block.emit -> completed (produced
+// output), block.error -> error. States persist until the block next runs.
+function applyBlockStatus(
+  event: DebugEvent,
+  setBlockStatus: (blockId: string, status: BlockStatus, output?: unknown) => void
+) {
+  if (!event.blockId) {
+    return;
+  }
+  if (event.type === 'block.start') {
+    setBlockStatus(event.blockId, 'running');
+  } else if (event.type === 'block.error') {
+    setBlockStatus(event.blockId, 'error', event.data);
+  } else if (event.type === 'block.emit') {
+    setBlockStatus(event.blockId, 'completed', event.data);
+  }
+}
+
+// Ping the emitting output handle and every connected downstream input handle.
+function pingEventPorts(blockId: string, port: string, edges: Edge[]) {
+  pingHandle(blockId, port);
+  for (const edge of edges) {
+    if (edge.source === blockId && edge.sourceHandle === port) {
+      pingHandle(edge.target, edge.targetHandle || 'in');
+    }
+  }
+}
+
+// Process new debug events: drive status rings, feed the latest emitted value
+// into node-body views (useBlockData), and ping the relevant port handles.
 function processNewEvents(
   events: DebugEvent[],
   edges: Edge[],
   lastProcessedTimestamp: React.RefObject<number>,
-  setBlockLiveOutput: (blockId: string, output: unknown) => void
+  setBlockLiveOutput: (blockId: string, output: unknown) => void,
+  setBlockStatus: (blockId: string, status: BlockStatus, output?: unknown) => void
 ) {
   const newEvents = events.filter((e) => e.timestamp > lastProcessedTimestamp.current);
 
@@ -91,22 +122,15 @@ function processNewEvents(
   }
 
   for (const event of newEvents) {
+    applyBlockStatus(event, setBlockStatus);
+
     if (event.type !== 'block.emit' || !event.blockId || !event.port) {
       continue;
     }
-    // Surface the emitted value to the block's node-body view.
     if (event.data !== undefined) {
       setBlockLiveOutput(event.blockId, event.data);
     }
-    // Ping output port
-    pingHandle(event.blockId, event.port);
-
-    // Ping connected input ports
-    for (const edge of edges) {
-      if (edge.source === event.blockId && edge.sourceHandle === event.port) {
-        pingHandle(edge.target, edge.targetHandle || 'in');
-      }
-    }
+    pingEventPorts(event.blockId, event.port, edges);
   }
 }
 
@@ -220,6 +244,7 @@ interface ConfigSidePanelProps {
     name: string;
     source: string;
     type: string;
+    preview?: string;
   }>;
   blockSchema: BlockDefinition['schema'] | undefined;
   viewModuleUrl: string | undefined;
@@ -621,6 +646,7 @@ function WorkflowEditorWithBlocks({
     portTypeMap,
     blockSchemaMap,
     setBlockLiveOutput,
+    setBlockStatus,
   } = editor;
 
   // Connect to debug stream for port ping animations
@@ -632,10 +658,10 @@ function WorkflowEditorWithBlocks({
   // Track last processed event timestamp to handle array truncation
   const lastProcessedTimestamp = useRef(0);
 
-  // Trigger port pings + live node-view updates when emit events come in
+  // Trigger port pings, live node-view updates, and status rings on new events
   useEffect(() => {
-    processNewEvents(events, edges, lastProcessedTimestamp, setBlockLiveOutput);
-  }, [events, edges, setBlockLiveOutput]);
+    processNewEvents(events, edges, lastProcessedTimestamp, setBlockLiveOutput, setBlockStatus);
+  }, [events, edges, setBlockLiveOutput, setBlockStatus]);
 
   // Handle drop from toolbar
   const onDragOver = useCallback((event: React.DragEvent) => {

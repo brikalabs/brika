@@ -106,7 +106,7 @@ export const condition = defineBlock({
   }),
   run: ({ inputs, outputs, config }) => {
     inputs.in.on((data) => {
-      const fieldValue = resolveFieldValue(data, config.field);
+      const fieldValue = getFieldValue(data, config.field);
       const result = evaluate(fieldValue, config.operator, config.value);
       log.debug(
         `Condition: ${config.field} ${config.operator} ${JSON.stringify(config.value)} = ${result}`
@@ -137,24 +137,6 @@ function getFieldValue(data: unknown, path: string): unknown {
     current = (current as Record<string, unknown>)[part];
   }
   return current;
-}
-
-/**
- * Resolve a field value from data, supporting:
- * - Plain dot paths: "count", "data.status"
- * - Expression syntax: "{{ inputs.in.count }}" → resolves "count" on data
- */
-// Path is a dot-separated identifier chain (word chars + dots only).
-// The character class is disjoint from `\s` and `{}`, so there is no
-// overlap with the surrounding whitespace or braces -- linear-time
-// match, no backtracking ambiguity (Sonar S5852, super-linear ReDoS).
-const FIELD_EXPRESSION_RE = /^\{\{\s*inputs\.\w+\.([\w.]+)\s*\}\}$/;
-
-function resolveFieldValue(data: unknown, field: string): unknown {
-  // Strip {{ }} expression wrapper and resolve the path
-  const match = FIELD_EXPRESSION_RE.exec(field.trim());
-  const path = match ? match[1] : field;
-  return getFieldValue(data, path);
 }
 
 function evaluate(fieldValue: unknown, operator: string, compareValue: unknown): boolean {
@@ -204,7 +186,7 @@ export const switchBlock = defineBlock({
   }),
   run: ({ inputs, config, emit }) => {
     inputs.in.on((data) => {
-      const value = String(resolveFieldValue(data, config.field));
+      const value = String(getFieldValue(data, config.field));
       const index = (config.cases ?? []).findIndex((c) => c.value === value);
       const target = index >= 0 ? `case-${index}` : 'default';
       log.debug(`Switch value: ${value} -> ${target}`);
@@ -307,47 +289,6 @@ export const transform = defineBlock({
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Expression Interpolation
-// ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * Interpolate {{inputs.portId.field}} expressions in a template string.
- *
- * @param template Template string with {{...}} placeholders
- * @param context Object containing available data: { inputs: { portId: data }, config: {...} }
- */
-function interpolate(
-  template: string,
-  context: { inputs: Record<string, unknown>; config: Record<string, unknown> }
-): string {
-  return template.replaceAll(/\{\{([^{}]+)}}/g, (_, expr: string) => {
-    const path = expr.trim().split('.');
-    let value: unknown = context;
-
-    for (const key of path) {
-      if (value === null || value === undefined) {
-        return '';
-      }
-      if (typeof value !== 'object') {
-        return '';
-      }
-      value = (value as Record<string, unknown>)[key];
-    }
-
-    if (value === undefined || value === null) {
-      return '';
-    }
-    if (typeof value === 'object') {
-      return JSON.stringify(value);
-    }
-    if (typeof value === 'string') {
-      return value;
-    }
-    return JSON.stringify(value);
-  });
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
 // Log Block - Log a message
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -368,14 +309,10 @@ export const logBlock = defineBlock({
   }),
   run: ({ inputs, outputs, config }) => {
     inputs.in.on((data) => {
-      const c = {
-        inputs: { in: data },
-        config,
-      };
-
-      const message = config.message ? interpolate(config.message, c) : JSON.stringify(data);
-
-      log[config.level](message);
+      // `config.message` is resolved by the SDK runtime: any `{{ inputs.in.field }}`
+      // expression is already substituted by the time we read it here.
+      const message = config.message;
+      log[config.level](message || JSON.stringify(data));
       outputs.out.emit(data);
     });
   },
@@ -498,6 +435,34 @@ export const sparkReceiver = defineBlock({
     start(subscribeSpark(config.sparkType))
       .pipe(map((event) => event.payload))
       .to(outputs.out);
+  },
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Button Block - Manual trigger (custom node view with a button)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Button: a manual trigger. The node-body view renders a button that POSTs to
+ * `/api/workflows/inject` for this block's `press` port, so a click fires the
+ * workflow (the inject opens a recorded run). The `press` input also accepts a
+ * wired upstream signal, so the same block doubles as a programmable trigger.
+ */
+export const button = defineBlock({
+  id: 'button',
+  inputs: {
+    press: input(z.generic(), { name: 'Press' }),
+  },
+  outputs: {
+    out: output(z.object({ ts: z.number() }), { name: 'Out' }),
+  },
+  config: z.object({
+    label: z.string().default('Trigger').describe('Button label shown on the node'),
+  }),
+  run: ({ inputs, outputs }) => {
+    inputs.press.on(() => {
+      outputs.out.emit({ ts: Date.now() });
+    });
   },
 });
 

@@ -118,6 +118,20 @@ export type OutputEmitters<O extends Record<string, OutputDef<OutputSchema>>> = 
   readonly [K in keyof O]: Emitter<OutputType<O[K]>>;
 };
 
+/** Result of a `ctx.callTool` invocation (mirrors the hub `ToolResult`). */
+export interface ToolCallResult {
+  ok: boolean;
+  content?: string;
+  data?: Json;
+}
+
+/** A registered tool as seen by a block via `ctx.listTools` (qualified id). */
+export interface ToolInfo {
+  id: string;
+  description?: string;
+  inputSchema?: Json;
+}
+
 /**
  * Typed block context with reactive inputs/outputs.
  */
@@ -155,6 +169,18 @@ export interface BlockContext<
    * Start a flow from a value, source, or factory.
    */
   start<T>(input: T | Source<T> | Factory<T>): Flow<T>;
+
+  /**
+   * Call a hub-registered tool by id and await its result. The tool may be
+   * provided by any plugin (the registry is global). Args and result are JSON.
+   */
+  callTool(tool: string, args: Record<string, Json>): Promise<ToolCallResult>;
+
+  /**
+   * Enumerate every tool registered across all plugins (qualified ids +
+   * descriptions + input schemas), e.g. to hand them to a model as tools.
+   */
+  listTools(): Promise<ToolInfo[]>;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

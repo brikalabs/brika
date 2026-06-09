@@ -11,13 +11,17 @@
  */
 
 import type { Channel, Json } from '@brika/ipc';
-import type { LogLevelType } from '@brika/ipc/contract';
 import {
   blockEmit,
+  invokeTool,
+  type LogLevelType,
+  listTools as listToolsRpc,
   pushInput as pushInputMsg,
   registerBlock as registerBlockMsg,
   startBlock as startBlockRpc,
   stopBlock as stopBlockMsg,
+  type ToolDefinition,
+  type ToolResult,
 } from '@brika/ipc/contract';
 
 // ---- Structural types (no @brika/flow import needed) ----
@@ -27,6 +31,8 @@ interface BlockRuntimeContext {
   workflowId: string;
   config: Record<string, unknown>;
   emit(portId: string, data: unknown): void;
+  callTool(tool: string, args: Record<string, Json>): Promise<ToolResult>;
+  listTools(): Promise<ToolDefinition[]>;
 }
 
 interface BlockInstance {
@@ -93,6 +99,8 @@ export function setupBlocks(
         emit: (port, data) => {
           channel.send(blockEmit, { instanceId, port, data: data as Json });
         },
+        callTool: (tool, args) => channel.call(invokeTool, { tool, args }, 0),
+        listTools: async () => (await channel.call(listToolsRpc, {}, 0)).tools,
       });
       blockInstances.set(instanceId, instance);
       return { ok: true };

@@ -28,6 +28,7 @@
 * [Manifest Reference](plugins/manifest.md)
 * [Reactive Blocks](plugins/reactive-blocks.md)
 * [Reactive Streams](plugins/reactive-streams.md)
+* [Config Variables](plugins/variables.md)
 * [Bricks](plugins/bricks.md)
 * [Pages](plugins/pages.md)
 * [Actions](plugins/actions.md)
