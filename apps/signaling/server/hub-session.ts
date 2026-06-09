@@ -16,7 +16,6 @@ import {
   CloudflareIceServerProvider,
   type HubSessionAttachment,
   HubSessionState,
-  type WsLike,
 } from '@brika/remote-access-protocol';
 import type { Env } from './env';
 import { clientIpFromRequest } from './rate-limit';

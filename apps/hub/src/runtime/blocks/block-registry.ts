@@ -6,7 +6,7 @@
 
 import { inject, singleton } from '@brika/di';
 import type { BlockDefinition } from '@brika/sdk';
-import { isCompatible, parsePortType } from '@brika/type-system';
+import { displayType, isCompatible, parsePortType } from '@brika/type-system';
 
 /** Runtime block info (includes ports from running plugin) */
 export interface BlockSummary {
@@ -191,12 +191,12 @@ export class BlockRegistry {
         inputs: b.inputs.map((p) => ({
           id: p.id,
           name: p.name,
-          typeName: p.typeName,
+          typeName: displayType(parsePortType(p)),
         })),
         outputs: b.outputs.map((p) => ({
           id: p.id,
           name: p.name,
-          typeName: p.typeName,
+          typeName: displayType(parsePortType(p)),
         })),
       }));
   }
@@ -340,7 +340,7 @@ export class BlockRegistry {
     const toType = parsePortType(toPort);
     if (!isCompatible(fromType, toType)) {
       errors.push(
-        `Type mismatch: ${fromBlock.id}.${fromPortId} (${fromPort.typeName}) → ${toBlock.id}.${toPortId} (${toPort.typeName})`
+        `Type mismatch: ${fromBlock.id}.${fromPortId} (${displayType(fromType)}) → ${toBlock.id}.${toPortId} (${displayType(toType)})`
       );
     }
   }

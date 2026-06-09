@@ -105,7 +105,7 @@ export class PluginWatcher {
 
   /** Stop all watchers, pollers, and pending timers. */
   stopAll(): void {
-    for (const name of [...this.#entries.keys()]) {
+    for (const name of this.#entries.keys()) {
       this.unwatch(name);
     }
   }

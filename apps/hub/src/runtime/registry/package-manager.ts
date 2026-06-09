@@ -70,31 +70,39 @@ export class PackageManager {
 
     if (proc.stderr instanceof ReadableStream) {
       const decoder = new TextDecoder();
+      const reader = proc.stderr.getReader();
       let buffer = '';
 
-      for await (const chunk of proc.stderr) {
-        buffer += decoder.decode(chunk, {
-          stream: true,
-        });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() ?? '';
+      try {
+        let result = await reader.read();
+        while (!result.done) {
+          buffer += decoder.decode(result.value, {
+            stream: true,
+          });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() ?? '';
 
-        for (const line of lines) {
-          const trimmed = line.trim();
-          if (!trimmed) {
-            continue;
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed) {
+              continue;
+            }
+            // The authoritative phases (resolving -> linking -> complete) come
+            // from PluginRegistry.install; here we only relay bun's raw output as
+            // an opaque message under a single coarse phase, rather than scraping
+            // bun's stderr text (which drifts across bun versions).
+            yield {
+              phase: 'downloading',
+              operation,
+              package: packageName,
+              message: trimmed,
+            };
           }
-          // The authoritative phases (resolving -> linking -> complete) come
-          // from PluginRegistry.install; here we only relay bun's raw output as
-          // an opaque message under a single coarse phase, rather than scraping
-          // bun's stderr text (which drifts across bun versions).
-          yield {
-            phase: 'downloading',
-            operation,
-            package: packageName,
-            message: trimmed,
-          };
+
+          result = await reader.read();
         }
+      } finally {
+        reader.releaseLock();
       }
 
       const remaining = buffer.trim();
