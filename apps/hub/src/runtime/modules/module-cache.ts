@@ -1,5 +1,6 @@
 import { mkdir, readdir, rm, unlink } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
+import { CHUNK_DIR } from './module-kinds';
 
 export interface CacheEntry {
   /** Short content hash used for cache-busting URLs (not an HTTP ETag). */
@@ -94,6 +95,12 @@ export class ModuleCache {
     for (const key of this.#mem.keys()) {
       if (key.startsWith(prefix) && !currentKeys.has(key.slice(prefix.length))) {
         const moduleId = key.slice(prefix.length);
+        // Shared chunks are not declared in the manifest (and so never in
+        // `currentKeys`); they are owned by the bundle build, which overwrites
+        // them per source hash. Skip so prune never drops a live chunk.
+        if (moduleId.startsWith(`${CHUNK_DIR}/`)) {
+          continue;
+        }
         const dir = join(cacheDir, dirname(moduleId));
         const base = moduleId.split('/').pop() ?? moduleId;
         readdir(dir)
@@ -109,6 +116,28 @@ export class ModuleCache {
         this.#mem.delete(key);
       }
     }
+  }
+
+  /**
+   * Delete shared-chunk files left over from a previous source hash. Chunks are
+   * content-hash-named, so a source change emits new filenames and the old ones
+   * (skipped by {@link prune}) would otherwise accumulate. Files for the current
+   * hash are kept so a concurrent cache hit keeps resolving.
+   */
+  async pruneChunks(cacheDir: string, keepHash: string): Promise<void> {
+    const dir = join(cacheDir, CHUNK_DIR);
+    let files: string[];
+    try {
+      files = await readdir(dir);
+    } catch {
+      return; // No chunk directory yet.
+    }
+    const keep = `.${keepHash}.js`;
+    await Promise.all(
+      files
+        .filter((f) => f.endsWith('.js') && !f.endsWith(keep))
+        .map((f) => unlink(join(dir, f)).catch(() => undefined))
+    );
   }
 
   /** Remove all cached data for a plugin (in-memory + disk). */

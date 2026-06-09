@@ -1,7 +1,12 @@
 import { group, route } from '@brika/router';
 import { z } from 'zod';
 import { ModuleCompiler } from '@/runtime/modules';
-import { getModuleKind, moduleScopeId } from '@/runtime/modules/module-kinds';
+import {
+  chunkScopeId,
+  getModuleKind,
+  isChunkId,
+  moduleScopeId,
+} from '@/runtime/modules/module-kinds';
 import { PluginLifecycle } from '@/runtime/plugins/plugin-lifecycle';
 
 /**
@@ -11,6 +16,11 @@ import { PluginLifecycle } from '@/runtime/plugins/plugin-lifecycle';
  * URL format: /api/modules/:pluginUid/:kind/:id.:hash.js (the hash is for
  * cache busting only). pluginUid (not name) avoids encoded slashes in scoped
  * package names.
+ *
+ * Shared chunks (`_brika_chunk_*`) are emitted by the bundle build and imported
+ * by an entry via a relative path, so they arrive under the entry's own `:kind`
+ * segment. They are stored in one per-plugin namespace, so chunk requests are
+ * resolved by name regardless of `:kind`.
  */
 export const modulesRoutes = group({
   prefix: '/api/modules',
@@ -34,7 +44,10 @@ export const modulesRoutes = group({
         // Parse the module id from "id.hash.js".
         const dotIdx = params.file.indexOf('.');
         const id = dotIdx > 0 ? params.file.slice(0, dotIdx) : params.file;
-        const entry = inject(ModuleCompiler).get(moduleScopeId(pluginName, kind, id));
+        const scopeId = isChunkId(id)
+          ? chunkScopeId(pluginName, id)
+          : moduleScopeId(pluginName, kind, id);
+        const entry = inject(ModuleCompiler).get(scopeId);
         if (!entry) {
           return new Response('Module not found', { status: 404 });
         }

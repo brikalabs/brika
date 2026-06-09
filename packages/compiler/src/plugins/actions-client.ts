@@ -1,6 +1,7 @@
 import { join, relative, resolve } from 'node:path';
 import type { BunPlugin } from 'bun';
 import { computeActionId } from '../action-hash';
+import { pickLoader } from '../loader';
 
 const ACTION_IMPORT = '@brika/sdk/actions';
 
@@ -47,8 +48,7 @@ export function brikaActionsPlugin(pluginRoot: string): BunPlugin {
     }
     try {
       const content = await Bun.file(absPath).text();
-      const loader = absPath.endsWith('.tsx') ? 'tsx' : 'ts';
-      const { imports } = new Bun.Transpiler({ loader }).scan(content);
+      const { imports } = new Bun.Transpiler({ loader: pickLoader(absPath) }).scan(content);
       const result = imports.some((i) => i.path === ACTION_IMPORT);
       actionFileCache.set(absPath, result);
       return result;
@@ -76,8 +76,7 @@ export function brikaActionsPlugin(pluginRoot: string): BunPlugin {
 
       build.onLoad({ namespace: 'brika-actions', filter: /.*/ }, async ({ path }) => {
         const content = await Bun.file(path).text();
-        const loader = path.endsWith('.tsx') ? 'tsx' : 'ts';
-        const { exports: names } = new Bun.Transpiler({ loader }).scan(content);
+        const { exports: names } = new Bun.Transpiler({ loader: pickLoader(path) }).scan(content);
         const rel = relative(pluginRoot, path);
 
         return {

@@ -157,8 +157,9 @@ describe('ModuleCompiler - syncManifest()', () => {
 
   test('manifest with no client modules prunes and compiles nothing', async () => {
     // Empty manifest: every module kind selects [], so currentKeys is empty,
-    // prune removes nothing for a fresh plugin, and compile is a no-op loop.
-    await expect(compiler.syncManifest('sync-test', TEST_DIR, {})).resolves.toBeUndefined();
+    // prune removes nothing for a fresh plugin, and compile is a no-op loop that
+    // returns an empty per-kind summary.
+    await expect(compiler.syncManifest('sync-test', TEST_DIR, {})).resolves.toEqual({ kinds: [] });
     expect(compiler.get('sync-test:anything')).toBeUndefined();
   });
 });

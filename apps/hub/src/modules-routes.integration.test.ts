@@ -94,4 +94,16 @@ describe('module routes', () => {
 
     expect(mockCompiler.get).toHaveBeenCalledWith('@brika/plugin-timer:pages/dashboard');
   });
+
+  test('resolves a shared chunk from the per-plugin namespace, ignoring kind', async () => {
+    // A chunk is imported relative to an entry, so it arrives under that entry's
+    // `:kind` segment; the route must still resolve it by name, not by kind.
+    // Chunks carry no cache-bust hash segment (unlike `id.hash.js` modules): the
+    // content hash already lives in the `_brika_chunk_<hash>` name.
+    await app.get('/api/modules/plg-1/brick/_brika_chunk_7d5pzgcg.js');
+
+    expect(mockCompiler.get).toHaveBeenCalledWith(
+      '@brika/plugin-timer:_chunks/_brika_chunk_7d5pzgcg'
+    );
+  });
 });

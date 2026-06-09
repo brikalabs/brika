@@ -26,14 +26,21 @@ Bun.build({
   target: 'browser',
   format: 'esm',
   minify: true,
+  // NODE_ENV is inlined as 'production' so libraries gated on
+  // `process.env.NODE_ENV` drop their dev branches.
+  define: { 'process.env.NODE_ENV': '"production"' },
   plugins: [
-    brikaExternalsPlugin(),    // rewrite bridge specifiers
-    brikaActionsPlugin(root),  // replace action imports with stubs
-    brikaForceSideEffectsPlugin(),
+    brikaExternalsPlugin(),         // rewrite bridge specifiers
+    brikaActionsPlugin(root),       // replace action imports with stubs
+    brikaForceSideEffectsPlugin(),  // keep barrel re-exports from being dropped
     brikaI18nCallSitePlugin(sourceRoot),
   ],
 });
 ```
+
+Multiple modules of a kind are built together with `splitting: true` so a heavy
+dependency shared across bricks (e.g. recharts) lands in one chunk loaded once,
+rather than being copied into every brick's bundle.
 
 The output is a string of minified JavaScript. The hub serves it under a content-hashed URL (see [Cache](#content-hashed-cache)) and the [host UI](brick-rendering.md) dynamically imports it.
 
@@ -72,6 +79,12 @@ import * as React from 'react';
 // becomes
 module.exports = globalThis.__brika.React;
 ```
+
+The specifier → `__brika.<prop>` mapping is the single source of truth in
+`@brika/sdk/browser-bridge` (`BRIDGE_GLOBALS`). The compiler reads it to rewrite
+imports; the host UI populates exactly those props and types its bridge object
+against `BridgeProp`, so a registry entry the host forgets to implement is a
+compile error. Adding a shared dependency is one edit in that file.
 
 See [Externals Rewrite](externals-rewrite.md) for the full bridge map and the host setup.
 
@@ -145,7 +158,9 @@ The runtime drops `__cs` in production builds (and from JSON-serialised messages
 
 ## Force-side-effects
 
-Some modules have important side effects (registering a context module, registering verify-checks) that minifiers would tree-shake if marked `/* @__PURE__ */`. `brikaForceSideEffectsPlugin` marks these as side-effectful so they survive the bundle.
+`brikaForceSideEffectsPlugin` rewrites every barrel re-export inside `node_modules` (`export { A } from './x'` becomes an `import` + `export const`). It works around a Bun bug: for a package with `"sideEffects": false`, Bun's barrel optimizer drops a re-exported implementation even when a sibling module still calls it, especially once that barrel lands in a **code-split chunk**. The classic victim is recharts' `getNiceTickValues`, re-exported through `util/scale` and used by the axis selectors: without this plugin a chart brick compiles cleanly but throws `<minified> is not defined` the moment it renders.
+
+It is load-bearing for any chart brick and **must not be removed** without rendering a recharts chart from a *split* build. `Bun.build`'s `ignoreDCEAnnotations: true` does not help (verified on 1.3.14), and a single-file (non-split) build hides the bug, so static checks and fixed-size render tests pass while the real brick still breaks.
 
 ## See also
 

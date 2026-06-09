@@ -52,14 +52,19 @@ describe('TailwindCompiler', () => {
       expect(matches?.length).toBe(1);
     });
 
-    test('caches the build across multiple calls', async () => {
+    test('isolates candidates across calls (no class leakage between modules)', async () => {
+      // Regression: Tailwind v4's build() accumulates candidates, so reusing one
+      // design system made each module's CSS the running union of every module
+      // compiled before it. Each call must see only its own classes, otherwise
+      // a brick ships CSS for unrelated bricks (and other plugins).
       const tw = new TailwindCompiler();
-      const css1 = await tw.compileCss('const a = "hidden"');
-      const css2 = await tw.compileCss('const b = "block"');
-      expect(css1).toBeDefined();
-      expect(css2).toBeDefined();
-      expect(css1).toContain('display');
-      expect(css2).toContain('display');
+      const first = await tw.compileCss('const a = "grid"');
+      const second = await tw.compileCss('const b = "contents"');
+
+      expect(first).toContain('grid');
+      // The second module never mentions `grid`, so its CSS must not contain it.
+      expect(second).toContain('contents');
+      expect(second).not.toContain('grid');
     });
 
     test('returns only a header comment when no candidates match any utility', async () => {

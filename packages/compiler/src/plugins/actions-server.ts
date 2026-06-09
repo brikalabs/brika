@@ -1,6 +1,7 @@
 import { join, relative } from 'node:path';
 import type { BunPlugin } from 'bun';
 import { computeActionId } from '../action-hash';
+import { pickLoader } from '../loader';
 import type { PluginBuildTransform } from './compose';
 
 const ACTION_IMPORT = '@brika/sdk/actions';
@@ -54,7 +55,7 @@ export function brikaServerActionsPlugin(pluginRoot: string): BunPlugin {
     name: transform.name,
     setup(build) {
       build.onLoad({ filter: /\.[tj]sx?$/ }, async (args) => {
-        const loader = args.path.endsWith('.tsx') ? ('tsx' as const) : ('ts' as const);
+        const loader = pickLoader(args.path);
         const original = await Bun.file(args.path).text();
         const next = await transform.transform(original, { path: args.path, loader });
         if (next === original) {

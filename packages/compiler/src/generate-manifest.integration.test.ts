@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { generateEntry, generateManifest } from './generate-manifest';
+import { generateEntry } from './generate-entry';
+import { generateManifest } from './generate-manifest';
 
 // Temp plugins live INSIDE the compiler package so the block/spark modules
 // we import can resolve `@brika/sdk` through the workspace node_modules.
