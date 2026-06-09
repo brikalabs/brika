@@ -17,6 +17,7 @@ import {
   MapPin,
   MousePointerClick,
   Plug,
+  Server,
   Shield,
 } from 'lucide-react';
 import { z } from 'zod';
@@ -33,6 +34,7 @@ export const PERMISSION_ICON_MAP: Record<string, LucideIcon> = {
   'map-pin': MapPin,
   'mouse-pointer-square': MousePointerClick,
   plug: Plug,
+  server: Server,
 };
 
 /** Fallback icon for unrecognised permission families */
@@ -41,6 +43,8 @@ export const FallbackPermissionIcon: LucideIcon = Shield;
 // ─── Inline scope schemas ─────────────────────────────────────────────────────
 
 export const AllowScopeSchema = z.object({ allow: z.array(z.string()) });
+
+export const LocalNetScopeSchema = z.object({ allowLoopbackPorts: z.array(z.number()) });
 
 export const FsScopeSchema = z.object({
   read: z.array(z.string()).default([]),
@@ -278,6 +282,28 @@ export function ScopeDetail({
     if (!hosts) {
       return null;
     }
+    return <HostScopeDetail hosts={hosts} label={hostsLabel} />;
+  }
+
+  // netLocal's grant id is dev.brika.net.local.fetch (family segment 'net'),
+  // so match by id prefix and show the consented ports as localhost chips.
+  if (family === 'netLocal') {
+    const ports = new Set<number>();
+    for (const [id, scope] of Object.entries(grants)) {
+      if (!id.startsWith('dev.brika.net.local.')) {
+        continue;
+      }
+      const result = LocalNetScopeSchema.safeParse(scope);
+      if (result.success) {
+        for (const port of result.data.allowLoopbackPorts) {
+          ports.add(port);
+        }
+      }
+    }
+    if (ports.size === 0) {
+      return null;
+    }
+    const hosts = [...ports].sort((a, b) => a - b).map((p) => `localhost:${p}`);
     return <HostScopeDetail hosts={hosts} label={hostsLabel} />;
   }
 

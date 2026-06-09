@@ -7,6 +7,8 @@
   "secretsDesc": "Read and write per-plugin credentials in the OS keychain",
   "net": "Network",
   "netDesc": "Make outbound HTTP requests to the listed hosts",
+  "netLocal": "Local network",
+  "netLocalDesc": "Reach local services on this machine (localhost only, on the listed ports). Used for local AI model servers like Ollama",
   "rawSocket": "Raw sockets",
   "rawSocketDesc": "Open raw TCP/UDP sockets directly, bypassing the mediated network surface (needed for wire protocols like Matter mDNS)",
   "fs": "Filesystem",

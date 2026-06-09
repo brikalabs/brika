@@ -7,6 +7,8 @@
   "secretsDesc": "Lire et écrire les identifiants du plugin dans le trousseau du système",
   "net": "Réseau",
   "netDesc": "Effectuer des requêtes HTTP sortantes vers les hôtes listés",
+  "netLocal": "Réseau local",
+  "netLocalDesc": "Accéder aux services locaux de cette machine (localhost uniquement, sur les ports listés). Utilisé pour les serveurs de modèles IA locaux comme Ollama",
   "rawSocket": "Sockets bruts",
   "rawSocketDesc": "Ouvrir directement des sockets TCP/UDP bruts, en contournant la couche réseau médiée (nécessaire pour les protocoles comme le mDNS de Matter)",
   "fs": "Système de fichiers",
