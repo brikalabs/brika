@@ -581,6 +581,9 @@ function zodToBlockSchema(schema: z.ZodObject<z.ZodRawShape>): BlockSchema {
       description?: string;
       enum?: Json[];
       default?: Json;
+      format?: string;
+      label?: string;
+      showWhen?: { field: string; equals: string | number | boolean };
     }
   >;
   const props =
@@ -609,6 +612,9 @@ function zodToBlockSchema(schema: z.ZodObject<z.ZodRawShape>): BlockSchema {
             : {
                 default: v.default,
               }),
+          ...(v.format ? { format: v.format } : {}),
+          ...(v.label ? { label: v.label } : {}),
+          ...(v.showWhen ? { showWhen: v.showWhen } : {}),
         },
       ])
     ),

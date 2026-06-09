@@ -336,6 +336,31 @@ describe('defineReactiveBlock', () => {
     expect(block.schema.properties?.enabled).toBeDefined();
   });
 
+  test('preserves format, label, and showWhen meta on config fields', () => {
+    const block = defineReactiveBlock(
+      {
+        id: 'meta-block',
+        inputs: {},
+        outputs: {},
+        config: z.object({
+          model: z.string().meta({ label: 'Model', format: 'dynamic-dropdown' }),
+          baseUrl: z
+            .string()
+            .optional()
+            .meta({ showWhen: { field: 'provider', equals: 'openai' } }),
+        }),
+      },
+      () => undefined
+    );
+
+    expect(block.schema.properties?.model?.format).toBe('dynamic-dropdown');
+    expect(block.schema.properties?.model?.label).toBe('Model');
+    expect(block.schema.properties?.baseUrl?.showWhen).toEqual({
+      field: 'provider',
+      equals: 'openai',
+    });
+  });
+
   test('start() returns block instance with pushInput and stop', () => {
     const block = defineReactiveBlock(
       {

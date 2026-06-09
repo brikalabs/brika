@@ -38,9 +38,9 @@ export const llmBlock = defineBlock({
       ),
     ...providerConfig,
     model: z
-      .string()
+      .dynamicDropdown({ label: 'Model' })
       .default('claude-opus-4-8')
-      .describe('Model id (provider-specific, e.g. claude-opus-4-8 or gpt-4o)'),
+      .describe('Pick a model from the chosen provider, or enter a custom id'),
     systemPrompt: z
       .string()
       .optional()
@@ -48,6 +48,7 @@ export const llmBlock = defineBlock({
     effort: z
       .enum(['low', 'medium', 'high'])
       .default('high')
+      .meta({ showWhen: { field: 'provider', equals: 'anthropic' } })
       .describe('Reasoning effort and token spend (Anthropic)'),
     maxTokens: z
       .number()

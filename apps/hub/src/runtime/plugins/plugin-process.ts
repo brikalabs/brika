@@ -418,10 +418,14 @@ export class PluginProcess {
    * Fetch dynamic options for a preference from the plugin via IPC.
    * Returns empty array if the plugin is stopped or the RPC fails.
    */
-  async fetchPreferenceOptions(name: string): Promise<
+  async fetchPreferenceOptions(
+    name: string,
+    params?: Record<string, unknown>
+  ): Promise<
     Array<{
       value: string;
       label: string;
+      description?: string;
     }>
   > {
     if (this.#stopped) {
@@ -430,6 +434,7 @@ export class PluginProcess {
     try {
       const result = await this.#channel.call(preferenceOptions, {
         name,
+        ...(params !== undefined ? { params } : {}),
       });
       return result.options;
     } catch (e) {

@@ -1,4 +1,5 @@
 import { defineBlock, input, type Json, log, output, z } from '@brika/sdk';
+import { addUsage, costForUsage, type TokenUsage } from '../catalog';
 import {
   type ChatMessage,
   type ChatTool,
@@ -44,6 +45,18 @@ function buildToolSet(
     });
   }
   return { tools, nameToId };
+}
+
+/** Log a run's token usage and estimated cost (surfaces in the live debug Logs). */
+function logUsage(model: string, usage: TokenUsage): void {
+  if (usage.inputTokens === 0 && usage.outputTokens === 0) {
+    return;
+  }
+  const cost = costForUsage(model, usage);
+  const costLabel = cost !== undefined ? `~$${cost.toFixed(4)}` : 'cost unavailable';
+  log.info(
+    `Agent run: ${usage.inputTokens} in / ${usage.outputTokens} out tokens (${model}), ${costLabel}`
+  );
 }
 
 /** Execute each requested tool call via ctx.callTool, returning normalized results. */
@@ -106,11 +119,15 @@ export const agentBlock = defineBlock({
       ),
     ...providerConfig,
     model: z
-      .string()
+      .dynamicDropdown({ label: 'Model' })
       .default('claude-opus-4-8')
-      .describe('Model id (provider-specific, e.g. claude-opus-4-8 or gpt-4o)'),
+      .describe('Pick a model from the chosen provider, or enter a custom id'),
     systemPrompt: z.string().optional().describe('System prompt defining the agent persona/rules'),
-    effort: z.enum(['low', 'medium', 'high']).default('high'),
+    effort: z
+      .enum(['low', 'medium', 'high'])
+      .default('high')
+      .meta({ showWhen: { field: 'provider', equals: 'anthropic' } })
+      .describe('Reasoning effort and token spend (Anthropic)'),
     maxTokens: z.number().int().min(1).max(16000).default(4096),
     maxIterations: z.number().int().min(1).max(20).default(8).describe('Tool-loop iteration cap'),
     tools: z
@@ -133,6 +150,7 @@ export const agentBlock = defineBlock({
         const provider = getProvider({ provider: config.provider, baseUrl: config.baseUrl });
         const { tools, nameToId } = buildToolSet(await listTools(), new Set(config.tools));
         const history: ChatMessage[] = [{ role: 'user', text: prompt }];
+        let total: TokenUsage = { inputTokens: 0, outputTokens: 0 };
 
         for (let i = 0; i < config.maxIterations; i++) {
           const turn = await provider.chat({
@@ -143,10 +161,14 @@ export const agentBlock = defineBlock({
             maxTokens: config.maxTokens,
             effort: config.effort,
           });
+          if (turn.usage) {
+            total = addUsage(total, turn.usage);
+          }
           history.push({ role: 'assistant', text: turn.text, toolCalls: turn.toolCalls });
 
           if (turn.toolCalls.length === 0) {
             outputs.reply.emit(turn.text);
+            logUsage(config.model, total);
             return;
           }
 

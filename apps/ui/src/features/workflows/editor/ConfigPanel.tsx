@@ -37,15 +37,18 @@ import {
   ArrowUpFromLine,
   Check,
   ChevronRight,
+  ChevronsUpDown,
   Copy,
   HelpCircle,
+  PencilLine,
   Plus,
   Sparkles,
   Trash2,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useCapture } from '@/features/analytics/hooks';
+import { fetcher } from '@/lib/query';
 import { useLocale } from '@/lib/use-locale';
 import type { BlockNodeData, BlockPort } from './BlockNode';
 import { ClientBlockView } from './ClientBlockView';
@@ -129,6 +132,28 @@ interface SchemaProperty {
   description?: string;
   default?: unknown;
   enum?: unknown[];
+  /** UI widget hint from z.dynamicDropdown(), e.g. 'dynamic-dropdown'. */
+  format?: string;
+  /** UI label from z.meta({ label }). */
+  label?: string;
+  /** Show this field only when a sibling field equals a value. */
+  showWhen?: { field: string; equals: string | number | boolean };
+}
+
+/** Narrow an unknown value to the showWhen shape. */
+function toShowWhen(value: unknown): SchemaProperty['showWhen'] {
+  if (typeof value !== 'object' || value === null) {
+    return undefined;
+  }
+  const obj = Object.fromEntries(Object.entries(value));
+  const equals = obj.equals;
+  if (
+    typeof obj.field !== 'string' ||
+    (typeof equals !== 'string' && typeof equals !== 'number' && typeof equals !== 'boolean')
+  ) {
+    return undefined;
+  }
+  return { field: obj.field, equals };
 }
 
 interface BlockSchema {
@@ -150,6 +175,9 @@ function toSchemaProperty(value: unknown): SchemaProperty {
     description: typeof obj.description === 'string' ? obj.description : undefined,
     default: obj.default,
     enum: Array.isArray(obj.enum) ? obj.enum : undefined,
+    format: typeof obj.format === 'string' ? obj.format : undefined,
+    label: typeof obj.label === 'string' ? obj.label : undefined,
+    showWhen: toShowWhen(obj.showWhen),
   };
 }
 
@@ -392,6 +420,10 @@ interface FieldProps {
   variables: Variable[];
   required?: boolean;
   pluginId?: string;
+  /** Full block type id, used to resolve dynamic-dropdown options. */
+  blockType?: string;
+  /** Sibling config values, forwarded to provider-aware option providers. */
+  allConfig?: Record<string, unknown>;
 }
 
 /** Resolved display info passed to each field renderer */
@@ -403,6 +435,8 @@ interface ResolvedFieldInfo {
   variables: Variable[];
   defaultValue: unknown;
   name: string;
+  blockType?: string;
+  allConfig?: Record<string, unknown>;
 }
 
 function DurationField({ value, onChange, cleanDescription, label }: Readonly<ResolvedFieldInfo>) {
@@ -583,6 +617,207 @@ function StringField({
   );
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Dynamic Dropdown (z.dynamicDropdown) - options fetched live, scoped by siblings
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface DynamicOption {
+  value: string;
+  label: string;
+  description?: string;
+}
+
+/** String-valued sibling fields, forwarded as the options query (self excluded). */
+function siblingParams(
+  config: Record<string, unknown> | undefined,
+  self: string
+): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [key, val] of Object.entries(config ?? {})) {
+    if (key === self) {
+      continue;
+    }
+    if (typeof val === 'string') {
+      out[key] = val;
+    } else if (typeof val === 'number' || typeof val === 'boolean') {
+      out[key] = String(val);
+    }
+  }
+  return out;
+}
+
+function fetchBlockConfigOptions(
+  blockType: string,
+  name: string,
+  params: Record<string, string>
+): Promise<{ options: DynamicOption[] }> {
+  const qs = new URLSearchParams(params).toString();
+  const base = `/api/blocks/${encodeURIComponent(blockType)}/config/${encodeURIComponent(name)}/options`;
+  return fetcher<{ options: DynamicOption[] }>(qs ? `${base}?${qs}` : base);
+}
+
+/**
+ * A filter-as-you-type picker whose options are fetched live and re-fetched when
+ * a sibling field changes (e.g. the model list for the chosen provider). A
+ * persistent escape hatch flips to a free-text input for ids not in the list.
+ */
+function DynamicSelectField({
+  name,
+  value,
+  onChange,
+  label,
+  blockType,
+  allConfig,
+}: Readonly<ResolvedFieldInfo>) {
+  const capture = useCapture();
+  const current = toDisplayString(value);
+  const [open, setOpen] = useState(false);
+  const [filter, setFilter] = useState('');
+  const [custom, setCustom] = useState(false);
+  const [options, setOptions] = useState<DynamicOption[]>([]);
+  const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle');
+
+  const params = useMemo(() => siblingParams(allConfig, name), [allConfig, name]);
+  const paramsKey = useMemo(() => JSON.stringify(params), [params]);
+
+  useEffect(() => {
+    if (!blockType || custom) {
+      return;
+    }
+    let cancelled = false;
+    setStatus('loading');
+    fetchBlockConfigOptions(blockType, name, JSON.parse(paramsKey))
+      .then((data) => {
+        if (!cancelled) {
+          setOptions(data.options);
+          setStatus('idle');
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setStatus('error');
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [blockType, name, paramsKey, custom]);
+
+  if (custom) {
+    return (
+      <div className="space-y-1.5">
+        <Input
+          value={current}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={`Enter a custom ${label.toLowerCase()}`}
+          className="bg-background font-mono text-sm"
+        />
+        <button
+          type="button"
+          className="text-muted-foreground text-xs hover:text-foreground"
+          onClick={() => setCustom(false)}
+        >
+          Back to the list
+        </button>
+      </div>
+    );
+  }
+
+  const needle = filter.trim().toLowerCase();
+  const filtered = needle
+    ? options.filter((o) =>
+        `${o.label} ${o.value} ${o.description ?? ''}`.toLowerCase().includes(needle)
+      )
+    : options;
+  const selected = options.find((o) => o.value === current);
+
+  return (
+    <div className="space-y-2">
+      <Button
+        type="button"
+        variant="outline"
+        className="w-full justify-between bg-background font-normal"
+        onClick={() => {
+          if (!open) {
+            capture('workflow.config_dynamic_options_opened', { field: name });
+          }
+          setOpen(!open);
+        }}
+      >
+        <span className="truncate">
+          {selected?.label ?? (current || `Select ${label.toLowerCase()}`)}
+        </span>
+        <ChevronsUpDown className="size-4 shrink-0 opacity-50" />
+      </Button>
+
+      {open && (
+        <div className="overflow-hidden rounded-lg border bg-popover shadow-lg">
+          <div className="border-b p-2">
+            <Input
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              placeholder={`Filter ${label.toLowerCase()}`}
+              className="h-8 bg-background text-sm"
+            />
+          </div>
+          <div className="max-h-[220px] overflow-y-auto">
+            {status === 'loading' && (
+              <p className="px-3 py-2 text-muted-foreground text-xs">Loading...</p>
+            )}
+            {status === 'error' && (
+              <p className="px-3 py-2 text-destructive text-xs">
+                Could not load options. Check the provider API key in plugin settings.
+              </p>
+            )}
+            {status === 'idle' && filtered.length === 0 && (
+              <p className="px-3 py-2 text-muted-foreground text-xs">No matches</p>
+            )}
+            {filtered.map((o) => (
+              <button
+                key={o.value}
+                type="button"
+                className="flex w-full flex-col gap-0.5 px-3 py-2 text-left hover:bg-accent"
+                onClick={() => {
+                  capture('workflow.config_dynamic_option_picked', { field: name });
+                  onChange(o.value);
+                  setOpen(false);
+                  setFilter('');
+                }}
+              >
+                <span className="flex items-center justify-between gap-2">
+                  <span className="truncate font-medium text-sm">{o.label}</span>
+                  {o.value === current && <Check className="size-3.5 shrink-0 text-primary" />}
+                </span>
+                <span className="flex items-center justify-between gap-2">
+                  <code className="truncate font-mono text-[10px] text-muted-foreground">
+                    {o.value}
+                  </code>
+                  {o.description && (
+                    <span className="shrink-0 text-[10px] text-muted-foreground">
+                      {o.description}
+                    </span>
+                  )}
+                </span>
+              </button>
+            ))}
+          </div>
+          <button
+            type="button"
+            className="flex w-full items-center gap-1.5 border-t px-3 py-2 text-left text-muted-foreground text-xs hover:bg-accent hover:text-foreground"
+            onClick={() => {
+              setCustom(true);
+              setOpen(false);
+            }}
+          >
+            <PencilLine className="size-3" />
+            {`Use a custom ${label.toLowerCase()}`}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /** Map from type-marker to the corresponding renderer */
 const markerRenderers: Record<TypeMarker, (info: ResolvedFieldInfo) => ReactNode> = {
   duration: (info) => <DurationField {...info} />,
@@ -607,6 +842,8 @@ function resolveFieldInfo(
     variables: props.variables,
     defaultValue: props.schema.default,
     name: props.name,
+    blockType: props.blockType,
+    allConfig: props.allConfig,
   };
 }
 
@@ -618,6 +855,10 @@ function renderFieldControl(
   if (typeMarker) {
     const renderer = markerRenderers[typeMarker];
     return renderer(info);
+  }
+
+  if (schema.format === 'dynamic-dropdown') {
+    return <DynamicSelectField {...info} />;
   }
 
   if (schema.type === 'boolean') {
@@ -650,11 +891,13 @@ function SchemaField(props: Readonly<FieldProps>) {
   // Clean description (remove type marker) - used as fallback
   const fallbackDescription = description?.replaceAll(/\$type:\w+(:\w+)?/g, '').trim();
 
-  // Pretty label from camelCase (fallback)
-  const fallbackLabel = name
-    .replaceAll(/([A-Z])/g, ' $1')
-    .replace(/^./, (s) => s.toUpperCase())
-    .trim();
+  // Pretty label: prefer an explicit meta label, else humanize the camelCase key.
+  const fallbackLabel =
+    schema.label ??
+    name
+      .replaceAll(/([A-Z])/g, ' $1')
+      .replace(/^./, (s) => s.toUpperCase())
+      .trim();
 
   // Translate field label and description using plugin's fields translations
   const label = pluginId ? tp(pluginId, `fields.${name}.label`, fallbackLabel) : fallbackLabel;
@@ -808,13 +1051,17 @@ function BlockConfig({
     );
   }
 
-  // Render form fields from schema
+  // Render form fields from schema, skipping any whose showWhen condition is unmet.
   const properties = schema.properties;
   const requiredFields = new Set(schema.required ?? []);
+  const visibleFields = Object.entries(properties).filter(([, fieldSchema]) => {
+    const { showWhen } = toSchemaProperty(fieldSchema);
+    return !showWhen || config[showWhen.field] === showWhen.equals;
+  });
 
   return (
     <div className="space-y-4">
-      {Object.entries(properties).map(([name, fieldSchema]) => (
+      {visibleFields.map(([name, fieldSchema]) => (
         <SchemaField
           key={name}
           name={name}
@@ -829,6 +1076,8 @@ function BlockConfig({
           variables={availableVariables}
           required={requiredFields.has(name)}
           pluginId={pluginId}
+          blockType={data.type}
+          allConfig={config}
         />
       ))}
     </div>

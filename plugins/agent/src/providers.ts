@@ -1,4 +1,13 @@
 import { getPreferences, type Json, z } from '@brika/sdk';
+import {
+  describeModel,
+  hintsForModel,
+  type ModelHints,
+  type ModelOption,
+  type ModelPricing,
+  modelSupportsThinking,
+  type TokenUsage,
+} from './catalog';
 
 /**
  * LLM provider abstraction.
@@ -58,6 +67,12 @@ export interface ChatTurn {
   text: string;
   /** Requested tool calls; empty means the assistant is done. */
   toolCalls: ToolCall[];
+  /**
+   * Token usage for this turn when the provider reports it. Optional because
+   * many OpenAI-compatible proxies omit the `usage` block; a missing value
+   * means "unavailable", never zero.
+   */
+  usage?: TokenUsage;
 }
 
 export interface LlmProvider {
@@ -96,6 +111,9 @@ function jsonArr(value: Json | undefined): Json[] {
 function jsonStr(value: Json | undefined): string | undefined {
   return typeof value === 'string' ? value : undefined;
 }
+function jsonNum(value: Json | undefined): number | undefined {
+  return typeof value === 'number' ? value : undefined;
+}
 /** Parse a tool-argument JSON string into a JSON object (empty on failure). */
 function parseArgs(text: string | undefined): Record<string, Json> {
   if (!text) {
@@ -120,11 +138,20 @@ async function postJson(url: string, headers: Record<string, string>, body: Json
   return parseJson(await res.text());
 }
 
+async function getJson(url: string, headers: Record<string, string>): Promise<Json> {
+  const res = await fetch(url, { headers });
+  if (!res.ok) {
+    throw new Error(`Model list request failed (${res.status}): ${await res.text()}`);
+  }
+  return parseJson(await res.text());
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Anthropic provider (Messages API)
 // ─────────────────────────────────────────────────────────────────────────────
 
 const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages';
+const ANTHROPIC_MODELS_URL = 'https://api.anthropic.com/v1/models?limit=1000';
 const ANTHROPIC_VERSION = '2023-06-01';
 
 function anthropicContent(message: ChatMessage): Json {
@@ -165,14 +192,17 @@ function createAnthropicProvider(): LlmProvider {
         description: tool.description,
         input_schema: tool.inputSchema,
       }));
+      // Adaptive thinking + the effort knob 400 on models that do not support
+      // them (Haiku 4.5, Sonnet 4.5). Send them only when the model does.
+      const thinks = modelSupportsThinking(req.model);
       const data = await postJson(
         ANTHROPIC_URL,
         { 'x-api-key': anthropicApiKey, 'anthropic-version': ANTHROPIC_VERSION },
         {
           model: req.model,
           max_tokens: req.maxTokens,
-          thinking: { type: 'adaptive' },
-          output_config: { effort: req.effort },
+          thinking: thinks ? { type: 'adaptive' } : undefined,
+          output_config: thinks ? { effort: req.effort } : undefined,
           system: req.system,
           messages,
           tools: tools.length > 0 ? tools : undefined,
@@ -183,7 +213,7 @@ function createAnthropicProvider(): LlmProvider {
   };
 }
 
-function readAnthropicTurn(data: Json): ChatTurn {
+export function readAnthropicTurn(data: Json): ChatTurn {
   const content = jsonArr(jsonObj(data)?.content);
   let text = '';
   const toolCalls: ToolCall[] = [];
@@ -203,7 +233,25 @@ function readAnthropicTurn(data: Json): ChatTurn {
       });
     }
   }
-  return { text, toolCalls };
+  return { text, toolCalls, usage: readAnthropicUsage(data) };
+}
+
+function readAnthropicUsage(data: Json): TokenUsage | undefined {
+  const usage = jsonObj(jsonObj(data)?.usage);
+  if (!usage) {
+    return undefined;
+  }
+  const inputTokens = jsonNum(usage.input_tokens);
+  const outputTokens = jsonNum(usage.output_tokens);
+  if (inputTokens === undefined || outputTokens === undefined) {
+    return undefined;
+  }
+  const cached = jsonNum(usage.cache_read_input_tokens);
+  return {
+    inputTokens,
+    outputTokens,
+    ...(cached !== undefined ? { cachedInputTokens: cached } : {}),
+  };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -274,7 +322,7 @@ function createOpenAiProvider(baseUrl: string): LlmProvider {
   };
 }
 
-function readOpenAiTurn(data: Json): ChatTurn {
+export function readOpenAiTurn(data: Json): ChatTurn {
   const choice = jsonObj(jsonArr(jsonObj(data)?.choices)[0]);
   const message = jsonObj(choice?.message);
   const text = jsonStr(message?.content) ?? '';
@@ -291,7 +339,25 @@ function readOpenAiTurn(data: Json): ChatTurn {
       args: parseArgs(jsonStr(fn.arguments)),
     });
   }
-  return { text, toolCalls };
+  return { text, toolCalls, usage: readOpenAiUsage(data) };
+}
+
+function readOpenAiUsage(data: Json): TokenUsage | undefined {
+  const usage = jsonObj(jsonObj(data)?.usage);
+  if (!usage) {
+    return undefined;
+  }
+  const inputTokens = jsonNum(usage.prompt_tokens);
+  const outputTokens = jsonNum(usage.completion_tokens);
+  if (inputTokens === undefined || outputTokens === undefined) {
+    return undefined;
+  }
+  const cached = jsonNum(jsonObj(usage.prompt_tokens_details)?.cached_tokens);
+  return {
+    inputTokens,
+    outputTokens,
+    ...(cached !== undefined ? { cachedInputTokens: cached } : {}),
+  };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -307,6 +373,7 @@ export const providerConfig = {
   baseUrl: z
     .string()
     .optional()
+    .meta({ showWhen: { field: 'provider', equals: 'openai' } })
     .describe('OpenAI-compatible base URL (openai only). Defaults to api.openai.com.'),
 };
 
@@ -336,4 +403,105 @@ export async function askLlm(
     effort: opts.effort,
   });
   return turn.text;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Live model listing (powers the model picker)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Fetch the models the provider currently serves. The picker is driven by this
+ * live list so it never drifts; catalog hints add a price/context badge, and
+ * providers that return pricing live (OpenRouter) override the hint.
+ */
+export async function listModels(settings: ProviderSettings): Promise<ModelOption[]> {
+  if (settings.provider === 'openai') {
+    return listOpenAiModels(settings.baseUrl || DEFAULT_OPENAI_BASE);
+  }
+  return listAnthropicModels();
+}
+
+async function listAnthropicModels(): Promise<ModelOption[]> {
+  const { anthropicApiKey } = getPreferences<AgentPreferences>();
+  if (!anthropicApiKey) {
+    throw new Error('Set the Anthropic API key in the AI Agent plugin settings');
+  }
+  const data = await getJson(ANTHROPIC_MODELS_URL, {
+    'x-api-key': anthropicApiKey,
+    'anthropic-version': ANTHROPIC_VERSION,
+  });
+  const options: ModelOption[] = [];
+  for (const raw of jsonArr(jsonObj(data)?.data)) {
+    const entry = jsonObj(raw);
+    const id = jsonStr(entry?.id);
+    if (!id) {
+      continue;
+    }
+    const hints = hintsForModel(id);
+    options.push({
+      value: id,
+      label: jsonStr(entry?.display_name) ?? hints.displayName ?? id,
+      description: describeModel(hints),
+      contextWindow: hints.contextWindow,
+      pricing: hints.pricing,
+    });
+  }
+  return options;
+}
+
+async function listOpenAiModels(baseUrl: string): Promise<ModelOption[]> {
+  const { openaiApiKey } = getPreferences<AgentPreferences>();
+  if (!openaiApiKey) {
+    throw new Error('Set the OpenAI API key in the AI Agent plugin settings');
+  }
+  const endpoint = `${baseUrl.replace(/\/$/, '')}/models`;
+  const data = await getJson(endpoint, { authorization: `Bearer ${openaiApiKey}` });
+  const options: ModelOption[] = [];
+  for (const raw of jsonArr(jsonObj(data)?.data)) {
+    const option = openAiModelOption(jsonObj(raw));
+    if (option) {
+      options.push(option);
+    }
+  }
+  return options;
+}
+
+/** Normalize one OpenAI-compatible model entry, reading rich fields when present. */
+function openAiModelOption(entry: Record<string, Json> | null): ModelOption | null {
+  const id = jsonStr(entry?.id);
+  if (!entry || !id) {
+    return null;
+  }
+  const hints = hintsForModel(id);
+  const contextWindow = jsonNum(entry.context_length) ?? hints.contextWindow;
+  const pricing = openRouterPricing(jsonObj(entry.pricing)) ?? hints.pricing;
+  const merged: ModelHints = {
+    ...hints,
+    ...(contextWindow !== undefined ? { contextWindow } : {}),
+    ...(pricing !== undefined ? { pricing } : {}),
+  };
+  return {
+    value: id,
+    label: jsonStr(entry.name) ?? hints.displayName ?? id,
+    description: describeModel(merged),
+    contextWindow,
+    pricing,
+  };
+}
+
+/** OpenRouter returns per-token USD prices as strings; convert to per-MTok. */
+function openRouterPricing(pricing: Record<string, Json> | null): ModelPricing | undefined {
+  if (!pricing) {
+    return undefined;
+  }
+  const prompt = Number.parseFloat(jsonStr(pricing.prompt) ?? '');
+  const completion = Number.parseFloat(jsonStr(pricing.completion) ?? '');
+  if (
+    !Number.isFinite(prompt) ||
+    !Number.isFinite(completion) ||
+    (prompt === 0 && completion === 0)
+  ) {
+    return undefined;
+  }
+  return { inputPerMTok: prompt * 1_000_000, outputPerMTok: completion * 1_000_000 };
 }
