@@ -24,10 +24,13 @@ export interface TemplateScope {
   config: Record<string, unknown>;
 }
 
-/** Matches a single `{{ expr }}` placeholder (no nested braces). */
-const EXPRESSION = /\{\{\s*([^{}]+?)\s*\}\}/g;
+// Matches a single `{{ expr }}` placeholder. The inner class `[^{}]` is disjoint
+// from the `{}` delimiters and the `+` is greedy with no trailing optional, so the
+// pattern is linear with no overlapping-quantifier backtracking (Sonar S5852,
+// super-linear ReDoS). Surrounding whitespace is trimmed by the caller.
+const EXPRESSION = /\{\{([^{}]+)\}\}/g;
 /** Non-global twin used purely for presence checks (keeps `lastIndex` clean). */
-const HAS_EXPRESSION = /\{\{\s*[^{}]+?\s*\}\}/;
+const HAS_EXPRESSION = /\{\{[^{}]+\}\}/;
 
 /** True when `value` contains at least one `{{ expr }}` placeholder. */
 export function hasTemplate(value: string): boolean {
