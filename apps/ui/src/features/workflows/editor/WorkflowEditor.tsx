@@ -235,6 +235,7 @@ interface ConfigSidePanelProps {
     name: string;
     source: string;
     type: string;
+    preview?: string;
   }>;
   blockSchema: BlockDefinition['schema'] | undefined;
   viewModuleUrl: string | undefined;

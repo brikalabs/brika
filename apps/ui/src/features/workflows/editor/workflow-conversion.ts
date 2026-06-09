@@ -35,6 +35,8 @@ export interface AvailableVariable {
   name: string;
   source: string;
   type: string;
+  /** Short rendering of the value last seen on this path, when one has flowed. */
+  preview?: string;
 }
 
 /* ─── XYFlow ↔ type-system graph conversion ─────────────────── */
@@ -83,7 +85,8 @@ export function edgesToGraphEdges(edges: Edge[]): GraphEdge[] {
 export function collectInputVariables(
   edge: Edge,
   blockNodes: Node[],
-  portTypeMap: PortTypeMap
+  portTypeMap: PortTypeMap,
+  lastOutputs: Record<string, unknown> = {}
 ): AvailableVariable[] {
   const sourceNode = blockNodes.find((n) => n.id === edge.source);
   if (!sourceNode) {
@@ -93,11 +96,16 @@ export function collectInputVariables(
   const targetPortId = edge.targetHandle || 'in';
   const resolvedType = portTypeMap.get(portKey(sourceNode.id, sourcePortId));
 
+  // The value last emitted by the source node is exactly what arrives on this
+  // input port, so its paths preview against that value.
+  const portValue = lastOutputs[sourceNode.id];
+
   if (resolvedType) {
     return getCompletions(resolvedType, `inputs.${targetPortId}`, 3).map((item) => ({
       name: item.path,
       source: `from ${sourceNode.id}`,
       type: item.type,
+      preview: formatPreview(navigateValue(portValue, subPath(item.path, targetPortId))),
     }));
   }
 
@@ -108,8 +116,56 @@ export function collectInputVariables(
       name: `inputs.${targetPortId}`,
       source: `from ${sourceNode.id}`,
       type: outputPort?.typeName ?? 'generic',
+      preview: formatPreview(portValue),
     },
   ];
+}
+
+/** Segments of a completion path below its `inputs.<portId>` prefix. */
+function subPath(fullPath: string, portId: string): string[] {
+  const prefix = `inputs.${portId}`;
+  if (fullPath === prefix) {
+    return [];
+  }
+  return fullPath.startsWith(`${prefix}.`) ? fullPath.slice(prefix.length + 1).split('.') : [];
+}
+
+/** Walk object properties / array indices without casts; missing path -> undefined. */
+function navigateValue(value: unknown, segments: string[]): unknown {
+  let current = value;
+  for (const segment of segments) {
+    if (current === null || current === undefined) {
+      return undefined;
+    }
+    if (Array.isArray(current)) {
+      const index = Number(segment);
+      current = Number.isInteger(index) ? current[index] : undefined;
+    } else if (typeof current === 'object') {
+      current = Reflect.get(current, segment);
+    } else {
+      return undefined;
+    }
+  }
+  return current;
+}
+
+/** A short, human-readable preview of a last-seen value; undefined renders nothing. */
+function formatPreview(value: unknown): string | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (value === null) {
+    return 'null';
+  }
+  if (typeof value === 'number' || typeof value === 'boolean') {
+    return String(value);
+  }
+  try {
+    const text = typeof value === 'string' ? value : JSON.stringify(value);
+    return text.length > 48 ? `${text.slice(0, 47)}...` : text;
+  } catch {
+    return undefined;
+  }
 }
 
 export function collectConfigVariables(data: BlockNodeData): AvailableVariable[] {

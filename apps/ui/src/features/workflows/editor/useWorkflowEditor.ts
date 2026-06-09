@@ -469,13 +469,13 @@ export function useWorkflowEditor(
       const incomingEdges = edges.filter((e) => e.target === blockId);
 
       const inputVars = incomingEdges.flatMap((edge) =>
-        collectInputVariables(edge, blockNodes, portTypeMap)
+        collectInputVariables(edge, blockNodes, portTypeMap, blockOutputs)
       );
       const configVars = targetNode ? collectConfigVariables(targetNode.data as BlockNodeData) : [];
 
       return [...inputVars, ...configVars];
     },
-    [nodes, edges, portTypeMap]
+    [nodes, edges, portTypeMap, blockOutputs]
   );
 
   return {
