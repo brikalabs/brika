@@ -133,7 +133,8 @@ export const agentBlock = defineBlock({
     tools: z
       .array(z.string())
       .default([])
-      .describe('Qualified tool ids the agent may call (empty = all registered tools)'),
+      .meta({ label: 'Tools', format: 'tool-multiselect' })
+      .describe('Which tools the agent may call (none selected = all registered tools)'),
   }),
   run: ({ inputs, outputs, config, callTool, listTools }) => {
     inputs.in.on(async (data) => {
