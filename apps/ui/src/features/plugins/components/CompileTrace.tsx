@@ -36,10 +36,11 @@ export function CompileTrace({ timeline, variant = 'compact' }: Readonly<Compile
     }
   } else if (timeline.status === 'error') {
     label = t('common:compile.failed');
+  } else if (active) {
+    const step = t(`common:compile.step.${active.key}`, { defaultValue: active.key });
+    label = `${t('common:compile.compiling')} ${step}`;
   } else {
-    label = active
-      ? `${t('common:compile.compiling')} ${t(`common:compile.step.${active.key}`, { defaultValue: active.key })}`
-      : t('common:compile.compiling');
+    label = t('common:compile.compiling');
   }
 
   return (

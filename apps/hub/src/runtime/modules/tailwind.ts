@@ -88,7 +88,8 @@ export class TailwindCompiler {
       return undefined;
     }
 
-    const compile = await (this.#compile ??= import('tailwindcss').then((m) => m.compile));
+    this.#compile ??= import('tailwindcss').then((m) => m.compile);
+    const compile = await this.#compile;
     const css = (await compile(this.#theme)).build(candidates);
     if (css.length === 0) {
       return undefined;

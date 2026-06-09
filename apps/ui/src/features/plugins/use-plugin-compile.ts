@@ -173,7 +173,7 @@ export function usePluginCompileTimeline(uid: string): CompileTimeline | null {
 
     const unsub = subscribeSharedEvents(getStreamUrl('/api/stream/events'), (ev) => {
       const event = parsePluginCompileEvent(ev.data);
-      if (!event || event.uid !== uid) {
+      if (event?.uid !== uid) {
         return;
       }
       const frame = toFrame(event);
