@@ -317,7 +317,8 @@ describe('generateTypes', () => {
     );
 
     // cacheDir should not have been created, so reading the file rejects with ENOENT
-    await expect(readFile(join(cacheDir, 'i18n-resources.d.ts'), 'utf-8')).rejects.toThrow(/ENOENT/);
+    const typesFile = join(cacheDir, 'i18n-resources.d.ts');
+    await expect(readFile(typesFile, 'utf-8')).rejects.toThrow(/ENOENT/);
   });
 
   test('does nothing when cacheDir is empty string', async () => {
