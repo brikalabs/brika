@@ -92,6 +92,16 @@ async function runStack(resolved: ResolvedConfig, { plain }: { plain: boolean })
   process.once('SIGINT', shutdown);
   process.once('SIGTERM', shutdown);
 
+  // Children are spawned detached (process-group leaders), so a mortar crash
+  // that skips shutdown() would orphan the WHOLE stack (hub + its plugins).
+  // Tear the tree down before dying, whatever the error was.
+  const crash = (error: unknown): void => {
+    console.error('[mortar] fatal:', error);
+    void supervisor.shutdown().then(() => process.exit(1));
+  };
+  process.once('uncaughtException', crash);
+  process.once('unhandledRejection', crash);
+
   if (plain) {
     await runPlain(supervisor, resolved);
     return;
