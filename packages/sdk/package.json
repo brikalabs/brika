@@ -25,6 +25,7 @@
     "./brick": "./src/brick.ts",
     "./browser-bridge": "./src/browser-bridge.ts",
     "./schema": "./src/blocks/schema.ts",
+    "./expressions": "./src/expressions.ts",
     "./sparks": "./src/sparks.ts",
     "./lifecycle": "./src/lifecycle.ts",
     "./storage": "./src/storage.ts",

@@ -10,17 +10,21 @@
 import { createCli } from '@brika/cli';
 import build from './commands/build';
 import check from './commands/check';
+import create from './commands/create';
 import dev from './commands/dev';
+import docs from './commands/docs';
 import doctor from './commands/doctor';
 import install from './commands/install';
 import verify from './commands/verify';
 
 await createCli({ name: 'brika' })
+  .addCommand(create)
   .addCommand(build)
   .addCommand(check)
   .addCommand(verify)
   .addCommand(dev)
   .addCommand(install)
+  .addCommand(docs)
   .addCommand(doctor)
   .addHelp()
   .run();

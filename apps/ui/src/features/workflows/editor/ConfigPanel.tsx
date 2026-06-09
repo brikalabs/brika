@@ -33,6 +33,7 @@ import {
 import { displayType, parsePortType } from '@brika/type-system';
 import type { Node } from '@xyflow/react';
 import {
+  AlertTriangle,
   ArrowDownToLine,
   ArrowUpFromLine,
   Check,
@@ -55,6 +56,7 @@ import { useLocale } from '@/lib/use-locale';
 import { fetchTools, type ToolSummary } from '../api';
 import type { BlockNodeData, BlockPort } from './BlockNode';
 import { ClientBlockView } from './ClientBlockView';
+import { lintExpressions } from './expression-lint';
 import { usePortTypeName } from './WorkflowTypeContext';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -227,6 +229,10 @@ interface ExpressionFieldProps {
   variables: Variable[];
   placeholder?: string;
   multiline?: boolean;
+  /** Declared input port ids; enables inline `{{ }}` linting when provided. */
+  inputPortIds?: string[];
+  /** Declared config keys for `{{ config.x }}` linting. */
+  configKeys?: string[];
 }
 
 function ExpressionField({
@@ -235,10 +241,18 @@ function ExpressionField({
   variables,
   placeholder,
   multiline,
+  inputPortIds,
+  configKeys,
 }: Readonly<ExpressionFieldProps>) {
   const capture = useCapture();
   const [showVars, setShowVars] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
+
+  // Inline expression linting: typo'd ports/keys surface while typing.
+  const expressionWarnings = useMemo(
+    () => (inputPortIds ? lintExpressions(value, inputPortIds, configKeys ?? []) : []),
+    [value, inputPortIds, configKeys]
+  );
 
   const insertVariable = (varName: string) => {
     capture('workflow.config_variable_inserted');
@@ -283,6 +297,21 @@ function ExpressionField({
           <Sparkles className="size-4 text-primary" />
         </Button>
       </div>
+
+      {expressionWarnings.length > 0 && (
+        <div className="space-y-0.5">
+          {expressionWarnings.map((w) => (
+            <p
+              key={`${w.expression}:${w.message}`}
+              className="flex items-center gap-1 text-warning text-xs"
+            >
+              <AlertTriangle className="size-3 shrink-0" />
+              <span className="truncate font-mono">{`{{ ${w.expression} }}`}</span>
+              <span className="shrink-0">{w.message}</span>
+            </p>
+          ))}
+        </div>
+      )}
 
       {/* Variable suggestions dropdown */}
       {showVars && variables.length > 0 && (
@@ -447,6 +476,10 @@ interface FieldProps {
   blockType?: string;
   /** Sibling config values, forwarded to provider-aware option providers. */
   allConfig?: Record<string, unknown>;
+  /** Declared input port ids, for `{{ inputs.x }}` expression linting. */
+  inputPortIds?: string[];
+  /** Declared config keys, for `{{ config.x }}` expression linting. */
+  configKeys?: string[];
 }
 
 /** Resolved display info passed to each field renderer */
@@ -460,6 +493,8 @@ interface ResolvedFieldInfo {
   name: string;
   blockType?: string;
   allConfig?: Record<string, unknown>;
+  inputPortIds?: string[];
+  configKeys?: string[];
 }
 
 function DurationField({ value, onChange, cleanDescription, label }: Readonly<ResolvedFieldInfo>) {
@@ -498,6 +533,8 @@ function ExpressionMarkerField({
   variables,
   cleanDescription,
   label,
+  inputPortIds,
+  configKeys,
 }: Readonly<ResolvedFieldInfo>) {
   return (
     <ExpressionField
@@ -506,6 +543,8 @@ function ExpressionMarkerField({
       variables={variables}
       placeholder={cleanDescription || `Enter ${label.toLowerCase()}`}
       multiline
+      inputPortIds={inputPortIds}
+      configKeys={configKeys}
     />
   );
 }
@@ -621,6 +660,8 @@ function StringField({
   cleanDescription,
   label,
   name,
+  inputPortIds,
+  configKeys,
 }: Readonly<ResolvedFieldInfo>) {
   const isMultiline =
     name === 'message' ||
@@ -636,6 +677,8 @@ function StringField({
       variables={variables}
       placeholder={cleanDescription || `Enter ${label.toLowerCase()}`}
       multiline={isMultiline}
+      inputPortIds={inputPortIds}
+      configKeys={configKeys}
     />
   );
 }
@@ -1296,6 +1339,8 @@ function resolveFieldInfo(
     name: props.name,
     blockType: props.blockType,
     allConfig: props.allConfig,
+    inputPortIds: props.inputPortIds,
+    configKeys: props.configKeys,
   };
 }
 
@@ -1542,6 +1587,8 @@ function BlockConfig({
           pluginId={pluginId}
           blockType={data.type}
           allConfig={config}
+          inputPortIds={(data.inputs ?? []).map((p) => p.id)}
+          configKeys={Object.keys(properties)}
         />
       ))}
     </div>
