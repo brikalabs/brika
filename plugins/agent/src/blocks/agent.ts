@@ -22,6 +22,11 @@ function toToolName(id: string): string {
   return id.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 64);
 }
 
+/** Use a wire payload directly only when it is already a string. */
+function stringInput(data: unknown): string {
+  return typeof data === 'string' ? data : '';
+}
+
 type ToolInfo = { id: string; description?: string; inputSchema?: Json };
 type ToolResult = { ok: boolean; content?: string; data?: Json };
 type CallTool = (tool: string, args: Record<string, Json>) => Promise<ToolResult>;
@@ -121,7 +126,7 @@ export const agentBlock = defineBlock({
     color: '#d97757',
   },
   inputs: {
-    prompt: input(z.string(), { name: 'Prompt' }),
+    in: input(z.generic(), { name: 'Input' }),
   },
   outputs: {
     reply: output(z.string(), { name: 'Reply' }),
@@ -129,6 +134,12 @@ export const agentBlock = defineBlock({
     error: output(z.object({ message: z.string() }), { name: 'Error' }),
   },
   config: z.object({
+    prompt: z
+      .string()
+      .optional()
+      .describe(
+        'Goal sent to the agent. Reference incoming data with {{ inputs.in }} or {{ inputs.in.field }}. Leave empty to use a string piped into the Input.'
+      ),
     model: z.enum(['claude-opus-4-8', 'claude-sonnet-4-6']).default('claude-opus-4-8'),
     systemPrompt: z.string().optional().describe('System prompt defining the agent persona/rules'),
     effort: z.enum(['low', 'medium', 'high']).default('high'),
@@ -140,7 +151,18 @@ export const agentBlock = defineBlock({
       .describe('Qualified tool ids the agent may call (empty = all registered tools)'),
   }),
   run: ({ inputs, outputs, config, callTool, listTools }) => {
-    inputs.prompt.on(async (prompt) => {
+    inputs.in.on(async (data) => {
+      // `config.prompt` resolves against the live input scope when templated;
+      // an empty field falls back to a string piped into the Input.
+      const templated = config.prompt?.trim();
+      const prompt = templated && templated.length > 0 ? templated : stringInput(data);
+      if (!prompt) {
+        outputs.error.emit({
+          message: 'Empty prompt. Set the Prompt field or pipe a string into the Input.',
+        });
+        return;
+      }
+
       const { apiKey } = getPreferences<{ apiKey?: string }>();
       if (!apiKey) {
         outputs.error.emit({

@@ -10,6 +10,7 @@ import { z } from 'zod';
 import { log } from '../api/logging';
 import { getContext } from '../context';
 import { collectBlock } from '../internal/collect';
+import { type TemplateScope, templatedConfigView } from '../internal/template';
 import type { Json } from '../types';
 import {
   type BlockContext,
@@ -307,7 +308,11 @@ function compileBlock<
         log.error(`Config validation failed: ${configResult.error.message}`);
         throw new Error(`Block config validation failed: ${configResult.error.message}`);
       }
-      const config = configResult.data;
+      // Live scope for `{{ inputs.<port> }}` / `{{ config.<key> }}` expressions
+      // embedded in string config fields. Updated on every input event below; the
+      // config view resolves templated fields against it at read time.
+      const scope: TemplateScope = { inputs: {}, config: configResult.data };
+      const config = templatedConfigView(configResult.data, scope);
 
       // Build input flows object
       const inputFlows = Object.fromEntries([...flows.entries()].map(([id, flow]) => [id, flow]));
@@ -350,6 +355,10 @@ function compileBlock<
               return; // Drop invalid data
             }
           }
+
+          // Record the latest value so this block's `{{ inputs.<port> }}`
+          // expressions resolve against it on the handlers that fire below.
+          scope.inputs[portId] = data;
 
           // Push to flow
           const flow = flows.get(portId);
