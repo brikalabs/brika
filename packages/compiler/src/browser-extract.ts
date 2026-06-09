@@ -137,14 +137,13 @@ export async function readBrowserModule(file: string): Promise<BrowserModuleResu
       plugins: [browserBuildPlugin],
     });
   } catch (err) {
+    // Bun.build rejects on any bundling failure (missing entry, syntax error,
+    // unresolved import), so the catch is the real failure path.
     return { error: errorMessage(err) };
-  }
-  if (!built.success) {
-    return { error: built.logs.map((l) => l.message).join('; ') };
   }
   const [output] = built.outputs;
   if (!output) {
-    return { error: 'bundling produced no output' };
+    return { error: built.logs.map((l) => l.message).join('; ') || 'bundling produced no output' };
   }
   importSalt += 1;
   const tmp = join(dirname(file), `.brika-manifest.${basename(file, '.tsx')}.${importSalt}.mjs`);

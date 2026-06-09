@@ -8,6 +8,7 @@
  * - Port type compatibility checking for workflow connections
  */
 
+export * from './events';
 export * from './manifests';
 export * from './preferences';
 export * from './store';

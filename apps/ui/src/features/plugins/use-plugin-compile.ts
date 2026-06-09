@@ -1,3 +1,4 @@
+import { type PluginCompilePayload, pluginCompilePayloadSchema } from '@brika/plugin';
 import { useEffect, useRef, useState } from 'react';
 import { z } from 'zod';
 import { getStreamUrl } from '@/lib/query';
@@ -6,21 +7,11 @@ import { subscribeSharedEvents } from '@/lib/shared-event-source';
 /** Envelope of a `plugin.compile` event as it arrives over `/api/stream/events`. */
 const compileEventSchema = z.object({
   type: z.literal('plugin.compile'),
-  payload: z.object({
-    uid: z.string(),
-    name: z.string(),
-    phase: z.enum(['start', 'progress', 'done', 'error']),
-    step: z.string().optional(),
-    modules: z.number().optional(),
-    chunks: z.number().optional(),
-    cached: z.boolean().optional(),
-    durationMs: z.number().optional(),
-    message: z.string().optional(),
-  }),
+  payload: pluginCompilePayloadSchema,
 });
 
 /** A fully-parsed `plugin.compile` event payload (uid/name + the step fields). */
-export type PluginCompileEvent = z.infer<typeof compileEventSchema>['payload'];
+export type PluginCompileEvent = PluginCompilePayload;
 
 /** Parse a raw SSE frame into a compile event, or null if it is not one. */
 export function parsePluginCompileEvent(data: string): PluginCompileEvent | null {
