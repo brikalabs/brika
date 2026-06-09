@@ -266,10 +266,10 @@ export class WorkflowEngine {
     return this.#executors.get(id)?.portBuffers() ?? [];
   }
 
-  inject(blockId: string, port: string, data: Json): boolean {
+  inject(blockId: string, port: string, data: Json, options?: { replay?: boolean }): boolean {
     for (const executor of this.#executors.values()) {
       if (executor.ownsBlock(blockId)) {
-        return executor.inject(blockId, port, data);
+        return executor.inject(blockId, port, data, options);
       }
     }
     return false;

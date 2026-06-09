@@ -127,12 +127,25 @@ export const workflowsRoutes = group({
       },
     }),
 
-    // Manually trigger a block on a running workflow (backs the button block).
+    // Manually trigger a block on a running workflow (backs the button block
+    // and the editor's Run control). `replay: true` re-delivers the value
+    // that last flowed into the port instead of an empty poke.
     route.post({
       path: '/inject',
-      body: z.object({ blockId: z.string(), port: z.string() }),
+      body: z.object({
+        blockId: z.string(),
+        port: z.string(),
+        replay: z.boolean().optional(),
+      }),
       handler: ({ body, inject }) => {
-        const ok = inject(WorkflowEngine).inject(body.blockId, body.port, {});
+        const ok = inject(WorkflowEngine).inject(
+          body.blockId,
+          body.port,
+          {},
+          {
+            replay: body.replay ?? false,
+          }
+        );
         return { ok };
       },
     }),

@@ -4,7 +4,17 @@
  * Dynamic block node with clear multi-input/multi-output visualization.
  */
 
-import { Badge, Button, cn, toast } from '@brika/clay';
+import {
+  Badge,
+  Button,
+  ButtonGroup,
+  cn,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  toast,
+} from '@brika/clay';
 import {
   displayType,
   isCompatible,
@@ -24,12 +34,14 @@ import {
 } from '@xyflow/react';
 import {
   CheckCircle,
+  ChevronDown,
   Clock,
   HelpCircle,
   Loader2,
   MessageSquare,
   PencilLine,
   Play,
+  RotateCcw,
   Send,
   Wrench,
   XCircle,
@@ -459,8 +471,9 @@ const DEFAULT_INPUTS: BlockPort[] = [{ id: 'in', name: 'Input' }];
 const DEFAULT_OUTPUTS: BlockPort[] = [{ id: 'out', name: 'Output' }];
 
 /**
- * Run-once: poke the block's first input on the running workflow. Shown in the
- * node toolbar when the node is selected and the block has an input to poke.
+ * Run control for a selected block: the primary action re-triggers it with
+ * the LAST value that flowed into its input (replay); the dropdown offers an
+ * empty trigger for blocks that just need a poke.
  */
 function RunBlockButton({
   blockId,
@@ -471,9 +484,9 @@ function RunBlockButton({
 }>) {
   const { t } = useLocale();
 
-  const run = async () => {
+  const run = async (replay: boolean) => {
     try {
-      const res = await injectBlock(blockId, port);
+      const res = await injectBlock(blockId, port, { replay });
       if (!res.ok) {
         toast.error(t('workflows:editor.runBlock.notRunning'));
       }
@@ -482,16 +495,39 @@ function RunBlockButton({
     }
   };
 
+  const segment =
+    'h-7 border-primary/30 bg-background/95 font-medium text-primary text-xs shadow-lg backdrop-blur hover:bg-primary/10 hover:text-primary';
+
   return (
-    <Button
-      size="sm"
-      variant="outline"
-      className="h-7 gap-1.5 rounded-full border-primary/30 bg-background/95 px-3 font-medium text-primary text-xs shadow-lg backdrop-blur hover:bg-primary/10 hover:text-primary"
-      onClick={run}
-    >
-      <Play className="size-3 fill-current" />
-      {t('workflows:editor.runBlock.label')}
-    </Button>
+    <ButtonGroup>
+      <Button
+        size="sm"
+        variant="outline"
+        className={cn(segment, 'gap-1.5 px-3')}
+        title={t('workflows:editor.runBlock.replayHint')}
+        onClick={() => run(true)}
+      >
+        <Play className="size-3 fill-current" />
+        {t('workflows:editor.runBlock.label')}
+      </Button>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button size="sm" variant="outline" className={cn(segment, 'px-1.5')}>
+            <ChevronDown className="size-3" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" sideOffset={6}>
+          <DropdownMenuItem onClick={() => run(true)}>
+            <RotateCcw className="size-3.5" />
+            {t('workflows:editor.runBlock.replay')}
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => run(false)}>
+            <Play className="size-3.5" />
+            {t('workflows:editor.runBlock.empty')}
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </ButtonGroup>
   );
 }
 

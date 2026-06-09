@@ -117,7 +117,10 @@
     "runBlock": {
       "label": "Run",
       "notRunning": "Enable the workflow to run blocks",
-      "failed": "Run request failed"
+      "failed": "Run request failed",
+      "replay": "Run with last input",
+      "empty": "Run with empty trigger",
+      "replayHint": "Re-triggers with the value that last arrived on this input"
     },
     "diagnostics": {
       "errors": "errors",

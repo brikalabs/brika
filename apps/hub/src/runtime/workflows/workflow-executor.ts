@@ -236,7 +236,7 @@ export class WorkflowExecutor {
    * Inject data into a block's input port.
    * Use this to trigger the workflow from external events.
    */
-  inject(blockId: string, port: string, data: Json): boolean {
+  inject(blockId: string, port: string, data: Json, options?: { replay?: boolean }): boolean {
     const workflow = this.#workflow;
     if (!workflow) {
       return false;
@@ -249,14 +249,39 @@ export class WorkflowExecutor {
       return false;
     }
 
+    // Replay: re-trigger the block with the value that last flowed into this
+    // input (the freshest upstream buffer across fan-in). Falls back to the
+    // provided payload when nothing has flowed yet.
+    const payload = options?.replay ? (this.#lastInputValue(blockId, port) ?? data) : data;
+
     // An external injection is a fresh run root.
     const correlationId = crypto.randomUUID();
     this.#lastCorrelationId.set(blockId, correlationId);
     this.#emit({ type: 'run.opened', workflowId: workflow.id, blockId, correlationId });
     this.#emit({ type: 'block.start', workflowId: workflow.id, blockId, port, correlationId });
 
-    this.#plugins.pushBlockInput(blockId, port, data, correlationId);
+    this.#plugins.pushBlockInput(blockId, port, payload, correlationId);
     return true;
+  }
+
+  /**
+   * The value that last arrived on a block's input port: the most recent
+   * output buffer among the connections feeding it (fan-in picks the
+   * freshest). Undefined when nothing has flowed yet.
+   */
+  #lastInputValue(blockId: string, port: string): Json | undefined {
+    const connections = this.#workflow?.connections ?? [];
+    let best: PortBuffer | undefined;
+    for (const conn of connections) {
+      if (conn.to !== blockId || (conn.toPort ?? 'in') !== port) {
+        continue;
+      }
+      const buffer = this.#buffers.get(`${conn.from}:${conn.fromPort ?? 'out'}`);
+      if (buffer && (!best || buffer.ts > best.ts)) {
+        best = buffer;
+      }
+    }
+    return best?.value;
   }
 
   /** Whether this executor is running the given block instance. */

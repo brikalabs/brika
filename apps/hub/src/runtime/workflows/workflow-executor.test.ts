@@ -659,6 +659,36 @@ describe('WorkflowExecutor - Block Emit and Data Flow', () => {
     });
   });
 
+  test('inject with replay re-delivers the last value that flowed into the port', async () => {
+    expect.hasAssertions();
+    await executor.start(createConnectedWorkflow());
+
+    // block-a emitted once: its buffer holds the last value block-b received.
+    emitHandler?.('block-a', 'tick', { message: 'previous-input' });
+    pushedInputs.length = 0;
+
+    const ok = executor.inject('block-b', 'input', {}, { replay: true });
+
+    expect(ok).toBeTrue();
+    expect(pushedInputs).toHaveLength(1);
+    expect(pushedInputs[0]).toMatchObject({
+      blockId: 'block-b',
+      port: 'input',
+      data: { message: 'previous-input' },
+    });
+  });
+
+  test('inject with replay falls back to the payload when nothing has flowed yet', async () => {
+    expect.hasAssertions();
+    await executor.start(createConnectedWorkflow());
+
+    const ok = executor.inject('block-b', 'input', {}, { replay: true });
+
+    expect(ok).toBeTrue();
+    expect(pushedInputs).toHaveLength(1);
+    expect(pushedInputs[0]).toMatchObject({ blockId: 'block-b', port: 'input', data: {} });
+  });
+
   test('should dispatch data to connected blocks', async () => {
     expect.hasAssertions();
     const workflow = createConnectedWorkflow();

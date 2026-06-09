@@ -191,10 +191,15 @@ export async function fetchWorkflowPortValues(id: string): Promise<PortValue[]> 
   return res.json();
 }
 
-/** Manually poke a block's input on a RUNNING workflow (the Run-once button). */
+/**
+ * Manually poke a block's input on a RUNNING workflow (the Run control).
+ * With `replay`, the hub re-delivers the value that last flowed into the
+ * port instead of an empty trigger.
+ */
 export async function injectBlock(
   blockId: string,
-  port: string
+  port: string,
+  options?: { replay?: boolean }
 ): Promise<{
   ok: boolean;
 }> {
@@ -206,6 +211,7 @@ export async function injectBlock(
     body: JSON.stringify({
       blockId,
       port,
+      replay: options?.replay ?? false,
     }),
   });
   return res.json();

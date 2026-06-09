@@ -117,7 +117,10 @@
     "runBlock": {
       "label": "Exécuter",
       "notRunning": "Activez le workflow pour exécuter des blocs",
-      "failed": "Échec de la demande d'exécution"
+      "failed": "Échec de la demande d'exécution",
+      "replay": "Exécuter avec la dernière entrée",
+      "empty": "Exécuter avec un déclencheur vide",
+      "replayHint": "Relance avec la valeur reçue en dernier sur cette entrée"
     },
     "diagnostics": {
       "errors": "erreurs",
