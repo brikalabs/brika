@@ -1649,12 +1649,30 @@ interface IOTypesSectionProps {
   outputs: BlockPort[];
 }
 
+/**
+ * Ports are already visible on the canvas node; this section is a closed-by-
+ * default disclosure so the panel leads with what the user came for (config).
+ */
 function IOTypesSection({ nodeId, inputs, outputs }: Readonly<IOTypesSectionProps>) {
+  const [open, setOpen] = useState(false);
   const hasInputs = inputs.length > 0;
   const hasOutputs = outputs.length > 0;
 
   if (!hasInputs && !hasOutputs) {
     return null;
+  }
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="mt-3 flex w-full items-center gap-1.5 border-t pt-3 text-left text-muted-foreground text-xs transition-colors hover:text-foreground"
+      >
+        <ChevronRight className="size-3.5" />
+        {`${inputs.length} in / ${outputs.length} out`}
+      </button>
+    );
   }
 
   return (

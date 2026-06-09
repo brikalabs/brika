@@ -161,30 +161,31 @@ const nodeTypes: NodeTypes = {
   block: BlockNode,
 };
 
-type PanelName = 'blocks' | 'config' | 'debug';
+type PanelName = 'blocks' | 'inspector';
 
 interface PanelStates {
   blocks: boolean;
-  config: boolean;
-  debug: boolean;
+  inspector: boolean;
 }
 
+// One panel per side. The block library starts collapsed (Cmd+K and the
+// wire-drop picker cover adding blocks); the right inspector carries either
+// the selected block's config or the runs/live observability, never both.
 const DEFAULT_PANEL_STATES: PanelStates = {
-  blocks: true,
-  config: true,
-  debug: true,
+  blocks: false,
+  inspector: true,
 };
+
+const PANEL_STORAGE_KEY = 'workflow-editor-panels-v2';
 
 function isValidPanelStates(value: unknown): value is PanelStates {
   return (
     typeof value === 'object' &&
     value !== null &&
     'blocks' in value &&
-    'config' in value &&
-    'debug' in value &&
+    'inspector' in value &&
     typeof (value as PanelStates).blocks === 'boolean' &&
-    typeof (value as PanelStates).config === 'boolean' &&
-    typeof (value as PanelStates).debug === 'boolean'
+    typeof (value as PanelStates).inspector === 'boolean'
   );
 }
 
@@ -192,7 +193,7 @@ function usePanelState() {
   const capture = useCapture();
   const [panelStates, setPanelStates] = useState<PanelStates>(() => {
     try {
-      const saved = localStorage.getItem('workflow-editor-panels');
+      const saved = localStorage.getItem(PANEL_STORAGE_KEY);
       if (saved) {
         const parsed: unknown = JSON.parse(saved);
         if (isValidPanelStates(parsed)) {
@@ -213,16 +214,28 @@ function usePanelState() {
           [panel]: !prev[panel],
         };
         capture('workflow.editor_panel_toggled', { panel, open: next[panel] });
-        localStorage.setItem('workflow-editor-panels', JSON.stringify(next));
+        localStorage.setItem(PANEL_STORAGE_KEY, JSON.stringify(next));
         return next;
       });
     },
     [capture]
   );
 
+  const openPanel = useCallback((panel: PanelName) => {
+    setPanelStates((prev: PanelStates) => {
+      if (prev[panel]) {
+        return prev;
+      }
+      const next = { ...prev, [panel]: true };
+      localStorage.setItem(PANEL_STORAGE_KEY, JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
   return {
     panelStates,
     togglePanel,
+    openPanel,
   };
 }
 
@@ -248,10 +261,11 @@ function BlocksPanel({ isOpen, onToggle }: Readonly<BlocksPanelProps>) {
   );
 }
 
-interface ConfigSidePanelProps {
+interface InspectorPanelProps {
   isOpen: boolean;
   onToggle: () => void;
-  selectedNode: Node;
+  workflow: Workflow;
+  selectedNode: Node | null;
   updateBlockConfig: (nodeId: string, config: Record<string, unknown>) => void;
   availableVariables: Array<{
     name: string;
@@ -264,60 +278,51 @@ interface ConfigSidePanelProps {
   pluginUid: string | undefined;
 }
 
-function ConfigSidePanel({
+/**
+ * The single right-hand panel. Focused, never stacked: a selected block shows
+ * its configuration; an empty selection shows the workflow's runs/live
+ * observability. Click the canvas to get back to the workflow view.
+ */
+function InspectorPanel({
   isOpen,
   onToggle,
+  workflow,
   selectedNode,
   updateBlockConfig,
   availableVariables,
   blockSchema,
   viewModuleUrl,
   pluginUid,
-}: Readonly<ConfigSidePanelProps>) {
+}: Readonly<InspectorPanelProps>) {
   const { t } = useLocale();
 
   return (
     <CollapsiblePanel
       side="right"
-      icon={<Settings2 className="size-4" />}
-      title={t('workflows:editor.panels.config')}
+      icon={
+        selectedNode ? <Settings2 className="size-4" /> : <Zap className="size-4 text-yellow-500" />
+      }
+      title={
+        selectedNode ? t('workflows:editor.panels.config') : t('workflows:editor.panels.debug')
+      }
       isOpen={isOpen}
       onToggle={onToggle}
-      width="w-80"
+      width="w-88"
     >
-      <ConfigPanel
-        node={selectedNode}
-        onUpdateBlock={updateBlockConfig}
-        availableVariables={availableVariables}
-        blockSchema={blockSchema}
-        viewModuleUrl={viewModuleUrl}
-        pluginUid={pluginUid}
-        className="h-full w-full"
-        onCollapse={onToggle}
-      />
-    </CollapsiblePanel>
-  );
-}
-
-interface DebugSidePanelProps {
-  isOpen: boolean;
-  onToggle: () => void;
-  workflow: Workflow;
-}
-
-function DebugSidePanel({ isOpen, onToggle, workflow }: Readonly<DebugSidePanelProps>) {
-  const { t } = useLocale();
-
-  return (
-    <CollapsiblePanel
-      side="right"
-      icon={<Zap className="size-4 text-yellow-500" />}
-      title={t('workflows:editor.panels.debug')}
-      isOpen={isOpen}
-      onToggle={onToggle}
-      width="w-72"
-    >
-      <DebugPanel workflow={workflow} className="h-full w-full" onCollapse={onToggle} />
+      {selectedNode ? (
+        <ConfigPanel
+          node={selectedNode}
+          onUpdateBlock={updateBlockConfig}
+          availableVariables={availableVariables}
+          blockSchema={blockSchema}
+          viewModuleUrl={viewModuleUrl}
+          pluginUid={pluginUid}
+          className="h-full w-full"
+          onCollapse={onToggle}
+        />
+      ) : (
+        <DebugPanel workflow={workflow} className="h-full w-full" onCollapse={onToggle} />
+      )}
     </CollapsiblePanel>
   );
 }
@@ -450,8 +455,8 @@ interface EditorCanvasProps {
   onDragOver: ((event: React.DragEvent) => void) | undefined;
   onDrop: ((event: React.DragEvent) => void) | undefined;
   leftCollapsed: boolean;
-  configCollapsed: boolean;
-  debugCollapsed: boolean;
+  inspectorCollapsed: boolean;
+  hasSelection: boolean;
   togglePanel: (panel: PanelName) => void;
   canUndo: boolean;
   canRedo: boolean;
@@ -475,8 +480,8 @@ function EditorCanvas({
   onDragOver,
   onDrop,
   leftCollapsed,
-  configCollapsed,
-  debugCollapsed,
+  inspectorCollapsed,
+  hasSelection,
   togglePanel,
   canUndo,
   canRedo,
@@ -526,12 +531,8 @@ function EditorCanvas({
 
       {nodes.length === 0 && !readonly && <EmptyStateOverlay />}
 
-      {(configCollapsed || debugCollapsed) && (
-        <RightCollapsedTabs
-          configCollapsed={configCollapsed}
-          debugCollapsed={debugCollapsed}
-          togglePanel={togglePanel}
-        />
+      {inspectorCollapsed && (
+        <RightCollapsedTabs hasSelection={hasSelection} togglePanel={togglePanel} />
       )}
     </div>
   );
@@ -557,36 +558,29 @@ function LeftCollapsedTabs({ togglePanel }: Readonly<LeftCollapsedTabsProps>) {
 }
 
 interface RightCollapsedTabsProps {
-  configCollapsed: boolean;
-  debugCollapsed: boolean;
+  hasSelection: boolean;
   togglePanel: (panel: PanelName) => void;
 }
 
-function RightCollapsedTabs({
-  configCollapsed,
-  debugCollapsed,
-  togglePanel,
-}: Readonly<RightCollapsedTabsProps>) {
+function RightCollapsedTabs({ hasSelection, togglePanel }: Readonly<RightCollapsedTabsProps>) {
   const { t } = useLocale();
 
   return (
     <CollapsedTabsContainer side="right">
-      {configCollapsed && (
-        <CollapsedTab
-          side="right"
-          icon={<Settings2 className="size-4" />}
-          title={t('workflows:editor.panels.config')}
-          onExpand={() => togglePanel('config')}
-        />
-      )}
-      {debugCollapsed && (
-        <CollapsedTab
-          side="right"
-          icon={<Zap className="size-4 text-yellow-500" />}
-          title={t('workflows:editor.panels.debug')}
-          onExpand={() => togglePanel('debug')}
-        />
-      )}
+      <CollapsedTab
+        side="right"
+        icon={
+          hasSelection ? (
+            <Settings2 className="size-4" />
+          ) : (
+            <Zap className="size-4 text-yellow-500" />
+          )
+        }
+        title={
+          hasSelection ? t('workflows:editor.panels.config') : t('workflows:editor.panels.debug')
+        }
+        onExpand={() => togglePanel('inspector')}
+      />
     </CollapsedTabsContainer>
   );
 }
@@ -702,7 +696,7 @@ function WorkflowEditorWithBlocks({
 }: Readonly<WorkflowEditorWithBlocksProps>) {
   const { t } = useLocale();
   const { screenToFlowPosition, fitView } = useReactFlow();
-  const { panelStates, togglePanel } = usePanelState();
+  const { panelStates, togglePanel, openPanel } = usePanelState();
   const capture = useCapture();
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [dropPicker, setDropPicker] = useState<DropPickerState | null>(null);
@@ -973,10 +967,16 @@ function WorkflowEditorWithBlocks({
     return blockSchemaMap[getBlockType(selectedNode)];
   }, [selectedNode, blockSchemaMap]);
 
-  // Check which panels are collapsed for stacking
+  // Selecting a block focuses the inspector on it (opening the panel if the
+  // user had collapsed it earlier).
+  useEffect(() => {
+    if (selectedNode) {
+      openPanel('inspector');
+    }
+  }, [selectedNode, openPanel]);
+
   const leftCollapsed = !readonly && !panelStates.blocks;
-  const configCollapsed = !readonly && !!selectedNode && !panelStates.config;
-  const debugCollapsed = !readonly && !panelStates.debug;
+  const inspectorCollapsed = !readonly && !panelStates.inspector;
 
   return (
     <WorkflowTypeContext value={portTypeMap}>
@@ -1001,8 +1001,8 @@ function WorkflowEditorWithBlocks({
           onDragOver={readonly ? undefined : onDragOver}
           onDrop={readonly ? undefined : onDrop}
           leftCollapsed={leftCollapsed}
-          configCollapsed={configCollapsed}
-          debugCollapsed={debugCollapsed}
+          inspectorCollapsed={inspectorCollapsed}
+          hasSelection={!!selectedNode}
           togglePanel={togglePanel}
           canUndo={canUndo}
           canRedo={canRedo}
@@ -1010,24 +1010,17 @@ function WorkflowEditorWithBlocks({
           onRedo={redo}
         />
 
-        {!readonly && selectedNode && (
-          <ConfigSidePanel
-            isOpen={panelStates.config}
-            onToggle={() => togglePanel('config')}
+        {!readonly && (
+          <InspectorPanel
+            isOpen={panelStates.inspector}
+            onToggle={() => togglePanel('inspector')}
+            workflow={workflow}
             selectedNode={selectedNode}
             updateBlockConfig={updateBlockConfig}
             availableVariables={availableVariables}
             blockSchema={selectedBlockDef?.schema}
             viewModuleUrl={selectedBlockDef?.viewModuleUrl}
             pluginUid={selectedBlockDef?.pluginUid}
-          />
-        )}
-
-        {!readonly && (
-          <DebugSidePanel
-            isOpen={panelStates.debug}
-            onToggle={() => togglePanel('debug')}
-            workflow={workflow}
           />
         )}
 
