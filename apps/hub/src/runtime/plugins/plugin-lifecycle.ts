@@ -12,7 +12,7 @@ import { EventSystem } from '@/runtime/events/event-system';
 import { I18nService } from '@/runtime/i18n';
 import { Logger } from '@/runtime/logs/log-router';
 import { MetricsStore } from '@/runtime/metrics';
-import { ModuleCompiler } from '@/runtime/modules';
+import { type CompileSummary, ModuleCompiler } from '@/runtime/modules';
 import { MODULE_KINDS, resolveModuleUrl } from '@/runtime/modules/module-kinds';
 import { SecretStore } from '@/runtime/secrets/secret-store';
 import { type PluginStateWithMetadata, StateStore } from '@/runtime/state/state-store';
@@ -361,7 +361,24 @@ export class PluginLifecycle {
 
     const locales = await this.#i18n.registerPluginTranslations(metadata.name, rootDirectory);
 
-    await this.#compilePluginModules(metadata, rootDirectory);
+    // Surface the build live over `/api/stream/events` so the UI can show
+    // compilation step-by-step while a plugin installs, enables, or reloads.
+    const compileStart = performance.now();
+    this.#emitCompile(uid, pluginName, { phase: 'start' });
+
+    const clientSummary = await this.#guardCompile(uid, pluginName, () =>
+      this.#compilePluginModules(metadata, rootDirectory)
+    );
+    for (const k of clientSummary.kinds) {
+      this.#emitCompile(uid, pluginName, {
+        phase: 'progress',
+        step: k.kind,
+        modules: k.modules,
+        chunks: k.chunks,
+        cached: k.cached,
+        durationMs: k.durationMs,
+      });
+    }
 
     this.#logs.info('Starting plugin', {
       pluginName: pluginName,
@@ -372,16 +389,26 @@ export class PluginLifecycle {
     // Build the server-side entry: action IDs are injected at compile time
     const outdir = join(rootDirectory, 'node_modules', '.cache', 'brika', 'server');
     const serverExternals = computeServerExternals(metadata);
-    const buildResult = await compileServerEntry({
-      entrypoint: entryPoint,
-      pluginRoot: rootDirectory,
-      outdir,
-      external: serverExternals,
-    });
+    const serverStart = performance.now();
+    const buildResult = await this.#guardCompile(uid, pluginName, () =>
+      compileServerEntry({
+        entrypoint: entryPoint,
+        pluginRoot: rootDirectory,
+        outdir,
+        external: serverExternals,
+      })
+    );
 
     if (buildResult.success) {
       this.#logs.debug(buildResult.cached ? 'Server build cached' : 'Server build compiled', {
         pluginName,
+      });
+      this.#emitCompile(uid, pluginName, {
+        phase: 'progress',
+        step: 'server',
+        modules: 1,
+        cached: buildResult.cached,
+        durationMs: Math.round(performance.now() - serverStart),
       });
     }
 
@@ -389,6 +416,11 @@ export class PluginLifecycle {
       this.#logs.error('Server build failed', {
         pluginName,
         errors: buildResult.errors.join('; '),
+      });
+      this.#emitCompile(uid, pluginName, {
+        phase: 'error',
+        step: 'server',
+        message: buildResult.errors.join('; '),
       });
       this.#analytics.capture(
         'plugin.load_failed',
@@ -400,6 +432,11 @@ export class PluginLifecycle {
       this.#state.setHealth(pluginName, 'crashed', PluginErrors.buildFailed(buildResult.errors));
       return;
     }
+
+    this.#emitCompile(uid, pluginName, {
+      phase: 'done',
+      durationMs: Math.round(performance.now() - compileStart),
+    });
 
     // Allocate per-plugin host dirs that back `/data`, `/cache`, `/tmp`.
     // `/bundle` is the plugin install dir, read-only. The L3 sandbox needs
@@ -1011,9 +1048,40 @@ export class PluginLifecycle {
     );
   }
 
-  async #compilePluginModules(metadata: PluginPackageSchema, rootDirectory: string): Promise<void> {
-    await this.#moduleCompiler.syncManifest(metadata.name, rootDirectory, metadata);
+  async #compilePluginModules(
+    metadata: PluginPackageSchema,
+    rootDirectory: string
+  ): Promise<CompileSummary> {
+    const summary = await this.#moduleCompiler.syncManifest(metadata.name, rootDirectory, metadata);
     await ensurePluginTsconfig(rootDirectory);
+    return summary;
+  }
+
+  /** Dispatch a `plugin.compile` build-progress event onto the hub event bus. */
+  #emitCompile(
+    uid: string,
+    name: string,
+    fields: Omit<ReturnType<typeof PluginActions.compile.create>['payload'], 'uid' | 'name'>
+  ): void {
+    this.#events.dispatch(PluginActions.compile.create({ uid, name, ...fields }, 'hub'));
+  }
+
+  /**
+   * Run a build step, emitting a terminal `compile` error event if it throws so
+   * the UI's progress indicator never hangs on an unexpected failure (a build
+   * failure that returns a result rather than throwing is reported by the
+   * caller). The error is re-thrown for the normal load-failure handling.
+   */
+  async #guardCompile<T>(uid: string, name: string, run: () => Promise<T>): Promise<T> {
+    try {
+      return await run();
+    } catch (error) {
+      this.#emitCompile(uid, name, {
+        phase: 'error',
+        message: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
+    }
   }
 }
 

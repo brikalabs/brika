@@ -55,6 +55,23 @@
     "failed": "Échoué",
     "completed": "Terminé"
   },
+  "compile": {
+    "compiling": "Compilation",
+    "failedName": "Échec de compilation de {{name}}",
+    "failed": "Échec de la compilation",
+    "done": "Compilé en {{ms}} ms",
+    "modules_one": "{{count}} module",
+    "modules_other": "{{count}} modules",
+    "chunks_one": "{{count}} chunk",
+    "chunks_other": "{{count}} chunks",
+    "step": {
+      "brick": "briques",
+      "page": "pages",
+      "blockView": "vues de bloc",
+      "blockNode": "nœuds de bloc",
+      "server": "serveur"
+    }
+  },
   "items": {
     "plugin_one": "Plugin",
     "plugin_other": "Plugins",

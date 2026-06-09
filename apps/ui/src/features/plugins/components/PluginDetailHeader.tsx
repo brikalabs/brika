@@ -70,6 +70,7 @@ export function PluginDetailHeader({
           </div>
 
           <PluginHeaderActions
+            uid={plugin.uid}
             pluginName={plugin.name}
             status={plugin.status}
             isBusy={isBusy}

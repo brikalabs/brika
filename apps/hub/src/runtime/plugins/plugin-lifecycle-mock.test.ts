@@ -10,6 +10,7 @@ import 'reflect-metadata';
 import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from 'bun:test';
 import { get, provide, stub, useTestBed } from '@brika/di/testing';
 import { sleep, waitFor } from '@brika/testing';
+import { z } from 'zod';
 import { type BunSecretsMock, installBunSecretsMock } from '@/helpers/_bun-secrets-mock';
 import { PluginManagerConfig } from '@/runtime/config';
 import { brikaContext } from '@/runtime/context/brika-context';
@@ -156,6 +157,7 @@ describe('PluginLifecycle (with mocked spawn)', () => {
   let mockMetrics: Record<string, ReturnType<typeof mock>>;
   let secretsMock: BunSecretsMock;
   let resolverSpy: ReturnType<typeof spyOn>;
+  let syncManifestMock: ReturnType<typeof mock>;
 
   useTestBed({
     autoStub: false,
@@ -227,7 +229,11 @@ describe('PluginLifecycle (with mocked spawn)', () => {
     };
 
     stub(Logger);
-    stub(ModuleCompiler);
+    // syncManifest now returns a per-kind compile summary the lifecycle reads to
+    // emit `plugin.compile` progress events; give the stub an empty one (tests
+    // can override it, e.g. to reject and exercise the error path).
+    syncManifestMock = mock().mockResolvedValue({ kinds: [] });
+    stub(ModuleCompiler, { syncManifest: syncManifestMock });
     provide(PluginManagerConfig, mockConfig);
     provide(StateStore, mockState);
     provide(EventSystem, mockEvents);
@@ -264,6 +270,49 @@ describe('PluginLifecycle (with mocked spawn)', () => {
 
       expect(mockState.registerPlugin).toHaveBeenCalled();
       expect(mockState.setHealth).toHaveBeenCalledWith('@test/plugin', 'restarting');
+    });
+
+    test('load() emits plugin.compile build-progress events (start, server, done)', async () => {
+      await loadPlugin();
+
+      const compileEvent = z.object({
+        type: z.literal('plugin.compile'),
+        payload: z.object({ phase: z.string(), step: z.string().optional() }),
+      });
+      const steps = mockEvents.dispatch.mock.calls
+        .map((call) => compileEvent.safeParse(call[0]))
+        .filter((r) => r.success)
+        .map((r) =>
+          r.data.payload.step
+            ? `${r.data.payload.phase}:${r.data.payload.step}`
+            : r.data.payload.phase
+        );
+
+      // A run opens with `start`, reports the server build, and closes with `done`.
+      expect(steps[0]).toBe('start');
+      expect(steps).toContain('progress:server');
+      expect(steps.at(-1)).toBe('done');
+    });
+
+    test('emits a compile error event when compilation throws (no hung UI)', async () => {
+      // A thrown build (vs a returned failure) must still close the run so the
+      // UI progress indicator does not hang on "Compiling…" forever.
+      syncManifestMock.mockRejectedValueOnce(new Error('compile boom'));
+
+      await lifecycle.load('/mock/path').catch(() => undefined);
+
+      const compileError = z.object({
+        type: z.literal('plugin.compile'),
+        payload: z.object({ phase: z.string(), message: z.string().optional() }),
+      });
+      const errors = mockEvents.dispatch.mock.calls
+        .map((call) => compileError.safeParse(call[0]))
+        .filter((r) => r.success)
+        .map((r) => r.data.payload)
+        .filter((p) => p.phase === 'error');
+
+      expect(errors).toHaveLength(1);
+      expect(errors[0]?.message).toContain('compile boom');
     });
 
     test('load() skips if process already exists and force is false', async () => {

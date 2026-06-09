@@ -50,6 +50,7 @@ import { useCapture } from '@/features/analytics/hooks';
 import { LoginPage } from '@/features/auth';
 import { useHealth } from '@/features/dashboard/hooks';
 import { MigrationBanner } from '@/features/migrations';
+import { CompileNotifications } from '@/features/plugins/CompileNotifications';
 import { UpdateNotification, useUpdateCheck } from '@/features/updates';
 import { useAuthInterceptor } from '@/hooks/use-auth-interceptor';
 import { ThemeProvider } from '@/lib/theme-provider';
@@ -416,6 +417,8 @@ export function RootLayout() {
             dedicated UpdateStep, login/loading screens don't surface toasts. */}
         <UpdateNotification />
         <MigrationBanner />
+        {/* App-wide toasts for plugin compilation (install/enable/reload). */}
+        <CompileNotifications />
         {/* Toast viewport. Plugin pages and host actions trigger notifications
             via the imperative `toast()` API; this is the single sink that
             renders them on the authenticated chrome. */}

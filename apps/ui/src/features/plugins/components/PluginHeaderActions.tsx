@@ -14,9 +14,12 @@ import { ArrowUp, EllipsisVertical, Power, RotateCcw, Skull, Trash2 } from 'luci
 import { useState } from 'react';
 import { useCapture } from '@/features/analytics/hooks';
 import { useLocale } from '@/lib/use-locale';
+import { usePluginCompileTimeline } from '../use-plugin-compile';
+import { CompileTrace } from './CompileTrace';
 import { UninstallDialog } from './UninstallDialog';
 
 interface PluginHeaderActionsProps {
+  uid: string;
   pluginName: string;
   status: string;
   isBusy: boolean;
@@ -31,6 +34,7 @@ interface PluginHeaderActionsProps {
 }
 
 export function PluginHeaderActions({
+  uid,
   pluginName,
   status,
   isBusy,
@@ -46,6 +50,7 @@ export function PluginHeaderActions({
   const { t } = useLocale();
   const capture = useCapture();
   const [uninstallOpen, setUninstallOpen] = useState(false);
+  const compile = usePluginCompileTimeline(uid);
 
   const openUpdateDialog = (source: 'button' | 'menu') => {
     capture('plugins.update_dialog_opened', { source });
@@ -63,10 +68,14 @@ export function PluginHeaderActions({
 
   return (
     <div className="flex items-center gap-2">
-      <Status variant={statusVariant} className="px-3 py-1">
-        <StatusIndicator pulse={status === 'running'} />
-        <StatusLabel>{t(`common:status.${status}`)}</StatusLabel>
-      </Status>
+      {compile ? (
+        <CompileTrace timeline={compile} variant="expanded" />
+      ) : (
+        <Status variant={statusVariant} className="px-3 py-1">
+          <StatusIndicator pulse={status === 'running'} />
+          <StatusLabel>{t(`common:status.${status}`)}</StatusLabel>
+        </Status>
+      )}
 
       <Button variant="outline" size="sm" onClick={onReload} disabled={isBusy} className="gap-1.5">
         <RotateCcw className="size-3.5" />

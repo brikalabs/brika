@@ -55,6 +55,23 @@
     "failed": "Failed",
     "completed": "Completed"
   },
+  "compile": {
+    "compiling": "Compiling",
+    "failedName": "{{name}} failed to build",
+    "failed": "Build failed",
+    "done": "Compiled in {{ms}}ms",
+    "modules_one": "{{count}} module",
+    "modules_other": "{{count}} modules",
+    "chunks_one": "{{count}} chunk",
+    "chunks_other": "{{count}} chunks",
+    "step": {
+      "brick": "bricks",
+      "page": "pages",
+      "blockView": "block views",
+      "blockNode": "block nodes",
+      "server": "server"
+    }
+  },
   "items": {
     "plugin_one": "Plugin",
     "plugin_other": "Plugins",
