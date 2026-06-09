@@ -5,8 +5,15 @@
  */
 
 import { Badge, cn } from '@brika/clay';
-import { displayType, parsePortType } from '@brika/type-system';
-import { Handle, type NodeProps, Position, useNodeId } from '@xyflow/react';
+import {
+  displayType,
+  isCompatible,
+  type PortTypeMap,
+  parsePortType,
+  portKey,
+  type TypeDescriptor,
+} from '@brika/type-system';
+import { Handle, type NodeProps, Position, useConnection, useNodeId } from '@xyflow/react';
 import {
   CheckCircle,
   Clock,
@@ -20,7 +27,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { DynamicIcon, type IconName } from 'lucide-react/dynamic';
-import React, { memo } from 'react';
+import React, { memo, useContext } from 'react';
 import {
   BaseNode,
   BaseNodeContent,
@@ -30,7 +37,7 @@ import {
 import { useLocale } from '@/lib/use-locale';
 import { ClientBlockView } from './ClientBlockView';
 import type { BlockStatus } from './useWorkflowEditor';
-import { usePortTypeName } from './WorkflowTypeContext';
+import { WorkflowTypeContext } from './WorkflowTypeContext';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -130,74 +137,151 @@ function portColor(resolvedType: string | undefined, fallbackTypeDisplay: string
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Output Port Component
+// Port Component (inputs and outputs)
 // ─────────────────────────────────────────────────────────────────────────────
 
-interface OutputPortProps {
-  port: BlockPort;
-  index: number;
-  total: number;
-}
+const ORIGIN_SEPARATOR = '\u0000';
 
-const OutputPort = memo(function OutputPort({ port, index, total }: Readonly<OutputPortProps>) {
-  const nodeId = useNodeId() ?? '';
-  const resolvedType = usePortTypeName(nodeId, port.id);
-  const offset = total > 1 ? ((index + 1) / (total + 1)) * 100 : 50;
-  const portTypeDisplay = displayType(parsePortType(port));
-  const color = portColor(resolvedType, portTypeDisplay);
-  const label = resolvedType ?? portTypeDisplay;
-
-  return (
-    <>
-      <Handle
-        type="source"
-        position={Position.Bottom}
-        id={port.id}
-        className="absolute! -bottom-1! h-3! w-3! rounded-full! border-2! border-background!"
-        style={{ backgroundColor: color, left: `${offset}%`, transform: 'translateX(-50%)' }}
-      />
-      <span
-        className="pointer-events-none absolute max-w-20 truncate text-center font-mono text-[9px] leading-tight"
-        style={{ color, left: `${offset}%`, transform: 'translateX(-50%)', bottom: '-1.1rem' }}
-        title={`${port.name}: ${label}`}
-      >
-        {label}
-      </span>
-    </>
+/**
+ * The in-progress connection origin, encoded as a string so the per-frame
+ * pointer updates of a wire drag never re-render the ports.
+ */
+function useConnectionOrigin(): {
+  inProgress: boolean;
+  fromNodeId: string;
+  fromHandleId: string;
+  fromHandleType: 'source' | 'target';
+} {
+  const encoded = useConnection((c) =>
+    c.inProgress
+      ? [
+          c.fromNode.id,
+          c.fromHandle.id ?? (c.fromHandle.type === 'source' ? 'out' : 'in'),
+          c.fromHandle.type,
+        ].join(ORIGIN_SEPARATOR)
+      : ''
   );
-});
+  if (!encoded) {
+    return { inProgress: false, fromNodeId: '', fromHandleId: '', fromHandleType: 'source' };
+  }
+  const [fromNodeId, fromHandleId, fromHandleType] = encoded.split(ORIGIN_SEPARATOR);
+  return {
+    inProgress: true,
+    fromNodeId,
+    fromHandleId,
+    fromHandleType: fromHandleType === 'target' ? 'target' : 'source',
+  };
+}
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Input Port Component
-// ─────────────────────────────────────────────────────────────────────────────
+type PortRole = 'origin' | 'candidate' | 'blocked' | null;
 
-interface InputPortProps {
+interface PortRoleContext {
+  origin: ReturnType<typeof useConnectionOrigin>;
+  nodeId: string;
+  portId: string;
+  direction: 'input' | 'output';
+  typeMap: PortTypeMap;
+  ownType: TypeDescriptor;
+}
+
+/**
+ * Role of this port while a wire is being dragged: the drag origin itself, a
+ * compatible candidate (glows), a type-incompatible port (dims), or null when
+ * no drag is in progress / the port is on the same side as the origin.
+ */
+function computePortRole({
+  origin,
+  nodeId,
+  portId,
+  direction,
+  typeMap,
+  ownType,
+}: Readonly<PortRoleContext>): PortRole {
+  if (!origin.inProgress) {
+    return null;
+  }
+  if (origin.fromNodeId === nodeId && origin.fromHandleId === portId) {
+    return 'origin';
+  }
+  const isOppositeSide =
+    direction === 'input' ? origin.fromHandleType === 'source' : origin.fromHandleType === 'target';
+  if (!isOppositeSide || origin.fromNodeId === nodeId) {
+    return null;
+  }
+  const originType = typeMap.get(portKey(origin.fromNodeId, origin.fromHandleId));
+  const compatible =
+    !originType ||
+    (direction === 'input' ? isCompatible(originType, ownType) : isCompatible(ownType, originType));
+  return compatible ? 'candidate' : 'blocked';
+}
+
+interface PortProps {
   port: BlockPort;
   index: number;
   total: number;
+  direction: 'input' | 'output';
 }
 
-const InputPort = memo(function InputPort({ port, index, total }: Readonly<InputPortProps>) {
+const Port = memo(function Port({ port, index, total, direction }: Readonly<PortProps>) {
   const nodeId = useNodeId() ?? '';
-  const resolvedType = usePortTypeName(nodeId, port.id);
+  const typeMap = useContext(WorkflowTypeContext);
+  const resolved = typeMap.get(portKey(nodeId, port.id));
+  const declared = parsePortType(port);
+  const typeDisplay = resolved ? displayType(resolved) : displayType(declared);
   const offset = total > 1 ? ((index + 1) / (total + 1)) * 100 : 50;
-  const portTypeDisplay = displayType(parsePortType(port));
-  const color = portColor(resolvedType, portTypeDisplay);
-  const label = resolvedType ?? portTypeDisplay;
+  const color = portColor(resolved ? typeDisplay : undefined, typeDisplay);
+
+  // Live feedback while a wire is being dragged: candidate ports glow,
+  // type-incompatible ports dim, everything else stays untouched.
+  const origin = useConnectionOrigin();
+  const role = computePortRole({
+    origin,
+    nodeId,
+    portId: port.id,
+    direction,
+    typeMap,
+    ownType: resolved ?? declared,
+  });
+
+  const showTypeLabel = origin.inProgress && role !== null;
+  const label = showTypeLabel ? typeDisplay : port.name;
+
+  const handleStyle: React.CSSProperties = {
+    backgroundColor: color,
+    left: `${offset}%`,
+    transform: role === 'candidate' ? 'translateX(-50%) scale(1.5)' : 'translateX(-50%)',
+    boxShadow: role === 'candidate' ? `0 0 0 4px ${color}40` : undefined,
+    opacity: role === 'blocked' ? 0.25 : undefined,
+    transition: 'transform 120ms ease, box-shadow 120ms ease, opacity 120ms ease',
+  };
 
   return (
     <>
       <Handle
-        type="target"
-        position={Position.Top}
+        type={direction === 'input' ? 'target' : 'source'}
+        position={direction === 'input' ? Position.Top : Position.Bottom}
         id={port.id}
-        className="absolute! -top-1! h-3! w-3! rounded-full! border-2! border-background!"
-        style={{ backgroundColor: color, left: `${offset}%`, transform: 'translateX(-50%)' }}
+        className={cn(
+          'absolute! h-3! w-3! rounded-full! border-2! border-background!',
+          direction === 'input' ? '-top-1!' : '-bottom-1!'
+        )}
+        style={handleStyle}
       />
       <span
-        className="pointer-events-none absolute max-w-20 truncate text-center font-mono text-[9px] leading-tight"
-        style={{ color, left: `${offset}%`, transform: 'translateX(-50%)', top: '-1.1rem' }}
-        title={`${port.name}: ${label}`}
+        className={cn(
+          'pointer-events-none absolute max-w-24 truncate text-center font-mono text-[9px] leading-tight',
+          'opacity-0 transition-opacity duration-150 group-hover:opacity-100',
+          String.raw`[.react-flow\_\_node.selected_&]:opacity-100`,
+          showTypeLabel && 'opacity-100',
+          role === 'blocked' && 'opacity-40!'
+        )}
+        style={{
+          color,
+          left: `${offset}%`,
+          transform: 'translateX(-50%)',
+          ...(direction === 'input' ? { top: '-1.1rem' } : { bottom: '-1.1rem' }),
+        }}
+        title={`${port.name}: ${typeDisplay}`}
       >
         {label}
       </span>
@@ -382,14 +466,14 @@ export const BlockNode = memo(function BlockNode(props: NodeProps) {
   return (
     <BaseNode
       className={cn(
-        'relative w-64 transition-all duration-200',
+        'group relative w-64 transition-all duration-200',
         statusStyles[status] || '',
         selected && 'ring-2 ring-primary ring-offset-2'
       )}
     >
       {/* Input Handles */}
       {inputs.map((port: BlockPort, i: number) => (
-        <InputPort key={port.id} port={port} index={i} total={inputs.length} />
+        <Port key={port.id} port={port} index={i} total={inputs.length} direction="input" />
       ))}
 
       <BaseNodeHeader className="pb-1">
@@ -449,7 +533,7 @@ export const BlockNode = memo(function BlockNode(props: NodeProps) {
 
       {/* Output Handles */}
       {outputs.map((port: BlockPort, i: number) => (
-        <OutputPort key={port.id} port={port} index={i} total={outputs.length} />
+        <Port key={port.id} port={port} index={i} total={outputs.length} direction="output" />
       ))}
     </BaseNode>
   );

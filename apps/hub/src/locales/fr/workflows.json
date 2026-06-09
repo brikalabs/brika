@@ -86,6 +86,29 @@
       "availableVariables": "Variables disponibles",
       "clickToCopy": "Cliquez pour copier · Utilisez dans n'importe quel champ"
     },
-    "workflowName": "Nom du workflow"
+    "workflowName": "Nom du workflow",
+    "autosave": {
+      "saving": "Enregistrement...",
+      "saved": "Enregistré",
+      "retry": "Réessayer"
+    },
+    "palette": {
+      "placeholder": "Rechercher des blocs et des actions...",
+      "addBlock": "Ajouter un bloc",
+      "goToBlock": "Aller au bloc",
+      "actions": "Actions",
+      "fitView": "Ajuster la vue",
+      "undo": "Annuler",
+      "redo": "Rétablir",
+      "noResults": "Aucun résultat"
+    },
+    "picker": {
+      "search": "Rechercher un bloc compatible...",
+      "noCompatible": "Aucun bloc compatible"
+    },
+    "connection": {
+      "incompatible": "Types incompatibles : {{output}} ne peut pas alimenter {{input}}",
+      "selfConnection": "Un bloc ne peut pas se connecter à lui-même"
+    }
   }
 }

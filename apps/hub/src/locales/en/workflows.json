@@ -86,6 +86,29 @@
       "availableVariables": "Available Variables",
       "clickToCopy": "Click to copy · Use in any text field"
     },
-    "workflowName": "Workflow name"
+    "workflowName": "Workflow name",
+    "autosave": {
+      "saving": "Saving...",
+      "saved": "Saved",
+      "retry": "Retry save"
+    },
+    "palette": {
+      "placeholder": "Search blocks and actions...",
+      "addBlock": "Add block",
+      "goToBlock": "Go to block",
+      "actions": "Actions",
+      "fitView": "Fit view",
+      "undo": "Undo",
+      "redo": "Redo",
+      "noResults": "No results"
+    },
+    "picker": {
+      "search": "Search compatible blocks...",
+      "noCompatible": "No compatible blocks"
+    },
+    "connection": {
+      "incompatible": "Incompatible types: {{output}} cannot feed {{input}}",
+      "selfConnection": "A block cannot connect to itself"
+    }
   }
 }

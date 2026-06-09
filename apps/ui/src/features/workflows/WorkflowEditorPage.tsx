@@ -1,21 +1,27 @@
 /**
  * Workflow Editor Page
  *
- * Full-page workflow editor with sidebar panels.
+ * Full-page workflow editor with sidebar panels. Changes autosave: there is
+ * no Save button and no unsaved-changes dialog, only a status indicator.
  * Routes: /workflows/new, /workflows/:id/edit
  */
 
 import { Button, Input } from '@brika/clay';
+import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from '@tanstack/react-router';
 import { ReactFlowProvider } from '@xyflow/react';
-import { ArrowLeft, Loader2, Save } from 'lucide-react';
-import { useCallback, useRef, useState } from 'react';
+import { ArrowLeft, Check, Loader2, RefreshCw } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useCapture } from '@/features/analytics/hooks';
 import { useLocale } from '@/lib/use-locale';
 import { paths } from '@/routes/paths';
 import type { Workflow } from './api';
 import { WorkflowEditor } from './editor';
 import { useSaveWorkflow, useWorkflow } from './hooks';
+
+const AUTOSAVE_DELAY_MS = 1200;
+
+type SaveState = 'idle' | 'pending' | 'saving' | 'saved' | 'error';
 
 // Create a new empty workflow
 function createNewWorkflow(): Workflow {
@@ -29,10 +35,47 @@ function createNewWorkflow(): Workflow {
   };
 }
 
+function SaveStatusIndicator({
+  state,
+  onRetry,
+}: Readonly<{
+  state: SaveState;
+  onRetry: () => void;
+}>) {
+  const { t } = useLocale();
+
+  if (state === 'error') {
+    return (
+      <Button size="sm" variant="destructive" onClick={onRetry} className="gap-2">
+        <RefreshCw className="size-4" />
+        {t('workflows:editor.autosave.retry')}
+      </Button>
+    );
+  }
+  if (state === 'saving' || state === 'pending') {
+    return (
+      <span className="flex items-center gap-2 text-muted-foreground text-xs">
+        <Loader2 className="size-3.5 animate-spin" />
+        {t('workflows:editor.autosave.saving')}
+      </span>
+    );
+  }
+  if (state === 'saved') {
+    return (
+      <span className="flex items-center gap-2 text-muted-foreground text-xs">
+        <Check className="size-3.5 text-status-completed" />
+        {t('workflows:editor.autosave.saved')}
+      </span>
+    );
+  }
+  return null;
+}
+
 export function WorkflowEditorPage() {
   const { t } = useLocale();
   const navigate = useNavigate();
   const capture = useCapture();
+  const queryClient = useQueryClient();
   const params = useParams({
     strict: false,
   });
@@ -56,10 +99,13 @@ export function WorkflowEditorPage() {
     isNew ? createNewWorkflow() : null
   );
   const [workflowName, setWorkflowName] = useState('');
-  const [isDirty, setIsDirty] = useState(false);
+  const [saveState, setSaveState] = useState<SaveState>('idle');
 
-  // Track current workflow from editor in a ref to avoid re-renders
+  // Latest editor state in refs so the debounced save never goes stale
   const currentWorkflowRef = useRef<Workflow | null>(null);
+  const workflowNameRef = useRef('');
+  workflowNameRef.current = workflowName;
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Update local state when existing workflow loads
   if (existingWorkflow && !initialWorkflow) {
@@ -70,55 +116,112 @@ export function WorkflowEditorPage() {
   // Current workflow to display (initial only, editor maintains its own state)
   const currentWorkflow = initialWorkflow || existingWorkflow;
 
-  // Handle workflow changes from editor
-  const handleWorkflowChange = useCallback((workflow: Workflow, editorIsDirty: boolean) => {
-    currentWorkflowRef.current = workflow;
-    setIsDirty(editorIsDirty);
-  }, []);
-
-  // Handle name change
-  const handleNameChange = useCallback((name: string) => {
-    setWorkflowName(name);
-    setIsDirty(true);
-  }, []);
-
-  // Handle save - uses the current workflow from the editor
-  const handleSave = useCallback(
-    async (workflow: Workflow) => {
-      // Use the latest workflow from the ref if available
-      const workflowToSave = currentWorkflowRef.current || workflow;
-
-      const toSave = {
-        ...workflowToSave,
-        name: workflowName || workflowToSave.name,
-      };
-
+  const performSave = useCallback(async () => {
+    const base = currentWorkflowRef.current;
+    if (!base) {
+      return;
+    }
+    const toSave = {
+      ...base,
+      name: workflowNameRef.current || base.name,
+    };
+    setSaveState('saving');
+    try {
       await saveWorkflowMutation.mutateAsync(toSave);
       setInitialWorkflow(toSave);
-      setIsDirty(false);
-
-      // If new workflow, navigate to edit URL
+      setSaveState('saved');
+      capture('workflow.autosaved', {
+        id: toSave.id,
+        isNew,
+        blockCount: toSave.blocks?.length ?? 0,
+      });
+      // First save of a brand-new workflow: move to its edit URL. The
+      // query cache is seeded so the remounted editor renders instantly.
       if (isNew) {
+        queryClient.setQueryData(['workflows', toSave.id], toSave);
         navigate({
           to: paths.workflows.edit.to({
             id: toSave.id,
           }),
+          replace: true,
         });
       }
+    } catch {
+      setSaveState('error');
+    }
+  }, [saveWorkflowMutation, capture, isNew, queryClient, navigate]);
+
+  const flushSave = useCallback(() => {
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = null;
+    }
+    void performSave();
+  }, [performSave]);
+
+  const scheduleSave = useCallback(() => {
+    setSaveState((state) => (state === 'saving' ? state : 'pending'));
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+    }
+    saveTimerRef.current = setTimeout(() => {
+      saveTimerRef.current = null;
+      void performSave();
+    }, AUTOSAVE_DELAY_MS);
+  }, [performSave]);
+
+  // Clear any pending timer on unmount (back/away already flushed)
+  useEffect(() => {
+    return () => {
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current);
+      }
+    };
+  }, []);
+
+  // Cmd+S saves immediately (autosave would have caught up anyway)
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && (e.key === 's' || e.key === 'S')) {
+        e.preventDefault();
+        flushSave();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [flushSave]);
+
+  // Handle workflow changes from editor
+  const handleWorkflowChange = useCallback(
+    (workflow: Workflow, editorIsDirty: boolean) => {
+      currentWorkflowRef.current = workflow;
+      if (editorIsDirty) {
+        scheduleSave();
+      }
     },
-    [workflowName, isNew, navigate, saveWorkflowMutation]
+    [scheduleSave]
   );
 
-  // Handle back navigation
+  // Handle name change
+  const handleNameChange = useCallback(
+    (name: string) => {
+      setWorkflowName(name);
+      scheduleSave();
+    },
+    [scheduleSave]
+  );
+
+  // Handle back navigation: flush any pending changes, no dialog
   const handleBack = useCallback(() => {
-    const discarded = isDirty && confirm(t('workflows:editor.unsavedChanges'));
-    capture('workflow.editor_back', { dirty: isDirty, discarded });
-    if (!isDirty || discarded) {
-      navigate({
-        to: paths.workflows.list.path,
-      });
+    const hasPending = saveTimerRef.current !== null || saveState === 'pending';
+    capture('workflow.editor_back', { pendingSave: hasPending });
+    if (hasPending) {
+      flushSave();
     }
-  }, [isDirty, navigate, t, capture]);
+    navigate({
+      to: paths.workflows.list.path,
+    });
+  }, [saveState, flushSave, navigate, capture]);
 
   // Loading state
   if (!isNew && isLoading) {
@@ -171,31 +274,7 @@ export function WorkflowEditorPage() {
         </div>
 
         <div className="flex items-center gap-3">
-          {isDirty && (
-            <span className="text-muted-foreground text-xs">{t('workflows:editor.unsaved')}</span>
-          )}
-          <Button
-            size="sm"
-            disabled={saveWorkflowMutation.isPending}
-            onClick={() => {
-              const wf = currentWorkflowRef.current || currentWorkflow;
-              if (wf) {
-                capture('workflow.save_clicked', {
-                  isNew,
-                  blockCount: wf.blocks?.length ?? 0,
-                });
-                handleSave(wf);
-              }
-            }}
-            className="gap-2"
-          >
-            {saveWorkflowMutation.isPending ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : (
-              <Save className="size-4" />
-            )}
-            {t('common:actions.save')}
-          </Button>
+          <SaveStatusIndicator state={saveState} onRetry={flushSave} />
         </div>
       </div>
 
@@ -206,7 +285,6 @@ export function WorkflowEditorPage() {
             <WorkflowEditor
               workflow={currentWorkflow}
               readonly={false}
-              onSave={handleSave}
               onChange={handleWorkflowChange}
             />
           </ReactFlowProvider>

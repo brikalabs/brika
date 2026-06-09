@@ -1,11 +1,14 @@
-import { Button } from '@brika/clay';
+import { Button, toast } from '@brika/clay';
+import { portKey } from '@brika/type-system';
 import { useQuery } from '@tanstack/react-query';
 import {
   Background,
   ConnectionLineType,
   type Edge,
+  type FinalConnectionState,
   type Node,
   type NodeTypes,
+  type OnConnectEnd,
   Panel,
   ReactFlow,
   ReactFlowProvider,
@@ -21,7 +24,9 @@ import {
   Minus,
   MousePointerClick,
   Plus,
+  Redo2,
   Settings2,
+  Undo2,
   Unlock,
   Zap,
 } from 'lucide-react';
@@ -36,8 +41,16 @@ import { BlockNode } from './BlockNode';
 import { type BlockDefinition, BlockToolbar, type BlockTypeInfo } from './BlockToolbar';
 import { CollapsedTab, CollapsedTabsContainer, CollapsiblePanel } from './CollapsiblePanel';
 import { ConfigPanel } from './ConfigPanel';
+import { ConnectionDropPicker } from './ConnectionDropPicker';
+import {
+  type CompatibleBlock,
+  compatibleBlocksForSource,
+  compatibleBlocksForTarget,
+  typeLabel,
+} from './connection-compat';
 import { DebugPanel } from './DebugPanel';
-import { useWorkflowEditor } from './useWorkflowEditor';
+import { EditorCommandPalette } from './EditorCommandPalette';
+import { type ConnectionOrigin, useWorkflowEditor } from './useWorkflowEditor';
 import { WorkflowTypeContext } from './WorkflowTypeContext';
 import type { BlockStatus } from './workflow-conversion';
 
@@ -309,7 +322,21 @@ function DebugSidePanel({ isOpen, onToggle, workflow }: Readonly<DebugSidePanelP
   );
 }
 
-function EditorControls({ showInteractive }: Readonly<{ showInteractive: boolean }>) {
+interface EditorControlsProps {
+  showInteractive: boolean;
+  canUndo: boolean;
+  canRedo: boolean;
+  onUndo: () => void;
+  onRedo: () => void;
+}
+
+function EditorControls({
+  showInteractive,
+  canUndo,
+  canRedo,
+  onUndo,
+  onRedo,
+}: Readonly<EditorControlsProps>) {
   const { zoomIn, zoomOut, fitView } = useReactFlow();
   const store = useStoreApi();
   const capture = useCapture();
@@ -331,6 +358,34 @@ function EditorControls({ showInteractive }: Readonly<{ showInteractive: boolean
   return (
     <Panel position="bottom-left">
       <div className="flex flex-col rounded-md border bg-background shadow-sm">
+        {showInteractive && (
+          <>
+            <Button
+              size="icon"
+              variant="ghost"
+              className="size-7 rounded-none rounded-t-md"
+              disabled={!canUndo}
+              onClick={() => {
+                capture('workflow.canvas_undo');
+                onUndo();
+              }}
+            >
+              <Undo2 className="size-3.5" />
+            </Button>
+            <Button
+              size="icon"
+              variant="ghost"
+              className="size-7 rounded-none"
+              disabled={!canRedo}
+              onClick={() => {
+                capture('workflow.canvas_redo');
+                onRedo();
+              }}
+            >
+              <Redo2 className="size-3.5" />
+            </Button>
+          </>
+        )}
         <Button
           size="icon"
           variant="ghost"
@@ -386,6 +441,7 @@ interface EditorCanvasProps {
   onNodesChange: ReturnType<typeof useWorkflowEditor>['onNodesChange'];
   onEdgesChange: ReturnType<typeof useWorkflowEditor>['onEdgesChange'];
   onConnect: ReturnType<typeof useWorkflowEditor>['onConnect'];
+  onConnectEnd: OnConnectEnd | undefined;
   isValidConnection: ReturnType<typeof useWorkflowEditor>['isValidConnection'];
   onNodeClick: ReturnType<typeof useWorkflowEditor>['onNodeClick'];
   onPaneClick: ReturnType<typeof useWorkflowEditor>['onPaneClick'];
@@ -397,6 +453,10 @@ interface EditorCanvasProps {
   configCollapsed: boolean;
   debugCollapsed: boolean;
   togglePanel: (panel: PanelName) => void;
+  canUndo: boolean;
+  canRedo: boolean;
+  onUndo: () => void;
+  onRedo: () => void;
 }
 
 function EditorCanvas({
@@ -406,6 +466,7 @@ function EditorCanvas({
   onNodesChange,
   onEdgesChange,
   onConnect,
+  onConnectEnd,
   isValidConnection,
   onNodeClick,
   onPaneClick,
@@ -417,6 +478,10 @@ function EditorCanvas({
   configCollapsed,
   debugCollapsed,
   togglePanel,
+  canUndo,
+  canRedo,
+  onUndo,
+  onRedo,
 }: Readonly<EditorCanvasProps>) {
   return (
     <div className="relative flex flex-1 flex-col">
@@ -427,6 +492,7 @@ function EditorCanvas({
         onNodesChange={readonly ? undefined : onNodesChange}
         onEdgesChange={readonly ? undefined : onEdgesChange}
         onConnect={readonly ? undefined : onConnect}
+        onConnectEnd={readonly ? undefined : onConnectEnd}
         isValidConnection={isValidConnection}
         onNodeClick={onNodeClick}
         onPaneClick={onPaneClick}
@@ -449,7 +515,13 @@ function EditorCanvas({
         }}
       >
         <Background />
-        <EditorControls showInteractive={!readonly} />
+        <EditorControls
+          showInteractive={!readonly}
+          canUndo={canUndo}
+          canRedo={canRedo}
+          onUndo={onUndo}
+          onRedo={onRedo}
+        />
       </ReactFlow>
 
       {nodes.length === 0 && !readonly && <EmptyStateOverlay />}
@@ -548,14 +620,12 @@ function EmptyStateOverlay() {
 interface WorkflowEditorInnerProps {
   workflow: Workflow;
   readonly?: boolean;
-  onSave?: (workflow: Workflow) => Promise<void>;
   onChange?: (workflow: Workflow, isDirty: boolean) => void;
 }
 
 function WorkflowEditorInner({
   workflow: initialWorkflow,
   readonly = false,
-  onSave,
   onChange,
 }: Readonly<WorkflowEditorInnerProps>) {
   const { t } = useLocale();
@@ -585,7 +655,6 @@ function WorkflowEditorInner({
       workflow={initialWorkflow}
       blockDefinitions={blockDefinitions}
       readonly={readonly}
-      onSave={onSave}
       onChange={onChange}
     />
   );
@@ -595,15 +664,48 @@ interface WorkflowEditorWithBlocksProps extends WorkflowEditorInnerProps {
   blockDefinitions: BlockDefinition[];
 }
 
+/** A wire dropped on empty canvas: where, and from which handle. */
+interface DropPickerState {
+  screen: { x: number; y: number };
+  nodePosition: { x: number; y: number };
+  origin: ConnectionOrigin;
+}
+
+/** Client coordinates of a mouse or touch connect-end event. */
+function eventClientPoint(event: MouseEvent | TouchEvent): { x: number; y: number } {
+  if ('changedTouches' in event) {
+    const touch = event.changedTouches[0];
+    return { x: touch?.clientX ?? 0, y: touch?.clientY ?? 0 };
+  }
+  return { x: event.clientX, y: event.clientY };
+}
+
+/** Resolve the dragged handle into a ConnectionOrigin, defaulting handle ids. */
+function connectionOriginOf(connectionState: FinalConnectionState): ConnectionOrigin | null {
+  const { fromNode, fromHandle } = connectionState;
+  if (!fromNode || !fromHandle) {
+    return null;
+  }
+  const handleType = fromHandle.type;
+  return {
+    nodeId: fromNode.id,
+    handleId: fromHandle.id ?? (handleType === 'source' ? 'out' : 'in'),
+    handleType,
+  };
+}
+
 function WorkflowEditorWithBlocks({
   workflow: initialWorkflow,
   blockDefinitions,
   readonly = false,
   onChange,
 }: Readonly<WorkflowEditorWithBlocksProps>) {
-  const { screenToFlowPosition } = useReactFlow();
+  const { t } = useLocale();
+  const { screenToFlowPosition, fitView } = useReactFlow();
   const { panelStates, togglePanel } = usePanelState();
   const capture = useCapture();
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [dropPicker, setDropPicker] = useState<DropPickerState | null>(null);
 
   // Fetch sparks for type resolution
   const { data: sparks = [] } = useQuery({
@@ -641,12 +743,18 @@ function WorkflowEditorWithBlocks({
     workflow,
     selectedNode,
     addBlock,
+    addConnectedBlock,
     updateBlockConfig,
     getAvailableVariables,
     portTypeMap,
     blockSchemaMap,
     setBlockLiveOutput,
     setBlockStatus,
+    setSelectedNodeId,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
   } = editor;
 
   // Connect to debug stream for port ping animations
@@ -706,6 +814,154 @@ function WorkflowEditorWithBlocks({
     [addBlock, screenToFlowPosition, capture]
   );
 
+  // Wire dropped on an incompatible handle: explain why instead of failing
+  // silently. Wire dropped on empty canvas: open the compatible-block picker.
+  const onConnectEnd: OnConnectEnd = useCallback(
+    (event, connectionState) => {
+      if (connectionState.isValid) {
+        return;
+      }
+      const origin = connectionOriginOf(connectionState);
+      if (!origin) {
+        return;
+      }
+
+      const { toNode, toHandle } = connectionState;
+      if (toNode && toHandle) {
+        if (toNode.id === origin.nodeId) {
+          toast.error(t('workflows:editor.connection.selfConnection'));
+          return;
+        }
+        const fromIsSource = origin.handleType === 'source';
+        const outKey = fromIsSource
+          ? portKey(origin.nodeId, origin.handleId)
+          : portKey(toNode.id, toHandle.id ?? 'out');
+        const inKey = fromIsSource
+          ? portKey(toNode.id, toHandle.id ?? 'in')
+          : portKey(origin.nodeId, origin.handleId);
+        capture('workflow.connection_rejected', { reason: 'incompatible-types' });
+        toast.error(
+          t('workflows:editor.connection.incompatible', {
+            output: typeLabel(portTypeMap.get(outKey), 'generic'),
+            input: typeLabel(portTypeMap.get(inKey), 'generic'),
+          })
+        );
+        return;
+      }
+
+      const screen = eventClientPoint(event);
+      const flowPoint = screenToFlowPosition(screen);
+      const nodePosition =
+        origin.handleType === 'source'
+          ? { x: flowPoint.x - 128, y: flowPoint.y + 8 }
+          : { x: flowPoint.x - 128, y: flowPoint.y - 160 };
+      capture('workflow.wire_drop_picker_opened', { from: origin.handleType });
+      setDropPicker({ screen, nodePosition, origin });
+    },
+    [t, capture, portTypeMap, screenToFlowPosition]
+  );
+
+  // Blocks with at least one port compatible with the dragged handle.
+  const dropCandidates = useMemo<CompatibleBlock[]>(() => {
+    if (!dropPicker) {
+      return [];
+    }
+    const { origin } = dropPicker;
+    const originType = portTypeMap.get(portKey(origin.nodeId, origin.handleId));
+    return origin.handleType === 'source'
+      ? compatibleBlocksForSource(blockDefinitions, originType)
+      : compatibleBlocksForTarget(blockDefinitions, originType);
+  }, [dropPicker, portTypeMap, blockDefinitions]);
+
+  const handleDropPick = useCallback(
+    (candidate: CompatibleBlock, translatedLabel: string) => {
+      if (!dropPicker) {
+        return;
+      }
+      const blockType: BlockTypeInfo = {
+        ...candidate.block,
+        type: candidate.block.type || candidate.block.id,
+        defaultConfig: {},
+        translatedLabel,
+      };
+      capture('workflow.block_added', {
+        blockType: blockType.type,
+        pluginId: candidate.block.pluginId,
+        via: 'wire-drop',
+      });
+      addConnectedBlock(blockType, dropPicker.nodePosition, dropPicker.origin, candidate.portId);
+      setDropPicker(null);
+    },
+    [dropPicker, addConnectedBlock, capture]
+  );
+
+  // Command palette: insert at the visible canvas center, jump, undo/redo.
+  const handlePaletteAdd = useCallback(
+    (block: BlockDefinition, translatedLabel: string) => {
+      const center = screenToFlowPosition({
+        x: window.innerWidth / 2,
+        y: window.innerHeight / 2,
+      });
+      capture('workflow.block_added', {
+        blockType: block.type || block.id,
+        pluginId: block.pluginId,
+        via: 'palette',
+      });
+      addBlock(
+        {
+          ...block,
+          type: block.type || block.id,
+          defaultConfig: {},
+          translatedLabel,
+        },
+        { x: center.x - 128, y: center.y - 60 }
+      );
+    },
+    [addBlock, screenToFlowPosition, capture]
+  );
+
+  const handleJumpToNode = useCallback(
+    (nodeId: string) => {
+      setSelectedNodeId(nodeId);
+      fitView({ nodes: [{ id: nodeId }], duration: 300, maxZoom: 1.25 });
+    },
+    [setSelectedNodeId, fitView]
+  );
+
+  // Keyboard shortcuts: Cmd+K palette, Cmd+Z / Shift+Cmd+Z history.
+  useEffect(() => {
+    if (readonly) {
+      return;
+    }
+    const onKeyDown = (e: KeyboardEvent) => {
+      const mod = e.metaKey || e.ctrlKey;
+      if (!mod) {
+        return;
+      }
+      if (e.key === 'k' || e.key === 'K') {
+        e.preventDefault();
+        setPaletteOpen((open) => !open);
+        return;
+      }
+      const el = e.target instanceof HTMLElement ? e.target : null;
+      const editable =
+        el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable);
+      if (editable) {
+        return;
+      }
+      if (e.key === 'z' || e.key === 'Z') {
+        e.preventDefault();
+        if (e.shiftKey) {
+          redo();
+        } else {
+          undo();
+        }
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [readonly, undo, redo]);
+
   // Get available variables for selected block
   const availableVariables = selectedNode ? getAvailableVariables(selectedNode.id) : [];
 
@@ -736,6 +992,7 @@ function WorkflowEditorWithBlocks({
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
+          onConnectEnd={onConnectEnd}
           isValidConnection={isValidConnection}
           onNodeClick={onNodeClick}
           onPaneClick={onPaneClick}
@@ -747,6 +1004,10 @@ function WorkflowEditorWithBlocks({
           configCollapsed={configCollapsed}
           debugCollapsed={debugCollapsed}
           togglePanel={togglePanel}
+          canUndo={canUndo}
+          canRedo={canRedo}
+          onUndo={undo}
+          onRedo={redo}
         />
 
         {!readonly && selectedNode && (
@@ -769,6 +1030,31 @@ function WorkflowEditorWithBlocks({
             workflow={workflow}
           />
         )}
+
+        {!readonly && (
+          <EditorCommandPalette
+            open={paletteOpen}
+            onOpenChange={setPaletteOpen}
+            blocks={blockDefinitions}
+            nodes={nodes}
+            canUndo={canUndo}
+            canRedo={canRedo}
+            onAddBlock={handlePaletteAdd}
+            onJumpToNode={handleJumpToNode}
+            onFitView={() => fitView({ duration: 300 })}
+            onUndo={undo}
+            onRedo={redo}
+          />
+        )}
+
+        {!readonly && dropPicker && (
+          <ConnectionDropPicker
+            position={dropPicker.screen}
+            candidates={dropCandidates}
+            onPick={handleDropPick}
+            onClose={() => setDropPicker(null)}
+          />
+        )}
       </div>
     </WorkflowTypeContext>
   );
@@ -777,7 +1063,6 @@ function WorkflowEditorWithBlocks({
 export interface WorkflowEditorProps {
   workflow: Workflow;
   readonly?: boolean;
-  onSave?: (workflow: Workflow) => Promise<void>;
   onChange?: (workflow: Workflow, isDirty: boolean) => void;
 }
 

@@ -460,4 +460,6 @@ export function BlockToolbar({ onDragStart, onCollapse, className }: Readonly<Bl
 // Extended BlockTypeInfo that includes metadata
 export interface BlockTypeInfo extends BlockDefinition {
   defaultConfig?: Record<string, unknown>;
+  /** Locale-resolved display label, carried through drag data and pickers. */
+  translatedLabel?: string;
 }
