@@ -15,12 +15,18 @@ import {
   formatPower,
   kwhToWatts,
   Loader,
+  Message,
   PeriodPlaceholder,
   useSizeTier,
 } from '../ui/states';
 import { liveBrick } from './live.brick';
 
 const ACCENT = 'var(--color-data-3)';
+
+// Most recent 15-minute readings to plot: one day's worth (96 quarter-hours).
+// The fetch window is wider (a week, to clear SIL's publish lag), so the brick
+// trims down to the latest day of activity it actually received.
+const LIVE_WINDOW = 96;
 
 type FormatTime = PluginLocale['formatTime'];
 
@@ -35,26 +41,33 @@ function isToday(timestamp: string): boolean {
 }
 
 interface Row {
+  /** Full ISO timestamp: the X axis key. Unique, so the active dot stays put. */
+  ts: string;
   watts: number;
+  /** Human "HH:MM" shown in the tooltip. */
   label: string;
 }
 
 function buildRows(points: ConsumptionPoint[], formatTime: FormatTime): Row[] {
   return points.map((p) => ({
+    ts: p.timestamp,
     watts: kwhToWatts(p.total - p.injection),
     label: formatTime(new Date(p.timestamp)),
   }));
 }
 
-function LiveTooltip({ active, payload, label }: TooltipContentProps<number, string>) {
-  if (!active || !payload?.length) {
+function LiveTooltip({ active, payload }: TooltipContentProps<number, string>) {
+  const point = payload?.[0];
+  if (!active || !point) {
     return null;
   }
-  const watts = payload[0]?.value ?? 0;
+  // The X axis is keyed on the unique timestamp (so the highlighted dot tracks
+  // the cursor); the readable time lives on the row payload, not the axis label.
+  const time = String(point.payload?.label ?? '');
   return (
     <div className="rounded-md border border-border bg-popover px-2 py-1 text-popover-foreground text-xs shadow-md">
-      <div className="text-muted-foreground">{label}</div>
-      <div className="font-medium text-data-3">{formatPower(Number(watts))}</div>
+      <div className="text-muted-foreground">{time}</div>
+      <div className="font-medium text-data-3">{formatPower(Number(point.value ?? 0))}</div>
     </div>
   );
 }
@@ -75,7 +88,8 @@ export default function LiveConsumption() {
 
   const periodState = state?.periods?.['24h'];
   const data = periodState?.data;
-  const rows = useMemo(() => (data ? buildRows(data.points, formatTime) : []), [data, formatTime]);
+  const recent = useMemo(() => (data ? data.points.slice(-LIVE_WINDOW) : []), [data]);
+  const rows = useMemo(() => buildRows(recent, formatTime), [recent, formatTime]);
   const tier = useSizeTier();
 
   if (!state) {
@@ -84,13 +98,20 @@ export default function LiveConsumption() {
   if (!state.credentialsSet) {
     return <NoCredentials />;
   }
-  if (!data || rows.length === 0) {
-    return <PeriodPlaceholder error={periodState?.error} tone="emerald" />;
+  // A login/network/rate-limit fault gets its own explanatory message.
+  if (periodState?.error) {
+    return <PeriodPlaceholder error={periodState.error} tone="emerald" />;
+  }
+  // No period state yet, or the first poll is still in flight: keep spinning.
+  if (!data) {
+    return <Loader tone="emerald" />;
   }
 
-  const last = data.points.at(-1);
-  if (!last) {
-    return <PeriodPlaceholder error={periodState?.error} tone="emerald" />;
+  const last = recent.at(-1);
+  // Poll succeeded but SIL has published nothing in the fetched window. Say so
+  // instead of spinning forever (the prior bug, since the window was too narrow).
+  if (!last || rows.length === 0) {
+    return <Message icon={Activity} text={t('ui.noRecentData')} />;
   }
 
   const liveWatts = kwhToWatts(last.total - last.injection);
@@ -105,7 +126,7 @@ export default function LiveConsumption() {
             <stop offset="95%" stopColor={ACCENT} stopOpacity={0} />
           </linearGradient>
         </defs>
-        <XAxis dataKey="label" hide />
+        <XAxis dataKey="ts" hide />
         <Tooltip content={LiveTooltip} cursor={{ stroke: ACCENT, strokeOpacity: 0.3 }} />
         <Area
           type="monotone"
