@@ -255,7 +255,7 @@ function readAnthropicUsage(data: Json): TokenUsage | undefined {
   return {
     inputTokens,
     outputTokens,
-    ...(cached !== undefined ? { cachedInputTokens: cached } : {}),
+    ...(cached === undefined ? {} : { cachedInputTokens: cached }),
   };
 }
 
@@ -417,7 +417,7 @@ function readOpenAiUsage(data: Json): TokenUsage | undefined {
   return {
     inputTokens,
     outputTokens,
-    ...(cached !== undefined ? { cachedInputTokens: cached } : {}),
+    ...(cached === undefined ? {} : { cachedInputTokens: cached }),
   };
 }
 
@@ -562,8 +562,8 @@ function openAiModelOption(entry: Record<string, Json> | null): ModelOption | nu
   const pricing = openRouterPricing(jsonObj(entry.pricing)) ?? hints.pricing;
   const merged: ModelHints = {
     ...hints,
-    ...(contextWindow !== undefined ? { contextWindow } : {}),
-    ...(pricing !== undefined ? { pricing } : {}),
+    ...(contextWindow === undefined ? {} : { contextWindow }),
+    ...(pricing === undefined ? {} : { pricing }),
   };
   return {
     value: id,
