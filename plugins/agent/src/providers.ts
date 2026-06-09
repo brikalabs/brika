@@ -19,13 +19,16 @@ import {
  *
  * Three providers ship: Anthropic (Messages API), any OpenAI-compatible
  * chat-completions endpoint (OpenAI, OpenRouter, Groq, Together, Mistral, Azure
- * OpenAI), and a local (loopback) provider for Ollama / LM Studio. The local
- * provider speaks the OpenAI wire format but egresses through the
- * `dev.brika.net.local.fetch` grant (consented loopback ports) instead of the
- * public `dev.brika.net.fetch` grant, whose SSRF guard blocks loopback.
+ * OpenAI), and Ollama. The Ollama provider speaks Ollama's NATIVE API
+ * (`/api/chat` + `/api/tags`), which carries tool calls (argument objects, not
+ * JSON strings), token counts (`prompt_eval_count`/`eval_count`), and the
+ * installed-model list with size metadata, none of which the OpenAI-compat
+ * shim exposes reliably. It egresses through the `dev.brika.net.local.fetch`
+ * grant (consented loopback ports) instead of the public `dev.brika.net.fetch`
+ * grant, whose SSRF guard blocks loopback.
  *
  * Hosted keys come from plugin-global password preferences (`anthropicApiKey`,
- * `openaiApiKey`); local needs no key.
+ * `openaiApiKey`); Ollama needs no key.
  */
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -81,14 +84,14 @@ export interface LlmProvider {
   chat(req: ChatRequest): Promise<ChatTurn>;
 }
 
-export type ProviderId = 'anthropic' | 'openai' | 'local';
+export type ProviderId = 'anthropic' | 'openai' | 'ollama';
 
 export interface ProviderSettings {
   provider: ProviderId;
   /**
    * Base URL. For `openai`, the OpenAI-compatible endpoint (e.g.
-   * https://openrouter.ai/api/v1). For `local`, the loopback model server
-   * (e.g. http://localhost:11434/v1 for Ollama).
+   * https://openrouter.ai/api/v1). For `ollama`, the server root
+   * (defaults to http://localhost:11434).
    */
   baseUrl?: string;
 }
@@ -264,8 +267,13 @@ function readAnthropicUsage(data: Json): TokenUsage | undefined {
 // ─────────────────────────────────────────────────────────────────────────────
 
 const DEFAULT_OPENAI_BASE = 'https://api.openai.com/v1';
-/** Ollama's OpenAI-compatible endpoint; LM Studio uses http://localhost:1234/v1. */
-const DEFAULT_LOCAL_BASE = 'http://localhost:11434/v1';
+/** Ollama server root (the native API lives under /api). */
+const DEFAULT_OLLAMA_BASE = 'http://localhost:11434';
+
+/** Normalize a user-pasted Ollama base: strip trailing slash and a /v1 suffix. */
+function ollamaRoot(baseUrl: string): string {
+  return baseUrl.replace(/\/+$/, '').replace(/\/v1$/, '');
+}
 
 function openaiMessages(req: ChatRequest): Json[] {
   const out: Json[] = [];
@@ -297,36 +305,15 @@ function openaiMessages(req: ChatRequest): Json[] {
   return out;
 }
 
-/** JSON-POST transport: differs by egress (public `net.fetch` vs loopback `net.local`). */
-type JsonPost = (url: string, headers: Record<string, string>, body: Json) => Promise<Json>;
-
-interface OpenAiOptions {
-  /** Transport for the chat request. Defaults to the public-egress postJson. */
-  post?: JsonPost;
-  /** When false, omit the Bearer auth header (local servers need no key). */
-  auth?: boolean;
-  label?: string;
-}
-
-/**
- * OpenAI-compatible provider. The same chat/completions wire format backs both
- * hosted endpoints (OpenAI, OpenRouter, Groq...) and local servers (Ollama, LM
- * Studio); only the egress transport and whether a key is required differ.
- */
-function createOpenAiProvider(baseUrl: string, opts: OpenAiOptions = {}): LlmProvider {
-  const post = opts.post ?? postJson;
-  const useAuth = opts.auth !== false;
+/** OpenAI-compatible provider (OpenAI, OpenRouter, Groq, Together, Mistral, Azure). */
+function createOpenAiProvider(baseUrl: string): LlmProvider {
   const endpoint = `${baseUrl.replace(/\/$/, '')}/chat/completions`;
   return {
-    label: opts.label ?? 'OpenAI-compatible',
+    label: 'OpenAI-compatible',
     async chat(req) {
-      const headers: Record<string, string> = {};
-      if (useAuth) {
-        const { openaiApiKey } = getPreferences<AgentPreferences>();
-        if (!openaiApiKey) {
-          throw new Error('Set the OpenAI API key in the AI Agent plugin settings');
-        }
-        headers.authorization = `Bearer ${openaiApiKey}`;
+      const { openaiApiKey } = getPreferences<AgentPreferences>();
+      if (!openaiApiKey) {
+        throw new Error('Set the OpenAI API key in the AI Agent plugin settings');
       }
       const tools = req.tools.map((tool) => ({
         type: 'function',
@@ -336,49 +323,138 @@ function createOpenAiProvider(baseUrl: string, opts: OpenAiOptions = {}): LlmPro
           parameters: tool.inputSchema,
         },
       }));
-      const data = await post(endpoint, headers, {
-        model: req.model,
-        max_tokens: req.maxTokens,
-        messages: openaiMessages(req),
-        tools: tools.length > 0 ? tools : undefined,
-      });
+      const data = await postJson(
+        endpoint,
+        { authorization: `Bearer ${openaiApiKey}` },
+        {
+          model: req.model,
+          max_tokens: req.maxTokens,
+          messages: openaiMessages(req),
+          tools: tools.length > 0 ? tools : undefined,
+        }
+      );
       return readOpenAiTurn(data);
     },
   };
 }
 
-/** Local (loopback) provider: OpenAI wire format over the consented net.local grant. */
-function createLocalProvider(baseUrl: string): LlmProvider {
-  return createOpenAiProvider(baseUrl, {
-    post: localPostJson,
-    auth: false,
-    label: 'Local (loopback)',
-  });
+// ─────────────────────────────────────────────────────────────────────────────
+// Ollama provider (native API over the consented net.local grant)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Serialize the normalized conversation to Ollama's native /api/chat shape.
+ * Differences from OpenAI: assistant tool-call arguments are OBJECTS (not JSON
+ * strings), tool calls carry no ids (results are matched by order), and tool
+ * results are plain `{ role: 'tool', content }` messages.
+ */
+function ollamaMessages(req: ChatRequest): Json[] {
+  const out: Json[] = [];
+  if (req.system) {
+    out.push({ role: 'system', content: req.system });
+  }
+  for (const message of req.messages) {
+    if (message.role === 'user') {
+      out.push({ role: 'user', content: message.text });
+    } else if (message.role === 'assistant') {
+      out.push({
+        role: 'assistant',
+        content: message.text,
+        tool_calls:
+          message.toolCalls.length > 0
+            ? message.toolCalls.map((call) => ({
+                function: { name: call.name, arguments: call.args },
+              }))
+            : undefined,
+      });
+    } else {
+      for (const result of message.results) {
+        out.push({ role: 'tool', content: result.content });
+      }
+    }
+  }
+  return out;
 }
 
-/** JSON POST over the loopback grant (Ollama / LM Studio on a consented port). */
-async function localPostJson(
-  url: string,
-  headers: Record<string, string>,
-  body: Json
-): Promise<Json> {
+/**
+ * Dedicated Ollama provider. Uses the native API so tool calling and token
+ * counts work as Ollama implements them: `/api/chat` accepts the same
+ * function-tool declarations as OpenAI but returns argument objects, and the
+ * response carries `prompt_eval_count`/`eval_count` for usage. Tool-call ids
+ * are synthesized (Ollama matches results by order, the agent loop by id).
+ */
+function createOllamaProvider(baseUrl: string): LlmProvider {
+  const endpoint = `${ollamaRoot(baseUrl)}/api/chat`;
+  return {
+    label: 'Ollama',
+    async chat(req) {
+      const tools = req.tools.map((tool) => ({
+        type: 'function',
+        function: {
+          name: tool.name,
+          description: tool.description,
+          parameters: tool.inputSchema,
+        },
+      }));
+      const data = await localPostJson(endpoint, {
+        model: req.model,
+        stream: false,
+        messages: ollamaMessages(req),
+        tools: tools.length > 0 ? tools : undefined,
+        options: { num_predict: req.maxTokens },
+      });
+      return readOllamaTurn(data);
+    },
+  };
+}
+
+export function readOllamaTurn(data: Json): ChatTurn {
+  const message = jsonObj(jsonObj(data)?.message);
+  const text = jsonStr(message?.content) ?? '';
+  const toolCalls: ToolCall[] = [];
+  for (const raw of jsonArr(message?.tool_calls)) {
+    const fn = jsonObj(jsonObj(raw)?.function);
+    if (!fn) {
+      continue;
+    }
+    toolCalls.push({
+      id: `ollama-call-${toolCalls.length}`,
+      name: jsonStr(fn.name) ?? '',
+      args: jsonObj(fn.arguments) ?? {},
+    });
+  }
+  return { text, toolCalls, usage: readOllamaUsage(data) };
+}
+
+function readOllamaUsage(data: Json): TokenUsage | undefined {
+  const obj = jsonObj(data);
+  const inputTokens = jsonNum(obj?.prompt_eval_count);
+  const outputTokens = jsonNum(obj?.eval_count);
+  if (inputTokens === undefined || outputTokens === undefined) {
+    return undefined;
+  }
+  return { inputTokens, outputTokens };
+}
+
+/** JSON POST over the loopback grant (the Ollama server on a consented port). */
+async function localPostJson(url: string, body: Json): Promise<Json> {
   const res = await localFetch({
     url,
     method: 'POST',
-    headers: { 'content-type': 'application/json', ...headers },
+    headers: { 'content-type': 'application/json' },
     body: JSON.stringify(body),
   });
   if (res.status < 200 || res.status >= 300) {
-    throw new Error(`Local LLM request failed (${res.status}): ${res.body}`);
+    throw new Error(`Ollama request failed (${res.status}): ${res.body}`);
   }
   return parseJson(res.body);
 }
 
-/** JSON GET over the loopback grant (used to list local models). */
+/** JSON GET over the loopback grant (used to list installed Ollama models). */
 async function localGetJson(url: string): Promise<Json> {
   const res = await localFetch({ url });
   if (res.status < 200 || res.status >= 300) {
-    throw new Error(`Local model list request failed (${res.status}): ${res.body}`);
+    throw new Error(`Ollama model list request failed (${res.status}): ${res.body}`);
   }
   return parseJson(res.body);
 }
@@ -428,17 +504,17 @@ function readOpenAiUsage(data: Json): TokenUsage | undefined {
 /** Config schema fragment shared by the LLM blocks (provider + base URL). */
 export const providerConfig = {
   provider: z
-    .enum(['anthropic', 'openai', 'local'])
+    .enum(['anthropic', 'openai', 'ollama'])
     .default('anthropic')
     .describe(
-      'LLM provider. "openai" covers any OpenAI-compatible endpoint; "local" runs a loopback model server (Ollama, LM Studio).'
+      'LLM provider. "openai" covers any OpenAI-compatible endpoint; "ollama" runs your installed local models for free.'
     ),
   baseUrl: z
     .string()
     .optional()
-    .meta({ showWhen: { field: 'provider', equals: ['openai', 'local'] } })
+    .meta({ showWhen: { field: 'provider', equals: ['openai', 'ollama'] } })
     .describe(
-      'Base URL. OpenAI-compatible endpoint, or a local server like http://localhost:11434/v1.'
+      'Base URL. OpenAI-compatible endpoint, or the Ollama server (defaults to http://localhost:11434).'
     ),
 };
 
@@ -446,8 +522,8 @@ export function getProvider(settings: ProviderSettings): LlmProvider {
   if (settings.provider === 'openai') {
     return createOpenAiProvider(settings.baseUrl || DEFAULT_OPENAI_BASE);
   }
-  if (settings.provider === 'local') {
-    return createLocalProvider(settings.baseUrl || DEFAULT_LOCAL_BASE);
+  if (settings.provider === 'ollama') {
+    return createOllamaProvider(settings.baseUrl || DEFAULT_OLLAMA_BASE);
   }
   return createAnthropicProvider();
 }
@@ -486,24 +562,45 @@ export async function listModels(settings: ProviderSettings): Promise<ModelOptio
   if (settings.provider === 'openai') {
     return listOpenAiModels(settings.baseUrl || DEFAULT_OPENAI_BASE);
   }
-  if (settings.provider === 'local') {
-    return listLocalModels(settings.baseUrl || DEFAULT_LOCAL_BASE);
+  if (settings.provider === 'ollama') {
+    return listOllamaModels(settings.baseUrl || DEFAULT_OLLAMA_BASE);
   }
   return listAnthropicModels();
 }
 
-/** List models a local server serves (OpenAI-compatible /models over loopback). */
-async function listLocalModels(baseUrl: string): Promise<ModelOption[]> {
-  const endpoint = `${baseUrl.replace(/\/$/, '')}/models`;
-  const data = await localGetJson(endpoint);
+/**
+ * List the models installed on the Ollama server via the native /api/tags,
+ * which carries the metadata (parameter size, on-disk size) the picker shows.
+ */
+async function listOllamaModels(baseUrl: string): Promise<ModelOption[]> {
+  const data = await localGetJson(`${ollamaRoot(baseUrl)}/api/tags`);
   const options: ModelOption[] = [];
-  for (const raw of jsonArr(jsonObj(data)?.data)) {
-    const id = jsonStr(jsonObj(raw)?.id);
-    if (id) {
-      options.push({ value: id, label: id, description: 'local model (free)' });
+  for (const raw of jsonArr(jsonObj(data)?.models)) {
+    const option = ollamaModelOption(jsonObj(raw));
+    if (option) {
+      options.push(option);
     }
   }
   return options;
+}
+
+/** Normalize one /api/tags entry into a picker option with a size summary. */
+export function ollamaModelOption(entry: Record<string, Json> | null): ModelOption | null {
+  const name = jsonStr(entry?.name) ?? jsonStr(entry?.model);
+  if (!entry || !name) {
+    return null;
+  }
+  const parts: string[] = [];
+  const paramSize = jsonStr(jsonObj(entry.details)?.parameter_size);
+  if (paramSize) {
+    parts.push(paramSize);
+  }
+  const sizeBytes = jsonNum(entry.size);
+  if (sizeBytes !== undefined && sizeBytes > 0) {
+    parts.push(`${(sizeBytes / 1_000_000_000).toFixed(1)} GB`);
+  }
+  parts.push('free');
+  return { value: name, label: name, description: parts.join(' | ') };
 }
 
 async function listAnthropicModels(): Promise<ModelOption[]> {
@@ -527,8 +624,6 @@ async function listAnthropicModels(): Promise<ModelOption[]> {
       value: id,
       label: jsonStr(entry?.display_name) ?? hints.displayName ?? id,
       description: describeModel(hints),
-      contextWindow: hints.contextWindow,
-      pricing: hints.pricing,
     });
   }
   return options;
@@ -552,7 +647,7 @@ async function listOpenAiModels(baseUrl: string): Promise<ModelOption[]> {
 }
 
 /** Normalize one OpenAI-compatible model entry, reading rich fields when present. */
-function openAiModelOption(entry: Record<string, Json> | null): ModelOption | null {
+export function openAiModelOption(entry: Record<string, Json> | null): ModelOption | null {
   const id = jsonStr(entry?.id);
   if (!entry || !id) {
     return null;
@@ -569,13 +664,11 @@ function openAiModelOption(entry: Record<string, Json> | null): ModelOption | nu
     value: id,
     label: jsonStr(entry.name) ?? hints.displayName ?? id,
     description: describeModel(merged),
-    contextWindow,
-    pricing,
   };
 }
 
 /** OpenRouter returns per-token USD prices as strings; convert to per-MTok. */
-function openRouterPricing(pricing: Record<string, Json> | null): ModelPricing | undefined {
+export function openRouterPricing(pricing: Record<string, Json> | null): ModelPricing | undefined {
   if (!pricing) {
     return undefined;
   }

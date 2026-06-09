@@ -47,8 +47,6 @@ export interface ModelOption {
   label: string;
   /** Secondary line shown under the label (context window, price). */
   description?: string;
-  contextWindow?: number;
-  pricing?: ModelPricing;
 }
 
 const OPUS: ModelPricing = { inputPerMTok: 5, outputPerMTok: 25, cachedInputPerMTok: 0.5 };
@@ -129,13 +127,17 @@ export function costForUsage(
   if (!price) {
     return undefined;
   }
-  const cached = usage.cachedInputTokens ?? 0;
-  const cachedRate = price.cachedInputPerMTok ?? price.inputPerMTok;
-  return (
+  let cost =
     (usage.inputTokens / 1_000_000) * price.inputPerMTok +
-    (cached / 1_000_000) * cachedRate +
-    (usage.outputTokens / 1_000_000) * price.outputPerMTok
-  );
+    (usage.outputTokens / 1_000_000) * price.outputPerMTok;
+  // Cached input is billed separately ONLY where the catalog models a distinct
+  // cached rate (Anthropic, whose `input_tokens` excludes cache reads). Adding a
+  // cached term for providers without one would double-count: OpenAI's
+  // `prompt_tokens` already includes the cached tokens.
+  if (price.cachedInputPerMTok !== undefined && usage.cachedInputTokens) {
+    cost += (usage.cachedInputTokens / 1_000_000) * price.cachedInputPerMTok;
+  }
+  return cost;
 }
 
 /** Add two usage records, summing the optional cached field only when present. */

@@ -1,4 +1,4 @@
 {
   "name": "AI Agent",
-  "description": "Run Claude inside your workflows: prompt-in, text-out AI blocks"
+  "description": "AI agent and chat blocks with tool calling, for Claude, OpenAI-compatible endpoints, or your local Ollama models"
 }

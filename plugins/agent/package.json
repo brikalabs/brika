@@ -41,7 +41,7 @@
       ]
     },
     "dev.brika.net.local.fetch": {
-      "allowLoopbackPorts": [11434, 1234, 8080]
+      "allowLoopbackPorts": [11434]
     }
   },
   "preferences": [

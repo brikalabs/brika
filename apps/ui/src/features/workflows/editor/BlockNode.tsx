@@ -7,7 +7,18 @@
 import { Badge, cn } from '@brika/clay';
 import { displayType, parsePortType } from '@brika/type-system';
 import { Handle, type NodeProps, Position, useNodeId } from '@xyflow/react';
-import { CheckCircle, Loader2, XCircle } from 'lucide-react';
+import {
+  CheckCircle,
+  Clock,
+  HelpCircle,
+  Loader2,
+  MessageSquare,
+  PencilLine,
+  Send,
+  Wrench,
+  XCircle,
+  Zap,
+} from 'lucide-react';
 import { DynamicIcon, type IconName } from 'lucide-react/dynamic';
 import React, { memo } from 'react';
 import {
@@ -206,55 +217,95 @@ function configToString(value: unknown): string {
   return String(value);
 }
 
-/** Render a summary snippet for a block's config */
+/** One config-summary chip: an icon plus a truncated value, color-themed. */
+function ConfigSummaryChip({
+  icon,
+  className,
+  mono = true,
+  children,
+}: Readonly<{
+  icon: React.ReactNode;
+  className: string;
+  mono?: boolean;
+  children: React.ReactNode;
+}>) {
+  return (
+    <div className={`flex items-center gap-1.5 rounded-md px-2 py-1 text-xs ${className}`}>
+      <span className="shrink-0">{icon}</span>
+      <span className={`truncate ${mono ? 'font-mono' : ''}`}>{children}</span>
+    </div>
+  );
+}
+
+/** Render a summary snippet for a block's config (lucide icons, never emoji). */
 function renderConfigSummary(config: Record<string, unknown>): React.ReactNode {
   if (config.tool) {
     return (
-      <code className="block truncate rounded-md bg-muted/50 px-2 py-1 font-mono text-muted-foreground text-xs">
-        ⚡ {configToString(config.tool)}
-      </code>
+      <ConfigSummaryChip
+        icon={<Wrench className="size-3" />}
+        className="bg-muted/50 text-muted-foreground"
+      >
+        {configToString(config.tool)}
+      </ConfigSummaryChip>
     );
   }
   if (config.if) {
     return (
-      <code className="block truncate rounded-md bg-warning/10 px-2 py-1 font-mono text-warning text-xs">
-        ❓ {configToString(config.if).slice(0, 35)}
-      </code>
+      <ConfigSummaryChip
+        icon={<HelpCircle className="size-3" />}
+        className="bg-warning/10 text-warning"
+      >
+        {configToString(config.if).slice(0, 35)}
+      </ConfigSummaryChip>
     );
   }
   if (config.duration) {
     return (
-      <div className="rounded-md bg-muted/50 px-2 py-1 text-muted-foreground text-xs">
-        ⏱️ {configToString(config.duration)}
-      </div>
+      <ConfigSummaryChip
+        icon={<Clock className="size-3" />}
+        className="bg-muted/50 text-muted-foreground"
+        mono={false}
+      >
+        {configToString(config.duration)}
+      </ConfigSummaryChip>
     );
   }
   if (config.event) {
     return (
-      <code className="block truncate rounded-md bg-success/10 px-2 py-1 font-mono text-success text-xs">
-        📤 {configToString(config.event)}
-      </code>
+      <ConfigSummaryChip icon={<Send className="size-3" />} className="bg-success/10 text-success">
+        {configToString(config.event)}
+      </ConfigSummaryChip>
     );
   }
   if (config.message) {
     return (
-      <div className="truncate rounded-md bg-muted/50 px-2 py-1 text-xs">
-        💬 "{configToString(config.message).slice(0, 25)}..."
-      </div>
+      <ConfigSummaryChip
+        icon={<MessageSquare className="size-3" />}
+        className="bg-muted/50"
+        mono={false}
+      >
+        "{configToString(config.message).slice(0, 25)}..."
+      </ConfigSummaryChip>
     );
   }
   if (config.var) {
     return (
-      <code className="block truncate rounded-md bg-data-8/10 px-2 py-1 font-mono text-data-8 text-xs">
-        📝 {configToString(config.var)} = ...
-      </code>
+      <ConfigSummaryChip
+        icon={<PencilLine className="size-3" />}
+        className="bg-data-8/10 text-data-8"
+      >
+        {configToString(config.var)} = ...
+      </ConfigSummaryChip>
     );
   }
   if (config.sparkType) {
     return (
-      <code className="block truncate rounded-md bg-amber-500/10 px-2 py-1 font-mono text-amber-600 text-xs">
-        ⚡ {configToString(config.sparkType)}
-      </code>
+      <ConfigSummaryChip
+        icon={<Zap className="size-3" />}
+        className="bg-amber-500/10 text-amber-600"
+      >
+        {configToString(config.sparkType)}
+      </ConfigSummaryChip>
     );
   }
   return null;

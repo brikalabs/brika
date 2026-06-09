@@ -16,7 +16,7 @@ import { listModels, type ProviderId } from './providers';
  */
 definePreferenceOptions('model', async (params) => {
   const raw = params?.provider;
-  const provider: ProviderId = raw === 'openai' || raw === 'local' ? raw : 'anthropic';
+  const provider: ProviderId = raw === 'openai' || raw === 'ollama' ? raw : 'anthropic';
   const baseUrl = typeof params?.baseUrl === 'string' ? params.baseUrl : undefined;
   const models = await listModels({ provider, baseUrl });
   return models.map((m) => ({ value: m.value, label: m.label, description: m.description }));

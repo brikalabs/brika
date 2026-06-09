@@ -60,6 +60,16 @@ describe('costForUsage', () => {
     expect(cost).toBe(0.5);
   });
 
+  it('does not double-count cached input when no cached rate is modeled', () => {
+    // OpenAI-style: prompt_tokens already includes cached; no cachedInputPerMTok.
+    const cost = costForUsage('gpt-4o', {
+      inputTokens: 1_000_000,
+      outputTokens: 0,
+      cachedInputTokens: 500_000,
+    });
+    expect(cost).toBe(2.5);
+  });
+
   it('returns undefined for an uncatalogued model (never a fake $0)', () => {
     expect(
       costForUsage('some-local-model', { inputTokens: 100, outputTokens: 100 })

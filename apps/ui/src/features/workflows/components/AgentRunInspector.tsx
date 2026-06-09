@@ -143,7 +143,7 @@ export function AgentRunInspector({
       </div>
       <ScrollArea className="h-90">
         {timeline.length > 0 ? (
-          <div className="pt-1">{timeline.map(renderEntry)}</div>
+          <div className="pt-1">{timeline.map((entry, i) => renderEntry(entry, i))}</div>
         ) : (
           <div className="flex h-full items-center justify-center text-muted-foreground text-sm">
             No agent activity recorded

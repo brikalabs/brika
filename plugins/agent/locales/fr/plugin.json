@@ -1,4 +1,4 @@
 {
   "name": "Agent IA",
-  "description": "Exécutez Claude dans vos workflows : blocs IA prompt-entrée, texte-sortie"
+  "description": "Blocs agent IA et chat avec appel d'outils, pour Claude, les API compatibles OpenAI ou vos modèles locaux Ollama"
 }

@@ -650,7 +650,15 @@ interface DynamicOption {
   description?: string;
 }
 
-/** String-valued sibling fields, forwarded as the options query (self excluded). */
+/** Short string values longer than this are not forwarded as options params. */
+const MAX_PARAM_LENGTH = 200;
+
+/**
+ * Short scalar sibling fields, forwarded as the options query (self excluded).
+ * Long strings are dropped: option providers key off discriminators (provider,
+ * baseUrl), and forwarding a user prompt would bloat the URL and leak its
+ * content into request logs.
+ */
 function siblingParams(
   config: Record<string, unknown> | undefined,
   self: string
@@ -661,7 +669,9 @@ function siblingParams(
       continue;
     }
     if (typeof val === 'string') {
-      out[key] = val;
+      if (val.length <= MAX_PARAM_LENGTH) {
+        out[key] = val;
+      }
     } else if (typeof val === 'number' || typeof val === 'boolean') {
       out[key] = String(val);
     }
