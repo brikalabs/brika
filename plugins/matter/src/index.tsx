@@ -23,6 +23,10 @@ import {
 
 import './actions';
 
+// ─── Tools (hub-wide, AI-discoverable: list-devices, control-device) ────────
+
+import './tools';
+
 // Pages are compiled by the hub via Bun.build() — no import needed here.
 
 // ─── Sparks ──────────────────────────────────────────────────────────────────
