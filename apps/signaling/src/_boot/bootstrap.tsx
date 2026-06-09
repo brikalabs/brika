@@ -34,7 +34,6 @@ import '@/index.css';
  */
 if (globalThis.__brikaHandoffDone) {
   console.log('[brika-bootstrap] handoff already done — skipping re-render');
-  import.meta.hot?.decline();
 } else {
   const rootEl = document.getElementById('root');
   if (!rootEl) {
@@ -52,9 +51,9 @@ if (globalThis.__brikaHandoffDone) {
       <App />
     </React.StrictMode>
   );
-
-  // Even in the first-load case, decline HMR for this module. Any
-  // import-graph change reaches up here and there's no safe re-execution
-  // path — a full reload is correct.
-  import.meta.hot?.decline();
 }
+
+// This bootstrap entry intentionally never opts into Vite HMR acceptance. Any
+// import-graph change reaches up to this module and there is no safe
+// re-execution path, so Vite falls back to a full page reload, which is the
+// correct behavior here.

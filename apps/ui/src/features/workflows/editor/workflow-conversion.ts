@@ -7,6 +7,7 @@
  */
 
 import {
+  displayType,
   type GraphEdge,
   type GraphNode,
   getCompletions,
@@ -115,7 +116,7 @@ export function collectInputVariables(
     {
       name: `inputs.${targetPortId}`,
       source: `from ${sourceNode.id}`,
-      type: outputPort?.typeName ?? 'generic',
+      type: outputPort ? displayType(parsePortType(outputPort)) : 'generic',
       preview: formatPreview(portValue),
     },
   ];
@@ -221,15 +222,12 @@ export function workflowToFlow(
         inputs: def?.inputs?.map((p) => ({
           id: p.id,
           name: p.name || p.id,
-          direction: 'input' as const,
-          typeName: p.typeName || 'generic<T>',
           type: p.type,
         })),
         outputs: expandDynamicPorts(
           (def?.outputs ?? []).map((p) => ({
             id: p.id,
             name: p.name || p.id,
-            typeName: p.typeName || 'generic<T>',
             type: p.type,
             dynamic: p.dynamic,
           })),

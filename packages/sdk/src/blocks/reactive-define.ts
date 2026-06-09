@@ -203,14 +203,12 @@ function compileBlock<
   const inputMap = new Map<
     string,
     {
-      typeName: string;
       type: Record<string, unknown>;
       jsonSchema?: Record<string, unknown>;
     }
   >();
   for (const [id, def] of Object.entries(spec.inputs ?? {})) {
     inputMap.set(id, {
-      typeName: getBaseTypeName(def.schema),
       type: getTypeDescriptor(def.schema),
       jsonSchema: getJsonSchema(def.schema),
     });
@@ -221,7 +219,6 @@ function compileBlock<
     id,
     name: def.meta?.name ?? portDisplayName(id),
     direction: 'input' as const,
-    typeName: getBaseTypeName(def.schema),
     type: getTypeDescriptor(def.schema),
     jsonSchema: getJsonSchema(def.schema),
   }));
@@ -247,7 +244,6 @@ function compileBlock<
             id,
             name: def.meta?.name ?? portDisplayName(id),
             direction: 'output' as const,
-            typeName: linkedInput.typeName,
             type: linkedInput.type,
             jsonSchema: linkedInput.jsonSchema,
             dynamic: def.meta?.repeat,
@@ -261,7 +257,6 @@ function compileBlock<
       id,
       name: def.meta?.name ?? portDisplayName(id),
       direction: 'output' as const,
-      typeName: baseTypeName,
       type: typeDesc,
       jsonSchema: getJsonSchema(def.schema),
       dynamic: def.meta?.repeat,

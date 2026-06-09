@@ -21,7 +21,6 @@ import {
   type IceServerProvider,
   NoneIceServerProvider,
   StaticIceServerProvider,
-  type WsLike,
 } from '@brika/remote-access-protocol';
 import { type AppDeps, buildApp } from './app';
 import { openSqliteClaimStore } from './claims-sqlite';

@@ -70,6 +70,25 @@ describe('defineAction', () => {
     }).not.toThrow();
   });
 
+  test('throws TypeError when string ID provided but no handler argument given', () => {
+    expect(() => {
+      // Bypassing TypeScript to test the runtime guard (lines 83-86).
+      (defineAction as (id: string) => unknown)('no-handler-id');
+    }).toThrow(TypeError);
+  });
+
+  test('TypeError message includes the action id', () => {
+    let msg = '';
+    try {
+      (defineAction as (id: string) => unknown)('my-broken-action');
+    } catch (err) {
+      if (err instanceof TypeError) {
+        msg = err.message;
+      }
+    }
+    expect(msg).toContain('my-broken-action');
+  });
+
   // ── __finalizeActions ─────────────────────────────────────────────────────
 
   test('__finalizeActions assigns IDs and registers handlers', async () => {

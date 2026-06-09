@@ -50,13 +50,11 @@ export interface BlockDefinition {
   inputs: Array<{
     id: string;
     name: string;
-    typeName?: string;
     type?: Record<string, unknown>;
   }>;
   outputs: Array<{
     id: string;
     name: string;
-    typeName?: string;
     type?: Record<string, unknown>;
     dynamic?: string;
   }>;

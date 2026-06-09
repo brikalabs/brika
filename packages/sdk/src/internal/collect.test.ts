@@ -3,9 +3,11 @@ import { z } from 'zod';
 import { dynamicDropdown } from '../blocks/schema-types';
 import {
   collectBlock,
+  collectBrick,
   collectSpark,
   drainCollector,
   installCollector,
+  isZodSchema,
   parseBrickMeta,
   zodToPreferences,
 } from './collect';
@@ -40,6 +42,31 @@ describe('build collector', () => {
     drainCollector();
 
     collectBlock({ id: 'b', meta: { name: 'X', category: 'flow' } });
+    expect(drainCollector()).toEqual({ blocks: [], sparks: [], bricks: [] });
+  });
+
+  test('captures bricks between install and drain', () => {
+    installCollector();
+    collectBrick({
+      id: 'my-brick',
+      meta: { name: 'My Brick', category: 'display' },
+      config: z.object({ label: z.string() }),
+      data: z.object({ value: z.number() }),
+    });
+
+    const result = drainCollector();
+    expect(result.bricks).toHaveLength(1);
+    expect(result.bricks[0]?.id).toBe('my-brick');
+    expect(result.bricks[0]?.meta.name).toBe('My Brick');
+  });
+
+  test('collectBrick is a no-op when no collector is installed', () => {
+    collectBrick({
+      id: 'orphan-brick',
+      meta: { name: 'Orphan', category: 'display' },
+      config: z.object({}),
+      data: z.object({}),
+    });
     expect(drainCollector()).toEqual({ blocks: [], sparks: [], bricks: [] });
   });
 });
@@ -126,5 +153,55 @@ describe('parseBrickMeta', () => {
   test('rejects a non-object and a bad family', () => {
     expect(parseBrickMeta(undefined).ok).toBe(false);
     expect(parseBrickMeta({ families: ['xl'] }).ok).toBe(false);
+  });
+});
+
+describe('isZodSchema', () => {
+  test('returns true for real zod schemas', () => {
+    expect(isZodSchema(z.string())).toBe(true);
+    expect(isZodSchema(z.object({ x: z.number() }))).toBe(true);
+  });
+
+  test('returns false for null', () => {
+    expect(isZodSchema(null)).toBe(false);
+  });
+
+  test('returns false for primitives', () => {
+    expect(isZodSchema(42)).toBe(false);
+    expect(isZodSchema('schema')).toBe(false);
+    expect(isZodSchema(undefined)).toBe(false);
+  });
+
+  test('returns false for plain objects without safeParse', () => {
+    expect(isZodSchema({ type: 'string' })).toBe(false);
+  });
+
+  test('returns false for object where safeParse is not a function', () => {
+    expect(isZodSchema({ safeParse: 'not-a-function' })).toBe(false);
+  });
+
+  test('returns true for duck-typed schema-like objects', () => {
+    expect(isZodSchema({ safeParse: () => ({ success: true, data: null }) })).toBe(true);
+  });
+});
+
+describe('zodToPreferences: non-object schema fallback', () => {
+  test('returns empty preferences for a non-object schema (no properties)', () => {
+    // z.string() produces { type: 'string' } with no 'properties'; the function
+    // parses it successfully (properties is optional) and returns an empty list.
+    const result = zodToPreferences(z.string());
+    expect(result.preferences).toEqual([]);
+    // No warnings expected since the conversion succeeds cleanly.
+    expect(result.warnings).toEqual([]);
+  });
+
+  test('password format on a string field produces password type', () => {
+    const schema = z.object({
+      token: z.string().meta({ format: 'password' }),
+    });
+    const { preferences } = zodToPreferences(schema);
+    expect(preferences).toContainEqual(
+      expect.objectContaining({ type: 'password', name: 'token' })
+    );
   });
 });

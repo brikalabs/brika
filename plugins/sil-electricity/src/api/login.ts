@@ -143,9 +143,8 @@ async function postCredentials(jar: CookieJar, email: string, password: string):
     }
     // Otherwise surface status + body snippet so a 401 (bad creds) is
     // distinguishable from a 302/403 (handshake or flow drift) in the log.
-    throw new AuthError(
-      `credentials POST returned HTTP ${r.status}${body ? `: ${body.slice(0, 200)}` : ''}`
-    );
+    const bodySnippet = body ? `: ${body.slice(0, 200)}` : '';
+    throw new AuthError(`credentials POST returned HTTP ${r.status}${bodySnippet}`);
   }
   // Drain the JSON body so the connection can be reused.
   await r.json().catch(() => null);

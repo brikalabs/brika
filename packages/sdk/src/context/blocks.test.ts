@@ -51,7 +51,7 @@ describe('setupBlocks', () => {
             id: 'in',
             name: 'Input',
             direction: 'input' as const,
-            typeName: 'number',
+            type: { kind: 'primitive', type: 'number' },
           },
         ],
         outputs: [
@@ -59,7 +59,7 @@ describe('setupBlocks', () => {
             id: 'out',
             name: 'Output',
             direction: 'output' as const,
-            typeName: 'string',
+            type: { kind: 'primitive', type: 'string' },
           },
         ],
         schema: {

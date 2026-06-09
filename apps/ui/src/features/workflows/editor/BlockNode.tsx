@@ -5,6 +5,7 @@
  */
 
 import { Badge, cn } from '@brika/clay';
+import { displayType, parsePortType } from '@brika/type-system';
 import { Handle, type NodeProps, Position, useNodeId } from '@xyflow/react';
 import { CheckCircle, Loader2, XCircle } from 'lucide-react';
 import { DynamicIcon, type IconName } from 'lucide-react/dynamic';
@@ -27,8 +28,6 @@ import { usePortTypeName } from './WorkflowTypeContext';
 export interface BlockPort {
   id: string;
   name: string;
-  /** Type name: "string", "number", "object", "generic", etc. */
-  typeName?: string;
   /** Structural type descriptor (JSON, from @brika/type-system) */
   type?: Record<string, unknown>;
   /** Config array key this port templates over (expanded per item in the editor). */
@@ -93,8 +92,8 @@ const StatusIndicator = memo(function StatusIndicator({
 // ─────────────────────────────────────────────────────────────────────────────
 
 /** Map a resolved type kind to a port handle color */
-function portColor(resolvedType: string | undefined, fallbackTypeName: string | undefined): string {
-  const type = resolvedType ?? fallbackTypeName ?? '';
+function portColor(resolvedType: string | undefined, fallbackTypeDisplay: string): string {
+  const type = resolvedType ?? fallbackTypeDisplay;
   if (type.startsWith('generic') || type === '') {
     return '#8b5cf6'; // violet — unresolved generic
   }
@@ -133,7 +132,9 @@ const OutputPort = memo(function OutputPort({ port, index, total }: Readonly<Out
   const nodeId = useNodeId() ?? '';
   const resolvedType = usePortTypeName(nodeId, port.id);
   const offset = total > 1 ? ((index + 1) / (total + 1)) * 100 : 50;
-  const color = portColor(resolvedType, port.typeName);
+  const portTypeDisplay = displayType(parsePortType(port));
+  const color = portColor(resolvedType, portTypeDisplay);
+  const label = resolvedType ?? portTypeDisplay;
 
   return (
     <>
@@ -147,9 +148,9 @@ const OutputPort = memo(function OutputPort({ port, index, total }: Readonly<Out
       <span
         className="pointer-events-none absolute max-w-20 truncate text-center font-mono text-[9px] leading-tight"
         style={{ color, left: `${offset}%`, transform: 'translateX(-50%)', bottom: '-1.1rem' }}
-        title={`${port.name}: ${resolvedType ?? port.typeName ?? 'generic<T>'}`}
+        title={`${port.name}: ${label}`}
       >
-        {resolvedType ?? port.typeName ?? 'T'}
+        {label}
       </span>
     </>
   );
@@ -169,7 +170,9 @@ const InputPort = memo(function InputPort({ port, index, total }: Readonly<Input
   const nodeId = useNodeId() ?? '';
   const resolvedType = usePortTypeName(nodeId, port.id);
   const offset = total > 1 ? ((index + 1) / (total + 1)) * 100 : 50;
-  const color = portColor(resolvedType, port.typeName);
+  const portTypeDisplay = displayType(parsePortType(port));
+  const color = portColor(resolvedType, portTypeDisplay);
+  const label = resolvedType ?? portTypeDisplay;
 
   return (
     <>
@@ -183,9 +186,9 @@ const InputPort = memo(function InputPort({ port, index, total }: Readonly<Input
       <span
         className="pointer-events-none absolute max-w-20 truncate text-center font-mono text-[9px] leading-tight"
         style={{ color, left: `${offset}%`, transform: 'translateX(-50%)', top: '-1.1rem' }}
-        title={`${port.name}: ${resolvedType ?? port.typeName ?? 'generic<T>'}`}
+        title={`${port.name}: ${label}`}
       >
-        {resolvedType ?? port.typeName ?? 'T'}
+        {label}
       </span>
     </>
   );

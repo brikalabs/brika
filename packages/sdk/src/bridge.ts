@@ -115,8 +115,8 @@ export interface PreludeBridge {
   // -- Blocks (manifest-validated, instance lifecycle) --
   registerBlock(block: {
     id: string;
-    inputs: Array<{ id: string; typeName: string; type?: unknown; jsonSchema?: unknown }>;
-    outputs: Array<{ id: string; typeName: string; type?: unknown; jsonSchema?: unknown }>;
+    inputs: Array<{ id: string; type?: unknown; jsonSchema?: unknown }>;
+    outputs: Array<{ id: string; type?: unknown; jsonSchema?: unknown }>;
     schema: unknown;
     start?: (ctx: {
       blockId: string;

@@ -43,7 +43,6 @@ interface BlockInstance {
 interface BlockPort {
   id: string;
   name?: string;
-  typeName: string;
   type?: unknown;
   jsonSchema?: unknown;
   dynamic?: string;
@@ -150,7 +149,6 @@ export function setupBlocks(
       const mapPort = (p: BlockPort) => ({
         id: p.id,
         name: p.name ?? p.id,
-        typeName: p.typeName,
         type: p.type as Json | undefined,
         jsonSchema: p.jsonSchema as Json | undefined,
         dynamic: p.dynamic,

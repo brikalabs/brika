@@ -313,7 +313,7 @@ export class BunMock {
   #applyFileMock(): void {
     const files = this.#files;
 
-    this.#fileSpy = spyOn(Bun, 'file').mockImplementation(((path: unknown) => {
+    this.#fileSpy = spyOn(Bun, 'file').mockImplementation((path: unknown) => {
       const p = String(path);
       return {
         exists: () => Promise.resolve(files.has(p)),
@@ -331,7 +331,7 @@ export class BunMock {
           return Promise.resolve(typeof content === 'string' ? content : JSON.stringify(content));
         },
       } as ReturnType<typeof Bun.file>;
-    }) as typeof Bun.file);
+    });
   }
 
   #applyWriteMock(): void {

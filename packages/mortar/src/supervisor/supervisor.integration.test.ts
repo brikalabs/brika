@@ -837,3 +837,62 @@ describe.concurrent('Supervisor metadata', () => {
     expect(sup.get('ghost')).toBeNull();
   });
 });
+
+// ─── DuplicateServiceIdError ─────────────────────────────────────────────────
+
+describe('Supervisor constructor', () => {
+  test('throws DuplicateServiceIdError when two services share the same id', () => {
+    const { DuplicateServiceIdError } = require('../errors');
+    expect(() => mkSupervisor([longRunning('a'), longRunning('a')])).toThrow(
+      DuplicateServiceIdError
+    );
+  });
+});
+
+// ─── log-based port detection (confirmLogPort) ───────────────────────────────
+
+describe.concurrent('Supervisor (log-port detection)', () => {
+  test('health:auto becomes healthy when the service logs its port URL', async () => {
+    // Use a random port to avoid collisions with parallel tests.
+    const port = 7200 + Math.floor(Math.random() * 200);
+    // The service binds the port AND emits a URL line matching parsePortFromLog.
+    // That triggers the appendLog -> confirmLogPort -> isPortListening path.
+    await using sup = mkSupervisor([
+      {
+        id: 'logport',
+        label: 'logport',
+        command: `bun -e "Bun.serve({ port: ${port}, fetch: () => new Response('ok') }); console.log('Listening on http://localhost:${port}'); await Bun.sleep(60000)"`,
+        env: {},
+        dependsOn: [],
+        health: { kind: 'auto', timeoutMs: 15_000 },
+        url: null,
+        cwd: null,
+        port: null,
+      },
+    ]);
+    sup.start();
+    await waitFor(sup, (states) => states[0]?.status.kind === 'healthy', {
+      label: 'log-port healthy',
+      timeoutMs: 20_000,
+    });
+    expect(sup.get('logport')?.detectedPort).toBe(port);
+  }, 25_000);
+
+  test(
+    'restartAll is a no-op when already shutting down',
+    async () => {
+      await using sup = mkSupervisor([longRunning('a')]);
+      sup.start();
+      await waitFor(sup, (s) => s[0]?.status.kind === 'healthy', { label: 'healthy' });
+      // Start the shutdown without awaiting — isShuttingDown flips to true
+      // but the Promise hasn't resolved yet.
+      const shutdownPromise = sup.shutdown();
+      // restartAll during an in-flight shutdown must be a fast no-op.
+      const t0 = Date.now();
+      await sup.restartAll();
+      expect(Date.now() - t0).toBeLessThan(200);
+      await shutdownPromise;
+    },
+    CONCURRENT_TEST_TIMEOUT_MS
+  );
+});
