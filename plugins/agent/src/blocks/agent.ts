@@ -19,6 +19,19 @@ function stringInput(data: unknown): string {
   return typeof data === 'string' ? data : '';
 }
 
+/**
+ * Default agent persona when the user sets no system prompt. Spells out the
+ * tool-loop contract explicitly: small local models otherwise tend to imitate
+ * tool-result markup as text or fabricate results instead of issuing the next
+ * call, which ends the loop early.
+ */
+const DEFAULT_SYSTEM_PROMPT = [
+  'You are an automation agent with access to tools.',
+  'To act on the world, CALL a tool. Never write tool-call or tool-result markup as text, and never invent tool results.',
+  'For multi-step tasks, keep calling tools (one or more per turn) until the goal is done.',
+  'When the goal is complete, answer with a short plain-text summary of what you did.',
+].join(' ');
+
 type ToolInfo = { id: string; description?: string; inputSchema?: Json };
 type CallTool = (
   tool: string,
@@ -185,9 +198,10 @@ export const agentBlock = defineBlock({
         const history: ChatMessage[] = [{ role: 'user', text: prompt }];
         let total: TokenUsage = { inputTokens: 0, outputTokens: 0 };
 
+        const system = config.systemPrompt?.trim() ? config.systemPrompt : DEFAULT_SYSTEM_PROMPT;
         for (let i = 0; i < config.maxIterations; i++) {
           const turn = await provider.chat({
-            system: config.systemPrompt,
+            system,
             messages: history,
             tools,
             model,
