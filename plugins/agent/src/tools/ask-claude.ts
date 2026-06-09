@@ -24,8 +24,7 @@ defineTool(
   async (args) => {
     const prompt = typeof args.prompt === 'string' ? args.prompt : '';
     return askLlm(prompt, {
-      provider: 'anthropic',
-      model: 'claude-opus-4-8',
+      model: 'anthropic:claude-opus-4-8',
       effort: 'high',
       maxTokens: 4096,
     });

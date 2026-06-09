@@ -803,7 +803,11 @@ function DynamicSelectField({
               </p>
             )}
             {status === 'idle' && filtered.length === 0 && (
-              <p className="px-3 py-2 text-muted-foreground text-xs">No matches</p>
+              <p className="px-3 py-2 text-muted-foreground text-xs">
+                {options.length === 0
+                  ? 'Nothing available yet. Configure a provider in the plugin settings.'
+                  : 'No matches'}
+              </p>
             )}
             {filtered.map((o) => (
               <button

@@ -6,7 +6,33 @@ import {
   readAnthropicTurn,
   readOllamaTurn,
   readOpenAiTurn,
+  resolveModel,
 } from './providers';
+
+describe('resolveModel', () => {
+  it('splits a provider-qualified ref on the first colon only', () => {
+    expect(resolveModel('anthropic:claude-opus-4-8')).toEqual({
+      provider: 'anthropic',
+      model: 'claude-opus-4-8',
+    });
+    expect(resolveModel('ollama:llama3.1:8b')).toEqual({
+      provider: 'ollama',
+      model: 'llama3.1:8b',
+    });
+    expect(resolveModel('openai:openai/gpt-4o')).toEqual({
+      provider: 'openai',
+      model: 'openai/gpt-4o',
+    });
+  });
+
+  it('treats a bare or unknown-prefixed id as Anthropic (escape hatch)', () => {
+    expect(resolveModel('claude-opus-4-8')).toEqual({
+      provider: 'anthropic',
+      model: 'claude-opus-4-8',
+    });
+    expect(resolveModel('llama3.1:8b')).toEqual({ provider: 'anthropic', model: 'llama3.1:8b' });
+  });
+});
 
 describe('readAnthropicTurn', () => {
   it('parses usage including cached reads', () => {

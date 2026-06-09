@@ -86,19 +86,36 @@ export interface LlmProvider {
 
 export type ProviderId = 'anthropic' | 'openai' | 'ollama';
 
-export interface ProviderSettings {
-  provider: ProviderId;
-  /**
-   * Base URL. For `openai`, the OpenAI-compatible endpoint (e.g.
-   * https://openrouter.ai/api/v1). For `ollama`, the server root
-   * (defaults to http://localhost:11434).
-   */
-  baseUrl?: string;
-}
-
+/**
+ * Plugin-global provider setup. A provider is "configured" when its key is
+ * present (hosted) or its server answers (Ollama); blocks carry NO provider
+ * fields, only a model ref that names the provider it came from.
+ */
 interface AgentPreferences {
   anthropicApiKey?: string;
   openaiApiKey?: string;
+  /** OpenAI-compatible endpoint override (OpenRouter, Groq, Azure...). */
+  openaiBaseUrl?: string;
+  /** Ollama server root; defaults to http://localhost:11434. */
+  ollamaBaseUrl?: string;
+}
+
+/**
+ * A model ref qualifies a model id with the provider it belongs to:
+ * `anthropic:claude-opus-4-8`, `openai:gpt-4o`, `ollama:llama3.1:8b`. Only the
+ * FIRST `:` segment is provider-matched, so Ollama tags (`llama3.1:8b`) and
+ * OpenRouter ids (`openai/gpt-4o`) pass through intact. A bare id without a
+ * provider prefix resolves to Anthropic (the hand-typed escape hatch).
+ */
+export function resolveModel(ref: string): { provider: ProviderId; model: string } {
+  const colon = ref.indexOf(':');
+  if (colon > 0) {
+    const head = ref.slice(0, colon);
+    if (head === 'anthropic' || head === 'openai' || head === 'ollama') {
+      return { provider: head, model: ref.slice(colon + 1) };
+    }
+  }
+  return { provider: 'anthropic', model: ref };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -450,9 +467,13 @@ async function localPostJson(url: string, body: Json): Promise<Json> {
   return parseJson(res.body);
 }
 
-/** JSON GET over the loopback grant (used to list installed Ollama models). */
+/**
+ * JSON GET over the loopback grant (lists installed Ollama models). The short
+ * timeout doubles as the "is Ollama running" probe: when the server is down
+ * the picker should skip it quickly, not hang.
+ */
 async function localGetJson(url: string): Promise<Json> {
-  const res = await localFetch({ url });
+  const res = await localFetch({ url, timeoutMs: 3_000 });
   if (res.status < 200 || res.status >= 300) {
     throw new Error(`Ollama model list request failed (${res.status}): ${res.body}`);
   }
@@ -498,32 +519,17 @@ function readOpenAiUsage(data: Json): TokenUsage | undefined {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Resolution
+// Resolution (provider setup lives in plugin preferences, never in blocks)
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** Config schema fragment shared by the LLM blocks (provider + base URL). */
-export const providerConfig = {
-  provider: z
-    .enum(['anthropic', 'openai', 'ollama'])
-    .default('anthropic')
-    .describe(
-      'LLM provider. "openai" covers any OpenAI-compatible endpoint; "ollama" runs your installed local models for free.'
-    ),
-  baseUrl: z
-    .string()
-    .optional()
-    .meta({ showWhen: { field: 'provider', equals: ['openai', 'ollama'] } })
-    .describe(
-      'Base URL. OpenAI-compatible endpoint, or the Ollama server (defaults to http://localhost:11434).'
-    ),
-};
-
-export function getProvider(settings: ProviderSettings): LlmProvider {
-  if (settings.provider === 'openai') {
-    return createOpenAiProvider(settings.baseUrl || DEFAULT_OPENAI_BASE);
+/** Build the provider a model ref resolves to, reading setup from preferences. */
+export function getProvider(provider: ProviderId): LlmProvider {
+  const prefs = getPreferences<AgentPreferences>();
+  if (provider === 'openai') {
+    return createOpenAiProvider(prefs.openaiBaseUrl || DEFAULT_OPENAI_BASE);
   }
-  if (settings.provider === 'ollama') {
-    return createOllamaProvider(settings.baseUrl || DEFAULT_OLLAMA_BASE);
+  if (provider === 'ollama') {
+    return createOllamaProvider(prefs.ollamaBaseUrl || DEFAULT_OLLAMA_BASE);
   }
   return createAnthropicProvider();
 }
@@ -531,18 +537,20 @@ export function getProvider(settings: ProviderSettings): LlmProvider {
 /** One-shot completion helper for the simple chat block and the LLM-as-a-tool. */
 export async function askLlm(
   prompt: string,
-  opts: ProviderSettings & {
+  opts: {
+    /** Model ref (`provider:model-id`) or a bare Anthropic model id. */
     model: string;
     systemPrompt?: string;
     effort: 'low' | 'medium' | 'high';
     maxTokens: number;
   }
 ): Promise<string> {
-  const turn = await getProvider(opts).chat({
+  const { provider, model } = resolveModel(opts.model);
+  const turn = await getProvider(provider).chat({
     system: opts.systemPrompt,
     messages: [{ role: 'user', text: prompt }],
     tools: [],
-    model: opts.model,
+    model,
     maxTokens: opts.maxTokens,
     effort: opts.effort,
   });
@@ -553,19 +561,56 @@ export async function askLlm(
 // Live model listing (powers the model picker)
 // ─────────────────────────────────────────────────────────────────────────────
 
+const PROVIDER_LABEL: Record<ProviderId, string> = {
+  anthropic: 'Anthropic',
+  openai: 'OpenAI',
+  ollama: 'Ollama',
+};
+
 /**
- * Fetch the models the provider currently serves. The picker is driven by this
- * live list so it never drifts; catalog hints add a price/context badge, and
- * providers that return pricing live (OpenRouter) override the hint.
+ * One picker across every CONFIGURED provider: hosted providers list when
+ * their key is set, Ollama when the server answers. Option values are model
+ * refs (`provider:model-id`); a provider that fails to list (network, bad
+ * key, server down) is skipped so the others still appear.
  */
-export async function listModels(settings: ProviderSettings): Promise<ModelOption[]> {
-  if (settings.provider === 'openai') {
-    return listOpenAiModels(settings.baseUrl || DEFAULT_OPENAI_BASE);
+export async function listAllModels(): Promise<ModelOption[]> {
+  const prefs = getPreferences<AgentPreferences>();
+  const sources: Array<{ provider: ProviderId; list: () => Promise<ModelOption[]> }> = [];
+  if (prefs.anthropicApiKey) {
+    sources.push({ provider: 'anthropic', list: listAnthropicModels });
   }
-  if (settings.provider === 'ollama') {
-    return listOllamaModels(settings.baseUrl || DEFAULT_OLLAMA_BASE);
+  if (prefs.openaiApiKey) {
+    sources.push({
+      provider: 'openai',
+      list: () => listOpenAiModels(prefs.openaiBaseUrl || DEFAULT_OPENAI_BASE),
+    });
   }
-  return listAnthropicModels();
+  // Ollama needs no key: it is configured when the local server answers.
+  sources.push({
+    provider: 'ollama',
+    list: () => listOllamaModels(prefs.ollamaBaseUrl || DEFAULT_OLLAMA_BASE),
+  });
+
+  const settled = await Promise.allSettled(sources.map((s) => s.list()));
+  const options: ModelOption[] = [];
+  settled.forEach((result, i) => {
+    if (result.status !== 'fulfilled') {
+      return;
+    }
+    const source = sources[i];
+    if (!source) {
+      return;
+    }
+    const label = PROVIDER_LABEL[source.provider];
+    for (const option of result.value) {
+      options.push({
+        value: `${source.provider}:${option.value}`,
+        label: option.label,
+        description: option.description ? `${label} | ${option.description}` : label,
+      });
+    }
+  });
+  return options;
 }
 
 /**

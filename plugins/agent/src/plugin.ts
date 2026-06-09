@@ -7,18 +7,16 @@
 
 import { definePreferenceOptions } from '@brika/sdk';
 import { log, onStop } from '@brika/sdk/lifecycle';
-import { listModels, type ProviderId } from './providers';
+import { listAllModels } from './providers';
 
 /**
- * Live model picker. The config UI calls this with the block's currently
- * selected `provider` (and `baseUrl`), so the dropdown shows exactly the models
- * that provider serves, each annotated with its context window and price.
+ * Live model picker across every CONFIGURED provider: hosted providers appear
+ * when their key is set in the plugin settings, Ollama when the local server
+ * answers. Option values are model refs (`provider:model-id`), so blocks carry
+ * no provider fields at all.
  */
-definePreferenceOptions('model', async (params) => {
-  const raw = params?.provider;
-  const provider: ProviderId = raw === 'openai' || raw === 'ollama' ? raw : 'anthropic';
-  const baseUrl = typeof params?.baseUrl === 'string' ? params.baseUrl : undefined;
-  const models = await listModels({ provider, baseUrl });
+definePreferenceOptions('model', async () => {
+  const models = await listAllModels();
   return models.map((m) => ({ value: m.value, label: m.label, description: m.description }));
 });
 

@@ -4,7 +4,7 @@ import {
   type ChatMessage,
   type ChatTool,
   getProvider,
-  providerConfig,
+  resolveModel,
   type ToolCall,
   type ToolResult,
 } from '../providers';
@@ -122,8 +122,9 @@ async function runToolCalls(
  * in the reactive stream). It enumerates the hub tool registry via ctx.listTools
  * (scoped by the `tools` allowlist), gives them to the configured provider,
  * executes each requested tool call via ctx.callTool, and loops until the model
- * answers or hits `maxIterations`. Provider-agnostic (Anthropic or any
- * OpenAI-compatible endpoint); keys come from the plugin-global preferences.
+ * answers or hits `maxIterations`. The block carries no provider plumbing:
+ * provider setup (keys, endpoints) lives in the plugin-global preferences, and
+ * the model ref (`provider:model-id`) names where each model comes from.
  */
 export const agentBlock = defineBlock({
   id: 'agent',
@@ -149,17 +150,15 @@ export const agentBlock = defineBlock({
       .describe(
         'Goal sent to the agent. Reference incoming data with {{ inputs.in }} or {{ inputs.in.field }}. Leave empty to use a string piped into the Input.'
       ),
-    ...providerConfig,
     model: z
       .dynamicDropdown({ label: 'Model' })
-      .default('claude-opus-4-8')
-      .describe('Pick a model from the chosen provider, or enter a custom id'),
+      .default('anthropic:claude-opus-4-8')
+      .describe('Pick a model from your configured providers (set keys in the plugin settings)'),
     systemPrompt: z.string().optional().describe('System prompt defining the agent persona/rules'),
     effort: z
       .enum(['low', 'medium', 'high'])
       .default('high')
-      .meta({ showWhen: { field: 'provider', equals: 'anthropic' } })
-      .describe('Reasoning effort and token spend (Anthropic)'),
+      .describe('Reasoning effort and token spend (Claude models)'),
     maxTokens: z.number().int().min(1).max(16000).default(4096),
     maxIterations: z.number().int().min(1).max(20).default(8).describe('Tool-loop iteration cap'),
     tools: z
@@ -180,7 +179,8 @@ export const agentBlock = defineBlock({
       }
 
       try {
-        const provider = getProvider({ provider: config.provider, baseUrl: config.baseUrl });
+        const { provider: providerId, model } = resolveModel(config.model);
+        const provider = getProvider(providerId);
         const { tools, nameToId } = buildToolSet(await listTools(), new Set(config.tools));
         const history: ChatMessage[] = [{ role: 'user', text: prompt }];
         let total: TokenUsage = { inputTokens: 0, outputTokens: 0 };
@@ -190,7 +190,7 @@ export const agentBlock = defineBlock({
             system: config.systemPrompt,
             messages: history,
             tools,
-            model: config.model,
+            model,
             maxTokens: config.maxTokens,
             effort: config.effort,
           });
@@ -198,11 +198,11 @@ export const agentBlock = defineBlock({
             total = addUsage(total, turn.usage);
           }
           history.push({ role: 'assistant', text: turn.text, toolCalls: turn.toolCalls });
-          logStep(i + 1, config.maxIterations, config.model, turn, nameToId, total);
+          logStep(i + 1, config.maxIterations, model, turn, nameToId, total);
 
           if (turn.toolCalls.length === 0) {
             outputs.reply.emit(turn.text);
-            logUsage(config.model, total);
+            logUsage(model, total);
             return;
           }
 
