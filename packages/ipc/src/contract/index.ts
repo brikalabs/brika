@@ -136,6 +136,8 @@ export type {
 // ─── Tools ───
 export {
   callTool,
+  invokeTool,
+  listTools,
   registerTool,
   ToolCallContext,
   ToolCallSource,

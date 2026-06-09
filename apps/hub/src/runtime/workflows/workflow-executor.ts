@@ -14,10 +14,31 @@ import { PluginManager } from '@/runtime/plugins/plugin-manager';
 import type { Json } from '@/types';
 import type { BlockConnection, Workflow, WorkflowBlock } from './types';
 
-/** Events emitted during workflow execution */
+/**
+ * Events emitted during workflow execution.
+ *
+ * `correlationId` groups events into a "run": a best-effort causal slice of the
+ * always-on event stream (a trigger/source/inject emission opens one; downstream
+ * blocks inherit it; a quiescence window closes it). It is tracked hub-side only
+ * (the plugin IPC boundary is fire-and-forget, so true per-event causation is not
+ * recoverable without invasive IPC/SDK changes). `block.start` marks a block
+ * receiving input ("running"); `block.emit` marks it producing output
+ * ("completed"). New event kinds and the optional field are additive so the debug
+ * SSE and existing UI keep working unchanged.
+ */
 export interface ExecutionEvent {
-  type: 'workflow.started' | 'workflow.stopped' | 'block.emit' | 'block.log' | 'block.error';
+  type:
+    | 'workflow.started'
+    | 'workflow.stopped'
+    | 'run.opened'
+    | 'run.closed'
+    | 'block.start'
+    | 'block.emit'
+    | 'block.log'
+    | 'block.error';
   workflowId: string;
+  /** Run this event belongs to. Absent for pre-run lifecycle (workflow.started/stopped, startup errors). */
+  correlationId?: string;
   blockId?: string;
   port?: string;
   data?: Json;
@@ -63,6 +84,16 @@ export class WorkflowExecutor {
     { block: WorkflowBlock; def: import('@brika/sdk').BlockDefinition } | null
   >(); // blockId -> cached lookup
 
+  // ── Run correlation (hub-side, best-effort) ──────────────────────────────────
+  /** Milliseconds of inactivity on a run before it is considered closed. */
+  static readonly #QUIESCENCE_MS = 2000;
+  /** Block instances with no inbound connection (run roots), computed in start(). */
+  readonly #sourceInstances = new Set<string>();
+  /** Most-recent inbound correlationId per block instance. */
+  readonly #lastCorrelationId = new Map<string, string>();
+  /** Open runs -> their quiescence timer. */
+  readonly #openRuns = new Map<string, ReturnType<typeof setTimeout>>();
+
   // ─────────────────────────────────────────────────────────────────────────────
   // Lifecycle
   // ─────────────────────────────────────────────────────────────────────────────
@@ -82,6 +113,8 @@ export class WorkflowExecutor {
     this.#buffers.clear();
     this.#blockDefCache.clear();
     this.#buildBlockDefCache(workflow);
+    this.#computeSourceInstances(workflow);
+    this.#lastCorrelationId.clear();
 
     // Register this workflow's own emit/log handlers (kept as refs so stop()
     // removes exactly these, not every workflow's).
@@ -126,6 +159,13 @@ export class WorkflowExecutor {
     }
 
     const workflowId = this.#workflow.id;
+
+    // Close any open runs (emits run.closed, clears their quiescence timers).
+    for (const cid of [...this.#openRuns.keys()]) {
+      this.#closeRun(workflowId, cid);
+    }
+    this.#lastCorrelationId.clear();
+    this.#sourceInstances.clear();
 
     // Stop all block instances via IPC
     for (const instanceId of this.#instanceIds) {
@@ -182,6 +222,10 @@ export class WorkflowExecutor {
    * Use this to trigger the workflow from external events.
    */
   inject(blockId: string, port: string, data: Json): boolean {
+    const workflow = this.#workflow;
+    if (!workflow) {
+      return false;
+    }
     if (!this.#instanceIds.has(blockId)) {
       this.#logs.warn('Cannot inject data into unknown block instance', {
         blockId,
@@ -189,6 +233,12 @@ export class WorkflowExecutor {
       });
       return false;
     }
+
+    // An external injection is a fresh run root.
+    const correlationId = crypto.randomUUID();
+    this.#lastCorrelationId.set(blockId, correlationId);
+    this.#emit({ type: 'run.opened', workflowId: workflow.id, blockId, correlationId });
+    this.#emit({ type: 'block.start', workflowId: workflow.id, blockId, port, correlationId });
 
     this.#plugins.pushBlockInput(blockId, port, data);
     return true;
@@ -281,7 +331,8 @@ export class WorkflowExecutor {
    * Called when a block emits data on an output port.
    */
   #onBlockEmit(blockId: string, port: string, data: Json): void {
-    if (!this.#workflow) {
+    const workflow = this.#workflow;
+    if (!workflow) {
       return;
     }
 
@@ -289,6 +340,17 @@ export class WorkflowExecutor {
     // workflows; ignore blocks this workflow does not own.
     if (!this.#instanceIds.has(blockId)) {
       return;
+    }
+
+    // Determine the run this emit belongs to. A source (no inbound connection)
+    // opens a fresh run on every emit; a downstream block inherits the
+    // correlation of its most recent input (lazily opening one if it emitted
+    // without a recorded input, e.g. a timer block).
+    let correlationId = this.#lastCorrelationId.get(blockId);
+    if (!correlationId || this.#sourceInstances.has(blockId)) {
+      correlationId = crypto.randomUUID();
+      this.#lastCorrelationId.set(blockId, correlationId);
+      this.#emit({ type: 'run.opened', workflowId: workflow.id, blockId, correlationId });
     }
 
     // Update buffer
@@ -302,17 +364,18 @@ export class WorkflowExecutor {
       count: (existing?.count ?? 0) + 1,
     });
 
-    // Emit event
+    // Emit event (block produced output -> "completed" in the UI)
     this.#emit({
       type: 'block.emit',
-      workflowId: this.#workflow.id,
+      workflowId: workflow.id,
       blockId,
       port,
       data,
+      correlationId,
     });
 
-    // Dispatch to downstream blocks
-    this.#dispatch(blockId, port, data);
+    // Dispatch to downstream blocks, carrying the run forward.
+    this.#dispatch(workflow.id, blockId, port, data, correlationId);
   }
 
   /**
@@ -330,6 +393,7 @@ export class WorkflowExecutor {
       blockId,
       level,
       message,
+      correlationId: this.#lastCorrelationId.get(blockId),
     });
   }
 
@@ -337,7 +401,13 @@ export class WorkflowExecutor {
    * Dispatch data to downstream blocks based on connections.
    * Validates data against target port types before delivery.
    */
-  #dispatch(blockId: string, port: string, data: Json): void {
+  #dispatch(
+    workflowId: string,
+    blockId: string,
+    port: string,
+    data: Json,
+    correlationId: string
+  ): void {
     const key = `${blockId}.${port}`;
     const targets = this.#connections.get(key) ?? [];
 
@@ -349,9 +419,19 @@ export class WorkflowExecutor {
       const targetPort = conn.toPort ?? 'in';
 
       // Validate data against target port type
-      if (!this.#validatePortData(conn.to, targetPort, data)) {
-        continue; // Skip this target — don't crash the workflow
+      if (!this.#validatePortData(conn.to, targetPort, data, correlationId)) {
+        continue; // Skip this target — surfaced as a block.error in the run
       }
+
+      // Carry the run forward to the target and mark it running.
+      this.#lastCorrelationId.set(conn.to, correlationId);
+      this.#emit({
+        type: 'block.start',
+        workflowId,
+        blockId: conn.to,
+        port: targetPort,
+        correlationId,
+      });
 
       this.#plugins.pushBlockInput(conn.to, targetPort, data);
     }
@@ -361,7 +441,7 @@ export class WorkflowExecutor {
    * Validate data against a target port's declared type.
    * Returns true if valid (or if type info unavailable), false if invalid.
    */
-  #validatePortData(blockId: string, portId: string, data: Json): boolean {
+  #validatePortData(blockId: string, portId: string, data: Json, correlationId: string): boolean {
     if (!this.#workflow) {
       return true;
     }
@@ -402,7 +482,9 @@ export class WorkflowExecutor {
         type: 'block.error',
         workflowId: this.#workflow.id,
         blockId,
+        port: portId,
         error: `Input validation failed on port "${portId}": expected ${portType.kind}, got ${dataType.kind}`,
+        correlationId,
       });
       return false;
     }
@@ -420,6 +502,12 @@ export class WorkflowExecutor {
   }
 
   #emit(event: ExecutionEvent): void {
+    // Any activity inside a run defers its quiescence close (run.closed itself
+    // must not re-arm the timer, or a run would never close).
+    if (event.correlationId && event.type !== 'run.closed') {
+      this.#touchRun(event.workflowId, event.correlationId);
+    }
+
     for (const listener of this.#listeners) {
       try {
         listener(event);
@@ -427,6 +515,48 @@ export class WorkflowExecutor {
         this.#logs.error('Execution listener threw', {}, { error: e });
       }
     }
+  }
+
+  /** Mark the run roots: block instances that are not the target of any connection. */
+  #computeSourceInstances(workflow: Workflow): void {
+    this.#sourceInstances.clear();
+    const hasInbound = new Set<string>();
+    for (const conn of workflow.connections) {
+      hasInbound.add(conn.to);
+    }
+    for (const block of workflow.blocks) {
+      if (!hasInbound.has(block.id)) {
+        this.#sourceInstances.add(block.id);
+      }
+    }
+  }
+
+  /** (Re)arm the quiescence timer that closes a run after a window of inactivity. */
+  #touchRun(workflowId: string, correlationId: string): void {
+    const existing = this.#openRuns.get(correlationId);
+    if (existing) {
+      clearTimeout(existing);
+    }
+    const timer = setTimeout(
+      () => this.#closeRun(workflowId, correlationId),
+      WorkflowExecutor.#QUIESCENCE_MS
+    );
+    this.#openRuns.set(correlationId, timer);
+  }
+
+  /** Close a run: drop its timer + per-block correlation, then emit run.closed. */
+  #closeRun(workflowId: string, correlationId: string): void {
+    const timer = this.#openRuns.get(correlationId);
+    if (timer) {
+      clearTimeout(timer);
+    }
+    this.#openRuns.delete(correlationId);
+    for (const [instanceId, cid] of this.#lastCorrelationId) {
+      if (cid === correlationId) {
+        this.#lastCorrelationId.delete(instanceId);
+      }
+    }
+    this.#emit({ type: 'run.closed', workflowId, correlationId });
   }
 
   /** Resolve a block type - uses registry's O(1) short-name index. */

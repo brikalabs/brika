@@ -744,6 +744,61 @@ describe('WorkflowExecutor - Block Emit and Data Flow', () => {
     const emitEvent = events.find((e) => e.type === 'block.emit');
     expect(emitEvent).toBeUndefined();
   });
+
+  test('should open a run and stamp a shared correlationId across the cascade', async () => {
+    expect.hasAssertions();
+    const events: ExecutionEvent[] = [];
+    executor.addListener((e) => events.push(e));
+
+    await executor.start(createConnectedWorkflow());
+
+    // block-a is a source (no inbound connection) -> opens a fresh run.
+    emitHandler?.('block-a', 'tick', { value: 1 });
+
+    const opened = events.find((e) => e.type === 'run.opened');
+    const emit = events.find((e) => e.type === 'block.emit' && e.blockId === 'block-a');
+    const start = events.find((e) => e.type === 'block.start' && e.blockId === 'block-b');
+
+    expect(opened?.correlationId).toBeDefined();
+    expect(opened?.blockId).toBe('block-a');
+    const cid = opened?.correlationId;
+    expect(emit?.correlationId).toBe(cid);
+    expect(start?.correlationId).toBe(cid);
+    expect(start?.port).toBe('input');
+  });
+
+  test('should reuse the upstream run when a downstream block emits', async () => {
+    expect.hasAssertions();
+    const events: ExecutionEvent[] = [];
+    executor.addListener((e) => events.push(e));
+
+    await executor.start(createConnectedWorkflow());
+
+    emitHandler?.('block-a', 'tick', { value: 1 });
+    const cid = events.find((e) => e.type === 'run.opened')?.correlationId;
+
+    // block-b (downstream) emits -> it inherits block-a's run, no new run opens.
+    emitHandler?.('block-b', 'out', { value: 2 });
+
+    const downstreamEmit = events.find((e) => e.type === 'block.emit' && e.blockId === 'block-b');
+    expect(downstreamEmit?.correlationId).toBe(cid);
+    expect(events.filter((e) => e.type === 'run.opened')).toHaveLength(1);
+  });
+
+  test('should close open runs on stop', async () => {
+    expect.hasAssertions();
+    const events: ExecutionEvent[] = [];
+    executor.addListener((e) => events.push(e));
+
+    await executor.start(createConnectedWorkflow());
+    emitHandler?.('block-a', 'tick', { value: 1 });
+    const cid = events.find((e) => e.type === 'run.opened')?.correlationId;
+
+    executor.stop();
+
+    const closed = events.find((e) => e.type === 'run.closed');
+    expect(closed?.correlationId).toBe(cid);
+  });
 });
 
 describe('WorkflowExecutor - Block Start Error Handling', () => {

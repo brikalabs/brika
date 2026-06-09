@@ -2,7 +2,7 @@ import { Analytics } from '@brika/analytics';
 import { BadRequest, createSSEStream, group, route } from '@brika/router';
 import { z } from 'zod';
 import { BlockRegistry } from '@/runtime/blocks';
-import { WorkflowEngine, WorkflowLoader } from '@/runtime/workflows';
+import { RunStore, WorkflowEngine, WorkflowLoader } from '@/runtime/workflows';
 import { nonEmptyRecord, PositionSchema } from '@/runtime/workflows/schemas';
 import type { Json } from '@/types';
 import { getOrThrow } from '../utils/resource-helpers';
@@ -161,6 +161,31 @@ export const workflowsRoutes = group({
 
           return () => unsub();
         });
+      },
+    }),
+
+    // Run history (recorded execution traces). Declared before "/:id" so the
+    // static "/runs" segment matches first, mirroring "/debug" above.
+    route.get({
+      path: '/runs',
+      query: z.object({
+        workflowId: z.string().optional(),
+        status: z.enum(['running', 'completed', 'error']).optional(),
+        limit: z.coerce.number().int().min(1).max(1000).optional(),
+        cursor: z.coerce.number().int().optional(),
+      }),
+      handler: ({ query, inject }) => {
+        return inject(RunStore).query({ ...query, order: 'desc' }).runs;
+      },
+    }),
+
+    route.get({
+      path: '/runs/:runId',
+      params: z.object({
+        runId: z.coerce.number().int(),
+      }),
+      handler: ({ params, inject }) => {
+        return getOrThrow(inject(RunStore).get(params.runId), 'Run not found');
       },
     }),
 

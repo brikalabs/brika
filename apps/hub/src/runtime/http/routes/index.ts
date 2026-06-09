@@ -19,6 +19,7 @@ import { hubSetupProtectedRoutes, hubSetupPublicRoutes } from './setup';
 import { sparksRoutes } from './sparks';
 import { healthRoute, systemRoute } from './status';
 import { streamsRoutes } from './streams';
+import { toolsRoutes } from './tools-routes';
 import {
   systemAdminRoutes,
   systemReadRoutes,
@@ -80,6 +81,7 @@ export const allRoutes = combineRoutes(
       remoteAccessRoutes,
       sparksRoutes,
       workflowsRoutes,
+      toolsRoutes,
       logsRoutes,
       analyticsRoutes,
       streamsRoutes,

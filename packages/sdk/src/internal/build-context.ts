@@ -45,6 +45,7 @@ export function installBuildContext(): void {
     updatePreference: noop,
     definePreferenceOptions: noop,
     registerAction: noop,
+    registerTool: noop,
     registerRoute: noop,
     registerBlock: (block) => ({ id: block.id }),
     registerSpark: noop,

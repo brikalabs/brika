@@ -1,5 +1,6 @@
 import {
   Button,
+  cn,
   Dialog,
   DialogContent,
   DialogDescription,
@@ -22,6 +23,9 @@ import {
   filterEvents,
   useDebugStream,
 } from '../debug';
+import { RunsView } from './RunsView';
+
+type DebugView = 'live' | 'runs';
 
 interface DebugDialogProps {
   workflowId: string | null;
@@ -39,7 +43,16 @@ export function DebugDialog({
   const { t } = useLocale();
   const capture = useCapture();
   const [filter, setFilter] = useState<DebugFilter>('all');
+  const [view, setView] = useState<DebugView>('live');
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  const tabClass = (active: boolean) =>
+    cn(
+      'h-6 rounded-md border px-2 text-xs transition-colors',
+      active
+        ? 'border-primary bg-primary text-primary-foreground'
+        : 'border-border bg-transparent text-muted-foreground hover:bg-accent'
+    );
 
   // Use shared debug stream hook
   const { events, connected, clear } = useDebugStream({
@@ -79,57 +92,84 @@ export function DebugDialog({
               )}
             </DialogTitle>
           </div>
-          <DialogDescription className="flex items-center justify-between">
-            <span>{workflowName || workflowId}</span>
-            <EventFilterButtons
-              filter={filter}
-              onChange={(next) => {
-                capture('workflow.debug_filter_changed', { filter: next });
-                setFilter(next);
-              }}
-              labels={{
-                all: t('workflows:debug.all'),
-                logs: t('workflows:debug.logsOnly'),
-                emits: t('workflows:debug.emitsOnly'),
-              }}
-            />
+          <DialogDescription className="flex items-center justify-between gap-2">
+            <span className="truncate">{workflowName || workflowId}</span>
+            <div className="flex items-center gap-2">
+              <div className="flex gap-1">
+                <button
+                  type="button"
+                  className={tabClass(view === 'live')}
+                  onClick={() => setView('live')}
+                >
+                  {t('workflows:debug.live')}
+                </button>
+                <button
+                  type="button"
+                  className={tabClass(view === 'runs')}
+                  onClick={() => setView('runs')}
+                >
+                  {t('workflows:runs.title')}
+                </button>
+              </div>
+              {view === 'live' && (
+                <EventFilterButtons
+                  filter={filter}
+                  onChange={(next) => {
+                    capture('workflow.debug_filter_changed', { filter: next });
+                    setFilter(next);
+                  }}
+                  labels={{
+                    all: t('workflows:debug.all'),
+                    logs: t('workflows:debug.logsOnly'),
+                    emits: t('workflows:debug.emitsOnly'),
+                  }}
+                />
+              )}
+            </div>
           </DialogDescription>
         </DialogHeader>
 
-        <div className="rounded-lg border bg-muted/50 p-2">
-          <ScrollArea className="h-100" ref={scrollRef}>
-            {filteredEvents.length === 0 ? (
-              <div className="flex h-full items-center justify-center text-muted-foreground text-sm">
-                {t('workflows:debug.waiting')}
-              </div>
-            ) : (
-              <div className="space-y-0">
-                {filteredEvents.map((event, i) => (
-                  <DebugEventEntry key={`${event.timestamp}-${i}`} event={event} />
-                ))}
-              </div>
-            )}
-          </ScrollArea>
-        </div>
+        {view === 'live' ? (
+          <div className="rounded-lg border bg-muted/50 p-2">
+            <ScrollArea className="h-100" ref={scrollRef}>
+              {filteredEvents.length === 0 ? (
+                <div className="flex h-full items-center justify-center text-muted-foreground text-sm">
+                  {t('workflows:debug.waiting')}
+                </div>
+              ) : (
+                <div className="space-y-0">
+                  {filteredEvents.map((event, i) => (
+                    <DebugEventEntry key={`${event.timestamp}-${i}`} event={event} />
+                  ))}
+                </div>
+              )}
+            </ScrollArea>
+          </div>
+        ) : (
+          <RunsView workflowId={workflowId} />
+        )}
 
         <DialogFooter>
           <div className="flex w-full items-center justify-between">
             <span className="text-muted-foreground text-xs">
-              {filter === 'all'
-                ? `${events.length} ${t('workflows:debug.events')}`
-                : `${filteredEvents.length} / ${events.length} ${t('workflows:debug.events')}`}
+              {view === 'live' &&
+                (filter === 'all'
+                  ? `${events.length} ${t('workflows:debug.events')}`
+                  : `${filteredEvents.length} / ${events.length} ${t('workflows:debug.events')}`)}
             </span>
             <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  capture('workflow.debug_cleared', { eventCount: events.length });
-                  clear();
-                }}
-              >
-                {t('workflows:debug.clear')}
-              </Button>
+              {view === 'live' && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    capture('workflow.debug_cleared', { eventCount: events.length });
+                    clear();
+                  }}
+                >
+                  {t('workflows:debug.clear')}
+                </Button>
+              )}
               <Button
                 variant="outline"
                 size="sm"

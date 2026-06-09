@@ -39,6 +39,7 @@ import { ConfigPanel } from './ConfigPanel';
 import { DebugPanel } from './DebugPanel';
 import { useWorkflowEditor } from './useWorkflowEditor';
 import { WorkflowTypeContext } from './WorkflowTypeContext';
+import type { BlockStatus } from './workflow-conversion';
 
 export interface RegisteredSpark {
   type: string;
@@ -82,7 +83,8 @@ function processNewEvents(
   events: DebugEvent[],
   edges: Edge[],
   lastProcessedTimestamp: React.RefObject<number>,
-  setBlockLiveOutput: (blockId: string, output: unknown) => void
+  setBlockLiveOutput: (blockId: string, output: unknown) => void,
+  setBlockStatus: (blockId: string, status: BlockStatus, output?: unknown) => void
 ) {
   const newEvents = events.filter((e) => e.timestamp > lastProcessedTimestamp.current);
 
@@ -91,6 +93,19 @@ function processNewEvents(
   }
 
   for (const event of newEvents) {
+    // Drive the per-block status rings from run lifecycle + emit/error events.
+    // block.start -> running (received input), block.emit -> completed (produced
+    // output), block.error -> error. States persist until the block next runs.
+    if (event.blockId) {
+      if (event.type === 'block.start') {
+        setBlockStatus(event.blockId, 'running');
+      } else if (event.type === 'block.error') {
+        setBlockStatus(event.blockId, 'error');
+      } else if (event.type === 'block.emit') {
+        setBlockStatus(event.blockId, 'completed', event.data);
+      }
+    }
+
     if (event.type !== 'block.emit' || !event.blockId || !event.port) {
       continue;
     }
@@ -621,6 +636,7 @@ function WorkflowEditorWithBlocks({
     portTypeMap,
     blockSchemaMap,
     setBlockLiveOutput,
+    setBlockStatus,
   } = editor;
 
   // Connect to debug stream for port ping animations
@@ -632,10 +648,10 @@ function WorkflowEditorWithBlocks({
   // Track last processed event timestamp to handle array truncation
   const lastProcessedTimestamp = useRef(0);
 
-  // Trigger port pings + live node-view updates when emit events come in
+  // Trigger port pings, live node-view updates, and status rings on new events
   useEffect(() => {
-    processNewEvents(events, edges, lastProcessedTimestamp, setBlockLiveOutput);
-  }, [events, edges, setBlockLiveOutput]);
+    processNewEvents(events, edges, lastProcessedTimestamp, setBlockLiveOutput, setBlockStatus);
+  }, [events, edges, setBlockLiveOutput, setBlockStatus]);
 
   // Handle drop from toolbar
   const onDragOver = useCallback((event: React.DragEvent) => {

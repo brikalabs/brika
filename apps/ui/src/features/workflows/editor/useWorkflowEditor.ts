@@ -205,7 +205,10 @@ export function useWorkflowEditor(
     [nodes, portTypeMap]
   );
 
-  // Handle new connections (enforces single connection per port)
+  // Handle new connections. Ports are multi-connection: an output may fan out to
+  // many targets and an input may fan in from many sources (the reactive flow
+  // merges them). addEdge dedupes exact-duplicate wires; type compatibility is
+  // still enforced at drag time by isValidConnection above.
   const onConnect: OnConnect = useCallback(
     (connection: Connection) => {
       const newEdge: Edge = {
@@ -217,20 +220,7 @@ export function useWorkflowEditor(
         },
       } as Edge;
 
-      setEdges((eds) => {
-        // Remove any existing edge connected to the same target port (input)
-        // Remove any existing edge connected to the same source port (output)
-        const filtered = eds.filter((e) => {
-          const sameTargetPort =
-            e.target === connection.target &&
-            (e.targetHandle || 'in') === (connection.targetHandle || 'in');
-          const sameSourcePort =
-            e.source === connection.source &&
-            (e.sourceHandle || 'out') === (connection.sourceHandle || 'out');
-          return !sameTargetPort && !sameSourcePort;
-        });
-        return addEdge(newEdge, filtered);
-      });
+      setEdges((eds) => addEdge(newEdge, eds));
       setIsDirty(true);
     },
     [setEdges]

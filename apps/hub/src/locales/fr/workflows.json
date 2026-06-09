@@ -46,6 +46,7 @@
   },
   "debug": {
     "title": "Débogage en direct",
+    "live": "Direct",
     "description": "Événements d'exécution du workflow en temps réel",
     "connected": "Connecté",
     "disconnected": "Déconnecté",

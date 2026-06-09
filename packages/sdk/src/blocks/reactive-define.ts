@@ -30,6 +30,8 @@ import {
   type ReactiveBlockSpec,
   type ResolvedRef,
   type Source,
+  type ToolCallResult,
+  type ToolInfo,
   zodToJsonSchema,
   zodToTypeName,
 } from './reactive';
@@ -53,6 +55,14 @@ export interface BlockRuntimeContext {
   workflowId: string;
   config: Record<string, unknown>;
   emit(portId: string, data: Serializable): void;
+  /**
+   * Call a hub-registered tool by id. Always provided by the hub prelude at
+   * runtime; optional here only so test harnesses can build a minimal context
+   * (the typed `run()` context surfaces it as required).
+   */
+  callTool?(tool: string, args: Record<string, Json>): Promise<ToolCallResult>;
+  /** Enumerate registered tools. Always provided at runtime (see `callTool`). */
+  listTools?(): Promise<ToolInfo[]>;
 }
 
 /** Running block instance */
@@ -317,6 +327,8 @@ function compileBlock<
         // Launder unknown -> Serializable without a cast; the value is already
         // serialized downstream. Used for dynamic template ports (emit `case-N`).
         emit: (portId: string, data: unknown) => ctx.emit(portId, z.any().parse(data)),
+        callTool: ctx.callTool,
+        listTools: ctx.listTools,
         get context() {
           return this;
         },

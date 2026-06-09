@@ -141,6 +141,13 @@ export { defineRoute } from './api/routes';
 
 export type { ActionRef } from './api/actions';
 export { defineAction } from './api/actions';
+export type {
+  ToolCallContext,
+  ToolDefinition,
+  ToolHandler,
+  ToolInputSchema,
+} from './api/tools';
+export { defineTool } from './api/tools';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Brick Data (push to client-rendered bricks)

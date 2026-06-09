@@ -14,4 +14,5 @@ import './bricks';
 import './location';
 import './secrets';
 import './actions';
+import './tools';
 import './lifecycle';

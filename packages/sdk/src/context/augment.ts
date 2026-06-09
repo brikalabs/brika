@@ -20,6 +20,7 @@ import type { MethodsOf } from './register';
 import type { setupRoutes } from './routes';
 import type { setupSecrets } from './secrets';
 import type { setupSparks } from './sparks';
+import type { setupTools } from './tools';
 
 declare module '../context' {
   interface Context
@@ -31,5 +32,6 @@ declare module '../context' {
       MethodsOf<typeof setupLocation>,
       MethodsOf<typeof setupRoutes>,
       MethodsOf<typeof setupSecrets>,
-      MethodsOf<typeof setupSparks> {}
+      MethodsOf<typeof setupSparks>,
+      MethodsOf<typeof setupTools> {}
 }

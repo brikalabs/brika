@@ -46,6 +46,7 @@
   },
   "debug": {
     "title": "Live Debug",
+    "live": "Live",
     "description": "Real-time workflow execution events",
     "connected": "Connected",
     "disconnected": "Disconnected",

@@ -1,0 +1,148 @@
+import 'reflect-metadata';
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import { rmSync } from 'node:fs';
+import { mkdtemp } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { configureDatabases } from '@brika/db';
+import { get, reset, useTestBed } from '@brika/di/testing';
+import { RunStore } from './run-store';
+
+useTestBed({ autoStub: false });
+
+describe('RunStore', () => {
+  let store: RunStore;
+  let tempDir: string;
+
+  beforeEach(async () => {
+    reset();
+    tempDir = await mkdtemp(join(tmpdir(), 'run-store-test-'));
+    configureDatabases(tempDir);
+    store = get(RunStore);
+    store.init();
+  });
+
+  afterEach(() => {
+    store.close();
+    reset();
+    try {
+      rmSync(tempDir, { recursive: true, force: true });
+    } catch {
+      // Ignore cleanup errors
+    }
+  });
+
+  test('records a full run lifecycle as a completed run', () => {
+    const correlationId = 'corr-1';
+    store.record({ type: 'run.opened', workflowId: 'wf', correlationId, blockId: 'trigger' });
+    store.record({
+      type: 'block.start',
+      workflowId: 'wf',
+      correlationId,
+      blockId: 'b1',
+      port: 'in',
+    });
+    store.record({
+      type: 'block.emit',
+      workflowId: 'wf',
+      correlationId,
+      blockId: 'b1',
+      port: 'out',
+      data: { ok: true },
+    });
+    store.record({ type: 'run.closed', workflowId: 'wf', correlationId });
+
+    const { runs } = store.query();
+    expect(runs.length).toBe(1);
+    expect(runs[0]?.status).toBe('completed');
+    expect(runs[0]?.workflowId).toBe('wf');
+    expect(runs[0]?.triggerBlockId).toBe('trigger');
+    expect(runs[0]?.finishedAt).toBeDefined();
+    expect(runs[0]?.eventCount).toBe(2);
+
+    const detail = store.get(Number(runs[0]?.id));
+    expect(detail?.events.length).toBe(2);
+    expect(detail?.events[0]?.kind).toBe('block.start');
+    expect(detail?.events[1]?.kind).toBe('block.emit');
+    expect(detail?.events[1]?.data).toEqual({ ok: true });
+  });
+
+  test('a block.error flips the run to error and keeps the message', () => {
+    const correlationId = 'corr-err';
+    store.record({ type: 'run.opened', workflowId: 'wf', correlationId, blockId: 't' });
+    store.record({
+      type: 'block.error',
+      workflowId: 'wf',
+      correlationId,
+      blockId: 'b1',
+      error: 'boom',
+    });
+    store.record({ type: 'run.closed', workflowId: 'wf', correlationId });
+
+    const { runs } = store.query();
+    expect(runs[0]?.status).toBe('error');
+    expect(runs[0]?.error).toBe('boom');
+  });
+
+  test('query filters by workflowId and status', () => {
+    store.record({ type: 'run.opened', workflowId: 'a', correlationId: 'c-a', blockId: 't' });
+    store.record({ type: 'run.closed', workflowId: 'a', correlationId: 'c-a' });
+    store.record({ type: 'run.opened', workflowId: 'b', correlationId: 'c-b', blockId: 't' });
+
+    expect(store.query({ workflowId: 'a' }).runs.length).toBe(1);
+    expect(store.query({ status: 'completed' }).runs.length).toBe(1);
+    const running = store.query({ status: 'running' }).runs;
+    expect(running.length).toBe(1);
+    expect(running[0]?.workflowId).toBe('b');
+  });
+
+  test('workflow.stopped finalizes runs still open', () => {
+    store.record({ type: 'run.opened', workflowId: 'wf', correlationId: 'open-1', blockId: 't' });
+    store.record({
+      type: 'block.emit',
+      workflowId: 'wf',
+      correlationId: 'open-1',
+      blockId: 'b',
+      port: 'out',
+      data: 1,
+    });
+    store.record({ type: 'workflow.stopped', workflowId: 'wf' });
+
+    const { runs } = store.query();
+    expect(runs[0]?.status).toBe('completed');
+    expect(runs[0]?.finishedAt).toBeDefined();
+  });
+
+  test('oversized event data is truncated to a marker', () => {
+    const correlationId = 'big';
+    store.record({ type: 'run.opened', workflowId: 'wf', correlationId, blockId: 't' });
+    store.record({
+      type: 'block.emit',
+      workflowId: 'wf',
+      correlationId,
+      blockId: 'b',
+      port: 'out',
+      data: 'x'.repeat(20000),
+    });
+
+    const { runs } = store.query();
+    const detail = store.get(Number(runs[0]?.id));
+    expect(detail?.events[0]?.data).toMatchObject({ __truncated: true });
+  });
+
+  test('lazily opens a run for a run-scoped event arriving without run.opened', () => {
+    store.record({
+      type: 'block.emit',
+      workflowId: 'wf',
+      correlationId: 'orphan',
+      blockId: 'b',
+      port: 'out',
+      data: 1,
+    });
+
+    const { runs } = store.query();
+    expect(runs.length).toBe(1);
+    expect(runs[0]?.status).toBe('running');
+    expect(runs[0]?.eventCount).toBe(1);
+  });
+});

@@ -56,10 +56,19 @@ export function useBlockTypes() {
   });
 }
 
-export function useWorkflowRuns() {
+export function useWorkflowRuns(workflowId?: string) {
   return useQuery({
-    queryKey: ['workflows', 'runs'],
-    queryFn: api.fetchWorkflowRuns,
+    queryKey: ['workflows', 'runs', workflowId ?? null],
+    queryFn: () => api.fetchWorkflowRuns(workflowId),
+    refetchInterval: 2000,
+  });
+}
+
+export function useWorkflowRun(runId: string | null) {
+  return useQuery({
+    queryKey: ['workflows', 'runs', 'detail', runId],
+    queryFn: () => api.fetchWorkflowRun(runId ?? ''),
+    enabled: !!runId,
     refetchInterval: 2000,
   });
 }

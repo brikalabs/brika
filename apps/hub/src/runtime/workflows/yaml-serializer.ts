@@ -24,13 +24,20 @@ const YAML_OPTIONS = {
 
 const jsonValue: z.ZodType<Json> = z.any();
 
+/**
+ * A port may reference one peer (`"block:port"`) or many (an array), enabling
+ * fan-out (one output to several inputs) and fan-in (several outputs into one
+ * input). A single ref is kept as a plain string so simple workflows stay terse.
+ */
+const PortRefValue = z.union([z.string(), z.array(z.string())]);
+
 const YAMLBlockSchema = z.object({
   id: z.string(),
   type: z.string(),
   position: z.optional(PositionSchema),
   config: nonEmptyRecord(z.record(z.string(), jsonValue)),
-  inputs: nonEmptyRecord(z.record(z.string(), z.string())),
-  outputs: nonEmptyRecord(z.record(z.string(), z.string())),
+  inputs: nonEmptyRecord(z.record(z.string(), PortRefValue)),
+  outputs: nonEmptyRecord(z.record(z.string(), PortRefValue)),
 });
 
 const YAMLWorkspaceSchema = z.object({
@@ -133,38 +140,53 @@ export class YAMLSerializer {
   }
 
   static #buildConnectionMaps(connections: BlockConnection[]): {
-    inputs: Map<string, Record<string, string>>;
-    outputs: Map<string, Record<string, string>>;
+    inputs: Map<string, Record<string, string | string[]>>;
+    outputs: Map<string, Record<string, string | string[]>>;
   } {
-    const inputs = new Map<string, Record<string, string>>();
-    const outputs = new Map<string, Record<string, string>>();
+    const inputs = new Map<string, Record<string, string | string[]>>();
+    const outputs = new Map<string, Record<string, string | string[]>>();
 
     for (const conn of connections) {
       if (!conn.fromPort || !conn.toPort) {
         continue;
       }
-
-      if (!outputs.has(conn.from)) {
-        outputs.set(conn.from, {});
-      }
-      const fromEntry = outputs.get(conn.from);
-      if (fromEntry) {
-        fromEntry[conn.fromPort] = `${conn.to}:${conn.toPort}`;
-      }
-
-      if (!inputs.has(conn.to)) {
-        inputs.set(conn.to, {});
-      }
-      const toEntry = inputs.get(conn.to);
-      if (toEntry) {
-        toEntry[conn.toPort] = `${conn.from}:${conn.fromPort}`;
-      }
+      YAMLSerializer.#addPortRef(outputs, conn.from, conn.fromPort, `${conn.to}:${conn.toPort}`);
+      YAMLSerializer.#addPortRef(inputs, conn.to, conn.toPort, `${conn.from}:${conn.fromPort}`);
     }
 
     return {
       inputs,
       outputs,
     };
+  }
+
+  /**
+   * Record a peer ref on a port. The first ref stays a plain string; additional
+   * distinct refs promote the entry to an array (fan-out / fan-in).
+   */
+  static #addPortRef(
+    map: Map<string, Record<string, string | string[]>>,
+    blockId: string,
+    port: string,
+    ref: string
+  ): void {
+    if (!map.has(blockId)) {
+      map.set(blockId, {});
+    }
+    const entry = map.get(blockId);
+    if (!entry) {
+      return;
+    }
+    const existing = entry[port];
+    if (existing === undefined) {
+      entry[port] = ref;
+    } else if (Array.isArray(existing)) {
+      if (!existing.includes(ref)) {
+        existing.push(ref);
+      }
+    } else if (existing !== ref) {
+      entry[port] = [existing, ref];
+    }
   }
 
   static #buildConnections(blocks: YAMLBlock[]): BlockConnection[] {
@@ -179,6 +201,11 @@ export class YAMLSerializer {
     return connections;
   }
 
+  /** Normalize a port's YAML value (one ref or many) to an array of refs. */
+  static #toRefs(value: string | string[]): string[] {
+    return Array.isArray(value) ? value : [value];
+  }
+
   static #parseOutputConnections(
     block: YAMLBlock,
     connections: BlockConnection[],
@@ -188,23 +215,25 @@ export class YAMLSerializer {
       return;
     }
 
-    for (const [fromPort, ref] of Object.entries(block.outputs)) {
-      try {
-        const { blockId: to, portId: toPort } = parsePortRef(ref as `${string}:${string}`);
-        const key = `${block.id}:${fromPort}->${to}:${toPort}`;
-        if (seen.has(key)) {
-          continue;
-        }
+    for (const [fromPort, refValue] of Object.entries(block.outputs)) {
+      for (const ref of YAMLSerializer.#toRefs(refValue)) {
+        try {
+          const { blockId: to, portId: toPort } = parsePortRef(ref as `${string}:${string}`);
+          const key = `${block.id}:${fromPort}->${to}:${toPort}`;
+          if (seen.has(key)) {
+            continue;
+          }
 
-        seen.add(key);
-        connections.push({
-          from: block.id,
-          fromPort,
-          to,
-          toPort,
-        });
-      } catch {
-        // Skip invalid port references
+          seen.add(key);
+          connections.push({
+            from: block.id,
+            fromPort,
+            to,
+            toPort,
+          });
+        } catch {
+          // Skip invalid port references
+        }
       }
     }
   }
@@ -218,23 +247,25 @@ export class YAMLSerializer {
       return;
     }
 
-    for (const [toPort, ref] of Object.entries(block.inputs)) {
-      try {
-        const { blockId: from, portId: fromPort } = parsePortRef(ref as `${string}:${string}`);
-        const key = `${from}:${fromPort}->${block.id}:${toPort}`;
-        if (seen.has(key)) {
-          continue;
-        }
+    for (const [toPort, refValue] of Object.entries(block.inputs)) {
+      for (const ref of YAMLSerializer.#toRefs(refValue)) {
+        try {
+          const { blockId: from, portId: fromPort } = parsePortRef(ref as `${string}:${string}`);
+          const key = `${from}:${fromPort}->${block.id}:${toPort}`;
+          if (seen.has(key)) {
+            continue;
+          }
 
-        seen.add(key);
-        connections.push({
-          from,
-          fromPort,
-          to: block.id,
-          toPort,
-        });
-      } catch {
-        // Skip invalid port references
+          seen.add(key);
+          connections.push({
+            from,
+            fromPort,
+            to: block.id,
+            toPort,
+          });
+        } catch {
+          // Skip invalid port references
+        }
       }
     }
   }

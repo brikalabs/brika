@@ -6,6 +6,7 @@ import {
   blockLog,
   brickInstanceAction,
   callAction,
+  callTool,
   capture,
   deletePluginSecret,
   emitSpark,
@@ -15,6 +16,8 @@ import {
   getPluginSecret,
   grantRequest,
   hello,
+  invokeTool,
+  listTools,
   log,
   preferenceOptions,
   preferences,
@@ -28,6 +31,7 @@ import {
   registerBrickType,
   registerRoute,
   registerSpark,
+  registerTool,
   routeRequest,
   type SparkEvent as SparkEventType,
   setPluginSecret,
@@ -36,6 +40,9 @@ import {
   startBlock,
   stopBlock,
   subscribeSpark,
+  type ToolCallContext,
+  type ToolDefinition,
+  type ToolResult,
   unsubscribeSpark,
   updateBrickConfig,
   updatePreference,
@@ -92,6 +99,9 @@ export interface PluginProcessCallbacks {
   onBrickType: (brickType: BrickTypeRegistration) => void;
   onBrickDataPush: (brickTypeId: string, data: unknown) => void;
   onRoute: (method: string, path: string) => void;
+  onRegisterTool: (tool: ToolDefinition, process: PluginProcess) => void;
+  onInvokeTool: (tool: string, args: Record<string, Json>) => Promise<ToolResult>;
+  onListTools: () => ToolDefinition[];
   onUpdatePreference: (key: string, value: unknown) => void;
   onGetHubLocation: () => HubLocation | null;
   onGetHubTimezone: () => string | null;
@@ -473,6 +483,26 @@ export class PluginProcess {
   }
 
   /**
+   * Invoke a tool this plugin registered, by id. Used by the global
+   * ToolRegistry to dispatch a call to its owning plugin.
+   */
+  async callPluginTool(
+    toolId: string,
+    args: Record<string, Json>,
+    ctx: ToolCallContext
+  ): Promise<ToolResult> {
+    if (this.#stopped) {
+      return { ok: false, content: 'Plugin stopped' };
+    }
+    try {
+      return await this.#channel.call(callTool, { tool: toolId, args, ctx }, 0);
+    } catch (e) {
+      this.callbacks.onLog('error', `Tool call failed [${toolId}]: ${e}`);
+      return { ok: false, content: 'Tool call failed' };
+    }
+  }
+
+  /**
    * Resolve a virtual path into a real host path, honouring the
    * plugin's current `dev.brika.fs.readFile` scope and the standard
    * symlink-escape guard. Used by the action HTTP route when a
@@ -695,6 +725,16 @@ export class PluginProcess {
     this.#channel.on(registerAction, ({ id }) => {
       this.#actions.add(id);
     });
+
+    this.#channel.on(registerTool, ({ tool }) => {
+      this.callbacks.onRegisterTool(tool, this);
+    });
+
+    this.#channel.implement(invokeTool, ({ tool, args }) =>
+      this.callbacks.onInvokeTool(tool, args)
+    );
+
+    this.#channel.implement(listTools, () => ({ tools: this.callbacks.onListTools() }));
 
     this.#channel.on(registerRoute, ({ method, path }) => {
       this.callbacks.onRoute(method, path);
