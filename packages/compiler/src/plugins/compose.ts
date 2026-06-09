@@ -17,9 +17,7 @@
  */
 
 import type { BunPlugin } from 'bun';
-import { pickLoader } from './node-builtin-shim';
-
-type Loader = 'tsx' | 'ts' | 'jsx' | 'js';
+import { type Loader, pickLoader } from '../loader';
 
 export interface TransformContext {
   /** Absolute path of the file being loaded. */

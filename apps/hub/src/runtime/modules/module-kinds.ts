@@ -1,5 +1,11 @@
 import { join } from 'node:path';
+import { CLIENT_CHUNK_PREFIX } from '@brika/compiler';
 import type { PluginPackageSchema } from '@brika/schema';
+
+export { CLIENT_CHUNK_PREFIX } from '@brika/compiler';
+
+/** On-disk cache directory (relative to a plugin's cache root) holding shared chunks. */
+export const CHUNK_DIR = '_chunks';
 
 /** The manifest fields that declare compiled client modules. */
 export type ManifestModules = Pick<PluginPackageSchema, 'pages' | 'bricks' | 'blocks'>;
@@ -77,6 +83,26 @@ export function moduleUrl(pluginUid: string, kind: ModuleKind, id: string, hash:
  */
 export function moduleScopeId(pluginName: string, kind: ModuleKind, id: string): string {
   return `${pluginName}:${kind.cacheKey(id)}`;
+}
+
+/** True when a served `id` names a shared code chunk rather than a module. */
+export function isChunkId(id: string): boolean {
+  return id.startsWith(CLIENT_CHUNK_PREFIX);
+}
+
+/** On-disk cache path (relative to the plugin cache root) for a shared chunk. */
+export function chunkCacheKey(chunkName: string): string {
+  return `${CHUNK_DIR}/${chunkName}`;
+}
+
+/**
+ * In-memory cache key for a shared chunk. Kind-independent: a chunk may be
+ * imported by entries of several kinds, so it lives in one per-plugin namespace
+ * and the serving route resolves `_brika_chunk_*` requests here regardless of
+ * the `:kind` URL segment.
+ */
+export function chunkScopeId(pluginName: string, chunkName: string): string {
+  return `${pluginName}:${chunkCacheKey(chunkName)}`;
 }
 
 /** Minimal compiler surface needed to look up a compiled module's hash. */

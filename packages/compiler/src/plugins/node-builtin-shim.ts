@@ -24,6 +24,7 @@
  */
 
 import type { BunPlugin } from 'bun';
+import { pickLoader } from '../loader';
 
 export interface NodeBuiltinShimOptions {
   /** Plugin name used in the BunPlugin manifest (e.g. `brika-node-os-shim`). */
@@ -68,8 +69,6 @@ export function rewriteNodeBuiltinImports(
     .replace(sideEffectRegex, `$1${replacement}`);
 }
 
-export { pickLoader };
-
 export function createNodeBuiltinShimPlugin(opts: NodeBuiltinShimOptions): BunPlugin {
   return {
     name: opts.pluginName,
@@ -84,21 +83,6 @@ export function createNodeBuiltinShimPlugin(opts: NodeBuiltinShimOptions): BunPl
       });
     },
   };
-}
-
-type Loader = 'tsx' | 'ts' | 'jsx' | 'js';
-
-function pickLoader(path: string): Loader {
-  if (path.endsWith('.tsx')) {
-    return 'tsx';
-  }
-  if (path.endsWith('.ts')) {
-    return 'ts';
-  }
-  if (path.endsWith('.jsx')) {
-    return 'jsx';
-  }
-  return 'js';
 }
 
 /**

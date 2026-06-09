@@ -22,6 +22,8 @@ import { useLocale } from '@/lib/use-locale';
 import { paths } from '@/routes/paths';
 import { pluginsApi } from '../api';
 import type { UpdateInfo } from '../registry-api';
+import { usePluginCompileTimeline } from '../use-plugin-compile';
+import { CompileTrace } from './CompileTrace';
 import { PluginCardActions } from './PluginCardActions';
 import { formatPluginError } from './plugin-utils';
 import { UpdatePluginDialog } from './UpdatePluginDialog';
@@ -194,6 +196,7 @@ export function PluginCard({
   const { t, tp } = useLocale();
   const capture = useCapture();
   const [updateDialogOpen, setUpdateDialogOpen] = React.useState(false);
+  const compile = usePluginCompileTimeline(p.uid);
 
   const statusVariant = getStatusVariant(p.status);
   const hasUpdate = updateInfo?.updateAvailable === true;
@@ -248,15 +251,19 @@ export function PluginCard({
               )}
             </div>
 
-            {/* Status indicator */}
-            <Status variant={statusVariant} className="shrink-0 text-[11px]">
-              {isTransientStatus(p.status) ? (
-                <Loader2 className="size-3 animate-spin" />
-              ) : (
-                <StatusIndicator pulse={p.status === 'running'} />
-              )}
-              <StatusLabel>{t(`common:status.${p.status}`)}</StatusLabel>
-            </Status>
+            {/* Status indicator: live build trace takes over while compiling. */}
+            {compile ? (
+              <CompileTrace timeline={compile} variant="compact" />
+            ) : (
+              <Status variant={statusVariant} className="shrink-0 text-[11px]">
+                {isTransientStatus(p.status) ? (
+                  <Loader2 className="size-3 animate-spin" />
+                ) : (
+                  <StatusIndicator pulse={p.status === 'running'} />
+                )}
+                <StatusLabel>{t(`common:status.${p.status}`)}</StatusLabel>
+              </Status>
+            )}
 
             {/* Actions — visible on hover */}
             <ActionButtonsOverlay

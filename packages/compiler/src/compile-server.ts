@@ -55,6 +55,10 @@ export async function compileServerEntry(opts: ServerCompileOptions): Promise<Se
     splitting: opts.splitting ?? true,
     minify: true,
     external: opts.external,
+    // NOTE: deliberately NOT inlining process.env.NODE_ENV here. The server
+    // bundle externalizes every dep, so there is almost no dev-branch code to
+    // strip, and a plugin's own runtime `process.env.NODE_ENV` read must stay
+    // dynamic (the hub forwards the real value into the plugin subprocess).
     // Return a failed result with logs instead of throwing an opaque
     // AggregateError, so callers can surface the actual build errors.
     throw: false,

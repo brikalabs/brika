@@ -1,5 +1,6 @@
 import { isAbsolute, relative } from 'node:path';
 import type { BunPlugin } from 'bun';
+import { pickLoader } from '../../loader';
 import { injectCallSites } from './scanner';
 
 /**
@@ -65,23 +66,10 @@ export function brikaI18nCallSitePlugin(sourceRoot: string): BunPlugin {
         if (transformed === text) {
           return undefined;
         }
-        return { contents: transformed, loader: loaderFor(args.path) };
+        return { contents: transformed, loader: pickLoader(args.path) };
       });
     },
   };
-}
-
-function loaderFor(path: string): 'ts' | 'tsx' | 'js' | 'jsx' {
-  if (path.endsWith('.tsx')) {
-    return 'tsx';
-  }
-  if (path.endsWith('.ts')) {
-    return 'ts';
-  }
-  if (path.endsWith('.jsx')) {
-    return 'jsx';
-  }
-  return 'js';
 }
 
 /** Quick reject: only scan files that mention `t(` or `tp(` literally. */
@@ -92,22 +80,3 @@ function hasIndicator(text: string): boolean {
   // tokenizer; this is just a cheap "is it even worth opening?" gate.
   return /(^|[^.\w$])t\s*\(|(^|[^.\w$])tp\s*\(/.test(text);
 }
-
-export {
-  CH_BACKTICK,
-  CH_CR,
-  CH_DOLLAR,
-  CH_DQUOTE,
-  CH_LBRACE,
-  CH_LF,
-  CH_LPAREN,
-  CH_RBRACE,
-  CH_SLASH,
-  CH_SPACE,
-  CH_SQUOTE,
-  CH_TAB,
-  DIVISION_PRECEDING,
-  isIdentPart,
-  isIdentStart,
-  REGEX_PRECEDING_KEYWORDS,
-} from './lex';

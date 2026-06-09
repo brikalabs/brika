@@ -163,8 +163,8 @@ describe('PluginLifecycle', () => {
       clear: mock(),
     };
     mockModuleCompiler = {
-      compile: mock().mockResolvedValue(undefined),
-      syncManifest: mock().mockResolvedValue(undefined),
+      compile: mock().mockResolvedValue({ kinds: [] }),
+      syncManifest: mock().mockResolvedValue({ kinds: [] }),
       get: mock().mockReturnValue(undefined),
       prune: mock(),
       remove: mock(),

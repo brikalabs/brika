@@ -1,4 +1,5 @@
 import { defineActions } from '@brika/events';
+import { pluginCompilePayloadSchema } from '@brika/plugin';
 import { z } from 'zod';
 
 // Plugin actions
@@ -35,6 +36,8 @@ export const PluginActions = defineActions('plugin', {
     /** Configured soft-limit (bytes) that was exceeded. */
     limitBytes: z.number(),
   }),
+  /** Build progress for a plugin's source; see {@link pluginCompilePayloadSchema}. */
+  compile: pluginCompilePayloadSchema,
 });
 
 // Spark actions for typed events

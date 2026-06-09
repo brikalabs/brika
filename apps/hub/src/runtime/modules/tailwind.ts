@@ -1,7 +1,7 @@
 import TW_CUSTOM_THEME from '@brika/ui-kit/tailwind-theme.css' with { type: 'text' };
 import TW_DEFAULT_THEME from 'tailwindcss/theme.css' with { type: 'text' };
 
-type Build = (candidates: string[]) => string;
+type Compile = typeof import('tailwindcss').compile;
 
 /** Extract candidate tokens from JS string literals. */
 function extractCandidates(js: string): string[] {
@@ -73,18 +73,24 @@ function minifyCss(css: string): string {
  * correctly inside the brick without leaking onto `:root`.
  */
 export class TailwindCompiler {
-  #build: Promise<Build> | null = null;
+  // The `compile` import is reused; the *design system* it returns is not. Its
+  // `build()` accumulates candidates across calls, so a shared one would make
+  // every module's CSS the running union of every module compiled before it
+  // (across all plugins in a hub session). A fresh design system per call keeps
+  // each module's CSS to its own classes. Parsing the theme is cheap (~3ms) and
+  // the result is cached on disk, so this only runs on a cold compile.
+  #compile: Promise<Compile> | null = null;
+  readonly #theme = [TW_DEFAULT_THEME, TW_CUSTOM_THEME, '@tailwind utilities;'].join('\n');
 
   async compileCss(jsSource: string, scopeId?: string): Promise<string | undefined> {
-    this.#build ??= this.#init();
-    const build = await this.#build;
-
     const candidates = extractCandidates(jsSource);
     if (candidates.length === 0) {
       return undefined;
     }
 
-    const css = build(candidates);
+    this.#compile ??= import('tailwindcss').then((m) => m.compile);
+    const compile = await this.#compile;
+    const css = (await compile(this.#theme)).build(candidates);
     if (css.length === 0) {
       return undefined;
     }
@@ -110,13 +116,5 @@ export class TailwindCompiler {
     // utilities still resolve their variables.
     const rootTokens = tokens ? `:root, :host { ${tokens} }` : '';
     return minifyCss(`@layer utilities { ${rootTokens} ${stripped} }`);
-  }
-
-  async #init(): Promise<Build> {
-    const { compile } = await import('tailwindcss');
-    const compiled = await compile(
-      [TW_DEFAULT_THEME, TW_CUSTOM_THEME, '@tailwind utilities;'].join('\n')
-    );
-    return (candidates) => compiled.build(candidates);
   }
 }

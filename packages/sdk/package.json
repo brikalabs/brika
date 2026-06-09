@@ -23,6 +23,7 @@
     "./brick-views": "./src/brick-views.ts",
     "./block-views": "./src/block-views.ts",
     "./brick": "./src/brick.ts",
+    "./browser-bridge": "./src/browser-bridge.ts",
     "./schema": "./src/blocks/schema.ts",
     "./sparks": "./src/sparks.ts",
     "./lifecycle": "./src/lifecycle.ts",

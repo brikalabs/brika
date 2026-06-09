@@ -3,6 +3,7 @@
  * Heavy deps (icons, ui, cva, clsx) are lazy-loaded with top-level await.
  */
 
+import type { BridgeProp } from '@brika/sdk/browser-bridge';
 import { z } from '@brika/sdk/schema';
 import * as React from 'react';
 import * as jsxRuntime from 'react/jsx-runtime';
@@ -99,7 +100,9 @@ const bridge = {
   ui,
   cva,
   clsx: clsxWrapper,
-};
+  // Typed against the shared registry: forgetting to implement a bridged module
+  // declared in `@brika/sdk/browser-bridge` is a compile error here.
+} satisfies Record<BridgeProp, unknown>;
 
 declare global {
   // eslint-disable-next-line no-var
