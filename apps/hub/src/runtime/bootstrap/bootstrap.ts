@@ -205,6 +205,16 @@ export class Bootstrap {
       try {
         await fn(p);
       } catch (error) {
+        if (p.fatal) {
+          // A fatal plugin failing means the hub cannot do its job
+          // (e.g. the API port is held by another instance). Abort the
+          // boot loudly instead of running headless.
+          this.logs.error(`${label} bootstrap plugin failed, aborting boot`, {
+            plugin: p.name,
+            error: errorMessage(error),
+          });
+          throw error;
+        }
         this.logs.warn(`${label} bootstrap plugin failed`, {
           plugin: p.name,
           error: errorMessage(error),

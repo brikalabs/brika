@@ -1120,9 +1120,14 @@ describe('PluginProcess', () => {
         },
       });
 
-      expect(callbacks.onBlockEmit).toHaveBeenCalledWith('inst-1', 'output', {
-        result: 42,
-      });
+      expect(callbacks.onBlockEmit).toHaveBeenCalledWith(
+        'inst-1',
+        'output',
+        {
+          result: 42,
+        },
+        undefined
+      );
     });
 
     test('blockLog handler calls onBlockLog', () => {
@@ -1133,7 +1138,13 @@ describe('PluginProcess', () => {
         message: 'Block running',
       });
 
-      expect(callbacks.onBlockLog).toHaveBeenCalledWith('inst-1', 'wf-1', 'info', 'Block running');
+      expect(callbacks.onBlockLog).toHaveBeenCalledWith(
+        'inst-1',
+        'wf-1',
+        'info',
+        'Block running',
+        undefined
+      );
     });
 
     describe('registerBrickType', () => {

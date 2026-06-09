@@ -86,7 +86,7 @@ export interface PluginProcessCallbacks {
   onLog: (level: string, message: string, meta?: Record<string, Json>) => void;
   onCapture: (name: string, props?: Record<string, Json>, distinctId?: string) => void;
   onBlock: (block: BlockRegistration) => void;
-  onBlockEmit: (instanceId: string, port: string, data: Json) => void;
+  onBlockEmit: (instanceId: string, port: string, data: Json, causationId?: string) => void;
   onBlockLog: (
     instanceId: string,
     workflowId: string,
@@ -295,7 +295,7 @@ export class PluginProcess {
     }
   }
 
-  pushInput(instanceId: string, port: string, data: Json): void {
+  pushInput(instanceId: string, port: string, data: Json, causationId?: string): void {
     if (this.#stopped) {
       return;
     }
@@ -303,6 +303,7 @@ export class PluginProcess {
       instanceId,
       port,
       data,
+      causationId,
     });
   }
 
@@ -711,8 +712,8 @@ export class PluginProcess {
       this.callbacks.onSparkUnsubscribe(subscriptionId);
     });
 
-    this.#channel.on(blockEmit, ({ instanceId, port, data }) => {
-      this.callbacks.onBlockEmit(instanceId, port, data);
+    this.#channel.on(blockEmit, ({ instanceId, port, data, causationId }) => {
+      this.callbacks.onBlockEmit(instanceId, port, data, causationId);
     });
 
     this.#channel.on(blockLog, ({ instanceId, workflowId, level, message, data }) => {

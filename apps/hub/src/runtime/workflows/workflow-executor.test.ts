@@ -80,9 +80,17 @@ const createConnectedWorkflow = (): Workflow => ({
 
 describe('WorkflowExecutor - Lifecycle', () => {
   let executor: WorkflowExecutor;
-  let emitHandler: ((instanceId: string, port: string, data: Json) => void) | null;
+  let emitHandler:
+    | ((instanceId: string, port: string, data: Json, causationId?: string) => void)
+    | null;
   let logHandler:
-    | ((instanceId: string, workflowId: string, level: string, message: string) => void)
+    | ((
+        instanceId: string,
+        workflowId: string,
+        level: string,
+        message: string,
+        data?: Json
+      ) => void)
     | null;
   let startedBlocks: string[];
 
@@ -91,11 +99,19 @@ describe('WorkflowExecutor - Lifecycle', () => {
     logHandler = null;
     startedBlocks = [];
     stub(PluginManager, {
-      setBlockEmitHandler: (handler: (instanceId: string, port: string, data: Json) => void) => {
+      setBlockEmitHandler: (
+        handler: (instanceId: string, port: string, data: Json, causationId?: string) => void
+      ) => {
         emitHandler = handler;
       },
       setBlockLogHandler: (
-        handler: (instanceId: string, workflowId: string, level: string, message: string) => void
+        handler: (
+          instanceId: string,
+          workflowId: string,
+          level: string,
+          message: string,
+          data?: Json
+        ) => void
       ) => {
         logHandler = handler;
       },
@@ -542,9 +558,17 @@ describe('WorkflowExecutor - Event Listeners', () => {
 
 describe('WorkflowExecutor - Block Emit and Data Flow', () => {
   let executor: WorkflowExecutor;
-  let emitHandler: ((instanceId: string, port: string, data: Json) => void) | null;
+  let emitHandler:
+    | ((instanceId: string, port: string, data: Json, causationId?: string) => void)
+    | null;
   let logHandler:
-    | ((instanceId: string, workflowId: string, level: string, message: string) => void)
+    | ((
+        instanceId: string,
+        workflowId: string,
+        level: string,
+        message: string,
+        data?: Json
+      ) => void)
     | null;
   let pushedInputs: Array<{
     blockId: string;
@@ -558,11 +582,19 @@ describe('WorkflowExecutor - Block Emit and Data Flow', () => {
     pushedInputs = [];
 
     stub(PluginManager, {
-      setBlockEmitHandler: (handler: (instanceId: string, port: string, data: Json) => void) => {
+      setBlockEmitHandler: (
+        handler: (instanceId: string, port: string, data: Json, causationId?: string) => void
+      ) => {
         emitHandler = handler;
       },
       setBlockLogHandler: (
-        handler: (instanceId: string, workflowId: string, level: string, message: string) => void
+        handler: (
+          instanceId: string,
+          workflowId: string,
+          level: string,
+          message: string,
+          data?: Json
+        ) => void
       ) => {
         logHandler = handler;
       },
@@ -783,6 +815,34 @@ describe('WorkflowExecutor - Block Emit and Data Flow', () => {
     const downstreamEmit = events.find((e) => e.type === 'block.emit' && e.blockId === 'block-b');
     expect(downstreamEmit?.correlationId).toBe(cid);
     expect(events.filter((e) => e.type === 'run.opened')).toHaveLength(1);
+  });
+
+  test('an emit carrying a causationId is attributed to that exact run (fan-in safe)', async () => {
+    expect.hasAssertions();
+    const events: ExecutionEvent[] = [];
+    executor.addListener((e) => events.push(e));
+
+    await executor.start(createConnectedWorkflow());
+
+    // Two source emissions open two distinct runs.
+    emitHandler?.('block-a', 'tick', { value: 1 });
+    emitHandler?.('block-a', 'tick', { value: 2 });
+    const opened = events.filter((e) => e.type === 'run.opened');
+    expect(opened).toHaveLength(2);
+    const firstRun = opened[0]?.correlationId;
+    const secondRun = opened[1]?.correlationId;
+    expect(firstRun).toBeDefined();
+    expect(firstRun).not.toBe(secondRun);
+
+    // block-b answers for the FIRST input even though the second arrived since:
+    // the SDK-traced causationId wins over the last-input heuristic.
+    if (firstRun) {
+      emitHandler?.('block-b', 'out', { value: 10 }, firstRun);
+    }
+
+    const downstreamEmit = events.find((e) => e.type === 'block.emit' && e.blockId === 'block-b');
+    expect(downstreamEmit?.correlationId).toBe(firstRun);
+    expect(events.filter((e) => e.type === 'run.opened')).toHaveLength(2);
   });
 
   test('should close open runs on stop', async () => {

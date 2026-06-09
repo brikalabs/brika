@@ -5,6 +5,7 @@
  * Uses Zod schemas for type inference and JSON Schema generation.
  */
 
+import type { FlowErrorHandler } from '@brika/flow';
 import { z } from 'zod';
 import type { Json } from '../types';
 import type { GenericRef, PassthroughRef, ResolvedRef } from './schema-types';
@@ -265,22 +266,31 @@ class EmitterImpl<T> implements Emitter<T> {
   readonly #emit: (portId: string, value: SerializableType) => void;
   readonly #portId: string;
   readonly #schema: z.ZodType;
+  readonly #onInvalid: ((portId: string, message: string) => void) | undefined;
 
   constructor(
     portId: string,
     schema: z.ZodType,
-    emit: (portId: string, value: SerializableType) => void
+    emit: (portId: string, value: SerializableType) => void,
+    onInvalid?: (portId: string, message: string) => void
   ) {
     this.#portId = portId;
     this.#schema = schema;
     this.#emit = emit;
+    this.#onInvalid = onInvalid;
   }
 
   emit(value: T): void {
     const result = this.#schema.safeParse(value);
     if (!result.success) {
-      console.warn(`Output validation failed for port "${this.#portId}":`, result.error.message);
-      return; // Drop invalid data — don't propagate type mismatches
+      // Drop invalid data, but never silently: the runtime routes this into
+      // the workflow run trace.
+      if (this.#onInvalid) {
+        this.#onInvalid(this.#portId, result.error.message);
+      } else {
+        console.warn(`Output validation failed for port "${this.#portId}":`, result.error.message);
+      }
+      return;
     }
     this.#emit(this.#portId, result.data as SerializableType);
   }
@@ -296,9 +306,10 @@ class EmitterImpl<T> implements Emitter<T> {
 export function createEmitter<T>(
   portId: string,
   schema: z.ZodType,
-  emit: (portId: string, value: SerializableType) => void
+  emit: (portId: string, value: SerializableType) => void,
+  onInvalid?: (portId: string, message: string) => void
 ): Emitter<T> {
-  return new EmitterImpl<T>(portId, schema, emit);
+  return new EmitterImpl<T>(portId, schema, emit, onInvalid);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -311,9 +322,10 @@ export function createEmitter<T>(
 export function createFlowFromInput<T>(
   inputVal: T | Source<T> | Factory<T>,
   setTimeoutFn: (fn: () => void, ms: number) => Cleanup,
-  cleanup: CleanupRegistry
+  cleanup: CleanupRegistry,
+  onError?: FlowErrorHandler
 ): FlowImpl<T> {
-  const flow = new FlowImpl<T>(setTimeoutFn, cleanup);
+  const flow = new FlowImpl<T>(setTimeoutFn, cleanup, onError);
 
   if (typeof inputVal === 'function') {
     const factory = inputVal as Factory<T>;

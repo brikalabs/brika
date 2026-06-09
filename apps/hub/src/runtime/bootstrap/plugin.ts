@@ -24,6 +24,15 @@ export interface BootstrapPlugin {
   readonly name: string;
 
   /**
+   * When true, a failure in any lifecycle hook aborts the boot instead
+   * of the default warn-and-continue. Reserve this for subsystems the
+   * hub is useless without (e.g. the API server: a hub that can't bind
+   * its port would otherwise keep running headless, loading plugins and
+   * executing workflows while being unreachable).
+   */
+  readonly fatal?: boolean;
+
+  /**
    * Setup hook - called immediately when plugin is registered.
    * Use this to configure the bootstrap instance (e.g., register signal handlers).
    */

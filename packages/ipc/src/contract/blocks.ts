@@ -92,6 +92,8 @@ export const pushInput = message(
     port: z.string(),
     /** Data to push */
     data: Json,
+    /** Run correlation id of the event that caused this delivery */
+    causationId: z.string().optional(),
   })
 );
 
@@ -105,6 +107,8 @@ export const blockEmit = message(
     port: z.string(),
     /** Emitted data */
     data: Json,
+    /** Run correlation id of the input that caused this emit (async-traced) */
+    causationId: z.string().optional(),
   })
 );
 

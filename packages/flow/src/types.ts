@@ -10,8 +10,15 @@ export type { Serializable } from '@brika/serializable';
 /** Cleanup function */
 export type Cleanup = () => void;
 
-/** Subscriber callback */
+/** Subscriber callback (async handlers are observed only for error capture) */
 export type Subscriber<T> = (value: T) => void;
+
+/**
+ * Receives errors thrown (or rejected) by subscribers during `push`. Wired by
+ * the block runtime so handler crashes land in the run trace instead of dying
+ * as unhandled rejections.
+ */
+export type FlowErrorHandler = (error: unknown) => void;
 
 /** Operator function type */
 export type Operator<In, Out> = (source: Flow<In>) => Flow<Out>;

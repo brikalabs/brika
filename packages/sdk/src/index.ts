@@ -95,6 +95,8 @@ export type { BlockDefinition, BlockPort, BlockSchema, PortDirection } from './b
 
 export type { Logger } from './api/logging';
 export { log } from './api/logging';
+export type { RetryOptions } from './api/retry';
+export { retry } from './api/retry';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Analytics

@@ -433,3 +433,61 @@ describe('createFlow', () => {
     expect(values).toEqual(['test']);
   });
 });
+
+describe('subscriber error capture', () => {
+  const makeFlow = <T>(onError?: (error: unknown) => void) => {
+    const cleanup = new CleanupRegistry();
+    const setTimeoutFn = (fn: () => void, ms: number) => {
+      const id = setTimeout(fn, ms);
+      return () => clearTimeout(id);
+    };
+    return new FlowImpl<T>(setTimeoutFn, cleanup, onError);
+  };
+
+  test('a throwing subscriber reports to onError and does not break delivery', () => {
+    const errors: unknown[] = [];
+    const flow = makeFlow<number>((e) => errors.push(e));
+    const received: number[] = [];
+
+    flow.subscribe(() => {
+      throw new Error('boom');
+    });
+    flow.subscribe((v) => received.push(v));
+
+    flow.push(1);
+    flow.push(2);
+
+    expect(received).toEqual([1, 2]);
+    expect(errors).toHaveLength(2);
+    expect(errors[0]).toBeInstanceOf(Error);
+  });
+
+  test('an async rejecting subscriber reports to onError instead of unhandled rejection', async () => {
+    const errors: unknown[] = [];
+    const flow = makeFlow<number>((e) => errors.push(e));
+
+    flow.subscribe(async () => {
+      await Promise.resolve();
+      throw new Error('async boom');
+    });
+
+    flow.push(1);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(errors).toHaveLength(1);
+    expect(String(errors[0])).toContain('async boom');
+  });
+
+  test('derived flows inherit the error handler', () => {
+    const errors: unknown[] = [];
+    const flow = makeFlow<number>((e) => errors.push(e));
+    const derived = flow.derive<number>();
+
+    derived.subscribe(() => {
+      throw new Error('derived boom');
+    });
+    derived.push(7);
+
+    expect(errors).toHaveLength(1);
+  });
+});

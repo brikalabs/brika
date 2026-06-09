@@ -5,6 +5,7 @@
  * All subscriptions via .to() and .on() are automatically cleaned up when the block stops.
  */
 
+import { AsyncLocalStorage } from 'node:async_hooks';
 import type { Serializable } from '@brika/serializable';
 import { z } from 'zod';
 import { log } from '../api/logging';
@@ -56,7 +57,7 @@ export interface BlockRuntimeContext {
   blockId: string;
   workflowId: string;
   config: Record<string, unknown>;
-  emit(portId: string, data: Serializable): void;
+  emit(portId: string, data: Serializable, causationId?: string): void;
   /**
    * Call a hub-registered tool by id. Always provided by the hub prelude at
    * runtime; optional here only so test harnesses can build a minimal context
@@ -76,7 +77,7 @@ export interface BlockRuntimeContext {
 /** Running block instance */
 export interface BlockInstance {
   /** Push data to an input port */
-  pushInput(portId: string, data: Serializable): void;
+  pushInput(portId: string, data: Serializable, causationId?: string): void;
   /** Stop the block and clean up */
   stop(): void;
 }
@@ -313,6 +314,21 @@ function compileBlock<
       // Create cleanup registry
       const cleanup = new CleanupRegistry();
 
+      const blockLogger = makeBlockLogger(ctx);
+
+      // Causation trace: pushInput binds the triggering run's id around the
+      // delivery, and AsyncLocalStorage carries it through the handlers' async
+      // continuations, so every emit can name the exact run that caused it
+      // (fan-in safe correlation, no hub-side guessing).
+      const causation = new AsyncLocalStorage<string>();
+
+      // Handler crashes (sync throw or async rejection) land in the run trace
+      // as structured errors instead of dying as unhandled rejections.
+      const onFlowError = (error: unknown) => {
+        const message = error instanceof Error ? error.message : String(error);
+        blockLogger.error(`Unhandled error in block handler: ${message}`, { error: message });
+      };
+
       // setTimeout wrapper with auto-cleanup
       const setTimeoutWrapper = (fn: () => void, ms: number): Cleanup => {
         const id = setTimeout(fn, ms);
@@ -324,13 +340,33 @@ function compileBlock<
       // Create flows for each input
       const flows = new Map<string, FlowImpl<unknown>>();
       for (const id of Object.keys(spec.inputs ?? {})) {
-        flows.set(id, createFlow<unknown>(setTimeoutWrapper, cleanup));
+        flows.set(id, createFlow<unknown>(setTimeoutWrapper, cleanup, onFlowError));
       }
 
-      // Create emitters for each output
+      // Emit carrying the causation of the input that (transitively) caused it
+      const emitWithCausation = (portId: string, value: Serializable) => {
+        const causationId = causation.getStore();
+        if (causationId) {
+          ctx.emit(portId, value, causationId);
+        } else {
+          ctx.emit(portId, value);
+        }
+      };
+
+      // Create emitters for each output; validation drops are loud (run trace)
       const outputEmitters = {} as Record<string, Emitter<unknown>>;
       for (const [id, def] of Object.entries(spec.outputs ?? {})) {
-        outputEmitters[id] = createEmitter<unknown>(id, getRuntimeSchema(def.schema), ctx.emit);
+        outputEmitters[id] = createEmitter<unknown>(
+          id,
+          getRuntimeSchema(def.schema),
+          emitWithCausation,
+          (portId, message) => {
+            blockLogger.warn(`Output validation failed for "${portId}", emit dropped`, {
+              port: portId,
+              error: message,
+            });
+          }
+        );
       }
 
       // Parse and validate config. Abort the block start on failure rather than
@@ -338,7 +374,7 @@ function compileBlock<
       // a misconfigured block); the runtime then marks the block failed.
       const configResult = spec.config.safeParse(ctx.config);
       if (!configResult.success) {
-        log.error(`Config validation failed: ${configResult.error.message}`);
+        blockLogger.error(`Config validation failed: ${configResult.error.message}`);
         throw new Error(`Block config validation failed: ${configResult.error.message}`);
       }
       // Live scope for `{{ inputs.<port> }}` / `{{ config.<key> }}` expressions
@@ -352,7 +388,7 @@ function compileBlock<
 
       // start() function for creating flows from values/sources/factories
       const start = <T>(input: T | Source<T> | Factory<T>): Flow<T> => {
-        return createFlowFromInput(input, setTimeoutWrapper, cleanup);
+        return createFlowFromInput(input, setTimeoutWrapper, cleanup, onFlowError);
       };
 
       const reactiveCtx = {
@@ -364,10 +400,10 @@ function compileBlock<
         start,
         // Launder unknown -> Serializable without a cast; the value is already
         // serialized downstream. Used for dynamic template ports (emit `case-N`).
-        emit: (portId: string, data: unknown) => ctx.emit(portId, z.any().parse(data)),
+        emit: (portId: string, data: unknown) => emitWithCausation(portId, z.any().parse(data)),
         callTool: ctx.callTool,
         listTools: ctx.listTools,
-        log: makeBlockLogger(ctx),
+        log: blockLogger,
         get context() {
           return this;
         },
@@ -378,26 +414,37 @@ function compileBlock<
 
       // Return instance handle
       return {
-        pushInput(portId: string, data: Serializable): void {
-          // Always validate input data
+        pushInput(portId: string, data: Serializable, causationId?: string): void {
+          // Always validate input data; drops are loud (run trace), not silent
           const inputDef = spec.inputs?.[portId];
           if (inputDef) {
             const runtimeSchema = getRuntimeSchema(inputDef.schema);
             const result = runtimeSchema.safeParse(data);
             if (!result.success) {
-              log.warn(`Input validation failed for "${portId}": ${result.error.message}`);
+              blockLogger.warn(`Input validation failed for "${portId}", data dropped`, {
+                port: portId,
+                error: result.error.message,
+              });
               return; // Drop invalid data
             }
           }
 
-          // Record the latest value so this block's `{{ inputs.<port> }}`
-          // expressions resolve against it on the handlers that fire below.
-          scope.inputs[portId] = data;
+          const deliver = () => {
+            // Record the latest value so this block's `{{ inputs.<port> }}`
+            // expressions resolve against it on the handlers that fire below.
+            scope.inputs[portId] = data;
 
-          // Push to flow
-          const flow = flows.get(portId);
-          if (flow) {
-            flow.push(data);
+            // Push to flow
+            const flow = flows.get(portId);
+            if (flow) {
+              flow.push(data);
+            }
+          };
+
+          if (causationId) {
+            causation.run(causationId, deliver);
+          } else {
+            deliver();
           }
         },
 

@@ -36,6 +36,8 @@ apps/console/workflows/
 
 # mortar exported logs (`s` keybind in the TUI dumps here)
 .mortar-logs/
+# mortar crash-recovery state (live child PIDs; reaped on next start)
+.mortar-run.json
 
 # Plugin persistent data
 plugins/*/data/

@@ -749,7 +749,7 @@ describe('Prelude Blocks', () => {
       data: 42,
     });
 
-    expect(pushFn).toHaveBeenCalledWith('in', 42);
+    expect(pushFn).toHaveBeenCalledWith('in', 42, undefined);
   });
 
   test('stopBlock stops and removes instance', async () => {

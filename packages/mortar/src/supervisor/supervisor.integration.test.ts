@@ -1,4 +1,7 @@
 import { describe, expect, test } from 'bun:test';
+import { mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import type { ServiceSpec } from '../config';
 import {
   type ServiceState,
@@ -13,9 +16,13 @@ import {
  * The 400ms `SHUTDOWN_RENDER_HOLD_MS` exists so ink can paint the final
  * frame before unmounting — irrelevant headless, and previously dominated
  * the wall-clock of every `await using sup = mkSupervisor(...)`.
+ *
+ * `projectRoot` defaults to a fresh temp dir so the run-state file the
+ * supervisor persists never lands in (or clashes inside) the repo.
  */
 function mkSupervisor(specs: readonly ServiceSpec[], options: SupervisorOptions = {}): Supervisor {
-  return new Supervisor(specs, { renderHoldMs: 0, ...options });
+  const projectRoot = mkdtempSync(join(tmpdir(), 'mortar-test-'));
+  return new Supervisor(specs, { renderHoldMs: 0, projectRoot, ...options });
 }
 
 /** Wait until a predicate over the supervisor's state turns true. */

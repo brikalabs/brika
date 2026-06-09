@@ -28,6 +28,7 @@ import React from 'react';
 import { configExists, loadConfig, type ResolvedConfig, saveDefaultConfig } from './config';
 import { writeDefaultAndAnnounce } from './config/prompts';
 import { Supervisor } from './supervisor';
+import { reapStaleRun } from './supervisor/run-state';
 import { App } from './tui/App';
 
 const startCommand = defineCommand({
@@ -84,6 +85,23 @@ async function resolveAndLoad(explicitPath: string | undefined): Promise<Resolve
 }
 
 async function runStack(resolved: ResolvedConfig, { plain }: { plain: boolean }): Promise<void> {
+  // Recover from a previous session that died without running shutdown()
+  // (kill -9, runtime crash, terminal hard-close). Children are spawned
+  // detached, so they survive ANY unclean mortar death; the run-state
+  // file is how the next session finds and reaps them.
+  const previous = await reapStaleRun(resolved.root);
+  if (previous.kind === 'active') {
+    console.error(
+      `${pc.red('✗')} another mortar session (pid ${previous.mortarPid}) is already running this stack`
+    );
+    process.exit(1);
+  }
+  if (previous.kind === 'reaped' && previous.reaped > 0) {
+    process.stdout.write(
+      `${pc.yellow('⚠')} reaped ${previous.reaped} orphaned service(s) from a previous mortar run\n`
+    );
+  }
+
   const supervisor = new Supervisor(resolved.config.services, { projectRoot: resolved.root });
 
   const shutdown = (): void => {
@@ -91,6 +109,10 @@ async function runStack(resolved: ResolvedConfig, { plain }: { plain: boolean })
   };
   process.once('SIGINT', shutdown);
   process.once('SIGTERM', shutdown);
+  // SIGHUP: terminal/pane closed, ssh session dropped. Without this the
+  // detached children (which do NOT receive the terminal's SIGHUP) all
+  // outlive mortar as orphans.
+  process.once('SIGHUP', shutdown);
 
   // Children are spawned detached (process-group leaders), so a mortar crash
   // that skips shutdown() would orphan the WHOLE stack (hub + its plugins).
@@ -101,6 +123,24 @@ async function runStack(resolved: ResolvedConfig, { plain }: { plain: boolean })
   };
   process.once('uncaughtException', crash);
   process.once('unhandledRejection', crash);
+
+  // Last resort, runs even when an exit path skipped the async
+  // shutdown(): synchronously SIGKILL each child's process group.
+  // (`process.on('exit')` handlers must not await.)
+  process.on('exit', () => {
+    for (const pid of supervisor.livePids()) {
+      try {
+        process.kill(-pid, 'SIGKILL');
+      } catch {
+        /* already dead */
+      }
+      try {
+        process.kill(pid, 'SIGKILL');
+      } catch {
+        /* already dead */
+      }
+    }
+  });
 
   if (plain) {
     await runPlain(supervisor, resolved);

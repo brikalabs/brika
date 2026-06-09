@@ -31,7 +31,7 @@ interface BlockRuntimeContext {
   blockId: string;
   workflowId: string;
   config: Record<string, unknown>;
-  emit(portId: string, data: unknown): void;
+  emit(portId: string, data: unknown, causationId?: string): void;
   callTool(tool: string, args: Record<string, Json>): Promise<ToolResult>;
   listTools(): Promise<ToolDefinition[]>;
   /** Block-scoped log: lands in the workflow run trace, with structured data. */
@@ -39,7 +39,7 @@ interface BlockRuntimeContext {
 }
 
 interface BlockInstance {
-  pushInput(portId: string, data: unknown): void;
+  pushInput(portId: string, data: unknown, causationId?: string): void;
   stop(): void;
 }
 
@@ -98,8 +98,8 @@ export function setupBlocks(
         blockId: instanceId,
         workflowId,
         config,
-        emit: (port, data) => {
-          channel.send(blockEmit, { instanceId, port, data: data as Json });
+        emit: (port, data, causationId) => {
+          channel.send(blockEmit, { instanceId, port, data: data as Json, causationId });
         },
         callTool: (tool, args) => channel.call(invokeTool, { tool, args }, 0),
         listTools: async () => (await channel.call(listToolsRpc, {}, 0)).tools,
@@ -115,8 +115,8 @@ export function setupBlocks(
   });
 
   // ---- Message: hub pushes data to a block input port ----
-  channel.on(pushInputMsg, ({ instanceId, port, data }) => {
-    blockInstances.get(instanceId)?.pushInput(port, data);
+  channel.on(pushInputMsg, ({ instanceId, port, data, causationId }) => {
+    blockInstances.get(instanceId)?.pushInput(port, data, causationId);
   });
 
   // ---- Message: hub asks plugin to stop a block instance ----
