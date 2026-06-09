@@ -39,6 +39,7 @@ import type { Workflow } from '../api';
 import { type DebugEvent, useDebugStream } from '../debug';
 import { BlockNode } from './BlockNode';
 import { type BlockDefinition, BlockToolbar, type BlockTypeInfo } from './BlockToolbar';
+import { BlockInputValuesContext, collectInputValues } from './block-input-values';
 import { CollapsedTab, CollapsedTabsContainer, CollapsiblePanel } from './CollapsiblePanel';
 import { ConfigPanel } from './ConfigPanel';
 import { ConnectionDropPicker } from './ConnectionDropPicker';
@@ -126,7 +127,8 @@ function processNewEvents(
   edges: Edge[],
   lastProcessedTimestamp: React.RefObject<number>,
   setBlockLiveOutput: (blockId: string, output: unknown) => void,
-  setBlockStatus: (blockId: string, status: BlockStatus, output?: unknown) => void
+  setBlockStatus: (blockId: string, status: BlockStatus, output?: unknown) => void,
+  setPortValue: (blockId: string, port: string, value: unknown) => void
 ) {
   const newEvents = events.filter((e) => e.timestamp > lastProcessedTimestamp.current);
 
@@ -142,6 +144,7 @@ function processNewEvents(
     }
     if (event.data !== undefined) {
       setBlockLiveOutput(event.blockId, event.data);
+      setPortValue(event.blockId, event.port, event.data);
     }
     pingEventPorts(event.blockId, event.port, edges);
   }
@@ -742,6 +745,9 @@ function WorkflowEditorWithBlocks({
     getAvailableVariables,
     portTypeMap,
     blockSchemaMap,
+    blockOutputs,
+    portValues,
+    setPortValue,
     setBlockLiveOutput,
     setBlockStatus,
     setSelectedNodeId,
@@ -762,8 +768,22 @@ function WorkflowEditorWithBlocks({
 
   // Trigger port pings, live node-view updates, and status rings on new events
   useEffect(() => {
-    processNewEvents(events, edges, lastProcessedTimestamp, setBlockLiveOutput, setBlockStatus);
-  }, [events, edges, setBlockLiveOutput, setBlockStatus]);
+    processNewEvents(
+      events,
+      edges,
+      lastProcessedTimestamp,
+      setBlockLiveOutput,
+      setBlockStatus,
+      setPortValue
+    );
+  }, [events, edges, setBlockLiveOutput, setBlockStatus, setPortValue]);
+
+  // Live input values per node (edge wiring x last emitted port values), the
+  // editor-side scope for resolving {{ }} in node-body views.
+  const inputValuesByNode = useMemo(
+    () => collectInputValues(edges, portValues, blockOutputs),
+    [edges, portValues, blockOutputs]
+  );
 
   // Handle drop from toolbar
   const onDragOver = useCallback((event: React.DragEvent) => {
@@ -980,75 +1000,77 @@ function WorkflowEditorWithBlocks({
 
   return (
     <WorkflowTypeContext value={portTypeMap}>
-      <div className="flex h-full">
-        {!readonly && (
-          <BlocksPanel isOpen={panelStates.blocks} onToggle={() => togglePanel('blocks')} />
-        )}
+      <BlockInputValuesContext value={inputValuesByNode}>
+        <div className="flex h-full">
+          {!readonly && (
+            <BlocksPanel isOpen={panelStates.blocks} onToggle={() => togglePanel('blocks')} />
+          )}
 
-        <EditorCanvas
-          readonly={readonly}
-          nodes={nodes}
-          edges={edges}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          onConnect={onConnect}
-          onConnectEnd={onConnectEnd}
-          isValidConnection={isValidConnection}
-          onNodeClick={onNodeClick}
-          onPaneClick={onPaneClick}
-          onNodesDelete={onNodesDelete}
-          onEdgesDelete={onEdgesDelete}
-          onDragOver={readonly ? undefined : onDragOver}
-          onDrop={readonly ? undefined : onDrop}
-          leftCollapsed={leftCollapsed}
-          inspectorCollapsed={inspectorCollapsed}
-          hasSelection={!!selectedNode}
-          togglePanel={togglePanel}
-          canUndo={canUndo}
-          canRedo={canRedo}
-          onUndo={undo}
-          onRedo={redo}
-        />
-
-        {!readonly && (
-          <InspectorPanel
-            isOpen={panelStates.inspector}
-            onToggle={() => togglePanel('inspector')}
-            workflow={workflow}
-            selectedNode={selectedNode}
-            updateBlockConfig={updateBlockConfig}
-            availableVariables={availableVariables}
-            blockSchema={selectedBlockDef?.schema}
-            viewModuleUrl={selectedBlockDef?.viewModuleUrl}
-            pluginUid={selectedBlockDef?.pluginUid}
-          />
-        )}
-
-        {!readonly && (
-          <EditorCommandPalette
-            open={paletteOpen}
-            onOpenChange={setPaletteOpen}
-            blocks={blockDefinitions}
+          <EditorCanvas
+            readonly={readonly}
             nodes={nodes}
+            edges={edges}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            onConnect={onConnect}
+            onConnectEnd={onConnectEnd}
+            isValidConnection={isValidConnection}
+            onNodeClick={onNodeClick}
+            onPaneClick={onPaneClick}
+            onNodesDelete={onNodesDelete}
+            onEdgesDelete={onEdgesDelete}
+            onDragOver={readonly ? undefined : onDragOver}
+            onDrop={readonly ? undefined : onDrop}
+            leftCollapsed={leftCollapsed}
+            inspectorCollapsed={inspectorCollapsed}
+            hasSelection={!!selectedNode}
+            togglePanel={togglePanel}
             canUndo={canUndo}
             canRedo={canRedo}
-            onAddBlock={handlePaletteAdd}
-            onJumpToNode={handleJumpToNode}
-            onFitView={() => fitView({ duration: 300 })}
             onUndo={undo}
             onRedo={redo}
           />
-        )}
 
-        {!readonly && dropPicker && (
-          <ConnectionDropPicker
-            position={dropPicker.screen}
-            candidates={dropCandidates}
-            onPick={handleDropPick}
-            onClose={() => setDropPicker(null)}
-          />
-        )}
-      </div>
+          {!readonly && (
+            <InspectorPanel
+              isOpen={panelStates.inspector}
+              onToggle={() => togglePanel('inspector')}
+              workflow={workflow}
+              selectedNode={selectedNode}
+              updateBlockConfig={updateBlockConfig}
+              availableVariables={availableVariables}
+              blockSchema={selectedBlockDef?.schema}
+              viewModuleUrl={selectedBlockDef?.viewModuleUrl}
+              pluginUid={selectedBlockDef?.pluginUid}
+            />
+          )}
+
+          {!readonly && (
+            <EditorCommandPalette
+              open={paletteOpen}
+              onOpenChange={setPaletteOpen}
+              blocks={blockDefinitions}
+              nodes={nodes}
+              canUndo={canUndo}
+              canRedo={canRedo}
+              onAddBlock={handlePaletteAdd}
+              onJumpToNode={handleJumpToNode}
+              onFitView={() => fitView({ duration: 300 })}
+              onUndo={undo}
+              onRedo={redo}
+            />
+          )}
+
+          {!readonly && dropPicker && (
+            <ConnectionDropPicker
+              position={dropPicker.screen}
+              candidates={dropCandidates}
+              onPick={handleDropPick}
+              onClose={() => setDropPicker(null)}
+            />
+          )}
+        </div>
+      </BlockInputValuesContext>
     </WorkflowTypeContext>
   );
 }

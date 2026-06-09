@@ -20,6 +20,7 @@ import {
   Position,
   useConnection,
   useNodeId,
+  useUpdateNodeInternals,
 } from '@xyflow/react';
 import {
   CheckCircle,
@@ -35,7 +36,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { DynamicIcon, type IconName } from 'lucide-react/dynamic';
-import React, { memo, useContext } from 'react';
+import React, { memo, useContext, useEffect } from 'react';
 import {
   BaseNode,
   BaseNodeContent,
@@ -44,6 +45,7 @@ import {
 } from '@/components/base-node';
 import { useLocale } from '@/lib/use-locale';
 import { injectBlock } from '../api';
+import { resolveConfigForView, useBlockInputValues } from './block-input-values';
 import { ClientBlockView } from './ClientBlockView';
 import type { BlockStatus } from './useWorkflowEditor';
 import { WorkflowTypeContext } from './WorkflowTypeContext';
@@ -480,6 +482,7 @@ export const BlockNode = memo(function BlockNode(props: NodeProps) {
   const { tp } = useLocale();
   const data = props.data as unknown as BlockNodeData;
   const selected = props.selected;
+  const inputValues = useBlockInputValues(typeof data.id === 'string' ? data.id : '');
 
   const iconName = (data.icon || 'box') as IconName;
   const color = data.color || '#6b7280';
@@ -497,6 +500,15 @@ export const BlockNode = memo(function BlockNode(props: NodeProps) {
   const inputs = data.inputs ?? DEFAULT_INPUTS;
   const outputs = data.outputs ?? DEFAULT_OUTPUTS;
 
+  // Dynamic template ports (switch cases, ...) appear and disappear with the
+  // config. React Flow caches handle positions per node, so it must re-measure
+  // whenever the port set changes or edges keep anchoring to stale spots.
+  const updateNodeInternals = useUpdateNodeInternals();
+  const portsSignature = [...inputs, ...outputs].map((p) => p.id).join('|');
+  useEffect(() => {
+    updateNodeInternals(data.id);
+  }, [portsSignature, updateNodeInternals, data.id]);
+
   const statusStyles: Record<string, string> = {
     idle: '',
     running: 'ring-2 ring-status-running ring-offset-2 ring-offset-background animate-pulse',
@@ -512,9 +524,10 @@ export const BlockNode = memo(function BlockNode(props: NodeProps) {
         selected && 'ring-2 ring-primary ring-offset-2'
       )}
     >
-      {/* Run-once toolbar (selected nodes with a pokeable input) */}
+      {/* Run-once toolbar (selected nodes with a pokeable input). Sits above
+          the node so it never collides with the inspector panel. */}
       {inputs.length > 0 && (
-        <NodeToolbar isVisible={selected} position={Position.Right} offset={8}>
+        <NodeToolbar isVisible={selected} position={Position.Top} align="end" offset={10}>
           <RunBlockButton blockId={data.id} port={inputs[0].id} />
         </NodeToolbar>
       )}
@@ -550,7 +563,7 @@ export const BlockNode = memo(function BlockNode(props: NodeProps) {
             pluginUid={data.pluginUid}
             moduleUrl={data.nodeModuleUrl}
             scopeId={`${data.pluginId}:blocks/${blockKey}.node`}
-            config={config}
+            config={resolveConfigForView(config, inputValues)}
             data={data.output}
             compact
           />

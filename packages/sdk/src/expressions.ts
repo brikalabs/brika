@@ -7,4 +7,6 @@ export {
   type ExpressionOperand,
   hasTemplate,
   parseExpression,
+  resolveTemplate,
+  type TemplateScope,
 } from './internal/template';

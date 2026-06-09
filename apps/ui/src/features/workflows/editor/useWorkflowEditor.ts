@@ -110,6 +110,9 @@ export function useWorkflowEditor(
   const [isDirty, setIsDirty] = useState(false);
   const [blockStatuses, setBlockStatuses] = useState<Record<string, BlockStatus>>({});
   const [blockOutputs, setBlockOutputs] = useState<Record<string, unknown>>({});
+  // Last emitted value per "blockId:port", feeding live previews and the
+  // client-side {{ }} resolution of node-body views.
+  const [portValues, setPortValues] = useState<Record<string, unknown>>({});
   const [executionLogs, setExecutionLogs] = useState<ExecutionLog[]>([]);
 
   // Track onChange callback in ref to avoid stale closures
@@ -553,6 +556,18 @@ export function useWorkflowEditor(
     [setNodes]
   );
 
+  // Record the latest value seen on an output port (for previews and the
+  // editor-side template scope of downstream blocks).
+  const setPortValue = useCallback((blockId: string, port: string, value: unknown) => {
+    setPortValues((prev) => {
+      const key = `${blockId}:${port}`;
+      if (Object.is(prev[key], value)) {
+        return prev;
+      }
+      return { ...prev, [key]: value };
+    });
+  }, []);
+
   // Push the latest emitted value into a block's node data so node-body views
   // (useBlockData) render live. Scoped to blocks that actually ship a node view,
   // so high-frequency workflows don't re-render the whole graph.
@@ -653,6 +668,8 @@ export function useWorkflowEditor(
     setSelectedNodeId,
     blockStatuses,
     blockOutputs,
+    portValues,
+    setPortValue,
     executionLogs,
     setBlockStatus,
     setBlockLiveOutput,

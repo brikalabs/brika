@@ -30,6 +30,15 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@brika/clay';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@brika/clay/components/command';
+import { Popover, PopoverContent, PopoverTrigger } from '@brika/clay/components/popover';
 import { displayType, parsePortType } from '@brika/type-system';
 import type { Node } from '@xyflow/react';
 import {
@@ -49,7 +58,7 @@ import {
   X,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useCapture } from '@/features/analytics/hooks';
 import { fetcher } from '@/lib/query';
 import { useLocale } from '@/lib/use-locale';
@@ -245,8 +254,12 @@ function ExpressionField({
   configKeys,
 }: Readonly<ExpressionFieldProps>) {
   const capture = useCapture();
-  const [showVars, setShowVars] = useState(false);
-  const [copied, setCopied] = useState<string | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
+  // Callback ref: the Input/Textarea union needs a contravariant function ref.
+  const setInputRef = (el: HTMLInputElement | HTMLTextAreaElement | null) => {
+    inputRef.current = el;
+  };
 
   // Inline expression linting: typo'd ports/keys surface while typing.
   const expressionWarnings = useMemo(
@@ -254,18 +267,24 @@ function ExpressionField({
     [value, inputPortIds, configKeys]
   );
 
+  // Insert at the cursor (falling back to append), then restore focus.
   const insertVariable = (varName: string) => {
     capture('workflow.config_variable_inserted');
     const expr = `{{ ${varName} }}`;
-    onChange(value + expr);
-    setShowVars(false);
-  };
-
-  const copyVariable = (varName: string) => {
-    capture('workflow.config_variable_copied', { surface: 'expression_field' });
-    navigator.clipboard.writeText(`{{ ${varName} }}`);
-    setCopied(varName);
-    setTimeout(() => setCopied(null), 1500);
+    const el = inputRef.current;
+    if (el && typeof el.selectionStart === 'number') {
+      const start = el.selectionStart;
+      const end = el.selectionEnd ?? start;
+      onChange(value.slice(0, start) + expr + value.slice(end));
+      requestAnimationFrame(() => {
+        el.focus();
+        const position = start + expr.length;
+        el.setSelectionRange(position, position);
+      });
+    } else {
+      onChange(value + expr);
+    }
+    setPickerOpen(false);
   };
 
   const InputComponent = multiline ? Textarea : Input;
@@ -274,28 +293,66 @@ function ExpressionField({
     <div className="space-y-2">
       <div className="relative">
         <InputComponent
+          ref={setInputRef}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
           className={cn('pr-10 font-mono text-sm', multiline && 'min-h-[80px]')}
         />
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="absolute top-1 right-1 h-7 w-7 p-0"
-          onClick={() => {
-            if (!showVars) {
-              capture('workflow.config_variable_picker_opened', {
-                variableCount: variables.length,
-              });
-            }
-            setShowVars(!showVars);
-          }}
-          title="Insert variable"
-        >
-          <Sparkles className="size-4 text-primary" />
-        </Button>
+        {variables.length > 0 && (
+          <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="absolute top-1 right-1 h-7 w-7 p-0"
+                onClick={() => {
+                  if (!pickerOpen) {
+                    capture('workflow.config_variable_picker_opened', {
+                      variableCount: variables.length,
+                    });
+                  }
+                }}
+                title="Insert variable"
+              >
+                <Sparkles className="size-4 text-primary" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="end" sideOffset={6} className="w-80 p-0">
+              <Command>
+                <CommandInput autoFocus placeholder="Search variables..." />
+                <CommandList className="max-h-60">
+                  <CommandEmpty>No matching variable</CommandEmpty>
+                  <CommandGroup>
+                    {variables.map((v) => (
+                      <CommandItem
+                        key={v.name}
+                        value={`${v.name} ${v.type}`}
+                        onSelect={() => insertVariable(v.name)}
+                        className="flex flex-col items-start gap-0.5"
+                      >
+                        <span className="flex w-full min-w-0 items-center gap-2">
+                          <code className="min-w-0 flex-1 truncate font-mono text-primary text-xs">
+                            {`{{ ${v.name} }}`}
+                          </code>
+                          <span className="shrink-0 rounded bg-muted px-1 py-0.5 font-mono text-[9px] text-muted-foreground">
+                            {v.type}
+                          </span>
+                        </span>
+                        {v.preview !== undefined && (
+                          <span className="w-full truncate text-left font-mono text-[10px] text-muted-foreground">
+                            {v.preview}
+                          </span>
+                        )}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
+        )}
       </div>
 
       {expressionWarnings.length > 0 && (
@@ -310,54 +367,6 @@ function ExpressionField({
               <span className="shrink-0">{w.message}</span>
             </p>
           ))}
-        </div>
-      )}
-
-      {/* Variable suggestions dropdown */}
-      {showVars && variables.length > 0 && (
-        <div className="overflow-hidden rounded-lg border bg-popover shadow-lg">
-          <div className="border-b bg-muted/50 p-2 font-medium text-muted-foreground text-xs">
-            Click to insert variable
-          </div>
-          <div className="max-h-[150px] overflow-y-auto">
-            {variables.map((v) => (
-              <div
-                key={v.name}
-                className="group flex cursor-pointer items-center justify-between px-3 py-2 hover:bg-accent"
-              >
-                <button
-                  type="button"
-                  className="flex min-w-0 flex-1 flex-col gap-0.5 text-left"
-                  onClick={() => insertVariable(v.name)}
-                >
-                  <span className="flex items-center gap-2">
-                    <code className="font-mono text-primary text-xs">{`{{ ${v.name} }}`}</code>
-                    <span className="text-muted-foreground text-xs">{v.type}</span>
-                  </span>
-                  {v.preview !== undefined && (
-                    <span className="truncate font-mono text-[10px] text-muted-foreground">
-                      {v.preview}
-                    </span>
-                  )}
-                </button>
-                <button
-                  type="button"
-                  className="rounded p-1 opacity-0 hover:bg-muted group-hover:opacity-100"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    copyVariable(v.name);
-                  }}
-                  title="Copy to clipboard"
-                >
-                  {copied === v.name ? (
-                    <Check className="size-3 text-success" />
-                  ) : (
-                    <Copy className="size-3 text-muted-foreground" />
-                  )}
-                </button>
-              </div>
-            ))}
-          </div>
         </div>
       )}
     </div>
@@ -1853,14 +1862,14 @@ function VariablesReference({ variables }: Readonly<VariablesReferenceProps>) {
               }}
               title={t('workflows:editor.panels.clickToCopy')}
             >
-              <div className="flex w-full items-center justify-between gap-2">
-                <code className="font-mono text-primary">{`{{ ${v.name} }}`}</code>
-                <Badge variant="outline" className="h-5 text-[10px]">
-                  {v.type}
+              <div className="flex w-full min-w-0 items-center justify-between gap-2">
+                <code className="min-w-0 break-all font-mono text-primary">{`{{ ${v.name} }}`}</code>
+                <Badge variant="outline" className="h-5 max-w-[45%] shrink-0 text-[10px]">
+                  <span className="truncate">{v.type}</span>
                 </Badge>
               </div>
               {v.preview !== undefined && (
-                <span className="truncate font-mono text-[10px] text-muted-foreground">
+                <span className="w-full truncate font-mono text-[10px] text-muted-foreground">
                   {v.preview}
                 </span>
               )}
@@ -1932,7 +1941,7 @@ export function ConfigPanel({
         <VariablesReference variables={availableVariables} />
       </ScrollArea>
 
-      <div className="border-t bg-background/80 p-3 text-center text-muted-foreground text-xs">
+      <div className="truncate border-t bg-background/80 p-2 text-center text-[10px] text-muted-foreground">
         {t('workflows:editor.panels.nodeId')}: <code className="font-mono">{node.id}</code>
       </div>
     </div>
