@@ -1,4 +1,4 @@
-import { getPreferences, type Json, localFetch, z } from '@brika/sdk';
+import { getPreferences, type Json, localFetch, log, z } from '@brika/sdk';
 import {
   describeModel,
   hintsForModel,
@@ -597,11 +597,15 @@ export async function listAllModels(): Promise<ModelOption[]> {
   const settled = await Promise.allSettled(sources.map((s) => s.list()));
   const options: ModelOption[] = [];
   settled.forEach((result, i) => {
-    if (result.status !== 'fulfilled') {
-      return;
-    }
     const source = sources[i];
     if (!source) {
+      return;
+    }
+    if (result.status !== 'fulfilled') {
+      // Skipping is correct (one bad provider must not break the picker),
+      // but say WHY in the logs or the gap is undiagnosable.
+      const reason = result.reason instanceof Error ? result.reason.message : String(result.reason);
+      log.warn(`Model list skipped for ${source.provider}: ${reason}`);
       return;
     }
     const label = PROVIDER_LABEL[source.provider];
