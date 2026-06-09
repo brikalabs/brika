@@ -207,6 +207,7 @@ export * from './types';
 
 export type { DeviceLocation } from './api/location';
 export { getDeviceLocation } from './api/location';
+export { localFetch } from './api/net-local';
 export type { HubLocation as HubLocationData } from './types';
 
 // ─────────────────────────────────────────────────────────────────────────────

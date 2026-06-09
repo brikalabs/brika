@@ -56,8 +56,11 @@ export interface BlockSchema {
       format?: string;
       /** UI label from `.meta({ label })`. */
       label?: string;
-      /** Show this field only when a sibling field equals a value. */
-      showWhen?: { field: string; equals: string | number | boolean };
+      /** Show this field only when a sibling field equals a value (or one of several). */
+      showWhen?: {
+        field: string;
+        equals: string | number | boolean | ReadonlyArray<string | number | boolean>;
+      };
     }
   >;
   required?: string[];

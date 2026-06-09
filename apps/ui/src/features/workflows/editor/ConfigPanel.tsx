@@ -139,24 +139,44 @@ interface SchemaProperty {
   format?: string;
   /** UI label from z.meta({ label }). */
   label?: string;
-  /** Show this field only when a sibling field equals a value. */
-  showWhen?: { field: string; equals: string | number | boolean };
+  /** Show this field only when a sibling field equals a value (or one of several). */
+  showWhen?: { field: string; equals: ShowWhenValue | ReadonlyArray<ShowWhenValue> };
 }
 
-/** Narrow an unknown value to the showWhen shape. */
+type ShowWhenValue = string | number | boolean;
+
+function isShowWhenValue(value: unknown): value is ShowWhenValue {
+  return typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean';
+}
+
+/** Narrow an unknown value to the showWhen shape (scalar or array of scalars). */
 function toShowWhen(value: unknown): SchemaProperty['showWhen'] {
   if (typeof value !== 'object' || value === null) {
     return undefined;
   }
   const obj = Object.fromEntries(Object.entries(value));
-  const equals = obj.equals;
-  if (
-    typeof obj.field !== 'string' ||
-    (typeof equals !== 'string' && typeof equals !== 'number' && typeof equals !== 'boolean')
-  ) {
+  const { equals } = obj;
+  if (typeof obj.field !== 'string') {
     return undefined;
   }
-  return { field: obj.field, equals };
+  if (isShowWhenValue(equals)) {
+    return { field: obj.field, equals };
+  }
+  if (Array.isArray(equals) && equals.every(isShowWhenValue)) {
+    return { field: obj.field, equals };
+  }
+  return undefined;
+}
+
+/** Whether the live field value satisfies a showWhen condition. */
+function showWhenSatisfied(
+  actual: unknown,
+  equals: ShowWhenValue | ReadonlyArray<ShowWhenValue>
+): boolean {
+  if (Array.isArray(equals)) {
+    return isShowWhenValue(actual) && equals.includes(actual);
+  }
+  return actual === equals;
 }
 
 interface BlockSchema {
@@ -1486,7 +1506,7 @@ function BlockConfig({
   const requiredFields = new Set(schema.required ?? []);
   const visibleFields = Object.entries(properties).filter(([, fieldSchema]) => {
     const { showWhen } = toSchemaProperty(fieldSchema);
-    return !showWhen || config[showWhen.field] === showWhen.equals;
+    return !showWhen || showWhenSatisfied(config[showWhen.field], showWhen.equals);
   });
 
   return (

@@ -1,4 +1,4 @@
-import { getPreferences, type Json, z } from '@brika/sdk';
+import { getPreferences, type Json, localFetch, z } from '@brika/sdk';
 import {
   describeModel,
   hintsForModel,
@@ -17,14 +17,15 @@ import {
  * conversation (`ChatMessage[]` + `ChatTool[]`) into its own wire format, makes
  * one round-trip, and translates the reply back into a `ChatTurn`.
  *
- * Two providers ship today: Anthropic (Messages API) and any OpenAI-compatible
+ * Three providers ship: Anthropic (Messages API), any OpenAI-compatible
  * chat-completions endpoint (OpenAI, OpenRouter, Groq, Together, Mistral, Azure
- * OpenAI). A local provider (Ollama) is intentionally absent: the net.fetch
- * grant's SSRF guard blocks loopback, so local models need a separate
- * egress path (a future follow-up).
+ * OpenAI), and a local (loopback) provider for Ollama / LM Studio. The local
+ * provider speaks the OpenAI wire format but egresses through the
+ * `dev.brika.net.local.fetch` grant (consented loopback ports) instead of the
+ * public `dev.brika.net.fetch` grant, whose SSRF guard blocks loopback.
  *
- * Keys come from plugin-global password preferences (`anthropicApiKey`,
- * `openaiApiKey`); egress is the operator-consented `dev.brika.net.fetch` grant.
+ * Hosted keys come from plugin-global password preferences (`anthropicApiKey`,
+ * `openaiApiKey`); local needs no key.
  */
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -80,11 +81,15 @@ export interface LlmProvider {
   chat(req: ChatRequest): Promise<ChatTurn>;
 }
 
-export type ProviderId = 'anthropic' | 'openai';
+export type ProviderId = 'anthropic' | 'openai' | 'local';
 
 export interface ProviderSettings {
   provider: ProviderId;
-  /** OpenAI-compatible base URL, e.g. https://openrouter.ai/api/v1 (openai only). */
+  /**
+   * Base URL. For `openai`, the OpenAI-compatible endpoint (e.g.
+   * https://openrouter.ai/api/v1). For `local`, the loopback model server
+   * (e.g. http://localhost:11434/v1 for Ollama).
+   */
   baseUrl?: string;
 }
 
@@ -259,6 +264,8 @@ function readAnthropicUsage(data: Json): TokenUsage | undefined {
 // ─────────────────────────────────────────────────────────────────────────────
 
 const DEFAULT_OPENAI_BASE = 'https://api.openai.com/v1';
+/** Ollama's OpenAI-compatible endpoint; LM Studio uses http://localhost:1234/v1. */
+const DEFAULT_LOCAL_BASE = 'http://localhost:11434/v1';
 
 function openaiMessages(req: ChatRequest): Json[] {
   const out: Json[] = [];
@@ -290,14 +297,36 @@ function openaiMessages(req: ChatRequest): Json[] {
   return out;
 }
 
-function createOpenAiProvider(baseUrl: string): LlmProvider {
+/** JSON-POST transport: differs by egress (public `net.fetch` vs loopback `net.local`). */
+type JsonPost = (url: string, headers: Record<string, string>, body: Json) => Promise<Json>;
+
+interface OpenAiOptions {
+  /** Transport for the chat request. Defaults to the public-egress postJson. */
+  post?: JsonPost;
+  /** When false, omit the Bearer auth header (local servers need no key). */
+  auth?: boolean;
+  label?: string;
+}
+
+/**
+ * OpenAI-compatible provider. The same chat/completions wire format backs both
+ * hosted endpoints (OpenAI, OpenRouter, Groq...) and local servers (Ollama, LM
+ * Studio); only the egress transport and whether a key is required differ.
+ */
+function createOpenAiProvider(baseUrl: string, opts: OpenAiOptions = {}): LlmProvider {
+  const post = opts.post ?? postJson;
+  const useAuth = opts.auth !== false;
   const endpoint = `${baseUrl.replace(/\/$/, '')}/chat/completions`;
   return {
-    label: 'OpenAI-compatible',
+    label: opts.label ?? 'OpenAI-compatible',
     async chat(req) {
-      const { openaiApiKey } = getPreferences<AgentPreferences>();
-      if (!openaiApiKey) {
-        throw new Error('Set the OpenAI API key in the AI Agent plugin settings');
+      const headers: Record<string, string> = {};
+      if (useAuth) {
+        const { openaiApiKey } = getPreferences<AgentPreferences>();
+        if (!openaiApiKey) {
+          throw new Error('Set the OpenAI API key in the AI Agent plugin settings');
+        }
+        headers.authorization = `Bearer ${openaiApiKey}`;
       }
       const tools = req.tools.map((tool) => ({
         type: 'function',
@@ -307,19 +336,51 @@ function createOpenAiProvider(baseUrl: string): LlmProvider {
           parameters: tool.inputSchema,
         },
       }));
-      const data = await postJson(
-        endpoint,
-        { authorization: `Bearer ${openaiApiKey}` },
-        {
-          model: req.model,
-          max_tokens: req.maxTokens,
-          messages: openaiMessages(req),
-          tools: tools.length > 0 ? tools : undefined,
-        }
-      );
+      const data = await post(endpoint, headers, {
+        model: req.model,
+        max_tokens: req.maxTokens,
+        messages: openaiMessages(req),
+        tools: tools.length > 0 ? tools : undefined,
+      });
       return readOpenAiTurn(data);
     },
   };
+}
+
+/** Local (loopback) provider: OpenAI wire format over the consented net.local grant. */
+function createLocalProvider(baseUrl: string): LlmProvider {
+  return createOpenAiProvider(baseUrl, {
+    post: localPostJson,
+    auth: false,
+    label: 'Local (loopback)',
+  });
+}
+
+/** JSON POST over the loopback grant (Ollama / LM Studio on a consented port). */
+async function localPostJson(
+  url: string,
+  headers: Record<string, string>,
+  body: Json
+): Promise<Json> {
+  const res = await localFetch({
+    url,
+    method: 'POST',
+    headers: { 'content-type': 'application/json', ...headers },
+    body: JSON.stringify(body),
+  });
+  if (res.status < 200 || res.status >= 300) {
+    throw new Error(`Local LLM request failed (${res.status}): ${res.body}`);
+  }
+  return parseJson(res.body);
+}
+
+/** JSON GET over the loopback grant (used to list local models). */
+async function localGetJson(url: string): Promise<Json> {
+  const res = await localFetch({ url });
+  if (res.status < 200 || res.status >= 300) {
+    throw new Error(`Local model list request failed (${res.status}): ${res.body}`);
+  }
+  return parseJson(res.body);
 }
 
 export function readOpenAiTurn(data: Json): ChatTurn {
@@ -367,19 +428,26 @@ function readOpenAiUsage(data: Json): TokenUsage | undefined {
 /** Config schema fragment shared by the LLM blocks (provider + base URL). */
 export const providerConfig = {
   provider: z
-    .enum(['anthropic', 'openai'])
+    .enum(['anthropic', 'openai', 'local'])
     .default('anthropic')
-    .describe('LLM provider. "openai" covers any OpenAI-compatible endpoint.'),
+    .describe(
+      'LLM provider. "openai" covers any OpenAI-compatible endpoint; "local" runs a loopback model server (Ollama, LM Studio).'
+    ),
   baseUrl: z
     .string()
     .optional()
-    .meta({ showWhen: { field: 'provider', equals: 'openai' } })
-    .describe('OpenAI-compatible base URL (openai only). Defaults to api.openai.com.'),
+    .meta({ showWhen: { field: 'provider', equals: ['openai', 'local'] } })
+    .describe(
+      'Base URL. OpenAI-compatible endpoint, or a local server like http://localhost:11434/v1.'
+    ),
 };
 
 export function getProvider(settings: ProviderSettings): LlmProvider {
   if (settings.provider === 'openai') {
     return createOpenAiProvider(settings.baseUrl || DEFAULT_OPENAI_BASE);
+  }
+  if (settings.provider === 'local') {
+    return createLocalProvider(settings.baseUrl || DEFAULT_LOCAL_BASE);
   }
   return createAnthropicProvider();
 }
@@ -418,7 +486,24 @@ export async function listModels(settings: ProviderSettings): Promise<ModelOptio
   if (settings.provider === 'openai') {
     return listOpenAiModels(settings.baseUrl || DEFAULT_OPENAI_BASE);
   }
+  if (settings.provider === 'local') {
+    return listLocalModels(settings.baseUrl || DEFAULT_LOCAL_BASE);
+  }
   return listAnthropicModels();
+}
+
+/** List models a local server serves (OpenAI-compatible /models over loopback). */
+async function listLocalModels(baseUrl: string): Promise<ModelOption[]> {
+  const endpoint = `${baseUrl.replace(/\/$/, '')}/models`;
+  const data = await localGetJson(endpoint);
+  const options: ModelOption[] = [];
+  for (const raw of jsonArr(jsonObj(data)?.data)) {
+    const id = jsonStr(jsonObj(raw)?.id);
+    if (id) {
+      options.push({ value: id, label: id, description: 'local model (free)' });
+    }
+  }
+  return options;
 }
 
 async function listAnthropicModels(): Promise<ModelOption[]> {

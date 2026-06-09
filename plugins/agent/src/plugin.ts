@@ -7,7 +7,7 @@
 
 import { definePreferenceOptions } from '@brika/sdk';
 import { log, onStop } from '@brika/sdk/lifecycle';
-import { listModels } from './providers';
+import { listModels, type ProviderId } from './providers';
 
 /**
  * Live model picker. The config UI calls this with the block's currently
@@ -15,7 +15,8 @@ import { listModels } from './providers';
  * that provider serves, each annotated with its context window and price.
  */
 definePreferenceOptions('model', async (params) => {
-  const provider = params?.provider === 'openai' ? 'openai' : 'anthropic';
+  const raw = params?.provider;
+  const provider: ProviderId = raw === 'openai' || raw === 'local' ? raw : 'anthropic';
   const baseUrl = typeof params?.baseUrl === 'string' ? params.baseUrl : undefined;
   const models = await listModels({ provider, baseUrl });
   return models.map((m) => ({ value: m.value, label: m.label, description: m.description }));

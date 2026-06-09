@@ -583,7 +583,10 @@ function zodToBlockSchema(schema: z.ZodObject<z.ZodRawShape>): BlockSchema {
       default?: Json;
       format?: string;
       label?: string;
-      showWhen?: { field: string; equals: string | number | boolean };
+      showWhen?: {
+        field: string;
+        equals: string | number | boolean | ReadonlyArray<string | number | boolean>;
+      };
     }
   >;
   const props =
