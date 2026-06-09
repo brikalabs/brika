@@ -118,6 +118,10 @@
       "label": "Exécuter",
       "notRunning": "Activez le workflow pour exécuter des blocs",
       "failed": "Échec de la demande d'exécution"
+    },
+    "diagnostics": {
+      "errors": "erreurs",
+      "warnings": "avertissements"
     }
   }
 }

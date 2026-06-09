@@ -25,7 +25,7 @@ import { type MouseEvent, useCallback, useEffect, useMemo, useRef, useState } fr
 import type { Workflow, WorkflowBlock } from '../api';
 import type { BlockNodeData } from './BlockNode';
 import type { BlockDefinition, BlockTypeInfo } from './BlockToolbar';
-import { expandDynamicPorts } from './dynamic-ports';
+import { expandDynamicPorts, portsEqual } from './dynamic-ports';
 import type { RegisteredSpark } from './WorkflowEditor';
 import {
   collectConfigVariables,
@@ -91,6 +91,20 @@ function buildBlockNode(blockType: BlockTypeInfo, position: { x: number; y: numb
     position,
     data,
   };
+}
+
+/**
+ * Return the previous value while its JSON signature is unchanged, so
+ * downstream memos keyed on the value skip recomputation when a new object is
+ * structurally identical.
+ */
+function useSignatureMemo<T>(value: T): T {
+  const signature = JSON.stringify(value);
+  const ref = useRef({ signature, value });
+  if (ref.current.signature !== signature) {
+    ref.current = { signature, value };
+  }
+  return ref.current.value;
 }
 
 export function useWorkflowEditor(
@@ -272,10 +286,15 @@ export function useWorkflowEditor(
     [onEdgesChangeBase, takeSnapshot]
   );
 
-  // Memoize graph conversions separately — position-only node changes
-  // won't retrigger type inference since ports/types haven't changed
-  const graphNodes = useMemo(() => nodesToGraphNodes(nodes), [nodes]);
-  const graphEdges = useMemo(() => edgesToGraphEdges(edges), [edges]);
+  // Memoize graph conversions on a STRUCTURAL signature: live-stream status/
+  // output updates and node drags replace node objects constantly, but the
+  // type graph only changes when ids/ports/config/wiring do. Keeping the
+  // arrays (and thus portTypeMap) referentially stable skips whole-graph
+  // re-inference per event and stops every Port from re-rendering.
+  const graphNodesRaw = useMemo(() => nodesToGraphNodes(nodes), [nodes]);
+  const graphEdgesRaw = useMemo(() => edgesToGraphEdges(edges), [edges]);
+  const graphNodes = useSignatureMemo(graphNodesRaw);
+  const graphEdges = useSignatureMemo(graphEdgesRaw);
 
   // Pure derived type inference — no useEffect/setNodes cascade
   const portTypeMap: PortTypeMap = useMemo(
@@ -473,17 +492,24 @@ export function useWorkflowEditor(
         const data = node.data as BlockNodeData;
         const mergedConfig = { ...data.config, ...config };
         const def = blockSchemaMap[data.type];
-        const outputs = def?.outputs?.some((p) => p.dynamic)
-          ? expandDynamicPorts(
-              def.outputs.map((p) => ({
-                id: p.id,
-                name: p.name || p.id,
-                type: p.type,
-                dynamic: p.dynamic,
-              })),
-              mergedConfig
-            )
-          : data.outputs;
+        let outputs = data.outputs;
+        if (def?.outputs?.some((p) => p.dynamic)) {
+          const expanded = expandDynamicPorts(
+            def.outputs.map((p) => ({
+              id: p.id,
+              name: p.name || p.id,
+              type: p.type,
+              dynamic: p.dynamic,
+            })),
+            mergedConfig
+          );
+          // Keep the existing array identity when nothing structural changed:
+          // handle re-measurement and edge revalidation only run on real
+          // port-set changes, not on every config keystroke.
+          if (!data.outputs || !portsEqual(expanded, data.outputs)) {
+            outputs = expanded;
+          }
+        }
         const updated = [...nds];
         updated[idx] = {
           ...node,

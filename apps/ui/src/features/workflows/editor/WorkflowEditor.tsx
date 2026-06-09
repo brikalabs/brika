@@ -1,4 +1,4 @@
-import { Button, toast } from '@brika/clay';
+import { Button, cn, toast } from '@brika/clay';
 import { portKey } from '@brika/type-system';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -16,6 +16,7 @@ import {
   useStoreApi,
 } from '@xyflow/react';
 import {
+  AlertTriangle,
   Blocks,
   GripVertical,
   Loader2,
@@ -51,6 +52,7 @@ import {
 } from './connection-compat';
 import { DebugPanel } from './DebugPanel';
 import { EditorCommandPalette } from './EditorCommandPalette';
+import { collectDiagnostics, type GraphDiagnostic, invalidEdgeIds } from './graph-diagnostics';
 import { type ConnectionOrigin, useWorkflowEditor } from './useWorkflowEditor';
 import { WorkflowTypeContext } from './WorkflowTypeContext';
 import type { BlockStatus } from './workflow-conversion';
@@ -330,6 +332,72 @@ function InspectorPanel({
   );
 }
 
+interface DiagnosticsBadgeProps {
+  diagnostics: ReadonlyArray<GraphDiagnostic>;
+  onJump: (nodeId: string) => void;
+}
+
+/**
+ * Canvas problems chip: errors/warnings the engine would hit at runtime
+ * (stale type mismatches, missing required config, removed block types,
+ * feedback loops). Click an entry to jump to the offending node.
+ */
+function DiagnosticsBadge({ diagnostics, onJump }: Readonly<DiagnosticsBadgeProps>) {
+  const { t } = useLocale();
+  const [open, setOpen] = useState(false);
+
+  if (diagnostics.length === 0) {
+    return null;
+  }
+  const errors = diagnostics.filter((d) => d.severity === 'error').length;
+  const warnings = diagnostics.length - errors;
+
+  return (
+    <Panel position="top-center">
+      <div className="flex max-w-130 flex-col items-center gap-1">
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          className={cn(
+            'flex items-center gap-1.5 rounded-full border px-3 py-1 font-medium text-xs shadow-md backdrop-blur transition-colors',
+            errors > 0
+              ? 'border-destructive/40 bg-destructive/10 text-destructive hover:bg-destructive/15'
+              : 'border-warning/40 bg-warning/10 text-warning hover:bg-warning/15'
+          )}
+        >
+          <AlertTriangle className="size-3.5" />
+          {errors > 0 && `${errors} ${t('workflows:editor.diagnostics.errors')}`}
+          {errors > 0 && warnings > 0 && ' · '}
+          {warnings > 0 && `${warnings} ${t('workflows:editor.diagnostics.warnings')}`}
+        </button>
+        {open && (
+          <div className="max-h-60 w-130 overflow-y-auto rounded-lg border bg-popover/95 p-1 shadow-xl backdrop-blur">
+            {diagnostics.map((d) => (
+              <button
+                key={`${d.kind}:${d.nodeId}:${d.edgeId ?? ''}:${d.message}`}
+                type="button"
+                onClick={() => {
+                  setOpen(false);
+                  onJump(d.nodeId);
+                }}
+                className="flex w-full items-start gap-2 rounded-md px-2 py-1.5 text-left text-xs transition-colors hover:bg-accent"
+              >
+                <AlertTriangle
+                  className={cn(
+                    'mt-0.5 size-3 shrink-0',
+                    d.severity === 'error' ? 'text-destructive' : 'text-warning'
+                  )}
+                />
+                <span className="min-w-0 break-words">{d.message}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </Panel>
+  );
+}
+
 interface EditorControlsProps {
   showInteractive: boolean;
   canUndo: boolean;
@@ -465,6 +533,8 @@ interface EditorCanvasProps {
   canRedo: boolean;
   onUndo: () => void;
   onRedo: () => void;
+  diagnostics: ReadonlyArray<GraphDiagnostic>;
+  onJumpToNode: (nodeId: string) => void;
 }
 
 function EditorCanvas({
@@ -490,6 +560,8 @@ function EditorCanvas({
   canRedo,
   onUndo,
   onRedo,
+  diagnostics,
+  onJumpToNode,
 }: Readonly<EditorCanvasProps>) {
   return (
     <div className="relative flex flex-1 flex-col">
@@ -530,6 +602,7 @@ function EditorCanvas({
           onUndo={onUndo}
           onRedo={onRedo}
         />
+        {!readonly && <DiagnosticsBadge diagnostics={diagnostics} onJump={onJumpToNode} />}
       </ReactFlow>
 
       {nodes.length === 0 && !readonly && <EmptyStateOverlay />}
@@ -808,6 +881,25 @@ function WorkflowEditorWithBlocks({
     [edges, portValues, blockOutputs]
   );
 
+  // Static graph analysis: stale type mismatches, missing required config,
+  // missing block types, feedback loops. Edges with a type mismatch render in
+  // the destructive color so the broken wire is visible on the canvas itself.
+  const diagnostics = useMemo(
+    () => collectDiagnostics({ nodes, edges, portTypeMap, blockSchemaMap }),
+    [nodes, edges, portTypeMap, blockSchemaMap]
+  );
+  const displayEdges = useMemo(() => {
+    const invalid = invalidEdgeIds(diagnostics);
+    if (invalid.size === 0) {
+      return edges;
+    }
+    return edges.map((edge) =>
+      invalid.has(edge.id)
+        ? { ...edge, style: { ...edge.style, stroke: 'var(--destructive)', strokeWidth: 2 } }
+        : edge
+    );
+  }, [edges, diagnostics]);
+
   // Handle drop from toolbar
   const onDragOver = useCallback((event: React.DragEvent) => {
     event.preventDefault();
@@ -1032,7 +1124,7 @@ function WorkflowEditorWithBlocks({
           <EditorCanvas
             readonly={readonly}
             nodes={nodes}
-            edges={edges}
+            edges={displayEdges}
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
@@ -1052,6 +1144,8 @@ function WorkflowEditorWithBlocks({
             canRedo={canRedo}
             onUndo={undo}
             onRedo={redo}
+            diagnostics={diagnostics}
+            onJumpToNode={handleJumpToNode}
           />
 
           {!readonly && (

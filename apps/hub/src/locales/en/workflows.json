@@ -118,6 +118,10 @@
       "label": "Run",
       "notRunning": "Enable the workflow to run blocks",
       "failed": "Run request failed"
+    },
+    "diagnostics": {
+      "errors": "errors",
+      "warnings": "warnings"
     }
   }
 }

@@ -53,3 +53,16 @@ export function expandDynamicPorts(
     }));
   });
 }
+
+/** Structural equality on id+name+dynamic, the fields handles depend on. */
+export function portsEqual(a: readonly BlockPort[], b: readonly BlockPort[]): boolean {
+  if (a === b) {
+    return true;
+  }
+  if (a.length !== b.length) {
+    return false;
+  }
+  return a.every(
+    (port, i) => port.id === b[i].id && port.name === b[i].name && port.dynamic === b[i].dynamic
+  );
+}
