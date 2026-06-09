@@ -161,7 +161,8 @@ export class WorkflowExecutor {
     const workflowId = this.#workflow.id;
 
     // Close any open runs (emits run.closed, clears their quiescence timers).
-    for (const cid of [...this.#openRuns.keys()]) {
+    // Map iteration tolerates deletion of the current key by #closeRun.
+    for (const cid of this.#openRuns.keys()) {
       this.#closeRun(workflowId, cid);
     }
     this.#lastCorrelationId.clear();

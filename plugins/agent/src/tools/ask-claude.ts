@@ -22,7 +22,7 @@ defineTool(
     },
   },
   async (args) => {
-    const prompt = typeof args.prompt === 'string' ? args.prompt : String(args.prompt ?? '');
+    const prompt = typeof args.prompt === 'string' ? args.prompt : '';
     return askClaude(prompt, {
       model: 'claude-opus-4-8',
       effort: 'high',

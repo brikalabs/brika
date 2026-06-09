@@ -137,6 +137,7 @@ function stringify(value: unknown): string {
   try {
     return JSON.stringify(value);
   } catch {
-    return String(value);
+    // Unserializable (e.g. a circular structure) renders empty, like a missing path.
+    return '';
   }
 }

@@ -11,10 +11,10 @@
  */
 
 import type { Channel, Json } from '@brika/ipc';
-import type { LogLevelType } from '@brika/ipc/contract';
 import {
   blockEmit,
   invokeTool,
+  type LogLevelType,
   listTools as listToolsRpc,
   pushInput as pushInputMsg,
   registerBlock as registerBlockMsg,

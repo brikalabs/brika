@@ -77,8 +77,37 @@ function pingHandle(blockId: string, portId: string) {
   }
 }
 
-// Process new debug events: ping the relevant port handles and feed the latest
-// emitted value into node-body views (useBlockData) for live previews.
+// Drive a block's status ring from a run lifecycle / emit / error event.
+// block.start -> running (received input), block.emit -> completed (produced
+// output), block.error -> error. States persist until the block next runs.
+function applyBlockStatus(
+  event: DebugEvent,
+  setBlockStatus: (blockId: string, status: BlockStatus, output?: unknown) => void
+) {
+  if (!event.blockId) {
+    return;
+  }
+  if (event.type === 'block.start') {
+    setBlockStatus(event.blockId, 'running');
+  } else if (event.type === 'block.error') {
+    setBlockStatus(event.blockId, 'error', event.data);
+  } else if (event.type === 'block.emit') {
+    setBlockStatus(event.blockId, 'completed', event.data);
+  }
+}
+
+// Ping the emitting output handle and every connected downstream input handle.
+function pingEventPorts(blockId: string, port: string, edges: Edge[]) {
+  pingHandle(blockId, port);
+  for (const edge of edges) {
+    if (edge.source === blockId && edge.sourceHandle === port) {
+      pingHandle(edge.target, edge.targetHandle || 'in');
+    }
+  }
+}
+
+// Process new debug events: drive status rings, feed the latest emitted value
+// into node-body views (useBlockData), and ping the relevant port handles.
 function processNewEvents(
   events: DebugEvent[],
   edges: Edge[],
@@ -93,35 +122,15 @@ function processNewEvents(
   }
 
   for (const event of newEvents) {
-    // Drive the per-block status rings from run lifecycle + emit/error events.
-    // block.start -> running (received input), block.emit -> completed (produced
-    // output), block.error -> error. States persist until the block next runs.
-    if (event.blockId) {
-      if (event.type === 'block.start') {
-        setBlockStatus(event.blockId, 'running');
-      } else if (event.type === 'block.error') {
-        setBlockStatus(event.blockId, 'error', event.data);
-      } else if (event.type === 'block.emit') {
-        setBlockStatus(event.blockId, 'completed', event.data);
-      }
-    }
+    applyBlockStatus(event, setBlockStatus);
 
     if (event.type !== 'block.emit' || !event.blockId || !event.port) {
       continue;
     }
-    // Surface the emitted value to the block's node-body view.
     if (event.data !== undefined) {
       setBlockLiveOutput(event.blockId, event.data);
     }
-    // Ping output port
-    pingHandle(event.blockId, event.port);
-
-    // Ping connected input ports
-    for (const edge of edges) {
-      if (edge.source === event.blockId && edge.sourceHandle === event.port) {
-        pingHandle(edge.target, edge.targetHandle || 'in');
-      }
-    }
+    pingEventPorts(event.blockId, event.port, edges);
   }
 }
 

@@ -162,7 +162,7 @@ export class RunStore {
   /** Defensive: finalize any runs still open for a stopping workflow. */
   #closeWorkflowRuns(db: RunsDb, workflowId: string): void {
     const prefix = `${workflowId}:`;
-    for (const [key, runId] of [...this.#openRunIds]) {
+    for (const [key, runId] of this.#openRunIds) {
       if (key.startsWith(prefix)) {
         this.#openRunIds.delete(key);
         this.#finalizeRun(db, runId);

@@ -312,7 +312,7 @@ export const logBlock = defineBlock({
       // `config.message` is resolved by the SDK runtime: any `{{ inputs.in.field }}`
       // expression is already substituted by the time we read it here.
       const message = config.message;
-      log[config.level](message ? message : JSON.stringify(data));
+      log[config.level](message || JSON.stringify(data));
       outputs.out.emit(data);
     });
   },

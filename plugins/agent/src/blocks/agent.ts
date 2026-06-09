@@ -78,14 +78,14 @@ async function executeToolUses(
     }
     const qualifiedId = nameToId.get(jsonStr(b.name) ?? '');
     let resultText: string;
-    if (!qualifiedId) {
-      resultText = `Unknown tool: ${jsonStr(b.name) ?? ''}`;
-    } else {
+    if (qualifiedId) {
       const res = await callTool(qualifiedId, jsonObj(b.input) ?? {});
       resultText = res.ok
         ? (res.content ?? JSON.stringify(res.data ?? null))
         : (res.content ?? 'Tool call failed');
       onToolCall(qualifiedId, resultText);
+    } else {
+      resultText = `Unknown tool: ${jsonStr(b.name) ?? ''}`;
     }
     results.push({ type: 'tool_result', tool_use_id: jsonStr(b.id) ?? '', content: resultText });
   }
