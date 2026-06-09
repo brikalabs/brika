@@ -93,6 +93,13 @@ defineTool(
     const params = paramsSchema.safeParse(args.args);
 
     const controller = getMatterController();
+    // Models sometimes invent nodeIds ("light1") instead of resolving them.
+    // Distinguish that from a real command failure so the caller can recover.
+    const known = controller.getCommissionedDevices();
+    if (!known.some((device) => device.nodeId === nodeId)) {
+      const ids = known.map((device) => `${device.nodeId} (${device.name})`).join(', ');
+      return `Error: unknown nodeId "${nodeId}". Call list-devices first and use one of the real nodeId values${ids ? `: ${ids}` : '.'}`;
+    }
     const ok = await controller.sendCommand(
       nodeId,
       command.data,
@@ -100,6 +107,6 @@ defineTool(
     );
     return ok
       ? `Sent "${command.data}" to device ${nodeId}.`
-      : `Command "${command.data}" failed on device ${nodeId}.`;
+      : `Command "${command.data}" failed on device ${nodeId} (device may be offline).`;
   }
 );
