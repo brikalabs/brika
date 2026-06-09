@@ -14,13 +14,7 @@
     "url": "git+https://github.com/brikalabs/brika.git",
     "directory": "packages/sdk"
   },
-  "keywords": [
-    "brika",
-    "sdk",
-    "plugins",
-    "workflow",
-    "home-automation"
-  ],
+  "keywords": ["brika", "sdk", "plugins", "workflow", "home-automation"],
   "engines": {
     "bun": ">=1.3"
   },
