@@ -311,4 +311,58 @@ describe('isCompatible', () => {
       expect(isCompatible(T.array(T.string), T.obj({}))).toBe(false);
     });
   });
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Numeric equivalence (integer/float/double are interchangeable with number)
+  // ─────────────────────────────────────────────────────────────────────────
+
+  describe('numeric equivalence', () => {
+    it('number is compatible with number', () => {
+      expect(isCompatible(T.number, T.number)).toBe(true);
+    });
+
+    it('number widens to string', () => {
+      expect(isCompatible(T.number, T.string)).toBe(true);
+    });
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Enum vs incompatible primitive (boolean, null)
+  // ─────────────────────────────────────────────────────────────────────────
+
+  describe('enum vs incompatible primitive', () => {
+    it('string enum is NOT compatible with boolean primitive', () => {
+      expect(isCompatible(T.enum(['a', 'b']), T.boolean)).toBe(false);
+    });
+
+    it('string enum is NOT compatible with null primitive', () => {
+      expect(isCompatible(T.enum(['a']), T.null)).toBe(false);
+    });
+
+    it('number enum is NOT compatible with boolean primitive', () => {
+      expect(isCompatible(T.enum([1, 2]), T.boolean)).toBe(false);
+    });
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Literal vs incompatible primitive
+  // ─────────────────────────────────────────────────────────────────────────
+
+  describe('literal vs incompatible primitive', () => {
+    it('string literal is NOT compatible with null primitive', () => {
+      expect(isCompatible(T.literal('hello'), T.null)).toBe(false);
+    });
+
+    it('number literal is NOT compatible with null primitive', () => {
+      expect(isCompatible(T.literal(42), T.null)).toBe(false);
+    });
+
+    it('boolean literal is NOT compatible with null primitive', () => {
+      expect(isCompatible(T.literal(true), T.null)).toBe(false);
+    });
+
+    it('boolean literal is NOT compatible with number primitive', () => {
+      expect(isCompatible(T.literal(false), T.number)).toBe(false);
+    });
+  });
 });

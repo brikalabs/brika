@@ -88,3 +88,54 @@ describe('templatedConfigView', () => {
     expect(view.flag).toBe(true);
   });
 });
+
+describe('resolveTemplate edge cases', () => {
+  test('empty expression {{ }} resolves to empty string (empty path)', () => {
+    // An expression whose entire content is whitespace yields an empty path
+    // (segments.length === 0), which returns undefined, which stringifies to ''.
+    const s = scope({});
+    expect(resolveTemplate('[{{   }}]', s)).toBe('[]');
+  });
+
+  test('navigate returns undefined when current is a primitive (non-object)', () => {
+    // inputs.greeting is a string; navigating deeper into it yields undefined.
+    const s = scope({ inputs: { greeting: 'hello' } });
+    expect(resolveTemplate('{{ inputs.greeting.length }}', s)).toBe('');
+  });
+
+  test('navigate returns undefined when current is null', () => {
+    // A null value mid-path is dead — the rest resolves to empty.
+    const s = scope({ inputs: { data: null } });
+    expect(resolveTemplate('{{ inputs.data.field }}', s)).toBe('');
+  });
+
+  test('stringify renders a bigint as a string', () => {
+    // BigInt is a valid scalar; should not fall through to JSON.stringify.
+    const s = scope({ inputs: { n: BigInt(12345678901234) } });
+    expect(resolveTemplate('{{ inputs.n }}', s)).toBe('12345678901234');
+  });
+
+  test('stringify renders undefined/null as empty string', () => {
+    const s = scope({ inputs: { a: undefined, b: null } });
+    expect(resolveTemplate('[{{ inputs.a }}][{{ inputs.b }}]', s)).toBe('[][]');
+  });
+
+  test('stringify falls back to empty string for circular JSON', () => {
+    // A circular reference makes JSON.stringify throw; we expect empty string.
+    const circular: Record<string, unknown> = {};
+    circular.self = circular;
+    const s = scope({ inputs: { obj: circular } });
+    // The expression resolves to the circular object; stringify catches the error.
+    expect(resolveTemplate('{{ inputs.obj }}', s)).toBe('');
+  });
+
+  test('array index access works via navigate', () => {
+    const s = scope({ inputs: { items: ['a', 'b', 'c'] } });
+    expect(resolveTemplate('{{ inputs.items.2 }}', s)).toBe('c');
+  });
+
+  test('non-integer key on array resolves to undefined', () => {
+    const s = scope({ inputs: { items: ['a', 'b'] } });
+    expect(resolveTemplate('[{{ inputs.items.foo }}]', s)).toBe('[]');
+  });
+});

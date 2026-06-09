@@ -400,6 +400,57 @@ describe('saveConfig', () => {
     expect(resolved.config.services[0]?.url).toBe('http://localhost:9999/');
   });
 
+  test('includes cwd in serialized output when non-null', async () => {
+    await saveConfig(
+      {
+        services: [
+          {
+            id: 'a',
+            label: 'A',
+            command: 'echo a',
+            env: {},
+            dependsOn: [],
+            health: { kind: 'none' },
+            url: null,
+            cwd: 'apps/sub',
+            port: null,
+          },
+        ],
+      },
+      workDir
+    );
+    const text = await readFile(join(workDir, 'mortar.yml'), 'utf8');
+    expect(text).toContain('cwd:');
+    const resolved = await loadConfig(workDir);
+    expect(resolved.config.services[0]?.cwd).toBe('apps/sub');
+  });
+
+  test('includes port in serialized output when non-null', async () => {
+    await saveConfig(
+      {
+        services: [
+          {
+            id: 'a',
+            label: 'A',
+            command: 'echo a',
+            env: {},
+            dependsOn: [],
+            health: { kind: 'none' },
+            url: null,
+            cwd: null,
+            port: 5173,
+          },
+        ],
+      },
+      workDir
+    );
+    const text = await readFile(join(workDir, 'mortar.yml'), 'utf8');
+    expect(text).toContain('port:');
+    const resolved = await loadConfig(workDir);
+    // port is preserved; the validator upgrades health from none to tcp
+    expect(resolved.config.services[0]?.port).toBe(5173);
+  });
+
   test('omits url:null from serialized output', async () => {
     await saveConfig(
       {
@@ -447,6 +498,10 @@ describe('serviceUrl', () => {
         5678
       )
     ).toBe('http://x/?q=1');
+  });
+
+  test('uses the declared spec.port to build the URL', () => {
+    expect(serviceUrl({ ...base, port: 3000 })).toBe('http://localhost:3000/');
   });
 
   test('uses the runtime-detected port when no explicit url', () => {

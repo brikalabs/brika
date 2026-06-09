@@ -1,5 +1,10 @@
-import { describe, expect, test } from 'bun:test';
+import { afterEach, describe, expect, test } from 'bun:test';
+import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 import { loadMigrations, loadTarBytes, loadWorkspaceLocaleArchive } from './macros';
+
+// REPO_ROOT mirrors what macros.ts resolves internally: three levels up from src/
+const REPO_ROOT = resolve(import.meta.dir, '../../..');
 
 describe('loadMigrations', () => {
   test('returns drizzle MigrationMeta[] for an existing migrations folder', () => {
@@ -55,6 +60,21 @@ describe('loadTarBytes', () => {
 
   test('returns an empty array when the path is a file (not a directory)', async () => {
     expect(await loadTarBytes('packages/db/package.json')).toEqual([]);
+  });
+
+  test('returns an empty array when the directory contains only zero-byte files', async () => {
+    // Create a temp directory under REPO_ROOT so loadTarBytes can resolve it
+    const relPath = join('.brika-test-empty', `run-${Date.now()}`);
+    const absPath = join(REPO_ROOT, relPath);
+    mkdirSync(absPath, { recursive: true });
+    writeFileSync(join(absPath, 'zero-a.txt'), '');
+    writeFileSync(join(absPath, 'zero-b.txt'), '');
+    try {
+      const result = await loadTarBytes(relPath);
+      expect(result).toEqual([]);
+    } finally {
+      rmSync(join(REPO_ROOT, '.brika-test-empty'), { recursive: true, force: true });
+    }
   });
 });
 

@@ -26,4 +26,40 @@ describe('installFakeClock', () => {
     await clock.advance(3);
     expect(count).toBe(3);
   });
+
+  test('clearTimeout with undefined id is a no-op', () => {
+    clock = installFakeClock();
+    // cancel(undefined) should not throw and should leave the queue intact.
+    expect(() => {
+      clearTimeout(undefined as unknown as number);
+    }).not.toThrow();
+  });
+
+  test('clearInterval with undefined id is a no-op', () => {
+    clock = installFakeClock();
+    expect(() => {
+      clearInterval(undefined as unknown as number);
+    }).not.toThrow();
+  });
+
+  test('setTimeout fires at the correct fake time', async () => {
+    clock = installFakeClock(1000);
+    let firedAt = 0;
+    setTimeout(() => {
+      firedAt = Date.now();
+    }, 500);
+    await clock.advance(500);
+    expect(firedAt).toBe(1500);
+  });
+
+  test('clearTimeout cancels a pending timer', async () => {
+    clock = installFakeClock();
+    let fired = false;
+    const id = setTimeout(() => {
+      fired = true;
+    }, 100);
+    clearTimeout(id);
+    await clock.advance(200);
+    expect(fired).toBe(false);
+  });
 });

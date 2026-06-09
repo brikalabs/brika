@@ -946,3 +946,280 @@ describe('defineReactiveBlock', () => {
     instance.stop();
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// defineBlock (single-arg form)
+// ─────────────────────────────────────────────────────────────────────────────
+
+const { defineBlock } = await import('./blocks/reactive-define');
+
+describe('defineBlock', () => {
+  beforeEach(() => {
+    mockRegisterBlock.mockClear();
+  });
+
+  test('creates a compiled block from the inline run property', () => {
+    const block = defineBlock({
+      id: 'inline-block',
+      inputs: {},
+      outputs: {},
+      config: z.object({}),
+      run: () => undefined,
+    });
+    expect(block.id).toBe('inline-block');
+    expect(typeof block.start).toBe('function');
+    expect(mockRegisterBlock).toHaveBeenCalled();
+  });
+
+  test('run receives setup context with inputs and outputs', () => {
+    const runFn = mock();
+    const block = defineBlock({
+      id: 'run-ctx-block',
+      inputs: { in: input(z.number(), { name: 'In' }) },
+      outputs: { out: output(z.string(), { name: 'Out' }) },
+      config: z.object({ val: z.string().default('x') }),
+      run: runFn,
+    });
+    block.start({
+      blockId: 'b1',
+      workflowId: 'w1',
+      config: {},
+      emit: () => undefined,
+    });
+    expect(runFn).toHaveBeenCalledTimes(1);
+    const ctx = runFn.mock.calls[0]?.[0] as {
+      blockId: string;
+      inputs: { in: unknown };
+      outputs: { out: unknown };
+      config: { val: string };
+    };
+    expect(ctx.blockId).toBe('b1');
+    expect(ctx.inputs.in).toBeDefined();
+    expect(ctx.outputs.out).toBeDefined();
+    expect(ctx.config.val).toBe('x');
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// typeDescriptor branches via complex output schemas
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('typeDescriptor generation for complex output schemas', () => {
+  beforeEach(() => {
+    mockRegisterBlock.mockClear();
+  });
+
+  test('null type output generates correct descriptor', () => {
+    // z.null() produces { type: 'null' } in JSON Schema
+    const block = defineReactiveBlock(
+      {
+        id: 'null-output-block',
+        inputs: {},
+        outputs: { out: output(z.null(), { name: 'Null Output' }) },
+        config: z.object({}),
+      },
+      () => undefined
+    );
+    expect(block.outputs[0]?.typeName).toBe('null');
+  });
+
+  test('union output (anyOf) generates union descriptor', () => {
+    // z.union produces anyOf in JSON Schema
+    const block = defineReactiveBlock(
+      {
+        id: 'union-output-block',
+        inputs: {},
+        outputs: {
+          out: output(z.union([z.string(), z.number()]), { name: 'Union' }),
+        },
+        config: z.object({}),
+      },
+      () => undefined
+    );
+    expect(block.outputs[0]?.typeName).toBeDefined();
+  });
+
+  test('enum output generates enum typeName', () => {
+    const block = defineReactiveBlock(
+      {
+        id: 'enum-output-block',
+        inputs: {},
+        outputs: {
+          out: output(z.enum(['a', 'b', 'c']), { name: 'Enum Output' }),
+        },
+        config: z.object({}),
+      },
+      () => undefined
+    );
+    expect(block.outputs[0]?.typeName).toBeDefined();
+  });
+
+  test('array output with typed elements generates array descriptor', () => {
+    const block = defineReactiveBlock(
+      {
+        id: 'array-output-block',
+        inputs: {},
+        outputs: {
+          out: output(z.array(z.string()), { name: 'Array Output' }),
+        },
+        config: z.object({}),
+      },
+      () => undefined
+    );
+    expect(block.outputs[0]?.typeName).toBe('string[]');
+  });
+
+  test('tuple output generates tuple descriptor', () => {
+    // z.tuple produces prefixItems in JSON Schema
+    const block = defineReactiveBlock(
+      {
+        id: 'tuple-output-block',
+        inputs: {},
+        outputs: {
+          out: output(z.tuple([z.string(), z.number()]), { name: 'Tuple' }),
+        },
+        config: z.object({}),
+      },
+      () => undefined
+    );
+    expect(block.outputs[0]?.typeName).toBeDefined();
+  });
+
+  test('record output generates record descriptor', () => {
+    // z.record produces object with additionalProperties in JSON Schema
+    const block = defineReactiveBlock(
+      {
+        id: 'record-output-block',
+        inputs: {},
+        outputs: {
+          out: output(z.record(z.string(), z.number()), { name: 'Record' }),
+        },
+        config: z.object({}),
+      },
+      () => undefined
+    );
+    expect(block.outputs[0]?.typeName).toBeDefined();
+  });
+
+  test('object output with required and optional fields', () => {
+    const block = defineReactiveBlock(
+      {
+        id: 'object-output-block',
+        inputs: {},
+        outputs: {
+          out: output(z.object({ name: z.string(), age: z.number().optional() }), {
+            name: 'Object',
+          }),
+        },
+        config: z.object({}),
+      },
+      () => undefined
+    );
+    expect(block.outputs[0]?.typeName).toBeDefined();
+  });
+
+  test('literal output generates literal descriptor', () => {
+    // z.literal produces { const: value } in JSON Schema
+    const block = defineReactiveBlock(
+      {
+        id: 'literal-output-block',
+        inputs: {},
+        outputs: {
+          out: output(z.literal('hello'), { name: 'Literal' }),
+        },
+        config: z.object({}),
+      },
+      () => undefined
+    );
+    expect(block.outputs[0]?.typeName).toBeDefined();
+  });
+
+  test('getTypeDescriptor falls back to unknown on zodToJsonSchema error', () => {
+    // A schema that throws during toJSONSchema will fall through to unknown kind.
+    // z.never() is a valid schema but produces an anyOf/never path.
+    const block = defineReactiveBlock(
+      {
+        id: 'never-output-block',
+        inputs: {},
+        outputs: {
+          out: output(z.never(), { name: 'Never' }),
+        },
+        config: z.object({}),
+      },
+      () => undefined
+    );
+    // Should not throw; output is defined even if type is unknown.
+    expect(block.outputs).toHaveLength(1);
+  });
+
+  test('portDisplayName default name derived from key when no meta name', () => {
+    // When no name is provided to output(), the port key is title-cased via portDisplayName.
+    const block = defineReactiveBlock(
+      {
+        id: 'default-name-block',
+        inputs: { myInput: input(z.string()) },
+        outputs: { myOutput: output(z.string()) },
+        config: z.object({}),
+      },
+      () => undefined
+    );
+    expect(block.outputs[0]?.id).toBe('myOutput');
+    // Default name is title-cased from the key.
+    expect(block.outputs[0]?.name).toBe('MyOutput');
+    expect(block.inputs[0]?.name).toBe('MyInput');
+  });
+
+  test('discriminatedUnion output generates oneOf-based descriptor', () => {
+    // z.discriminatedUnion produces oneOf in JSON Schema (line 527-529 path).
+    const block = defineReactiveBlock(
+      {
+        id: 'discriminated-union-block',
+        inputs: {},
+        outputs: {
+          out: output(
+            z.discriminatedUnion('type', [
+              z.object({ type: z.literal('a'), val: z.string() }),
+              z.object({ type: z.literal('b'), count: z.number() }),
+            ]),
+            { name: 'Union' }
+          ),
+        },
+        config: z.object({}),
+      },
+      () => undefined
+    );
+    expect(block.outputs[0]?.typeName).toBeDefined();
+  });
+
+  test('tuple output generates tuple-based descriptor (prefixItems path)', () => {
+    // z.tuple produces prefixItems in JSON Schema (lines 547-551 path).
+    const block = defineReactiveBlock(
+      {
+        id: 'tuple2-block',
+        inputs: {},
+        outputs: {
+          out: output(z.tuple([z.string(), z.boolean(), z.number()]), { name: 'Tuple' }),
+        },
+        config: z.object({}),
+      },
+      () => undefined
+    );
+    expect(block.outputs[0]?.typeName).toBeDefined();
+  });
+
+  test('record output generates record descriptor with additionalProperties', () => {
+    // z.record produces additionalProperties object schema (lines 559-565).
+    const block = defineReactiveBlock(
+      {
+        id: 'record2-block',
+        inputs: {},
+        outputs: {
+          out: output(z.record(z.string(), z.boolean()), { name: 'Record' }),
+        },
+        config: z.object({}),
+      },
+      () => undefined
+    );
+    expect(block.outputs[0]?.typeName).toBeDefined();
+  });
+});

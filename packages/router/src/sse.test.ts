@@ -5,7 +5,7 @@
  * `String()`, finally-close on success) that the original suite missed.
  */
 
-import { describe, expect, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'bun:test';
 import { createAsyncSSEStream, createSSEStream } from './sse';
 
 describe('SSE', () => {
@@ -254,5 +254,149 @@ describe('createAsyncSSEStream (extra coverage)', () => {
     expect(chunk).toContain('failed');
 
     await reader.cancel();
+  });
+});
+
+describe('createSSEStream (heartbeat)', () => {
+  test('setInterval callback enqueues the heartbeat comment frame', async () => {
+    // Intercept setInterval to capture the heartbeat callback so we can fire
+    // it synchronously without waiting 30 s or using fake timers (which
+    // deadlock against the ReadableStream pull machinery in Bun 1.3.x).
+    let capturedCallback: (() => void) | undefined;
+    const origSetInterval = globalThis.setInterval;
+    const origClearInterval = globalThis.clearInterval;
+    let fakeTimer: ReturnType<typeof setInterval> | undefined;
+
+    globalThis.setInterval = ((cb: () => void, _delay: number) => {
+      capturedCallback = cb;
+      fakeTimer = origSetInterval(() => undefined, 9_999_999);
+      return fakeTimer;
+    }) as typeof setInterval;
+
+    globalThis.clearInterval = ((id: ReturnType<typeof setInterval> | undefined) => {
+      if (id === fakeTimer) {
+        origClearInterval(fakeTimer);
+      }
+    }) as typeof clearInterval;
+
+    try {
+      let capturedClose: (() => void) | undefined;
+      const response = createSSEStream((send, close) => {
+        capturedClose = close;
+        // Send one message so the stream has data to read (the retry prefix
+        // is merged with the first send, so without a send the first read()
+        // would block forever waiting for an enqueue).
+        send({ ping: true });
+      });
+
+      const reader = response.body?.getReader();
+      if (!reader) {
+        throw new Error('Expected readable stream reader');
+      }
+
+      // Read the first chunk (retry: prefix + first send).
+      const firstChunk = await reader.read();
+      const firstText = new TextDecoder().decode(firstChunk.value);
+      expect(firstText).toContain('retry: 500');
+      expect(firstText).toContain('"ping":true');
+
+      // Manually fire the heartbeat callback (simulating 30 s elapsing).
+      if (!capturedCallback) {
+        throw new Error('setInterval callback was not captured');
+      }
+      capturedCallback();
+
+      // The heartbeat chunk is now enqueued.
+      const heartbeatChunk = await reader.read();
+      const heartbeatText = new TextDecoder().decode(heartbeatChunk.value);
+      expect(heartbeatText).toBe(': heartbeat\n\n');
+
+      capturedClose?.();
+      await reader.cancel();
+    } finally {
+      globalThis.setInterval = origSetInterval;
+      globalThis.clearInterval = origClearInterval;
+    }
+  });
+
+  test('clearInterval is called when close() is invoked', async () => {
+    let clearIntervalCallCount = 0;
+    const origSetInterval = globalThis.setInterval;
+    const origClearInterval = globalThis.clearInterval;
+
+    globalThis.setInterval = ((_cb: () => void, _delay: number) => {
+      return origSetInterval(() => undefined, 9_999_999);
+    }) as typeof setInterval;
+
+    globalThis.clearInterval = ((id: ReturnType<typeof setInterval> | undefined) => {
+      clearIntervalCallCount++;
+      origClearInterval(id);
+    }) as typeof clearInterval;
+
+    try {
+      let capturedClose: (() => void) | undefined;
+      const response = createSSEStream((send, close) => {
+        capturedClose = close;
+        send({ ping: true });
+      });
+
+      const reader = response.body?.getReader();
+      if (!reader) {
+        throw new Error('Expected readable stream reader');
+      }
+
+      await reader.read();
+
+      capturedClose?.();
+
+      // clearInterval(heartbeat) runs inside close().
+      expect(clearIntervalCallCount).toBeGreaterThanOrEqual(1);
+
+      await reader.cancel();
+    } finally {
+      globalThis.setInterval = origSetInterval;
+      globalThis.clearInterval = origClearInterval;
+    }
+  });
+
+  test('cancel() calls clearInterval and cleanup', async () => {
+    let clearIntervalCallCount = 0;
+    const origSetInterval = globalThis.setInterval;
+    const origClearInterval = globalThis.clearInterval;
+
+    globalThis.setInterval = ((_cb: () => void, _delay: number) => {
+      return origSetInterval(() => undefined, 9_999_999);
+    }) as typeof setInterval;
+
+    globalThis.clearInterval = ((id: ReturnType<typeof setInterval> | undefined) => {
+      clearIntervalCallCount++;
+      origClearInterval(id);
+    }) as typeof clearInterval;
+
+    let cleaned = false;
+
+    try {
+      const response = createSSEStream((send) => {
+        send({ ping: true });
+        return () => {
+          cleaned = true;
+        };
+      });
+
+      const reader = response.body?.getReader();
+      if (!reader) {
+        throw new Error('Expected readable stream reader');
+      }
+
+      await reader.read();
+
+      await reader.cancel();
+
+      expect(clearIntervalCallCount).toBeGreaterThanOrEqual(1);
+      expect(cleaned).toBe(true);
+    } finally {
+      globalThis.setInterval = origSetInterval;
+      globalThis.clearInterval = origClearInterval;
+    }
   });
 });
