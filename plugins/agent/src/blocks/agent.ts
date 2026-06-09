@@ -104,29 +104,56 @@ function logUsage(model: string, usage: TokenUsage): void {
   );
 }
 
-/** Execute each requested tool call via ctx.callTool, returning normalized results. */
-async function runToolCalls(
+/** Stable signature for repeat detection: qualified id + serialized args. */
+function callSignature(qualifiedId: string, args: Record<string, Json>): string {
+  return `${qualifiedId} ${JSON.stringify(args)}`;
+}
+
+/**
+ * Loop-guard nudge. Small local models (live-observed: SmolLM2 burning every
+ * iteration re-calling list-devices) get stuck re-issuing the identical call
+ * instead of using its result; repeating it verbatim would waste the whole
+ * iteration budget, so the repeat is answered with this corrective text
+ * instead of being executed.
+ */
+const REPEAT_NUDGE =
+  'You already called this tool with these exact arguments; its result is above. Do not repeat the call. Use that result to take the next step toward the goal, or give your final answer.';
+
+/**
+ * Execute each requested tool call via ctx.callTool, returning normalized
+ * results. A call that exactly repeats one from the PREVIOUS iteration is not
+ * executed; it gets the corrective nudge as its result.
+ */
+export async function runToolCalls(
   calls: ToolCall[],
   nameToId: Map<string, string>,
   callTool: CallTool,
-  onToolCall: (tool: string, result: string) => void
-): Promise<ToolResult[]> {
+  onToolCall: (tool: string, result: string) => void,
+  prevSignatures: ReadonlySet<string>
+): Promise<{ results: ToolResult[]; signatures: Set<string> }> {
   const results: ToolResult[] = [];
+  const signatures = new Set<string>();
   for (const call of calls) {
     const qualifiedId = nameToId.get(call.name);
     let content: string;
     if (qualifiedId) {
-      const res = await callTool(qualifiedId, call.args);
-      content = res.ok
-        ? (res.content ?? JSON.stringify(res.data ?? null))
-        : (res.content ?? 'Tool call failed');
-      onToolCall(qualifiedId, content);
+      const signature = callSignature(qualifiedId, call.args);
+      signatures.add(signature);
+      if (prevSignatures.has(signature)) {
+        content = REPEAT_NUDGE;
+      } else {
+        const res = await callTool(qualifiedId, call.args);
+        content = res.ok
+          ? (res.content ?? JSON.stringify(res.data ?? null))
+          : (res.content ?? 'Tool call failed');
+        onToolCall(qualifiedId, content);
+      }
     } else {
       content = `Unknown tool: ${call.name}`;
     }
     results.push({ id: call.id, content });
   }
-  return results;
+  return { results, signatures };
 }
 
 /**
@@ -197,6 +224,7 @@ export const agentBlock = defineBlock({
         const { tools, nameToId } = buildToolSet(await listTools(), new Set(config.tools));
         const history: ChatMessage[] = [{ role: 'user', text: prompt }];
         let total: TokenUsage = { inputTokens: 0, outputTokens: 0 };
+        let prevSignatures: ReadonlySet<string> = new Set<string>();
 
         const system = config.systemPrompt?.trim() ? config.systemPrompt : DEFAULT_SYSTEM_PROMPT;
         for (let i = 0; i < config.maxIterations; i++) {
@@ -220,9 +248,14 @@ export const agentBlock = defineBlock({
             return;
           }
 
-          const results = await runToolCalls(turn.toolCalls, nameToId, callTool, (tool, result) =>
-            outputs.toolCall.emit({ tool, result })
+          const { results, signatures } = await runToolCalls(
+            turn.toolCalls,
+            nameToId,
+            callTool,
+            (tool, result) => outputs.toolCall.emit({ tool, result }),
+            prevSignatures
           );
+          prevSignatures = signatures;
           history.push({ role: 'tool', results });
         }
 
