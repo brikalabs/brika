@@ -186,7 +186,10 @@ export function DebugPanel({ workflow, onCollapse, className }: Readonly<DebugPa
 
       {/* Events */}
       {tab === 'live' && (
-        <ScrollArea className="min-h-0 flex-1 overflow-hidden" ref={scrollRef}>
+        <ScrollArea
+          className="[&_[data-radix-scroll-area-viewport]>div]:block! min-h-0 flex-1 overflow-hidden [&_[data-radix-scroll-area-viewport]>div]:w-full [&_[data-radix-scroll-area-viewport]>div]:max-w-full"
+          ref={scrollRef}
+        >
           {filteredEvents.length === 0 ? (
             <div className="flex h-full items-center justify-center py-12">
               <div className="text-center">

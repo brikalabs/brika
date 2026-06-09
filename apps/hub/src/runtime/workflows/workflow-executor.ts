@@ -264,6 +264,15 @@ export class WorkflowExecutor {
     return this.#instanceIds.has(blockId);
   }
 
+  /**
+   * Last value seen on each output port since start. Lets the editor restore
+   * node previews and {{ }} resolution after a reload instead of waiting for
+   * the next emission.
+   */
+  portBuffers(): PortBuffer[] {
+    return [...this.#buffers.values()];
+  }
+
   // ─────────────────────────────────────────────────────────────────────────────
   // Event Listeners
   // ─────────────────────────────────────────────────────────────────────────────

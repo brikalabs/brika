@@ -105,13 +105,25 @@ const StatusIndicator = memo(function StatusIndicator({
   }
 
   if (status === 'running') {
-    return <Loader2 className="size-4 animate-spin text-status-running" />;
+    return (
+      <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-status-running/15">
+        <Loader2 className="size-3 animate-spin text-status-running" />
+      </span>
+    );
   }
   if (status === 'completed') {
-    return <CheckCircle className="size-4 text-status-completed" />;
+    return (
+      <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-status-completed/15">
+        <CheckCircle className="size-3 text-status-completed" />
+      </span>
+    );
   }
   if (status === 'error') {
-    return <XCircle className="size-4 text-status-error" />;
+    return (
+      <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-status-error/15">
+        <XCircle className="size-3 text-status-error" />
+      </span>
+    );
   }
   return null;
 });
@@ -471,8 +483,13 @@ function RunBlockButton({
   };
 
   return (
-    <Button size="sm" variant="secondary" className="h-7 gap-1.5 shadow-md" onClick={run}>
-      <Play className="size-3.5" />
+    <Button
+      size="sm"
+      variant="outline"
+      className="h-7 gap-1.5 rounded-full border-primary/30 bg-background/95 px-3 font-medium text-primary text-xs shadow-lg backdrop-blur hover:bg-primary/10 hover:text-primary"
+      onClick={run}
+    >
+      <Play className="size-3 fill-current" />
       {t('workflows:editor.runBlock.label')}
     </Button>
   );
@@ -512,8 +529,8 @@ export const BlockNode = memo(function BlockNode(props: NodeProps) {
   const statusStyles: Record<string, string> = {
     idle: '',
     running: 'ring-2 ring-status-running ring-offset-2 ring-offset-background animate-pulse',
-    completed: 'ring-2 ring-status-completed ring-offset-1 ring-offset-background',
-    error: 'ring-2 ring-status-error ring-offset-1 ring-offset-background',
+    completed: 'ring-1 ring-status-completed/50',
+    error: 'ring-1 ring-status-error/60',
   };
 
   return (

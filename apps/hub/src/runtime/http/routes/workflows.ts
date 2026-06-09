@@ -199,6 +199,19 @@ export const workflowsRoutes = group({
       },
     }),
 
+    // Last-seen output value per port of a RUNNING workflow. The editor seeds
+    // its live previews and {{ }} view-resolution from this on load, so node
+    // views keep their last data across reloads instead of starting blank.
+    route.get({
+      path: '/:id/values',
+      params: z.object({
+        id: workflowIdSchema,
+      }),
+      handler: ({ params, inject }) => {
+        return inject(WorkflowEngine).portValues(params.id);
+      },
+    }),
+
     route.get({
       path: '/:id',
       params: z.object({

@@ -35,7 +35,7 @@ import { useCapture } from '@/features/analytics/hooks';
 import { fetcher } from '@/lib/query';
 import { useLocale } from '@/lib/use-locale';
 import '@xyflow/react/dist/style.css';
-import type { Workflow } from '../api';
+import { fetchWorkflowPortValues, type Workflow } from '../api';
 import { type DebugEvent, useDebugStream } from '../debug';
 import { BlockNode } from './BlockNode';
 import { type BlockDefinition, BlockToolbar, type BlockTypeInfo } from './BlockToolbar';
@@ -777,6 +777,29 @@ function WorkflowEditorWithBlocks({
       setPortValue
     );
   }, [events, edges, setBlockLiveOutput, setBlockStatus, setPortValue]);
+
+  // Seed last-seen port values from the hub once per workflow, so previews
+  // and node views (Image, ...) keep their last data across editor reloads.
+  const seededWorkflowRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (seededWorkflowRef.current === workflow.id) {
+      return;
+    }
+    seededWorkflowRef.current = workflow.id;
+    let cancelled = false;
+    fetchWorkflowPortValues(workflow.id).then((values) => {
+      if (cancelled) {
+        return;
+      }
+      for (const entry of values) {
+        setPortValue(entry.blockId, entry.port, entry.value);
+        setBlockLiveOutput(entry.blockId, entry.value);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [workflow.id, setPortValue, setBlockLiveOutput]);
 
   // Live input values per node (edge wiring x last emitted port values), the
   // editor-side scope for resolving {{ }} in node-body views.

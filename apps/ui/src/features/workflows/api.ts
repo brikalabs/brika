@@ -174,6 +174,23 @@ export async function disableWorkflow(id: string): Promise<{
   return res.json();
 }
 
+export interface PortValue {
+  blockId: string;
+  port: string;
+  value: unknown;
+  ts: number;
+  count: number;
+}
+
+/** Last-seen output values per port of a running workflow (empty when stopped). */
+export async function fetchWorkflowPortValues(id: string): Promise<PortValue[]> {
+  const res = await fetch(`${API_BASE}/workflows/${id}/values`);
+  if (!res.ok) {
+    return [];
+  }
+  return res.json();
+}
+
 /** Manually poke a block's input on a RUNNING workflow (the Run-once button). */
 export async function injectBlock(
   blockId: string,

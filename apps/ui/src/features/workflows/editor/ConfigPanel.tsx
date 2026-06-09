@@ -1913,7 +1913,7 @@ export function ConfigPanel({
         onCollapse={onCollapse}
       />
 
-      <ScrollArea className="min-h-0 flex-1 overflow-hidden">
+      <ScrollArea className="[&_[data-radix-scroll-area-viewport]>div]:block! min-h-0 flex-1 overflow-hidden [&_[data-radix-scroll-area-viewport]>div]:w-full [&_[data-radix-scroll-area-viewport]>div]:max-w-full">
         <div className="p-4">
           {viewModuleUrl && pluginUid && blockData.pluginId ? (
             <ClientBlockView

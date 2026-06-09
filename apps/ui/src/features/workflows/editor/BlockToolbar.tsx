@@ -367,7 +367,7 @@ export function BlockToolbar({ onDragStart, onCollapse, className }: Readonly<Bl
         </InputGroup>
       </div>
 
-      <ScrollArea className="min-h-0 flex-1 overflow-hidden">
+      <ScrollArea className="[&_[data-radix-scroll-area-viewport]>div]:block! min-h-0 flex-1 overflow-hidden [&_[data-radix-scroll-area-viewport]>div]:w-full [&_[data-radix-scroll-area-viewport]>div]:max-w-full">
         <div className="space-y-4 p-3">
           {isLoading && (
             <div className="space-y-2">

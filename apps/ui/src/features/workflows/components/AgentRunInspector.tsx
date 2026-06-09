@@ -217,7 +217,7 @@ export function AgentRunInspector({
           </span>
         )}
       </div>
-      <ScrollArea className="h-90">
+      <ScrollArea className="[&_[data-radix-scroll-area-viewport]>div]:block! h-90 [&_[data-radix-scroll-area-viewport]>div]:w-full [&_[data-radix-scroll-area-viewport]>div]:max-w-full">
         {timeline.length > 0 ? (
           <div className="pt-1">{timeline.map((entry, i) => renderEntry(entry, i))}</div>
         ) : (

@@ -97,6 +97,8 @@ export type { Logger } from './api/logging';
 export { log } from './api/logging';
 export type { RetryOptions } from './api/retry';
 export { retry } from './api/retry';
+export type { NormalizedMedia } from './media';
+export { bytesToDataUrl, dataUrlToBytes, normalizeMedia, sniffMimeType } from './media';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Analytics

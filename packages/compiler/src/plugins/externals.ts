@@ -11,9 +11,10 @@ const BRIDGE: Readonly<Record<string, string>> = BRIDGE_GLOBALS;
 /**
  * @brika/sdk subpaths that a browser module may import directly even though they
  * are NOT bridged: they bundle as real, react-free code. `@brika/sdk/brick`
- * (the `defineBrick` descriptor) is imported by a single-file brick's view.
+ * (the `defineBrick` descriptor) is imported by a single-file brick's view;
+ * `@brika/sdk/media` (pure media normalization helpers) by media views.
  */
-const BROWSER_SAFE = ['@brika/sdk/brick'] as const;
+const BROWSER_SAFE = ['@brika/sdk/brick', '@brika/sdk/media'] as const;
 
 /**
  * The exact set of import specifiers a browser-compiled plugin module (brick or

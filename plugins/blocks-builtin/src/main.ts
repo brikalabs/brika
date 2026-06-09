@@ -17,6 +17,7 @@ import {
   subscribeSpark,
   z,
 } from '@brika/sdk';
+import { bytesToDataUrl, normalizeMedia } from '@brika/sdk/media';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Action Block - Call a tool with arguments
@@ -497,14 +498,63 @@ export const image = defineBlock({
     in: input(z.generic(), { name: 'Input' }),
   },
   outputs: {
-    out: output(z.passthrough('in'), { name: 'Output' }),
+    out: output(z.generic(), { name: 'Output' }),
+    error: output(z.object({ message: z.string() }), { name: 'Error' }),
   },
   config: z.object({
-    url: z.string().optional().describe('Image URL to display'),
+    url: z.string().optional().describe('Image URL when nothing is wired in (supports {{ }})'),
     alt: z.string().optional().describe('Alternative text'),
+    format: z
+      .enum(['auto', 'url', 'data-url', 'binary'])
+      .default('auto')
+      .describe(
+        'Output: auto passes the input through; url emits a URL string; data-url emits a base64 data URL; binary emits raw bytes'
+      ),
   }),
-  run: ({ inputs, outputs }) => {
-    inputs.in.on((data) => outputs.out.emit(data));
+  run: ({ inputs, outputs, config, emit, log }) => {
+    // The out port is generic (its concrete type depends on `format`), so the
+    // raw context emit is used; `error` stays a typed emitter.
+    inputs.in.on((data) => {
+      const media = normalizeMedia(data) ?? normalizeMedia(config.url ?? '');
+      if (!media) {
+        outputs.error.emit({
+          message: 'Not media: pass a URL string, raw bytes, or { url, bytes, mimeType }',
+        });
+        return;
+      }
+      switch (config.format) {
+        case 'url':
+          if (media.url) {
+            emit('out', media.url);
+          } else if (media.bytes) {
+            emit('out', bytesToDataUrl(media.bytes, media.mimeType));
+          }
+          return;
+        case 'data-url':
+          if (media.bytes) {
+            emit('out', bytesToDataUrl(media.bytes, media.mimeType));
+          } else {
+            log.warn('No bytes to encode; this block does no network fetch', {
+              hint: 'Put an HTTP Request block before it to download the URL',
+            });
+            outputs.error.emit({
+              message: 'No bytes to encode. Download the URL with an HTTP Request block first.',
+            });
+          }
+          return;
+        case 'binary':
+          if (media.bytes) {
+            emit('out', media.bytes);
+          } else {
+            outputs.error.emit({
+              message: 'No bytes available. Download the URL with an HTTP Request block first.',
+            });
+          }
+          return;
+        default:
+          emit('out', data);
+      }
+    });
   },
 });
 
