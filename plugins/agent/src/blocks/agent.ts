@@ -47,6 +47,33 @@ function buildToolSet(
   return { tools, nameToId };
 }
 
+/**
+ * Emit one structured trace entry per agent iteration so the reason -> call-tool
+ * -> observe loop reads as a legible timeline in the live debug Logs (each entry
+ * expands to its reasoning preview, the tools it called, and the running cost).
+ */
+function logStep(
+  step: number,
+  max: number,
+  model: string,
+  turn: { text: string; toolCalls: ToolCall[]; usage?: TokenUsage },
+  nameToId: Map<string, string>,
+  total: TokenUsage
+): void {
+  const calledTools = turn.toolCalls.map((c) => nameToId.get(c.name) ?? c.name);
+  const cost = costForUsage(model, total);
+  const stepTokens = turn.usage ? turn.usage.inputTokens + turn.usage.outputTokens : undefined;
+  log.info(`Agent step ${step}/${max}`, {
+    iteration: step,
+    model,
+    toolCalls: calledTools,
+    cumulativeTokens: total.inputTokens + total.outputTokens,
+    ...(turn.text ? { reasoning: turn.text.slice(0, 280) } : {}),
+    ...(stepTokens !== undefined ? { stepTokens } : {}),
+    ...(cost !== undefined ? { cumulativeCostUsd: Number(cost.toFixed(6)) } : {}),
+  });
+}
+
 /** Log a run's token usage and estimated cost (surfaces in the live debug Logs). */
 function logUsage(model: string, usage: TokenUsage): void {
   if (usage.inputTokens === 0 && usage.outputTokens === 0) {
@@ -166,6 +193,7 @@ export const agentBlock = defineBlock({
             total = addUsage(total, turn.usage);
           }
           history.push({ role: 'assistant', text: turn.text, toolCalls: turn.toolCalls });
+          logStep(i + 1, config.maxIterations, config.model, turn, nameToId, total);
 
           if (turn.toolCalls.length === 0) {
             outputs.reply.emit(turn.text);
