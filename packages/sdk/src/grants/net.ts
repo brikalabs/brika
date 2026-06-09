@@ -180,10 +180,71 @@ export const netFetch = defineGrant(
   }
 );
 
+/**
+ * Scope for the loopback-egress capability. Unlike `net.fetch` (an allow-list
+ * of public hosts), this grant reaches ONLY localhost, and only on the ports
+ * the operator consents to (e.g. 11434 for Ollama, 1234 for LM Studio). The
+ * default empty list reaches nothing.
+ */
+export const LocalNetScopeSchema = z.object({
+  allowLoopbackPorts: z.array(z.number().int().min(1).max(65535)),
+});
+
+export type LocalNetScope = z.infer<typeof LocalNetScopeSchema>;
+
+/**
+ * `dev.brika.net.local` — HTTP to loopback services on consented ports.
+ *
+ * The strict INVERSE of `net.fetch`: the public-internet SSRF guard
+ * (`assertPublicHost`) stays untouched; this grant has its own loopback-only
+ * check (`assertLoopbackHost`) that permits 127.0.0.0/8, ::1, and `localhost`
+ * on an allow-listed port and rejects every other host (including
+ * 169.254.169.254 and RFC1918). Enables local model servers (Ollama / LM
+ * Studio / llama.cpp) without opening an SSRF hole. Same wire shape as
+ * `net.fetch`; redirects are never followed (loopback servers don't redirect,
+ * and following one could escape to a public host).
+ */
+export const netLocal = defineGrant(
+  {
+    id: 'dev.brika.net.local.fetch',
+    args: FetchArgsSchema,
+    result: FetchResultSchema,
+    permission: {
+      name: 'netLocal',
+      scope: LocalNetScopeSchema,
+      defaultScope: { allowLoopbackPorts: [] },
+      icon: 'server',
+    },
+    description: 'Make HTTP requests to local (loopback) services on consented ports',
+    redact: {
+      args: (args) => ({
+        url: args.url,
+        method: args.method,
+        headers: redactHeaders(args.headers),
+        bodyBytes: args.body === undefined ? 0 : args.body.length,
+      }),
+      result: (result) => ({
+        status: result.status,
+        statusText: result.statusText,
+        headers: redactHeaders(result.headers),
+        setCookieCount: result.setCookies.length,
+        bodyBytes: result.body.length,
+        attempts: result.attempts,
+      }),
+    },
+  },
+  () => {
+    throw new Error(
+      'net.local: SDK-side handler invoked — the hub must rebind this spec with a real handler before dispatch.'
+    );
+  }
+);
+
 declare module '../ctx' {
   interface Ctx {
     net: {
       fetch(args: FetchArgs): Promise<FetchResult>;
+      local: { fetch(args: FetchArgs): Promise<FetchResult> };
     };
   }
 }

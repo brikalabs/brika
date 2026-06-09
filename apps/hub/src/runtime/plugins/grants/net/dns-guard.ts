@@ -95,6 +95,32 @@ export async function assertPublicHost(host: string, resolver: DnsResolver): Pro
   }
 }
 
+/**
+ * Strict INVERSE of `assertPublicHost`, for the `net.local` grant: permit ONLY
+ * a loopback host on a consented port, and reject everything else. Reuses
+ * `classifyIp` so the loopback determination shares one audited code path.
+ *
+ * Accepts the literal name `localhost` and any loopback IP literal
+ * (127.0.0.0/8, ::1). Every other host — public, link-local, or RFC1918,
+ * including the 169.254.169.254 metadata endpoint — is rejected, so this can
+ * never become an SSRF pivot. Loopback IP literals need no DNS, so there is no
+ * rebinding window; `localhost` is trusted as the conventional loopback alias.
+ */
+export function assertLoopbackHost(url: URL, allowLoopbackPorts: ReadonlyArray<number>): void {
+  const host = url.hostname.toLowerCase();
+  const isLoopback = host === 'localhost' || classifyIp(host) === 'loopback';
+  if (!isLoopback) {
+    throw errors.netHostNotAllowed({ host, allow: ['loopback only'] });
+  }
+  const port = Number(url.port);
+  if (!Number.isInteger(port) || !allowLoopbackPorts.includes(port)) {
+    throw errors.netHostNotAllowed({
+      host: `${host}:${url.port || '(default)'}`,
+      allow: allowLoopbackPorts.map(String),
+    });
+  }
+}
+
 // ─── IPv4 ───────────────────────────────────────────────────────────────────
 
 function parseIpv4(s: string): [number, number, number, number] | null {

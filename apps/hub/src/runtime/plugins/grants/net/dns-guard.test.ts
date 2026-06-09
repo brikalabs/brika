@@ -8,7 +8,7 @@
 
 import { describe, expect, test } from 'bun:test';
 import { BrikaError } from '@brika/errors';
-import { assertPublicHost, classifyIp } from './dns-guard';
+import { assertLoopbackHost, assertPublicHost, classifyIp } from './dns-guard';
 
 const PUBLIC_IPV4 = [8, 8, 8, 8].join('.');
 
@@ -167,5 +167,43 @@ describe('assertPublicHost', () => {
       host: 'metadata.example',
       category: 'link-local',
     });
+  });
+});
+
+describe('assertLoopbackHost — net.local strict inverse', () => {
+  const allowed = [11434, 1234];
+
+  test('permits loopback hosts on a consented port', () => {
+    expect(() => assertLoopbackHost(new URL('http://127.0.0.1:11434/v1'), allowed)).not.toThrow();
+    expect(() => assertLoopbackHost(new URL('http://localhost:1234/v1'), allowed)).not.toThrow();
+    expect(() => assertLoopbackHost(new URL('http://[::1]:11434/v1'), allowed)).not.toThrow();
+    expect(() => assertLoopbackHost(new URL('http://127.5.6.7:11434/'), allowed)).not.toThrow();
+  });
+
+  test('rejects a loopback host on a non-consented port', () => {
+    expect(() => assertLoopbackHost(new URL('http://127.0.0.1:9999/'), allowed)).toThrow(
+      BrikaError
+    );
+    expect(() => assertLoopbackHost(new URL('http://localhost/'), allowed)).toThrow(BrikaError);
+  });
+
+  test('rejects every non-loopback host (no SSRF pivot)', () => {
+    expect(() => assertLoopbackHost(new URL('http://169.254.169.254:11434/'), allowed)).toThrow(
+      BrikaError
+    );
+    expect(() => assertLoopbackHost(new URL('http://192.168.1.10:11434/'), allowed)).toThrow(
+      BrikaError
+    );
+    expect(() => assertLoopbackHost(new URL('http://10.0.0.5:11434/'), allowed)).toThrow(
+      BrikaError
+    );
+    expect(() => assertLoopbackHost(new URL('http://example.com:11434/'), allowed)).toThrow(
+      BrikaError
+    );
+    expect(() => assertLoopbackHost(new URL('http://8.8.8.8:11434/'), allowed)).toThrow(BrikaError);
+  });
+
+  test('default empty port list reaches nothing', () => {
+    expect(() => assertLoopbackHost(new URL('http://127.0.0.1:11434/'), [])).toThrow(BrikaError);
   });
 });
