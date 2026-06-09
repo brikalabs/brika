@@ -260,13 +260,25 @@ export class PluginManager {
   }
 
   setBlockLogHandler(
-    handler: (instanceId: string, workflowId: string, level: string, message: string) => void
+    handler: (
+      instanceId: string,
+      workflowId: string,
+      level: string,
+      message: string,
+      data?: Json
+    ) => void
   ): void {
     this.#eventHandler.setBlockLogHandler(handler);
   }
 
   clearBlockLogHandler(
-    handler?: (instanceId: string, workflowId: string, level: string, message: string) => void
+    handler?: (
+      instanceId: string,
+      workflowId: string,
+      level: string,
+      message: string,
+      data?: Json
+    ) => void
   ): void {
     this.#eventHandler.clearBlockLogHandler(handler);
   }

@@ -4,7 +4,7 @@
  * Dynamic block node with clear multi-input/multi-output visualization.
  */
 
-import { Badge, cn } from '@brika/clay';
+import { Badge, Button, cn, toast } from '@brika/clay';
 import {
   displayType,
   isCompatible,
@@ -13,7 +13,14 @@ import {
   portKey,
   type TypeDescriptor,
 } from '@brika/type-system';
-import { Handle, type NodeProps, Position, useConnection, useNodeId } from '@xyflow/react';
+import {
+  Handle,
+  type NodeProps,
+  NodeToolbar,
+  Position,
+  useConnection,
+  useNodeId,
+} from '@xyflow/react';
 import {
   CheckCircle,
   Clock,
@@ -21,6 +28,7 @@ import {
   Loader2,
   MessageSquare,
   PencilLine,
+  Play,
   Send,
   Wrench,
   XCircle,
@@ -35,6 +43,7 @@ import {
   BaseNodeHeaderTitle,
 } from '@/components/base-node';
 import { useLocale } from '@/lib/use-locale';
+import { injectBlock } from '../api';
 import { ClientBlockView } from './ClientBlockView';
 import type { BlockStatus } from './useWorkflowEditor';
 import { WorkflowTypeContext } from './WorkflowTypeContext';
@@ -435,6 +444,38 @@ const ExecutionResult = memo(function ExecutionResult({
 const DEFAULT_INPUTS: BlockPort[] = [{ id: 'in', name: 'Input' }];
 const DEFAULT_OUTPUTS: BlockPort[] = [{ id: 'out', name: 'Output' }];
 
+/**
+ * Run-once: poke the block's first input on the running workflow. Shown in the
+ * node toolbar when the node is selected and the block has an input to poke.
+ */
+function RunBlockButton({
+  blockId,
+  port,
+}: Readonly<{
+  blockId: string;
+  port: string;
+}>) {
+  const { t } = useLocale();
+
+  const run = async () => {
+    try {
+      const res = await injectBlock(blockId, port);
+      if (!res.ok) {
+        toast.error(t('workflows:editor.runBlock.notRunning'));
+      }
+    } catch {
+      toast.error(t('workflows:editor.runBlock.failed'));
+    }
+  };
+
+  return (
+    <Button size="sm" variant="secondary" className="h-7 gap-1.5 shadow-md" onClick={run}>
+      <Play className="size-3.5" />
+      {t('workflows:editor.runBlock.label')}
+    </Button>
+  );
+}
+
 export const BlockNode = memo(function BlockNode(props: NodeProps) {
   const { tp } = useLocale();
   const data = props.data as unknown as BlockNodeData;
@@ -471,6 +512,13 @@ export const BlockNode = memo(function BlockNode(props: NodeProps) {
         selected && 'ring-2 ring-primary ring-offset-2'
       )}
     >
+      {/* Run-once toolbar (selected nodes with a pokeable input) */}
+      {inputs.length > 0 && (
+        <NodeToolbar isVisible={selected} position={Position.Right} offset={8}>
+          <RunBlockButton blockId={data.id} port={inputs[0].id} />
+        </NodeToolbar>
+      )}
+
       {/* Input Handles */}
       {inputs.map((port: BlockPort, i: number) => (
         <Port key={port.id} port={port} index={i} total={inputs.length} direction="input" />

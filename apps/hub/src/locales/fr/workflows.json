@@ -55,7 +55,11 @@
     "clear": "Effacer",
     "all": "Tout",
     "logsOnly": "Logs",
-    "emitsOnly": "Émissions"
+    "emitsOnly": "Émissions",
+    "tabs": {
+      "runs": "Exécutions",
+      "live": "Direct"
+    }
   },
   "editor": {
     "title": "Éditeur de Workflow",
@@ -109,6 +113,11 @@
     "connection": {
       "incompatible": "Types incompatibles : {{output}} ne peut pas alimenter {{input}}",
       "selfConnection": "Un bloc ne peut pas se connecter à lui-même"
+    },
+    "runBlock": {
+      "label": "Exécuter",
+      "notRunning": "Activez le workflow pour exécuter des blocs",
+      "failed": "Échec de la demande d'exécution"
     }
   }
 }

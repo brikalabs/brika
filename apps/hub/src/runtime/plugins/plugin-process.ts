@@ -87,7 +87,13 @@ export interface PluginProcessCallbacks {
   onCapture: (name: string, props?: Record<string, Json>, distinctId?: string) => void;
   onBlock: (block: BlockRegistration) => void;
   onBlockEmit: (instanceId: string, port: string, data: Json) => void;
-  onBlockLog: (instanceId: string, workflowId: string, level: string, message: string) => void;
+  onBlockLog: (
+    instanceId: string,
+    workflowId: string,
+    level: string,
+    message: string,
+    data?: Json
+  ) => void;
   onSpark: (spark: SparkRegistration) => void;
   onSparkEmit: (sparkId: string, payload: Json) => void;
   onSparkSubscribe: (
@@ -709,8 +715,8 @@ export class PluginProcess {
       this.callbacks.onBlockEmit(instanceId, port, data);
     });
 
-    this.#channel.on(blockLog, ({ instanceId, workflowId, level, message }) => {
-      this.callbacks.onBlockLog(instanceId, workflowId, level, message);
+    this.#channel.on(blockLog, ({ instanceId, workflowId, level, message, data }) => {
+      this.callbacks.onBlockLog(instanceId, workflowId, level, message, data);
     });
 
     this.#channel.on(registerBrickType, ({ brickType }) => {

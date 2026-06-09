@@ -55,7 +55,11 @@
     "clear": "Clear",
     "all": "All",
     "logsOnly": "Logs",
-    "emitsOnly": "Emits"
+    "emitsOnly": "Emits",
+    "tabs": {
+      "runs": "Runs",
+      "live": "Live"
+    }
   },
   "editor": {
     "title": "Workflow Editor",
@@ -109,6 +113,11 @@
     "connection": {
       "incompatible": "Incompatible types: {{output}} cannot feed {{input}}",
       "selfConnection": "A block cannot connect to itself"
+    },
+    "runBlock": {
+      "label": "Run",
+      "notRunning": "Enable the workflow to run blocks",
+      "failed": "Run request failed"
     }
   }
 }

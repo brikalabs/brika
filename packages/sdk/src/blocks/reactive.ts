@@ -181,6 +181,22 @@ export interface BlockContext<
    * descriptions + input schemas), e.g. to hand them to a model as tools.
    */
   listTools(): Promise<ToolInfo[]>;
+
+  /**
+   * Block-scoped logger. Entries land in the workflow's run trace (and the
+   * live debug stream), keyed to this block, with an optional structured
+   * payload, so per-step data like reasoning, token usage, or cost is
+   * persisted with the run instead of vanishing into the global plugin logs.
+   */
+  readonly log: BlockLogger;
+}
+
+/** Block-scoped structured logger (see {@link BlockContext.log}). */
+export interface BlockLogger {
+  debug(message: string, data?: Json): void;
+  info(message: string, data?: Json): void;
+  warn(message: string, data?: Json): void;
+  error(message: string, data?: Json): void;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

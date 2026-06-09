@@ -1,4 +1,4 @@
-import { defineBlock, input, type Json, log, output, z } from '@brika/sdk';
+import { type BlockLogger, defineBlock, input, type Json, output, z } from '@brika/sdk';
 import { addUsage, costForUsage, type TokenUsage } from '../catalog';
 import {
   type ChatMessage,
@@ -62,10 +62,11 @@ function buildToolSet(
 
 /**
  * Emit one structured trace entry per agent iteration so the reason -> call-tool
- * -> observe loop reads as a legible timeline in the live debug Logs (each entry
- * expands to its reasoning preview, the tools it called, and the running cost).
+ * -> observe loop reads as a legible timeline in the run trace (each entry
+ * carries its reasoning preview, the tools it called, and the running cost).
  */
 function logStep(
+  log: BlockLogger,
   step: number,
   max: number,
   model: string,
@@ -76,6 +77,7 @@ function logStep(
   const cost = costForUsage(model, total);
   const meta: Record<string, Json> = {
     iteration: step,
+    maxIterations: max,
     model,
     toolCalls: turn.toolCalls.map((c) => nameToId.get(c.name) ?? c.name),
     cumulativeTokens: total.inputTokens + total.outputTokens,
@@ -92,15 +94,24 @@ function logStep(
   log.info(`Agent step ${step}/${max}`, meta);
 }
 
-/** Log a run's token usage and estimated cost (surfaces in the live debug Logs). */
-function logUsage(model: string, usage: TokenUsage): void {
+/** Log a run's token usage and estimated cost into the run trace. */
+function logUsage(log: BlockLogger, model: string, usage: TokenUsage): void {
   if (usage.inputTokens === 0 && usage.outputTokens === 0) {
     return;
   }
   const cost = costForUsage(model, usage);
   const costLabel = cost === undefined ? 'cost unavailable' : `~$${cost.toFixed(4)}`;
+  const meta: Record<string, Json> = {
+    model,
+    inputTokens: usage.inputTokens,
+    outputTokens: usage.outputTokens,
+  };
+  if (cost !== undefined) {
+    meta.costUsd = Number(cost.toFixed(6));
+  }
   log.info(
-    `Agent run: ${usage.inputTokens} in / ${usage.outputTokens} out tokens (${model}), ${costLabel}`
+    `Agent run: ${usage.inputTokens} in / ${usage.outputTokens} out tokens (${model}), ${costLabel}`,
+    meta
   );
 }
 
@@ -207,7 +218,7 @@ export const agentBlock = defineBlock({
       .meta({ label: 'Tools', format: 'tool-multiselect' })
       .describe('Which tools the agent may call (none selected = all registered tools)'),
   }),
-  run: ({ inputs, outputs, config, callTool, listTools }) => {
+  run: ({ inputs, outputs, config, callTool, listTools, log }) => {
     inputs.in.on(async (data) => {
       const templated = config.prompt?.trim();
       const prompt = templated && templated.length > 0 ? templated : stringInput(data);
@@ -240,11 +251,11 @@ export const agentBlock = defineBlock({
             total = addUsage(total, turn.usage);
           }
           history.push({ role: 'assistant', text: turn.text, toolCalls: turn.toolCalls });
-          logStep(i + 1, config.maxIterations, model, turn, nameToId, total);
+          logStep(log, i + 1, config.maxIterations, model, turn, nameToId, total);
 
           if (turn.toolCalls.length === 0) {
             outputs.reply.emit(turn.text);
-            logUsage(model, total);
+            logUsage(log, model, total);
             return;
           }
 

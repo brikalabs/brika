@@ -19,11 +19,19 @@ import type { Serializable } from '@brika/serializable';
 import type { z } from 'zod';
 import type { CompiledSpark } from '../api/sparks';
 import type { CompiledReactiveBlock } from '../blocks/reactive-define';
+import type { Json } from '../types';
 import { installFakeClock, type TestClock } from './clock';
 
 interface CapturedSpark {
   id: string;
   payload: unknown;
+}
+
+/** One `ctx.log` entry captured during a harness run. */
+export interface CapturedBlockLog {
+  level: 'debug' | 'info' | 'warn' | 'error';
+  message: string;
+  data?: Json;
 }
 
 // The block runtime resolves sparks/logging through getContext(). We swap the
@@ -88,6 +96,8 @@ export interface BlockHarness {
     /** The most recent payload for one spark, typed by its schema. */
     last<S extends z.ZodType>(spark: CompiledSpark<S>): z.infer<S> | undefined;
   };
+  /** Every `ctx.log` entry the block produced, in order. */
+  readonly logs: ReadonlyArray<CapturedBlockLog>;
   readonly clock: TestClock;
   /** Run the block's cleanup and restore real timers. */
   stop(): void;
@@ -124,11 +134,16 @@ export function runBlock(
     }
   };
 
+  const logs: CapturedBlockLog[] = [];
+
   const instance = block.start({
     blockId: 'test-block',
     workflowId: 'test-workflow',
     config: options.config ?? {},
     emit,
+    log: (level, message, data) => {
+      logs.push({ level, message, data });
+    },
   });
 
   const inputs: Record<string, InputDriver> = {};
@@ -167,6 +182,7 @@ export function runBlock(
   return {
     inputs,
     outputs,
+    logs,
     sparks: {
       get all() {
         return sink;

@@ -1,4 +1,4 @@
-import { defineBlock, input, log, output, z } from '@brika/sdk';
+import { defineBlock, input, output, z } from '@brika/sdk';
 
 /**
  * Call Tool: invoke any hub-registered tool by id from inside a workflow.
@@ -35,7 +35,7 @@ export const callToolBlock = defineBlock({
       .meta({ label: 'Input argument', format: 'tool-arg-select' })
       .describe('Which of the tool arguments the input is passed as'),
   }),
-  run: ({ inputs, outputs, config, callTool }) => {
+  run: ({ inputs, outputs, config, callTool, log }) => {
     inputs.input.on(async (text) => {
       if (!config.tool) {
         outputs.error.emit({ message: 'No tool selected. Pick a tool in the block config.' });

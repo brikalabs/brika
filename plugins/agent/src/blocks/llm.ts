@@ -1,4 +1,4 @@
-import { defineBlock, input, log, output, z } from '@brika/sdk';
+import { defineBlock, input, output, z } from '@brika/sdk';
 import { askLlm } from '../providers';
 
 /**
@@ -56,7 +56,7 @@ export const llmBlock = defineBlock({
       .default(4096)
       .describe('Maximum tokens in the reply'),
   }),
-  run: ({ inputs, outputs, config }) => {
+  run: ({ inputs, outputs, config, log }) => {
     inputs.in.on(async (data) => {
       const templated = config.prompt?.trim();
       const prompt = templated && templated.length > 0 ? templated : stringInput(data);

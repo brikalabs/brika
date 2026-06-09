@@ -14,6 +14,7 @@ import { type TemplateScope, templatedConfigView } from '../internal/template';
 import type { Json } from '../types';
 import {
   type BlockContext,
+  type BlockLogger,
   type BlockSetup,
   type Cleanup,
   CleanupRegistry,
@@ -64,6 +65,12 @@ export interface BlockRuntimeContext {
   callTool?(tool: string, args: Record<string, Json>): Promise<ToolCallResult>;
   /** Enumerate registered tools. Always provided at runtime (see `callTool`). */
   listTools?(): Promise<ToolInfo[]>;
+  /**
+   * Block-scoped log channel into the workflow run trace. Optional for the
+   * same reason as `callTool`: test harnesses build a minimal context. When
+   * absent, the typed context's `log` falls back to the plugin global logger.
+   */
+  log?(level: 'debug' | 'info' | 'warn' | 'error', message: string, data?: Json): void;
 }
 
 /** Running block instance */
@@ -72,6 +79,37 @@ export interface BlockInstance {
   pushInput(portId: string, data: Serializable): void;
   /** Stop the block and clean up */
   stop(): void;
+}
+
+/** Wrap non-record payloads so the global logger's meta stays an object. */
+function asLogMeta(data: Json | undefined): Record<string, Json> | undefined {
+  if (data === undefined) {
+    return undefined;
+  }
+  if (typeof data === 'object' && data !== null && !Array.isArray(data)) {
+    return data;
+  }
+  return { value: data };
+}
+
+/**
+ * Block-scoped logger bound to the runtime's `log` channel (run trace) when
+ * available, falling back to the plugin's global logger (tests, older hubs).
+ */
+function makeBlockLogger(ctx: BlockRuntimeContext): BlockLogger {
+  const send = (level: 'debug' | 'info' | 'warn' | 'error', message: string, data?: Json) => {
+    if (ctx.log) {
+      ctx.log(level, message, data);
+    } else {
+      log[level](message, asLogMeta(data));
+    }
+  };
+  return {
+    debug: (message, data) => send('debug', message, data),
+    info: (message, data) => send('info', message, data),
+    warn: (message, data) => send('warn', message, data),
+    error: (message, data) => send('error', message, data),
+  };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -329,6 +367,7 @@ function compileBlock<
         emit: (portId: string, data: unknown) => ctx.emit(portId, z.any().parse(data)),
         callTool: ctx.callTool,
         listTools: ctx.listTools,
+        log: makeBlockLogger(ctx),
         get context() {
           return this;
         },

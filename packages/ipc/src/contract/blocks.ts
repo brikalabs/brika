@@ -120,6 +120,8 @@ export const blockLog = message(
     level: z.enum(['debug', 'info', 'warn', 'error']),
     /** Log message */
     message: z.string(),
+    /** Structured payload persisted into the run trace (per-step data, cost, ...) */
+    data: Json.optional(),
   })
 );
 

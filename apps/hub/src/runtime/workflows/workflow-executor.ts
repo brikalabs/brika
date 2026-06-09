@@ -77,7 +77,13 @@ export class WorkflowExecutor {
   // own (the plugin event handler now fans out to every running workflow).
   #blockEmitHandler: ((instanceId: string, port: string, data: Json) => void) | null = null;
   #blockLogHandler:
-    | ((instanceId: string, workflowId: string, level: string, message: string) => void)
+    | ((
+        instanceId: string,
+        workflowId: string,
+        level: string,
+        message: string,
+        data?: Json
+      ) => void)
     | null = null;
   readonly #blockDefCache = new Map<
     string,
@@ -127,9 +133,10 @@ export class WorkflowExecutor {
       instanceId: string,
       workflowId: string,
       level: string,
-      message: string
+      message: string,
+      data?: Json
     ) => {
-      this.#onBlockLog(instanceId, workflowId, level, message);
+      this.#onBlockLog(instanceId, workflowId, level, message, data);
     };
     this.#plugins.setBlockLogHandler(this.#blockLogHandler);
 
@@ -387,7 +394,13 @@ export class WorkflowExecutor {
   /**
    * Called when a block emits a log message.
    */
-  #onBlockLog(blockId: string, workflowId: string, level: string, message: string): void {
+  #onBlockLog(
+    blockId: string,
+    workflowId: string,
+    level: string,
+    message: string,
+    data?: Json
+  ): void {
     // Only emit if this is from the current workflow
     if (this.#workflow?.id !== workflowId) {
       return;
@@ -399,6 +412,7 @@ export class WorkflowExecutor {
       blockId,
       level,
       message,
+      data,
       correlationId: this.#lastCorrelationId.get(blockId),
     });
   }

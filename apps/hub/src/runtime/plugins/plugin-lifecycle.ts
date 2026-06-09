@@ -536,8 +536,8 @@ export class PluginLifecycle {
         onBlock: (block) => this.#eventHandler.registerBlock(metadata.name, block, metadata),
         onBlockEmit: (instanceId, port, data) =>
           this.#eventHandler.onBlockEmit(instanceId, port, data),
-        onBlockLog: (instanceId, workflowId, level, message) =>
-          this.#eventHandler.onBlockLog(instanceId, workflowId, level, message),
+        onBlockLog: (instanceId, workflowId, level, message, data) =>
+          this.#eventHandler.onBlockLog(instanceId, workflowId, level, message, data),
         onSpark: (spark) => this.#eventHandler.registerSpark(metadata.name, spark),
         onSparkEmit: (sparkId, payload) =>
           this.#eventHandler.emitSpark(pluginName, sparkId, payload),

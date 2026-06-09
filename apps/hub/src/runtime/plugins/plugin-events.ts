@@ -40,7 +40,7 @@ export class PluginEventHandler {
   // (each executor ignores blocks it does not own).
   readonly #blockEmitHandlers = new Set<(instanceId: string, port: string, data: Json) => void>();
   readonly #blockLogHandlers = new Set<
-    (instanceId: string, workflowId: string, level: string, message: string) => void
+    (instanceId: string, workflowId: string, level: string, message: string, data?: Json) => void
   >();
 
   setBlockEmitHandler(handler: (instanceId: string, port: string, data: Json) => void): void {
@@ -57,14 +57,26 @@ export class PluginEventHandler {
   }
 
   setBlockLogHandler(
-    handler: (instanceId: string, workflowId: string, level: string, message: string) => void
+    handler: (
+      instanceId: string,
+      workflowId: string,
+      level: string,
+      message: string,
+      data?: Json
+    ) => void
   ): void {
     this.#blockLogHandlers.add(handler);
   }
 
   /** Remove a specific handler, or all handlers when called with no argument. */
   clearBlockLogHandler(
-    handler?: (instanceId: string, workflowId: string, level: string, message: string) => void
+    handler?: (
+      instanceId: string,
+      workflowId: string,
+      level: string,
+      message: string,
+      data?: Json
+    ) => void
   ): void {
     if (handler) {
       this.#blockLogHandlers.delete(handler);
@@ -79,9 +91,15 @@ export class PluginEventHandler {
     }
   }
 
-  onBlockLog(instanceId: string, workflowId: string, level: string, message: string): void {
+  onBlockLog(
+    instanceId: string,
+    workflowId: string,
+    level: string,
+    message: string,
+    data?: Json
+  ): void {
     for (const handler of this.#blockLogHandlers) {
-      handler(instanceId, workflowId, level, message);
+      handler(instanceId, workflowId, level, message, data);
     }
   }
 

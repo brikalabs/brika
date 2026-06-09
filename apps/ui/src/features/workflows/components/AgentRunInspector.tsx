@@ -1,20 +1,16 @@
 /**
  * Agent Run Inspector
  *
- * Renders a recorded AI Agent run as a legible call-tool -> observe -> reply
- * timeline, distinct from the flat event list. It reads the structured data the
- * agent persists on its output ports: each `toolCall` emit (tool + result), the
- * final `reply`, and any `error`. Detection is structural (the agent's output
- * ports), never message-parsing.
- *
- * Per-iteration reasoning and token cost are logged by the agent loop but are
- * not yet persisted as run-event data (block logs carry no structured payload
- * today); surfacing those here is a follow-up that adds a structured-trace
- * channel.
+ * Renders a recorded AI Agent run as a legible reason -> call-tool -> observe
+ * -> reply timeline, distinct from the flat event list. It reads the
+ * structured data the agent persists: per-iteration `block.log` trace entries
+ * (reasoning preview, token usage, running cost) plus each `toolCall` emit
+ * (tool + result), the final `reply`, and any `error`. Detection is structural
+ * (the agent's output ports), never message-parsing.
  */
 
 import { Badge, cn, ScrollArea } from '@brika/clay';
-import { AlertTriangle, CheckCircle, MessageSquare, Wrench } from 'lucide-react';
+import { AlertTriangle, Brain, CheckCircle, MessageSquare, Wrench } from 'lucide-react';
 import type { ReactNode } from 'react';
 import type { RunEvent, WorkflowRun } from '../api';
 
@@ -23,6 +19,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 function asString(value: unknown): string | undefined {
   return typeof value === 'string' ? value : undefined;
+}
+function asNumber(value: unknown): number | undefined {
+  return typeof value === 'number' ? value : undefined;
 }
 
 /** The agent block's output ports — their presence identifies an agent run. */
@@ -36,14 +35,58 @@ export function isAgentRun(events: ReadonlyArray<RunEvent>): boolean {
 }
 
 type Entry =
+  | {
+      kind: 'step';
+      ts: number;
+      iteration: number;
+      maxIterations?: number;
+      reasoning?: string;
+      stepTokens?: number;
+      cumulativeCostUsd?: number;
+    }
   | { kind: 'tool'; ts: number; tool: string; result: string }
   | { kind: 'reply'; ts: number; text: string }
   | { kind: 'error'; ts: number; message: string };
 
+/** Per-iteration trace entries arrive as block.log events carrying `iteration`. */
+function stepEntry(e: RunEvent): Entry | null {
+  if (e.kind !== 'block.log' || !isRecord(e.data)) {
+    return null;
+  }
+  const iteration = asNumber(e.data.iteration);
+  if (iteration === undefined) {
+    return null;
+  }
+  return {
+    kind: 'step',
+    ts: e.ts,
+    iteration,
+    maxIterations: asNumber(e.data.maxIterations),
+    reasoning: asString(e.data.reasoning),
+    stepTokens: asNumber(e.data.stepTokens),
+    cumulativeCostUsd: asNumber(e.data.cumulativeCostUsd),
+  };
+}
+
+/** The run's final cost: the run-summary log if present, else the last step's. */
+function runCostUsd(events: ReadonlyArray<RunEvent>): number | undefined {
+  let cost: number | undefined;
+  for (const e of events) {
+    if (e.kind !== 'block.log' || !isRecord(e.data)) {
+      continue;
+    }
+    cost = asNumber(e.data.costUsd) ?? asNumber(e.data.cumulativeCostUsd) ?? cost;
+  }
+  return cost;
+}
+
 function buildTimeline(events: ReadonlyArray<RunEvent>): Entry[] {
   const out: Entry[] = [];
   for (const e of events) {
-    if (e.kind === 'block.emit' && e.port === 'toolCall' && isRecord(e.data)) {
+    const step = stepEntry(e);
+    if (step) {
+      out.push(step);
+    } else if (e.kind === 'block.emit' && e.port === 'toolCall' && isRecord(e.data)) {
       out.push({
         kind: 'tool',
         ts: e.ts,
@@ -81,6 +124,33 @@ function TimelineRow({
 
 function renderEntry(entry: Entry, index: number): ReactNode {
   const key = `${entry.kind}-${index}`;
+  if (entry.kind === 'step') {
+    return (
+      <TimelineRow key={key} icon={<Brain className="size-3.5" />} tone="bg-data-7/15 text-data-7">
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="font-medium text-xs">
+            Step {entry.iteration}
+            {entry.maxIterations !== undefined ? ` / ${entry.maxIterations}` : ''}
+          </p>
+          {entry.stepTokens !== undefined && (
+            <Badge variant="outline" className="text-[9px]">
+              {entry.stepTokens} tokens
+            </Badge>
+          )}
+          {entry.cumulativeCostUsd !== undefined && (
+            <Badge variant="outline" className="text-[9px]">
+              ${entry.cumulativeCostUsd.toFixed(4)}
+            </Badge>
+          )}
+        </div>
+        {entry.reasoning && (
+          <p className="mt-1 whitespace-pre-wrap text-[11px] text-muted-foreground">
+            {entry.reasoning}
+          </p>
+        )}
+      </TimelineRow>
+    );
+  }
   if (entry.kind === 'tool') {
     return (
       <TimelineRow key={key} icon={<Wrench className="size-3.5" />} tone="bg-data-1/15 text-data-1">
@@ -124,6 +194,7 @@ export function AgentRunInspector({
 }: Readonly<{ run: WorkflowRun; events: ReadonlyArray<RunEvent> }>) {
   const timeline = buildTimeline(events);
   const toolCalls = timeline.filter((e) => e.kind === 'tool').length;
+  const cost = runCostUsd(events);
   const duration =
     run.finishedAt === undefined ? undefined : Math.max(0, run.finishedAt - run.startedAt);
 
@@ -135,6 +206,11 @@ export function AgentRunInspector({
         <Badge variant="outline" className="text-[10px]">
           {toolCalls} {toolCalls === 1 ? 'tool call' : 'tool calls'}
         </Badge>
+        {cost !== undefined && (
+          <Badge variant="outline" className="text-[10px]">
+            ${cost.toFixed(4)}
+          </Badge>
+        )}
         {duration !== undefined && (
           <span className="ml-auto text-muted-foreground text-xs">
             {duration < 1000 ? `${duration}ms` : `${(duration / 1000).toFixed(1)}s`}

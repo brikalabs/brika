@@ -174,6 +174,26 @@ export async function disableWorkflow(id: string): Promise<{
   return res.json();
 }
 
+/** Manually poke a block's input on a RUNNING workflow (the Run-once button). */
+export async function injectBlock(
+  blockId: string,
+  port: string
+): Promise<{
+  ok: boolean;
+}> {
+  const res = await fetch(`${API_BASE}/workflows/inject`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      blockId,
+      port,
+    }),
+  });
+  return res.json();
+}
+
 // Create test workflow event source
 export function createTestEventSource(
   workflowId: string,
