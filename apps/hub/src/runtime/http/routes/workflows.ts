@@ -127,6 +127,16 @@ export const workflowsRoutes = group({
       },
     }),
 
+    // Manually trigger a block on a running workflow (backs the button block).
+    route.post({
+      path: '/inject',
+      body: z.object({ blockId: z.string(), port: z.string() }),
+      handler: ({ body, inject }) => {
+        const ok = inject(WorkflowEngine).inject(body.blockId, body.port, {});
+        return { ok };
+      },
+    }),
+
     // SSE: Stream ALL workflow runtime events (debug)
     route.get({
       path: '/debug',

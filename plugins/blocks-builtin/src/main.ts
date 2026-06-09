@@ -502,6 +502,34 @@ export const sparkReceiver = defineBlock({
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Button Block - Manual trigger (custom node view with a button)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Button: a manual trigger. The node-body view renders a button that POSTs to
+ * `/api/workflows/inject` for this block's `press` port, so a click fires the
+ * workflow (the inject opens a recorded run). The `press` input also accepts a
+ * wired upstream signal, so the same block doubles as a programmable trigger.
+ */
+export const button = defineBlock({
+  id: 'button',
+  inputs: {
+    press: input(z.generic(), { name: 'Press' }),
+  },
+  outputs: {
+    out: output(z.object({ ts: z.number() }), { name: 'Out' }),
+  },
+  config: z.object({
+    label: z.string().default('Trigger').describe('Button label shown on the node'),
+  }),
+  run: ({ inputs, outputs }) => {
+    inputs.press.on(() => {
+      outputs.out.emit({ ts: Date.now() });
+    });
+  },
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Text Block - Display text / annotate the canvas (custom node view)
 // ─────────────────────────────────────────────────────────────────────────────
 

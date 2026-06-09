@@ -10,6 +10,7 @@ import { inject, singleton } from '@brika/di';
 import type { BlockDefinition } from '@brika/sdk';
 import { BlockRegistry } from '@/runtime/blocks';
 import { Logger, type ScopedLogger } from '@/runtime/logs/log-router';
+import type { Json } from '@/types';
 import type { Workflow } from './types';
 import { type ExecutionListener, WorkflowExecutor } from './workflow-executor';
 
@@ -252,6 +253,21 @@ export class WorkflowEngine {
   addGlobalListener(listener: ExecutionListener): () => void {
     this.#globalListeners.add(listener);
     return () => this.#globalListeners.delete(listener);
+  }
+
+  /**
+   * Manually inject data into a block on whichever running workflow owns it.
+   * Backs the manual-trigger ("button") block: it opens a recorded run and
+   * pushes to the block's input port. Returns false if no running workflow owns
+   * the block (e.g. the workflow is disabled).
+   */
+  inject(blockId: string, port: string, data: Json): boolean {
+    for (const executor of this.#executors.values()) {
+      if (executor.ownsBlock(blockId)) {
+        return executor.inject(blockId, port, data);
+      }
+    }
+    return false;
   }
 
   // ─────────────────────────────────────────────────────────────────────────────

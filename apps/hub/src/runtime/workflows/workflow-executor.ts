@@ -244,6 +244,11 @@ export class WorkflowExecutor {
     return true;
   }
 
+  /** Whether this executor is running the given block instance. */
+  ownsBlock(blockId: string): boolean {
+    return this.#instanceIds.has(blockId);
+  }
+
   // ─────────────────────────────────────────────────────────────────────────────
   // Event Listeners
   // ─────────────────────────────────────────────────────────────────────────────
