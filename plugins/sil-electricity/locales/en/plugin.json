@@ -62,6 +62,7 @@
     "estimatedCost": "Estimated cost",
     "live": "Live",
     "lastReading": "Last reading",
+    "noRecentData": "No recent readings from SIL yet",
     "todayTotal": "Today",
     "minuteConsumption": "15-minute consumption",
     "hourConsumption": "Hourly consumption",

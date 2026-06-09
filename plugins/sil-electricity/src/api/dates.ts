@@ -13,10 +13,12 @@ export function dateRangeForPeriod(period: Period): [string, string] {
   const start = new Date(end);
   switch (period) {
     case '24h':
-      // The Cube endpoint only accepts date-only ranges, even for 'minute'
-      // granularity. For 24h we ask for yesterday + today and rely on the
-      // smart meter only having the most recent ~24h of 15-min slots.
-      start.setDate(end.getDate() - 1);
+      // The Cube endpoint only accepts date-only ranges, even at 'minute'
+      // granularity. SIL publishes 15-minute readings with a multi-day lag, so
+      // "yesterday + today" is routinely empty. Fetch the last week so the most
+      // recent readings are always in range; the live brick then slices to the
+      // latest window it actually finds.
+      start.setDate(end.getDate() - 7);
       break;
     case '7d':
       start.setDate(end.getDate() - 7);
