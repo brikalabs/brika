@@ -1,5 +1,5 @@
 import { defineTool } from '@brika/sdk';
-import { askClaude } from '../anthropic';
+import { askLlm } from '../providers';
 
 /**
  * Expose Claude as a hub tool: any agent, voice assistant, rule, or the API can
@@ -23,7 +23,8 @@ defineTool(
   },
   async (args) => {
     const prompt = typeof args.prompt === 'string' ? args.prompt : '';
-    return askClaude(prompt, {
+    return askLlm(prompt, {
+      provider: 'anthropic',
       model: 'claude-opus-4-8',
       effort: 'high',
       maxTokens: 4096,

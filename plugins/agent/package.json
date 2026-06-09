@@ -3,7 +3,7 @@
   "name": "@brika/plugin-agent",
   "displayName": "AI Agent",
   "version": "0.4.0",
-  "description": "Run Claude inside your workflows: prompt-in, text-out AI blocks",
+  "description": "Run LLMs (Claude or any OpenAI-compatible endpoint) inside your workflows: prompt-in, text-out AI blocks",
   "author": "BRIKA Team",
   "license": "MIT",
   "repository": {
@@ -12,7 +12,7 @@
     "directory": "plugins/agent"
   },
   "icon": "./icon.svg",
-  "keywords": ["brika", "brika-plugin", "ai", "claude", "anthropic", "agent", "llm"],
+  "keywords": ["brika", "brika-plugin", "ai", "claude", "anthropic", "openai", "agent", "llm"],
   "engines": {
     "brika": "^0.4.0"
   },
@@ -30,22 +30,36 @@
   },
   "grants": {
     "dev.brika.net.fetch": {
-      "allow": ["api.anthropic.com"]
+      "allow": [
+        "api.anthropic.com",
+        "api.openai.com",
+        "openrouter.ai",
+        "api.groq.com",
+        "api.together.xyz",
+        "api.mistral.ai",
+        "*.openai.azure.com"
+      ]
     }
   },
   "preferences": [
     {
-      "name": "apiKey",
+      "name": "anthropicApiKey",
       "type": "password",
       "label": "Anthropic API Key",
-      "description": "Your Anthropic API key (sk-ant-...). Set once here; used by every agent block and tool. Stored securely in the OS keychain."
+      "description": "Your Anthropic API key (sk-ant-...). Used when a block's provider is Anthropic. Stored securely in the OS keychain."
+    },
+    {
+      "name": "openaiApiKey",
+      "type": "password",
+      "label": "OpenAI API Key",
+      "description": "Your OpenAI (or OpenAI-compatible) API key. Used when a block's provider is OpenAI. Stored securely in the OS keychain."
     }
   ],
   "blocks": [
     {
       "id": "llm",
-      "name": "Ask Claude",
-      "description": "Send a prompt to Claude and emit the completion",
+      "name": "Ask AI",
+      "description": "Send a prompt to an LLM and emit the completion",
       "category": "transform",
       "icon": "sparkles",
       "color": "#d97757"
@@ -61,7 +75,7 @@
     {
       "id": "agent",
       "name": "AI Agent",
-      "description": "Claude agent that reasons and calls tools to answer each prompt",
+      "description": "LLM agent that reasons and calls tools to answer each prompt",
       "category": "action",
       "icon": "bot",
       "color": "#d97757"
