@@ -273,15 +273,17 @@ const ExecutionResult = memo(function ExecutionResult({
 }: Readonly<ExecutionResultProps>) {
   if (status === 'completed' && output !== undefined) {
     return (
-      <div className="truncate rounded-lg border border-success/20 bg-success/10 p-2 text-success text-xs">
-        ✓ {JSON.stringify(output).slice(0, 40)}
+      <div className="flex items-center gap-1.5 truncate rounded-lg border border-success/20 bg-success/10 p-2 text-success text-xs">
+        <CheckCircle className="size-3 shrink-0" />
+        <span className="truncate font-mono">{JSON.stringify(output).slice(0, 40)}</span>
       </div>
     );
   }
   if (status === 'error' && output) {
     return (
-      <div className="truncate rounded-lg border border-destructive/20 bg-destructive/10 p-2 text-destructive text-xs">
-        ✗ {configToString(output).slice(0, 40)}
+      <div className="flex items-center gap-1.5 truncate rounded-lg border border-destructive/20 bg-destructive/10 p-2 text-destructive text-xs">
+        <XCircle className="size-3 shrink-0" />
+        <span className="truncate font-mono">{configToString(output).slice(0, 40)}</span>
       </div>
     );
   }

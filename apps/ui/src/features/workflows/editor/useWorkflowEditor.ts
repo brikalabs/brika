@@ -384,16 +384,16 @@ export function useWorkflowEditor(
           [blockId]: output,
         }));
       }
-      // Update node data
+      // Update node data: status always, plus the last output when this event
+      // carried one, so every block shows its most recent value on the canvas
+      // (via ExecutionResult) and not just blocks that ship a custom node view.
       setNodes((nds) =>
         nds.map((node) => {
           if (node.id === blockId && node.type === 'block') {
             return {
               ...node,
-              data: {
-                ...node.data,
-                status,
-              },
+              data:
+                output === undefined ? { ...node.data, status } : { ...node.data, status, output },
             };
           }
           return node;

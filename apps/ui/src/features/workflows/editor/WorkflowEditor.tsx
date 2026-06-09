@@ -100,7 +100,7 @@ function processNewEvents(
       if (event.type === 'block.start') {
         setBlockStatus(event.blockId, 'running');
       } else if (event.type === 'block.error') {
-        setBlockStatus(event.blockId, 'error');
+        setBlockStatus(event.blockId, 'error', event.data);
       } else if (event.type === 'block.emit') {
         setBlockStatus(event.blockId, 'completed', event.data);
       }
