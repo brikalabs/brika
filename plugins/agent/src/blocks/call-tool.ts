@@ -25,16 +25,25 @@ export const callToolBlock = defineBlock({
     error: output(z.object({ message: z.string() }), { name: 'Error' }),
   },
   config: z.object({
-    tool: z.string().describe('Id of the registered tool to call (see /api/tools)'),
+    tool: z
+      .string()
+      .meta({ label: 'Tool', format: 'tool-select' })
+      .describe('The registered tool to call'),
     argName: z
       .string()
       .default('prompt')
-      .describe('Name of the tool argument to pass the input as'),
+      .meta({ label: 'Input argument', format: 'tool-arg-select' })
+      .describe('Which of the tool arguments the input is passed as'),
   }),
   run: ({ inputs, outputs, config, callTool }) => {
     inputs.input.on(async (text) => {
+      if (!config.tool) {
+        outputs.error.emit({ message: 'No tool selected. Pick a tool in the block config.' });
+        return;
+      }
+      const argName = config.argName || 'prompt';
       try {
-        const res = await callTool(config.tool, { [config.argName]: text });
+        const res = await callTool(config.tool, { [argName]: text });
         if (res.ok) {
           outputs.result.emit(res.content ?? JSON.stringify(res.data ?? null));
         } else {

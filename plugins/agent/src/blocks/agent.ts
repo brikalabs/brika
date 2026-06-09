@@ -60,18 +60,23 @@ function logStep(
   nameToId: Map<string, string>,
   total: TokenUsage
 ): void {
-  const calledTools = turn.toolCalls.map((c) => nameToId.get(c.name) ?? c.name);
   const cost = costForUsage(model, total);
-  const stepTokens = turn.usage ? turn.usage.inputTokens + turn.usage.outputTokens : undefined;
-  log.info(`Agent step ${step}/${max}`, {
+  const meta: Record<string, Json> = {
     iteration: step,
     model,
-    toolCalls: calledTools,
+    toolCalls: turn.toolCalls.map((c) => nameToId.get(c.name) ?? c.name),
     cumulativeTokens: total.inputTokens + total.outputTokens,
-    ...(turn.text ? { reasoning: turn.text.slice(0, 280) } : {}),
-    ...(stepTokens !== undefined ? { stepTokens } : {}),
-    ...(cost !== undefined ? { cumulativeCostUsd: Number(cost.toFixed(6)) } : {}),
-  });
+  };
+  if (turn.text) {
+    meta.reasoning = turn.text.slice(0, 280);
+  }
+  if (turn.usage) {
+    meta.stepTokens = turn.usage.inputTokens + turn.usage.outputTokens;
+  }
+  if (cost !== undefined) {
+    meta.cumulativeCostUsd = Number(cost.toFixed(6));
+  }
+  log.info(`Agent step ${step}/${max}`, meta);
 }
 
 /** Log a run's token usage and estimated cost (surfaces in the live debug Logs). */
@@ -80,7 +85,7 @@ function logUsage(model: string, usage: TokenUsage): void {
     return;
   }
   const cost = costForUsage(model, usage);
-  const costLabel = cost !== undefined ? `~$${cost.toFixed(4)}` : 'cost unavailable';
+  const costLabel = cost === undefined ? 'cost unavailable' : `~$${cost.toFixed(4)}`;
   log.info(
     `Agent run: ${usage.inputTokens} in / ${usage.outputTokens} out tokens (${model}), ${costLabel}`
   );
