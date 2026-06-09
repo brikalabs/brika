@@ -107,6 +107,17 @@ describe('readOllamaTurn', () => {
     expect(turn.toolCalls).toEqual([]);
     expect(turn.usage).toBeUndefined();
   });
+
+  it('prefers the native call id when Ollama returns one', () => {
+    const turn = readOllamaTurn({
+      message: {
+        role: 'assistant',
+        content: '',
+        tool_calls: [{ id: 'call_jgel4xd6', function: { name: 'list_lights', arguments: {} } }],
+      },
+    });
+    expect(turn.toolCalls).toEqual([{ id: 'call_jgel4xd6', name: 'list_lights', args: {} }]);
+  });
 });
 
 describe('ollamaModelOption', () => {

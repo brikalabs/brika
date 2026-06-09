@@ -430,12 +430,15 @@ export function readOllamaTurn(data: Json): ChatTurn {
   const text = jsonStr(message?.content) ?? '';
   const toolCalls: ToolCall[] = [];
   for (const raw of jsonArr(message?.tool_calls)) {
-    const fn = jsonObj(jsonObj(raw)?.function);
+    const call = jsonObj(raw);
+    const fn = jsonObj(call?.function);
     if (!fn) {
       continue;
     }
+    // Newer Ollama returns a call id; older versions omit it, so synthesize
+    // one (the agent loop matches results by id, Ollama itself by order).
     toolCalls.push({
-      id: `ollama-call-${toolCalls.length}`,
+      id: jsonStr(call?.id) ?? `ollama-call-${toolCalls.length}`,
       name: jsonStr(fn.name) ?? '',
       args: jsonObj(fn.arguments) ?? {},
     });
