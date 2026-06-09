@@ -1,26 +1,12 @@
+import { BRIDGE_GLOBALS } from '@brika/sdk/browser-bridge';
 import type { BunPlugin } from 'bun';
 
 /**
- * Import specifier → globalThis.__brika.* property name.
- * Adding a shared dependency = one line here + one line in plugin-bridge.ts (UI).
+ * Import specifier → globalThis.__brika.* property name. The mapping lives in
+ * `@brika/sdk/browser-bridge` as the single source of truth shared with the host
+ * UI that populates those globals, so the compiler and the host can never drift.
  */
-const BRIDGE: Record<string, string> = {
-  react: 'React',
-  'react/jsx-runtime': 'jsx',
-  'react/jsx-dev-runtime': 'jsx',
-  // Bare @brika/sdk in client code resolves to a small client-safe surface
-  // (e.g. `capture`). Importing the full SDK into a browser bundle would pull
-  // in zod + server-only deps and fail to build.
-  '@brika/sdk': 'sdk',
-  '@brika/sdk/ui-kit': 'ui',
-  '@brika/sdk/ui-kit/icons': 'icons',
-  'lucide-react': 'icons',
-  '@brika/sdk/ui-kit/hooks': 'hooks',
-  '@brika/sdk/brick-views': 'brickHooks',
-  '@brika/sdk/block-views': 'blockHooks',
-  clsx: 'clsx',
-  'class-variance-authority': 'cva',
-};
+const BRIDGE: Readonly<Record<string, string>> = BRIDGE_GLOBALS;
 
 /**
  * @brika/sdk subpaths that a browser module may import directly even though they
