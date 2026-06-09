@@ -316,13 +316,8 @@ describe('generateTypes', () => {
       allTranslations
     );
 
-    // cacheDir should not have been created
-    try {
-      await readFile(join(cacheDir, 'i18n-resources.d.ts'), 'utf-8');
-      expect(true).toBe(false); // should not reach here
-    } catch (err) {
-      expect((err as NodeJS.ErrnoException).code).toBe('ENOENT');
-    }
+    // cacheDir should not have been created, so reading the file rejects with ENOENT
+    await expect(readFile(join(cacheDir, 'i18n-resources.d.ts'), 'utf-8')).rejects.toThrow(/ENOENT/);
   });
 
   test('does nothing when cacheDir is empty string', async () => {
