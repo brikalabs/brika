@@ -40,7 +40,11 @@ import { fetchWorkflowPortValues, type Workflow } from '../api';
 import { type DebugEvent, useDebugStream } from '../debug';
 import { BlockNode } from './BlockNode';
 import { type BlockDefinition, BlockToolbar, type BlockTypeInfo } from './BlockToolbar';
-import { BlockInputValuesContext, collectInputValues } from './block-input-values';
+import {
+  BlockInputValuesContext,
+  collectInputValues,
+  WorkflowIdContext,
+} from './block-input-values';
 import { CollapsedTab, CollapsedTabsContainer, CollapsiblePanel } from './CollapsiblePanel';
 import { ConfigPanel } from './ConfigPanel';
 import { ConnectionDropPicker } from './ConnectionDropPicker';
@@ -1116,77 +1120,79 @@ function WorkflowEditorWithBlocks({
   return (
     <WorkflowTypeContext value={portTypeMap}>
       <BlockInputValuesContext value={inputValuesByNode}>
-        <div className="flex h-full">
-          {!readonly && (
-            <BlocksPanel isOpen={panelStates.blocks} onToggle={() => togglePanel('blocks')} />
-          )}
+        <WorkflowIdContext value={workflow.id}>
+          <div className="flex h-full">
+            {!readonly && (
+              <BlocksPanel isOpen={panelStates.blocks} onToggle={() => togglePanel('blocks')} />
+            )}
 
-          <EditorCanvas
-            readonly={readonly}
-            nodes={nodes}
-            edges={displayEdges}
-            onNodesChange={onNodesChange}
-            onEdgesChange={onEdgesChange}
-            onConnect={onConnect}
-            onConnectEnd={onConnectEnd}
-            isValidConnection={isValidConnection}
-            onNodeClick={onNodeClick}
-            onPaneClick={onPaneClick}
-            onNodesDelete={onNodesDelete}
-            onEdgesDelete={onEdgesDelete}
-            onDragOver={readonly ? undefined : onDragOver}
-            onDrop={readonly ? undefined : onDrop}
-            leftCollapsed={leftCollapsed}
-            inspectorCollapsed={inspectorCollapsed}
-            hasSelection={!!selectedNode}
-            togglePanel={togglePanel}
-            canUndo={canUndo}
-            canRedo={canRedo}
-            onUndo={undo}
-            onRedo={redo}
-            diagnostics={diagnostics}
-            onJumpToNode={handleJumpToNode}
-          />
-
-          {!readonly && (
-            <InspectorPanel
-              isOpen={panelStates.inspector}
-              onToggle={() => togglePanel('inspector')}
-              workflow={workflow}
-              selectedNode={selectedNode}
-              updateBlockConfig={updateBlockConfig}
-              availableVariables={availableVariables}
-              blockSchema={selectedBlockDef?.schema}
-              viewModuleUrl={selectedBlockDef?.viewModuleUrl}
-              pluginUid={selectedBlockDef?.pluginUid}
-            />
-          )}
-
-          {!readonly && (
-            <EditorCommandPalette
-              open={paletteOpen}
-              onOpenChange={setPaletteOpen}
-              blocks={blockDefinitions}
+            <EditorCanvas
+              readonly={readonly}
               nodes={nodes}
+              edges={displayEdges}
+              onNodesChange={onNodesChange}
+              onEdgesChange={onEdgesChange}
+              onConnect={onConnect}
+              onConnectEnd={onConnectEnd}
+              isValidConnection={isValidConnection}
+              onNodeClick={onNodeClick}
+              onPaneClick={onPaneClick}
+              onNodesDelete={onNodesDelete}
+              onEdgesDelete={onEdgesDelete}
+              onDragOver={readonly ? undefined : onDragOver}
+              onDrop={readonly ? undefined : onDrop}
+              leftCollapsed={leftCollapsed}
+              inspectorCollapsed={inspectorCollapsed}
+              hasSelection={!!selectedNode}
+              togglePanel={togglePanel}
               canUndo={canUndo}
               canRedo={canRedo}
-              onAddBlock={handlePaletteAdd}
-              onJumpToNode={handleJumpToNode}
-              onFitView={() => fitView({ duration: 300 })}
               onUndo={undo}
               onRedo={redo}
+              diagnostics={diagnostics}
+              onJumpToNode={handleJumpToNode}
             />
-          )}
 
-          {!readonly && dropPicker && (
-            <ConnectionDropPicker
-              position={dropPicker.screen}
-              candidates={dropCandidates}
-              onPick={handleDropPick}
-              onClose={() => setDropPicker(null)}
-            />
-          )}
-        </div>
+            {!readonly && (
+              <InspectorPanel
+                isOpen={panelStates.inspector}
+                onToggle={() => togglePanel('inspector')}
+                workflow={workflow}
+                selectedNode={selectedNode}
+                updateBlockConfig={updateBlockConfig}
+                availableVariables={availableVariables}
+                blockSchema={selectedBlockDef?.schema}
+                viewModuleUrl={selectedBlockDef?.viewModuleUrl}
+                pluginUid={selectedBlockDef?.pluginUid}
+              />
+            )}
+
+            {!readonly && (
+              <EditorCommandPalette
+                open={paletteOpen}
+                onOpenChange={setPaletteOpen}
+                blocks={blockDefinitions}
+                nodes={nodes}
+                canUndo={canUndo}
+                canRedo={canRedo}
+                onAddBlock={handlePaletteAdd}
+                onJumpToNode={handleJumpToNode}
+                onFitView={() => fitView({ duration: 300 })}
+                onUndo={undo}
+                onRedo={redo}
+              />
+            )}
+
+            {!readonly && dropPicker && (
+              <ConnectionDropPicker
+                position={dropPicker.screen}
+                candidates={dropCandidates}
+                onPick={handleDropPick}
+                onClose={() => setDropPicker(null)}
+              />
+            )}
+          </div>
+        </WorkflowIdContext>
       </BlockInputValuesContext>
     </WorkflowTypeContext>
   );

@@ -120,7 +120,8 @@
       "failed": "Échec de la demande d'exécution",
       "replay": "Exécuter avec la dernière entrée",
       "empty": "Exécuter avec un déclencheur vide",
-      "replayHint": "Relance avec la valeur reçue en dernier sur cette entrée"
+      "replayHint": "Relance avec la valeur reçue en dernier sur cette entrée",
+      "history": "Entrées précédentes"
     },
     "diagnostics": {
       "errors": "erreurs",

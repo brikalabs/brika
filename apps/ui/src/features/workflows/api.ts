@@ -194,12 +194,13 @@ export async function fetchWorkflowPortValues(id: string): Promise<PortValue[]> 
 /**
  * Manually poke a block's input on a RUNNING workflow (the Run control).
  * With `replay`, the hub re-delivers the value that last flowed into the
- * port instead of an empty trigger.
+ * port; with `data`, that explicit payload (e.g. a previous input picked
+ * from history) is delivered instead of an empty trigger.
  */
 export async function injectBlock(
   blockId: string,
   port: string,
-  options?: { replay?: boolean }
+  options?: { replay?: boolean; data?: unknown }
 ): Promise<{
   ok: boolean;
 }> {
@@ -212,8 +213,30 @@ export async function injectBlock(
       blockId,
       port,
       replay: options?.replay ?? false,
+      ...(options?.data === undefined ? {} : { data: options.data }),
     }),
   });
+  return res.json();
+}
+
+export interface InputHistoryEntry {
+  ts: number;
+  value: unknown;
+}
+
+/** Previous values that flowed into one block input, newest first, deduped. */
+export async function fetchBlockInputHistory(
+  workflowId: string,
+  blockId: string,
+  port: string
+): Promise<InputHistoryEntry[]> {
+  const query = new URLSearchParams({ blockId, port });
+  const res = await fetch(
+    `${API_BASE}/workflows/${encodeURIComponent(workflowId)}/input-history?${query}`
+  );
+  if (!res.ok) {
+    return [];
+  }
   return res.json();
 }
 

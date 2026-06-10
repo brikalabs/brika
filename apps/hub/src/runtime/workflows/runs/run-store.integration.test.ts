@@ -146,3 +146,72 @@ describe('RunStore', () => {
     expect(runs[0]?.eventCount).toBe(1);
   });
 });
+
+describe('RunStore.recentEmittedValues', () => {
+  let store: RunStore;
+  let tempDir: string;
+
+  beforeEach(async () => {
+    reset();
+    tempDir = await mkdtemp(join(tmpdir(), 'run-store-history-'));
+    configureDatabases(tempDir);
+    store = get(RunStore);
+    store.init();
+  });
+
+  afterEach(() => {
+    store.close();
+    reset();
+    try {
+      rmSync(tempDir, { recursive: true, force: true });
+    } catch {
+      // Ignore cleanup errors
+    }
+  });
+
+  test('lists previous values from the wired sources, newest first, deduped', () => {
+    store.record({ type: 'run.opened', workflowId: 'wf', correlationId: 'c1', blockId: 'src' });
+    store.record({
+      type: 'block.emit',
+      workflowId: 'wf',
+      correlationId: 'c1',
+      blockId: 'src',
+      port: 'out',
+      data: { n: 1 },
+    });
+    store.record({
+      type: 'block.emit',
+      workflowId: 'wf',
+      correlationId: 'c1',
+      blockId: 'src',
+      port: 'out',
+      data: { n: 2 },
+    });
+    // Duplicate payload: deduped, keeps the newest occurrence position
+    store.record({
+      type: 'block.emit',
+      workflowId: 'wf',
+      correlationId: 'c1',
+      blockId: 'src',
+      port: 'out',
+      data: { n: 1 },
+    });
+    // Different port: not wired into the target input, must be excluded
+    store.record({
+      type: 'block.emit',
+      workflowId: 'wf',
+      correlationId: 'c1',
+      blockId: 'src',
+      port: 'other',
+      data: { n: 99 },
+    });
+
+    const values = store.recentEmittedValues('wf', [{ blockId: 'src', port: 'out' }], 10);
+    expect(values.map((v) => v.value)).toEqual([{ n: 1 }, { n: 2 }]);
+  });
+
+  test('empty refs and unknown workflows return nothing', () => {
+    expect(store.recentEmittedValues('wf', [], 10)).toEqual([]);
+    expect(store.recentEmittedValues('ghost', [{ blockId: 'a', port: 'out' }], 10)).toEqual([]);
+  });
+});

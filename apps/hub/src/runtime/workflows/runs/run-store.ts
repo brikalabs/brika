@@ -6,6 +6,7 @@ import {
   desc,
   endTsFilter,
   eq,
+  or,
   sql,
   startTsFilter,
 } from '@brika/db';
@@ -249,6 +250,60 @@ export class RunStore {
       .set({ status: 'completed' })
       .where(and(eq(runsTable.id, runId), eq(runsTable.status, 'running')))
       .run();
+  }
+
+  /**
+   * Values previously emitted by the given (blockId, port) sources in a
+   * workflow, newest first, deduplicated by payload. Backs the editor's
+   * "run with a previous input" list: the sources are the ports wired into
+   * the input being re-triggered. Truncation markers (payloads over the
+   * per-event cap) are skipped because they cannot be replayed faithfully.
+   */
+  recentEmittedValues(
+    workflowId: string,
+    refs: ReadonlyArray<{ blockId: string; port: string }>,
+    limit = 10
+  ): Array<{ ts: number; value: Json }> {
+    if (refs.length === 0) {
+      return [];
+    }
+    const db = this.db;
+    if (!db) {
+      return [];
+    }
+    const refMatch = or(
+      ...refs.map((ref) =>
+        and(eq(runEventsTable.blockId, ref.blockId), eq(runEventsTable.port, ref.port))
+      )
+    );
+    const rows = db
+      .select({ ts: runEventsTable.ts, data: runEventsTable.data })
+      .from(runEventsTable)
+      .innerJoin(runsTable, eq(runsTable.id, runEventsTable.runId))
+      .where(
+        and(eq(runsTable.workflowId, workflowId), eq(runEventsTable.kind, 'block.emit'), refMatch)
+      )
+      .orderBy(desc(runEventsTable.ts))
+      .limit(Math.min(Math.max(limit, 1), 50) * 5)
+      .all();
+
+    const seen = new Set<string>();
+    const out: Array<{ ts: number; value: Json }> = [];
+    for (const row of rows) {
+      if (row.data === null || seen.has(row.data)) {
+        continue;
+      }
+      const value = parseJson(row.data);
+      if (typeof value === 'object' && value !== null && '__truncated' in value) {
+        continue;
+      }
+      seen.add(row.data);
+      out.push({ ts: row.ts, value });
+      if (out.length >= limit) {
+        break;
+      }
+    }
+    return out;
   }
 
   query(params: RunQueryParams = {}): RunQueryResult {

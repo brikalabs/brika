@@ -14,6 +14,13 @@ export type BlockInputValues = ReadonlyMap<string, Record<string, unknown>>;
 
 export const BlockInputValuesContext = createContext<BlockInputValues>(new Map());
 
+/** The workflow being edited, for node-level API calls (history, inject). */
+export const WorkflowIdContext = createContext<string>('');
+
+export function useWorkflowId(): string {
+  return useContext(WorkflowIdContext);
+}
+
 const EMPTY: Record<string, unknown> = {};
 
 export function useBlockInputValues(nodeId: string): Record<string, unknown> {

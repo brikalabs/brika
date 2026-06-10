@@ -120,7 +120,8 @@
       "failed": "Run request failed",
       "replay": "Run with last input",
       "empty": "Run with empty trigger",
-      "replayHint": "Re-triggers with the value that last arrived on this input"
+      "replayHint": "Re-triggers with the value that last arrived on this input",
+      "history": "Previous inputs"
     },
     "diagnostics": {
       "errors": "errors",

@@ -136,16 +136,13 @@ export const workflowsRoutes = group({
         blockId: z.string(),
         port: z.string(),
         replay: z.boolean().optional(),
+        /** Explicit payload (e.g. a previous input picked from history). */
+        data: z.custom<Json>(() => true).optional(),
       }),
       handler: ({ body, inject }) => {
-        const ok = inject(WorkflowEngine).inject(
-          body.blockId,
-          body.port,
-          {},
-          {
-            replay: body.replay ?? false,
-          }
-        );
+        const ok = inject(WorkflowEngine).inject(body.blockId, body.port, body.data ?? {}, {
+          replay: body.replay ?? false,
+        });
         return { ok };
       },
     }),
@@ -215,6 +212,27 @@ export const workflowsRoutes = group({
     // Last-seen output value per port of a RUNNING workflow. The editor seeds
     // its live previews and {{ }} view-resolution from this on load, so node
     // views keep their last data across reloads instead of starting blank.
+    // Previous values that flowed into one block input (from the run store),
+    // newest first, deduplicated. Backs "run with a previous input".
+    route.get({
+      path: '/:id/input-history',
+      params: z.object({
+        id: workflowIdSchema,
+      }),
+      query: z.object({
+        blockId: z.string(),
+        port: z.string(),
+        limit: z.coerce.number().int().min(1).max(50).optional(),
+      }),
+      handler: ({ params, query, inject }) => {
+        const workflow = getOrThrow(inject(WorkflowEngine).get(params.id), 'Workflow not found');
+        const refs = (workflow.connections ?? [])
+          .filter((c) => c.to === query.blockId && (c.toPort ?? 'in') === query.port)
+          .map((c) => ({ blockId: c.from, port: c.fromPort ?? 'out' }));
+        return inject(RunStore).recentEmittedValues(params.id, refs, query.limit ?? 10);
+      },
+    }),
+
     route.get({
       path: '/:id/values',
       params: z.object({

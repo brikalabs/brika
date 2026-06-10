@@ -12,6 +12,8 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
   toast,
 } from '@brika/clay';
@@ -23,6 +25,7 @@ import {
   portKey,
   type TypeDescriptor,
 } from '@brika/type-system';
+import { useQuery } from '@tanstack/react-query';
 import {
   Handle,
   type NodeProps,
@@ -48,7 +51,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { DynamicIcon, type IconName } from 'lucide-react/dynamic';
-import React, { memo, useContext, useEffect } from 'react';
+import React, { memo, useContext, useEffect, useState } from 'react';
 import {
   BaseNode,
   BaseNodeContent,
@@ -56,8 +59,8 @@ import {
   BaseNodeHeaderTitle,
 } from '@/components/base-node';
 import { useLocale } from '@/lib/use-locale';
-import { injectBlock } from '../api';
-import { resolveConfigForView, useBlockInputValues } from './block-input-values';
+import { fetchBlockInputHistory, injectBlock } from '../api';
+import { resolveConfigForView, useBlockInputValues, useWorkflowId } from './block-input-values';
 import { ClientBlockView } from './ClientBlockView';
 import type { BlockStatus } from './useWorkflowEditor';
 import { WorkflowTypeContext } from './WorkflowTypeContext';
@@ -483,10 +486,20 @@ function RunBlockButton({
   port: string;
 }>) {
   const { t } = useLocale();
+  const workflowId = useWorkflowId();
+  const [menuOpen, setMenuOpen] = useState(false);
 
-  const run = async (replay: boolean) => {
+  // Previous inputs (persisted in the run store), loaded when the menu opens.
+  const { data: history = [] } = useQuery({
+    queryKey: ['workflows', workflowId, 'input-history', blockId, port],
+    queryFn: () => fetchBlockInputHistory(workflowId, blockId, port),
+    enabled: menuOpen && workflowId.length > 0,
+    staleTime: 5000,
+  });
+
+  const run = async (options: { replay?: boolean; data?: unknown }) => {
     try {
-      const res = await injectBlock(blockId, port, { replay });
+      const res = await injectBlock(blockId, port, options);
       if (!res.ok) {
         toast.error(t('workflows:editor.runBlock.notRunning'));
       }
@@ -505,26 +518,48 @@ function RunBlockButton({
         variant="outline"
         className={cn(segment, 'gap-1.5 px-3')}
         title={t('workflows:editor.runBlock.replayHint')}
-        onClick={() => run(true)}
+        onClick={() => run({ replay: true })}
       >
         <Play className="size-3 fill-current" />
         {t('workflows:editor.runBlock.label')}
       </Button>
-      <DropdownMenu>
+      <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
         <DropdownMenuTrigger asChild>
           <Button size="sm" variant="outline" className={cn(segment, 'px-1.5')}>
             <ChevronDown className="size-3" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" sideOffset={6}>
-          <DropdownMenuItem onClick={() => run(true)}>
+        <DropdownMenuContent align="end" sideOffset={6} className="max-w-80">
+          <DropdownMenuItem onClick={() => run({ replay: true })}>
             <RotateCcw className="size-3.5" />
             {t('workflows:editor.runBlock.replay')}
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => run(false)}>
+          <DropdownMenuItem onClick={() => run({})}>
             <Play className="size-3.5" />
             {t('workflows:editor.runBlock.empty')}
           </DropdownMenuItem>
+          {history.length > 0 && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel className="text-[10px] text-muted-foreground uppercase">
+                {t('workflows:editor.runBlock.history')}
+              </DropdownMenuLabel>
+              {history.map((entry) => (
+                <DropdownMenuItem
+                  key={`${entry.ts}:${JSON.stringify(entry.value)}`}
+                  onClick={() => run({ data: entry.value })}
+                  className="flex items-start gap-2"
+                >
+                  <span className="mt-0.5 shrink-0 font-mono text-[10px] text-muted-foreground">
+                    {new Date(entry.ts).toLocaleTimeString()}
+                  </span>
+                  <span className="min-w-0 truncate font-mono text-xs">
+                    {JSON.stringify(entry.value)}
+                  </span>
+                </DropdownMenuItem>
+              ))}
+            </>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
     </ButtonGroup>
