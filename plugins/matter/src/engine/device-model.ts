@@ -4,22 +4,25 @@
  * the rest of the plugin consumes.
  *
  * Everything cluster-specific (state mapping, commands, classification hints)
- * lives in the registry in `clusters.ts`; this module only iterates it.
+ * lives in the device-family registry (`../registry`); this module only
+ * iterates its composed structures.
  */
 
 import { log } from '@brika/sdk/lifecycle';
 import { BridgedDeviceBasicInformationClient } from '@matter/main/behaviors/bridged-device-basic-information';
 import type { PairedNode } from '@project-chip/matter.js/device';
 import {
-  CLUSTER_REGISTRY,
+  CLASSIFICATION_HINTS,
+  CLUSTER_ENTRIES,
+  DEVICE_TYPE_MAP,
   type DeviceType,
   type MatterCommand,
   type MatterEndpoint,
   type MatterState,
   parseStateSlice,
-} from './clusters';
+} from '../registry';
 
-export type { DeviceType, MatterState } from './clusters';
+export type { DeviceType, MatterState } from '../registry';
 
 export interface MatterDevice {
   nodeId: string;
@@ -60,44 +63,6 @@ export interface MatterDeviceEvent {
 
 // ─── Device Type Mapping ─────────────────────────────────────────────────────
 
-/** Known Matter device type IDs → our simplified categories */
-export const DEVICE_TYPE_MAP: Record<number, DeviceType> = {
-  // Bridges / Aggregators
-  0x000e: 'bridge', // Aggregator (e.g. Hue Bridge)
-  // Lights
-  0x0100: 'light', // On/Off Light
-  0x0101: 'light', // Dimmable Light
-  0x010c: 'light', // Color Temperature Light
-  0x010d: 'light', // Extended Color Light
-  // Locks
-  0x000a: 'lock', // Door Lock
-  0x000b: 'lock', // Door Lock Controller
-  // Window coverings
-  0x0202: 'cover', // Window Covering
-  // Thermostats
-  0x0301: 'thermostat', // Thermostat
-  // Switches
-  0x0103: 'switch', // On/Off Light Switch
-  0x0104: 'switch', // Dimmer Switch
-  0x0105: 'switch', // Color Dimmer Switch
-  0x000f: 'switch', // Generic Switch
-  // Fans / air movement
-  0x002b: 'fan', // Fan
-  0x002d: 'fan', // Air Purifier
-  // Appliances
-  0x0074: 'vacuum', // Robotic Vacuum Cleaner
-  0x0303: 'unknown', // Pump
-  // Sensors
-  0x0107: 'sensor', // Occupancy Sensor
-  0x0106: 'sensor', // Light Sensor
-  0x0302: 'sensor', // Temperature Sensor
-  0x0305: 'sensor', // Humidity Sensor
-  0x0015: 'sensor', // Contact Sensor
-  0x0076: 'sensor', // Smoke/CO Alarm
-  0x0510: 'sensor', // Electrical Sensor
-  0x0850: 'sensor', // Contact Sensor
-};
-
 /** Classify a single device type ID */
 function classifyDeviceType(deviceTypeId: number): DeviceType | undefined {
   return DEVICE_TYPE_MAP[deviceTypeId];
@@ -119,12 +84,13 @@ export function classifyDeviceTypes(deviceTypeIds: number[]): DeviceType {
  * deviceTypeList carries only structural types. Hue bridges label e.g. a
  * dimmer or wall-switch-module endpoint with just `0x0013` (Bridged Node) +
  * `0x0011` (Power Source), so the id-based map yields 'unknown' even though
- * the device plainly has a Switch cluster. Priority is registry order.
+ * the device plainly has a Switch cluster. Priority is each hint's explicit
+ * rank (the registry sorts them; switch leads so Hue dimmer button endpoints
+ * never classify as lights).
  */
 export function classifyFromState(state: MatterState): DeviceType {
-  for (const entry of CLUSTER_REGISTRY) {
-    const hint = entry.classify;
-    if (hint && hint.keys.some((key) => key in state)) {
+  for (const hint of CLASSIFICATION_HINTS) {
+    if (hint.keys.some((key) => key in state)) {
       return hint.type;
     }
   }
@@ -141,7 +107,7 @@ export function classifyFromState(state: MatterState): DeviceType {
  */
 export function readEndpointState(ep: MatterEndpoint): MatterState {
   const state: MatterState = {};
-  for (const entry of CLUSTER_REGISTRY) {
+  for (const entry of CLUSTER_ENTRIES) {
     if (!entry.read) {
       continue;
     }
@@ -163,7 +129,7 @@ export function readEndpointState(ep: MatterEndpoint): MatterState {
  */
 export function deriveCommands(state: MatterState): MatterCommand[] {
   const commands: MatterCommand[] = [];
-  for (const entry of CLUSTER_REGISTRY) {
+  for (const entry of CLUSTER_ENTRIES) {
     for (const command of entry.commands ?? []) {
       if (command.when in state) {
         commands.push(command.name);

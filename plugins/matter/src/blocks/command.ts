@@ -1,6 +1,7 @@
 import { defineBlock, input, output, z } from '@brika/sdk';
 import { log } from '@brika/sdk/lifecycle';
-import { getMatterController, MATTER_COMMAND_VALUES } from '../matter-controller';
+import { getMatterController } from '../engine/controller';
+import { MATTER_COMMAND_VALUES } from '../registry';
 
 export const matterCommand = defineBlock({
   id: 'command',

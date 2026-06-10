@@ -16,8 +16,8 @@ import {
   getMatterController,
   type MatterButtonPress,
   MatterController,
-} from '../matter-controller';
-import { PRESS_TYPE_VALUES } from '../press-tracker';
+} from '../engine/controller';
+import { PRESS_TYPE_VALUES } from '../engine/press-tracker';
 
 /** Gesture dropdown choices: 'any' plus the normalized press vocabulary. */
 const PRESS_CHOICES = ['any', ...PRESS_TYPE_VALUES] as const;

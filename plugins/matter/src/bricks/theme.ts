@@ -1,5 +1,5 @@
 /**
- * Device theme system — gradients, accent colors, and Lucide icons per device type.
+ * Device theme system: gradients, accent colors, and Lucide icons per device type.
  *
  * Inspired by the website weatherTheme() pattern and the weather plugin's
  * per-condition visual system. Gradients are dark enough for white text.

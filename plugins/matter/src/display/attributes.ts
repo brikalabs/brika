@@ -6,7 +6,7 @@
  * (the `brika check` import boundary enforces this). Pure data + pure functions.
  *
  * Consumers:
- *   - clusters.ts gives each key a zod schema (typed `MatterState`), and this
+ *   - the registry (registry/types.ts) gives each key a zod schema (typed `MatterState`), and this
  *     module gives each key its human face (label, format, visibility).
  *   - The "When Device Changes" block derives its attribute dropdown from
  *     `WATCHABLE_ATTRIBUTE_KEYS`.
@@ -15,7 +15,7 @@
  */
 
 /**
- * Every device category the plugin maps. Runtime source of truth: clusters.ts
+ * Every device category the plugin maps. Runtime source of truth: the registry
  * builds its zod `DeviceTypeSchema` from this tuple, and the type below is
  * structurally identical to its inference (this module stays zod-free).
  */

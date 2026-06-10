@@ -1,5 +1,5 @@
 /**
- * Thermostat controls — large centered temperature display with mode badge.
+ * Thermostat controls: large centered temperature display with mode badge.
  */
 
 import { getDeviceTheme } from '../theme';

@@ -1,11 +1,11 @@
 /**
- * Matter Device — client-rendered brick.
+ * Matter Device: client-rendered brick.
  *
  * Adaptive layouts by size:
- *   1×1  — micro: centered icon + state label, tappable for toggleable devices
- *   N×1  — strip: horizontal row with icon, name, state label, tappable
- *   1×N  — narrow: vertical icon + name + controls with tight padding
- *   else — full: header + divider + controls, compact styling at ≤2×2
+ *   1×1  - micro: centered icon + state label, tappable for toggleable devices
+ *   N×1  - strip: horizontal row with icon, name, state label, tappable
+ *   1×N  - narrow: vertical icon + name + controls with tight padding
+ *   else - full: header + divider + controls, compact styling at ≤2×2
  *
  * Data is pushed from the plugin process via deviceBrick.data.set(...).
  * Commands are sent via callAction(doDeviceCommand, ...).
@@ -17,7 +17,7 @@ import { useLocale } from '@brika/sdk/ui-kit/hooks';
 import clsx from 'clsx';
 import { Loader2, Settings } from 'lucide-react';
 import { useCallback } from 'react';
-import { summarizeState } from '../attributes';
+import { summarizeState } from '../display/attributes';
 import { AmbientGlow, DeviceIcon, StatusBadge } from './_components';
 import { DeviceControls } from './controls';
 import { useSendCommand } from './controls/send-command';

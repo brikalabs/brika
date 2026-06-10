@@ -88,7 +88,11 @@
       "humidity": "Humidité",
       "open": "Ouvrir",
       "stop": "Stop",
-      "close": "Fermer"
+      "close": "Fermer",
+      "start": "Démarrer",
+      "pause": "Pause",
+      "resume": "Reprendre",
+      "dock": "Retour à la base"
     },
     "attributes": {
       "on": "Alimentation",
@@ -143,6 +147,9 @@
       "seekingCharger": "Recherche du chargeur",
       "charging": "En charge",
       "docked": "À quai"
+    },
+    "remote": {
+      "pressHint": "Appuyez sur un bouton de la télécommande"
     },
     "noDeviceSelected": "Aucun appareil sélectionné",
     "deviceNotFound": "Appareil introuvable",

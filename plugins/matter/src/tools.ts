@@ -13,13 +13,13 @@
  */
 
 import { defineTool, z } from '@brika/sdk';
-import { getClusterCommand } from './clusters';
-import { getMatterController, MATTER_COMMAND_VALUES } from './matter-controller';
+import { getMatterController } from './engine/controller';
+import { getClusterCommand, MatterCommandSchema } from './registry';
 
-// Source of truth for the commands a tool caller may send. The tuple comes
-// straight from the cluster registry, so the inferred union IS `MatterCommand`
-// and `sendCommand` accepts a parsed value without a cast.
-const commandSchema = z.enum(MATTER_COMMAND_VALUES);
+// Source of truth for the commands a tool caller may send. The schema derives
+// from MATTER_COMMAND_VALUES in the registry, so the inferred union IS
+// `MatterCommand` and `sendCommand` accepts a parsed value without a cast.
+const commandSchema = MatterCommandSchema;
 
 /** Command parameters are stringly-typed (e.g. `{ level: "128" }`). */
 const paramsSchema = z.record(z.string(), z.string());

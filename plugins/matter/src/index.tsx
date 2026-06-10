@@ -9,7 +9,7 @@ import { log, onInit, onStop, onUninstall } from '@brika/sdk/lifecycle';
 import { clearAllData } from '@brika/sdk/storage';
 import { deviceBrick } from './bricks/device.brick';
 import { devicesBrick } from './bricks/devices.brick';
-import { getMatterController } from './matter-controller';
+import { getMatterController } from './engine/controller';
 import { serializeDevice } from './serialize';
 import {
   attributeChanged,
@@ -27,7 +27,7 @@ import './actions';
 
 import './tools';
 
-// Pages are compiled by the hub via Bun.build() — no import needed here.
+// Pages are compiled by the hub via Bun.build(): no import needed here.
 
 // ─── Sparks ──────────────────────────────────────────────────────────────────
 
@@ -47,7 +47,7 @@ export { deviceEvent } from './blocks/device-event';
 
 // ─── Bricks ──────────────────────────────────────────────────────────────────
 
-// Both bricks are client-rendered — no server-side defineBrick export needed.
+// Both bricks are client-rendered: no server-side defineBrick export needed.
 // Brick types are registered from package.json metadata.
 
 // ─── Dynamic Dropdown Options ────────────────────────────────────────────────

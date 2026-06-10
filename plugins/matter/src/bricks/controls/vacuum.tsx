@@ -9,19 +9,19 @@ import { useLocale } from '@brika/sdk/ui-kit/hooks';
 import clsx from 'clsx';
 import { Home, Pause, Play } from 'lucide-react';
 import { useCallback } from 'react';
-import { formatAttribute } from '../../attributes';
+import { formatAttribute } from '../../display/attributes';
 import { getDeviceTheme } from '../theme';
 import type { DeviceState } from '../types';
 import { useSendCommand } from './send-command';
 
 // Command values stay plain strings here: the typed `MatterCommand` union
-// lives in clusters.ts (server-only, zod + matter.js), and brick views must
+// lives in the registry (server-only, zod + matter.js), and brick views must
 // stay browser-safe. `DeviceState.commands` is string[] for the same reason.
-const VACUUM_ACTIONS: readonly { command: string; label: string; icon: typeof Play }[] = [
-  { command: 'vacuumStart', label: 'Start', icon: Play },
-  { command: 'vacuumPause', label: 'Pause', icon: Pause },
-  { command: 'vacuumResume', label: 'Resume', icon: Play },
-  { command: 'vacuumDock', label: 'Dock', icon: Home },
+const VACUUM_ACTIONS: readonly { command: string; labelKey: string; icon: typeof Play }[] = [
+  { command: 'vacuumStart', labelKey: 'device.controls.start', icon: Play },
+  { command: 'vacuumPause', labelKey: 'device.controls.pause', icon: Pause },
+  { command: 'vacuumResume', labelKey: 'device.controls.resume', icon: Play },
+  { command: 'vacuumDock', labelKey: 'device.controls.dock', icon: Home },
 ];
 
 function VacuumButton({
@@ -55,7 +55,7 @@ export function VacuumControls({ device }: Readonly<{ device: DeviceState }>) {
   const commands = device.commands ?? [];
   const vacuumState = device.state.vacuumState;
   const hasState = vacuumState !== null && vacuumState !== undefined;
-  let stateLabel = device.online ? 'Ready' : 'Offline';
+  let stateLabel = t(device.online ? 'device.online' : 'device.offline');
   if (hasState) {
     stateLabel = formatAttribute('vacuumState', vacuumState, t);
   }
@@ -77,7 +77,7 @@ export function VacuumControls({ device }: Readonly<{ device: DeviceState }>) {
         {VACUUM_ACTIONS.filter((action) => commands.includes(action.command)).map((action) => (
           <VacuumButton
             key={action.command}
-            label={action.label}
+            label={t(action.labelKey)}
             icon={action.icon}
             accentColor={theme.accentColor}
             onPress={() => run(action.command)}

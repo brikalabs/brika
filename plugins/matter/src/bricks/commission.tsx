@@ -1,5 +1,5 @@
 /**
- * Add a Matter Device — client-rendered brick.
+ * Add a Matter Device: client-rendered brick.
  *
  * Lets a user pair a new Matter device from a dashboard by entering its
  * setup/pairing code (e.g. "1234-567-8901" or an 11/21-digit numeric code).

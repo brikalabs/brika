@@ -1,13 +1,13 @@
 /**
  * Shared type definitions for Matter client-rendered bricks.
  *
- * Client bricks cannot import from plugin runtime code (matter-controller.ts),
- * so DeviceType comes from the browser-safe attribute registry instead.
+ * Client bricks cannot import from plugin runtime code (engine/, registry/),
+ * so DeviceType comes from the browser-safe display registry instead.
  */
 
-export type { DeviceType } from '../attributes';
+export type { DeviceType } from '../display/attributes';
 
-import type { DeviceType } from '../attributes';
+import type { DeviceType } from '../display/attributes';
 
 /** Full device state as pushed to the "device" brick via deviceBrick.data.set */
 export interface DeviceState {
@@ -18,7 +18,7 @@ export interface DeviceState {
   commissioned: boolean;
   /**
    * Kept as a loose record rather than mirroring the server's `MatterState`:
-   * the typed schema lives in clusters.ts (zod, server-only) and a hand-kept
+   * the typed schema lives in the registry (zod, server-only) and a hand-kept
    * mirror would drift on every attribute addition. Views never branch on the
    * value types; they render through formatAttribute/summarizeState, which
    * take `unknown` by contract.

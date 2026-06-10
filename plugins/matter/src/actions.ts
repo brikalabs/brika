@@ -3,10 +3,15 @@
  *
  * Server-side actions callable from plugin pages and client-rendered bricks.
  * The module compiler transforms action imports into lightweight refs at build time.
+ *
+ * Command names arrive stringly-typed from clients; they are validated against
+ * `MatterCommandSchema` (derived from MATTER_COMMAND_VALUES, the registry's
+ * command SSOT) before reaching the controller.
  */
 
 import { defineAction } from '@brika/sdk/actions';
-import { getMatterController, type MatterCommand } from './matter-controller';
+import { getMatterController } from './engine/controller';
+import { MatterCommandSchema } from './registry';
 import { serializeDevice } from './serialize';
 
 /**
@@ -52,12 +57,12 @@ export const commission = defineAction(async (input: { pairingCode: string }) =>
 /** Send command to a device */
 export const command = defineAction(
   async (input: { nodeId: string; command: string; params?: Record<string, string> }) => {
+    const parsed = MatterCommandSchema.safeParse(input.command);
+    if (!parsed.success) {
+      throw new Error('Command failed');
+    }
     const controller = getMatterController();
-    const ok = await controller.sendCommand(
-      input.nodeId,
-      input.command as MatterCommand,
-      input.params
-    );
+    const ok = await controller.sendCommand(input.nodeId, parsed.data, input.params);
     if (!ok) {
       throw new Error('Command failed');
     }
@@ -80,12 +85,12 @@ export const remove = defineAction(async (input: { nodeId: string }) => {
 /** Send a command to a Matter device from a client brick */
 export const doDeviceCommand = defineAction(
   async (input: { nodeId: string; command: string; args?: Record<string, string> }) => {
+    const parsed = MatterCommandSchema.safeParse(input.command);
+    if (!parsed.success) {
+      throw new Error(`Command "${input.command}" failed on device ${input.nodeId}`);
+    }
     const controller = getMatterController();
-    const ok = await controller.sendCommand(
-      input.nodeId,
-      input.command as MatterCommand,
-      input.args
-    );
+    const ok = await controller.sendCommand(input.nodeId, parsed.data, input.args);
     if (!ok) {
       throw new Error(`Command "${input.command}" failed on device ${input.nodeId}`);
     }

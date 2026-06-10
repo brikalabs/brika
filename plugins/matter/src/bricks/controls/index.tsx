@@ -1,5 +1,5 @@
 /**
- * Device controls dispatcher — routes to the appropriate control component
+ * Device controls dispatcher: routes to the appropriate control component
  * based on device type.
  */
 

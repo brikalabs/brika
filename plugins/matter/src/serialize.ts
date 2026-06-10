@@ -1,4 +1,4 @@
-import type { MatterDevice } from './matter-controller';
+import type { MatterDevice } from './engine/device-model';
 
 /** Convert a MatterDevice to a plain JSON-serializable object (full detail) */
 export function serializeDevice(d: MatterDevice) {

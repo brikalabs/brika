@@ -11,7 +11,7 @@
 import { useLocale } from '@brika/sdk/ui-kit/hooks';
 import clsx from 'clsx';
 import { BatteryMedium, CircleDot } from 'lucide-react';
-import { PRESS_LABEL_KEYS, PRESS_SHORT_LABELS } from '../../attributes';
+import { PRESS_LABEL_KEYS, PRESS_SHORT_LABELS } from '../../display/attributes';
 import { StatCard } from '../_components';
 import { getDeviceTheme } from '../theme';
 import type { DeviceState } from '../types';
@@ -61,6 +61,7 @@ function ButtonChip({
 }
 
 function BatteryCard({ device }: Readonly<{ device: DeviceState }>) {
+  const { t } = useLocale();
   const battery = device.state.battery;
   if (battery === undefined || battery === null) {
     return null;
@@ -68,7 +69,7 @@ function BatteryCard({ device }: Readonly<{ device: DeviceState }>) {
   return (
     <StatCard
       icon={BatteryMedium}
-      label="Battery"
+      label={t('device.attributes.battery')}
       value={`${String(battery)}%`}
       accentColor={getDeviceTheme('switch').accentColor}
     />
@@ -100,7 +101,7 @@ export function RemoteControls({
         </div>
         {lastPress !== undefined && (
           <span className="text-white/60 text-xs">
-            {`Button ${String(lastButton ?? '?')}: ${pressLabel(lastPress, t)}`}
+            {`${t('device.values.button')} ${String(lastButton ?? '?')}: ${pressLabel(lastPress, t)}`}
           </span>
         )}
         <BatteryCard device={device} />
@@ -128,12 +129,14 @@ export function RemoteControls({
       {lastPress ? (
         <div className="flex flex-col items-center">
           <span className="font-semibold text-sm text-white">
-            {lastButton === undefined ? 'Button' : `Button ${String(lastButton)}`}
+            {lastButton === undefined
+              ? t('device.values.button')
+              : `${t('device.values.button')} ${String(lastButton)}`}
           </span>
           <span className="text-white/60 text-xs">{pressLabel(lastPress, t)}</span>
         </div>
       ) : (
-        <span className="text-white/50 text-xs">Press a button on the remote</span>
+        <span className="text-white/50 text-xs">{t('device.remote.pressHint')}</span>
       )}
       <BatteryCard device={device} />
     </div>

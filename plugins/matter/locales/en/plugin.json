@@ -88,7 +88,11 @@
       "humidity": "Humidity",
       "open": "Open",
       "stop": "Stop",
-      "close": "Close"
+      "close": "Close",
+      "start": "Start",
+      "pause": "Pause",
+      "resume": "Resume",
+      "dock": "Dock"
     },
     "attributes": {
       "on": "Power",
@@ -143,6 +147,9 @@
       "seekingCharger": "Seeking charger",
       "charging": "Charging",
       "docked": "Docked"
+    },
+    "remote": {
+      "pressHint": "Press a button on the remote"
     },
     "noDeviceSelected": "No device selected",
     "deviceNotFound": "Device not found",

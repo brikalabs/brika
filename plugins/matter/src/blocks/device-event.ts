@@ -4,28 +4,25 @@
  * Subscribes directly to the in-process Matter controller (real matter.js
  * attribute events, no polling) and fires for the configured device:
  *
- *   - `changed-<i>` — one dynamic output per watched attribute, picked from a
+ *   - `changed-<i>` - one dynamic output per watched attribute, picked from a
  *     dropdown of the attributes Brika actually maps (no guessing names).
  *     Each watched attribute carries an optional built-in condition: fire on
  *     any change (default), when the value BECOMES a target, or when it
  *     crosses ABOVE/BELOW a numeric threshold (edge-triggered).
- *   - `event`       — Matter EVENTS: button presses on switches/dimmers
+ *   - `event`       - Matter EVENTS: button presses on switches/dimmers
  *     (`initialPress`, `shortRelease`, `longPress`, `multiPressComplete`, ...),
  *     lock alarms, and similar one-shot signals that never appear in state.
- *   - `any`         — any state change (the full device snapshot).
+ *   - `any`         - any state change (the full device snapshot).
  *
  * The device itself is picked from a dropdown of commissioned devices. The
- * attribute vocabulary comes from the shared registry in `attributes.ts`. All
+ * attribute vocabulary comes from the shared display registry in `display/attributes.ts`. All
  * subscriptions are cleaned up automatically when the block stops.
  */
 
 import { defineBlock, output, z } from '@brika/sdk';
-import { WATCHABLE_ATTRIBUTE_KEYS } from '../attributes';
-import {
-  getMatterController,
-  type MatterDevice,
-  type MatterDeviceEvent,
-} from '../matter-controller';
+import { WATCHABLE_ATTRIBUTE_KEYS } from '../display/attributes';
+import { getMatterController } from '../engine/controller';
+import type { MatterDevice, MatterDeviceEvent } from '../engine/device-model';
 import { ATTRIBUTE_CONDITION_VALUES, conditionMet } from './attribute-condition';
 
 function toStringState(device: MatterDevice): Record<string, string> {

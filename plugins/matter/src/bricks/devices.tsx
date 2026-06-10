@@ -1,5 +1,5 @@
 /**
- * Matter Devices — client-rendered brick.
+ * Matter Devices: client-rendered brick.
  *
  * Displays all commissioned Matter devices with online/offline status,
  * device type icons, and names in a responsive grid. Uses a deep indigo

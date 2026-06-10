@@ -34,7 +34,7 @@ import {
   Thermometer,
   ToggleLeft,
 } from 'lucide-react';
-import type { DeviceType } from '../matter-controller';
+import type { DeviceType } from '../display/attributes';
 
 export interface CommandConfig {
   nodeId?: string;

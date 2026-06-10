@@ -46,7 +46,7 @@ import {
 } from '@brika/sdk/ui-kit/icons';
 import { type ChangeEvent, type KeyboardEvent, useState } from 'react';
 import { commission, getDevices, remove, scan } from '../actions';
-import { type DeviceType, formatAttribute } from '../attributes';
+import { type DeviceType, formatAttribute } from '../display/attributes';
 
 interface MatterDevice {
   nodeId: string;
@@ -380,7 +380,7 @@ function DeviceTypeGroup({
 }
 
 // ─── Bridge section ─────────────────────────────────────────────────────────
-// Reuses DeviceTypeGroup with standard DeviceCards — sub-devices shown in info dialog
+// Reuses DeviceTypeGroup with standard DeviceCards: sub-devices shown in info dialog
 
 // ─── Device info dialog ─────────────────────────────────────────────────────
 

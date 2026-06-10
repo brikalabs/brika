@@ -1,11 +1,12 @@
 /**
- * Light controls — power toggle, brightness slider, and color presets.
+ * Light controls: power toggle, brightness slider, and color presets.
  *
  * All features shown at every size. Labels appear at h≥3 for breathing room.
  * Brightness slider uses local state with debounced commands for smooth dragging.
  */
 
 import { capture } from '@brika/sdk';
+import { useLocale } from '@brika/sdk/ui-kit/hooks';
 import { Sun } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { PowerToggle } from '../_components';
@@ -72,6 +73,7 @@ export function LightControls({
   device,
   height,
 }: Readonly<{ device: DeviceState; height: number }>) {
+  const { t } = useLocale();
   const theme = getDeviceTheme('light');
   const isOn = Boolean(device.state.on);
   const brightness = device.state.brightness === null ? null : Number(device.state.brightness);
@@ -174,7 +176,9 @@ export function LightControls({
           }}
         />
         <div className="flex flex-col gap-0.5">
-          <span className="font-semibold text-sm text-white">{isOn ? 'On' : 'Off'}</span>
+          <span className="font-semibold text-sm text-white">
+            {t(isOn ? 'device.values.on' : 'device.values.off')}
+          </span>
           {brightness !== null && (
             <span className="text-[10px] text-white/40 tabular-nums">{localBrightness}%</span>
           )}

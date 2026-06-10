@@ -5,10 +5,9 @@
  * and control Matter devices on the local network.
  *
  * This file owns lifecycle, node connections/subscriptions, and the notify
- * channels. Cluster specifics live in the registry (`clusters.ts`), the
- * device cache refresh in `device-model.ts`, and button-press normalization
- * in `press-tracker.ts`; the types they define are re-exported here so
- * existing imports keep working.
+ * channels. Cluster specifics live in the device-family registry
+ * (`../registry`), the device cache refresh in `device-model.ts`, and
+ * button-press normalization in `press-tracker.ts`.
  *
  * Storage is handled by matter.js internally via Environment/StorageService,
  * pointed at our plugin's data directory.
@@ -22,7 +21,7 @@ import { ManualPairingCodeCodec, NodeId, QrPairingCodeCodec, VendorId } from '@m
 import { NodeJsFilesystem } from '@matter/nodejs';
 import { CommissioningController, type NodeCommissioningOptions } from '@project-chip/matter.js';
 import { NodeStates, type PairedNode } from '@project-chip/matter.js/device';
-import { getClusterCommand, type MatterCommand } from './clusters';
+import { getClusterCommand, type MatterCommand } from '../registry';
 import {
   type MatterDevice,
   type MatterDeviceEvent,
@@ -35,11 +34,6 @@ import {
   type PressType,
   SWITCH_PRESS_EVENTS,
 } from './press-tracker';
-
-export type { DeviceType, MatterCommand, MatterEndpoint, MatterState } from './clusters';
-export { MATTER_COMMAND_VALUES } from './clusters';
-export type { MatterDevice, MatterDeviceEvent } from './device-model';
-export type { PressType } from './press-tracker';
 
 /** A normalized, user-level button press; see {@link press-tracker}. */
 export interface MatterButtonPress {

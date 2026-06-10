@@ -7,7 +7,7 @@
  * built-in condition: fire on any change, when the value becomes a target, or
  * when it crosses above/below a numeric threshold (edge-triggered).
  *
- * The attribute vocabulary comes from the shared registry in attributes.ts
+ * The attribute vocabulary comes from the shared display registry in display/attributes.ts
  * (zod-free, browser-safe), so the dropdown always matches what the cluster
  * readers actually produce. Suggestions adapt to the device type.
  */
@@ -26,7 +26,7 @@ import {
 import { useAction, useLocale } from '@brika/sdk/ui-kit/hooks';
 import { Cpu, Plus, Radio, RefreshCw, Trash2 } from 'lucide-react';
 import { listDevices } from '../actions';
-import { ATTRIBUTE_BY_KEY, WATCHABLE_ATTRIBUTE_KEYS } from '../attributes';
+import { ATTRIBUTE_BY_KEY, WATCHABLE_ATTRIBUTE_KEYS } from '../display/attributes';
 import { DEVICE_ICONS } from './_command-meta';
 import { ATTRIBUTE_CONDITION_VALUES, type AttributeConditionKind } from './attribute-condition';
 

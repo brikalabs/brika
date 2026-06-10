@@ -1,14 +1,14 @@
 /**
- * Sensor controls — grid of stat cards for sensor readings.
+ * Sensor controls: grid of stat cards for sensor readings.
  *
  * Labels, units, and visibility come from the shared attribute registry
- * (attributes.ts): hidden internals never render, prioritized readings
+ * (display/attributes.ts): hidden internals never render, prioritized readings
  * (temperature, humidity, ...) come first.
  */
 
 import { useLocale } from '@brika/sdk/ui-kit/hooks';
 import { Activity } from 'lucide-react';
-import { ATTRIBUTE_BY_KEY, attributePriority, formatAttribute } from '../../attributes';
+import { ATTRIBUTE_BY_KEY, attributePriority, formatAttribute } from '../../display/attributes';
 import { StatCard } from '../_components';
 import { getDeviceTheme } from '../theme';
 import type { DeviceState } from '../types';
