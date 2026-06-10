@@ -21,7 +21,13 @@
  * machine is unit-testable.
  */
 
-export type PressType = 'short' | 'long' | 'double' | 'triple' | 'multi';
+/**
+ * Every normalized gesture. Runtime source of truth: block schemas build
+ * their zod enums from this tuple (this module stays dependency-free).
+ */
+export const PRESS_TYPE_VALUES = ['short', 'long', 'double', 'triple', 'multi'] as const;
+
+export type PressType = (typeof PRESS_TYPE_VALUES)[number];
 
 /** A single user-level gesture. */
 export interface NormalizedPress {

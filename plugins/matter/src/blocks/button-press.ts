@@ -17,6 +17,10 @@ import {
   type MatterButtonPress,
   MatterController,
 } from '../matter-controller';
+import { PRESS_TYPE_VALUES } from '../press-tracker';
+
+/** Gesture dropdown choices: 'any' plus the normalized press vocabulary. */
+const PRESS_CHOICES = ['any', ...PRESS_TYPE_VALUES] as const;
 
 /**
  * True when a press belongs to the configured device, counting each gesture
@@ -74,10 +78,7 @@ export const buttonPress = defineBlock({
       .enum(['any', '1', '2', '3', '4', '5', '6', '7', '8'])
       .default('any')
       .describe('Which physical button to watch'),
-    press: z
-      .enum(['any', 'short', 'long', 'double', 'triple'])
-      .default('any')
-      .describe('Which gesture to fire on'),
+    press: z.enum(PRESS_CHOICES).default('any').describe('Which gesture to fire on'),
   }),
   run: ({ config, emit, start }) => {
     const controller = getMatterController();

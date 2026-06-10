@@ -28,8 +28,8 @@ import type { DeviceState } from './types';
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 /** Short state label for micro / strip layouts, from the attribute registry. */
-function stateLabel(device: DeviceState): string {
-  return summarizeState(device.state, device.deviceType, device.commands ?? [], device.online);
+function buildStateLabel(device: DeviceState, t: (key: string) => string): string {
+  return summarizeState(device.state, device.deviceType, device.commands ?? [], device.online, t);
 }
 
 /**
@@ -52,10 +52,11 @@ interface DeviceLayoutProps {
   theme: { gradient: string; glow: string };
   isActive: boolean;
   typeLabel: string;
+  stateLabel: string;
   onTap: () => void;
 }
 
-function MicroLayout({ device, theme, isActive, onTap }: Readonly<DeviceLayoutProps>) {
+function MicroLayout({ device, theme, isActive, stateLabel, onTap }: Readonly<DeviceLayoutProps>) {
   const tappable = tapCommand(device) !== undefined;
   const base =
     'relative flex h-full flex-col items-center justify-center gap-1.5 overflow-hidden rounded-lg';
@@ -63,7 +64,7 @@ function MicroLayout({ device, theme, isActive, onTap }: Readonly<DeviceLayoutPr
     <>
       <AmbientGlow color={theme.glow} active={isActive} />
       <DeviceIcon type={device.deviceType} />
-      <span className="relative font-medium text-white/70 text-xs">{stateLabel(device)}</span>
+      <span className="relative font-medium text-white/70 text-xs">{stateLabel}</span>
     </>
   );
   if (tappable) {
@@ -85,7 +86,14 @@ function MicroLayout({ device, theme, isActive, onTap }: Readonly<DeviceLayoutPr
   );
 }
 
-function StripLayout({ device, theme, isActive, typeLabel, onTap }: Readonly<DeviceLayoutProps>) {
+function StripLayout({
+  device,
+  theme,
+  isActive,
+  typeLabel,
+  stateLabel,
+  onTap,
+}: Readonly<DeviceLayoutProps>) {
   const tappable = tapCommand(device) !== undefined;
   const base = 'relative flex h-full items-center gap-2.5 overflow-hidden rounded-lg px-3';
   const children = (
@@ -96,7 +104,7 @@ function StripLayout({ device, theme, isActive, typeLabel, onTap }: Readonly<Dev
         <span className="truncate font-semibold text-sm text-white">{device.name}</span>
         <span className="text-[10px] text-white/50">{typeLabel}</span>
       </div>
-      <span className="relative font-medium text-white/60 text-xs">{stateLabel(device)}</span>
+      <span className="relative font-medium text-white/60 text-xs">{stateLabel}</span>
     </>
   );
   if (tappable) {
@@ -195,6 +203,7 @@ export default function DeviceBrick() {
   const theme = getDeviceTheme(device.deviceType);
   const isActive = device.online && Boolean(device.state.on ?? device.state.locked ?? true);
   const typeLabel = t(`device.types.${device.deviceType}`);
+  const stateLabel = buildStateLabel(device, t);
 
   // ─── Micro layout (1×1) ──────────────────────────────────────────────
 
@@ -205,6 +214,7 @@ export default function DeviceBrick() {
         theme={theme}
         isActive={isActive}
         typeLabel={typeLabel}
+        stateLabel={stateLabel}
         onTap={handleTap}
       />
     );
@@ -219,6 +229,7 @@ export default function DeviceBrick() {
         theme={theme}
         isActive={isActive}
         typeLabel={typeLabel}
+        stateLabel={stateLabel}
         onTap={handleTap}
       />
     );

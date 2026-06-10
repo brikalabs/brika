@@ -8,15 +8,22 @@
  * last-press display. Battery shows when the device reports one.
  */
 
+import { useLocale } from '@brika/sdk/ui-kit/hooks';
 import clsx from 'clsx';
 import { BatteryMedium, CircleDot } from 'lucide-react';
-import { PRESS_LABELS, PRESS_SHORT_LABELS } from '../../attributes';
+import { PRESS_LABEL_KEYS, PRESS_SHORT_LABELS } from '../../attributes';
 import { StatCard } from '../_components';
 import { getDeviceTheme } from '../theme';
 import type { DeviceState } from '../types';
 
 function lastPressOf(device: DeviceState): string | undefined {
   return typeof device.state.lastPress === 'string' ? device.state.lastPress : undefined;
+}
+
+/** Long-form translated gesture label; unknown gestures fall back to raw text. */
+function pressLabel(press: string, t: (k: string) => string): string {
+  const key = PRESS_LABEL_KEYS[press];
+  return key === undefined ? press : t(key);
 }
 
 function ButtonChip({
@@ -72,6 +79,7 @@ export function RemoteControls({
   device,
   buttonChildren = [],
 }: Readonly<{ device: DeviceState; buttonChildren?: DeviceState[] }>) {
+  const { t } = useLocale();
   const theme = getDeviceTheme('switch');
   const lastPress = lastPressOf(device);
   const lastButton = device.state.lastButton;
@@ -92,7 +100,7 @@ export function RemoteControls({
         </div>
         {lastPress !== undefined && (
           <span className="text-white/60 text-xs">
-            {`Button ${String(lastButton ?? '?')}: ${PRESS_LABELS[lastPress] ?? lastPress}`}
+            {`Button ${String(lastButton ?? '?')}: ${pressLabel(lastPress, t)}`}
           </span>
         )}
         <BatteryCard device={device} />
@@ -122,7 +130,7 @@ export function RemoteControls({
           <span className="font-semibold text-sm text-white">
             {lastButton === undefined ? 'Button' : `Button ${String(lastButton)}`}
           </span>
-          <span className="text-white/60 text-xs">{PRESS_LABELS[lastPress] ?? lastPress}</span>
+          <span className="text-white/60 text-xs">{pressLabel(lastPress, t)}</span>
         </div>
       ) : (
         <span className="text-white/50 text-xs">Press a button on the remote</span>

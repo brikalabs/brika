@@ -5,6 +5,7 @@
  */
 
 import { capture } from '@brika/sdk';
+import { useLocale } from '@brika/sdk/ui-kit/hooks';
 import clsx from 'clsx';
 import { Home, Pause, Play } from 'lucide-react';
 import { useCallback } from 'react';
@@ -13,6 +14,9 @@ import { getDeviceTheme } from '../theme';
 import type { DeviceState } from '../types';
 import { useSendCommand } from './send-command';
 
+// Command values stay plain strings here: the typed `MatterCommand` union
+// lives in clusters.ts (server-only, zod + matter.js), and brick views must
+// stay browser-safe. `DeviceState.commands` is string[] for the same reason.
 const VACUUM_ACTIONS: readonly { command: string; label: string; icon: typeof Play }[] = [
   { command: 'vacuumStart', label: 'Start', icon: Play },
   { command: 'vacuumPause', label: 'Pause', icon: Pause },
@@ -45,6 +49,7 @@ function VacuumButton({
 }
 
 export function VacuumControls({ device }: Readonly<{ device: DeviceState }>) {
+  const { t } = useLocale();
   const theme = getDeviceTheme('vacuum');
   const sendCommand = useSendCommand();
   const commands = device.commands ?? [];
@@ -52,7 +57,7 @@ export function VacuumControls({ device }: Readonly<{ device: DeviceState }>) {
   const hasState = vacuumState !== null && vacuumState !== undefined;
   let stateLabel = device.online ? 'Ready' : 'Offline';
   if (hasState) {
-    stateLabel = formatAttribute('vacuumState', vacuumState);
+    stateLabel = formatAttribute('vacuumState', vacuumState, t);
   }
 
   const run = useCallback(

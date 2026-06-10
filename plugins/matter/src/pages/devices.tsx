@@ -25,9 +25,11 @@ import {
 import { useAction, useCallAction, useLocale } from '@brika/sdk/ui-kit/hooks';
 import {
   Blinds,
+  Bot,
   ChevronRight,
   Cpu,
   Eye,
+  Fan,
   Info,
   Lightbulb,
   Loader2,
@@ -44,19 +46,7 @@ import {
 } from '@brika/sdk/ui-kit/icons';
 import { type ChangeEvent, type KeyboardEvent, useState } from 'react';
 import { commission, getDevices, remove, scan } from '../actions';
-import { formatAttribute } from '../attributes';
-
-// ─── Types ──────────────────────────────────────────────────────────────────
-
-type DeviceType =
-  | 'light'
-  | 'lock'
-  | 'cover'
-  | 'thermostat'
-  | 'switch'
-  | 'sensor'
-  | 'bridge'
-  | 'unknown';
+import { type DeviceType, formatAttribute } from '../attributes';
 
 interface MatterDevice {
   nodeId: string;
@@ -105,6 +95,8 @@ const DEVICE_META: Record<DeviceType, DeviceMeta> = {
     bgClass: 'bg-data-3/15',
   },
   sensor: { icon: Eye, accent: 'purple', iconClass: 'text-data-8', bgClass: 'bg-data-8/15' },
+  fan: { icon: Fan, accent: 'emerald', iconClass: 'text-data-4', bgClass: 'bg-data-4/15' },
+  vacuum: { icon: Bot, accent: 'blue', iconClass: 'text-data-1', bgClass: 'bg-data-1/15' },
   bridge: { icon: Network, accent: 'blue', iconClass: 'text-data-7', bgClass: 'bg-data-7/15' },
   unknown: {
     icon: Wrench,
@@ -120,6 +112,8 @@ const TYPE_ORDER: DeviceType[] = [
   'lock',
   'cover',
   'thermostat',
+  'fan',
+  'vacuum',
   'sensor',
   'unknown',
 ];
@@ -154,7 +148,7 @@ const STATE_PART_KEYS: readonly { key: string; icon: typeof Cpu; falsyIcon?: typ
   { key: 'systemModeName', icon: Wrench },
 ];
 
-function buildStateParts(device: MatterDevice): StatePart[] {
+function buildStateParts(device: MatterDevice, t: TFn): StatePart[] {
   const parts: StatePart[] = [];
   for (const { key, icon, falsyIcon } of STATE_PART_KEYS) {
     const value = device.state[key];
@@ -163,7 +157,7 @@ function buildStateParts(device: MatterDevice): StatePart[] {
     }
     parts.push({
       icon: falsyIcon !== undefined && !value ? falsyIcon : icon,
-      label: formatAttribute(key, value),
+      label: formatAttribute(key, value, t),
     });
   }
   return parts;
@@ -243,7 +237,7 @@ function DeviceCard({
 }>) {
   const meta = DEVICE_META[device.deviceType] ?? DEVICE_META.unknown;
   const Icon = meta.icon;
-  const stateParts = buildStateParts(device);
+  const stateParts = buildStateParts(device, t);
   const isRemoving = removingId === device.nodeId;
   const bridgeChild = isBridgeChild(device.nodeId);
   const bridgeName = bridgeChild ? findBridgeName(device, allDevices) : null;
@@ -419,7 +413,7 @@ function DeviceInfoDialog({
 
   const meta = DEVICE_META[device.deviceType] ?? DEVICE_META.unknown;
   const Icon = meta.icon;
-  const stateParts = buildStateParts(device);
+  const stateParts = buildStateParts(device, t);
   const isBridge = device.deviceType === 'bridge';
   const children = isBridge ? getBridgeChildren(device, allDevices) : [];
 

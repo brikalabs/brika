@@ -28,6 +28,7 @@ import { Cpu, Plus, Radio, RefreshCw, Trash2 } from 'lucide-react';
 import { listDevices } from '../actions';
 import { ATTRIBUTE_BY_KEY, WATCHABLE_ATTRIBUTE_KEYS } from '../attributes';
 import { DEVICE_ICONS } from './_command-meta';
+import { ATTRIBUTE_CONDITION_VALUES, type AttributeConditionKind } from './attribute-condition';
 
 interface WatchedAttribute {
   name: string;
@@ -40,13 +41,16 @@ interface DeviceEventConfig {
   attributes?: WatchedAttribute[];
 }
 
-/** Condition choices; mirrors ATTRIBUTE_CONDITION_VALUES on the server side. */
-const CONDITION_OPTIONS: readonly { value: string; label: string }[] = [
-  { value: 'changes', label: 'changes' },
-  { value: 'becomes', label: 'becomes' },
-  { value: 'above', label: 'goes above' },
-  { value: 'below', label: 'goes below' },
-];
+/** Display labels per condition; the values come from the shared tuple. */
+const CONDITION_LABELS: Record<AttributeConditionKind, string> = {
+  changes: 'changes',
+  becomes: 'becomes',
+  above: 'goes above',
+  below: 'goes below',
+};
+
+const CONDITION_OPTIONS: readonly { value: string; label: string }[] =
+  ATTRIBUTE_CONDITION_VALUES.map((value) => ({ value, label: CONDITION_LABELS[value] }));
 
 /** Common attributes to suggest, per device type (real registry keys). */
 const ATTRIBUTE_SUGGESTIONS: Record<string, string[]> = {
@@ -62,8 +66,9 @@ const ATTRIBUTE_SUGGESTIONS: Record<string, string[]> = {
   unknown: ['on'],
 };
 
-function attributeLabel(key: string): string {
-  return ATTRIBUTE_BY_KEY[key]?.label ?? key;
+function attributeLabel(key: string, t: (k: string) => string): string {
+  const meta = ATTRIBUTE_BY_KEY[key];
+  return meta ? t(meta.labelKey) : key;
 }
 
 function WatchedAttributeRow({
@@ -243,7 +248,7 @@ export default function DeviceEventView() {
               {available.map((key) => (
                 <SelectItem key={key} value={key}>
                   <span className="flex items-baseline gap-2">
-                    <span>{attributeLabel(key)}</span>
+                    <span>{attributeLabel(key, t)}</span>
                     <span className="font-mono text-muted-foreground text-xs">{key}</span>
                   </span>
                 </SelectItem>

@@ -45,21 +45,19 @@ import { ThermostatClient } from '@matter/main/behaviors/thermostat';
 import { WindowCoveringClient } from '@matter/main/behaviors/window-covering';
 import { DoorLock, RvcRunMode, Thermostat } from '@matter/main/clusters';
 import type { Endpoint } from '@project-chip/matter.js/device';
+import { DEVICE_TYPE_VALUES } from './attributes';
+import { PRESS_TYPE_VALUES } from './press-tracker';
 
 /** A matter.js device endpoint (node root, bridged child, button child, ...). */
 export type MatterEndpoint = Endpoint;
 
-export type DeviceType =
-  | 'light'
-  | 'lock'
-  | 'cover'
-  | 'thermostat'
-  | 'switch'
-  | 'sensor'
-  | 'fan'
-  | 'vacuum'
-  | 'bridge'
-  | 'unknown';
+/**
+ * Device categories, validated. The tuple lives in attributes.ts (browser-safe,
+ * zod-free); this schema is the server-side runtime contract over it.
+ */
+export const DeviceTypeSchema = z.enum(DEVICE_TYPE_VALUES);
+
+export type DeviceType = ZodInfer<typeof DeviceTypeSchema>;
 
 /**
  * Every command the controller can send. Single source of truth: the tools'
@@ -120,7 +118,7 @@ export const MatterStateSchema = z
     battery: z.coerce.number(),
     buttonPosition: z.coerce.number(),
     buttons: z.coerce.number(),
-    lastPress: z.enum(['short', 'long', 'double', 'triple', 'multi']),
+    lastPress: z.enum(PRESS_TYPE_VALUES),
     lastButton: z.coerce.number(),
     fanMode: z.coerce.number(),
     fanSpeed: z.coerce.number(),

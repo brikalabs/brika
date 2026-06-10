@@ -14,37 +14,54 @@
  *     instead of per-component switch chains.
  */
 
-// Mirrors the server-side union in clusters.ts; bricks/types.ts re-exports it
-// so client views keep a single browser-safe declaration.
-export type DeviceType =
-  | 'light'
-  | 'lock'
-  | 'cover'
-  | 'thermostat'
-  | 'switch'
-  | 'sensor'
-  | 'fan'
-  | 'vacuum'
-  | 'bridge'
-  | 'unknown';
+/**
+ * Every device category the plugin maps. Runtime source of truth: clusters.ts
+ * builds its zod `DeviceTypeSchema` from this tuple, and the type below is
+ * structurally identical to its inference (this module stays zod-free).
+ */
+export const DEVICE_TYPE_VALUES = [
+  'light',
+  'lock',
+  'cover',
+  'thermostat',
+  'switch',
+  'sensor',
+  'fan',
+  'vacuum',
+  'bridge',
+  'unknown',
+] as const;
 
-export type AttributeCategory =
-  | 'power'
-  | 'level'
-  | 'color'
-  | 'climate'
-  | 'security'
-  | 'buttons'
-  | 'sensor'
-  | 'diagnostic';
+export type DeviceType = (typeof DEVICE_TYPE_VALUES)[number];
+
+export const ATTRIBUTE_CATEGORY_VALUES = [
+  'power',
+  'level',
+  'color',
+  'climate',
+  'security',
+  'buttons',
+  'sensor',
+  'diagnostic',
+] as const;
+
+export type AttributeCategory = (typeof ATTRIBUTE_CATEGORY_VALUES)[number];
+
+export const ATTRIBUTE_KIND_VALUES = ['boolean', 'number', 'string'] as const;
+
+export type AttributeKind = (typeof ATTRIBUTE_KIND_VALUES)[number];
+
+/** Translate contract: views pass `t` from useLocale, unit tests pass a stub. */
+export type TranslateFn = (key: string) => string;
 
 export interface AttributeMeta {
   /** State key as produced by the cluster registry, e.g. 'brightness'. */
   key: string;
-  kind: 'boolean' | 'number' | 'string';
-  label: string;
-  /** Human-readable rendering: '72%', 'On', '21.5°C', 'Double press'. */
-  format: (value: unknown) => string;
+  kind: AttributeKind;
+  /** i18n key for the human label, e.g. 'device.attributes.brightness'. */
+  labelKey: string;
+  /** Human-readable rendering: '72%', t('device.values.on'), '21.5°C'. */
+  format: (value: unknown, t: TranslateFn) => string;
   category: AttributeCategory;
   /** Appears in the "When Device Changes" attribute dropdown. */
   watchable: boolean;
@@ -58,16 +75,20 @@ export interface AttributeMeta {
 
 // ─── Shared label tables ─────────────────────────────────────────────────────
 
-/** Long labels for normalized press gestures (remote panels, summaries). */
-export const PRESS_LABELS: Readonly<Record<string, string>> = {
-  short: 'Short press',
-  long: 'Long press',
-  double: 'Double press',
-  triple: 'Triple press',
-  multi: 'Multi press',
+/** i18n keys for the long-form press gestures (remote panels, summaries). */
+export const PRESS_LABEL_KEYS: Readonly<Record<string, string>> = {
+  short: 'device.press.short',
+  long: 'device.press.long',
+  double: 'device.press.double',
+  triple: 'device.press.triple',
+  multi: 'device.press.multi',
 };
 
-/** Compact labels for normalized press gestures (per-button chips). */
+/**
+ * Compact labels for normalized press gestures (per-button chips).
+ * Deliberately NOT translated: these are width-constrained chip glyphs
+ * ('2x', 'long'), technical shorthand rather than prose.
+ */
 export const PRESS_SHORT_LABELS: Readonly<Record<string, string>> = {
   short: 'short',
   long: 'long',
@@ -76,15 +97,15 @@ export const PRESS_SHORT_LABELS: Readonly<Record<string, string>> = {
   multi: 'multi',
 };
 
-/** Matter RVC OperationalState codes mapped to human labels. */
-export const VACUUM_STATE_LABELS: Readonly<Record<string, string>> = {
-  '0': 'Stopped',
-  '1': 'Running',
-  '2': 'Paused',
-  '3': 'Error',
-  '64': 'Seeking charger',
-  '65': 'Charging',
-  '66': 'Docked',
+/** Matter RVC OperationalState codes mapped to i18n keys. */
+export const VACUUM_STATE_KEYS: Readonly<Record<string, string>> = {
+  '0': 'device.vacuum.stopped',
+  '1': 'device.vacuum.running',
+  '2': 'device.vacuum.paused',
+  '3': 'device.vacuum.error',
+  '64': 'device.vacuum.seekingCharger',
+  '65': 'device.vacuum.charging',
+  '66': 'device.vacuum.docked',
 };
 
 // ─── Formatting helpers (pure, tolerant of any input) ───────────────────────
@@ -103,8 +124,18 @@ function percent(value: unknown): string {
   return `${asText(value)}%`;
 }
 
-function onOff(value: unknown): string {
-  return value ? 'On' : 'Off';
+function onOff(value: unknown, t: TranslateFn): string {
+  return t(value ? 'device.values.on' : 'device.values.off');
+}
+
+/** Translate a value through a key table, falling back to the raw text. */
+function translateMapped(
+  keys: Readonly<Record<string, string>>,
+  value: unknown,
+  t: TranslateFn
+): string {
+  const key = keys[asText(value)];
+  return key === undefined ? asText(value) : t(key);
 }
 
 /** 'B2 double': the last gesture with its button when the device reports one. */
@@ -126,7 +157,7 @@ export const ATTRIBUTES: readonly AttributeMeta[] = [
   {
     key: 'on',
     kind: 'boolean',
-    label: 'Power',
+    labelKey: 'device.attributes.on',
     format: onOff,
     category: 'power',
     watchable: true,
@@ -135,7 +166,7 @@ export const ATTRIBUTES: readonly AttributeMeta[] = [
   {
     key: 'brightness',
     kind: 'number',
-    label: 'Brightness',
+    labelKey: 'device.attributes.brightness',
     format: percent,
     category: 'level',
     watchable: true,
@@ -144,7 +175,7 @@ export const ATTRIBUTES: readonly AttributeMeta[] = [
   {
     key: 'hue',
     kind: 'number',
-    label: 'Hue',
+    labelKey: 'device.attributes.hue',
     format: (value) => `${asText(value)}°`,
     category: 'color',
     watchable: true,
@@ -152,7 +183,7 @@ export const ATTRIBUTES: readonly AttributeMeta[] = [
   {
     key: 'saturation',
     kind: 'number',
-    label: 'Saturation',
+    labelKey: 'device.attributes.saturation',
     format: percent,
     category: 'color',
     watchable: true,
@@ -160,7 +191,7 @@ export const ATTRIBUTES: readonly AttributeMeta[] = [
   {
     key: 'colorTempMireds',
     kind: 'number',
-    label: 'Color temperature',
+    labelKey: 'device.attributes.colorTempMireds',
     format: (value) => `${asText(value)} mireds`,
     category: 'color',
     watchable: true,
@@ -168,7 +199,7 @@ export const ATTRIBUTES: readonly AttributeMeta[] = [
   {
     key: 'colorMode',
     kind: 'number',
-    label: 'Color mode',
+    labelKey: 'device.attributes.colorMode',
     format: asText,
     category: 'color',
     watchable: true,
@@ -177,8 +208,8 @@ export const ATTRIBUTES: readonly AttributeMeta[] = [
   {
     key: 'locked',
     kind: 'boolean',
-    label: 'Lock',
-    format: (value) => (value ? 'Locked' : 'Unlocked'),
+    labelKey: 'device.attributes.locked',
+    format: (value, t) => t(value ? 'device.values.locked' : 'device.values.unlocked'),
     category: 'security',
     watchable: true,
     summaryPriority: 1,
@@ -186,7 +217,7 @@ export const ATTRIBUTES: readonly AttributeMeta[] = [
   {
     key: 'lockState',
     kind: 'number',
-    label: 'Lock state',
+    labelKey: 'device.attributes.lockState',
     format: asText,
     category: 'security',
     watchable: true,
@@ -195,7 +226,7 @@ export const ATTRIBUTES: readonly AttributeMeta[] = [
   {
     key: 'coverPosition',
     kind: 'number',
-    label: 'Position',
+    labelKey: 'device.attributes.coverPosition',
     format: percent,
     category: 'level',
     watchable: true,
@@ -204,7 +235,7 @@ export const ATTRIBUTES: readonly AttributeMeta[] = [
   {
     key: 'coverOperational',
     kind: 'string',
-    label: 'Cover activity',
+    labelKey: 'device.attributes.coverOperational',
     format: asText,
     category: 'level',
     watchable: true,
@@ -212,7 +243,7 @@ export const ATTRIBUTES: readonly AttributeMeta[] = [
   {
     key: 'temperature',
     kind: 'number',
-    label: 'Temperature',
+    labelKey: 'device.attributes.temperature',
     format: (value) => `${asText(value)}°C`,
     category: 'climate',
     watchable: true,
@@ -221,7 +252,7 @@ export const ATTRIBUTES: readonly AttributeMeta[] = [
   {
     key: 'humidity',
     kind: 'number',
-    label: 'Humidity',
+    labelKey: 'device.attributes.humidity',
     format: percent,
     category: 'climate',
     watchable: true,
@@ -230,8 +261,8 @@ export const ATTRIBUTES: readonly AttributeMeta[] = [
   {
     key: 'occupied',
     kind: 'boolean',
-    label: 'Occupancy',
-    format: (value) => (value ? 'Occupied' : 'Clear'),
+    labelKey: 'device.attributes.occupied',
+    format: (value, t) => t(value ? 'device.values.occupied' : 'device.values.clear'),
     category: 'sensor',
     watchable: true,
     summaryPriority: 12,
@@ -239,8 +270,8 @@ export const ATTRIBUTES: readonly AttributeMeta[] = [
   {
     key: 'contact',
     kind: 'boolean',
-    label: 'Contact',
-    format: (value) => (value ? 'Closed' : 'Open'),
+    labelKey: 'device.attributes.contact',
+    format: (value, t) => t(value ? 'device.values.closed' : 'device.values.open'),
     category: 'sensor',
     watchable: true,
     summaryPriority: 13,
@@ -248,7 +279,7 @@ export const ATTRIBUTES: readonly AttributeMeta[] = [
   {
     key: 'illuminance',
     kind: 'number',
-    label: 'Light level',
+    labelKey: 'device.attributes.illuminance',
     format: (value) => `${asText(value)} lx`,
     category: 'sensor',
     watchable: true,
@@ -257,7 +288,7 @@ export const ATTRIBUTES: readonly AttributeMeta[] = [
   {
     key: 'battery',
     kind: 'number',
-    label: 'Battery',
+    labelKey: 'device.attributes.battery',
     format: percent,
     category: 'diagnostic',
     watchable: true,
@@ -266,7 +297,7 @@ export const ATTRIBUTES: readonly AttributeMeta[] = [
   {
     key: 'buttonPosition',
     kind: 'number',
-    label: 'Button position',
+    labelKey: 'device.attributes.buttonPosition',
     format: asText,
     category: 'buttons',
     watchable: true,
@@ -275,7 +306,7 @@ export const ATTRIBUTES: readonly AttributeMeta[] = [
   {
     key: 'buttons',
     kind: 'number',
-    label: 'Button count',
+    labelKey: 'device.attributes.buttons',
     format: asText,
     category: 'buttons',
     watchable: false,
@@ -284,8 +315,8 @@ export const ATTRIBUTES: readonly AttributeMeta[] = [
   {
     key: 'lastPress',
     kind: 'string',
-    label: 'Last press',
-    format: (value) => PRESS_LABELS[asText(value)] ?? asText(value),
+    labelKey: 'device.attributes.lastPress',
+    format: (value, t) => translateMapped(PRESS_LABEL_KEYS, value, t),
     category: 'buttons',
     watchable: true,
     summaryPriority: 2,
@@ -294,15 +325,15 @@ export const ATTRIBUTES: readonly AttributeMeta[] = [
   {
     key: 'lastButton',
     kind: 'number',
-    label: 'Last button',
-    format: (value) => `Button ${asText(value)}`,
+    labelKey: 'device.attributes.lastButton',
+    format: (value, t) => `${t('device.values.button')} ${asText(value)}`,
     category: 'buttons',
     watchable: true,
   },
   {
     key: 'fanMode',
     kind: 'number',
-    label: 'Fan mode',
+    labelKey: 'device.attributes.fanMode',
     format: asText,
     category: 'level',
     watchable: true,
@@ -311,7 +342,7 @@ export const ATTRIBUTES: readonly AttributeMeta[] = [
   {
     key: 'fanSpeed',
     kind: 'number',
-    label: 'Fan speed',
+    labelKey: 'device.attributes.fanSpeed',
     format: percent,
     category: 'level',
     watchable: true,
@@ -320,8 +351,8 @@ export const ATTRIBUTES: readonly AttributeMeta[] = [
   {
     key: 'vacuumState',
     kind: 'number',
-    label: 'Vacuum state',
-    format: (value) => VACUUM_STATE_LABELS[asText(value)] ?? asText(value),
+    labelKey: 'device.attributes.vacuumState',
+    format: (value, t) => translateMapped(VACUUM_STATE_KEYS, value, t),
     category: 'power',
     watchable: true,
     summaryPriority: 1,
@@ -329,7 +360,7 @@ export const ATTRIBUTES: readonly AttributeMeta[] = [
   {
     key: 'systemMode',
     kind: 'number',
-    label: 'System mode',
+    labelKey: 'device.attributes.systemMode',
     format: asText,
     category: 'climate',
     watchable: true,
@@ -337,7 +368,7 @@ export const ATTRIBUTES: readonly AttributeMeta[] = [
   {
     key: 'systemModeName',
     kind: 'string',
-    label: 'Mode',
+    labelKey: 'device.attributes.systemModeName',
     format: asText,
     category: 'climate',
     watchable: true,
@@ -359,12 +390,12 @@ export function attributePriority(key: string): number {
 }
 
 /** Render one attribute value for humans; unknown keys fall back to String(). */
-export function formatAttribute(key: string, value: unknown): string {
+export function formatAttribute(key: string, value: unknown, t: TranslateFn): string {
   const meta = ATTRIBUTE_BY_KEY[key];
   if (!meta) {
     return asText(value);
   }
-  return meta.format(value);
+  return meta.format(value, t);
 }
 
 // ─── One-line device summaries ───────────────────────────────────────────────
@@ -395,7 +426,8 @@ export function summarizeState(
   state: Readonly<Record<string, unknown>>,
   deviceType: DeviceType,
   commands: readonly string[],
-  online: boolean
+  online: boolean,
+  t: TranslateFn
 ): string {
   for (const key of SUMMARY_RULES[deviceType]) {
     // 'on' is only a meaningful summary when the device can actually be
@@ -411,7 +443,7 @@ export function summarizeState(
     if (!meta) {
       continue;
     }
-    return meta.summarize ? meta.summarize(value, state) : meta.format(value);
+    return meta.summarize ? meta.summarize(value, state) : meta.format(value, t);
   }
-  return online ? 'Online' : 'Offline';
+  return t(online ? 'device.online' : 'device.offline');
 }
