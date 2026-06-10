@@ -26,13 +26,12 @@ import { PluginErrors } from './plugin-errors';
 import { PluginEventHandler } from './plugin-events';
 import { PluginResolver } from './plugin-resolver';
 import { PluginWatcher } from './plugin-watcher';
+import { resolvePreludePath } from './prelude-locator';
 import { RestartPolicy } from './restart-policy';
 import { pickLauncher, readSandboxModeFromEnv, type SandboxLauncher } from './sandbox';
 import { ensurePluginTsconfig, generateUid, HUB_VERSION, satisfiesVersion } from './utils';
 
 type PluginProcessInstance = InstanceType<typeof PluginProcess>;
-
-const PRELUDE_PATH = join(import.meta.dir, 'prelude', 'index.ts');
 
 /**
  * Shared registry used to derive permission families for the
@@ -454,9 +453,10 @@ export class PluginLifecycle {
     const grantedPermissions = this.#state.getGrantedPermissions(pluginName);
     const allowNetwork = networkConsented(metadata.grants, grantedPermissions);
 
+    const preludePath = await resolvePreludePath(this.#brikaInit.brikaDir);
     const sandboxPlan = this.#sandboxLauncher.wrap(
       this.#bunRunner.bin,
-      [`--preload=${PRELUDE_PATH}`, buildResult.entryPath],
+      [`--preload=${preludePath}`, buildResult.entryPath],
       {
         pluginUid: uid,
         readableDirs: [rootDirectory, fsDirs.data, fsDirs.cache, fsDirs.tmp],

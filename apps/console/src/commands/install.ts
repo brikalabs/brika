@@ -40,23 +40,33 @@ export async function resolveTarget(target: string): Promise<{ pkg: string; vers
   return { pkg: target };
 }
 
+/** With no <target>, install the cwd when it looks like a plugin directory. */
+async function defaultTarget(): Promise<string | undefined> {
+  return (await Bun.file(join(process.cwd(), 'package.json')).exists()) ? '.' : undefined;
+}
+
 export default defineCommand({
   name: 'install',
   description: 'Install a plugin into the hub (local path or npm package)',
   details:
     'Installs <target> into the running hub via the registry: a local path is linked as a file: ' +
-    'dependency, otherwise it is resolved from npm. Starts the hub if it is not running. For live ' +
+    'dependency, otherwise it is resolved from npm. With no target, installs the plugin in the ' +
+    'current directory. Starts the hub if it is not running. For live ' +
     'development with build + hot-reload, use `brika dev`.',
   options: {},
   examples: [
+    'brika install',
     'brika install ./my-plugin',
     'brika install @acme/brika-plugin-foo',
     'brika install brika-plugin-foo@1.2.0',
   ],
   async handler({ positionals }) {
-    const target = positionals[0];
+    // No target: install the plugin in the current directory (mirrors `brika dev`).
+    const target = positionals[0] ?? (await defaultTarget());
     if (!target) {
-      throw new CliError('usage: brika install <path-or-package>');
+      throw new CliError(
+        'usage: brika install [path-or-package] (no package.json in the current directory)'
+      );
     }
     const { pkg, version } = await resolveTarget(target);
     await ensureHub();
