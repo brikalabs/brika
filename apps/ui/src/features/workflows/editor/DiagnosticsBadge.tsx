@@ -47,7 +47,7 @@ export function DiagnosticsBadge({ diagnostics, onJump }: Readonly<DiagnosticsBa
           <div className="max-h-60 w-130 overflow-y-auto rounded-lg border bg-popover/95 p-1 shadow-xl backdrop-blur">
             {diagnostics.map((d) => (
               <button
-                key={`${d.kind}:${d.nodeId}:${d.edgeId ?? ''}:${d.message}`}
+                key={`${d.kind}:${d.nodeId}:${d.edgeId ?? ''}:${JSON.stringify(d.params)}`}
                 type="button"
                 onClick={() => {
                   setOpen(false);
@@ -61,7 +61,9 @@ export function DiagnosticsBadge({ diagnostics, onJump }: Readonly<DiagnosticsBa
                     d.severity === 'error' ? 'text-destructive' : 'text-warning'
                   )}
                 />
-                <span className="min-w-0 break-words">{d.message}</span>
+                <span className="min-w-0 break-words">
+                  {t(`workflows:editor.diagnostics.messages.${d.kind}`, d.params)}
+                </span>
               </button>
             ))}
           </div>

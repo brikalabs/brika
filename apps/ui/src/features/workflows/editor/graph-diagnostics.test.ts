@@ -96,6 +96,12 @@ describe('collectDiagnostics', () => {
     expect(mismatch).toBeDefined();
     expect(mismatch?.severity).toBe('error');
     expect(mismatch?.edgeId).toBe(edges[0].id);
+    expect(mismatch?.params).toEqual({
+      source: 'a.tick',
+      sourceType: 'string',
+      target: 'b.in',
+      targetType: 'number',
+    });
     expect(invalidEdgeIds(diagnostics).has(edges[0].id)).toBeTrue();
   });
 
@@ -105,7 +111,8 @@ describe('collectDiagnostics', () => {
       blockNode('ghost', 'vanished:block', {}),
     ];
     const diagnostics = diagnose(nodes, []);
-    expect(diagnostics.some((d) => d.kind === 'missing-config' && d.nodeId === 'b')).toBeTrue();
+    const missing = diagnostics.find((d) => d.kind === 'missing-config' && d.nodeId === 'b');
+    expect(missing?.params).toEqual({ block: 'b', field: 'message' });
     expect(diagnostics.some((d) => d.kind === 'unknown-block' && d.nodeId === 'ghost')).toBeTrue();
   });
 
@@ -125,7 +132,7 @@ describe('collectDiagnostics', () => {
     const cycle = diagnostics.find((d) => d.kind === 'cycle');
     expect(cycle).toBeDefined();
     expect(cycle?.severity).toBe('warning');
-    expect(cycle?.message).toContain('a');
+    expect(cycle?.params.path).toContain('a');
   });
 
   test('a clean compatible graph produces no diagnostics', () => {
@@ -141,5 +148,74 @@ describe('collectDiagnostics', () => {
       ),
     ];
     expect(diagnose(nodes, [edge('a', 'tick', 'b', 'in')])).toEqual([]);
+  });
+});
+
+describe('required semantics', () => {
+  test('defaulted fields and fields hidden by unmet showWhen are not flagged', () => {
+    const defs: Record<string, BlockDefinition> = {
+      conditional: {
+        id: 'conditional',
+        name: 'Conditional',
+        description: '',
+        icon: 'box',
+        color: '#888',
+        category: 'action',
+        pluginId: 'test',
+        inputs: [],
+        outputs: [],
+        schema: {
+          type: 'object',
+          properties: {
+            maxTokens: { type: 'number', default: 4096 },
+            apiKey: { type: 'string', showWhen: { field: 'provider', equals: 'custom' } },
+            provider: { type: 'string', default: 'anthropic' },
+          },
+          required: ['maxTokens', 'apiKey'],
+        },
+      },
+    };
+    const nodes = [blockNode('c', 'conditional', {}, { provider: 'anthropic' })];
+    const portTypeMap = inferTypes(nodesToGraphNodes(nodes), []);
+    const diagnostics = collectDiagnostics({
+      nodes,
+      edges: [],
+      portTypeMap,
+      blockSchemaMap: defs,
+    });
+    expect(diagnostics).toEqual([]);
+  });
+
+  test('a showWhen-gated field IS flagged once its condition is met', () => {
+    const defs: Record<string, BlockDefinition> = {
+      conditional: {
+        id: 'conditional',
+        name: 'Conditional',
+        description: '',
+        icon: 'box',
+        color: '#888',
+        category: 'action',
+        pluginId: 'test',
+        inputs: [],
+        outputs: [],
+        schema: {
+          type: 'object',
+          properties: {
+            apiKey: { type: 'string', showWhen: { field: 'provider', equals: 'custom' } },
+          },
+          required: ['apiKey'],
+        },
+      },
+    };
+    const nodes = [blockNode('c', 'conditional', {}, { provider: 'custom' })];
+    const portTypeMap = inferTypes(nodesToGraphNodes(nodes), []);
+    const diagnostics = collectDiagnostics({
+      nodes,
+      edges: [],
+      portTypeMap,
+      blockSchemaMap: defs,
+    });
+    expect(diagnostics.map((d) => d.kind)).toEqual(['missing-config']);
+    expect(diagnostics[0]?.params.field).toBe('apiKey');
   });
 });

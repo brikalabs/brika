@@ -69,7 +69,10 @@ import { lintExpressions } from './expression-lint';
 import {
   type DynamicOption,
   type ResolvedFieldInfo,
+  type ShowWhen,
+  showWhenSatisfied,
   toDisplayString,
+  toShowWhen,
   type Variable,
 } from './field-shared';
 import { ToolArgField, ToolMultiSelectField, ToolSelectField } from './ToolFields';
@@ -130,45 +133,10 @@ interface SchemaProperty {
   /** UI label from z.meta({ label }). */
   label?: string;
   /** Show this field only when a sibling field equals a value (or one of several). */
-  showWhen?: { field: string; equals: ShowWhenValue | ReadonlyArray<ShowWhenValue> };
-}
-
-type ShowWhenValue = string | number | boolean;
-
-function isShowWhenValue(value: unknown): value is ShowWhenValue {
-  return typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean';
+  showWhen?: ShowWhen;
 }
 
 /** Narrow an unknown value to the showWhen shape (scalar or array of scalars). */
-function toShowWhen(value: unknown): SchemaProperty['showWhen'] {
-  if (typeof value !== 'object' || value === null) {
-    return undefined;
-  }
-  const obj = Object.fromEntries(Object.entries(value));
-  const { equals } = obj;
-  if (typeof obj.field !== 'string') {
-    return undefined;
-  }
-  if (isShowWhenValue(equals)) {
-    return { field: obj.field, equals };
-  }
-  if (Array.isArray(equals) && equals.every(isShowWhenValue)) {
-    return { field: obj.field, equals };
-  }
-  return undefined;
-}
-
-/** Whether the live field value satisfies a showWhen condition. */
-function showWhenSatisfied(
-  actual: unknown,
-  equals: ShowWhenValue | ReadonlyArray<ShowWhenValue>
-): boolean {
-  if (Array.isArray(equals)) {
-    return isShowWhenValue(actual) && equals.includes(actual);
-  }
-  return actual === equals;
-}
-
 interface BlockSchema {
   type: 'object';
   properties?: Record<string, unknown>;

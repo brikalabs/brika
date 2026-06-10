@@ -1389,3 +1389,24 @@ describe('block-scoped log and causation', () => {
     expect(String(errorCall?.[1])).toContain('handler exploded');
   });
 });
+
+describe('config schema required semantics', () => {
+  test('defaulted and optional fields are not listed as required', () => {
+    const block = defineReactiveBlock(
+      {
+        id: 'req-block',
+        inputs: {},
+        outputs: {},
+        config: z.object({
+          prompt: z.string(),
+          maxTokens: z.number().default(4096),
+          tools: z.array(z.string()).default([]),
+          note: z.string().optional(),
+        }),
+      },
+      () => {}
+    );
+
+    expect(block.schema.required).toEqual(['prompt']);
+  });
+});

@@ -50,3 +50,46 @@ export function toDisplayString(value: unknown, fallback = ''): string {
   // symbol | function — not expected for config values.
   return fallback;
 }
+
+// ─── Conditional visibility (showWhen) ───────────────────────────────────────
+
+export type ShowWhenValue = string | number | boolean;
+
+/** A field is shown (and can be required) only when another field matches. */
+export interface ShowWhen {
+  field: string;
+  equals: ShowWhenValue | ReadonlyArray<ShowWhenValue>;
+}
+
+export function isShowWhenValue(value: unknown): value is ShowWhenValue {
+  return typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean';
+}
+
+export function toShowWhen(value: unknown): ShowWhen | undefined {
+  if (typeof value !== 'object' || value === null) {
+    return undefined;
+  }
+  const obj = Object.fromEntries(Object.entries(value));
+  const { equals } = obj;
+  if (typeof obj.field !== 'string') {
+    return undefined;
+  }
+  if (isShowWhenValue(equals)) {
+    return { field: obj.field, equals };
+  }
+  if (Array.isArray(equals) && equals.every(isShowWhenValue)) {
+    return { field: obj.field, equals };
+  }
+  return undefined;
+}
+
+/** Whether the live field value satisfies a showWhen condition. */
+export function showWhenSatisfied(
+  actual: unknown,
+  equals: ShowWhenValue | ReadonlyArray<ShowWhenValue>
+): boolean {
+  if (Array.isArray(equals)) {
+    return isShowWhenValue(actual) && equals.includes(actual);
+  }
+  return actual === equals;
+}

@@ -24,6 +24,7 @@ import {
 import type { Edge, Node } from '@xyflow/react';
 import type { BlockNodeData, BlockPort } from './BlockNode';
 import type { BlockDefinition } from './BlockToolbar';
+import { showWhenSatisfied, toShowWhen } from './field-shared';
 
 export type DiagnosticKind = 'type-mismatch' | 'missing-config' | 'unknown-block' | 'cycle';
 
@@ -34,7 +35,8 @@ export interface GraphDiagnostic {
   nodeId: string;
   /** Offending edge, for edge-level highlighting. */
   edgeId?: string;
-  message: string;
+  /** Interpolation values for the kind's locale message. */
+  params: Record<string, string>;
 }
 
 interface DiagnosticsInput {
@@ -112,11 +114,29 @@ function edgeTypeDiagnostics(
         severity: 'error',
         nodeId: edge.target,
         edgeId: edge.id,
-        message: `${sourceData?.label ?? edge.source}.${sourcePortId} (${displayType(outType)}) does not fit ${targetData?.label ?? edge.target}.${targetPortId} (${displayType(inType)})`,
+        params: {
+          source: `${sourceData?.label ?? edge.source}.${sourcePortId}`,
+          sourceType: displayType(outType),
+          target: `${targetData?.label ?? edge.target}.${targetPortId}`,
+          targetType: displayType(inType),
+        },
       });
     }
   }
   return out;
+}
+
+/** The raw JSON-schema property for one config field, when present. */
+function fieldProperty(
+  def: BlockDefinition,
+  field: string
+): { default?: unknown; showWhen?: unknown } | null {
+  const value = def.schema?.properties?.[field];
+  if (typeof value !== 'object' || value === null) {
+    return null;
+  }
+  const record: Record<string, unknown> = { ...value };
+  return { default: record.default, showWhen: record.showWhen };
 }
 
 /** Empty when undefined, null, or a blank string; 0/false are real values. */
@@ -140,19 +160,30 @@ function configDiagnostics(
         kind: 'unknown-block',
         severity: 'error',
         nodeId: node.id,
-        message: `${data.label || node.id}: block type "${data.type}" is not installed`,
+        params: { block: data.label || node.id, type: data.type },
       });
       continue;
     }
     for (const field of def.schema?.required ?? []) {
-      if (isBlank(data.config?.[field])) {
-        out.push({
-          kind: 'missing-config',
-          severity: 'warning',
-          nodeId: node.id,
-          message: `${data.label || node.id}: required field "${field}" is empty`,
-        });
+      if (!isBlank(data.config?.[field])) {
+        continue;
       }
+      // A defaulted field is satisfied by the runtime; a field hidden by an
+      // unmet showWhen condition is not required in the current configuration.
+      const property = fieldProperty(def, field);
+      if (property?.default !== undefined) {
+        continue;
+      }
+      const showWhen = toShowWhen(property?.showWhen);
+      if (showWhen && !showWhenSatisfied(data.config?.[showWhen.field], showWhen.equals)) {
+        continue;
+      }
+      out.push({
+        kind: 'missing-config',
+        severity: 'warning',
+        nodeId: node.id,
+        params: { block: data.label || node.id, field },
+      });
     }
   }
   return out;
@@ -219,7 +250,7 @@ function cycleDiagnostics(
       kind: 'cycle',
       severity: 'warning',
       nodeId: found[0],
-      message: `Feedback loop: ${path}. It will run forever unless a block breaks it.`,
+      params: { path },
     },
   ];
 }

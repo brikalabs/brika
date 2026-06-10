@@ -44,7 +44,11 @@ export const httpRequest = defineBlock({
     url: z.string().describe('Request URL'),
     method: z.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']).optional().describe('HTTP method'),
     headers: z.record(z.string(), z.string()).optional().describe('Request headers'),
-    body: z.string().optional().describe('Request body (for POST/PUT/PATCH)'),
+    body: z
+      .string()
+      .optional()
+      .meta({ showWhen: { field: 'method', equals: ['POST', 'PUT', 'PATCH'] } })
+      .describe('Request body'),
     timeoutMs: z.number().optional().default(30000).describe('Request timeout in milliseconds'),
   }),
   run: ({ inputs, outputs, config }) => {

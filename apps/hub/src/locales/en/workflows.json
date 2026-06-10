@@ -121,7 +121,13 @@
     },
     "diagnostics": {
       "errors": "errors",
-      "warnings": "warnings"
+      "warnings": "warnings",
+      "messages": {
+        "type-mismatch": "{{source}} ({{sourceType}}) does not fit {{target}} ({{targetType}})",
+        "missing-config": "{{block}}: required field \"{{field}}\" is empty",
+        "unknown-block": "{{block}}: block type \"{{type}}\" is not installed",
+        "cycle": "Feedback loop: {{path}}. It will run forever unless a block breaks it."
+      }
     }
   }
 }

@@ -707,11 +707,15 @@ function zodToBlockSchema(schema: z.ZodObject<z.ZodRawShape>): BlockSchema {
         },
       ])
     ),
-    required:
+    // A defaulted field is NOT required: the runtime fills the default, so
+    // the editor must not flag it. zod's toJSONSchema lists defaulted fields
+    // as required (output-type view), the wrong contract for a config form.
+    required: (
       (
         json as {
           required?: string[];
         }
-      ).required ?? [],
+      ).required ?? []
+    ).filter((key) => props[key]?.default === undefined),
   };
 }

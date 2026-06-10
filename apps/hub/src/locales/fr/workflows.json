@@ -121,7 +121,13 @@
     },
     "diagnostics": {
       "errors": "erreurs",
-      "warnings": "avertissements"
+      "warnings": "avertissements",
+      "messages": {
+        "type-mismatch": "{{source}} ({{sourceType}}) est incompatible avec {{target}} ({{targetType}})",
+        "missing-config": "{{block}} : le champ requis \"{{field}}\" est vide",
+        "unknown-block": "{{block}} : le type de bloc \"{{type}}\" n'est pas installé",
+        "cycle": "Boucle de rétroaction : {{path}}. Elle tournera sans fin si aucun bloc ne l'interrompt."
+      }
     }
   }
 }

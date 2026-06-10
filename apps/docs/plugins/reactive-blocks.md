@@ -127,6 +127,27 @@ config: z.object({
 });
 ```
 
+### Required, defaults, and conditional fields
+
+A config field is REQUIRED in the editor only when it is neither `.optional()`
+nor `.default(...)`: defaulted fields are filled by the runtime, so the editor
+never flags them. To show a field only when another field has a given value,
+attach a `showWhen` condition via `.meta()`:
+
+```ts
+config: z.object({
+  method: z.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']).default('GET'),
+  body: z
+    .string()
+    .optional()
+    .meta({ showWhen: { field: 'method', equals: ['POST', 'PUT', 'PATCH'] } })
+    .describe('Request body'),
+}),
+```
+
+The editor hides the field (and skips its required check) until the condition
+holds; `equals` accepts a single value or an array of allowed values.
+
 ## Multiple inputs
 
 Multiple inputs become multiple `Flow`s on `inputs`. Combine them with the combinators from [Reactive Streams](reactive-streams.md):
