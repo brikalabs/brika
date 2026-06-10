@@ -9,6 +9,7 @@
 
 import { useBlockConfig, useBlockData } from '@brika/sdk/block-views';
 import { bytesToDataUrl, normalizeMedia } from '@brika/sdk/media';
+import { useLocale } from '@brika/sdk/ui-kit/hooks';
 import { ImageOff } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
@@ -33,6 +34,7 @@ function mediaSrc(value: unknown): string | null {
 }
 
 export default function ImageNode() {
+  const { t } = useLocale();
   const config = useBlockConfig<ImageConfig>();
   const data = useBlockData<unknown>();
 
@@ -49,7 +51,7 @@ export default function ImageNode() {
     return (
       <div className="flex h-20 flex-col items-center justify-center gap-1 rounded-md border border-dashed text-muted-foreground">
         <ImageOff className="size-5" />
-        <span className="text-[10px]">Wire media in or set an image URL</span>
+        <span className="text-[10px]">{t('blocks.image.wireHint')}</span>
       </div>
     );
   }

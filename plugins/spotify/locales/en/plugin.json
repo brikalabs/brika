@@ -36,7 +36,13 @@
   },
   "player": {
     "title": "Spotify",
-    "login": "Login with Spotify"
+    "login": "Login with Spotify",
+    "nothingPlaying": "Nothing playing",
+    "searchPlaceholder": "Search songs, artists...",
+    "noResults": "No results",
+    "loadingDevices": "Loading devices...",
+    "defaultDevice": "Plugin default device",
+    "noDevices": "No active devices found. Open Spotify on a device, then refresh."
   },
   "blocks": {
     "play": {
@@ -48,6 +54,44 @@
     "track-changed": {
       "name": "Track Changed",
       "description": "Emitted when the playing track changes"
+    },
+    "playback-started": {
+      "name": "Playback Started",
+      "description": "Emitted when playback resumes"
+    },
+    "playback-paused": {
+      "name": "Playback Paused",
+      "description": "Emitted when playback pauses or stops"
+    },
+    "volume-changed": {
+      "name": "Volume Changed",
+      "description": "Emitted when the active device volume changes"
+    },
+    "device-changed": {
+      "name": "Device Changed",
+      "description": "Emitted when playback moves to a different device"
+    }
+  },
+  "tools": {
+    "get-now-playing": {
+      "name": "Now Playing",
+      "description": "Get the track currently or most recently playing on Spotify"
+    },
+    "search-tracks": {
+      "name": "Search Tracks",
+      "description": "Search the Spotify catalog for tracks by title, artist, or album"
+    },
+    "play-track": {
+      "name": "Play Track",
+      "description": "Start playback of a specific track, optionally on a chosen device"
+    },
+    "control-playback": {
+      "name": "Control Playback",
+      "description": "Play, pause, skip, seek, or set the playback volume"
+    },
+    "list-devices": {
+      "name": "List Devices",
+      "description": "List the available Spotify Connect devices"
     }
   }
 }

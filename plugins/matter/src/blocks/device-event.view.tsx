@@ -17,7 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@brika/sdk/ui-kit';
-import { useAction } from '@brika/sdk/ui-kit/hooks';
+import { useAction, useLocale } from '@brika/sdk/ui-kit/hooks';
 import { Cpu, Plus, Radio, RefreshCw, Trash2, X } from 'lucide-react';
 import { useState } from 'react';
 import { listDevices } from '../actions';
@@ -45,6 +45,7 @@ const ATTRIBUTE_SUGGESTIONS: Record<string, string[]> = {
 };
 
 export default function DeviceEventView() {
+  const { t } = useLocale();
   const config = useBlockConfig<DeviceEventConfig>();
   const update = useUpdateBlockConfig();
   const { data: devices, loading, refetch } = useAction(listDevices);
@@ -88,7 +89,9 @@ export default function DeviceEventView() {
         </div>
         <Select value={config.nodeId ?? ''} onValueChange={(v) => update({ nodeId: v })}>
           <SelectTrigger className="bg-background">
-            <SelectValue placeholder={loading ? 'Loading devices...' : 'Select a device...'}>
+            <SelectValue
+              placeholder={loading ? t('device.loadingDevices') : t('device.selectDevice')}
+            >
               {selected && (
                 <span className="flex items-center gap-2">
                   <DeviceIcon className="size-4 text-indigo-500" />

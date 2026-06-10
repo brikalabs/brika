@@ -63,6 +63,16 @@
       }
     }
   },
+  "blocks": {
+    "timer": {
+      "name": "Minuterie",
+      "description": "Définir une minuterie unique qui se déclenche après une durée"
+    },
+    "countdown": {
+      "name": "Compte à rebours",
+      "description": "Compte à rebours avec tics de progression"
+    }
+  },
   "events": {
     "completed": "Minuterie terminée",
     "cancelled": "Minuterie annulée"
@@ -70,7 +80,8 @@
   "fields": {
     "name": {
       "label": "Nom",
-      "description": "Nom de la minuterie"
+      "description": "Nom de la minuterie",
+      "placeholder": "minuterie"
     },
     "seconds": {
       "label": "Secondes",

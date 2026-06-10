@@ -12,6 +12,7 @@
 
 import { useBlockConfig, useBlockVariables, useUpdateBlockConfig } from '@brika/sdk/block-views';
 import { Badge, Input, Label } from '@brika/sdk/ui-kit';
+import { useLocale } from '@brika/sdk/ui-kit/hooks';
 import { Braces, Check, Copy, MessageCircle, Variable } from 'lucide-react';
 import { useState } from 'react';
 
@@ -23,6 +24,7 @@ interface EchoConfig {
 type FieldKey = 'prefix' | 'suffix';
 
 export default function EchoView() {
+  const { t } = useLocale();
   const config = useBlockConfig<EchoConfig>();
   const update = useUpdateBlockConfig();
   const variables = useBlockVariables();
@@ -60,7 +62,7 @@ export default function EchoView() {
             value={prefix}
             onFocus={() => setActiveField('prefix')}
             onChange={(e) => update({ prefix: e.target.value })}
-            placeholder="e.g. > "
+            placeholder={t('blocks.echo.prefixPlaceholder')}
             className={`bg-background font-mono ${activeField === 'prefix' ? 'ring-1 ring-blue-500/40' : ''}`}
           />
         </div>
@@ -70,7 +72,7 @@ export default function EchoView() {
             value={suffix}
             onFocus={() => setActiveField('suffix')}
             onChange={(e) => update({ suffix: e.target.value })}
-            placeholder="e.g.  !"
+            placeholder={t('blocks.echo.suffixPlaceholder')}
             className={`bg-background font-mono ${activeField === 'suffix' ? 'ring-1 ring-blue-500/40' : ''}`}
           />
         </div>

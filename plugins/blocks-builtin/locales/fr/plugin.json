@@ -48,6 +48,15 @@
         }
       }
     },
+    "text": {
+      "name": "Text",
+      "description": "Afficher du texte sur le canevas et transmettre les valeurs"
+    },
+    "image": {
+      "name": "Image",
+      "description": "Afficher une image sur le canevas et transmettre les valeurs",
+      "wireHint": "Connectez un média en entrée ou définissez une URL d'image"
+    },
     "switch": {
       "name": "Switch",
       "description": "Branchement multiple selon une valeur",
@@ -72,7 +81,8 @@
           "name": "Default",
           "description": "Sortie par défaut si aucun cas ne correspond"
         }
-      }
+      },
+      "noCases": "Aucun cas pour l'instant. Ajoutez-en un pour créer une sortie correspondante."
     },
     "delay": {
       "name": "Delay",
@@ -170,7 +180,12 @@
           "name": "Payload",
           "description": "Le payload de l'événement spark"
         }
-      }
+      },
+      "noSparks": "Aucun spark enregistré"
+    },
+    "button": {
+      "name": "Button",
+      "description": "Déclencher manuellement le workflow d'un clic sur un bouton"
     }
   },
   "fields": {

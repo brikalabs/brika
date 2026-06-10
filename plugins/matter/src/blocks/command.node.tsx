@@ -8,12 +8,13 @@
  */
 
 import { useBlockConfig } from '@brika/sdk/block-views';
-import { useAction } from '@brika/sdk/ui-kit/hooks';
+import { useAction, useLocale } from '@brika/sdk/ui-kit/hooks';
 import { Cpu, Lightbulb } from 'lucide-react';
 import { listDevices } from '../actions';
 import { COMMAND_META, type CommandConfig, DEVICE_ICONS } from './_command-meta';
 
 export default function CommandNode() {
+  const { t } = useLocale();
   const config = useBlockConfig<CommandConfig>();
   const { data: devices } = useAction(listDevices);
 
@@ -43,7 +44,9 @@ export default function CommandNode() {
       </div>
       <div className="flex items-center gap-1.5 text-muted-foreground text-xs">
         <DeviceIcon className="size-3.5" />
-        <span className="truncate">{device?.label ?? config.nodeId ?? 'No device selected'}</span>
+        <span className="truncate">
+          {device?.label ?? config.nodeId ?? t('device.noDeviceSelected')}
+        </span>
         {device && (
           <span
             className={

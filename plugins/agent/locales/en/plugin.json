@@ -1,4 +1,18 @@
 {
   "name": "AI Agent",
-  "description": "AI agent and chat blocks with tool calling, for Claude, OpenAI-compatible endpoints, or your local Ollama models"
+  "description": "AI agent and chat blocks with tool calling, for Claude, OpenAI-compatible endpoints, or your local Ollama models",
+  "blocks": {
+    "llm": {
+      "name": "Ask AI",
+      "description": "Send a prompt to an LLM and emit the completion"
+    },
+    "call-tool": {
+      "name": "Call Tool",
+      "description": "Invoke a hub-registered tool by id and emit its result"
+    },
+    "agent": {
+      "name": "AI Agent",
+      "description": "LLM agent that reasons and calls tools to answer each prompt"
+    }
+  }
 }

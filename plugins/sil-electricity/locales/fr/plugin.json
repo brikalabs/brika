@@ -1,6 +1,12 @@
 {
   "name": "SIL Électricité",
   "description": "Suivez votre consommation électrique auprès des Services Industriels de Lausanne",
+  "tools": {
+    "get-consumption": {
+      "name": "Obtenir la consommation",
+      "description": "Consommation électrique sur une période, avec totaux en kWh et coût estimé"
+    }
+  },
   "preferences": {
     "email": {
       "title": "Email",

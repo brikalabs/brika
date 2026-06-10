@@ -1,6 +1,12 @@
 {
   "name": "SIL Electricity",
   "description": "Monitor your electricity consumption from Services Industriels de Lausanne",
+  "tools": {
+    "get-consumption": {
+      "name": "Get Consumption",
+      "description": "Electricity consumption for a period, with kWh totals and estimated cost"
+    }
+  },
   "preferences": {
     "email": {
       "title": "Email",

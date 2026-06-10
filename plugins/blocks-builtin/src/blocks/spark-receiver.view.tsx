@@ -17,6 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@brika/sdk/ui-kit';
+import { useLocale } from '@brika/sdk/ui-kit/hooks';
 import { Zap } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
@@ -33,6 +34,7 @@ interface SparkReceiverConfig {
 }
 
 export default function SparkReceiverView() {
+  const { t } = useLocale();
   const config = useBlockConfig<SparkReceiverConfig>();
   const updateConfig = useUpdateBlockConfig();
   const [sparks, setSparks] = useState<RegisteredSpark[]>([]);
@@ -86,7 +88,7 @@ export default function SparkReceiverView() {
       {!loading && sparks.length === 0 && (
         <div className="flex items-center gap-2 rounded-md border bg-muted/50 px-3 py-2 text-muted-foreground text-sm">
           <Zap className="size-4" />
-          <span>No sparks registered</span>
+          <span>{t('blocks.spark-receiver.noSparks')}</span>
         </div>
       )}
 

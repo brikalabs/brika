@@ -37,6 +37,28 @@
     "device-discovered": {
       "name": "Device Discovered",
       "description": "Emitted when a new Matter device is found on the network"
+    },
+    "attribute-changed": {
+      "name": "Attribute Changed",
+      "description": "Emitted for each device attribute that changes"
+    },
+    "device-online": {
+      "name": "Device Online",
+      "description": "Emitted when a device connects"
+    },
+    "device-offline": {
+      "name": "Device Offline",
+      "description": "Emitted when a device disconnects"
+    }
+  },
+  "tools": {
+    "list-devices": {
+      "name": "List Devices",
+      "description": "List commissioned Matter devices with their name, type, and online state"
+    },
+    "control-device": {
+      "name": "Control Device",
+      "description": "Control a Matter device: toggle lights, lock or unlock, move covers, set brightness or temperature"
     }
   },
   "device": {
@@ -69,7 +91,10 @@
     "noDeviceSelected": "No device selected",
     "deviceNotFound": "Device not found",
     "noDevicesCommissioned": "No devices commissioned",
-    "matterDevices": "Matter Devices"
+    "matterDevices": "Matter Devices",
+    "selectDevice": "Select a device...",
+    "selectCommand": "Select a command...",
+    "loadingDevices": "Loading devices..."
   },
   "devicesPage": {
     "scanNetwork": "Scan Network",

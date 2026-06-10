@@ -1,4 +1,18 @@
 {
   "name": "Agent IA",
-  "description": "Blocs agent IA et chat avec appel d'outils, pour Claude, les API compatibles OpenAI ou vos modèles locaux Ollama"
+  "description": "Blocs agent IA et chat avec appel d'outils, pour Claude, les API compatibles OpenAI ou vos modèles locaux Ollama",
+  "blocks": {
+    "llm": {
+      "name": "Demander à l'IA",
+      "description": "Envoyer un prompt à un LLM et émettre la réponse"
+    },
+    "call-tool": {
+      "name": "Appeler un outil",
+      "description": "Invoquer un outil enregistré sur le hub par son id et émettre le résultat"
+    },
+    "agent": {
+      "name": "Agent IA",
+      "description": "Agent LLM qui raisonne et appelle des outils pour répondre à chaque prompt"
+    }
+  }
 }
