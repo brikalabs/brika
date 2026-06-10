@@ -66,6 +66,12 @@ import { fetchTools, type ToolSummary } from '../api';
 import type { BlockNodeData, BlockPort } from './BlockNode';
 import { ClientBlockView } from './ClientBlockView';
 import { lintExpressions } from './expression-lint';
+import {
+  type DynamicOption,
+  type ResolvedFieldInfo,
+  toDisplayString,
+  type Variable,
+} from './field-shared';
 import { ToolArgField, ToolMultiSelectField, ToolSelectField } from './ToolFields';
 import { usePortTypeName } from './WorkflowTypeContext';
 
@@ -110,37 +116,9 @@ function getTypeMarker(description?: string): {
   };
 }
 
-/**
- * Safely convert a value to string, handling objects and nullish values
- */
-export function toDisplayString(value: unknown, fallback = ''): string {
-  if (value === undefined || value === null) {
-    return fallback;
-  }
-  if (typeof value === 'object') {
-    return JSON.stringify(value);
-  }
-  if (typeof value === 'string') {
-    return value;
-  }
-  if (typeof value === 'number' || typeof value === 'boolean' || typeof value === 'bigint') {
-    return String(value);
-  }
-  // symbol | function — not expected for config values.
-  return fallback;
-}
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
 // ─────────────────────────────────────────────────────────────────────────────
-
-interface Variable {
-  name: string;
-  source: string;
-  type: string;
-  /** Short rendering of the value last seen on this path, when one has flowed. */
-  preview?: string;
-}
 
 interface SchemaProperty {
   type: string;
@@ -493,19 +471,6 @@ interface FieldProps {
 }
 
 /** Resolved display info passed to each field renderer */
-export interface ResolvedFieldInfo {
-  label: string;
-  cleanDescription: string | undefined;
-  value: unknown;
-  onChange: (value: unknown) => void;
-  variables: Variable[];
-  defaultValue: unknown;
-  name: string;
-  blockType?: string;
-  allConfig?: Record<string, unknown>;
-  inputPortIds?: string[];
-  configKeys?: string[];
-}
 
 function DurationField({ value, onChange, cleanDescription, label }: Readonly<ResolvedFieldInfo>) {
   const numericValue = typeof value === 'number' ? value : undefined;
@@ -696,12 +661,6 @@ function StringField({
 // ─────────────────────────────────────────────────────────────────────────────
 // Dynamic Dropdown (z.dynamicDropdown) - options fetched live, scoped by siblings
 // ─────────────────────────────────────────────────────────────────────────────
-
-export interface DynamicOption {
-  value: string;
-  label: string;
-  description?: string;
-}
 
 /** Short string values longer than this are not forwarded as options params. */
 const MAX_PARAM_LENGTH = 200;

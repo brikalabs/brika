@@ -47,7 +47,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useCapture } from '@/features/analytics/hooks';
 import { useLocale } from '@/lib/use-locale';
 import { fetchTools, type ToolSummary } from '../api';
-import { type DynamicOption, type ResolvedFieldInfo, toDisplayString } from './ConfigPanel';
+import { type DynamicOption, type ResolvedFieldInfo, toDisplayString } from './field-shared';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Tool-scoping multi-select (format:'tool-multiselect') - which tools the agent may call
