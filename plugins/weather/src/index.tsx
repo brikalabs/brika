@@ -9,6 +9,7 @@ import {
 import { compactBrick } from './bricks/compact.brick';
 import { currentBrick } from './bricks/current.brick';
 import { forecastBrick } from './bricks/forecast.brick';
+import './tools';
 import { getConditionColor, getGradient, getWeatherMeta } from './utils';
 import { acquirePolling, useWeatherMap } from './weather-store';
 

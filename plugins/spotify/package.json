@@ -103,6 +103,14 @@
           "description": "Device to play searched songs on"
         }
       ]
+    },
+    {
+      "id": "now-playing",
+      "name": "Now Playing",
+      "description": "Compact current-track widget (album art, title, artist)",
+      "category": "media",
+      "icon": "disc-3",
+      "color": "#1DB954"
     }
   ],
   "blocks": [

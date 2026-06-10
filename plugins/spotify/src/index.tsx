@@ -1,5 +1,6 @@
 import { definePreferenceOptions } from '@brika/sdk';
 import { log, onStop } from '@brika/sdk/lifecycle';
+import { nowPlayingBrick } from './bricks/now-playing.brick';
 import { playSongBrick } from './bricks/play-song.brick';
 import { playerBrick } from './bricks/player.brick';
 import { spotify } from './spotify-client';
@@ -39,6 +40,7 @@ export { playBlock } from './blocks/play';
 // ─── Actions (registers defineAction handlers for client-side brick) ─────────
 
 import './actions';
+import './tools';
 
 // ─── Bricks ───────────────────────────────────────────────────────────────────
 
@@ -67,6 +69,14 @@ usePlayerStore.subscribe(() => {
   playSongBrick.data.set({
     isAuthed: state.isAuthed,
     authUrl: spotify.getAuthUrl(),
+  });
+  const track = state.playback ?? state.recentTrack;
+  nowPlayingBrick.data.set({
+    trackName: track?.trackName ?? null,
+    artistName: track?.artistName ?? null,
+    albumArt: track?.albumArt ?? null,
+    isPlaying: state.playback?.isPlaying ?? false,
+    isAuthed: state.isAuthed,
   });
 });
 
