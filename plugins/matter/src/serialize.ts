@@ -10,6 +10,8 @@ export function serializeDevice(d: MatterDevice) {
     commissioned: d.commissioned,
     state: { ...d.state },
     commands: [...d.commands],
+    parentId: d.parentId ?? null,
+    button: d.button ?? null,
     discriminator: d.discriminator ?? null,
     vendor: d.vendor ?? null,
     product: d.product ?? null,

@@ -18,8 +18,9 @@ import { VacuumControls } from './vacuum';
 
 export function DeviceControls({
   device,
+  buttonChildren = [],
   height,
-}: Readonly<{ device: DeviceState; height: number }>) {
+}: Readonly<{ device: DeviceState; buttonChildren?: DeviceState[]; height: number }>) {
   switch (device.deviceType) {
     case 'light':
       return <LightControls device={device} height={height} />;
@@ -34,7 +35,7 @@ export function DeviceControls({
       // but have no onOff cluster: a power toggle could only fail. Show the
       // live last-press panel instead.
       if (!device.commands?.includes('toggle')) {
-        return <RemoteControls device={device} />;
+        return <RemoteControls device={device} buttonChildren={buttonChildren} />;
       }
       return <SwitchControls device={device} />;
     case 'vacuum':

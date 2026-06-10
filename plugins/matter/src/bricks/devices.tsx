@@ -64,7 +64,9 @@ export default function DevicesBrick() {
   }
 
   const devices = data.devices ?? [];
-  const commissioned = devices.filter((d) => d.commissioned);
+  // Hide button endpoints of composed devices: the named parent (the remote
+  // itself) represents them in an overview.
+  const commissioned = devices.filter((d) => d.commissioned && !d.parentId);
   const online = commissioned.filter((d) => d.online);
 
   return (

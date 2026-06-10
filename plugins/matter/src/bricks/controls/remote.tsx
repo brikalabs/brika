@@ -1,10 +1,14 @@
 /**
  * Remote controls, for battery switches (Hue dimmer, wall switch module) that
  * have no controllable cluster: the meaningful display is what was PRESSED.
- * Shows the last press live (the controller records it into device state) and
- * the battery level when the device reports one.
+ *
+ * Multi-button remotes render one chip per button (each button endpoint keeps
+ * its own lastPress, so every chip shows its own last gesture and the most
+ * recently pressed one lights up). Single-button devices keep the centered
+ * last-press display. Battery shows when the device reports one.
  */
 
+import clsx from 'clsx';
 import { BatteryMedium, CircleDot } from 'lucide-react';
 import { StatCard } from '../_components';
 import { getDeviceTheme } from '../theme';
@@ -18,12 +22,100 @@ const PRESS_LABELS: Record<string, string> = {
   multi: 'Multi press',
 };
 
-export function RemoteControls({ device }: Readonly<{ device: DeviceState }>) {
-  const theme = getDeviceTheme('switch');
-  const lastPress = typeof device.state.lastPress === 'string' ? device.state.lastPress : undefined;
-  const lastButton = device.state.lastButton;
-  const battery = device.state.battery;
+const PRESS_SHORT_LABELS: Record<string, string> = {
+  short: 'short',
+  long: 'long',
+  double: '2x',
+  triple: '3x',
+  multi: 'multi',
+};
 
+function lastPressOf(device: DeviceState): string | undefined {
+  return typeof device.state.lastPress === 'string' ? device.state.lastPress : undefined;
+}
+
+function ButtonChip({
+  child,
+  active,
+  accentColor,
+}: Readonly<{ child: DeviceState; active: boolean; accentColor: string }>) {
+  const press = lastPressOf(child);
+  return (
+    <div className="flex flex-col items-center gap-1">
+      <div
+        className="flex size-11 items-center justify-center rounded-full transition-all duration-200"
+        style={
+          active
+            ? {
+                backgroundColor: `${accentColor}30`,
+                boxShadow: `0 0 16px ${accentColor}40`,
+                border: `2px solid ${accentColor}`,
+              }
+            : {
+                backgroundColor: 'rgba(255,255,255,0.08)',
+                border: '2px solid transparent',
+              }
+        }
+      >
+        <span className={clsx('font-bold text-sm', active ? 'text-white' : 'text-white/60')}>
+          {child.button ?? '?'}
+        </span>
+      </div>
+      <span className={clsx('text-[10px]', active ? 'text-white/80' : 'text-white/40')}>
+        {press === undefined ? '·' : (PRESS_SHORT_LABELS[press] ?? press)}
+      </span>
+    </div>
+  );
+}
+
+function BatteryCard({ device }: Readonly<{ device: DeviceState }>) {
+  const battery = device.state.battery;
+  if (battery === undefined || battery === null) {
+    return null;
+  }
+  return (
+    <StatCard
+      icon={BatteryMedium}
+      label="Battery"
+      value={`${String(battery)}%`}
+      accentColor={getDeviceTheme('switch').accentColor}
+    />
+  );
+}
+
+export function RemoteControls({
+  device,
+  buttonChildren = [],
+}: Readonly<{ device: DeviceState; buttonChildren?: DeviceState[] }>) {
+  const theme = getDeviceTheme('switch');
+  const lastPress = lastPressOf(device);
+  const lastButton = device.state.lastButton;
+
+  // Multi-button remote: one chip per button, the last-pressed one lit.
+  if (buttonChildren.length > 1) {
+    return (
+      <div className="flex flex-1 flex-col items-center justify-center gap-3">
+        <div className="flex items-center gap-3">
+          {buttonChildren.map((child) => (
+            <ButtonChip
+              key={child.nodeId}
+              child={child}
+              active={lastPress !== undefined && child.button === lastButton}
+              accentColor={theme.accentColor}
+            />
+          ))}
+        </div>
+        {lastPress !== undefined && (
+          <span className="text-white/60 text-xs">
+            {`Button ${String(lastButton ?? '?')}: ${PRESS_LABELS[lastPress] ?? lastPress}`}
+          </span>
+        )}
+        <BatteryCard device={device} />
+      </div>
+    );
+  }
+
+  // Single button (or a button endpoint picked directly): centered display.
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-3">
       <div
@@ -50,14 +142,7 @@ export function RemoteControls({ device }: Readonly<{ device: DeviceState }>) {
       ) : (
         <span className="text-white/50 text-xs">Press a button on the remote</span>
       )}
-      {battery !== undefined && battery !== null && (
-        <StatCard
-          icon={BatteryMedium}
-          label="Battery"
-          value={`${String(battery)}%`}
-          accentColor={theme.accentColor}
-        />
-      )}
+      <BatteryCard device={device} />
     </div>
   );
 }

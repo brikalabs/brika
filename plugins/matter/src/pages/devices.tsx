@@ -69,6 +69,10 @@ interface MatterDevice {
   product: string | null;
   serial: string | null;
   softwareVersion: string | null;
+  /** Set on button endpoints of a composed device (folded under the parent). */
+  parentId?: string | null;
+  /** 1-based button number on button endpoints. */
+  button?: number | null;
 }
 
 // ─── Device type metadata ───────────────────────────────────────────────────
@@ -199,6 +203,10 @@ function groupByType(
   const groups = new Map<DeviceType, MatterDevice[]>();
   for (const device of devices) {
     if (bridgeIds.has(device.nodeId)) {
+      continue;
+    }
+    // Button endpoints are folded under their named parent (the remote card).
+    if (device.parentId) {
       continue;
     }
     const list = groups.get(device.deviceType);

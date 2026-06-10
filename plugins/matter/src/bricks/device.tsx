@@ -169,6 +169,14 @@ export default function DeviceBrick() {
     typeof config.deviceId === 'string' && config.deviceId ? config.deviceId : undefined;
 
   const device = deviceId === undefined ? undefined : data?.deviceMap[deviceId];
+  // Button endpoints of a composed device (a multi-button remote), sorted by
+  // button number; drives the per-button panel in RemoteControls.
+  const buttonChildren =
+    device === undefined || data === undefined
+      ? []
+      : Object.values(data.deviceMap)
+          .filter((d) => d.parentId === device.nodeId)
+          .sort((a, b) => (a.button ?? 0) - (b.button ?? 0));
 
   // Hooks must run on EVERY render: the early returns below come after all of
   // them. Declaring this callback past the `!data` guard crashed with React
@@ -285,7 +293,7 @@ export default function DeviceBrick() {
 
       {/* Controls */}
       <div className="relative flex flex-1 flex-col">
-        <DeviceControls device={device} height={height} />
+        <DeviceControls device={device} buttonChildren={buttonChildren} height={height} />
       </div>
     </div>
   );

@@ -27,6 +27,10 @@ export interface DeviceState {
   state: Record<string, unknown>;
   /** Commands the device's clusters actually support (drives tappability). */
   commands?: string[];
+  /** For button endpoints of a composed device: the named parent's device id. */
+  parentId?: string | null;
+  /** For button endpoints: 1-based button number within the parent device. */
+  button?: number | null;
 }
 
 /** Data shape for the single-device brick */
@@ -41,6 +45,8 @@ export interface DeviceSummary {
   deviceType: DeviceType;
   online: boolean;
   commissioned: boolean;
+  /** Set on button endpoints of a composed device (folded under the parent). */
+  parentId?: string | null;
 }
 
 /** Data shape for the devices overview brick */
