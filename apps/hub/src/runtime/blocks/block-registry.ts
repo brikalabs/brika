@@ -77,6 +77,7 @@ export class BlockRegistry {
   readonly #shortNames = new Map<string, string>(); // shortId → full type
   readonly #plugins = new Map<string, PluginInfo>();
   readonly #listeners = new Set<(type: string) => void>();
+  readonly #unregisterListeners = new Set<(type: string) => void>();
 
   get size(): number {
     return this.#blocks.size;
@@ -85,6 +86,17 @@ export class BlockRegistry {
   onBlockRegistered(listener: (type: string) => void): () => void {
     this.#listeners.add(listener);
     return () => this.#listeners.delete(listener);
+  }
+
+  /**
+   * Fired for each block removed when its plugin unloads. The workflow engine
+   * uses this to pause running workflows whose triggers now point at a dead
+   * plugin process, so they re-arm when the block registers again instead of
+   * silently never firing.
+   */
+  onBlockUnregistered(listener: (type: string) => void): () => void {
+    this.#unregisterListeners.add(listener);
+    return () => this.#unregisterListeners.delete(listener);
   }
 
   register(block: BlockDefinition, plugin: PluginInfo): void {
@@ -126,7 +138,7 @@ export class BlockRegistry {
   }
 
   unregisterPlugin(pluginId: string): number {
-    let count = 0;
+    const removed: string[] = [];
     for (const [type, block] of this.#blocks) {
       if (block.pluginId === pluginId) {
         this.#blocks.delete(type);
@@ -135,17 +147,22 @@ export class BlockRegistry {
         if (this.#shortNames.get(block.id) === type) {
           this.#shortNames.delete(block.id);
         }
-        count++;
+        removed.push(type);
       }
     }
-    if (count > 0) {
+    if (removed.length > 0) {
       this.#plugins.delete(pluginId);
       this.logs.info('Plugin unregistered', {
         plugin: pluginId,
-        blocks: count,
+        blocks: removed.length,
       });
+      for (const type of removed) {
+        for (const listener of this.#unregisterListeners) {
+          listener(type);
+        }
+      }
     }
-    return count;
+    return removed.length;
   }
 
   get(type: string): RegisteredBlock | undefined {

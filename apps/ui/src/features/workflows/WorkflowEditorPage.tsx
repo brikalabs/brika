@@ -6,7 +6,7 @@
  * Routes: /workflows/new, /workflows/:id/edit
  */
 
-import { Button, Input } from '@brika/clay';
+import { Button, Input, Switch } from '@brika/clay';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from '@tanstack/react-router';
 import { ReactFlowProvider } from '@xyflow/react';
@@ -17,7 +17,7 @@ import { useLocale } from '@/lib/use-locale';
 import { paths } from '@/routes/paths';
 import type { Workflow } from './api';
 import { WorkflowEditor } from './editor';
-import { useSaveWorkflow, useWorkflow } from './hooks';
+import { useDisableWorkflow, useEnableWorkflow, useSaveWorkflow, useWorkflow } from './hooks';
 
 const AUTOSAVE_DELAY_MS = 1200;
 
@@ -71,6 +71,12 @@ function SaveStatusIndicator({
   return null;
 }
 
+const STATUS_DOT: Record<string, string> = {
+  running: 'bg-success',
+  error: 'bg-destructive',
+  stopped: 'bg-muted-foreground/40',
+};
+
 export function WorkflowEditorPage() {
   const { t } = useLocale();
   const navigate = useNavigate();
@@ -89,10 +95,13 @@ export function WorkflowEditorPage() {
   // Fetch existing workflow or create new
   const { data: existingWorkflow, isLoading } = useWorkflow(workflowId || '', {
     enabled: !!workflowId,
+    refetchInterval: 3000,
   });
 
   // Save workflow mutation with cache invalidation
   const saveWorkflowMutation = useSaveWorkflow();
+  const enableMutation = useEnableWorkflow();
+  const disableMutation = useDisableWorkflow();
 
   // Local state for workflow - tracks the latest state from the editor
   const [initialWorkflow, setInitialWorkflow] = useState<Workflow | null>(() =>
@@ -202,6 +211,22 @@ export function WorkflowEditorPage() {
     [scheduleSave]
   );
 
+  // Start/stop from the editor. The local copies are updated too so the next
+  // autosave does not write a stale `enabled` back over the toggle.
+  const handleToggleEnabled = useCallback(
+    (next: boolean) => {
+      if (!workflowId) {
+        return;
+      }
+      if (currentWorkflowRef.current) {
+        currentWorkflowRef.current = { ...currentWorkflowRef.current, enabled: next };
+      }
+      setInitialWorkflow((workflow) => (workflow ? { ...workflow, enabled: next } : workflow));
+      (next ? enableMutation : disableMutation).mutate(workflowId);
+    },
+    [workflowId, enableMutation, disableMutation]
+  );
+
   // Handle name change
   const handleNameChange = useCallback(
     (name: string) => {
@@ -275,6 +300,24 @@ export function WorkflowEditorPage() {
 
         <div className="flex items-center gap-3">
           <SaveStatusIndicator state={saveState} onRetry={flushSave} />
+          {!isNew && currentWorkflow && (
+            <>
+              <div className="h-6 w-px bg-border/50" />
+              <div className="flex items-center gap-2">
+                <span
+                  className={`size-2 rounded-full ${STATUS_DOT[existingWorkflow?.status ?? 'stopped'] ?? STATUS_DOT.stopped}`}
+                />
+                <span className="text-muted-foreground text-xs">
+                  {t(`common:status.${existingWorkflow?.status ?? 'stopped'}`)}
+                </span>
+                <Switch
+                  checked={currentWorkflow.enabled}
+                  onCheckedChange={handleToggleEnabled}
+                  aria-label={t('workflows:editor.toggleEnabled')}
+                />
+              </div>
+            </>
+          )}
         </div>
       </div>
 

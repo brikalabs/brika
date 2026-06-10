@@ -5,6 +5,7 @@ import { inject, singleton } from '@brika/di';
 import type { LogLevelType } from '@brika/ipc/contract';
 import type { Plugin, PluginHealth } from '@brika/plugin';
 import type { PluginPackageSchema } from '@brika/schema';
+import { BlockRegistry } from '@/runtime/blocks';
 import { BunRunner, PluginManagerConfig } from '@/runtime/config';
 import { BrikaInitializer } from '@/runtime/config/brika-initializer';
 import { BrickActions, PluginActions } from '@/runtime/events/actions';
@@ -134,6 +135,7 @@ export class PluginLifecycle {
   readonly #i18n = inject(I18nService);
   readonly #eventHandler = inject(PluginEventHandler);
   readonly #tools = inject(ToolRegistry);
+  readonly #blockRegistry = inject(BlockRegistry);
   readonly #pluginConfig = inject(PluginConfigService);
   readonly #metrics = inject(MetricsStore);
   readonly #moduleCompiler = inject(ModuleCompiler);
@@ -657,6 +659,13 @@ export class PluginLifecycle {
 
     // Clear runtime metrics (compiled modules are preserved for client-side bricks)
     this.#metrics.clear(name);
+
+    // Unregister the plugin's blocks so consumers learn the handlers are gone.
+    // The workflow engine listens for this to pause running workflows whose
+    // triggers lived in the dead process and re-arm them when the plugin (and
+    // its blocks) come back; without it, a reload left workflows subscribed to
+    // nothing, looking alive but never firing again.
+    this.#blockRegistry.unregisterPlugin(name);
 
     const restartState = this.#restartPolicy.getState(name);
     this.#state.setHealth(name, restartState?.pendingTimer ? 'restarting' : 'stopped');

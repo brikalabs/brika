@@ -40,6 +40,12 @@ export class WorkflowEngine {
   readonly #pendingBlocks = new Set<string>();
 
   init(): void {
+    // A plugin unload (reload, crash, hot-reload on a source edit) tears down
+    // the plugin process that hosts the workflow's block subscriptions. Pause
+    // every workflow using one of its blocks; the onBlockRegistered listener
+    // re-arms them the moment the plugin's blocks come back. Without this, a
+    // workflow survived the reload LOOKING alive but its triggers pointed at
+    // a dead process and never fired again.
     this.#eventUnsubs.push(
       this.blocks.onBlockRegistered(() => {
         for (const id of this.#pendingBlocks) {
@@ -48,10 +54,34 @@ export class WorkflowEngine {
             this.#tryStart(workflow);
           }
         }
-      })
+      }),
+      this.blocks.onBlockUnregistered((type) => this.#pauseWorkflowsUsing(type))
     );
 
     this.logs.info('Workflow engine initialized successfully', {});
+  }
+
+  /** Stop and mark pending every workflow that uses the given block type. */
+  #pauseWorkflowsUsing(type: string): void {
+    for (const workflow of this.#workflows.values()) {
+      const uses = workflow.blocks.some((block) => this.blocks.resolve(block.type) === type);
+      if (!uses || this.#pendingBlocks.has(workflow.id)) {
+        continue;
+      }
+      // A disabled, non-running workflow has nothing to pause; leaving it
+      // alone avoids flipping idle workflows into a transient error state.
+      if (!this.#executors.has(workflow.id) && !workflow.enabled) {
+        continue;
+      }
+      this.#stopWorkflowInternal(workflow.id);
+      this.#pendingBlocks.add(workflow.id);
+      this.#updateWorkflowState(workflow, 'error', `Missing blocks: ${type}`);
+      this.logs.info('Workflow paused: block unavailable (plugin reloading)', {
+        workflowId: workflow.id,
+        workflowName: workflow.name,
+        blockType: type,
+      });
+    }
   }
 
   // ─────────────────────────────────────────────────────────────────────────────

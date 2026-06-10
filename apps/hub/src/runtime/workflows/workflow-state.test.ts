@@ -31,6 +31,7 @@ const baseBlockMock = {
   listByCategory: () => ({}),
   resolve: (t: string) => t,
   onBlockRegistered: () => () => {},
+  onBlockUnregistered: () => () => {},
 };
 
 const createWorkflow = (id: string, enabled = false): Workflow => ({
