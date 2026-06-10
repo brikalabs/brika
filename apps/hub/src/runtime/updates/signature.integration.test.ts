@@ -46,7 +46,12 @@ function generateEd25519(): KeyPair {
 function makeSigFile(
   payloadPath: string,
   keys: KeyPair,
-  opts?: { tamperGlobal?: boolean; tamperPayload?: boolean; mode?: 'hashed' | 'legacy' }
+  opts?: {
+    tamperGlobal?: boolean;
+    tamperPayload?: boolean;
+    mode?: 'hashed' | 'legacy';
+    trustedComment?: string;
+  }
 ): string {
   const payload = readFileSync(payloadPath);
   const mode = opts?.mode ?? 'hashed';
@@ -60,7 +65,7 @@ function makeSigFile(
   const keyId = Buffer.alloc(8); // arbitrary; not checked
   const sigBlob = Buffer.concat([algo, keyId, sig]);
 
-  const trustedComment = 'release brika v0.6.0';
+  const trustedComment = opts?.trustedComment ?? 'release brika v0.6.0';
   const globalMessage = Buffer.concat([sig, Buffer.from(trustedComment, 'utf8')]);
   const globalMessageOrTampered = opts?.tamperGlobal === true ? Buffer.from('x') : globalMessage;
   const globalSig = sign(null, globalMessageOrTampered, keys.privateKey);
@@ -288,6 +293,31 @@ describe('verifyMinisignFile', () => {
     if (result.status === 'failed') {
       expect(result.reason).toMatch(/does not bind expected version/);
     }
+  });
+
+  test('canary releases: binds the signed package version, not the dated tag', async () => {
+    // CI signs `brika <BINARY_VERSION> <file>` (the package version). The
+    // caller must bind that same version: binding the dated canary TAG
+    // (`canary-20260610-...`) rejected every legitimately-signed canary
+    // update, since the tag never appears in the trusted comment.
+    const payload = join(dir, 'brika-darwin-arm64.tar.gz');
+    writeFileSync(payload, 'canary bytes');
+    const keys = generateEd25519();
+    const sigPath = makeSigFile(payload, keys, {
+      trustedComment: 'brika 0.4.0-canary.1781115263.7f84440 brika-darwin-arm64.tar.gz',
+    });
+
+    const boundToVersion = await verifyMinisignFile(payload, sigPath, keys.pubkeyB64, {
+      version: '0.4.0-canary.1781115263.7f84440',
+      asset: 'brika-darwin-arm64.tar.gz',
+    });
+    expect(boundToVersion.status).toBe('verified');
+
+    const boundToTag = await verifyMinisignFile(payload, sigPath, keys.pubkeyB64, {
+      version: 'canary-20260610-181720-7f84440',
+      asset: 'brika-darwin-arm64.tar.gz',
+    });
+    expect(boundToTag.status).toBe('failed');
   });
 
   test('rejects when the trusted comment does not name the expected asset', async () => {

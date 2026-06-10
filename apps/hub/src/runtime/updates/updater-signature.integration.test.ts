@@ -60,7 +60,7 @@ describe('maybeVerifySignature', () => {
       throw new Error('test fixture missing primary asset');
     }
     await expect(
-      maybeVerifySignature(release, firstAsset, archive, dir, () => undefined)
+      maybeVerifySignature(release, firstAsset, archive, dir, '0.6.0', () => undefined)
     ).rejects.toThrow(/no .minisig asset was published/);
   });
 
@@ -94,7 +94,7 @@ describe('maybeVerifySignature', () => {
       throw new Error('test fixture missing primary asset');
     }
     await expect(
-      maybeVerifySignature(release, firstAsset, archive, dir, () => undefined)
+      maybeVerifySignature(release, firstAsset, archive, dir, '0.6.0', () => undefined)
     ).rejects.toThrow(/Signature verification failed/);
 
     expect(mockFetch).toHaveBeenCalledTimes(1);
