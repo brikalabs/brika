@@ -38,6 +38,11 @@ export async function resolveTarget(target: string): Promise<{ pkg: string; vers
   return { pkg: target };
 }
 
+/** With no <target>, install the cwd when it looks like a plugin directory. */
+async function defaultTarget(): Promise<string | undefined> {
+  return (await Bun.file(join(process.cwd(), 'package.json')).exists()) ? '.' : undefined;
+}
+
 /** Explain that a hub is needed and exit, shared by `install` and `dev`. */
 export function noHubReachable(verb: string): never {
   const label = pc.yellow(`brika ${verb}`);
@@ -53,18 +58,23 @@ export default defineCommand({
   description: 'Install a plugin into a running hub (local path or npm package)',
   details:
     'Drives an already-running hub over loopback: a local path is linked as a file: dependency, ' +
-    'otherwise <target> is resolved from npm. This lean CLI cannot start a hub; use the full ' +
+    'otherwise <target> is resolved from npm. With no target, installs the plugin in the ' +
+    'current directory. This lean CLI cannot start a hub; use the full ' +
     'Brika app (`brika start`) for that, or point BRIKA_HOST / BRIKA_PORT at an existing one.',
   options: {},
   examples: [
+    'brika install',
     'brika install ./my-plugin',
     'brika install @acme/brika-plugin-foo',
     'brika install brika-plugin-foo@1.2.0',
   ],
   async handler({ positionals }) {
-    const target = positionals[0];
+    // No target: install the plugin in the current directory (mirrors `brika dev`).
+    const target = positionals[0] ?? (await defaultTarget());
     if (!target) {
-      throw new CliError('usage: brika install <path-or-package>');
+      throw new CliError(
+        'usage: brika install [path-or-package] (no package.json in the current directory)'
+      );
     }
     if (!(await pingHub())) {
       noHubReachable('install');

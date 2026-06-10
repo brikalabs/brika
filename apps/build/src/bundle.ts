@@ -10,6 +10,7 @@
 import { join } from 'node:path';
 import pc from 'picocolors';
 import { done, elapsed, fileSize, log, step } from './log';
+import { bundlePreludeSource, embedPrelude } from './plugins/embed-prelude';
 import { stubMockFiles } from './plugins/stub-mock-files';
 import { stubReactDevtoolsCore } from './plugins/stub-react-devtools-core';
 import { type BuildTarget, resolveEntrypoint } from './targets';
@@ -23,13 +24,14 @@ export async function bundle(target: BuildTarget): Promise<void> {
   console.log();
   step('Bundling...');
 
+  const preludeSource = await bundlePreludeSource();
   const result = await Bun.build({
     entrypoints: [resolveEntrypoint(target)],
     outdir: outDir,
     naming: 'server.[hash].[ext]',
     target: 'bun',
     minify: true,
-    plugins: [stubReactDevtoolsCore(), stubMockFiles()],
+    plugins: [stubReactDevtoolsCore(), stubMockFiles(), embedPrelude(preludeSource)],
   });
 
   if (!result.success) {
