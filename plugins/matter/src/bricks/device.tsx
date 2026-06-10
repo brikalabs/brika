@@ -47,7 +47,20 @@ function stateLabel(device: DeviceState): string {
   }
 }
 
-const TAPPABLE_TYPES: ReadonlySet<string> = new Set(['light', 'switch', 'lock']);
+/**
+ * The action a tap performs, from the device's REAL capabilities. Type-based
+ * gating broke on battery remotes: a Hue dimmer classifies as 'switch' but has
+ * no onOff cluster, so its tap sent a `toggle` that could only fail.
+ */
+function tapCommand(device: DeviceState): 'toggle' | 'lock' | undefined {
+  if (device.commands?.includes('toggle')) {
+    return 'toggle';
+  }
+  if (device.commands?.includes('lock')) {
+    return 'lock';
+  }
+  return undefined;
+}
 
 interface DeviceLayoutProps {
   device: DeviceState;
@@ -58,7 +71,7 @@ interface DeviceLayoutProps {
 }
 
 function MicroLayout({ device, theme, isActive, onTap }: Readonly<DeviceLayoutProps>) {
-  const tappable = TAPPABLE_TYPES.has(device.deviceType);
+  const tappable = tapCommand(device) !== undefined;
   const base =
     'relative flex h-full flex-col items-center justify-center gap-1.5 overflow-hidden rounded-lg';
   const children = (
@@ -88,7 +101,7 @@ function MicroLayout({ device, theme, isActive, onTap }: Readonly<DeviceLayoutPr
 }
 
 function StripLayout({ device, theme, isActive, typeLabel, onTap }: Readonly<DeviceLayoutProps>) {
-  const tappable = TAPPABLE_TYPES.has(device.deviceType);
+  const tappable = tapCommand(device) !== undefined;
   const base = 'relative flex h-full items-center gap-2.5 overflow-hidden rounded-lg px-3';
   const children = (
     <>
@@ -142,8 +155,12 @@ export default function DeviceBrick() {
     if (!device) {
       return;
     }
+    const action = tapCommand(device);
+    if (action === undefined) {
+      return;
+    }
     capture('matter.device_brick_tapped', { deviceType: device.deviceType });
-    if (device.deviceType === 'lock') {
+    if (action === 'lock') {
       sendCommand(device.nodeId, device.state.locked ? 'unlock' : 'lock');
     } else {
       sendCommand(device.nodeId, 'toggle');

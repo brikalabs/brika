@@ -25,6 +25,8 @@ export interface DeviceState {
   online: boolean;
   commissioned: boolean;
   state: Record<string, unknown>;
+  /** Commands the device's clusters actually support (drives tappability). */
+  commands?: string[];
 }
 
 /** Data shape for the single-device brick */

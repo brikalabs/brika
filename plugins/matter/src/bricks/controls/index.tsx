@@ -28,6 +28,12 @@ export function DeviceControls({
     case 'thermostat':
       return <ThermostatControls device={device} />;
     case 'switch':
+      // Battery remotes (Hue dimmer, wall switch module) classify as 'switch'
+      // but have no onOff cluster: a power toggle could only fail. Show their
+      // readable state (battery, buttons) instead.
+      if (!device.commands?.includes('toggle')) {
+        return <SensorControls device={device} />;
+      }
       return <SwitchControls device={device} />;
     case 'sensor':
       return <SensorControls device={device} />;
