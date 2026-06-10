@@ -24,7 +24,7 @@
     "uptime": "Uptime",
     "startedAt": "Started",
     "availableTools": "Available Tools",
-    "availableToolsDesc": "Tools provided by this plugin",
+    "availableToolsDesc": "AI-callable capabilities this plugin registers in the hub",
     "availableBlocks": "Available Blocks",
     "availableBlocksDesc": "Workflow blocks provided by this plugin",
     "availableSparks": "Available Sparks",

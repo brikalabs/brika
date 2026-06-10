@@ -13,6 +13,7 @@ import { PluginMetrics } from './PluginMetrics';
 import { PluginPermissions } from './PluginPermissions';
 import { PluginSparksList } from './PluginSparksList';
 import { PluginStats } from './PluginStats';
+import { PluginToolsList } from './PluginToolsList';
 
 export function PluginOverviewTab() {
   const params = useParams({
@@ -36,6 +37,7 @@ export function PluginOverviewTab() {
       <PluginBlocksList plugin={plugin} />
       <PluginSparksList plugin={plugin} />
       <PluginBricksList plugin={plugin} />
+      <PluginToolsList plugin={plugin} />
       <PluginConfigForm pluginUid={plugin.uid} pluginName={plugin.name} />
       <PluginPermissions plugin={plugin} />
       <PluginInstallInfo plugin={plugin} />

@@ -283,7 +283,8 @@ export class RunStore {
       .where(
         and(eq(runsTable.workflowId, workflowId), eq(runEventsTable.kind, 'block.emit'), refMatch)
       )
-      .orderBy(desc(runEventsTable.ts))
+      // id breaks same-millisecond ts ties in insertion order
+      .orderBy(desc(runEventsTable.ts), desc(runEventsTable.id))
       .limit(Math.min(Math.max(limit, 1), 50) * 5)
       .all();
 

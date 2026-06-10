@@ -48,6 +48,9 @@ export const paths = {
     list: route('/sparks'),
     tab: route('/sparks/$tab'),
   },
+  tools: {
+    list: route('/tools'),
+  },
   analytics: {
     list: route('/analytics'),
     tab: route('/analytics/$tab'),

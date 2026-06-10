@@ -1,33 +1,7 @@
 {
-  "title": "$t(common:items.tool_other)",
-  "subtitle": "Registered tools from $t(common:items.plugin_other)",
-  "empty": "No $t(common:items.tool_other) registered...",
-  "noArguments": "This $t(common:items.tool_one) has no input arguments",
-  "count_one": "{{count}} tool",
-  "count_other": "{{count}} tools",
-  "labels": {
-    "tool": "Tool",
-    "arguments": "Arguments",
-    "args": "Args",
-    "owner": "Owner"
-  },
-  "table": {
-    "tool": "Tool",
-    "description": "Description",
-    "args": "Args",
-    "owner": "Owner"
-  },
-  "actions": {
-    "call": "Call"
-  },
-  "dialog": {
-    "title": "Call Tool",
-    "arguments": "Arguments",
-    "noArgs": "This tool has no input arguments",
-    "call": "Call",
-    "result": {
-      "success": "Success",
-      "failed": "Failed"
-    }
-  }
+  "title": "Tools",
+  "description": "Hub-registered capabilities any AI agent or workflow can discover and call",
+  "search": "Search tools...",
+  "empty": "No tools registered yet. Enable a plugin that ships tools.",
+  "noResults": "No tools match your search"
 }
