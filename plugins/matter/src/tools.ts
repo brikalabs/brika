@@ -61,29 +61,56 @@ defineTool(
   {
     id: 'control-device',
     description:
-      'Control a commissioned Matter device by nodeId: turn a light on/off/toggle, lock/unlock, open/close/stop a cover, or set brightness/color/temperature. Resolve the nodeId with list-devices first.',
+      'Control commissioned Matter devices by nodeId: turn a light on/off/toggle, lock/unlock, ' +
+      'open/close/stop a cover, or set brightness/color/temperature. Resolve nodeIds with ' +
+      'list-devices first. To send the same command to several devices (e.g. turn off ALL ' +
+      'lights), pass every nodeId in `nodeIds` in ONE call instead of calling once per device.',
     icon: 'zap',
     color: '#7c3aed',
     input: z.object({
-      nodeId: z.string().min(1).describe('Target device nodeId (from list-devices)'),
-      command: commandSchema.describe('The command to send to the device'),
+      nodeId: z
+        .string()
+        .min(1)
+        .optional()
+        .describe('Single target device nodeId (from list-devices)'),
+      nodeIds: z
+        .array(z.string().min(1))
+        .optional()
+        .describe('Several target nodeIds; the command is sent to each one'),
+      command: commandSchema.describe('The command to send to the device(s)'),
       args: paramsSchema
         .optional()
         .describe('Optional string parameters, e.g. { "level": "128" } for setBrightness'),
     }),
   },
-  async ({ nodeId, command, args }) => {
+  async ({ nodeId, nodeIds, command, args }) => {
+    let targets: string[] = [];
+    if (nodeIds?.length) {
+      targets = nodeIds;
+    } else if (nodeId) {
+      targets = [nodeId];
+    }
+    if (targets.length === 0) {
+      return 'Error: provide nodeId (one device) or nodeIds (several devices).';
+    }
     const controller = getMatterController();
     // Models sometimes invent nodeIds ("light1") instead of resolving them.
     // Distinguish that from a real command failure so the caller can recover.
     const known = controller.getCommissionedDevices();
-    if (!known.some((device) => device.nodeId === nodeId)) {
+    const unknown = targets.filter((id) => !known.some((device) => device.nodeId === id));
+    if (unknown.length > 0) {
       const ids = known.map((device) => `${device.nodeId} (${device.name})`).join(', ');
-      return `Error: unknown nodeId "${nodeId}". Call list-devices first and use one of the real nodeId values${ids ? `: ${ids}` : '.'}`;
+      return `Error: unknown nodeId(s) ${unknown.map((id) => `"${id}"`).join(', ')}. Call list-devices first and use the real nodeId values${ids ? `: ${ids}` : '.'}`;
     }
-    const ok = await controller.sendCommand(nodeId, command, args);
-    return ok
-      ? `Sent "${command}" to device ${nodeId}.`
-      : `Command "${command}" failed on device ${nodeId} (device may be offline).`;
+    const lines: string[] = [];
+    for (const id of targets) {
+      const ok = await controller.sendCommand(id, command, args);
+      lines.push(
+        ok
+          ? `Sent "${command}" to device ${id}.`
+          : `Command "${command}" failed on device ${id} (device may be offline).`
+      );
+    }
+    return lines.join('\n');
   }
 );

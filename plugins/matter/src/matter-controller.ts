@@ -538,10 +538,22 @@ export class MatterController {
 
   // ─── Private ───────────────────────────────────────────────────────────────
 
-  /** Notify all callbacks for devices belonging to a given node */
-  #notifyNodeDevices(nodeIdStr: string): void {
+  /**
+   * Notify callbacks for devices belonging to a node, scoped to one endpoint
+   * when the report names it. An attribute report identifies the endpoint that
+   * changed; only that bridged device's subscribers (plus the node-root
+   * device's) should fire. Notifying every device on the node turned a single
+   * Hue-bridge report into a trigger fan-out: a workflow watching one dimmer
+   * fired whenever ANY light on the bridge changed, so an agent that controls
+   * lights kept re-triggering its own workflow in a feedback loop.
+   */
+  #notifyNodeDevices(nodeIdStr: string, endpointId?: number): void {
+    const scoped = endpointId === undefined ? undefined : `${nodeIdStr}:${endpointId}`;
     for (const device of this.#deviceCache.values()) {
-      if (device.nodeId === nodeIdStr || device.nodeId.startsWith(`${nodeIdStr}:`)) {
+      const onNode = device.nodeId === nodeIdStr || device.nodeId.startsWith(`${nodeIdStr}:`);
+      const inScope =
+        scoped === undefined || device.nodeId === scoped || device.nodeId === nodeIdStr;
+      if (onNode && inScope) {
         for (const cb of this.#onStateChanged) {
           cb(device);
         }
@@ -564,7 +576,7 @@ export class MatterController {
         `Attribute changed on ${nodeIdStr}: ${path.endpointId}/${path.clusterId}/${path.attributeName} = ${value}`
       );
       this.#refreshDeviceState(nodeIdStr, node);
-      this.#notifyNodeDevices(nodeIdStr);
+      this.#notifyNodeDevices(nodeIdStr, Number(path.endpointId));
     });
 
     // Subscribe to endpoint structure changes (bridges add children after init)
