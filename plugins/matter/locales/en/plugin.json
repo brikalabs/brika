@@ -75,6 +75,8 @@
       "thermostat": "Thermostat",
       "switch": "Switch",
       "sensor": "Sensor",
+      "fan": "Fan",
+      "vacuum": "Vacuum",
       "bridge": "Bridge",
       "unknown": "Device"
     },

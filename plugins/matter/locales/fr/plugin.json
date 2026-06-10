@@ -75,6 +75,8 @@
       "thermostat": "Thermostat",
       "switch": "Interrupteur",
       "sensor": "Capteur",
+      "fan": "Ventilateur",
+      "vacuum": "Aspirateur",
       "bridge": "Pont",
       "unknown": "Appareil"
     },
