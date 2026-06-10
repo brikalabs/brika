@@ -17,6 +17,7 @@ import { useLocale } from '@brika/sdk/ui-kit/hooks';
 import clsx from 'clsx';
 import { Loader2, Settings } from 'lucide-react';
 import { useCallback } from 'react';
+import { summarizeState } from '../attributes';
 import { AmbientGlow, DeviceIcon, StatusBadge } from './_components';
 import { DeviceControls } from './controls';
 import { useSendCommand } from './controls/send-command';
@@ -26,48 +27,9 @@ import type { DeviceState } from './types';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-/** Controllable switch: power state. Battery remote: last press, then battery. */
-function switchStateLabel(device: DeviceState): string {
-  if (device.commands?.includes('toggle')) {
-    return device.state.on ? 'On' : 'Off';
-  }
-  const { lastPress, lastButton, battery } = device.state;
-  if (typeof lastPress === 'string') {
-    return lastButton === undefined ? lastPress : `B${String(lastButton)} ${lastPress}`;
-  }
-  if (battery !== undefined && battery !== null) {
-    return `${String(battery)}%`;
-  }
-  return device.online ? 'Online' : 'Offline';
-}
-
-/** Short state label for micro / strip layouts */
+/** Short state label for micro / strip layouts, from the attribute registry. */
 function stateLabel(device: DeviceState): string {
-  switch (device.deviceType) {
-    case 'light':
-      return device.state.on ? 'On' : 'Off';
-    case 'switch':
-      return switchStateLabel(device);
-    case 'vacuum': {
-      const vacuumState = device.state.vacuumState;
-      if (typeof vacuumState === 'string') {
-        return vacuumState;
-      }
-      return device.online ? 'Ready' : 'Offline';
-    }
-    case 'lock':
-      return device.state.locked ? 'Locked' : 'Unlocked';
-    case 'cover': {
-      const pos = device.state.coverPosition;
-      return pos === null ? 'Cover' : `${Number(pos)}%`;
-    }
-    case 'thermostat': {
-      const temp = device.state.temperature;
-      return temp === null ? '—' : `${Number(temp)}°`;
-    }
-    default:
-      return device.online ? 'Online' : 'Offline';
-  }
+  return summarizeState(device.state, device.deviceType, device.commands ?? [], device.online);
 }
 
 /**

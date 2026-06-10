@@ -10,25 +10,10 @@
 
 import clsx from 'clsx';
 import { BatteryMedium, CircleDot } from 'lucide-react';
+import { PRESS_LABELS, PRESS_SHORT_LABELS } from '../../attributes';
 import { StatCard } from '../_components';
 import { getDeviceTheme } from '../theme';
 import type { DeviceState } from '../types';
-
-const PRESS_LABELS: Record<string, string> = {
-  short: 'Short press',
-  long: 'Long press',
-  double: 'Double press',
-  triple: 'Triple press',
-  multi: 'Multi press',
-};
-
-const PRESS_SHORT_LABELS: Record<string, string> = {
-  short: 'short',
-  long: 'long',
-  double: '2x',
-  triple: '3x',
-  multi: 'multi',
-};
 
 function lastPressOf(device: DeviceState): string | undefined {
   return typeof device.state.lastPress === 'string' ? device.state.lastPress : undefined;

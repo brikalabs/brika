@@ -3,7 +3,13 @@
  *
  * Pick a device, then choose which attributes to watch. Each watched attribute
  * becomes its own output port on the node (dynamic templated ports), so a
- * workflow can branch per attribute. Suggestions adapt to the device type.
+ * workflow can branch per attribute. Every watched attribute can carry a
+ * built-in condition: fire on any change, when the value becomes a target, or
+ * when it crosses above/below a numeric threshold (edge-triggered).
+ *
+ * The attribute vocabulary comes from the shared registry in attributes.ts
+ * (zod-free, browser-safe), so the dropdown always matches what the cluster
+ * readers actually produce. Suggestions adapt to the device type.
  */
 
 import { useBlockConfig, useUpdateBlockConfig } from '@brika/sdk/block-views';
@@ -18,13 +24,15 @@ import {
   SelectValue,
 } from '@brika/sdk/ui-kit';
 import { useAction, useLocale } from '@brika/sdk/ui-kit/hooks';
-import { Cpu, Plus, Radio, RefreshCw, Trash2, X } from 'lucide-react';
-import { useState } from 'react';
+import { Cpu, Plus, Radio, RefreshCw, Trash2 } from 'lucide-react';
 import { listDevices } from '../actions';
+import { ATTRIBUTE_BY_KEY, WATCHABLE_ATTRIBUTE_KEYS } from '../attributes';
 import { DEVICE_ICONS } from './_command-meta';
 
 interface WatchedAttribute {
   name: string;
+  when?: string;
+  value?: string;
 }
 
 interface DeviceEventConfig {
@@ -32,24 +40,88 @@ interface DeviceEventConfig {
   attributes?: WatchedAttribute[];
 }
 
-/** Common attributes to suggest, per device type. Users can add their own. */
+/** Condition choices; mirrors ATTRIBUTE_CONDITION_VALUES on the server side. */
+const CONDITION_OPTIONS: readonly { value: string; label: string }[] = [
+  { value: 'changes', label: 'changes' },
+  { value: 'becomes', label: 'becomes' },
+  { value: 'above', label: 'goes above' },
+  { value: 'below', label: 'goes below' },
+];
+
+/** Common attributes to suggest, per device type (real registry keys). */
 const ATTRIBUTE_SUGGESTIONS: Record<string, string[]> = {
-  light: ['on', 'level', 'colorTemp'],
-  switch: ['on'],
-  lock: ['lockState'],
-  cover: ['position'],
-  thermostat: ['temperature', 'targetTemp'],
-  sensor: ['occupancy', 'contact', 'temperature', 'humidity', 'illuminance'],
-  bridge: ['on'],
+  light: ['on', 'brightness', 'colorTempMireds'],
+  switch: ['lastPress', 'battery'],
+  lock: ['locked'],
+  cover: ['coverPosition'],
+  thermostat: ['temperature', 'systemModeName'],
+  sensor: ['occupied', 'contact', 'temperature', 'humidity', 'illuminance'],
+  fan: ['fanSpeed', 'fanMode'],
+  vacuum: ['vacuumState', 'battery'],
+  bridge: [],
   unknown: ['on'],
 };
+
+function attributeLabel(key: string): string {
+  return ATTRIBUTE_BY_KEY[key]?.label ?? key;
+}
+
+function WatchedAttributeRow({
+  attr,
+  onChange,
+  onRemove,
+}: Readonly<{
+  attr: WatchedAttribute;
+  onChange: (patch: Partial<WatchedAttribute>) => void;
+  onRemove: () => void;
+}>) {
+  const when = attr.when ?? 'changes';
+  return (
+    <div className="space-y-1.5 rounded-md border bg-muted/30 p-2">
+      <div className="flex items-center gap-2">
+        <span className="flex-1 truncate font-mono text-sm">{attr.name}</span>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="size-7 text-destructive"
+          onClick={onRemove}
+          aria-label={`Stop watching ${attr.name}`}
+        >
+          <Trash2 className="size-4" />
+        </Button>
+      </div>
+      <div className="flex items-center gap-1.5">
+        <Select value={when} onValueChange={(v: string) => onChange({ when: v })}>
+          <SelectTrigger className="h-8 flex-1 bg-background text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {CONDITION_OPTIONS.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {when !== 'changes' && (
+          <Input
+            value={attr.value ?? ''}
+            onChange={(e) => onChange({ value: e.target.value })}
+            placeholder={when === 'becomes' ? 'value' : 'number'}
+            className="h-8 flex-1 bg-background font-mono text-xs"
+          />
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default function DeviceEventView() {
   const { t } = useLocale();
   const config = useBlockConfig<DeviceEventConfig>();
   const update = useUpdateBlockConfig();
   const { data: devices, loading, refetch } = useAction(listDevices);
-  const [custom, setCustom] = useState('');
 
   const attributes = config.attributes ?? [];
   const selected = devices?.find((d) => d.value === config.nodeId);
@@ -58,13 +130,18 @@ export default function DeviceEventView() {
 
   const hasAttr = (name: string) => attributes.some((a) => a.name === name);
   const addAttr = (name: string) => {
-    const trimmed = name.trim();
-    if (trimmed && !hasAttr(trimmed)) {
-      update({ attributes: [...attributes, { name: trimmed }] });
+    if (name && !hasAttr(name)) {
+      update({ attributes: [...attributes, { name, when: 'changes' }] });
     }
   };
-  const removeAttr = (name: string) =>
-    update({ attributes: attributes.filter((a) => a.name !== name) });
+  const patchAttr = (index: number, patch: Partial<WatchedAttribute>) =>
+    update({
+      attributes: attributes.map((a, i) => (i === index ? { ...a, ...patch } : a)),
+    });
+  const removeAttr = (index: number) =>
+    update({ attributes: attributes.filter((_, i) => i !== index) });
+
+  const available = WATCHABLE_ATTRIBUTE_KEYS.filter((key) => !hasAttr(key));
 
   return (
     <div className="space-y-4">
@@ -128,22 +205,13 @@ export default function DeviceEventView() {
           </p>
         )}
 
-        {attributes.map((attr) => (
-          <div key={attr.name} className="flex items-center gap-2">
-            <span className="flex-1 truncate rounded-md bg-muted/50 px-2.5 py-1.5 font-mono text-sm">
-              {attr.name}
-            </span>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="size-8 text-destructive"
-              onClick={() => removeAttr(attr.name)}
-              aria-label={`Stop watching ${attr.name}`}
-            >
-              <Trash2 className="size-4" />
-            </Button>
-          </div>
+        {attributes.map((attr, index) => (
+          <WatchedAttributeRow
+            key={attr.name}
+            attr={attr}
+            onChange={(patch) => patchAttr(index, patch)}
+            onRemove={() => removeAttr(index)}
+          />
         ))}
 
         {suggestions.some((s) => !hasAttr(s)) && (
@@ -166,37 +234,28 @@ export default function DeviceEventView() {
           </div>
         )}
 
-        <div className="flex items-center gap-1.5">
-          <Input
-            value={custom}
-            onChange={(e) => setCustom(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                addAttr(custom);
-                setCustom('');
-              }
-            }}
-            placeholder="Custom attribute name"
-            className="bg-background font-mono text-xs"
-          />
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            className="size-9 shrink-0"
-            onClick={() => {
-              addAttr(custom);
-              setCustom('');
-            }}
-            aria-label="Add attribute"
-          >
-            <X className="size-4 rotate-45" />
-          </Button>
-        </div>
+        {available.length > 0 && (
+          <Select value="" onValueChange={(v: string) => addAttr(v)}>
+            <SelectTrigger className="bg-background text-muted-foreground text-xs">
+              <SelectValue placeholder="Add attribute..." />
+            </SelectTrigger>
+            <SelectContent>
+              {available.map((key) => (
+                <SelectItem key={key} value={key}>
+                  <span className="flex items-baseline gap-2">
+                    <span>{attributeLabel(key)}</span>
+                    <span className="font-mono text-muted-foreground text-xs">{key}</span>
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
       </div>
 
       <p className="text-muted-foreground text-xs">
-        Fires in real time from Matter device events. Each attribute routes out its own port.
+        Fires in real time from Matter device events. Each attribute routes out its own port;
+        "becomes" and threshold conditions fire only when the condition newly holds.
       </p>
     </div>
   );

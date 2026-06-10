@@ -1,15 +1,24 @@
 /**
  * Vacuum controls, start / pause / resume / dock with the operational state.
- * Buttons render only for the commands the device actually supports.
+ * Actions are a declarative table filtered by the commands the device actually
+ * supports; the state label comes from the shared attribute registry.
  */
 
 import { capture } from '@brika/sdk';
 import clsx from 'clsx';
 import { Home, Pause, Play } from 'lucide-react';
 import { useCallback } from 'react';
+import { formatAttribute } from '../../attributes';
 import { getDeviceTheme } from '../theme';
 import type { DeviceState } from '../types';
 import { useSendCommand } from './send-command';
+
+const VACUUM_ACTIONS: readonly { command: string; label: string; icon: typeof Play }[] = [
+  { command: 'vacuumStart', label: 'Start', icon: Play },
+  { command: 'vacuumPause', label: 'Pause', icon: Pause },
+  { command: 'vacuumResume', label: 'Resume', icon: Play },
+  { command: 'vacuumDock', label: 'Dock', icon: Home },
+];
 
 function VacuumButton({
   label,
@@ -39,8 +48,12 @@ export function VacuumControls({ device }: Readonly<{ device: DeviceState }>) {
   const theme = getDeviceTheme('vacuum');
   const sendCommand = useSendCommand();
   const commands = device.commands ?? [];
-  const vacuumState =
-    typeof device.state.vacuumState === 'string' ? device.state.vacuumState : undefined;
+  const vacuumState = device.state.vacuumState;
+  const hasState = vacuumState !== null && vacuumState !== undefined;
+  let stateLabel = device.online ? 'Ready' : 'Offline';
+  if (hasState) {
+    stateLabel = formatAttribute('vacuumState', vacuumState);
+  }
 
   const run = useCallback(
     (command: string) => {
@@ -52,42 +65,19 @@ export function VacuumControls({ device }: Readonly<{ device: DeviceState }>) {
 
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-3">
-      <span className={clsx('font-semibold text-sm', vacuumState ? 'text-white' : 'text-white/50')}>
-        {vacuumState ?? (device.online ? 'Ready' : 'Offline')}
+      <span className={clsx('font-semibold text-sm', hasState ? 'text-white' : 'text-white/50')}>
+        {stateLabel}
       </span>
       <div className="flex items-center gap-2">
-        {commands.includes('vacuumStart') && (
+        {VACUUM_ACTIONS.filter((action) => commands.includes(action.command)).map((action) => (
           <VacuumButton
-            label="Start"
-            icon={Play}
+            key={action.command}
+            label={action.label}
+            icon={action.icon}
             accentColor={theme.accentColor}
-            onPress={() => run('vacuumStart')}
+            onPress={() => run(action.command)}
           />
-        )}
-        {commands.includes('vacuumPause') && (
-          <VacuumButton
-            label="Pause"
-            icon={Pause}
-            accentColor={theme.accentColor}
-            onPress={() => run('vacuumPause')}
-          />
-        )}
-        {commands.includes('vacuumResume') && (
-          <VacuumButton
-            label="Resume"
-            icon={Play}
-            accentColor={theme.accentColor}
-            onPress={() => run('vacuumResume')}
-          />
-        )}
-        {commands.includes('vacuumDock') && (
-          <VacuumButton
-            label="Dock"
-            icon={Home}
-            accentColor={theme.accentColor}
-            onPress={() => run('vacuumDock')}
-          />
-        )}
+        ))}
       </div>
     </div>
   );

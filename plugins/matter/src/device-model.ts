@@ -15,9 +15,11 @@ import {
   type DeviceType,
   type MatterCommand,
   type MatterEndpoint,
+  type MatterState,
+  parseStateSlice,
 } from './clusters';
 
-export type { DeviceType } from './clusters';
+export type { DeviceType, MatterState } from './clusters';
 
 export interface MatterDevice {
   nodeId: string;
@@ -25,7 +27,7 @@ export interface MatterDevice {
   deviceType: DeviceType;
   online: boolean;
   commissioned: boolean;
-  state: Record<string, unknown>;
+  state: MatterState;
   /** Commands this device's clusters actually support (drives UI + AI tools). */
   commands: MatterCommand[];
   /** For button endpoints of a composed device: the named parent's device id. */
@@ -119,7 +121,7 @@ export function classifyDeviceTypes(deviceTypeIds: number[]): DeviceType {
  * `0x0011` (Power Source), so the id-based map yields 'unknown' even though
  * the device plainly has a Switch cluster. Priority is registry order.
  */
-export function classifyFromState(state: Record<string, unknown>): DeviceType {
+export function classifyFromState(state: MatterState): DeviceType {
   for (const entry of CLUSTER_REGISTRY) {
     const hint = entry.classify;
     if (hint && hint.keys.some((key) => key in state)) {
@@ -131,15 +133,25 @@ export function classifyFromState(state: Record<string, unknown>): DeviceType {
 
 // ─── Endpoint Reading ────────────────────────────────────────────────────────
 
-/** Read every registered cluster's state from an endpoint into a flat record. */
-export function readEndpointState(ep: MatterEndpoint): Record<string, unknown> {
-  const state: Record<string, unknown> = {};
+/**
+ * Read every registered cluster's state from an endpoint into typed state.
+ * Each reader writes a raw slice that is immediately schema-parsed
+ * ({@link parseStateSlice}): a malformed cluster value drops that attribute
+ * only, so one misbehaving cluster can never crash a refresh.
+ */
+export function readEndpointState(ep: MatterEndpoint): MatterState {
+  const state: MatterState = {};
   for (const entry of CLUSTER_REGISTRY) {
-    try {
-      entry.read?.(ep, state);
-    } catch {
-      /* cluster not present */
+    if (!entry.read) {
+      continue;
     }
+    const slice: Record<string, unknown> = {};
+    try {
+      entry.read(ep, slice);
+    } catch {
+      continue; /* cluster not present */
+    }
+    Object.assign(state, parseStateSlice(slice));
   }
   return state;
 }
@@ -149,7 +161,7 @@ export function readEndpointState(ep: MatterEndpoint): Record<string, unknown> {
  * Drives the `commands` field on {@link MatterDevice}: the UI and AI tools
  * only offer (and accept) what the device can actually do.
  */
-export function deriveCommands(state: Record<string, unknown>): MatterCommand[] {
+export function deriveCommands(state: MatterState): MatterCommand[] {
   const commands: MatterCommand[] = [];
   for (const entry of CLUSTER_REGISTRY) {
     for (const command of entry.commands ?? []) {

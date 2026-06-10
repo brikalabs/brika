@@ -2,20 +2,12 @@
  * Shared type definitions for Matter client-rendered bricks.
  *
  * Client bricks cannot import from plugin runtime code (matter-controller.ts),
- * so DeviceType is re-declared here as a string literal union.
+ * so DeviceType comes from the browser-safe attribute registry instead.
  */
 
-export type DeviceType =
-  | 'light'
-  | 'lock'
-  | 'cover'
-  | 'thermostat'
-  | 'switch'
-  | 'sensor'
-  | 'fan'
-  | 'vacuum'
-  | 'bridge'
-  | 'unknown';
+export type { DeviceType } from '../attributes';
+
+import type { DeviceType } from '../attributes';
 
 /** Full device state as pushed to the "device" brick via deviceBrick.data.set */
 export interface DeviceState {
@@ -24,6 +16,13 @@ export interface DeviceState {
   deviceType: DeviceType;
   online: boolean;
   commissioned: boolean;
+  /**
+   * Kept as a loose record rather than mirroring the server's `MatterState`:
+   * the typed schema lives in clusters.ts (zod, server-only) and a hand-kept
+   * mirror would drift on every attribute addition. Views never branch on the
+   * value types; they render through formatAttribute/summarizeState, which
+   * take `unknown` by contract.
+   */
   state: Record<string, unknown>;
   /** Commands the device's clusters actually support (drives tappability). */
   commands?: string[];

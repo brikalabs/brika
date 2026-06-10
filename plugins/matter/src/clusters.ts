@@ -2,8 +2,11 @@
  * Declarative Matter cluster registry.
  *
  * One entry per supported cluster. Each entry knows how to:
- *   - read its cluster state into the flat device state record,
- *   - execute the commands it offers (args arrive in RAW Matter units),
+ *   - read its cluster state into the flat device state record (every produced
+ *     slice is normalized through `MatterStateSchema`, the typed-state SSOT),
+ *   - execute the commands it offers (args arrive in RAW Matter units; commands
+ *     with a human-units surface also carry a zod `args` contract used by the
+ *     AI tools to validate and convert),
  *   - classify a device when its deviceTypeList carries only structural types.
  *
  * The controller and device model derive everything (state, supported
@@ -24,6 +27,8 @@
  *     leads so Hue dimmer button endpoints never classify as lights).
  */
 
+import { z } from '@brika/sdk';
+import type { ZodInfer, ZodType } from '@brika/sdk/schema';
 import { BooleanStateClient } from '@matter/main/behaviors/boolean-state';
 import { DoorLockClient } from '@matter/main/behaviors/door-lock';
 import { FanControlClient } from '@matter/main/behaviors/fan-control';
@@ -84,10 +89,113 @@ export const MATTER_COMMAND_VALUES = [
 
 export type MatterCommand = (typeof MATTER_COMMAND_VALUES)[number];
 
+// ─── Typed device state ──────────────────────────────────────────────────────
+
+/**
+ * Composed schema of every attribute the cluster readers (and the controller's
+ * press recorder) can produce, all optional. Field schemas normalize (coerce)
+ * and act as the typing source of truth: `MatterState` is inferred from here.
+ */
+export const MatterStateSchema = z
+  .object({
+    on: z.boolean(),
+    brightness: z.coerce.number(),
+    hue: z.coerce.number(),
+    saturation: z.coerce.number(),
+    colorTempMireds: z.coerce.number(),
+    colorMode: z.coerce.number(),
+    locked: z.boolean(),
+    lockState: z.coerce.number().nullable(),
+    coverPosition: z.coerce.number().nullable(),
+    coverOperational: z.object({
+      global: z.coerce.number().optional(),
+      lift: z.coerce.number().optional(),
+      tilt: z.coerce.number().optional(),
+    }),
+    temperature: z.coerce.number().nullable(),
+    humidity: z.coerce.number(),
+    occupied: z.boolean(),
+    contact: z.boolean(),
+    illuminance: z.coerce.number(),
+    battery: z.coerce.number(),
+    buttonPosition: z.coerce.number(),
+    buttons: z.coerce.number(),
+    lastPress: z.enum(['short', 'long', 'double', 'triple', 'multi']),
+    lastButton: z.coerce.number(),
+    fanMode: z.coerce.number(),
+    fanSpeed: z.coerce.number(),
+    vacuumState: z.coerce.number(),
+    systemMode: z.coerce.number(),
+    systemModeName: z.string(),
+  })
+  .partial();
+
+export type MatterState = ZodInfer<typeof MatterStateSchema>;
+
+const STATE_FIELD_SCHEMAS: ReadonlyMap<string, ZodType> = new Map(
+  Object.entries(MatterStateSchema.shape)
+);
+
+/**
+ * Parse one reader's slice of raw cluster values into typed state. Validation
+ * is field-level: a malformed cluster value drops THAT attribute, never the
+ * refresh; keys outside the schema are stripped.
+ */
+export function parseStateSlice(slice: Record<string, unknown>): MatterState {
+  const valid: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(slice)) {
+    const field = STATE_FIELD_SCHEMAS.get(key);
+    const parsed = field?.safeParse(value);
+    if (parsed?.success && parsed.data !== undefined) {
+      valid[key] = parsed.data;
+    }
+  }
+  const result = MatterStateSchema.safeParse(valid);
+  return result.success ? result.data : {};
+}
+
+// ─── Command argument contracts ──────────────────────────────────────────────
+
+export type CommandArgsResult =
+  | { ok: true; raw: Record<string, string> }
+  | { ok: false; error: string };
+
+/**
+ * Human-units argument contract for a command. The AI tool surface speaks
+ * percent/degrees/kelvin; `convert` validates those and translates them into
+ * the raw Matter units the executors expect (level 0-254, hue 0-254, mireds).
+ */
+export interface CommandArgsSpec {
+  /** Usage in human units, echoed in tool errors so a model can self-correct. */
+  usage: string;
+  convert(args: Record<string, string> | undefined): CommandArgsResult;
+}
+
+function commandArgs<TOut>(
+  schema: ZodType<TOut>,
+  usage: string,
+  toRaw: (parsed: TOut) => Record<string, string>
+): CommandArgsSpec {
+  return {
+    usage,
+    convert(args) {
+      const parsed = schema.safeParse(args ?? {});
+      if (!parsed.success) {
+        return { ok: false, error: `expected ${usage}` };
+      }
+      return { ok: true, raw: toRaw(parsed.data) };
+    },
+  };
+}
+
+const percentArg = z.coerce.number().min(0).max(100);
+
 export interface ClusterCommand {
   name: MatterCommand;
   /** State key that must be present for a device to support this command. */
   when: string;
+  /** Human-unit argument contract; commands without one pass args through raw. */
+  args?: CommandArgsSpec;
   /** Run the command on an endpoint. `args` are already raw Matter units. */
   execute(endpoint: MatterEndpoint, args: Record<string, string>): Promise<unknown>;
 }
@@ -167,6 +275,18 @@ export const CLUSTER_REGISTRY: readonly ClusterEntry[] = [
       {
         name: 'setBrightness',
         when: 'brightness',
+        args: commandArgs(
+          z.object({
+            brightness: percentArg.optional(),
+            // Legacy alias: some callers still send { level } in percent.
+            level: percentArg.optional(),
+          }),
+          '{ "brightness": "0-100" }',
+          (parsed) => {
+            const pct = parsed.brightness ?? parsed.level ?? 100;
+            return { level: String(Math.round((pct / 100) * 254)) };
+          }
+        ),
         execute: (ep, args) =>
           ep.commandsOf(LevelControlClient).moveToLevel({
             level: Number(args.level ?? 254),
@@ -202,6 +322,20 @@ export const CLUSTER_REGISTRY: readonly ClusterEntry[] = [
       {
         name: 'setColorTemp',
         when: 'colorTempMireds',
+        args: commandArgs(
+          z.object({
+            kelvin: z.coerce.number().min(1000).max(10000).optional(),
+            mireds: z.coerce.number().min(100).max(1000).optional(),
+          }),
+          '{ "kelvin": "1000-10000" } or { "mireds": "100-1000" }',
+          (parsed) => {
+            const mireds =
+              parsed.kelvin === undefined
+                ? (parsed.mireds ?? 370)
+                : Math.round(1_000_000 / parsed.kelvin);
+            return { mireds: String(mireds) };
+          }
+        ),
         execute: (ep, args) =>
           ep.commandsOf('colorControl').moveToColorTemperature({
             colorTemperatureMireds: Number(args.mireds ?? 370),
@@ -213,6 +347,17 @@ export const CLUSTER_REGISTRY: readonly ClusterEntry[] = [
       {
         name: 'setHueSaturation',
         when: 'hue',
+        args: commandArgs(
+          z.object({
+            hue: z.coerce.number().min(0).max(360).default(0),
+            saturation: percentArg.default(100),
+          }),
+          '{ "hue": "0-360", "saturation": "0-100" }',
+          (parsed) => ({
+            hue: String(Math.round((parsed.hue / 360) * 254)),
+            saturation: String(Math.round((parsed.saturation / 100) * 254)),
+          })
+        ),
         execute: (ep, args) =>
           ep.commandsOf('colorControl').moveToHueAndSaturation({
             hue: Number(args.hue ?? 0),
@@ -276,6 +421,12 @@ export const CLUSTER_REGISTRY: readonly ClusterEntry[] = [
       {
         name: 'setCoverPosition',
         when: 'coverPosition',
+        // Human percent IS the raw Matter unit (lift percentage).
+        args: commandArgs(
+          z.object({ position: percentArg.default(0) }),
+          '{ "position": "0-100" }',
+          (parsed) => ({ position: String(Math.round(parsed.position)) })
+        ),
         // goToLiftPercentage is feature-gated like the lift attributes.
         execute: (ep, args) =>
           ep.commandsOf('windowCovering').goToLiftPercentage({
@@ -332,6 +483,12 @@ export const CLUSTER_REGISTRY: readonly ClusterEntry[] = [
       {
         name: 'setFanSpeed',
         when: 'fanMode',
+        // Human percent IS the raw Matter unit (percentSetting).
+        args: commandArgs(
+          z.object({ speed: percentArg.default(0) }),
+          '{ "speed": "0-100" }',
+          (parsed) => ({ speed: String(Math.round(parsed.speed)) })
+        ),
         execute: (ep, args) =>
           ep.setStateOf(FanControlClient, {
             percentSetting: Math.round(clampPercent(Number(args.speed ?? 0))),

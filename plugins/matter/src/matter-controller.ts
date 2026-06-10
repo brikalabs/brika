@@ -36,7 +36,7 @@ import {
   SWITCH_PRESS_EVENTS,
 } from './press-tracker';
 
-export type { DeviceType, MatterCommand, MatterEndpoint } from './clusters';
+export type { DeviceType, MatterCommand, MatterEndpoint, MatterState } from './clusters';
 export { MATTER_COMMAND_VALUES } from './clusters';
 export type { MatterDevice, MatterDeviceEvent } from './device-model';
 export type { PressType } from './press-tracker';

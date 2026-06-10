@@ -6,53 +6,27 @@
  *
  *   - `changed-<i>` — one dynamic output per watched attribute, picked from a
  *     dropdown of the attributes Brika actually maps (no guessing names).
+ *     Each watched attribute carries an optional built-in condition: fire on
+ *     any change (default), when the value BECOMES a target, or when it
+ *     crosses ABOVE/BELOW a numeric threshold (edge-triggered).
  *   - `event`       — Matter EVENTS: button presses on switches/dimmers
  *     (`initialPress`, `shortRelease`, `longPress`, `multiPressComplete`, ...),
  *     lock alarms, and similar one-shot signals that never appear in state.
  *   - `any`         — any state change (the full device snapshot).
  *
- * The device itself is picked from a dropdown of commissioned devices. All
+ * The device itself is picked from a dropdown of commissioned devices. The
+ * attribute vocabulary comes from the shared registry in `attributes.ts`. All
  * subscriptions are cleaned up automatically when the block stops.
  */
 
 import { defineBlock, output, z } from '@brika/sdk';
+import { WATCHABLE_ATTRIBUTE_KEYS } from '../attributes';
 import {
   getMatterController,
   type MatterDevice,
   type MatterDeviceEvent,
 } from '../matter-controller';
-
-/**
- * Every attribute key the controller can map into `device.state`. This is the
- * closed vocabulary `#readEndpointState` produces; the dropdown offers exactly
- * these so users never have to guess attribute names.
- */
-const WATCHABLE_ATTRIBUTES = [
-  'on',
-  'brightness',
-  'hue',
-  'saturation',
-  'colorTempMireds',
-  'colorMode',
-  'locked',
-  'lockState',
-  'coverPosition',
-  'coverOperational',
-  'temperature',
-  'humidity',
-  'occupied',
-  'contact',
-  'illuminance',
-  'battery',
-  'buttonPosition',
-  'lastPress',
-  'lastButton',
-  'fanMode',
-  'fanSpeed',
-  'vacuumState',
-  'systemMode',
-  'systemModeName',
-] as const;
+import { ATTRIBUTE_CONDITION_VALUES, conditionMet } from './attribute-condition';
 
 function toStringState(device: MatterDevice): Record<string, string> {
   const state: Record<string, string> = {};
@@ -69,7 +43,7 @@ export const deviceEvent = defineBlock({
   meta: {
     name: 'When Device Changes',
     description:
-      "Fires when a Matter device's attributes change or it emits an event (button press)",
+      "Fires when a Matter device's attributes change (any change, becomes a value, or crosses a threshold) or it emits an event (button press)",
     category: 'trigger',
     icon: 'radio',
     color: '#6366f1',
@@ -112,9 +86,15 @@ export const deviceEvent = defineBlock({
       description: 'The commissioned Matter device to watch',
     }),
     attributes: z
-      .array(z.object({ name: z.enum(WATCHABLE_ATTRIBUTES) }))
+      .array(
+        z.object({
+          name: z.enum(WATCHABLE_ATTRIBUTE_KEYS),
+          when: z.enum(ATTRIBUTE_CONDITION_VALUES).default('changes'),
+          value: z.string().optional(),
+        })
+      )
       .default([])
-      .describe('Attributes to watch; each adds its own output'),
+      .describe('Attributes to watch; each adds its own output, optionally gated by a condition'),
   }),
   run: ({ config, emit, start }) => {
     const controller = getMatterController();
@@ -150,10 +130,11 @@ export const deviceEvent = defineBlock({
       const state = toStringState(device);
 
       (config.attributes ?? []).forEach((attr, index) => {
-        if (attr.name in state && state[attr.name] !== prev[attr.name]) {
+        const next = state[attr.name];
+        if (next !== undefined && conditionMet(attr, prev[attr.name], next)) {
           emit(`changed-${index}`, {
             attribute: attr.name,
-            value: state[attr.name] ?? '',
+            value: next,
             nodeId: device.nodeId,
             name: device.name,
           });

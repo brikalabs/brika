@@ -44,6 +44,7 @@ import {
 } from '@brika/sdk/ui-kit/icons';
 import { type ChangeEvent, type KeyboardEvent, useState } from 'react';
 import { commission, getDevices, remove, scan } from '../actions';
+import { formatAttribute } from '../attributes';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -140,37 +141,30 @@ function getRootNodeId(nodeId: string): string {
   return nodeId.split(':')[0];
 }
 
-function buildStateParts(device: MatterDevice, t: TFn): StatePart[] {
+/**
+ * Which attributes a device card badges, with their icon (and an alternate
+ * icon for falsy values). Labels come from the shared attribute registry.
+ */
+const STATE_PART_KEYS: readonly { key: string; icon: typeof Cpu; falsyIcon?: typeof Cpu }[] = [
+  { key: 'on', icon: Power },
+  { key: 'brightness', icon: Sun },
+  { key: 'locked', icon: Lock, falsyIcon: LockOpen },
+  { key: 'temperature', icon: Thermometer },
+  { key: 'coverPosition', icon: Blinds },
+  { key: 'systemModeName', icon: Wrench },
+];
+
+function buildStateParts(device: MatterDevice): StatePart[] {
   const parts: StatePart[] = [];
-  if (device.state.on !== null) {
-    parts.push({ icon: Power, label: device.state.on ? t('device.on') : t('device.off') });
-  }
-  if (device.state.brightness !== null) {
+  for (const { key, icon, falsyIcon } of STATE_PART_KEYS) {
+    const value = device.state[key];
+    if (value === null || value === undefined) {
+      continue;
+    }
     parts.push({
-      icon: Sun,
-      label: t('devicesPage.brightness', { value: device.state.brightness }),
+      icon: falsyIcon !== undefined && !value ? falsyIcon : icon,
+      label: formatAttribute(key, value),
     });
-  }
-  if (device.state.locked !== null) {
-    parts.push({
-      icon: device.state.locked ? Lock : LockOpen,
-      label: device.state.locked ? t('device.locked') : t('device.unlocked'),
-    });
-  }
-  if (device.state.temperature !== null) {
-    parts.push({
-      icon: Thermometer,
-      label: t('devicesPage.temperature', { value: device.state.temperature }),
-    });
-  }
-  if (device.state.coverPosition !== null) {
-    parts.push({
-      icon: Blinds,
-      label: t('devicesPage.position', { value: device.state.coverPosition }),
-    });
-  }
-  if (typeof device.state.systemModeName === 'string') {
-    parts.push({ icon: Wrench, label: device.state.systemModeName });
   }
   return parts;
 }
@@ -249,7 +243,7 @@ function DeviceCard({
 }>) {
   const meta = DEVICE_META[device.deviceType] ?? DEVICE_META.unknown;
   const Icon = meta.icon;
-  const stateParts = buildStateParts(device, t);
+  const stateParts = buildStateParts(device);
   const isRemoving = removingId === device.nodeId;
   const bridgeChild = isBridgeChild(device.nodeId);
   const bridgeName = bridgeChild ? findBridgeName(device, allDevices) : null;
@@ -425,7 +419,7 @@ function DeviceInfoDialog({
 
   const meta = DEVICE_META[device.deviceType] ?? DEVICE_META.unknown;
   const Icon = meta.icon;
-  const stateParts = buildStateParts(device, t);
+  const stateParts = buildStateParts(device);
   const isBridge = device.deviceType === 'bridge';
   const children = isBridge ? getBridgeChildren(device, allDevices) : [];
 

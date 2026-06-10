@@ -13,6 +13,7 @@
  */
 
 import { defineTool, z } from '@brika/sdk';
+import { getClusterCommand } from './clusters';
 import { getMatterController, MATTER_COMMAND_VALUES } from './matter-controller';
 
 // Source of truth for the commands a tool caller may send. The tuple comes
@@ -87,46 +88,6 @@ defineTool(
   }
 );
 
-/**
- * Translate human-friendly tool args into the raw units `sendCommand` expects.
- * The tool surface speaks percent/degrees/kelvin (what models and people use);
- * the controller speaks Matter raw units (level 0-254, hue 0-254, mireds).
- */
-function toRawArgs(
-  command: string,
-  args: Record<string, string> | undefined
-): Record<string, string> | undefined {
-  if (command === 'setBrightness') {
-    const pct = Number(args?.brightness ?? args?.level ?? 100);
-    const clamped = Math.max(0, Math.min(100, pct));
-    return { level: String(Math.round((clamped / 100) * 254)) };
-  }
-  if (command === 'setColorTemp') {
-    const kelvin = args?.kelvin === undefined ? undefined : Number(args.kelvin);
-    const mireds = kelvin ? Math.round(1_000_000 / kelvin) : Number(args?.mireds ?? 370);
-    return { mireds: String(mireds) };
-  }
-  if (command === 'setHueSaturation') {
-    const hueDeg = Math.max(0, Math.min(360, Number(args?.hue ?? 0)));
-    const satPct = Math.max(0, Math.min(100, Number(args?.saturation ?? 100)));
-    return {
-      hue: String(Math.round((hueDeg / 360) * 254)),
-      saturation: String(Math.round((satPct / 100) * 254)),
-    };
-  }
-  if (command === 'setFanSpeed') {
-    // Human percent IS the raw Matter unit (percentSetting); clamp and pass through.
-    const speed = Math.max(0, Math.min(100, Number(args?.speed ?? 0)));
-    return { speed: String(Math.round(speed)) };
-  }
-  if (command === 'setCoverPosition') {
-    // Human percent IS the raw Matter unit (lift percentage); clamp and pass through.
-    const position = Math.max(0, Math.min(100, Number(args?.position ?? 0)));
-    return { position: String(Math.round(position)) };
-  }
-  return args;
-}
-
 defineTool(
   {
     id: 'control-device',
@@ -182,19 +143,36 @@ defineTool(
     }
     // Refuse commands a device's clusters don't implement, with the supported
     // set in the error so the model can self-correct instead of retrying.
+    // A device with NO commands at all (battery remote, sensor) is called out
+    // explicitly; the old fallthrough sent the command anyway and surfaced a
+    // misleading "device may be offline" failure.
     const unsupported = targets
       .map((id) => known.find((device) => device.nodeId === id))
       .filter((device) => device !== undefined)
-      .filter((device) => device.commands.length > 0 && !device.commands.includes(command));
+      .filter((device) => !device.commands.includes(command));
     if (unsupported.length > 0) {
       const detail = unsupported
-        .map(
-          (device) => `${device.nodeId} (${device.name}) supports: ${device.commands.join(', ')}`
+        .map((device) =>
+          device.commands.length === 0
+            ? `${device.nodeId} (${device.name}) has no controllable functions (battery remote or sensor); react to it with device events instead`
+            : `${device.nodeId} (${device.name}) supports: ${device.commands.join(', ')}`
         )
         .join('; ');
       return `Error: "${command}" is not supported by ${detail}`;
     }
-    const rawArgs = toRawArgs(command, args);
+    // Commands with a human-units surface carry their zod contract in the
+    // cluster registry: validate there (friendly error on bad ranges so the
+    // model can self-correct) and convert to raw Matter units. Commands
+    // without one pass args through unchanged.
+    const argsSpec = getClusterCommand(command)?.args;
+    let rawArgs = args;
+    if (argsSpec) {
+      const converted = argsSpec.convert(args);
+      if (!converted.ok) {
+        return `Error: invalid arguments for "${command}": ${converted.error}.`;
+      }
+      rawArgs = converted.raw;
+    }
     const lines: string[] = [];
     for (const id of targets) {
       const ok = await controller.sendCommand(id, command, rawArgs);
