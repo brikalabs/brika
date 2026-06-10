@@ -25,7 +25,7 @@ interface PluginToolsListProps {
  * the qualified-id prefix (`pluginName:tool`) as the ownership link.
  */
 export function PluginToolsList({ plugin }: Readonly<PluginToolsListProps>) {
-  const { t } = useLocale();
+  const { t, tp } = useLocale();
   const { data: allTools = [] } = useTools();
   const tools = allTools.filter((tool) => splitToolId(tool.id).plugin === plugin.name);
 
@@ -52,6 +52,12 @@ export function PluginToolsList({ plugin }: Readonly<PluginToolsListProps>) {
           {tools.map((tool) => {
             const { name } = splitToolId(tool.id);
             const color = tool.color || '#6b7280';
+            const displayName = tp(plugin.name, `tools.${name}.name`, name);
+            const description = tp(
+              plugin.name,
+              `tools.${name}.description`,
+              tool.description ?? ''
+            );
             return (
               <div
                 key={tool.id}
@@ -63,9 +69,9 @@ export function PluginToolsList({ plugin }: Readonly<PluginToolsListProps>) {
                   </AvatarFallback>
                 </Avatar>
                 <div className="min-w-0 flex-1">
-                  <div className="truncate font-medium font-mono text-sm">{name}</div>
-                  {tool.description && (
-                    <div className="truncate text-muted-foreground text-xs">{tool.description}</div>
+                  <div className="truncate font-medium text-sm">{displayName}</div>
+                  {description && (
+                    <div className="truncate text-muted-foreground text-xs">{description}</div>
                   )}
                 </div>
               </div>

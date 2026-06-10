@@ -1,4 +1,4 @@
-import { defineTool } from '@brika/sdk';
+import { defineTool, z } from '@brika/sdk';
 import { askLlm } from '../providers';
 
 /**
@@ -13,16 +13,11 @@ defineTool(
       'Ask Claude a question and get a text answer. Call for open-ended reasoning, summarization, drafting, or classification.',
     icon: 'sparkles',
     color: '#d97757',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        prompt: { type: 'string', description: 'The question or instruction for Claude' },
-      },
-      required: ['prompt'],
-    },
+    input: z.object({
+      prompt: z.string().min(1).describe('The question or instruction for Claude'),
+    }),
   },
-  async (args) => {
-    const prompt = typeof args.prompt === 'string' ? args.prompt : '';
+  async ({ prompt }) => {
     return askLlm(prompt, {
       model: 'anthropic:claude-opus-4-8',
       effort: 'high',

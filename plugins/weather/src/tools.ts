@@ -22,23 +22,15 @@ defineTool(
       'Current weather and daily forecast for a city: temperature, feels-like, humidity, wind, condition, and per-day min/max/precipitation for up to 7 days. Use this for any "what is the weather" or "will it rain" question.',
     icon: 'cloud-sun',
     color: '#0ea5e9',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        city: { type: 'string', description: 'City name, e.g. "Lausanne"' },
-        days: { type: 'number', description: 'Forecast days to include, 1-7 (default 3)' },
-      },
-      required: ['city'],
-    },
+    input: z.object({
+      city: z.string().min(1).describe('City name, e.g. "Lausanne"'),
+      days: z.number().int().min(1).max(7).default(3).describe('Forecast days to include'),
+    }),
   },
-  async (args) => {
-    const parsed = z
-      .object({ city: z.string().min(1), days: z.number().int().min(1).max(7).default(3) })
-      .parse(args);
-
-    const location = await geocodeCity(parsed.city);
+  async ({ city, days }) => {
+    const location = await geocodeCity(city);
     if (!location) {
-      return { ok: false, error: `Unknown city: ${parsed.city}` };
+      return { ok: false, error: `Unknown city: ${city}` };
     }
     const weather = await fetchWeather(location.latitude, location.longitude);
     if (!weather) {
@@ -55,7 +47,7 @@ defineTool(
         humidityPercent: weather.current.humidity,
         windKmh: weather.current.windSpeed,
       },
-      daily: weather.daily.slice(0, parsed.days).map((day) => ({
+      daily: weather.daily.slice(0, days).map((day) => ({
         date: day.date,
         condition: getWeatherMeta(day.weatherCode).condition,
         minC: day.tempMin,

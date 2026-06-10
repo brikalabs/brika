@@ -40,30 +40,21 @@ defineTool(
       'Household electricity consumption for a period (24h, 7d, 30d, 12m, 24m): total kWh consumed, kWh injected back to the grid (solar), and the net cost estimate in CHF at the configured tariff.',
     icon: 'zap',
     color: '#eab308',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        period: {
-          type: 'string',
-          enum: [...periodSchema.options],
-          description: 'Aggregation period (default 24h)',
-        },
-      },
-    },
+    input: z.object({
+      period: periodSchema.default('24h').describe('Aggregation period'),
+    }),
   },
-  async (args) => {
-    const parsed = z.object({ period: periodSchema.default('24h') }).parse(args);
-
+  async ({ period }) => {
     // Refresh on demand so the answer is current even when no brick is
     // polling this period; auth/cooldown failures land in the period state.
-    await pollPeriod(parsed.period);
+    await pollPeriod(period);
 
     const state = useElectricityStore.get();
-    const periodState = state.periods[parsed.period];
+    const periodState = state.periods[period];
     if (periodState?.error) {
       return { ok: false, error: `SIL data unavailable: ${periodState.error}` };
     }
-    const sums = totals(parsed.period);
+    const sums = totals(period);
     if (!sums) {
       return { ok: false, error: 'No consumption data for this period yet' };
     }
@@ -72,7 +63,7 @@ defineTool(
     const costChf = sums.consumedKwh * prices.perKwh - sums.injectedKwh * prices.perInjection;
     return {
       ok: true,
-      period: parsed.period,
+      period,
       consumedKwh: Number(sums.consumedKwh.toFixed(2)),
       injectedKwh: Number(sums.injectedKwh.toFixed(2)),
       estimatedCostChf: Number(costChf.toFixed(2)),

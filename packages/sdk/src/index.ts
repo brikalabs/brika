@@ -151,8 +151,9 @@ export type {
   ToolDefinition,
   ToolHandler,
   ToolInputSchema,
+  TypedToolDefinition,
 } from './api/tools';
-export { defineTool } from './api/tools';
+export { defineRawTool, defineTool } from './api/tools';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Brick Data (push to client-rendered bricks)

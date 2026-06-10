@@ -24,9 +24,12 @@ function toolParameters(tool: ToolSummary): string[] {
 }
 
 function ToolCard({ tool }: Readonly<{ tool: ToolSummary }>) {
-  const { name } = splitToolId(tool.id);
+  const { tp } = useLocale();
+  const { plugin, name } = splitToolId(tool.id);
   const parameters = toolParameters(tool);
   const color = tool.color || '#6b7280';
+  const displayName = tp(plugin, `tools.${name}.name`, name);
+  const description = tp(plugin, `tools.${name}.description`, tool.description ?? '');
 
   return (
     <div className="flex items-start gap-3 rounded-lg bg-muted/30 p-3 transition-colors hover:bg-muted/50">
@@ -36,11 +39,9 @@ function ToolCard({ tool }: Readonly<{ tool: ToolSummary }>) {
         </AvatarFallback>
       </Avatar>
       <div className="min-w-0 flex-1">
-        <div className="truncate font-medium font-mono text-sm">{name}</div>
-        {tool.description && (
-          <div className="mt-0.5 line-clamp-2 text-muted-foreground text-xs">
-            {tool.description}
-          </div>
+        <div className="truncate font-medium text-sm">{displayName}</div>
+        {description && (
+          <div className="mt-0.5 line-clamp-2 text-muted-foreground text-xs">{description}</div>
         )}
         {parameters.length > 0 && (
           <div className="mt-1.5 flex flex-wrap gap-1">

@@ -42,7 +42,7 @@ defineTool(
       'List the commissioned Matter devices (lights, locks, covers, thermostats, switches, sensors) with their nodeId, name, type, and online state. Call this first to resolve a device name to the nodeId you pass to control-device.',
     icon: 'radio',
     color: '#7c3aed',
-    inputSchema: { type: 'object', properties: {} },
+    input: z.object({}),
   },
   () => {
     const controller = getMatterController();
@@ -64,34 +64,15 @@ defineTool(
       'Control a commissioned Matter device by nodeId: turn a light on/off/toggle, lock/unlock, open/close/stop a cover, or set brightness/color/temperature. Resolve the nodeId with list-devices first.',
     icon: 'zap',
     color: '#7c3aed',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        nodeId: { type: 'string', description: 'Target device nodeId (from list-devices)' },
-        command: {
-          type: 'string',
-          enum: [...commandSchema.options],
-          description: 'The command to send to the device',
-        },
-        args: {
-          type: 'object',
-          description: 'Optional string parameters, e.g. { "level": "128" } for setBrightness',
-        },
-      },
-      required: ['nodeId', 'command'],
-    },
+    input: z.object({
+      nodeId: z.string().min(1).describe('Target device nodeId (from list-devices)'),
+      command: commandSchema.describe('The command to send to the device'),
+      args: paramsSchema
+        .optional()
+        .describe('Optional string parameters, e.g. { "level": "128" } for setBrightness'),
+    }),
   },
-  async (args) => {
-    const nodeId = typeof args.nodeId === 'string' ? args.nodeId : '';
-    if (!nodeId) {
-      return 'Error: nodeId is required. Call list-devices to find it.';
-    }
-    const command = commandSchema.safeParse(args.command);
-    if (!command.success) {
-      return `Error: unknown command. Valid commands: ${commandSchema.options.join(', ')}`;
-    }
-    const params = paramsSchema.safeParse(args.args);
-
+  async ({ nodeId, command, args }) => {
     const controller = getMatterController();
     // Models sometimes invent nodeIds ("light1") instead of resolving them.
     // Distinguish that from a real command failure so the caller can recover.
@@ -100,13 +81,9 @@ defineTool(
       const ids = known.map((device) => `${device.nodeId} (${device.name})`).join(', ');
       return `Error: unknown nodeId "${nodeId}". Call list-devices first and use one of the real nodeId values${ids ? `: ${ids}` : '.'}`;
     }
-    const ok = await controller.sendCommand(
-      nodeId,
-      command.data,
-      params.success ? params.data : undefined
-    );
+    const ok = await controller.sendCommand(nodeId, command, args);
     return ok
-      ? `Sent "${command.data}" to device ${nodeId}.`
-      : `Command "${command.data}" failed on device ${nodeId} (device may be offline).`;
+      ? `Sent "${command}" to device ${nodeId}.`
+      : `Command "${command}" failed on device ${nodeId} (device may be offline).`;
   }
 );

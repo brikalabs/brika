@@ -38,7 +38,7 @@ defineTool(
       'The track currently playing (or most recently played) on Spotify: track name, artist, album art URL, and whether playback is active.',
     icon: 'music',
     color: '#1DB954',
-    inputSchema: { type: 'object', properties: {} },
+    input: z.object({}),
   },
   () => {
     const { playback, recentTrack } = usePlayerStore.get();
@@ -62,20 +62,13 @@ defineTool(
       'Search the Spotify catalog for tracks by free text (title, artist, album). Returns up to `limit` results with uri, name, artist, and album art; pass a uri to play-track.',
     icon: 'search',
     color: '#1DB954',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        query: { type: 'string', description: 'Free-text search (e.g. "plastic love takeuchi")' },
-        limit: { type: 'number', description: 'Max results (default 10)' },
-      },
-      required: ['query'],
-    },
+    input: z.object({
+      query: z.string().min(1).describe('Free-text search (e.g. "plastic love takeuchi")'),
+      limit: z.number().int().min(1).max(50).default(10).describe('Max results'),
+    }),
   },
-  async (args) => {
-    const parsed = z
-      .object({ query: z.string().min(1), limit: z.number().int().min(1).max(50).default(10) })
-      .parse(args);
-    const results = await getApi().searchTracks(parsed.query, parsed.limit);
+  async ({ query, limit }) => {
+    const results = await getApi().searchTracks(query, limit);
     return {
       tracks: results.map((track) => ({
         uri: track.uri,
@@ -94,20 +87,13 @@ defineTool(
       'Start playback of a specific track by Spotify uri (from search-tracks), optionally on a specific device (from list-devices).',
     icon: 'play',
     color: '#1DB954',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        uri: { type: 'string', description: 'Track uri, e.g. spotify:track:...' },
-        deviceId: { type: 'string', description: 'Target device id (optional)' },
-      },
-      required: ['uri'],
-    },
+    input: z.object({
+      uri: z.string().min(1).describe('Track uri, e.g. spotify:track:...'),
+      deviceId: z.string().optional().describe('Target device id (from list-devices)'),
+    }),
   },
-  async (args) => {
-    const parsed = z
-      .object({ uri: z.string().min(1), deviceId: z.string().optional() })
-      .parse(args);
-    await getApi().play(resolveTarget(parsed.deviceId), parsed.uri);
+  async ({ uri, deviceId }) => {
+    await getApi().play(resolveTarget(deviceId), uri);
     return { ok: true };
   }
 );
@@ -119,30 +105,20 @@ defineTool(
       'Control Spotify playback: play (resume or start), pause, next, previous, seek (positionMs), or set-volume (percent 0-100). Optionally target a device from list-devices.',
     icon: 'sliders-horizontal',
     color: '#1DB954',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        command: {
-          type: 'string',
-          enum: [...controlSchema.options],
-          description: 'Playback command',
-        },
-        deviceId: { type: 'string', description: 'Target device id (optional)' },
-        positionMs: { type: 'number', description: 'Seek position in ms (seek only)' },
-        percent: { type: 'number', description: 'Volume 0-100 (set-volume only)' },
-      },
-      required: ['command'],
-    },
+    input: z.object({
+      command: controlSchema.describe('Playback command'),
+      deviceId: z.string().optional().describe('Target device id (from list-devices)'),
+      positionMs: z.number().int().min(0).optional().describe('Seek position in ms (seek only)'),
+      percent: z
+        .number()
+        .int()
+        .min(0)
+        .max(100)
+        .optional()
+        .describe('Volume 0-100 (set-volume only)'),
+    }),
   },
-  async (args) => {
-    const parsed = z
-      .object({
-        command: controlSchema,
-        deviceId: z.string().optional(),
-        positionMs: z.number().int().min(0).optional(),
-        percent: z.number().int().min(0).max(100).optional(),
-      })
-      .parse(args);
+  async (parsed) => {
     const target = resolveTarget(parsed.deviceId);
 
     switch (parsed.command) {
@@ -186,7 +162,7 @@ defineTool(
       'List the available Spotify Connect devices (speakers, computers, phones) with their id, name, and type. Use a device id with play-track or control-playback.',
     icon: 'speaker',
     color: '#1DB954',
-    inputSchema: { type: 'object', properties: {} },
+    input: z.object({}),
   },
   async () => {
     const devices = await getApi().getDevices();
