@@ -128,6 +128,7 @@
         "unknown-block": "{{block}} : le type de bloc \"{{type}}\" n'est pas installé",
         "cycle": "Boucle de rétroaction : {{path}}. Elle tournera sans fin si aucun bloc ne l'interrompt."
       }
-    }
+    },
+    "toggleEnabled": "Workflow activé"
   }
 }

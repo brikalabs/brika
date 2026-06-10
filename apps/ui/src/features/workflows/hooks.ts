@@ -39,12 +39,15 @@ export function useWorkflow(
   id: string,
   options?: {
     enabled?: boolean;
+    /** Poll so live status (running/stopped/error) stays fresh, e.g. in the editor header. */
+    refetchInterval?: number;
   }
 ) {
   return useQuery({
     queryKey: ['workflows', id],
     queryFn: () => api.fetchWorkflow(id),
     enabled: options?.enabled ?? !!id,
+    refetchInterval: options?.refetchInterval,
   });
 }
 
