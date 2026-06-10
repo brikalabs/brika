@@ -493,7 +493,7 @@ export async function applyUpdate(options?: ApplyUpdateOptions): Promise<{
     // ceremony is live; until then the verifier returns 'skipped' and
     // we log a notice rather than blocking the apply.
     onProgress?.('verifying', 'Verifying signature...');
-    await maybeVerifySignature(release, asset, archivePath, tmpDir, onProgress);
+    await maybeVerifySignature(release, asset, archivePath, tmpDir, cmp.latestVersion, onProgress);
 
     // Extract
     onProgress?.('extracting', 'Extracting...');
@@ -547,12 +547,20 @@ export async function applyUpdate(options?: ApplyUpdateOptions): Promise<{
  */
 /** Exported for direct unit testing — the integration path (via
  * `applyUpdate`) is hard to exercise without standing up real
- * archive + supervisor plumbing. */
+ * archive + supervisor plumbing.
+ *
+ * `expectedVersion` is the version the updater decided to install
+ * (`compareRelease`'s `latestVersion`: `meta.version` with a tag-name
+ * fallback). CI signs the trusted comment as `brika <BINARY_VERSION> <file>`
+ * with that same package version, NOT the tag — dated canary tags
+ * (`canary-20260610-...`) never appear in the comment, so binding to
+ * `release.tag_name` rejected every legitimately-signed canary update. */
 export async function maybeVerifySignature(
   release: GitHubRelease,
   asset: GitHubRelease['assets'][number],
   archivePath: string,
   tmpDir: string,
+  expectedVersion: string,
   onProgress: ApplyUpdateOptions['onProgress']
 ): Promise<void> {
   const sigAsset = release.assets.find((a) => a.name === `${asset.name}.minisig`);
@@ -574,7 +582,7 @@ export async function maybeVerifySignature(
   const sigPath = join(tmpDir, sigFileName);
   await downloadFile(sigAsset.browser_download_url, tmpDir, sigFileName, sigAsset.size);
   const result = await verifyMinisignFile(archivePath, sigPath, BRIKA_SIGNING_PUBKEY_B64, {
-    version: release.tag_name,
+    version: expectedVersion,
     asset: asset.name,
   });
   if (result.status === 'failed') {
