@@ -40,6 +40,12 @@ export class WorkflowEngine {
   readonly #pendingBlocks = new Set<string>();
 
   init(): void {
+    // A plugin unload (reload, crash, hot-reload on a source edit) tears down
+    // the plugin process that hosts the workflow's block subscriptions. Pause
+    // every workflow using one of its blocks; the onBlockRegistered listener
+    // re-arms them the moment the plugin's blocks come back. Without this, a
+    // workflow survived the reload LOOKING alive but its triggers pointed at
+    // a dead process and never fired again.
     this.#eventUnsubs.push(
       this.blocks.onBlockRegistered(() => {
         for (const id of this.#pendingBlocks) {
@@ -48,16 +54,7 @@ export class WorkflowEngine {
             this.#tryStart(workflow);
           }
         }
-      })
-    );
-
-    // A plugin unload (reload, crash, hot-reload on a source edit) tears down
-    // the plugin process that hosts the workflow's block subscriptions. Pause
-    // every workflow using one of its blocks; the onBlockRegistered listener
-    // above re-arms them the moment the plugin's blocks come back. Without
-    // this, a workflow survived the reload LOOKING alive but its triggers
-    // pointed at a dead process and never fired again.
-    this.#eventUnsubs.push(
+      }),
       this.blocks.onBlockUnregistered((type) => this.#pauseWorkflowsUsing(type))
     );
 
