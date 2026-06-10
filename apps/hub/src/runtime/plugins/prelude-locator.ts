@@ -33,6 +33,15 @@ async function locate(brikaDir: string): Promise<string> {
     return SOURCE_PRELUDE_PATH;
   }
   const { default: source } = await import('brika:embedded-prelude');
+  return materializePrelude(source, brikaDir);
+}
+
+/**
+ * Write the embedded prelude source to `<brikaDir>/runtime/prelude-<hash>.js`
+ * (content-addressed, written once). Exposed for testing; production callers
+ * use {@link resolvePreludePath}.
+ */
+export async function materializePrelude(source: string, brikaDir: string): Promise<string> {
   const hasher = new Bun.CryptoHasher('sha256');
   hasher.update(source);
   const hash = hasher.digest('hex').slice(0, 16);
