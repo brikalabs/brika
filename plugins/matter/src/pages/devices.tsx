@@ -25,9 +25,11 @@ import {
 import { useAction, useCallAction, useLocale } from '@brika/sdk/ui-kit/hooks';
 import {
   Blinds,
+  Bot,
   ChevronRight,
   Cpu,
   Eye,
+  Fan,
   Info,
   Lightbulb,
   Loader2,
@@ -44,18 +46,7 @@ import {
 } from '@brika/sdk/ui-kit/icons';
 import { type ChangeEvent, type KeyboardEvent, useState } from 'react';
 import { commission, getDevices, remove, scan } from '../actions';
-
-// ─── Types ──────────────────────────────────────────────────────────────────
-
-type DeviceType =
-  | 'light'
-  | 'lock'
-  | 'cover'
-  | 'thermostat'
-  | 'switch'
-  | 'sensor'
-  | 'bridge'
-  | 'unknown';
+import { type DeviceType, formatAttribute } from '../display/attributes';
 
 interface MatterDevice {
   nodeId: string;
@@ -69,6 +60,10 @@ interface MatterDevice {
   product: string | null;
   serial: string | null;
   softwareVersion: string | null;
+  /** Set on button endpoints of a composed device (folded under the parent). */
+  parentId?: string | null;
+  /** 1-based button number on button endpoints. */
+  button?: number | null;
 }
 
 // ─── Device type metadata ───────────────────────────────────────────────────
@@ -100,6 +95,8 @@ const DEVICE_META: Record<DeviceType, DeviceMeta> = {
     bgClass: 'bg-data-3/15',
   },
   sensor: { icon: Eye, accent: 'purple', iconClass: 'text-data-8', bgClass: 'bg-data-8/15' },
+  fan: { icon: Fan, accent: 'emerald', iconClass: 'text-data-4', bgClass: 'bg-data-4/15' },
+  vacuum: { icon: Bot, accent: 'blue', iconClass: 'text-data-1', bgClass: 'bg-data-1/15' },
   bridge: { icon: Network, accent: 'blue', iconClass: 'text-data-7', bgClass: 'bg-data-7/15' },
   unknown: {
     icon: Wrench,
@@ -115,6 +112,8 @@ const TYPE_ORDER: DeviceType[] = [
   'lock',
   'cover',
   'thermostat',
+  'fan',
+  'vacuum',
   'sensor',
   'unknown',
 ];
@@ -136,37 +135,30 @@ function getRootNodeId(nodeId: string): string {
   return nodeId.split(':')[0];
 }
 
+/**
+ * Which attributes a device card badges, with their icon (and an alternate
+ * icon for falsy values). Labels come from the shared attribute registry.
+ */
+const STATE_PART_KEYS: readonly { key: string; icon: typeof Cpu; falsyIcon?: typeof Cpu }[] = [
+  { key: 'on', icon: Power },
+  { key: 'brightness', icon: Sun },
+  { key: 'locked', icon: Lock, falsyIcon: LockOpen },
+  { key: 'temperature', icon: Thermometer },
+  { key: 'coverPosition', icon: Blinds },
+  { key: 'systemModeName', icon: Wrench },
+];
+
 function buildStateParts(device: MatterDevice, t: TFn): StatePart[] {
   const parts: StatePart[] = [];
-  if (device.state.on !== null) {
-    parts.push({ icon: Power, label: device.state.on ? t('device.on') : t('device.off') });
-  }
-  if (device.state.brightness !== null) {
+  for (const { key, icon, falsyIcon } of STATE_PART_KEYS) {
+    const value = device.state[key];
+    if (value === null || value === undefined) {
+      continue;
+    }
     parts.push({
-      icon: Sun,
-      label: t('devicesPage.brightness', { value: device.state.brightness }),
+      icon: falsyIcon !== undefined && !value ? falsyIcon : icon,
+      label: formatAttribute(key, value, t),
     });
-  }
-  if (device.state.locked !== null) {
-    parts.push({
-      icon: device.state.locked ? Lock : LockOpen,
-      label: device.state.locked ? t('device.locked') : t('device.unlocked'),
-    });
-  }
-  if (device.state.temperature !== null) {
-    parts.push({
-      icon: Thermometer,
-      label: t('devicesPage.temperature', { value: device.state.temperature }),
-    });
-  }
-  if (device.state.coverPosition !== null) {
-    parts.push({
-      icon: Blinds,
-      label: t('devicesPage.position', { value: device.state.coverPosition }),
-    });
-  }
-  if (typeof device.state.systemModeName === 'string') {
-    parts.push({ icon: Wrench, label: device.state.systemModeName });
   }
   return parts;
 }
@@ -199,6 +191,10 @@ function groupByType(
   const groups = new Map<DeviceType, MatterDevice[]>();
   for (const device of devices) {
     if (bridgeIds.has(device.nodeId)) {
+      continue;
+    }
+    // Button endpoints are folded under their named parent (the remote card).
+    if (device.parentId) {
       continue;
     }
     const list = groups.get(device.deviceType);
@@ -384,7 +380,7 @@ function DeviceTypeGroup({
 }
 
 // ─── Bridge section ─────────────────────────────────────────────────────────
-// Reuses DeviceTypeGroup with standard DeviceCards — sub-devices shown in info dialog
+// Reuses DeviceTypeGroup with standard DeviceCards: sub-devices shown in info dialog
 
 // ─── Device info dialog ─────────────────────────────────────────────────────
 

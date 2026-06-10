@@ -1,5 +1,5 @@
 /**
- * Cover controls — position bar with open/stop/close buttons.
+ * Cover controls: position bar with open/stop/close buttons.
  * Position bar always visible when available.
  */
 

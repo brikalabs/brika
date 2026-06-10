@@ -1,6 +1,7 @@
 import { defineBlock, input, output, z } from '@brika/sdk';
 import { log } from '@brika/sdk/lifecycle';
-import { getMatterController } from '../matter-controller';
+import { getMatterController } from '../engine/controller';
+import { MATTER_COMMAND_VALUES } from '../registry';
 
 export const matterCommand = defineBlock({
   id: 'command',
@@ -20,22 +21,7 @@ export const matterCommand = defineBlock({
   },
   config: z.object({
     nodeId: z.string().describe('Matter device node ID'),
-    command: z
-      .enum([
-        'on',
-        'off',
-        'toggle',
-        'setBrightness',
-        'setColorTemp',
-        'setHueSaturation',
-        'lock',
-        'unlock',
-        'coverOpen',
-        'coverClose',
-        'coverStop',
-        'setTargetTemp',
-      ])
-      .describe('Command to send'),
+    command: z.enum(MATTER_COMMAND_VALUES).describe('Command to send'),
     params: z.record(z.string(), z.string()).optional().describe('Command parameters'),
   }),
   run: ({ inputs, outputs, config }) => {

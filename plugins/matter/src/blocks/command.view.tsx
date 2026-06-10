@@ -25,7 +25,7 @@ import {
 import { useAction, useLocale } from '@brika/sdk/ui-kit/hooks';
 import { Cpu, Network, Palette, Radar, RefreshCw, Sun, Sunset, Thermometer } from 'lucide-react';
 import { listDevices } from '../actions';
-import type { DeviceType } from '../matter-controller';
+import type { DeviceType } from '../display/attributes';
 import { COMMANDS, type CommandConfig, commandsForDeviceType, DEVICE_ICONS } from './_command-meta';
 
 /** Matter level range (0-254) <-> user-facing percent. */

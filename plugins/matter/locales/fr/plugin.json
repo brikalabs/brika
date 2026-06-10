@@ -75,6 +75,8 @@
       "thermostat": "Thermostat",
       "switch": "Interrupteur",
       "sensor": "Capteur",
+      "fan": "Ventilateur",
+      "vacuum": "Aspirateur",
       "bridge": "Pont",
       "unknown": "Appareil"
     },
@@ -86,7 +88,68 @@
       "humidity": "Humidité",
       "open": "Ouvrir",
       "stop": "Stop",
-      "close": "Fermer"
+      "close": "Fermer",
+      "start": "Démarrer",
+      "pause": "Pause",
+      "resume": "Reprendre",
+      "dock": "Retour à la base"
+    },
+    "attributes": {
+      "on": "Alimentation",
+      "brightness": "Luminosité",
+      "hue": "Teinte",
+      "saturation": "Saturation",
+      "colorTempMireds": "Température de couleur",
+      "colorMode": "Mode couleur",
+      "locked": "Verrou",
+      "lockState": "État du verrou",
+      "coverPosition": "Position",
+      "coverOperational": "Activité du volet",
+      "temperature": "Température",
+      "humidity": "Humidité",
+      "occupied": "Occupation",
+      "contact": "Contact",
+      "illuminance": "Niveau de lumière",
+      "battery": "Batterie",
+      "buttonPosition": "Position du bouton",
+      "buttons": "Nombre de boutons",
+      "lastPress": "Dernière pression",
+      "lastButton": "Dernier bouton",
+      "fanMode": "Mode du ventilateur",
+      "fanSpeed": "Vitesse du ventilateur",
+      "vacuumState": "État de l'aspirateur",
+      "systemMode": "Mode système",
+      "systemModeName": "Mode"
+    },
+    "values": {
+      "on": "Allumé",
+      "off": "Éteint",
+      "occupied": "Occupé",
+      "clear": "Libre",
+      "closed": "Fermé",
+      "open": "Ouvert",
+      "locked": "Verrouillé",
+      "unlocked": "Déverrouillé",
+      "button": "Bouton"
+    },
+    "press": {
+      "short": "Pression courte",
+      "long": "Pression longue",
+      "double": "Double pression",
+      "triple": "Triple pression",
+      "multi": "Pression multiple"
+    },
+    "vacuum": {
+      "stopped": "Arrêté",
+      "running": "Nettoyage",
+      "paused": "En pause",
+      "error": "Erreur",
+      "seekingCharger": "Recherche du chargeur",
+      "charging": "En charge",
+      "docked": "À quai"
+    },
+    "remote": {
+      "pressHint": "Appuyez sur un bouton de la télécommande"
     },
     "noDeviceSelected": "Aucun appareil sélectionné",
     "deviceNotFound": "Appareil introuvable",
@@ -129,6 +192,8 @@
       "thermostat": "Thermostats",
       "switch": "Interrupteurs",
       "sensor": "Capteurs",
+      "fan": "Ventilateurs",
+      "vacuum": "Aspirateurs",
       "bridge": "Ponts",
       "unknown": "Autres appareils"
     }

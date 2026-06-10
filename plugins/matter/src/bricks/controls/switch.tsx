@@ -1,8 +1,9 @@
 /**
- * Switch controls — large centered power toggle with status label.
+ * Switch controls: large centered power toggle with status label.
  */
 
 import { capture } from '@brika/sdk';
+import { useLocale } from '@brika/sdk/ui-kit/hooks';
 import clsx from 'clsx';
 import { Power } from 'lucide-react';
 import { useCallback } from 'react';
@@ -11,6 +12,7 @@ import type { DeviceState } from '../types';
 import { useSendCommand } from './send-command';
 
 export function SwitchControls({ device }: Readonly<{ device: DeviceState }>) {
+  const { t } = useLocale();
   const isOn = Boolean(device.state.on);
   const theme = getDeviceTheme('switch');
   const sendCommand = useSendCommand();
@@ -39,7 +41,7 @@ export function SwitchControls({ device }: Readonly<{ device: DeviceState }>) {
         <Power className={clsx('size-7', isOn ? 'text-white' : 'text-white/40')} />
       </button>
       <span className={clsx('font-semibold text-sm', isOn ? 'text-white' : 'text-white/50')}>
-        {isOn ? 'On' : 'Off'}
+        {t(isOn ? 'device.values.on' : 'device.values.off')}
       </span>
     </div>
   );

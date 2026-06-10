@@ -1,19 +1,13 @@
 /**
  * Shared type definitions for Matter client-rendered bricks.
  *
- * Client bricks cannot import from plugin runtime code (matter-controller.ts),
- * so DeviceType is re-declared here as a string literal union.
+ * Client bricks cannot import from plugin runtime code (engine/, registry/),
+ * so DeviceType comes from the browser-safe display registry instead.
  */
 
-export type DeviceType =
-  | 'light'
-  | 'lock'
-  | 'cover'
-  | 'thermostat'
-  | 'switch'
-  | 'sensor'
-  | 'bridge'
-  | 'unknown';
+export type { DeviceType } from '../display/attributes';
+
+import type { DeviceType } from '../display/attributes';
 
 /** Full device state as pushed to the "device" brick via deviceBrick.data.set */
 export interface DeviceState {
@@ -22,7 +16,20 @@ export interface DeviceState {
   deviceType: DeviceType;
   online: boolean;
   commissioned: boolean;
+  /**
+   * Kept as a loose record rather than mirroring the server's `MatterState`:
+   * the typed schema lives in the registry (zod, server-only) and a hand-kept
+   * mirror would drift on every attribute addition. Views never branch on the
+   * value types; they render through formatAttribute/summarizeState, which
+   * take `unknown` by contract.
+   */
   state: Record<string, unknown>;
+  /** Commands the device's clusters actually support (drives tappability). */
+  commands?: string[];
+  /** For button endpoints of a composed device: the named parent's device id. */
+  parentId?: string | null;
+  /** For button endpoints: 1-based button number within the parent device. */
+  button?: number | null;
 }
 
 /** Data shape for the single-device brick */
@@ -37,6 +44,8 @@ export interface DeviceSummary {
   deviceType: DeviceType;
   online: boolean;
   commissioned: boolean;
+  /** Set on button endpoints of a composed device (folded under the parent). */
+  parentId?: string | null;
 }
 
 /** Data shape for the devices overview brick */

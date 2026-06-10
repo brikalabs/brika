@@ -1,11 +1,11 @@
 /**
- * Matter Device — client-rendered brick.
+ * Matter Device: client-rendered brick.
  *
  * Adaptive layouts by size:
- *   1×1  — micro: centered icon + state label, tappable for toggleable devices
- *   N×1  — strip: horizontal row with icon, name, state label, tappable
- *   1×N  — narrow: vertical icon + name + controls with tight padding
- *   else — full: header + divider + controls, compact styling at ≤2×2
+ *   1×1  - micro: centered icon + state label, tappable for toggleable devices
+ *   N×1  - strip: horizontal row with icon, name, state label, tappable
+ *   1×N  - narrow: vertical icon + name + controls with tight padding
+ *   else - full: header + divider + controls, compact styling at ≤2×2
  *
  * Data is pushed from the plugin process via deviceBrick.data.set(...).
  * Commands are sent via callAction(doDeviceCommand, ...).
@@ -17,6 +17,7 @@ import { useLocale } from '@brika/sdk/ui-kit/hooks';
 import clsx from 'clsx';
 import { Loader2, Settings } from 'lucide-react';
 import { useCallback } from 'react';
+import { summarizeState } from '../display/attributes';
 import { AmbientGlow, DeviceIcon, StatusBadge } from './_components';
 import { DeviceControls } from './controls';
 import { useSendCommand } from './controls/send-command';
@@ -26,46 +27,44 @@ import type { DeviceState } from './types';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-/** Short state label for micro / strip layouts */
-function stateLabel(device: DeviceState): string {
-  switch (device.deviceType) {
-    case 'light':
-    case 'switch':
-      return device.state.on ? 'On' : 'Off';
-    case 'lock':
-      return device.state.locked ? 'Locked' : 'Unlocked';
-    case 'cover': {
-      const pos = device.state.coverPosition;
-      return pos === null ? 'Cover' : `${Number(pos)}%`;
-    }
-    case 'thermostat': {
-      const temp = device.state.temperature;
-      return temp === null ? '—' : `${Number(temp)}°`;
-    }
-    default:
-      return device.online ? 'Online' : 'Offline';
-  }
+/** Short state label for micro / strip layouts, from the attribute registry. */
+function buildStateLabel(device: DeviceState, t: (key: string) => string): string {
+  return summarizeState(device.state, device.deviceType, device.commands ?? [], device.online, t);
 }
 
-const TAPPABLE_TYPES: ReadonlySet<string> = new Set(['light', 'switch', 'lock']);
+/**
+ * The action a tap performs, from the device's REAL capabilities. Type-based
+ * gating broke on battery remotes: a Hue dimmer classifies as 'switch' but has
+ * no onOff cluster, so its tap sent a `toggle` that could only fail.
+ */
+function tapCommand(device: DeviceState): 'toggle' | 'lock' | undefined {
+  if (device.commands?.includes('toggle')) {
+    return 'toggle';
+  }
+  if (device.commands?.includes('lock')) {
+    return 'lock';
+  }
+  return undefined;
+}
 
 interface DeviceLayoutProps {
   device: DeviceState;
   theme: { gradient: string; glow: string };
   isActive: boolean;
   typeLabel: string;
+  stateLabel: string;
   onTap: () => void;
 }
 
-function MicroLayout({ device, theme, isActive, onTap }: Readonly<DeviceLayoutProps>) {
-  const tappable = TAPPABLE_TYPES.has(device.deviceType);
+function MicroLayout({ device, theme, isActive, stateLabel, onTap }: Readonly<DeviceLayoutProps>) {
+  const tappable = tapCommand(device) !== undefined;
   const base =
     'relative flex h-full flex-col items-center justify-center gap-1.5 overflow-hidden rounded-lg';
   const children = (
     <>
       <AmbientGlow color={theme.glow} active={isActive} />
       <DeviceIcon type={device.deviceType} />
-      <span className="relative font-medium text-white/70 text-xs">{stateLabel(device)}</span>
+      <span className="relative font-medium text-white/70 text-xs">{stateLabel}</span>
     </>
   );
   if (tappable) {
@@ -87,8 +86,15 @@ function MicroLayout({ device, theme, isActive, onTap }: Readonly<DeviceLayoutPr
   );
 }
 
-function StripLayout({ device, theme, isActive, typeLabel, onTap }: Readonly<DeviceLayoutProps>) {
-  const tappable = TAPPABLE_TYPES.has(device.deviceType);
+function StripLayout({
+  device,
+  theme,
+  isActive,
+  typeLabel,
+  stateLabel,
+  onTap,
+}: Readonly<DeviceLayoutProps>) {
+  const tappable = tapCommand(device) !== undefined;
   const base = 'relative flex h-full items-center gap-2.5 overflow-hidden rounded-lg px-3';
   const children = (
     <>
@@ -98,7 +104,7 @@ function StripLayout({ device, theme, isActive, typeLabel, onTap }: Readonly<Dev
         <span className="truncate font-semibold text-sm text-white">{device.name}</span>
         <span className="text-[10px] text-white/50">{typeLabel}</span>
       </div>
-      <span className="relative font-medium text-white/60 text-xs">{stateLabel(device)}</span>
+      <span className="relative font-medium text-white/60 text-xs">{stateLabel}</span>
     </>
   );
   if (tappable) {
@@ -132,6 +138,36 @@ export default function DeviceBrick() {
   const deviceId =
     typeof config.deviceId === 'string' && config.deviceId ? config.deviceId : undefined;
 
+  const device = deviceId === undefined ? undefined : data?.deviceMap[deviceId];
+  // Button endpoints of a composed device (a multi-button remote), sorted by
+  // button number; drives the per-button panel in RemoteControls.
+  const buttonChildren =
+    device === undefined || data === undefined
+      ? []
+      : Object.values(data.deviceMap)
+          .filter((d) => d.parentId === device.nodeId)
+          .sort((a, b) => (a.button ?? 0) - (b.button ?? 0));
+
+  // Hooks must run on EVERY render: the early returns below come after all of
+  // them. Declaring this callback past the `!data` guard crashed with React
+  // error #310 (more hooks than the previous render) the moment brick data
+  // arrived after a data-less first mount (fresh add to a board).
+  const handleTap = useCallback(() => {
+    if (!device) {
+      return;
+    }
+    const action = tapCommand(device);
+    if (action === undefined) {
+      return;
+    }
+    capture('matter.device_brick_tapped', { deviceType: device.deviceType });
+    if (action === 'lock') {
+      sendCommand(device.nodeId, device.state.locked ? 'unlock' : 'lock');
+    } else {
+      sendCommand(device.nodeId, 'toggle');
+    }
+  }, [sendCommand, device]);
+
   // ─── Loading ─────────────────────────────────────────────────────────
 
   if (!data) {
@@ -155,8 +191,6 @@ export default function DeviceBrick() {
 
   // ─── Device not found ────────────────────────────────────────────────
 
-  const device = data.deviceMap[deviceId];
-
   if (!device) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-2 p-3">
@@ -169,17 +203,7 @@ export default function DeviceBrick() {
   const theme = getDeviceTheme(device.deviceType);
   const isActive = device.online && Boolean(device.state.on ?? device.state.locked ?? true);
   const typeLabel = t(`device.types.${device.deviceType}`);
-
-  // ─── Tap handler for micro/strip tappable devices ────────────────────
-
-  const handleTap = useCallback(() => {
-    capture('matter.device_brick_tapped', { deviceType: device.deviceType });
-    if (device.deviceType === 'lock') {
-      sendCommand(device.nodeId, device.state.locked ? 'unlock' : 'lock');
-    } else {
-      sendCommand(device.nodeId, 'toggle');
-    }
-  }, [sendCommand, device.nodeId, device.deviceType, device.state.locked]);
+  const stateLabel = buildStateLabel(device, t);
 
   // ─── Micro layout (1×1) ──────────────────────────────────────────────
 
@@ -190,6 +214,7 @@ export default function DeviceBrick() {
         theme={theme}
         isActive={isActive}
         typeLabel={typeLabel}
+        stateLabel={stateLabel}
         onTap={handleTap}
       />
     );
@@ -204,6 +229,7 @@ export default function DeviceBrick() {
         theme={theme}
         isActive={isActive}
         typeLabel={typeLabel}
+        stateLabel={stateLabel}
         onTap={handleTap}
       />
     );
@@ -240,7 +266,7 @@ export default function DeviceBrick() {
 
       {/* Controls */}
       <div className="relative flex flex-1 flex-col">
-        <DeviceControls device={device} height={height} />
+        <DeviceControls device={device} buttonChildren={buttonChildren} height={height} />
       </div>
     </div>
   );

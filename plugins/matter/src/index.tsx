@@ -9,7 +9,8 @@ import { log, onInit, onStop, onUninstall } from '@brika/sdk/lifecycle';
 import { clearAllData } from '@brika/sdk/storage';
 import { deviceBrick } from './bricks/device.brick';
 import { devicesBrick } from './bricks/devices.brick';
-import { getMatterController } from './matter-controller';
+import { asText } from './display/attributes';
+import { getMatterController } from './engine/controller';
 import { serializeDevice } from './serialize';
 import {
   attributeChanged,
@@ -27,7 +28,7 @@ import './actions';
 
 import './tools';
 
-// Pages are compiled by the hub via Bun.build() — no import needed here.
+// Pages are compiled by the hub via Bun.build(): no import needed here.
 
 // ─── Sparks ──────────────────────────────────────────────────────────────────
 
@@ -41,12 +42,13 @@ export {
 
 // ─── Blocks ──────────────────────────────────────────────────────────────────
 
+export { buttonPress } from './blocks/button-press';
 export { matterCommand } from './blocks/command';
 export { deviceEvent } from './blocks/device-event';
 
 // ─── Bricks ──────────────────────────────────────────────────────────────────
 
-// Both bricks are client-rendered — no server-side defineBrick export needed.
+// Both bricks are client-rendered: no server-side defineBrick export needed.
 // Brick types are registered from package.json metadata.
 
 // ─── Dynamic Dropdown Options ────────────────────────────────────────────────
@@ -54,6 +56,18 @@ export { deviceEvent } from './blocks/device-event';
 definePreferenceOptions('deviceId', () => {
   const devices = getMatterController().getCommissionedDevices();
   return devices.map((d) => ({ value: d.nodeId, label: d.name }));
+});
+
+// Device picker for the "When Device Changes" block (config key `nodeId`).
+// Same devices as `deviceId`, with the type and online state surfaced so a
+// user can tell two same-named devices apart without knowing Matter ids.
+definePreferenceOptions('nodeId', () => {
+  const devices = getMatterController().getCommissionedDevices();
+  return devices.map((d) => ({
+    value: d.nodeId,
+    label: `${d.name} (${d.deviceType})`,
+    description: d.online ? `online, ${d.nodeId}` : `offline, ${d.nodeId}`,
+  }));
 });
 
 // ─── Client-side data push ──────────────────────────────────────────────────
@@ -98,7 +112,7 @@ onInit(async () => {
     const now = Date.now();
     const state: Record<string, string> = {};
     for (const [k, v] of Object.entries(device.state)) {
-      state[k] = String(v);
+      state[k] = asText(v);
     }
 
     const prev = prevByNode.get(device.nodeId);

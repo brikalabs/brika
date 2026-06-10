@@ -2,7 +2,7 @@
  * Shared UI components for Matter client bricks.
  *
  * Design language: white text on gradient backgrounds, glassmorphism buttons,
- * accent-colored fills, and subtle glow effects — inspired by the Spotify
+ * accent-colored fills, and subtle glow effects: inspired by the Spotify
  * and weather bricks and the website brick designs.
  */
 

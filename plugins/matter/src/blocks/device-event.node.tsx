@@ -1,8 +1,9 @@
 /**
  * "When Device Changes" node-body view.
  *
- * Shows which device is watched and the attributes being observed (each maps to
- * a dynamic output handle below the node).
+ * Shows which device is watched and the attributes being observed, including
+ * their condition ("temperature above 25"). Each attribute maps to a dynamic
+ * output handle below the node.
  */
 
 import { useBlockConfig } from '@brika/sdk/block-views';
@@ -10,11 +11,22 @@ import { Radio } from 'lucide-react';
 
 interface WatchedAttribute {
   name: string;
+  when?: string;
+  value?: string;
 }
 
 interface DeviceEventConfig {
   nodeId?: string;
   attributes?: WatchedAttribute[];
+}
+
+/** 'temperature above 25', 'on becomes true', or just 'brightness'. */
+function describeCondition(attr: WatchedAttribute): string {
+  const when = attr.when ?? 'changes';
+  if (when === 'changes') {
+    return attr.name;
+  }
+  return `${attr.name} ${when} ${attr.value ?? '?'}`;
 }
 
 export default function DeviceEventNode() {
@@ -42,7 +54,7 @@ export default function DeviceEventNode() {
               key={attr.name}
               className="rounded bg-indigo-500/10 px-1.5 py-0.5 font-mono text-[10px] text-indigo-600 dark:text-indigo-300"
             >
-              {attr.name}
+              {describeCondition(attr)}
             </span>
           ))}
         </div>

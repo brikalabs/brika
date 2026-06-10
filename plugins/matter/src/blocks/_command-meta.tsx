@@ -10,23 +10,31 @@ import {
   ArrowDown,
   ArrowUp,
   Blinds,
+  Bot,
   Cpu,
+  Fan,
+  Gauge,
+  Home,
   Lightbulb,
   Lock,
   LockOpen,
   type LucideIcon,
+  MoveVertical,
   Network,
   Palette,
+  Pause,
+  Play,
   Power,
   PowerOff,
   Radar,
   Square,
+  StepForward,
   Sun,
   Sunset,
   Thermometer,
   ToggleLeft,
 } from 'lucide-react';
-import type { DeviceType } from '../matter-controller';
+import type { DeviceType } from '../display/attributes';
 
 export interface CommandConfig {
   nodeId?: string;
@@ -41,6 +49,8 @@ export const DEVICE_ICONS: Record<DeviceType, LucideIcon> = {
   thermostat: Thermometer,
   switch: ToggleLeft,
   sensor: Radar,
+  fan: Fan,
+  vacuum: Bot,
   bridge: Network,
   unknown: Cpu,
 };
@@ -92,11 +102,23 @@ export const COMMANDS: ReadonlyArray<CommandEntry> = [
   { value: 'coverClose', label: 'Close cover', icon: ArrowDown, deviceTypes: ['cover'] },
   { value: 'coverStop', label: 'Stop cover', icon: Square, deviceTypes: ['cover'] },
   {
+    value: 'setCoverPosition',
+    label: 'Set cover position',
+    icon: MoveVertical,
+    deviceTypes: ['cover'],
+  },
+  {
     value: 'setTargetTemp',
     label: 'Set target temperature',
     icon: Thermometer,
     deviceTypes: ['thermostat'],
   },
+  { value: 'setFanMode', label: 'Set fan mode', icon: Fan, deviceTypes: ['fan'] },
+  { value: 'setFanSpeed', label: 'Set fan speed', icon: Gauge, deviceTypes: ['fan'] },
+  { value: 'vacuumStart', label: 'Start cleaning', icon: Play, deviceTypes: ['vacuum'] },
+  { value: 'vacuumPause', label: 'Pause cleaning', icon: Pause, deviceTypes: ['vacuum'] },
+  { value: 'vacuumResume', label: 'Resume cleaning', icon: StepForward, deviceTypes: ['vacuum'] },
+  { value: 'vacuumDock', label: 'Return to dock', icon: Home, deviceTypes: ['vacuum'] },
 ];
 
 /** Command values available when no device is selected (generic power controls). */

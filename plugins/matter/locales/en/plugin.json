@@ -75,6 +75,8 @@
       "thermostat": "Thermostat",
       "switch": "Switch",
       "sensor": "Sensor",
+      "fan": "Fan",
+      "vacuum": "Vacuum",
       "bridge": "Bridge",
       "unknown": "Device"
     },
@@ -86,7 +88,68 @@
       "humidity": "Humidity",
       "open": "Open",
       "stop": "Stop",
-      "close": "Close"
+      "close": "Close",
+      "start": "Start",
+      "pause": "Pause",
+      "resume": "Resume",
+      "dock": "Dock"
+    },
+    "attributes": {
+      "on": "Power",
+      "brightness": "Brightness",
+      "hue": "Hue",
+      "saturation": "Saturation",
+      "colorTempMireds": "Color temperature",
+      "colorMode": "Color mode",
+      "locked": "Lock",
+      "lockState": "Lock state",
+      "coverPosition": "Position",
+      "coverOperational": "Cover activity",
+      "temperature": "Temperature",
+      "humidity": "Humidity",
+      "occupied": "Occupancy",
+      "contact": "Contact",
+      "illuminance": "Light level",
+      "battery": "Battery",
+      "buttonPosition": "Button position",
+      "buttons": "Button count",
+      "lastPress": "Last press",
+      "lastButton": "Last button",
+      "fanMode": "Fan mode",
+      "fanSpeed": "Fan speed",
+      "vacuumState": "Vacuum state",
+      "systemMode": "System mode",
+      "systemModeName": "Mode"
+    },
+    "values": {
+      "on": "On",
+      "off": "Off",
+      "occupied": "Occupied",
+      "clear": "Clear",
+      "closed": "Closed",
+      "open": "Open",
+      "locked": "Locked",
+      "unlocked": "Unlocked",
+      "button": "Button"
+    },
+    "press": {
+      "short": "Short press",
+      "long": "Long press",
+      "double": "Double press",
+      "triple": "Triple press",
+      "multi": "Multi press"
+    },
+    "vacuum": {
+      "stopped": "Stopped",
+      "running": "Running",
+      "paused": "Paused",
+      "error": "Error",
+      "seekingCharger": "Seeking charger",
+      "charging": "Charging",
+      "docked": "Docked"
+    },
+    "remote": {
+      "pressHint": "Press a button on the remote"
     },
     "noDeviceSelected": "No device selected",
     "deviceNotFound": "Device not found",
@@ -129,6 +192,8 @@
       "thermostat": "Thermostats",
       "switch": "Switches",
       "sensor": "Sensors",
+      "fan": "Fans",
+      "vacuum": "Vacuums",
       "bridge": "Bridges",
       "unknown": "Other Devices"
     }

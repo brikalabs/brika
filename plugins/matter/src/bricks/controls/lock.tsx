@@ -1,5 +1,5 @@
 /**
- * Lock controls — large animated lock icon with toggle button.
+ * Lock controls: large animated lock icon with toggle button.
  */
 
 import { capture } from '@brika/sdk';
