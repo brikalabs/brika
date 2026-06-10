@@ -9,7 +9,9 @@
  */
 
 import { displayType, isCompatible, parsePortType, type TypeDescriptor } from '@brika/type-system';
+import type { FinalConnectionState } from '@xyflow/react';
 import type { BlockDefinition } from './BlockToolbar';
+import type { ConnectionOrigin } from './useWorkflowEditor';
 
 export interface CompatibleBlock {
   block: BlockDefinition;
@@ -63,4 +65,27 @@ export function compatibleBlocksForTarget(
 /** Human-readable label for a type descriptor, or a fallback when unknown. */
 export function typeLabel(type: TypeDescriptor | undefined, fallback: string): string {
   return type ? displayType(type) : fallback;
+}
+
+/** Client coordinates of a mouse or touch connect-end event. */
+export function eventClientPoint(event: MouseEvent | TouchEvent): { x: number; y: number } {
+  if ('changedTouches' in event) {
+    const touch = event.changedTouches[0];
+    return { x: touch?.clientX ?? 0, y: touch?.clientY ?? 0 };
+  }
+  return { x: event.clientX, y: event.clientY };
+}
+
+/** Resolve the dragged handle into a ConnectionOrigin, defaulting handle ids. */
+export function connectionOriginOf(connectionState: FinalConnectionState): ConnectionOrigin | null {
+  const { fromNode, fromHandle } = connectionState;
+  if (!fromNode || !fromHandle) {
+    return null;
+  }
+  const handleType = fromHandle.type;
+  return {
+    nodeId: fromNode.id,
+    handleId: fromHandle.id ?? (handleType === 'source' ? 'out' : 'in'),
+    handleType,
+  };
 }

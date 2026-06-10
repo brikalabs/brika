@@ -22,6 +22,7 @@ import { DynamicIcon } from 'lucide-react/dynamic';
 import { useMemo } from 'react';
 import { useLocale } from '@/lib/use-locale';
 import type { BlockDefinition } from './BlockToolbar';
+import { blockDisplayName } from './block-display';
 import { toIconName } from './icon-name';
 
 export interface EditorCommandPaletteProps {
@@ -69,8 +70,7 @@ export function EditorCommandPalette({
 
           <CommandGroup heading={t('workflows:editor.palette.addBlock')}>
             {blocks.map((block) => {
-              const blockKey = block.id.split(':').pop() || block.id;
-              const name = tp(block.pluginId, `blocks.${blockKey}.name`, block.name || blockKey);
+              const name = blockDisplayName(tp, block);
               return (
                 <CommandItem
                   key={`add:${block.type || block.id}`}

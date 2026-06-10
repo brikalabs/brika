@@ -38,9 +38,9 @@ import {
 } from './workflow-conversion';
 
 // Re-export so existing consumers (BlockNode, editor barrel) keep working.
-export type { BlockStatus, ExecutionLog } from './workflow-conversion';
+export type { BlockStatus } from './workflow-conversion';
 
-import type { BlockStatus, ExecutionLog } from './workflow-conversion';
+import type { BlockStatus } from './workflow-conversion';
 
 export interface UseWorkflowEditorOptions {
   /** Lookup function for external type data (e.g., spark schemas) */
@@ -59,6 +59,24 @@ export interface ConnectionOrigin {
   nodeId: string;
   handleId: string;
   handleType: 'source' | 'target';
+}
+
+/** Build a canvas edge with the canonical id/arrow/curve for a wire. */
+function buildEdge(
+  source: string,
+  sourceHandle: string,
+  target: string,
+  targetHandle: string
+): Edge {
+  return {
+    id: `${source}:${sourceHandle}->${target}:${targetHandle}`,
+    source,
+    sourceHandle,
+    target,
+    targetHandle,
+    type: 'smoothstep',
+    markerEnd: { type: MarkerType.ArrowClosed },
+  };
 }
 
 /** Build a fresh canvas node for a block type (shared by plain and wired adds). */
@@ -122,12 +140,10 @@ export function useWorkflowEditor(
   const [edges, setEdges, onEdgesChangeBase] = useEdgesState(initialEdges);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [isDirty, setIsDirty] = useState(false);
-  const [blockStatuses, setBlockStatuses] = useState<Record<string, BlockStatus>>({});
   const [blockOutputs, setBlockOutputs] = useState<Record<string, unknown>>({});
   // Last emitted value per "blockId:port", feeding live previews and the
   // client-side {{ }} resolution of node-body views.
   const [portValues, setPortValues] = useState<Record<string, unknown>>({});
-  const [executionLogs, setExecutionLogs] = useState<ExecutionLog[]>([]);
 
   // Track onChange callback in ref to avoid stale closures
   const onChangeRef = useRef(onChange);
@@ -364,14 +380,12 @@ export function useWorkflowEditor(
   // still enforced at drag time by isValidConnection above.
   const onConnect: OnConnect = useCallback(
     (connection: Connection) => {
-      const newEdge: Edge = {
-        ...connection,
-        id: `${connection.source}:${connection.sourceHandle || 'out'}->${connection.target}:${connection.targetHandle || 'in'}`,
-        type: 'smoothstep',
-        markerEnd: {
-          type: MarkerType.ArrowClosed,
-        },
-      } as Edge;
+      const newEdge = buildEdge(
+        connection.source,
+        connection.sourceHandle || 'out',
+        connection.target,
+        connection.targetHandle || 'in'
+      );
 
       takeSnapshot();
       setEdges((eds) => addEdge(newEdge, eds));
@@ -434,26 +448,10 @@ export function useWorkflowEditor(
       portId: string
     ) => {
       const newNode = buildBlockNode(blockType, position);
-      const wire =
+      const newEdge =
         origin.handleType === 'source'
-          ? {
-              source: origin.nodeId,
-              sourceHandle: origin.handleId,
-              target: newNode.id,
-              targetHandle: portId,
-            }
-          : {
-              source: newNode.id,
-              sourceHandle: portId,
-              target: origin.nodeId,
-              targetHandle: origin.handleId,
-            };
-      const newEdge: Edge = {
-        ...wire,
-        id: `${wire.source}:${wire.sourceHandle}->${wire.target}:${wire.targetHandle}`,
-        type: 'smoothstep',
-        markerEnd: { type: MarkerType.ArrowClosed },
-      };
+          ? buildEdge(origin.nodeId, origin.handleId, newNode.id, portId)
+          : buildEdge(newNode.id, portId, origin.nodeId, origin.handleId);
 
       takeSnapshot();
       setNodes((nds) => [...nds, newNode]);
@@ -553,10 +551,6 @@ export function useWorkflowEditor(
   // Set block status (for debugging)
   const setBlockStatus = useCallback(
     (blockId: string, status: BlockStatus, output?: unknown) => {
-      setBlockStatuses((prev) => ({
-        ...prev,
-        [blockId]: status,
-      }));
       if (output !== undefined) {
         setBlockOutputs((prev) => ({
           ...prev,
@@ -615,44 +609,6 @@ export function useWorkflowEditor(
     [setNodes]
   );
 
-  // Add execution log
-  const addExecutionLog = useCallback((log: Omit<ExecutionLog, 'id' | 'timestamp'>) => {
-    setExecutionLogs((prev) => [
-      ...prev,
-      {
-        ...log,
-        id: crypto.randomUUID(),
-        timestamp: Date.now(),
-      },
-    ]);
-  }, []);
-
-  // Clear execution state
-  const clearExecutionState = useCallback(() => {
-    setBlockStatuses({});
-    setBlockOutputs({});
-    setExecutionLogs([]);
-    setNodes((nds) =>
-      nds.map((node) => {
-        if (node.type === 'block') {
-          return {
-            ...node,
-            data: {
-              ...node.data,
-              status: 'idle',
-            },
-          };
-        }
-        return node;
-      })
-    );
-  }, [setNodes]);
-
-  // Mark workflow as clean (after successful save)
-  const markClean = useCallback(() => {
-    setIsDirty(false);
-  }, []);
-
   const getAvailableVariables = useCallback(
     (blockId: string) => {
       const blockNodes = nodes.filter((n) => n.type === 'block');
@@ -692,18 +648,13 @@ export function useWorkflowEditor(
     canUndo,
     canRedo,
     setSelectedNodeId,
-    blockStatuses,
     blockOutputs,
     portValues,
     setPortValue,
-    executionLogs,
     setBlockStatus,
     setBlockLiveOutput,
-    addExecutionLog,
-    clearExecutionState,
     getAvailableVariables,
     portTypeMap,
     blockSchemaMap,
-    markClean,
   };
 }

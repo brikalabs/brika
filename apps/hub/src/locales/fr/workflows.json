@@ -65,10 +65,6 @@
     "title": "Éditeur de Workflow",
     "blocks": "Blocs",
     "properties": "Propriétés",
-    "save": "Enregistrer le Workflow",
-    "discard": "Annuler les modifications",
-    "unsaved": "Non enregistré",
-    "unsavedChanges": "Modifications non enregistrées",
     "panels": {
       "blocks": "Blocs",
       "blocksDescription": "Glissez pour ajouter des blocs",

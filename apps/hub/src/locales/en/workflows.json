@@ -65,10 +65,6 @@
     "title": "Workflow Editor",
     "blocks": "Blocks",
     "properties": "Properties",
-    "save": "Save Workflow",
-    "discard": "Discard Changes",
-    "unsaved": "Unsaved",
-    "unsavedChanges": "Unsaved changes",
     "panels": {
       "blocks": "Blocks",
       "blocksDescription": "Drag to add blocks",

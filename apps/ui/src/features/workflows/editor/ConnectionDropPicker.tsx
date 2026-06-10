@@ -18,6 +18,7 @@ import {
 import { DynamicIcon } from 'lucide-react/dynamic';
 import { useEffect, useMemo, useRef } from 'react';
 import { useLocale } from '@/lib/use-locale';
+import { blockDisplayName } from './block-display';
 import type { CompatibleBlock } from './connection-compat';
 import { toIconName } from './icon-name';
 
@@ -97,12 +98,7 @@ export function ConnectionDropPicker({
               <CommandGroup key={group.category} heading={group.label}>
                 {group.items.map((candidate) => {
                   const { block } = candidate;
-                  const blockKey = block.id.split(':').pop() || block.id;
-                  const name = tp(
-                    block.pluginId,
-                    `blocks.${blockKey}.name`,
-                    block.name || blockKey
-                  );
+                  const name = blockDisplayName(tp, block);
                   return (
                     <CommandItem
                       key={block.type || block.id}

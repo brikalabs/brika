@@ -1,65 +1,57 @@
-import { Button, cn, toast } from '@brika/clay';
+import { toast } from '@brika/clay';
 import { portKey } from '@brika/type-system';
 import { useQuery } from '@tanstack/react-query';
 import {
   Background,
   ConnectionLineType,
   type Edge,
-  type FinalConnectionState,
   type Node,
   type NodeTypes,
   type OnConnectEnd,
-  Panel,
   ReactFlow,
   ReactFlowProvider,
   useReactFlow,
-  useStoreApi,
 } from '@xyflow/react';
-import {
-  AlertTriangle,
-  Blocks,
-  GripVertical,
-  Loader2,
-  Lock,
-  Maximize2,
-  Minus,
-  MousePointerClick,
-  Plus,
-  Redo2,
-  Settings2,
-  Undo2,
-  Unlock,
-  Zap,
-} from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useCapture } from '@/features/analytics/hooks';
 import { fetcher } from '@/lib/query';
 import { useLocale } from '@/lib/use-locale';
 import '@xyflow/react/dist/style.css';
 import { fetchWorkflowPortValues, type Workflow } from '../api';
-import { type DebugEvent, useDebugStream } from '../debug';
+import { useDebugStream } from '../debug';
 import { BlockNode } from './BlockNode';
-import { type BlockDefinition, BlockToolbar, type BlockTypeInfo } from './BlockToolbar';
+import { type BlockDefinition, type BlockTypeInfo } from './BlockToolbar';
 import {
   BlockInputValuesContext,
   collectInputValues,
   WorkflowIdContext,
 } from './block-input-values';
-import { CollapsedTab, CollapsedTabsContainer, CollapsiblePanel } from './CollapsiblePanel';
 import { ConfigPanel } from './ConfigPanel';
 import { ConnectionDropPicker } from './ConnectionDropPicker';
 import {
   type CompatibleBlock,
   compatibleBlocksForSource,
   compatibleBlocksForTarget,
+  connectionOriginOf,
+  eventClientPoint,
   typeLabel,
 } from './connection-compat';
-import { DebugPanel } from './DebugPanel';
+import { DiagnosticsBadge } from './DiagnosticsBadge';
+import {
+  BlocksPanel,
+  EmptyStateOverlay,
+  InspectorPanel,
+  LeftCollapsedTabs,
+  RightCollapsedTabs,
+} from './EditorChrome';
 import { EditorCommandPalette } from './EditorCommandPalette';
+import { EditorControls } from './EditorControls';
 import { collectDiagnostics, type GraphDiagnostic, invalidEdgeIds } from './graph-diagnostics';
+import { processNewEvents } from './live-events';
+import { type PanelName, usePanelState } from './use-panel-state';
 import { type ConnectionOrigin, useWorkflowEditor } from './useWorkflowEditor';
 import { WorkflowTypeContext } from './WorkflowTypeContext';
-import type { BlockStatus } from './workflow-conversion';
 
 export interface RegisteredSpark {
   type: string;
@@ -79,83 +71,6 @@ function getBlockType(node: Node): string {
   return '';
 }
 
-// Simple ping animation using DOM manipulation
-function pingHandle(blockId: string, portId: string) {
-  const selector = `.react-flow__node[data-id="${blockId}"] .react-flow__handle[data-handleid="${portId}"]`;
-  const handle = document.querySelector<HTMLElement>(selector);
-
-  if (handle) {
-    // Remove class first to allow re-triggering
-    handle.classList.remove('handle-ping');
-    // Force reflow to restart animation
-    handle.getClientRects();
-    handle.classList.add('handle-ping');
-    // Self-cleaning via animationend — no dangling setTimeout
-    handle.addEventListener('animationend', () => handle.classList.remove('handle-ping'), {
-      once: true,
-    });
-  }
-}
-
-// Drive a block's status ring from a run lifecycle / emit / error event.
-// block.start -> running (received input), block.emit -> completed (produced
-// output), block.error -> error. States persist until the block next runs.
-function applyBlockStatus(
-  event: DebugEvent,
-  setBlockStatus: (blockId: string, status: BlockStatus, output?: unknown) => void
-) {
-  if (!event.blockId) {
-    return;
-  }
-  if (event.type === 'block.start') {
-    setBlockStatus(event.blockId, 'running');
-  } else if (event.type === 'block.error') {
-    setBlockStatus(event.blockId, 'error', event.data);
-  } else if (event.type === 'block.emit') {
-    setBlockStatus(event.blockId, 'completed', event.data);
-  }
-}
-
-// Ping the emitting output handle and every connected downstream input handle.
-function pingEventPorts(blockId: string, port: string, edges: Edge[]) {
-  pingHandle(blockId, port);
-  for (const edge of edges) {
-    if (edge.source === blockId && edge.sourceHandle === port) {
-      pingHandle(edge.target, edge.targetHandle || 'in');
-    }
-  }
-}
-
-// Process new debug events: drive status rings, feed the latest emitted value
-// into node-body views (useBlockData), and ping the relevant port handles.
-function processNewEvents(
-  events: DebugEvent[],
-  edges: Edge[],
-  lastProcessedTimestamp: React.RefObject<number>,
-  setBlockLiveOutput: (blockId: string, output: unknown) => void,
-  setBlockStatus: (blockId: string, status: BlockStatus, output?: unknown) => void,
-  setPortValue: (blockId: string, port: string, value: unknown) => void
-) {
-  const newEvents = events.filter((e) => e.timestamp > lastProcessedTimestamp.current);
-
-  if (newEvents.length > 0) {
-    lastProcessedTimestamp.current = Math.max(...newEvents.map((e) => e.timestamp));
-  }
-
-  for (const event of newEvents) {
-    applyBlockStatus(event, setBlockStatus);
-
-    if (event.type !== 'block.emit' || !event.blockId || !event.port) {
-      continue;
-    }
-    if (event.data !== undefined) {
-      setBlockLiveOutput(event.blockId, event.data);
-      setPortValue(event.blockId, event.port, event.data);
-    }
-    pingEventPorts(event.blockId, event.port, edges);
-  }
-}
-
 // Fetch all block definitions with schemas
 async function fetchBlockDefinitions(): Promise<BlockDefinition[]> {
   const res = await fetch('/api/blocks');
@@ -169,350 +84,6 @@ async function fetchBlockDefinitions(): Promise<BlockDefinition[]> {
 const nodeTypes: NodeTypes = {
   block: BlockNode,
 };
-
-type PanelName = 'blocks' | 'inspector';
-
-interface PanelStates {
-  blocks: boolean;
-  inspector: boolean;
-}
-
-// One panel per side. The block library starts collapsed (Cmd+K and the
-// wire-drop picker cover adding blocks); the right inspector carries either
-// the selected block's config or the runs/live observability, never both.
-const DEFAULT_PANEL_STATES: PanelStates = {
-  blocks: false,
-  inspector: true,
-};
-
-const PANEL_STORAGE_KEY = 'workflow-editor-panels-v2';
-
-function isValidPanelStates(value: unknown): value is PanelStates {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    'blocks' in value &&
-    'inspector' in value &&
-    typeof (value as PanelStates).blocks === 'boolean' &&
-    typeof (value as PanelStates).inspector === 'boolean'
-  );
-}
-
-function usePanelState() {
-  const capture = useCapture();
-  const [panelStates, setPanelStates] = useState<PanelStates>(() => {
-    try {
-      const saved = localStorage.getItem(PANEL_STORAGE_KEY);
-      if (saved) {
-        const parsed: unknown = JSON.parse(saved);
-        if (isValidPanelStates(parsed)) {
-          return parsed;
-        }
-      }
-    } catch {
-      // Ignore localStorage errors
-    }
-    return DEFAULT_PANEL_STATES;
-  });
-
-  const togglePanel = useCallback(
-    (panel: PanelName) => {
-      setPanelStates((prev: PanelStates) => {
-        const next = {
-          ...prev,
-          [panel]: !prev[panel],
-        };
-        capture('workflow.editor_panel_toggled', { panel, open: next[panel] });
-        localStorage.setItem(PANEL_STORAGE_KEY, JSON.stringify(next));
-        return next;
-      });
-    },
-    [capture]
-  );
-
-  const openPanel = useCallback((panel: PanelName) => {
-    setPanelStates((prev: PanelStates) => {
-      if (prev[panel]) {
-        return prev;
-      }
-      const next = { ...prev, [panel]: true };
-      localStorage.setItem(PANEL_STORAGE_KEY, JSON.stringify(next));
-      return next;
-    });
-  }, []);
-
-  return {
-    panelStates,
-    togglePanel,
-    openPanel,
-  };
-}
-
-interface BlocksPanelProps {
-  isOpen: boolean;
-  onToggle: () => void;
-}
-
-function BlocksPanel({ isOpen, onToggle }: Readonly<BlocksPanelProps>) {
-  const { t } = useLocale();
-
-  return (
-    <CollapsiblePanel
-      side="left"
-      icon={<Blocks className="size-4" />}
-      title={t('workflows:editor.panels.blocks')}
-      isOpen={isOpen}
-      onToggle={onToggle}
-      width="w-56"
-    >
-      <BlockToolbar className="h-full w-full" onCollapse={onToggle} />
-    </CollapsiblePanel>
-  );
-}
-
-interface InspectorPanelProps {
-  isOpen: boolean;
-  onToggle: () => void;
-  workflow: Workflow;
-  selectedNode: Node | null;
-  updateBlockConfig: (nodeId: string, config: Record<string, unknown>) => void;
-  availableVariables: Array<{
-    name: string;
-    source: string;
-    type: string;
-    preview?: string;
-  }>;
-  blockSchema: BlockDefinition['schema'] | undefined;
-  viewModuleUrl: string | undefined;
-  pluginUid: string | undefined;
-}
-
-/**
- * The single right-hand panel. Focused, never stacked: a selected block shows
- * its configuration; an empty selection shows the workflow's runs/live
- * observability. Click the canvas to get back to the workflow view.
- */
-function InspectorPanel({
-  isOpen,
-  onToggle,
-  workflow,
-  selectedNode,
-  updateBlockConfig,
-  availableVariables,
-  blockSchema,
-  viewModuleUrl,
-  pluginUid,
-}: Readonly<InspectorPanelProps>) {
-  const { t } = useLocale();
-
-  return (
-    <CollapsiblePanel
-      side="right"
-      icon={
-        selectedNode ? <Settings2 className="size-4" /> : <Zap className="size-4 text-yellow-500" />
-      }
-      title={
-        selectedNode ? t('workflows:editor.panels.config') : t('workflows:editor.panels.debug')
-      }
-      isOpen={isOpen}
-      onToggle={onToggle}
-      width="w-88"
-    >
-      {selectedNode ? (
-        <ConfigPanel
-          node={selectedNode}
-          onUpdateBlock={updateBlockConfig}
-          availableVariables={availableVariables}
-          blockSchema={blockSchema}
-          viewModuleUrl={viewModuleUrl}
-          pluginUid={pluginUid}
-          className="h-full w-full"
-          onCollapse={onToggle}
-        />
-      ) : (
-        <DebugPanel workflow={workflow} className="h-full w-full" onCollapse={onToggle} />
-      )}
-    </CollapsiblePanel>
-  );
-}
-
-interface DiagnosticsBadgeProps {
-  diagnostics: ReadonlyArray<GraphDiagnostic>;
-  onJump: (nodeId: string) => void;
-}
-
-/**
- * Canvas problems chip: errors/warnings the engine would hit at runtime
- * (stale type mismatches, missing required config, removed block types,
- * feedback loops). Click an entry to jump to the offending node.
- */
-function DiagnosticsBadge({ diagnostics, onJump }: Readonly<DiagnosticsBadgeProps>) {
-  const { t } = useLocale();
-  const [open, setOpen] = useState(false);
-
-  if (diagnostics.length === 0) {
-    return null;
-  }
-  const errors = diagnostics.filter((d) => d.severity === 'error').length;
-  const warnings = diagnostics.length - errors;
-
-  return (
-    <Panel position="top-center">
-      <div className="flex max-w-130 flex-col items-center gap-1">
-        <button
-          type="button"
-          onClick={() => setOpen((o) => !o)}
-          className={cn(
-            'flex items-center gap-1.5 rounded-full border px-3 py-1 font-medium text-xs shadow-md backdrop-blur transition-colors',
-            errors > 0
-              ? 'border-destructive/40 bg-destructive/10 text-destructive hover:bg-destructive/15'
-              : 'border-warning/40 bg-warning/10 text-warning hover:bg-warning/15'
-          )}
-        >
-          <AlertTriangle className="size-3.5" />
-          {errors > 0 && `${errors} ${t('workflows:editor.diagnostics.errors')}`}
-          {errors > 0 && warnings > 0 && ' · '}
-          {warnings > 0 && `${warnings} ${t('workflows:editor.diagnostics.warnings')}`}
-        </button>
-        {open && (
-          <div className="max-h-60 w-130 overflow-y-auto rounded-lg border bg-popover/95 p-1 shadow-xl backdrop-blur">
-            {diagnostics.map((d) => (
-              <button
-                key={`${d.kind}:${d.nodeId}:${d.edgeId ?? ''}:${d.message}`}
-                type="button"
-                onClick={() => {
-                  setOpen(false);
-                  onJump(d.nodeId);
-                }}
-                className="flex w-full items-start gap-2 rounded-md px-2 py-1.5 text-left text-xs transition-colors hover:bg-accent"
-              >
-                <AlertTriangle
-                  className={cn(
-                    'mt-0.5 size-3 shrink-0',
-                    d.severity === 'error' ? 'text-destructive' : 'text-warning'
-                  )}
-                />
-                <span className="min-w-0 break-words">{d.message}</span>
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-    </Panel>
-  );
-}
-
-interface EditorControlsProps {
-  showInteractive: boolean;
-  canUndo: boolean;
-  canRedo: boolean;
-  onUndo: () => void;
-  onRedo: () => void;
-}
-
-function EditorControls({
-  showInteractive,
-  canUndo,
-  canRedo,
-  onUndo,
-  onRedo,
-}: Readonly<EditorControlsProps>) {
-  const { zoomIn, zoomOut, fitView } = useReactFlow();
-  const store = useStoreApi();
-  const capture = useCapture();
-  const [locked, setLocked] = useState(false);
-
-  const toggleLock = useCallback(() => {
-    setLocked((prev) => {
-      const next = !prev;
-      capture('workflow.canvas_lock_toggled', { locked: next });
-      store.setState({
-        nodesDraggable: !next,
-        nodesConnectable: !next,
-        elementsSelectable: !next,
-      });
-      return next;
-    });
-  }, [store, capture]);
-
-  return (
-    <Panel position="bottom-left">
-      <div className="flex flex-col rounded-md border bg-background shadow-sm">
-        {showInteractive && (
-          <>
-            <Button
-              size="icon"
-              variant="ghost"
-              className="size-7 rounded-none rounded-t-md"
-              disabled={!canUndo}
-              onClick={() => {
-                capture('workflow.canvas_undo');
-                onUndo();
-              }}
-            >
-              <Undo2 className="size-3.5" />
-            </Button>
-            <Button
-              size="icon"
-              variant="ghost"
-              className="size-7 rounded-none"
-              disabled={!canRedo}
-              onClick={() => {
-                capture('workflow.canvas_redo');
-                onRedo();
-              }}
-            >
-              <Redo2 className="size-3.5" />
-            </Button>
-          </>
-        )}
-        <Button
-          size="icon"
-          variant="ghost"
-          className="size-7 rounded-none rounded-t-md"
-          onClick={() => {
-            capture('workflow.canvas_zoom_in');
-            zoomIn();
-          }}
-        >
-          <Plus className="size-3.5" />
-        </Button>
-        <Button
-          size="icon"
-          variant="ghost"
-          className="size-7 rounded-none"
-          onClick={() => {
-            capture('workflow.canvas_zoom_out');
-            zoomOut();
-          }}
-        >
-          <Minus className="size-3.5" />
-        </Button>
-        <Button
-          size="icon"
-          variant="ghost"
-          className="size-7 rounded-none"
-          onClick={() => {
-            capture('workflow.canvas_fit_view');
-            fitView();
-          }}
-        >
-          <Maximize2 className="size-3.5" />
-        </Button>
-        {showInteractive && (
-          <Button
-            size="icon"
-            variant="ghost"
-            className="size-7 rounded-none rounded-b-md"
-            onClick={toggleLock}
-          >
-            {locked ? <Lock className="size-3.5" /> : <Unlock className="size-3.5" />}
-          </Button>
-        )}
-      </div>
-    </Panel>
-  );
-}
 
 interface EditorCanvasProps {
   readonly: boolean;
@@ -618,79 +189,6 @@ function EditorCanvas({
   );
 }
 
-interface LeftCollapsedTabsProps {
-  togglePanel: (panel: PanelName) => void;
-}
-
-function LeftCollapsedTabs({ togglePanel }: Readonly<LeftCollapsedTabsProps>) {
-  const { t } = useLocale();
-
-  return (
-    <CollapsedTabsContainer side="left">
-      <CollapsedTab
-        side="left"
-        icon={<Blocks className="size-4" />}
-        title={t('workflows:editor.panels.blocks')}
-        onExpand={() => togglePanel('blocks')}
-      />
-    </CollapsedTabsContainer>
-  );
-}
-
-interface RightCollapsedTabsProps {
-  hasSelection: boolean;
-  togglePanel: (panel: PanelName) => void;
-}
-
-function RightCollapsedTabs({ hasSelection, togglePanel }: Readonly<RightCollapsedTabsProps>) {
-  const { t } = useLocale();
-
-  return (
-    <CollapsedTabsContainer side="right">
-      <CollapsedTab
-        side="right"
-        icon={
-          hasSelection ? (
-            <Settings2 className="size-4" />
-          ) : (
-            <Zap className="size-4 text-yellow-500" />
-          )
-        }
-        title={
-          hasSelection ? t('workflows:editor.panels.config') : t('workflows:editor.panels.debug')
-        }
-        onExpand={() => togglePanel('inspector')}
-      />
-    </CollapsedTabsContainer>
-  );
-}
-
-function EmptyStateOverlay() {
-  const { t } = useLocale();
-
-  return (
-    <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-      <div className="flex flex-col items-center gap-4 rounded-xl border border-muted-foreground/30 border-dashed bg-background/80 p-8 text-center backdrop-blur-sm">
-        <div className="flex items-center gap-3">
-          <div className="flex size-12 items-center justify-center rounded-lg bg-primary/10">
-            <GripVertical className="size-6 text-primary" />
-          </div>
-          <MousePointerClick className="size-5 text-muted-foreground" />
-          <div className="flex size-12 items-center justify-center rounded-lg bg-muted">
-            <Blocks className="size-6 text-muted-foreground" />
-          </div>
-        </div>
-        <div>
-          <p className="font-medium">{t('workflows:editor.panels.dragToAdd')}</p>
-          <p className="mt-1 text-muted-foreground text-sm">
-            {t('workflows:editor.panels.blocksDescription')}
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 interface WorkflowEditorInnerProps {
   workflow: Workflow;
   readonly?: boolean;
@@ -743,29 +241,6 @@ interface DropPickerState {
   screen: { x: number; y: number };
   nodePosition: { x: number; y: number };
   origin: ConnectionOrigin;
-}
-
-/** Client coordinates of a mouse or touch connect-end event. */
-function eventClientPoint(event: MouseEvent | TouchEvent): { x: number; y: number } {
-  if ('changedTouches' in event) {
-    const touch = event.changedTouches[0];
-    return { x: touch?.clientX ?? 0, y: touch?.clientY ?? 0 };
-  }
-  return { x: event.clientX, y: event.clientY };
-}
-
-/** Resolve the dragged handle into a ConnectionOrigin, defaulting handle ids. */
-function connectionOriginOf(connectionState: FinalConnectionState): ConnectionOrigin | null {
-  const { fromNode, fromHandle } = connectionState;
-  if (!fromNode || !fromHandle) {
-    return null;
-  }
-  const handleType = fromHandle.type;
-  return {
-    nodeId: fromNode.id,
-    handleId: fromHandle.id ?? (handleType === 'source' ? 'out' : 'in'),
-    handleType,
-  };
 }
 
 function WorkflowEditorWithBlocks({

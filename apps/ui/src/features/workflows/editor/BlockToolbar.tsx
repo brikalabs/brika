@@ -29,10 +29,12 @@ import {
   Search,
   X,
 } from 'lucide-react';
-import { DynamicIcon, type IconName } from 'lucide-react/dynamic';
+import { DynamicIcon } from 'lucide-react/dynamic';
 import { type DragEvent, useMemo, useState } from 'react';
 import { useCapture } from '@/features/analytics/hooks';
 import { useLocale } from '@/lib/use-locale';
+import { blockDisplayName } from './block-display';
+import { toIconName } from './icon-name';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -94,11 +96,10 @@ interface DraggableBlockProps {
 
 function DraggableBlock({ block, onDragStart }: Readonly<DraggableBlockProps>) {
   const { tp } = useLocale();
-  const iconName = (block.icon || 'box') as IconName;
+  const iconName = toIconName(block.icon);
 
-  // Translate block name and description
   const blockKey = block.id.split(':').pop() || block.id;
-  const blockName = tp(block.pluginId, `blocks.${blockKey}.name`, block.name || blockKey);
+  const blockName = blockDisplayName(tp, block);
   const blockDesc = tp(block.pluginId, `blocks.${blockKey}.description`, block.description);
 
   const hasInputs = block.inputs && block.inputs.length > 0;

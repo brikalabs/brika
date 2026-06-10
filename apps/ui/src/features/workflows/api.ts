@@ -240,23 +240,6 @@ export async function fetchBlockInputHistory(
   return res.json();
 }
 
-// Create test workflow event source
-export function createTestEventSource(
-  workflowId: string,
-  payload: Record<string, unknown>
-): EventSource {
-  const params = new URLSearchParams({
-    id: workflowId,
-    payload: JSON.stringify(payload),
-  });
-  return new EventSource(`${API_BASE}/workflows/test?${params}`);
-}
-
-// Create live workflow events SSE connection
-export function createWorkflowEventsSource(workflowId: string): EventSource {
-  return new EventSource(`${API_BASE}/workflows/${workflowId}/events`);
-}
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Tools API
 // ─────────────────────────────────────────────────────────────────────────────
