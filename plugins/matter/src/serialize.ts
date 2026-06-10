@@ -9,6 +9,7 @@ export function serializeDevice(d: MatterDevice) {
     online: d.online,
     commissioned: d.commissioned,
     state: { ...d.state },
+    commands: [...d.commands],
     discriminator: d.discriminator ?? null,
     vendor: d.vendor ?? null,
     product: d.product ?? null,

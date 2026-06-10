@@ -11,10 +11,17 @@
 import { log } from '@brika/sdk/lifecycle';
 import { getDataDir } from '@brika/sdk/storage';
 import { Environment, Filesystem, Seconds, StorageService } from '@matter/main';
+import { BooleanStateClient } from '@matter/main/behaviors/boolean-state';
 import { BridgedDeviceBasicInformationClient } from '@matter/main/behaviors/bridged-device-basic-information';
 import { DoorLockClient } from '@matter/main/behaviors/door-lock';
+import { IlluminanceMeasurementClient } from '@matter/main/behaviors/illuminance-measurement';
 import { LevelControlClient } from '@matter/main/behaviors/level-control';
+import { OccupancySensingClient } from '@matter/main/behaviors/occupancy-sensing';
 import { OnOffClient } from '@matter/main/behaviors/on-off';
+import { PowerSourceClient } from '@matter/main/behaviors/power-source';
+import { RelativeHumidityMeasurementClient } from '@matter/main/behaviors/relative-humidity-measurement';
+import { SwitchClient } from '@matter/main/behaviors/switch';
+import { TemperatureMeasurementClient } from '@matter/main/behaviors/temperature-measurement';
 import { ThermostatClient } from '@matter/main/behaviors/thermostat';
 import { WindowCoveringClient } from '@matter/main/behaviors/window-covering';
 import { DoorLock, GeneralCommissioning, Thermostat } from '@matter/main/clusters';
@@ -42,11 +49,34 @@ export interface MatterDevice {
   online: boolean;
   commissioned: boolean;
   state: Record<string, unknown>;
+  /** Commands this device's clusters actually support (drives UI + AI tools). */
+  commands: MatterCommand[];
+  /** For button endpoints of a composed device: the named parent's device id. */
+  parentId?: string;
+  /** For button endpoints: 1-based button number within the parent device. */
+  button?: number;
   discriminator?: number;
   vendor?: string;
   product?: string;
   serial?: string;
   softwareVersion?: string;
+}
+
+/**
+ * A Matter EVENT (as opposed to an attribute change): button presses on
+ * switches/dimmers (`initialPress`, `shortRelease`, `longPress`,
+ * `multiPressComplete`, ...), lock alarms, and similar one-shot signals.
+ * These never appear in `state`; they are only observable as they happen.
+ */
+export interface MatterDeviceEvent {
+  /** Device id, `nodeId` or `nodeId:endpoint` for bridged children. */
+  nodeId: string;
+  /** Device display name. */
+  name: string;
+  /** Matter event name, e.g. `initialPress`. */
+  event: string;
+  /** Event payload flattened to strings (e.g. `{ "newPosition": "1" }`). */
+  data: Record<string, string>;
 }
 
 export type MatterCommand =
@@ -112,18 +142,25 @@ function classifyDeviceTypes(deviceTypeIds: number[]): DeviceType {
   return 'unknown';
 }
 
+/** An endpoint plus its tree parent (composed devices nest buttons under a named parent). */
+interface EndpointEntry {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ep: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  parent?: any;
+}
+
 /** Recursively collect all device endpoints (bridges expose children under the aggregator) */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function collectAllEndpoints(topEndpoints: any[]): any[] {
+function collectAllEndpoints(topEndpoints: any[]): EndpointEntry[] {
+  const all: EndpointEntry[] = [];
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const all: any[] = [];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const collect = (ep: any) => {
-    all.push(ep);
+  const collect = (ep: any, parent?: any) => {
+    all.push({ ep, parent });
     try {
       const children = ep.getChildEndpoints?.() ?? [];
       for (const child of children) {
-        collect(child);
+        collect(child, ep);
       }
     } catch {
       /* no children */
@@ -168,6 +205,7 @@ const CONTROLLER_STORAGE_ID = 'brika-matter-controller';
 export class MatterController {
   #controller?: CommissioningController;
   readonly #onStateChanged = new Set<DeviceCallback>();
+  readonly #onDeviceEvent = new Set<(event: MatterDeviceEvent) => void>();
   readonly #onDiscovered = new Set<DeviceCallback>();
   readonly #pairedNodes = new Map<string, PairedNode>();
   readonly #deviceCache = new Map<string, MatterDevice>();
@@ -283,6 +321,7 @@ export class MatterController {
           online: true,
           commissioned: false,
           state: {},
+          commands: [],
           discriminator: device.D,
         };
         for (const cb of this.#onDiscovered) {
@@ -301,6 +340,7 @@ export class MatterController {
       online: true,
       commissioned: false,
       state: {},
+      commands: [],
       discriminator: d.D,
     }));
   }
@@ -402,6 +442,18 @@ export class MatterController {
   onDeviceStateChanged(callback: DeviceCallback): () => void {
     this.#onStateChanged.add(callback);
     return () => this.#onStateChanged.delete(callback);
+  }
+
+  /** Subscribe to Matter EVENTS (button presses, alarms); see {@link MatterDeviceEvent}. */
+  onDeviceEvent(callback: (event: MatterDeviceEvent) => void): () => void {
+    this.#onDeviceEvent.add(callback);
+    return () => this.#onDeviceEvent.delete(callback);
+  }
+
+  #dispatchDeviceEvent(event: MatterDeviceEvent): void {
+    for (const cb of this.#onDeviceEvent) {
+      cb(event);
+    }
   }
 
   onDeviceDiscovered(callback: DeviceCallback): () => void {
@@ -579,6 +631,38 @@ export class MatterController {
       this.#notifyNodeDevices(nodeIdStr, Number(path.endpointId));
     });
 
+    // Subscribe to Matter EVENTS (button presses on switches/dimmers, lock
+    // alarms, ...). Unlike attributes these are one-shot signals: a Hue dimmer
+    // press surfaces ONLY here (its state carries no press information).
+    node.events.eventTriggered.on((report) => {
+      const endpointId = Number(report.path.endpointId);
+      const scoped = `${nodeIdStr}:${endpointId}`;
+      const deviceId = this.#deviceCache.has(scoped) ? scoped : nodeIdStr;
+      const device = this.#deviceCache.get(deviceId);
+      log.info(`Event on ${deviceId}: ${report.path.eventName}`);
+      for (const entry of report.events) {
+        const data = flattenEventData(entry.data);
+        this.#dispatchDeviceEvent({
+          nodeId: deviceId,
+          name: device?.name ?? deviceId,
+          event: report.path.eventName,
+          data,
+        });
+        // A button endpoint belongs to a composed device (Hue dimmer/wall
+        // module); re-emit on the named parent with the button number so
+        // users can watch the device they recognize, not "button 3".
+        if (device?.parentId !== undefined) {
+          const parent = this.#deviceCache.get(device.parentId);
+          this.#dispatchDeviceEvent({
+            nodeId: device.parentId,
+            name: parent?.name ?? device.parentId,
+            event: report.path.eventName,
+            data: device.button === undefined ? data : { ...data, button: String(device.button) },
+          });
+        }
+      }
+    });
+
     // Subscribe to endpoint structure changes (bridges add children after init)
     node.events.structureChanged.on(() => {
       const endpoints = node.getDevices();
@@ -649,12 +733,13 @@ export class MatterController {
         online: node.isConnected,
         commissioned: true,
         state: {},
+        commands: [],
       });
       return;
     }
 
     // Classify all endpoints to detect bridges vs actual devices
-    const classified = allEndpoints.map((ep) => {
+    const classified = allEndpoints.map(({ ep, parent }) => {
       const deviceTypes = ep.state?.descriptor?.deviceTypeList;
       let deviceType: DeviceType = 'unknown';
       if (deviceTypes?.length) {
@@ -664,13 +749,16 @@ export class MatterController {
         }
         deviceType = classifyDeviceTypes(ids);
       }
-      return { ep, deviceType };
+      return { ep, parent, deviceType };
     });
 
     // Always include all endpoints (bridges + device children)
     const hasMultiple = classified.length > 1;
+    // 1-based button counters per composed-device parent (Hue remotes expose
+    // one nameless generic-switch endpoint per physical button).
+    const buttonCounters = new Map<unknown, number>();
 
-    for (const { ep, deviceType } of classified) {
+    for (const { ep, parent, deviceType } of classified) {
       const epNumber = ep.number;
       // Bridge gets root nodeId so children (nodeId:ep) can be matched by prefix
       const isChild = hasMultiple && deviceType !== 'bridge';
@@ -678,25 +766,16 @@ export class MatterController {
 
       // Read cluster states for this endpoint
       const state = this.#readEndpointState(ep);
+      // Bridges often tag endpoints with only structural device types
+      // (Bridged Node, Power Source); fall back to cluster-based classification.
+      const resolvedType = deviceType === 'unknown' ? classifyFromState(state) : deviceType;
 
       // Endpoint metadata: try bridged device info, fall back to node-level
-      let epName: string | undefined;
-      let vendor: string | undefined;
-      let product: string | undefined;
-      let serial: string | undefined;
-      let softwareVersion: string | undefined;
-      try {
-        const bridgedInfo = ep.maybeStateOf(BridgedDeviceBasicInformationClient);
-        if (bridgedInfo) {
-          epName = bridgedInfo.nodeLabel ?? bridgedInfo.productName;
-          vendor = bridgedInfo.vendorName;
-          product = bridgedInfo.productName;
-          serial = bridgedInfo.serialNumber;
-          softwareVersion = bridgedInfo.softwareVersionString;
-        }
-      } catch {
-        /* not a bridged endpoint */
-      }
+      let { epName, vendor, product, serial, softwareVersion } = readBridgedInfo(ep);
+      const composed = composedButtonIdentity(nodeIdStr, parent, buttonCounters);
+      const parentId = composed?.parentId;
+      const button = composed?.button;
+      epName ??= composed?.name;
       epName ??= hasMultiple ? `${info?.productName ?? 'Device'} #${epNumber}` : undefined;
       epName ??= info?.productName ?? info?.nodeLabel ?? `Device ${nodeIdStr}`;
       vendor ??= info?.vendorName;
@@ -707,15 +786,38 @@ export class MatterController {
       this.#deviceCache.set(deviceId, {
         nodeId: deviceId,
         name: epName,
-        deviceType,
+        deviceType: resolvedType,
         online: node.isConnected,
         commissioned: true,
         state,
+        commands: deriveCommands(state),
+        parentId,
+        button,
         vendor,
         product,
         serial,
         softwareVersion,
       });
+    }
+
+    this.#promoteComposedParents(nodeIdStr);
+  }
+
+  /**
+   * A composed device's named parent endpoint exposes only structural
+   * clusters, so it classifies as 'unknown' even though its button children
+   * are switches. Promote it to 'switch' so the human-named device (the one
+   * users pick) shows up under the right category.
+   */
+  #promoteComposedParents(nodeIdStr: string): void {
+    for (const device of this.#deviceCache.values()) {
+      if (!device.parentId?.startsWith(nodeIdStr)) {
+        continue;
+      }
+      const parent = this.#deviceCache.get(device.parentId);
+      if (parent?.deviceType === 'unknown' && device.deviceType === 'switch') {
+        parent.deviceType = 'switch';
+      }
     }
   }
 
@@ -777,8 +879,225 @@ export class MatterController {
       /* cluster not present */
     }
 
+    readSwitchState(ep, state);
+    readSensorState(ep, state);
+
     return state;
   }
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function readSwitchState(ep: any, state: Record<string, unknown>): void {
+  try {
+    const switchState = ep.maybeStateOf(SwitchClient);
+    if (switchState) {
+      state.buttonPosition = Number(switchState.currentPosition ?? 0);
+      state.buttons = Number(switchState.numberOfPositions ?? 2);
+    }
+  } catch {
+    /* cluster not present */
+  }
+
+  try {
+    const battery = ep.maybeStateOf(PowerSourceClient)?.batPercentRemaining;
+    if (battery !== null && battery !== undefined) {
+      // Matter reports battery in half-percent units.
+      state.battery = Math.round(Number(battery) / 2);
+    }
+  } catch {
+    /* cluster not present */
+  }
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function readSensorState(ep: any, state: Record<string, unknown>): void {
+  try {
+    const temperature = ep.maybeStateOf(TemperatureMeasurementClient)?.measuredValue;
+    if (temperature !== null && temperature !== undefined) {
+      state.temperature = Number(temperature) / 100;
+    }
+  } catch {
+    /* cluster not present */
+  }
+
+  try {
+    const humidity = ep.maybeStateOf(RelativeHumidityMeasurementClient)?.measuredValue;
+    if (humidity !== null && humidity !== undefined) {
+      state.humidity = Number(humidity) / 100;
+    }
+  } catch {
+    /* cluster not present */
+  }
+
+  try {
+    const occupancy = ep.maybeStateOf(OccupancySensingClient);
+    if (occupancy) {
+      state.occupied = Boolean(occupancy.occupancy?.occupied);
+    }
+  } catch {
+    /* cluster not present */
+  }
+
+  try {
+    const illuminance = ep.maybeStateOf(IlluminanceMeasurementClient)?.measuredValue;
+    if (illuminance !== null && illuminance !== undefined) {
+      state.illuminance = Number(illuminance);
+    }
+  } catch {
+    /* cluster not present */
+  }
+
+  try {
+    const boolean = ep.maybeStateOf(BooleanStateClient);
+    if (boolean) {
+      state.contact = Boolean(boolean.stateValue);
+    }
+  } catch {
+    /* cluster not present */
+  }
+}
+
+/**
+ * Identity of a composed-device button endpoint. Composed devices (a Hue
+ * dimmer/wall module) name only the parent endpoint; their button endpoints
+ * carry no label of their own. Naming them after the parent makes a dropdown
+ * read "Hue dimmer switch 1 button 2" instead of "BSB003 #24".
+ */
+function composedButtonIdentity(
+  nodeIdStr: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  parent: any,
+  buttonCounters: Map<unknown, number>
+): { parentId: string; button: number; name: string } | undefined {
+  if (parent === undefined) {
+    return undefined;
+  }
+  const parentName = readBridgedInfo(parent).epName;
+  if (parentName === undefined) {
+    return undefined;
+  }
+  const button = (buttonCounters.get(parent) ?? 0) + 1;
+  buttonCounters.set(parent, button);
+  return {
+    parentId: `${nodeIdStr}:${parent.number}`,
+    button,
+    name: `${parentName} button ${button}`,
+  };
+}
+
+interface BridgedInfo {
+  epName?: string;
+  vendor?: string;
+  product?: string;
+  serial?: string;
+  softwareVersion?: string;
+}
+
+/** Endpoint metadata from the BridgedDeviceBasicInformation cluster, if present. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function readBridgedInfo(ep: any): BridgedInfo {
+  try {
+    const bridgedInfo = ep.maybeStateOf(BridgedDeviceBasicInformationClient);
+    if (bridgedInfo) {
+      return {
+        epName: bridgedInfo.nodeLabel ?? bridgedInfo.productName,
+        vendor: bridgedInfo.vendorName,
+        product: bridgedInfo.productName,
+        serial: bridgedInfo.serialNumber,
+        softwareVersion: bridgedInfo.softwareVersionString,
+      };
+    }
+  } catch {
+    /* not a bridged endpoint */
+  }
+  return {};
+}
+
+/**
+ * Classify an endpoint from the cluster state it exposes, for endpoints whose
+ * deviceTypeList carries only structural types. Hue bridges label e.g. a
+ * dimmer or wall-switch-module endpoint with just `0x0013` (Bridged Node) +
+ * `0x0011` (Power Source), so the id-based map yields 'unknown' even though
+ * the device plainly has a Switch cluster.
+ */
+function classifyFromState(state: Record<string, unknown>): DeviceType {
+  if ('buttonPosition' in state) {
+    return 'switch';
+  }
+  if ('on' in state || 'brightness' in state) {
+    return 'light';
+  }
+  if ('locked' in state) {
+    return 'lock';
+  }
+  if ('coverPosition' in state) {
+    return 'cover';
+  }
+  if ('systemMode' in state) {
+    return 'thermostat';
+  }
+  const sensorKeys = ['temperature', 'humidity', 'occupied', 'contact', 'illuminance'];
+  if (sensorKeys.some((key) => key in state)) {
+    return 'sensor';
+  }
+  return 'unknown';
+}
+
+/**
+ * Derive the commands a device supports from the cluster state it exposes.
+ * Drives the `commands` field on {@link MatterDevice}: the UI and AI tools
+ * only offer (and accept) what the device can actually do.
+ */
+function deriveCommands(state: Record<string, unknown>): MatterCommand[] {
+  const commands: MatterCommand[] = [];
+  if ('on' in state) {
+    commands.push('on', 'off', 'toggle');
+  }
+  if ('brightness' in state) {
+    commands.push('setBrightness');
+  }
+  if ('colorTempMireds' in state) {
+    commands.push('setColorTemp');
+  }
+  if ('hue' in state) {
+    commands.push('setHueSaturation');
+  }
+  if ('locked' in state) {
+    commands.push('lock', 'unlock');
+  }
+  if ('coverPosition' in state) {
+    commands.push('coverOpen', 'coverClose', 'coverStop');
+  }
+  if ('systemMode' in state) {
+    commands.push('setTargetTemp');
+  }
+  return commands;
+}
+
+/** Stringify one event-payload value without `[object Object]` artifacts. */
+function stringifyShallow(value: unknown): string {
+  if (typeof value === 'string') {
+    return value;
+  }
+  if (typeof value === 'object' && value !== null) {
+    return JSON.stringify(value);
+  }
+  return String(value);
+}
+
+/** Flatten a Matter event payload to the string map carried by {@link MatterDeviceEvent}. */
+function flattenEventData(data: unknown): Record<string, string> {
+  if (data === null || data === undefined) {
+    return {};
+  }
+  if (typeof data !== 'object') {
+    return { value: stringifyShallow(data) };
+  }
+  const flat: Record<string, string> = {};
+  for (const [key, value] of Object.entries(data)) {
+    flat[key] = stringifyShallow(value);
+  }
+  return flat;
 }
 
 /** Serialize an error including its full `cause` chain (matter.js hides the

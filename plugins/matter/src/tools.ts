@@ -39,7 +39,10 @@ defineTool(
   {
     id: 'list-devices',
     description:
-      'List the commissioned Matter devices (lights, locks, covers, thermostats, switches, sensors) with their nodeId, name, type, and online state. Call this first to resolve a device name to the nodeId you pass to control-device.',
+      'List the commissioned Matter devices (lights, locks, covers, thermostats, switches, ' +
+      'sensors) with their nodeId, name, type, online flag, current state (on, brightness, ' +
+      'temperature, battery, ...), and the exact commands each device supports. Call this ' +
+      'first: it tells you both WHICH device to target and WHAT it can do.',
     icon: 'radio',
     color: '#7c3aed',
     input: z.object({}),
@@ -52,6 +55,8 @@ defineTool(
         name: device.name,
         type: device.deviceType,
         online: device.online,
+        state: device.state,
+        commands: device.commands,
       })),
     };
   }
@@ -59,12 +64,82 @@ defineTool(
 
 defineTool(
   {
+    id: 'get-device-state',
+    description:
+      'Read one Matter device by nodeId: full current state (on, brightness, hue, saturation, ' +
+      'colorTempMireds, locked, coverPosition, temperature, humidity, occupied, contact, ' +
+      'illuminance, battery, ...), supported commands, and metadata. Use after control-device ' +
+      'to confirm an action took effect.',
+    icon: 'eye',
+    color: '#7c3aed',
+    input: z.object({
+      nodeId: z.string().min(1).describe('Device nodeId (from list-devices)'),
+    }),
+  },
+  ({ nodeId }) => {
+    const controller = getMatterController();
+    const device = controller.getCommissionedDevices().find((d) => d.nodeId === nodeId);
+    if (!device) {
+      const ids = controller
+        .getCommissionedDevices()
+        .map((d) => `${d.nodeId} (${d.name})`)
+        .join(', ');
+      return `Error: unknown nodeId "${nodeId}". Known devices: ${ids || 'none'}.`;
+    }
+    return {
+      nodeId: device.nodeId,
+      name: device.name,
+      type: device.deviceType,
+      online: device.online,
+      state: device.state,
+      commands: device.commands,
+      vendor: device.vendor,
+      product: device.product,
+    };
+  }
+);
+
+/**
+ * Translate human-friendly tool args into the raw units `sendCommand` expects.
+ * The tool surface speaks percent/degrees/kelvin (what models and people use);
+ * the controller speaks Matter raw units (level 0-254, hue 0-254, mireds).
+ */
+function toRawArgs(
+  command: string,
+  args: Record<string, string> | undefined
+): Record<string, string> | undefined {
+  if (command === 'setBrightness') {
+    const pct = Number(args?.brightness ?? args?.level ?? 100);
+    const clamped = Math.max(0, Math.min(100, pct));
+    return { level: String(Math.round((clamped / 100) * 254)) };
+  }
+  if (command === 'setColorTemp') {
+    const kelvin = args?.kelvin === undefined ? undefined : Number(args.kelvin);
+    const mireds = kelvin ? Math.round(1_000_000 / kelvin) : Number(args?.mireds ?? 370);
+    return { mireds: String(mireds) };
+  }
+  if (command === 'setHueSaturation') {
+    const hueDeg = Math.max(0, Math.min(360, Number(args?.hue ?? 0)));
+    const satPct = Math.max(0, Math.min(100, Number(args?.saturation ?? 100)));
+    return {
+      hue: String(Math.round((hueDeg / 360) * 254)),
+      saturation: String(Math.round((satPct / 100) * 254)),
+    };
+  }
+  return args;
+}
+
+defineTool(
+  {
     id: 'control-device',
     description:
       'Control commissioned Matter devices by nodeId: turn a light on/off/toggle, lock/unlock, ' +
       'open/close/stop a cover, or set brightness/color/temperature. Resolve nodeIds with ' +
-      'list-devices first. To send the same command to several devices (e.g. turn off ALL ' +
-      'lights), pass every nodeId in `nodeIds` in ONE call instead of calling once per device.',
+      "list-devices first; it also lists each device's supported commands. To send the same " +
+      'command to several devices (e.g. turn off ALL lights), pass every nodeId in `nodeIds` ' +
+      'in ONE call instead of calling once per device. Args use human units: setBrightness ' +
+      '{ "brightness": "0-100" }, setColorTemp { "kelvin": "2000-6500" }, setHueSaturation ' +
+      '{ "hue": "0-360", "saturation": "0-100" }.',
     icon: 'zap',
     color: '#7c3aed',
     input: z.object({
@@ -80,7 +155,9 @@ defineTool(
       command: commandSchema.describe('The command to send to the device(s)'),
       args: paramsSchema
         .optional()
-        .describe('Optional string parameters, e.g. { "level": "128" } for setBrightness'),
+        .describe(
+          'Command parameters in human units: brightness 0-100, kelvin 2000-6500, hue 0-360, saturation 0-100'
+        ),
     }),
   },
   async ({ nodeId, nodeIds, command, args }) => {
@@ -99,12 +176,29 @@ defineTool(
     const known = controller.getCommissionedDevices();
     const unknown = targets.filter((id) => !known.some((device) => device.nodeId === id));
     if (unknown.length > 0) {
+      const badIds = unknown.map((id) => `"${id}"`).join(', ');
       const ids = known.map((device) => `${device.nodeId} (${device.name})`).join(', ');
-      return `Error: unknown nodeId(s) ${unknown.map((id) => `"${id}"`).join(', ')}. Call list-devices first and use the real nodeId values${ids ? `: ${ids}` : '.'}`;
+      const hint = ids ? `: ${ids}` : '.';
+      return `Error: unknown nodeId(s) ${badIds}. Call list-devices first and use the real nodeId values${hint}`;
     }
+    // Refuse commands a device's clusters don't implement, with the supported
+    // set in the error so the model can self-correct instead of retrying.
+    const unsupported = targets
+      .map((id) => known.find((device) => device.nodeId === id))
+      .filter((device) => device !== undefined)
+      .filter((device) => device.commands.length > 0 && !device.commands.includes(command));
+    if (unsupported.length > 0) {
+      const detail = unsupported
+        .map(
+          (device) => `${device.nodeId} (${device.name}) supports: ${device.commands.join(', ')}`
+        )
+        .join('; ');
+      return `Error: "${command}" is not supported by ${detail}`;
+    }
+    const rawArgs = toRawArgs(command, args);
     const lines: string[] = [];
     for (const id of targets) {
-      const ok = await controller.sendCommand(id, command, args);
+      const ok = await controller.sendCommand(id, command, rawArgs);
       lines.push(
         ok
           ? `Sent "${command}" to device ${id}.`

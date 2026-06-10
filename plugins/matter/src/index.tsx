@@ -56,6 +56,18 @@ definePreferenceOptions('deviceId', () => {
   return devices.map((d) => ({ value: d.nodeId, label: d.name }));
 });
 
+// Device picker for the "When Device Changes" block (config key `nodeId`).
+// Same devices as `deviceId`, with the type and online state surfaced so a
+// user can tell two same-named devices apart without knowing Matter ids.
+definePreferenceOptions('nodeId', () => {
+  const devices = getMatterController().getCommissionedDevices();
+  return devices.map((d) => ({
+    value: d.nodeId,
+    label: `${d.name} (${d.deviceType})`,
+    description: d.online ? `online, ${d.nodeId}` : `offline, ${d.nodeId}`,
+  }));
+});
+
 // ─── Client-side data push ──────────────────────────────────────────────────
 
 /** Push the full device list to the "devices" brick */
