@@ -78,6 +78,14 @@
       "color": "#6366f1",
       "view": true,
       "nodeView": true
+    },
+    {
+      "id": "button-press",
+      "name": "When Button Pressed",
+      "description": "Fires once per button gesture (short, long, double or triple press) on a Matter switch or remote",
+      "category": "trigger",
+      "icon": "mouse-pointer-click",
+      "color": "#6366f1"
     }
   ],
   "pages": [

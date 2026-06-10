@@ -13,24 +13,12 @@
  */
 
 import { defineTool, z } from '@brika/sdk';
-import { getMatterController } from './matter-controller';
+import { getMatterController, MATTER_COMMAND_VALUES } from './matter-controller';
 
-// Source of truth for the commands a tool caller may send. The inferred union
-// matches `MatterCommand`, so `sendCommand` accepts a parsed value without a cast.
-const commandSchema = z.enum([
-  'on',
-  'off',
-  'toggle',
-  'setBrightness',
-  'setColorTemp',
-  'setHueSaturation',
-  'lock',
-  'unlock',
-  'coverOpen',
-  'coverClose',
-  'coverStop',
-  'setTargetTemp',
-]);
+// Source of truth for the commands a tool caller may send. The tuple comes
+// straight from the cluster registry, so the inferred union IS `MatterCommand`
+// and `sendCommand` accepts a parsed value without a cast.
+const commandSchema = z.enum(MATTER_COMMAND_VALUES);
 
 /** Command parameters are stringly-typed (e.g. `{ level: "128" }`). */
 const paramsSchema = z.record(z.string(), z.string());
@@ -126,6 +114,16 @@ function toRawArgs(
       saturation: String(Math.round((satPct / 100) * 254)),
     };
   }
+  if (command === 'setFanSpeed') {
+    // Human percent IS the raw Matter unit (percentSetting); clamp and pass through.
+    const speed = Math.max(0, Math.min(100, Number(args?.speed ?? 0)));
+    return { speed: String(Math.round(speed)) };
+  }
+  if (command === 'setCoverPosition') {
+    // Human percent IS the raw Matter unit (lift percentage); clamp and pass through.
+    const position = Math.max(0, Math.min(100, Number(args?.position ?? 0)));
+    return { position: String(Math.round(position)) };
+  }
   return args;
 }
 
@@ -134,12 +132,13 @@ defineTool(
     id: 'control-device',
     description:
       'Control commissioned Matter devices by nodeId: turn a light on/off/toggle, lock/unlock, ' +
-      'open/close/stop a cover, or set brightness/color/temperature. Resolve nodeIds with ' +
-      "list-devices first; it also lists each device's supported commands. To send the same " +
-      'command to several devices (e.g. turn off ALL lights), pass every nodeId in `nodeIds` ' +
-      'in ONE call instead of calling once per device. Args use human units: setBrightness ' +
-      '{ "brightness": "0-100" }, setColorTemp { "kelvin": "2000-6500" }, setHueSaturation ' +
-      '{ "hue": "0-360", "saturation": "0-100" }.',
+      'open/close/stop a cover, set brightness/color/temperature, drive a fan, or run a robot ' +
+      "vacuum. Resolve nodeIds with list-devices first; it also lists each device's supported " +
+      'commands. To send the same command to several devices (e.g. turn off ALL lights), pass ' +
+      'every nodeId in `nodeIds` in ONE call instead of calling once per device. Args use human ' +
+      'units: setBrightness { "brightness": "0-100" }, setColorTemp { "kelvin": "2000-6500" }, ' +
+      'setHueSaturation { "hue": "0-360", "saturation": "0-100" }, setFanSpeed ' +
+      '{ "speed": "0-100" }, setCoverPosition { "position": "0-100" }.',
     icon: 'zap',
     color: '#7c3aed',
     input: z.object({

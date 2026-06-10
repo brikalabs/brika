@@ -41,6 +41,7 @@ export {
 
 // ─── Blocks ──────────────────────────────────────────────────────────────────
 
+export { buttonPress } from './blocks/button-press';
 export { matterCommand } from './blocks/command';
 export { deviceEvent } from './blocks/device-event';
 

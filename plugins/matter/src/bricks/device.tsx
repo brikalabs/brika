@@ -132,6 +132,24 @@ export default function DeviceBrick() {
   const deviceId =
     typeof config.deviceId === 'string' && config.deviceId ? config.deviceId : undefined;
 
+  const device = deviceId === undefined ? undefined : data?.deviceMap[deviceId];
+
+  // Hooks must run on EVERY render: the early returns below come after all of
+  // them. Declaring this callback past the `!data` guard crashed with React
+  // error #310 (more hooks than the previous render) the moment brick data
+  // arrived after a data-less first mount (fresh add to a board).
+  const handleTap = useCallback(() => {
+    if (!device) {
+      return;
+    }
+    capture('matter.device_brick_tapped', { deviceType: device.deviceType });
+    if (device.deviceType === 'lock') {
+      sendCommand(device.nodeId, device.state.locked ? 'unlock' : 'lock');
+    } else {
+      sendCommand(device.nodeId, 'toggle');
+    }
+  }, [sendCommand, device]);
+
   // ─── Loading ─────────────────────────────────────────────────────────
 
   if (!data) {
@@ -155,8 +173,6 @@ export default function DeviceBrick() {
 
   // ─── Device not found ────────────────────────────────────────────────
 
-  const device = data.deviceMap[deviceId];
-
   if (!device) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-2 p-3">
@@ -169,17 +185,6 @@ export default function DeviceBrick() {
   const theme = getDeviceTheme(device.deviceType);
   const isActive = device.online && Boolean(device.state.on ?? device.state.locked ?? true);
   const typeLabel = t(`device.types.${device.deviceType}`);
-
-  // ─── Tap handler for micro/strip tappable devices ────────────────────
-
-  const handleTap = useCallback(() => {
-    capture('matter.device_brick_tapped', { deviceType: device.deviceType });
-    if (device.deviceType === 'lock') {
-      sendCommand(device.nodeId, device.state.locked ? 'unlock' : 'lock');
-    } else {
-      sendCommand(device.nodeId, 'toggle');
-    }
-  }, [sendCommand, device.nodeId, device.deviceType, device.state.locked]);
 
   // ─── Micro layout (1×1) ──────────────────────────────────────────────
 

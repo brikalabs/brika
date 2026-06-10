@@ -8,6 +8,8 @@
 import {
   Activity,
   Blinds,
+  Bot,
+  Fan,
   Lightbulb,
   Lock,
   LockOpen,
@@ -68,6 +70,20 @@ export const DEVICE_THEMES: Record<DeviceType, DeviceTheme> = {
     gradient: 'linear-gradient(135deg, #0a4a2a 0%, #146838 50%, #1e8848 100%)',
     accentColor: '#4ade80',
     glow: '#4ade80',
+  },
+  fan: {
+    label: 'Fan',
+    icon: Fan,
+    gradient: 'linear-gradient(135deg, #0a4848 0%, #146464 50%, #1e8080 100%)',
+    accentColor: '#2dd4bf',
+    glow: '#2dd4bf',
+  },
+  vacuum: {
+    label: 'Vacuum',
+    icon: Bot,
+    gradient: 'linear-gradient(135deg, #103a52 0%, #1a5270 50%, #246a8e 100%)',
+    accentColor: '#22d3ee',
+    glow: '#22d3ee',
   },
   sensor: {
     label: 'Sensor',

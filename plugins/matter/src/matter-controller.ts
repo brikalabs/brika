@@ -4,6 +4,12 @@
  * Wraps matter.js CommissioningController to discover, commission,
  * and control Matter devices on the local network.
  *
+ * This file owns lifecycle, node connections/subscriptions, and the notify
+ * channels. Cluster specifics live in the registry (`clusters.ts`), the
+ * device cache refresh in `device-model.ts`, and button-press normalization
+ * in `press-tracker.ts`; the types they define are re-exported here so
+ * existing imports keep working.
+ *
  * Storage is handled by matter.js internally via Environment/StorageService,
  * pointed at our plugin's data directory.
  */
@@ -11,188 +17,45 @@
 import { log } from '@brika/sdk/lifecycle';
 import { getDataDir } from '@brika/sdk/storage';
 import { Environment, Filesystem, Seconds, StorageService } from '@matter/main';
-import { BooleanStateClient } from '@matter/main/behaviors/boolean-state';
-import { BridgedDeviceBasicInformationClient } from '@matter/main/behaviors/bridged-device-basic-information';
-import { DoorLockClient } from '@matter/main/behaviors/door-lock';
-import { IlluminanceMeasurementClient } from '@matter/main/behaviors/illuminance-measurement';
-import { LevelControlClient } from '@matter/main/behaviors/level-control';
-import { OccupancySensingClient } from '@matter/main/behaviors/occupancy-sensing';
-import { OnOffClient } from '@matter/main/behaviors/on-off';
-import { PowerSourceClient } from '@matter/main/behaviors/power-source';
-import { RelativeHumidityMeasurementClient } from '@matter/main/behaviors/relative-humidity-measurement';
-import { SwitchClient } from '@matter/main/behaviors/switch';
-import { TemperatureMeasurementClient } from '@matter/main/behaviors/temperature-measurement';
-import { ThermostatClient } from '@matter/main/behaviors/thermostat';
-import { WindowCoveringClient } from '@matter/main/behaviors/window-covering';
-import { DoorLock, GeneralCommissioning, Thermostat } from '@matter/main/clusters';
+import { GeneralCommissioning } from '@matter/main/clusters';
 import { ManualPairingCodeCodec, NodeId, QrPairingCodeCodec, VendorId } from '@matter/main/types';
 import { NodeJsFilesystem } from '@matter/nodejs';
 import { CommissioningController, type NodeCommissioningOptions } from '@project-chip/matter.js';
 import { NodeStates, type PairedNode } from '@project-chip/matter.js/device';
+import { getClusterCommand, type MatterCommand } from './clusters';
+import {
+  type MatterDevice,
+  type MatterDeviceEvent,
+  refreshNodeDevices,
+  removeNodeEntries,
+} from './device-model';
+import {
+  createPressTracker,
+  type NormalizedPress,
+  type PressType,
+  SWITCH_PRESS_EVENTS,
+} from './press-tracker';
 
-// ─── Types ───────────────────────────────────────────────────────────────────
+export type { DeviceType, MatterCommand, MatterEndpoint } from './clusters';
+export { MATTER_COMMAND_VALUES } from './clusters';
+export type { MatterDevice, MatterDeviceEvent } from './device-model';
+export type { PressType } from './press-tracker';
 
-export type DeviceType =
-  | 'light'
-  | 'lock'
-  | 'cover'
-  | 'thermostat'
-  | 'switch'
-  | 'sensor'
-  | 'bridge'
-  | 'unknown';
-
-export interface MatterDevice {
-  nodeId: string;
-  name: string;
-  deviceType: DeviceType;
-  online: boolean;
-  commissioned: boolean;
-  state: Record<string, unknown>;
-  /** Commands this device's clusters actually support (drives UI + AI tools). */
-  commands: MatterCommand[];
-  /** For button endpoints of a composed device: the named parent's device id. */
-  parentId?: string;
-  /** For button endpoints: 1-based button number within the parent device. */
-  button?: number;
-  discriminator?: number;
-  vendor?: string;
-  product?: string;
-  serial?: string;
-  softwareVersion?: string;
-}
-
-/**
- * A Matter EVENT (as opposed to an attribute change): button presses on
- * switches/dimmers (`initialPress`, `shortRelease`, `longPress`,
- * `multiPressComplete`, ...), lock alarms, and similar one-shot signals.
- * These never appear in `state`; they are only observable as they happen.
- */
-export interface MatterDeviceEvent {
-  /** Device id, `nodeId` or `nodeId:endpoint` for bridged children. */
+/** A normalized, user-level button press; see {@link press-tracker}. */
+export interface MatterButtonPress {
+  /** Device id of the button device (or its named parent on the re-emission). */
   nodeId: string;
   /** Device display name. */
   name: string;
-  /** Matter event name, e.g. `initialPress`. */
-  event: string;
-  /** Event payload flattened to strings (e.g. `{ "newPosition": "1" }`). */
-  data: Record<string, string>;
+  /** 1-based button number within the device. */
+  button: number;
+  /** Normalized gesture. */
+  press: PressType;
+  /** Number of presses in the gesture (2 for double, 3 for triple, ...). */
+  count: number;
 }
-
-export type MatterCommand =
-  | 'on'
-  | 'off'
-  | 'toggle'
-  | 'setBrightness'
-  | 'setColorTemp'
-  | 'setHueSaturation'
-  | 'lock'
-  | 'unlock'
-  | 'coverOpen'
-  | 'coverClose'
-  | 'coverStop'
-  | 'setTargetTemp';
 
 type DeviceCallback = (device: MatterDevice) => void;
-
-// ─── Device Type Mapping ─────────────────────────────────────────────────────
-
-/** Known Matter device type IDs → our simplified categories */
-const DEVICE_TYPE_MAP: Record<number, DeviceType> = {
-  // Bridges / Aggregators
-  0x000e: 'bridge', // Aggregator (e.g. Hue Bridge)
-  // Lights
-  0x0100: 'light', // On/Off Light
-  0x0101: 'light', // Dimmable Light
-  0x010c: 'light', // Color Temperature Light
-  0x010d: 'light', // Extended Color Light
-  // Locks
-  0x000a: 'lock', // Door Lock
-  0x000b: 'lock', // Door Lock Controller
-  // Window coverings
-  0x0202: 'cover', // Window Covering
-  // Thermostats
-  0x0301: 'thermostat', // Thermostat
-  // Switches
-  0x0103: 'switch', // On/Off Light Switch
-  0x0104: 'switch', // Dimmer Switch
-  0x0105: 'switch', // Color Dimmer Switch
-  0x000f: 'switch', // Generic Switch
-  // Sensors
-  0x0107: 'sensor', // Occupancy Sensor
-  0x0106: 'sensor', // Light Sensor
-  0x0302: 'sensor', // Temperature Sensor
-  0x0305: 'sensor', // Humidity Sensor
-  0x0850: 'sensor', // Contact Sensor
-};
-
-/** Classify a single device type ID */
-function classifyDeviceType(deviceTypeId: number): DeviceType | undefined {
-  return DEVICE_TYPE_MAP[deviceTypeId];
-}
-
-/** Pick the best matching type from a list of device type IDs */
-function classifyDeviceTypes(deviceTypeIds: number[]): DeviceType {
-  for (const id of deviceTypeIds) {
-    const type = classifyDeviceType(id);
-    if (type) {
-      return type;
-    }
-  }
-  return 'unknown';
-}
-
-/** An endpoint plus its tree parent (composed devices nest buttons under a named parent). */
-interface EndpointEntry {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ep: any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  parent?: any;
-}
-
-/** Recursively collect all device endpoints (bridges expose children under the aggregator) */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function collectAllEndpoints(topEndpoints: any[]): EndpointEntry[] {
-  const all: EndpointEntry[] = [];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const collect = (ep: any, parent?: any) => {
-    all.push({ ep, parent });
-    try {
-      const children = ep.getChildEndpoints?.() ?? [];
-      for (const child of children) {
-        collect(child, ep);
-      }
-    } catch {
-      /* no children */
-    }
-  };
-  for (const ep of topEndpoints) {
-    collect(ep);
-  }
-  return all;
-}
-
-/** Read color control cluster state from an endpoint */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function readColorControlState(ep: any, state: Record<string, unknown>): void {
-  try {
-    const colorState = ep.state?.colorControl;
-    if (colorState) {
-      state.colorMode = colorState.colorMode;
-      if (colorState.currentHue !== null) {
-        state.hue = Math.round((Number(colorState.currentHue) / 254) * 360);
-      }
-      if (colorState.currentSaturation !== null) {
-        state.saturation = Math.round((Number(colorState.currentSaturation) / 254) * 100);
-      }
-      if (colorState.colorTemperatureMireds !== null) {
-        state.colorTempMireds = Number(colorState.colorTemperatureMireds);
-      }
-    }
-  } catch {
-    /* cluster not present */
-  }
-}
 
 const CONTROLLER_VENDOR_NAME = 'Brika';
 const CONTROLLER_NAME = 'Brika Matter';
@@ -206,9 +69,13 @@ export class MatterController {
   #controller?: CommissioningController;
   readonly #onStateChanged = new Set<DeviceCallback>();
   readonly #onDeviceEvent = new Set<(event: MatterDeviceEvent) => void>();
+  readonly #onButtonPress = new Set<(press: MatterButtonPress) => void>();
   readonly #onDiscovered = new Set<DeviceCallback>();
   readonly #pairedNodes = new Map<string, PairedNode>();
   readonly #deviceCache = new Map<string, MatterDevice>();
+  readonly #pressTracker = createPressTracker((deviceId, press) =>
+    this.#dispatchButtonPress(deviceId, press)
+  );
   #started = false;
 
   async start(): Promise<void> {
@@ -238,9 +105,9 @@ export class MatterController {
   async #startInternal(): Promise<void> {
     // Configure environment with our data dir as storage. matter.js 0.17
     // made `StorageService.location` a getter-only property; the previous
-    // direct assignment (`environment.get(StorageService).location = …`)
+    // direct assignment (`environment.get(StorageService).location = ...`)
     // throws `Attempted to assign to readonly property`. Register a
-    // `NodeJsFilesystem` rooted at our data dir instead — `StorageService`
+    // `NodeJsFilesystem` rooted at our data dir instead: `StorageService`
     // reads the path back through `environment.get(Filesystem).path`.
     const dataDir = getDataDir();
     const environment = Environment.default;
@@ -356,33 +223,7 @@ export class MatterController {
     log.info('Commissioning device from pairing code');
 
     try {
-      const commissioning = {
-        regulatoryLocation: GeneralCommissioning.RegulatoryLocationType.IndoorOutdoor,
-        regulatoryCountryCode: 'XX',
-      };
-
-      let options: NodeCommissioningOptions;
-
-      if (pairingCode.startsWith('MT:')) {
-        const [qrData] = QrPairingCodeCodec.decode(pairingCode);
-        // Log only the non-secret discriminator; the passcode is the device PIN.
-        log.info(`Decoded QR code, discriminator: ${qrData.discriminator}`);
-        options = {
-          commissioning,
-          discovery: { identifierData: { longDiscriminator: qrData.discriminator } },
-          passcode: qrData.passcode,
-        };
-      } else {
-        const manualData = ManualPairingCodeCodec.decode(pairingCode);
-        // Log only the non-secret discriminator; the passcode is the device PIN.
-        log.info(`Decoded manual code, discriminator: ${manualData.shortDiscriminator}`);
-        options = {
-          commissioning,
-          discovery: { identifierData: { shortDiscriminator: manualData.shortDiscriminator } },
-          passcode: manualData.passcode,
-        };
-      }
-
+      const options = decodePairingCode(pairingCode);
       const nodeId = await this.#controller.commissionNode(options);
       log.info(`Commissioned node: ${nodeId}`);
 
@@ -428,11 +269,7 @@ export class MatterController {
 
     this.#pairedNodes.delete(nodeId);
     // Remove all cache entries for this node (including bridge children)
-    for (const key of this.#deviceCache.keys()) {
-      if (key === nodeId || key.startsWith(`${nodeId}:`)) {
-        this.#deviceCache.delete(key);
-      }
-    }
+    removeNodeEntries(this.#deviceCache, nodeId);
     log.info(`Removed device: ${nodeId}`);
     return true;
   }
@@ -450,15 +287,54 @@ export class MatterController {
     return () => this.#onDeviceEvent.delete(callback);
   }
 
+  /**
+   * Subscribe to NORMALIZED button presses (one per gesture: short, long,
+   * double, triple, multi). Each press is emitted for the button device AND
+   * for its named composed-device parent, mirroring raw device events.
+   */
+  onButtonPress(callback: (press: MatterButtonPress) => void): () => void {
+    this.#onButtonPress.add(callback);
+    return () => this.#onButtonPress.delete(callback);
+  }
+
+  onDeviceDiscovered(callback: DeviceCallback): () => void {
+    this.#onDiscovered.add(callback);
+    return () => this.#onDiscovered.delete(callback);
+  }
+
   #dispatchDeviceEvent(event: MatterDeviceEvent): void {
     for (const cb of this.#onDeviceEvent) {
       cb(event);
     }
   }
 
-  onDeviceDiscovered(callback: DeviceCallback): () => void {
-    this.#onDiscovered.add(callback);
-    return () => this.#onDiscovered.delete(callback);
+  #emitButtonPress(press: MatterButtonPress): void {
+    for (const cb of this.#onButtonPress) {
+      cb(press);
+    }
+  }
+
+  /** Fan a normalized press out to the button device and its named parent. */
+  #dispatchButtonPress(deviceId: string, press: NormalizedPress): void {
+    const device = this.#deviceCache.get(deviceId);
+    const button = device?.button ?? 1;
+    this.#emitButtonPress({
+      nodeId: deviceId,
+      name: device?.name ?? deviceId,
+      button,
+      press: press.press,
+      count: press.count,
+    });
+    if (device?.parentId !== undefined) {
+      const parent = this.#deviceCache.get(device.parentId);
+      this.#emitButtonPress({
+        nodeId: device.parentId,
+        name: parent?.name ?? device.parentId,
+        button,
+        press: press.press,
+        count: press.count,
+      });
+    }
   }
 
   // ─── Queries ───────────────────────────────────────────────────────────────
@@ -507,80 +383,15 @@ export class MatterController {
         return false;
       }
 
-      switch (command) {
-        case 'on':
-          await endpoint.commandsOf(OnOffClient).on();
-          break;
-        case 'off':
-          await endpoint.commandsOf(OnOffClient).off();
-          break;
-        case 'toggle':
-          await endpoint.commandsOf(OnOffClient).toggle();
-          break;
-        case 'setBrightness': {
-          const level = Number(params?.level ?? 254);
-          await endpoint.commandsOf(LevelControlClient).moveToLevel({
-            level,
-            transitionTime: 10, // 1 second
-            optionsMask: { coupleColorTempToLevel: false, executeIfOff: true },
-            optionsOverride: { coupleColorTempToLevel: false, executeIfOff: true },
-          });
-          break;
-        }
-        case 'setColorTemp': {
-          const mireds = Number(params?.mireds ?? 370);
-          // Access commands via generic endpoint.commands (ColorControlClient isn't barrel-exported)
-          const colorCmds = (
-            endpoint.commands as Record<string, Record<string, (args: unknown) => Promise<void>>>
-          ).colorControl;
-          await colorCmds.moveToColorTemperature({
-            colorTemperatureMireds: mireds,
-            transitionTime: 5,
-            optionsMask: { executeIfOff: true },
-            optionsOverride: { executeIfOff: true },
-          });
-          break;
-        }
-        case 'setHueSaturation': {
-          const hue = Number(params?.hue ?? 0);
-          const saturation = Number(params?.saturation ?? 254);
-          const hsCmds = (
-            endpoint.commands as Record<string, Record<string, (args: unknown) => Promise<void>>>
-          ).colorControl;
-          await hsCmds.moveToHueAndSaturation({
-            hue,
-            saturation,
-            transitionTime: 5,
-            optionsMask: { executeIfOff: true },
-            optionsOverride: { executeIfOff: true },
-          });
-          break;
-        }
-        case 'lock':
-          await endpoint.commandsOf(DoorLockClient).lockDoor({});
-          break;
-        case 'unlock':
-          await endpoint.commandsOf(DoorLockClient).unlockDoor({});
-          break;
-        case 'coverOpen':
-          await endpoint.commandsOf(WindowCoveringClient).upOrOpen();
-          break;
-        case 'coverClose':
-          await endpoint.commandsOf(WindowCoveringClient).downOrClose();
-          break;
-        case 'coverStop':
-          await endpoint.commandsOf(WindowCoveringClient).stopMotion();
-          break;
-        case 'setTargetTemp': {
-          const amount = Number(params?.amount ?? 0);
-          const mode = Number(params?.mode ?? 0); // 0 = heat, 1 = cool, 2 = both
-          await endpoint.commandsOf(ThermostatClient).setpointRaiseLower({ amount, mode });
-          break;
-        }
+      const clusterCommand = getClusterCommand(command);
+      if (!clusterCommand) {
+        log.warn(`Command "${command}" has no cluster executor`);
+        return false;
       }
+      await clusterCommand.execute(endpoint, params ?? {});
 
       // Refresh the device cache after command
-      this.#refreshDeviceState(nodeIdPart, pairedNode);
+      refreshNodeDevices(nodeIdPart, pairedNode, this.#deviceCache);
       return true;
     } catch (err) {
       log.warn(`Command "${command}" failed on device ${deviceId}: ${err}`);
@@ -627,7 +438,7 @@ export class MatterController {
       log.info(
         `Attribute changed on ${nodeIdStr}: ${path.endpointId}/${path.clusterId}/${path.attributeName} = ${value}`
       );
-      this.#refreshDeviceState(nodeIdStr, node);
+      refreshNodeDevices(nodeIdStr, node, this.#deviceCache);
       this.#notifyNodeDevices(nodeIdStr, Number(path.endpointId));
     });
 
@@ -638,28 +449,9 @@ export class MatterController {
       const endpointId = Number(report.path.endpointId);
       const scoped = `${nodeIdStr}:${endpointId}`;
       const deviceId = this.#deviceCache.has(scoped) ? scoped : nodeIdStr;
-      const device = this.#deviceCache.get(deviceId);
       log.info(`Event on ${deviceId}: ${report.path.eventName}`);
       for (const entry of report.events) {
-        const data = flattenEventData(entry.data);
-        this.#dispatchDeviceEvent({
-          nodeId: deviceId,
-          name: device?.name ?? deviceId,
-          event: report.path.eventName,
-          data,
-        });
-        // A button endpoint belongs to a composed device (Hue dimmer/wall
-        // module); re-emit on the named parent with the button number so
-        // users can watch the device they recognize, not "button 3".
-        if (device?.parentId !== undefined) {
-          const parent = this.#deviceCache.get(device.parentId);
-          this.#dispatchDeviceEvent({
-            nodeId: device.parentId,
-            name: parent?.name ?? device.parentId,
-            event: report.path.eventName,
-            data: device.button === undefined ? data : { ...data, button: String(device.button) },
-          });
-        }
+        this.#dispatchScopedEvent(deviceId, report.path.eventName, flattenEventData(entry.data));
       }
     });
 
@@ -667,27 +459,13 @@ export class MatterController {
     node.events.structureChanged.on(() => {
       const endpoints = node.getDevices();
       log.info(`Structure changed on ${nodeIdStr}: now ${endpoints.length} endpoint(s)`);
-      this.#refreshDeviceState(nodeIdStr, node);
+      refreshNodeDevices(nodeIdStr, node, this.#deviceCache);
       this.#notifyNodeDevices(nodeIdStr);
     });
 
     // Subscribe to connection state changes
     node.events.stateChanged.on((state) => {
-      const online = state === NodeStates.Connected;
-      for (const device of this.#deviceCache.values()) {
-        if (device.nodeId === nodeIdStr || device.nodeId.startsWith(`${nodeIdStr}:`)) {
-          const wasOnline = device.online;
-          device.online = online;
-          if (wasOnline !== online) {
-            for (const cb of this.#onStateChanged) {
-              cb(device);
-            }
-          }
-        }
-      }
-      if (online !== node.isConnected) {
-        log.info(`Node ${nodeIdStr} ${online ? 'connected' : 'disconnected'}`);
-      }
+      this.#handleConnectionChange(nodeIdStr, node, state);
     });
 
     // Connect and wait for initialization
@@ -704,374 +482,85 @@ export class MatterController {
     }
 
     // Build initial device state
-    this.#refreshDeviceState(nodeIdStr, node);
+    refreshNodeDevices(nodeIdStr, node, this.#deviceCache);
     log.info(`Connected to node ${nodeIdStr} (${node.getDevices().length} endpoint(s))`);
   }
 
-  #refreshDeviceState(nodeIdStr: string, node: PairedNode): void {
-    const info = node.basicInformation;
-    const topEndpoints = node.getDevices();
-    const allEndpoints = collectAllEndpoints(topEndpoints);
-
-    log.info(
-      `Node ${nodeIdStr}: ${topEndpoints.length} top-level, ${allEndpoints.length} total endpoint(s)`
-    );
-
-    // Remove stale entries for this node before rebuilding
-    for (const key of this.#deviceCache.keys()) {
-      if (key === nodeIdStr || key.startsWith(`${nodeIdStr}:`)) {
-        this.#deviceCache.delete(key);
-      }
-    }
-
-    if (allEndpoints.length === 0) {
-      // No endpoints — store a placeholder
-      this.#deviceCache.set(nodeIdStr, {
-        nodeId: nodeIdStr,
-        name: info?.productName ?? info?.nodeLabel ?? `Device ${nodeIdStr}`,
-        deviceType: 'unknown',
-        online: node.isConnected,
-        commissioned: true,
-        state: {},
-        commands: [],
-      });
-      return;
-    }
-
-    // Classify all endpoints to detect bridges vs actual devices
-    const classified = allEndpoints.map(({ ep, parent }) => {
-      const deviceTypes = ep.state?.descriptor?.deviceTypeList;
-      let deviceType: DeviceType = 'unknown';
-      if (deviceTypes?.length) {
-        const ids = deviceTypes.map((dt: { deviceType: unknown }) => Number(dt.deviceType));
-        for (const id of ids) {
-          log.debug(`  ep${ep.number} device type: 0x${id.toString(16).padStart(4, '0')} (${id})`);
-        }
-        deviceType = classifyDeviceTypes(ids);
-      }
-      return { ep, parent, deviceType };
-    });
-
-    // Always include all endpoints (bridges + device children)
-    const hasMultiple = classified.length > 1;
-    // 1-based button counters per composed-device parent (Hue remotes expose
-    // one nameless generic-switch endpoint per physical button).
-    const buttonCounters = new Map<unknown, number>();
-
-    for (const { ep, parent, deviceType } of classified) {
-      const epNumber = ep.number;
-      // Bridge gets root nodeId so children (nodeId:ep) can be matched by prefix
-      const isChild = hasMultiple && deviceType !== 'bridge';
-      const deviceId = isChild ? `${nodeIdStr}:${epNumber}` : nodeIdStr;
-
-      // Read cluster states for this endpoint
-      const state = this.#readEndpointState(ep);
-      // Bridges often tag endpoints with only structural device types
-      // (Bridged Node, Power Source); fall back to cluster-based classification.
-      const resolvedType = deviceType === 'unknown' ? classifyFromState(state) : deviceType;
-
-      // Endpoint metadata: try bridged device info, fall back to node-level
-      let { epName, vendor, product, serial, softwareVersion } = readBridgedInfo(ep);
-      const composed = composedButtonIdentity(nodeIdStr, parent, buttonCounters);
-      const parentId = composed?.parentId;
-      const button = composed?.button;
-      epName ??= composed?.name;
-      epName ??= hasMultiple ? `${info?.productName ?? 'Device'} #${epNumber}` : undefined;
-      epName ??= info?.productName ?? info?.nodeLabel ?? `Device ${nodeIdStr}`;
-      vendor ??= info?.vendorName;
-      product ??= info?.productName;
-      serial ??= info?.serialNumber;
-      softwareVersion ??= info?.softwareVersionString;
-
-      this.#deviceCache.set(deviceId, {
-        nodeId: deviceId,
-        name: epName,
-        deviceType: resolvedType,
-        online: node.isConnected,
-        commissioned: true,
-        state,
-        commands: deriveCommands(state),
-        parentId,
-        button,
-        vendor,
-        product,
-        serial,
-        softwareVersion,
-      });
-    }
-
-    this.#promoteComposedParents(nodeIdStr);
-  }
-
   /**
-   * A composed device's named parent endpoint exposes only structural
-   * clusters, so it classifies as 'unknown' even though its button children
-   * are switches. Promote it to 'switch' so the human-named device (the one
-   * users pick) shows up under the right category.
+   * Dispatch one raw device event: to the device itself, re-emitted on its
+   * named composed-device parent (with the button number so users can watch
+   * the device they recognize, not "button 3"), and into the press tracker
+   * when it is a switch press event.
    */
-  #promoteComposedParents(nodeIdStr: string): void {
-    for (const device of this.#deviceCache.values()) {
-      if (!device.parentId?.startsWith(nodeIdStr)) {
-        continue;
-      }
+  #dispatchScopedEvent(deviceId: string, eventName: string, data: Record<string, string>): void {
+    const device = this.#deviceCache.get(deviceId);
+    this.#dispatchDeviceEvent({
+      nodeId: deviceId,
+      name: device?.name ?? deviceId,
+      event: eventName,
+      data,
+    });
+    if (device?.parentId !== undefined) {
       const parent = this.#deviceCache.get(device.parentId);
-      if (parent?.deviceType === 'unknown' && device.deviceType === 'switch') {
-        parent.deviceType = 'switch';
-      }
+      this.#dispatchDeviceEvent({
+        nodeId: device.parentId,
+        name: parent?.name ?? device.parentId,
+        event: eventName,
+        data: device.button === undefined ? data : { ...data, button: String(device.button) },
+      });
+    }
+    if (SWITCH_PRESS_EVENTS.has(eventName)) {
+      this.#pressTracker.handle(deviceId, eventName, data);
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  #readEndpointState(ep: any): Record<string, unknown> {
-    const state: Record<string, unknown> = {};
-
-    try {
-      const onOffState = ep.maybeStateOf(OnOffClient);
-      if (onOffState) {
-        state.on = onOffState.onOff;
+  #handleConnectionChange(nodeIdStr: string, node: PairedNode, state: NodeStates): void {
+    const online = state === NodeStates.Connected;
+    for (const device of this.#deviceCache.values()) {
+      if (device.nodeId === nodeIdStr || device.nodeId.startsWith(`${nodeIdStr}:`)) {
+        const wasOnline = device.online;
+        device.online = online;
+        if (wasOnline !== online) {
+          for (const cb of this.#onStateChanged) {
+            cb(device);
+          }
+        }
       }
-    } catch {
-      /* cluster not present */
     }
-
-    try {
-      const levelState = ep.maybeStateOf(LevelControlClient);
-      if (levelState) {
-        const level = levelState.currentLevel ?? 0;
-        state.brightness = Math.round((Number(level) / 254) * 100);
-      }
-    } catch {
-      /* cluster not present */
+    if (online !== node.isConnected) {
+      log.info(`Node ${nodeIdStr} ${online ? 'connected' : 'disconnected'}`);
     }
-
-    readColorControlState(ep, state);
-
-    try {
-      const lockState = ep.maybeStateOf(DoorLockClient);
-      if (lockState) {
-        const ls = lockState.lockState;
-        state.locked = ls === DoorLock.LockState.Locked;
-        state.lockState = ls;
-      }
-    } catch {
-      /* cluster not present */
-    }
-
-    try {
-      const coverState = ep.maybeStateOf(WindowCoveringClient);
-      if (coverState) {
-        state.coverPosition = coverState.currentPositionLiftPercentage ?? null;
-        state.coverOperational = coverState.operationalStatus;
-      }
-    } catch {
-      /* cluster not present */
-    }
-
-    try {
-      const thermoState = ep.maybeStateOf(ThermostatClient);
-      if (thermoState) {
-        const local = thermoState.localTemperature;
-        state.temperature = local === null ? null : Number(local) / 100;
-        state.systemMode = thermoState.systemMode;
-        state.systemModeName = Thermostat.SystemMode[thermoState.systemMode] ?? 'unknown';
-      }
-    } catch {
-      /* cluster not present */
-    }
-
-    readSwitchState(ep, state);
-    readSensorState(ep, state);
-
-    return state;
   }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function readSwitchState(ep: any, state: Record<string, unknown>): void {
-  try {
-    const switchState = ep.maybeStateOf(SwitchClient);
-    if (switchState) {
-      state.buttonPosition = Number(switchState.currentPosition ?? 0);
-      state.buttons = Number(switchState.numberOfPositions ?? 2);
-    }
-  } catch {
-    /* cluster not present */
-  }
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
-  try {
-    const battery = ep.maybeStateOf(PowerSourceClient)?.batPercentRemaining;
-    if (battery !== null && battery !== undefined) {
-      // Matter reports battery in half-percent units.
-      state.battery = Math.round(Number(battery) / 2);
-    }
-  } catch {
-    /* cluster not present */
-  }
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function readSensorState(ep: any, state: Record<string, unknown>): void {
-  try {
-    const temperature = ep.maybeStateOf(TemperatureMeasurementClient)?.measuredValue;
-    if (temperature !== null && temperature !== undefined) {
-      state.temperature = Number(temperature) / 100;
-    }
-  } catch {
-    /* cluster not present */
-  }
-
-  try {
-    const humidity = ep.maybeStateOf(RelativeHumidityMeasurementClient)?.measuredValue;
-    if (humidity !== null && humidity !== undefined) {
-      state.humidity = Number(humidity) / 100;
-    }
-  } catch {
-    /* cluster not present */
-  }
-
-  try {
-    const occupancy = ep.maybeStateOf(OccupancySensingClient);
-    if (occupancy) {
-      state.occupied = Boolean(occupancy.occupancy?.occupied);
-    }
-  } catch {
-    /* cluster not present */
-  }
-
-  try {
-    const illuminance = ep.maybeStateOf(IlluminanceMeasurementClient)?.measuredValue;
-    if (illuminance !== null && illuminance !== undefined) {
-      state.illuminance = Number(illuminance);
-    }
-  } catch {
-    /* cluster not present */
-  }
-
-  try {
-    const boolean = ep.maybeStateOf(BooleanStateClient);
-    if (boolean) {
-      state.contact = Boolean(boolean.stateValue);
-    }
-  } catch {
-    /* cluster not present */
-  }
-}
-
-/**
- * Identity of a composed-device button endpoint. Composed devices (a Hue
- * dimmer/wall module) name only the parent endpoint; their button endpoints
- * carry no label of their own. Naming them after the parent makes a dropdown
- * read "Hue dimmer switch 1 button 2" instead of "BSB003 #24".
- */
-function composedButtonIdentity(
-  nodeIdStr: string,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  parent: any,
-  buttonCounters: Map<unknown, number>
-): { parentId: string; button: number; name: string } | undefined {
-  if (parent === undefined) {
-    return undefined;
-  }
-  const parentName = readBridgedInfo(parent).epName;
-  if (parentName === undefined) {
-    return undefined;
-  }
-  const button = (buttonCounters.get(parent) ?? 0) + 1;
-  buttonCounters.set(parent, button);
-  return {
-    parentId: `${nodeIdStr}:${parent.number}`,
-    button,
-    name: `${parentName} button ${button}`,
+/** Decode a QR or manual pairing code into commissioning options. */
+function decodePairingCode(pairingCode: string): NodeCommissioningOptions {
+  const commissioning = {
+    regulatoryLocation: GeneralCommissioning.RegulatoryLocationType.IndoorOutdoor,
+    regulatoryCountryCode: 'XX',
   };
-}
 
-interface BridgedInfo {
-  epName?: string;
-  vendor?: string;
-  product?: string;
-  serial?: string;
-  softwareVersion?: string;
-}
+  if (pairingCode.startsWith('MT:')) {
+    const [qrData] = QrPairingCodeCodec.decode(pairingCode);
+    // Log only the non-secret discriminator; the passcode is the device PIN.
+    log.info(`Decoded QR code, discriminator: ${qrData.discriminator}`);
+    return {
+      commissioning,
+      discovery: { identifierData: { longDiscriminator: qrData.discriminator } },
+      passcode: qrData.passcode,
+    };
+  }
 
-/** Endpoint metadata from the BridgedDeviceBasicInformation cluster, if present. */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function readBridgedInfo(ep: any): BridgedInfo {
-  try {
-    const bridgedInfo = ep.maybeStateOf(BridgedDeviceBasicInformationClient);
-    if (bridgedInfo) {
-      return {
-        epName: bridgedInfo.nodeLabel ?? bridgedInfo.productName,
-        vendor: bridgedInfo.vendorName,
-        product: bridgedInfo.productName,
-        serial: bridgedInfo.serialNumber,
-        softwareVersion: bridgedInfo.softwareVersionString,
-      };
-    }
-  } catch {
-    /* not a bridged endpoint */
-  }
-  return {};
-}
-
-/**
- * Classify an endpoint from the cluster state it exposes, for endpoints whose
- * deviceTypeList carries only structural types. Hue bridges label e.g. a
- * dimmer or wall-switch-module endpoint with just `0x0013` (Bridged Node) +
- * `0x0011` (Power Source), so the id-based map yields 'unknown' even though
- * the device plainly has a Switch cluster.
- */
-function classifyFromState(state: Record<string, unknown>): DeviceType {
-  if ('buttonPosition' in state) {
-    return 'switch';
-  }
-  if ('on' in state || 'brightness' in state) {
-    return 'light';
-  }
-  if ('locked' in state) {
-    return 'lock';
-  }
-  if ('coverPosition' in state) {
-    return 'cover';
-  }
-  if ('systemMode' in state) {
-    return 'thermostat';
-  }
-  const sensorKeys = ['temperature', 'humidity', 'occupied', 'contact', 'illuminance'];
-  if (sensorKeys.some((key) => key in state)) {
-    return 'sensor';
-  }
-  return 'unknown';
-}
-
-/**
- * Derive the commands a device supports from the cluster state it exposes.
- * Drives the `commands` field on {@link MatterDevice}: the UI and AI tools
- * only offer (and accept) what the device can actually do.
- */
-function deriveCommands(state: Record<string, unknown>): MatterCommand[] {
-  const commands: MatterCommand[] = [];
-  if ('on' in state) {
-    commands.push('on', 'off', 'toggle');
-  }
-  if ('brightness' in state) {
-    commands.push('setBrightness');
-  }
-  if ('colorTempMireds' in state) {
-    commands.push('setColorTemp');
-  }
-  if ('hue' in state) {
-    commands.push('setHueSaturation');
-  }
-  if ('locked' in state) {
-    commands.push('lock', 'unlock');
-  }
-  if ('coverPosition' in state) {
-    commands.push('coverOpen', 'coverClose', 'coverStop');
-  }
-  if ('systemMode' in state) {
-    commands.push('setTargetTemp');
-  }
-  return commands;
+  const manualData = ManualPairingCodeCodec.decode(pairingCode);
+  // Log only the non-secret discriminator; the passcode is the device PIN.
+  log.info(`Decoded manual code, discriminator: ${manualData.shortDiscriminator}`);
+  return {
+    commissioning,
+    discovery: { identifierData: { shortDiscriminator: manualData.shortDiscriminator } },
+    passcode: manualData.passcode,
+  };
 }
 
 /** Stringify one event-payload value without `[object Object]` artifacts. */

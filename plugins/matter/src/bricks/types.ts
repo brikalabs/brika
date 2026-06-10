@@ -12,6 +12,8 @@ export type DeviceType =
   | 'thermostat'
   | 'switch'
   | 'sensor'
+  | 'fan'
+  | 'vacuum'
   | 'bridge'
   | 'unknown';
 
