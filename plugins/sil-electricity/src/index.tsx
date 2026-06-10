@@ -1,4 +1,5 @@
 import { getPreferences } from '@brika/sdk';
+import './tools';
 import {
   log,
   onBrickConfigChange,

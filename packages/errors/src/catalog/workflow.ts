@@ -1,6 +1,6 @@
 /**
  * Workflow diagnostic codes — these are NEVER thrown as errors.
- * They flow through validation pipelines (`@brika/workflow`) as
+ * They flow through the hub workflow validation pipelines as
  * structured diagnostics; the catalog provides their severity + i18n
  * key for UI display. Hence no factory entry in `factories.ts`.
  */

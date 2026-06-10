@@ -1,6 +1,12 @@
 {
   "name": "Météo",
   "description": "Affichage météo avec conditions actuelles, prévisions et widget compact",
+  "tools": {
+    "get-weather": {
+      "name": "Obtenir la météo",
+      "description": "Conditions actuelles et prévisions quotidiennes pour une ville"
+    }
+  },
   "preferences": {
     "city": {
       "title": "Ville",

@@ -1,9 +1,10 @@
-import { defineBlock, input, type Json, log, output, z } from '@brika/sdk';
+import { type BlockLogger, defineBlock, input, type Json, output, z } from '@brika/sdk';
+import { addUsage, costForUsage, type TokenUsage } from '../catalog';
 import {
   type ChatMessage,
   type ChatTool,
   getProvider,
-  providerConfig,
+  resolveModel,
   type ToolCall,
   type ToolResult,
 } from '../providers';
@@ -17,6 +18,19 @@ function toToolName(id: string): string {
 function stringInput(data: unknown): string {
   return typeof data === 'string' ? data : '';
 }
+
+/**
+ * Default agent persona when the user sets no system prompt. Spells out the
+ * tool-loop contract explicitly: small local models otherwise tend to imitate
+ * tool-result markup as text or fabricate results instead of issuing the next
+ * call, which ends the loop early.
+ */
+const DEFAULT_SYSTEM_PROMPT = [
+  'You are an automation agent with access to tools.',
+  'To act on the world, CALL a tool. Never write tool-call or tool-result markup as text, and never invent tool results.',
+  'For multi-step tasks, keep calling tools (one or more per turn) until the goal is done.',
+  'When the goal is complete, answer with a short plain-text summary of what you did.',
+].join(' ');
 
 type ToolInfo = { id: string; description?: string; inputSchema?: Json };
 type CallTool = (
@@ -46,29 +60,111 @@ function buildToolSet(
   return { tools, nameToId };
 }
 
-/** Execute each requested tool call via ctx.callTool, returning normalized results. */
-async function runToolCalls(
+/**
+ * Emit one structured trace entry per agent iteration so the reason -> call-tool
+ * -> observe loop reads as a legible timeline in the run trace (each entry
+ * carries its reasoning preview, the tools it called, and the running cost).
+ */
+function logStep(
+  log: BlockLogger,
+  step: number,
+  max: number,
+  model: string,
+  turn: { text: string; toolCalls: ToolCall[]; usage?: TokenUsage },
+  nameToId: Map<string, string>,
+  total: TokenUsage
+): void {
+  const cost = costForUsage(model, total);
+  const meta: Record<string, Json> = {
+    iteration: step,
+    maxIterations: max,
+    model,
+    toolCalls: turn.toolCalls.map((c) => nameToId.get(c.name) ?? c.name),
+    cumulativeTokens: total.inputTokens + total.outputTokens,
+  };
+  if (turn.text) {
+    meta.reasoning = turn.text.slice(0, 280);
+  }
+  if (turn.usage) {
+    meta.stepTokens = turn.usage.inputTokens + turn.usage.outputTokens;
+  }
+  if (cost !== undefined) {
+    meta.cumulativeCostUsd = Number(cost.toFixed(6));
+  }
+  log.info(`Agent step ${step}/${max}`, meta);
+}
+
+/** Log a run's token usage and estimated cost into the run trace. */
+function logUsage(log: BlockLogger, model: string, usage: TokenUsage): void {
+  if (usage.inputTokens === 0 && usage.outputTokens === 0) {
+    return;
+  }
+  const cost = costForUsage(model, usage);
+  const costLabel = cost === undefined ? 'cost unavailable' : `~$${cost.toFixed(4)}`;
+  const meta: Record<string, Json> = {
+    model,
+    inputTokens: usage.inputTokens,
+    outputTokens: usage.outputTokens,
+  };
+  if (cost !== undefined) {
+    meta.costUsd = Number(cost.toFixed(6));
+  }
+  log.info(
+    `Agent run: ${usage.inputTokens} in / ${usage.outputTokens} out tokens (${model}), ${costLabel}`,
+    meta
+  );
+}
+
+/** Stable signature for repeat detection: qualified id + serialized args. */
+function callSignature(qualifiedId: string, args: Record<string, Json>): string {
+  return `${qualifiedId} ${JSON.stringify(args)}`;
+}
+
+/**
+ * Loop-guard nudge. Small local models (live-observed: SmolLM2 burning every
+ * iteration re-calling list-devices) get stuck re-issuing the identical call
+ * instead of using its result; repeating it verbatim would waste the whole
+ * iteration budget, so the repeat is answered with this corrective text
+ * instead of being executed.
+ */
+const REPEAT_NUDGE =
+  'You already called this tool with these exact arguments; its result is above. Do not repeat the call. Use that result to take the next step toward the goal, or give your final answer.';
+
+/**
+ * Execute each requested tool call via ctx.callTool, returning normalized
+ * results. A call that exactly repeats one from the PREVIOUS iteration is not
+ * executed; it gets the corrective nudge as its result.
+ */
+export async function runToolCalls(
   calls: ToolCall[],
   nameToId: Map<string, string>,
   callTool: CallTool,
-  onToolCall: (tool: string, result: string) => void
-): Promise<ToolResult[]> {
+  onToolCall: (tool: string, result: string) => void,
+  prevSignatures: ReadonlySet<string>
+): Promise<{ results: ToolResult[]; signatures: Set<string> }> {
   const results: ToolResult[] = [];
+  const signatures = new Set<string>();
   for (const call of calls) {
     const qualifiedId = nameToId.get(call.name);
     let content: string;
     if (qualifiedId) {
-      const res = await callTool(qualifiedId, call.args);
-      content = res.ok
-        ? (res.content ?? JSON.stringify(res.data ?? null))
-        : (res.content ?? 'Tool call failed');
-      onToolCall(qualifiedId, content);
+      const signature = callSignature(qualifiedId, call.args);
+      signatures.add(signature);
+      if (prevSignatures.has(signature)) {
+        content = REPEAT_NUDGE;
+      } else {
+        const res = await callTool(qualifiedId, call.args);
+        content = res.ok
+          ? (res.content ?? JSON.stringify(res.data ?? null))
+          : (res.content ?? 'Tool call failed');
+        onToolCall(qualifiedId, content);
+      }
     } else {
       content = `Unknown tool: ${call.name}`;
     }
     results.push({ id: call.id, content });
   }
-  return results;
+  return { results, signatures };
 }
 
 /**
@@ -77,8 +173,9 @@ async function runToolCalls(
  * in the reactive stream). It enumerates the hub tool registry via ctx.listTools
  * (scoped by the `tools` allowlist), gives them to the configured provider,
  * executes each requested tool call via ctx.callTool, and loops until the model
- * answers or hits `maxIterations`. Provider-agnostic (Anthropic or any
- * OpenAI-compatible endpoint); keys come from the plugin-global preferences.
+ * answers or hits `maxIterations`. The block carries no provider plumbing:
+ * provider setup (keys, endpoints) lives in the plugin-global preferences, and
+ * the model ref (`provider:model-id`) names where each model comes from.
  */
 export const agentBlock = defineBlock({
   id: 'agent',
@@ -104,21 +201,24 @@ export const agentBlock = defineBlock({
       .describe(
         'Goal sent to the agent. Reference incoming data with {{ inputs.in }} or {{ inputs.in.field }}. Leave empty to use a string piped into the Input.'
       ),
-    ...providerConfig,
     model: z
-      .string()
-      .default('claude-opus-4-8')
-      .describe('Model id (provider-specific, e.g. claude-opus-4-8 or gpt-4o)'),
+      .dynamicDropdown({ label: 'Model' })
+      .default('anthropic:claude-opus-4-8')
+      .describe('Pick a model from your configured providers (set keys in the plugin settings)'),
     systemPrompt: z.string().optional().describe('System prompt defining the agent persona/rules'),
-    effort: z.enum(['low', 'medium', 'high']).default('high'),
+    effort: z
+      .enum(['low', 'medium', 'high'])
+      .default('high')
+      .describe('Reasoning effort and token spend (Claude models)'),
     maxTokens: z.number().int().min(1).max(16000).default(4096),
     maxIterations: z.number().int().min(1).max(20).default(8).describe('Tool-loop iteration cap'),
     tools: z
       .array(z.string())
       .default([])
-      .describe('Qualified tool ids the agent may call (empty = all registered tools)'),
+      .meta({ label: 'Tools', format: 'tool-multiselect' })
+      .describe('Which tools the agent may call (none selected = all registered tools)'),
   }),
-  run: ({ inputs, outputs, config, callTool, listTools }) => {
+  run: ({ inputs, outputs, config, callTool, listTools, log }) => {
     inputs.in.on(async (data) => {
       const templated = config.prompt?.trim();
       const prompt = templated && templated.length > 0 ? templated : stringInput(data);
@@ -130,29 +230,43 @@ export const agentBlock = defineBlock({
       }
 
       try {
-        const provider = getProvider({ provider: config.provider, baseUrl: config.baseUrl });
+        const { provider: providerId, model } = resolveModel(config.model);
+        const provider = getProvider(providerId);
         const { tools, nameToId } = buildToolSet(await listTools(), new Set(config.tools));
         const history: ChatMessage[] = [{ role: 'user', text: prompt }];
+        let total: TokenUsage = { inputTokens: 0, outputTokens: 0 };
+        let prevSignatures: ReadonlySet<string> = new Set<string>();
 
+        const system = config.systemPrompt?.trim() ? config.systemPrompt : DEFAULT_SYSTEM_PROMPT;
         for (let i = 0; i < config.maxIterations; i++) {
           const turn = await provider.chat({
-            system: config.systemPrompt,
+            system,
             messages: history,
             tools,
-            model: config.model,
+            model,
             maxTokens: config.maxTokens,
             effort: config.effort,
           });
+          if (turn.usage) {
+            total = addUsage(total, turn.usage);
+          }
           history.push({ role: 'assistant', text: turn.text, toolCalls: turn.toolCalls });
+          logStep(log, i + 1, config.maxIterations, model, turn, nameToId, total);
 
           if (turn.toolCalls.length === 0) {
             outputs.reply.emit(turn.text);
+            logUsage(log, model, total);
             return;
           }
 
-          const results = await runToolCalls(turn.toolCalls, nameToId, callTool, (tool, result) =>
-            outputs.toolCall.emit({ tool, result })
+          const { results, signatures } = await runToolCalls(
+            turn.toolCalls,
+            nameToId,
+            callTool,
+            (tool, result) => outputs.toolCall.emit({ tool, result }),
+            prevSignatures
           );
+          prevSignatures = signatures;
           history.push({ role: 'tool', results });
         }
 

@@ -37,6 +37,28 @@
     "device-discovered": {
       "name": "Appareil découvert",
       "description": "Émis lorsqu'un nouvel appareil Matter est détecté sur le réseau"
+    },
+    "attribute-changed": {
+      "name": "Attribut modifié",
+      "description": "Émis pour chaque attribut d'appareil qui change"
+    },
+    "device-online": {
+      "name": "Appareil en ligne",
+      "description": "Émis lorsqu'un appareil se connecte"
+    },
+    "device-offline": {
+      "name": "Appareil hors ligne",
+      "description": "Émis lorsqu'un appareil se déconnecte"
+    }
+  },
+  "tools": {
+    "list-devices": {
+      "name": "Lister les appareils",
+      "description": "Lister les appareils Matter connectés avec leur nom, type et état en ligne"
+    },
+    "control-device": {
+      "name": "Contrôler un appareil",
+      "description": "Contrôler un appareil Matter : allumer ou éteindre, verrouiller, déplacer les volets, régler la luminosité ou la température"
     }
   },
   "device": {
@@ -69,7 +91,10 @@
     "noDeviceSelected": "Aucun appareil sélectionné",
     "deviceNotFound": "Appareil introuvable",
     "noDevicesCommissioned": "Aucun appareil connecté",
-    "matterDevices": "Appareils Matter"
+    "matterDevices": "Appareils Matter",
+    "selectDevice": "Sélectionner un appareil...",
+    "selectCommand": "Sélectionner une commande...",
+    "loadingDevices": "Chargement des appareils..."
   },
   "devicesPage": {
     "scanNetwork": "Scanner le réseau",

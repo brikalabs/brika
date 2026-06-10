@@ -5,6 +5,7 @@ import { useLocale } from '@/lib/use-locale';
 import type { RunEvent, WorkflowRun } from '../api';
 import { type DebugEvent, DebugEventEntry } from '../debug';
 import { useWorkflowRun, useWorkflowRuns } from '../hooks';
+import { AgentRunInspector, isAgentRun } from './AgentRunInspector';
 
 function RunStatusIcon({ status }: Readonly<{ status: WorkflowRun['status'] }>) {
   if (status === 'running') {
@@ -60,22 +61,26 @@ export function RunsView({ workflowId }: Readonly<{ workflowId: string | null }>
           {t('common:actions.back')}
         </Button>
         <div className="rounded-lg border bg-muted/50 p-2">
-          <ScrollArea className="h-90">
-            {detail && detail.events.length > 0 ? (
-              <div className="space-y-0">
-                {detail.events.map((event) => (
-                  <DebugEventEntry
-                    key={event.id}
-                    event={runEventToDebug(detail.run.workflowId, event)}
-                  />
-                ))}
-              </div>
-            ) : (
-              <div className="flex h-full items-center justify-center text-muted-foreground text-sm">
-                {t('workflows:runs.empty')}
-              </div>
-            )}
-          </ScrollArea>
+          {detail && isAgentRun(detail.events) ? (
+            <AgentRunInspector run={detail.run} events={detail.events} />
+          ) : (
+            <ScrollArea className="[&_[data-radix-scroll-area-viewport]>div]:block! h-90 [&_[data-radix-scroll-area-viewport]>div]:w-full [&_[data-radix-scroll-area-viewport]>div]:max-w-full">
+              {detail && detail.events.length > 0 ? (
+                <div className="space-y-0">
+                  {detail.events.map((event) => (
+                    <DebugEventEntry
+                      key={event.id}
+                      event={runEventToDebug(detail.run.workflowId, event)}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="flex h-full items-center justify-center text-muted-foreground text-sm">
+                  {t('workflows:runs.empty')}
+                </div>
+              )}
+            </ScrollArea>
+          )}
         </div>
       </div>
     );
@@ -83,7 +88,7 @@ export function RunsView({ workflowId }: Readonly<{ workflowId: string | null }>
 
   return (
     <div className="rounded-lg border bg-muted/50 p-2">
-      <ScrollArea className="h-100">
+      <ScrollArea className="[&_[data-radix-scroll-area-viewport]>div]:block! h-100 [&_[data-radix-scroll-area-viewport]>div]:w-full [&_[data-radix-scroll-area-viewport]>div]:max-w-full">
         {runs.length === 0 ? (
           <div className="flex h-full items-center justify-center text-muted-foreground text-sm">
             {t('workflows:runs.empty')}

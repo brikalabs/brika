@@ -46,6 +46,7 @@ export type { Serializable } from '@brika/serializable';
 export type {
   BlockContext,
   BlockInstance,
+  BlockLogger,
   BlockMeta,
   BlockRuntimeContext,
   BlockSetup,
@@ -94,6 +95,10 @@ export type { BlockDefinition, BlockPort, BlockSchema, PortDirection } from './b
 
 export type { Logger } from './api/logging';
 export { log } from './api/logging';
+export type { RetryOptions } from './api/retry';
+export { retry } from './api/retry';
+export type { NormalizedMedia } from './media';
+export { bytesToDataUrl, dataUrlToBytes, normalizeMedia, sniffMimeType } from './media';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Analytics
@@ -146,8 +151,9 @@ export type {
   ToolDefinition,
   ToolHandler,
   ToolInputSchema,
+  TypedToolDefinition,
 } from './api/tools';
-export { defineTool } from './api/tools';
+export { defineRawTool, defineTool } from './api/tools';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Brick Data (push to client-rendered bricks)
@@ -207,6 +213,7 @@ export * from './types';
 
 export type { DeviceLocation } from './api/location';
 export { getDeviceLocation } from './api/location';
+export { localFetch } from './api/net-local';
 export type { HubLocation as HubLocationData } from './types';
 
 // ─────────────────────────────────────────────────────────────────────────────

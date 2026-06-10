@@ -55,30 +55,39 @@ export function setPreference(key: string, value: unknown): void {
 }
 
 /**
- * Register a dynamic options provider for a preference.
+ * Register a dynamic options provider for a `dynamic-dropdown` field. The hub
+ * calls this when loading the config UI to populate options at runtime, for
+ * plugin preferences, brick config, and workflow block config.
  *
- * Used with `dynamic-dropdown` preferences — the hub calls this
- * when loading the config UI to populate options at runtime.
+ * The provider receives the caller's `params` (when supplied), so options can
+ * depend on sibling field values, e.g. the model list for the chosen provider.
+ * Each option may carry an optional `description` shown as a secondary line.
  *
  * @example
  * ```typescript
+ * // Independent of other fields (devices for a Spotify account):
  * definePreferenceOptions('defaultDevice', async () => {
  *   const devices = await api.getDevices();
- *   return devices.map(d => ({ value: d.name, label: `${d.name} (${d.type})` }));
+ *   return devices.map(d => ({ value: d.id, label: `${d.name} (${d.type})` }));
  * });
+ *
+ * // Scoped by a sibling field (models for the selected provider):
+ * definePreferenceOptions('model', (params) => listModels(params));
  * ```
  */
 export function definePreferenceOptions(
   name: string,
-  provider: () =>
+  provider: (params?: Record<string, unknown>) =>
     | Array<{
         value: string;
         label: string;
+        description?: string;
       }>
     | Promise<
         Array<{
           value: string;
           label: string;
+          description?: string;
         }>
       >
 ): void {

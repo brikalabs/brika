@@ -16,6 +16,7 @@ import { defineGrant } from '@brika/grants';
 import { type FetchArgs, type NetScope, netFetch as spec } from '@brika/sdk/grants';
 import { assertPublicHost, type DnsResolver, defaultDnsResolver } from './dns-guard';
 import { assertHostAllowed } from './host-allow';
+import { buildLocalNetGrant } from './local';
 import { performFetch } from './perform';
 import { ConcurrencyLimiter } from './semaphore';
 import { SingleFlightCache, singleFlightKey } from './single-flight';
@@ -73,6 +74,7 @@ export function buildNetGrants(cb: NetCallbacks, opts?: NetGrantOptions) {
         release();
       }
     }),
+    buildLocalNetGrant(cb, limiter, resolver),
   ];
 }
 

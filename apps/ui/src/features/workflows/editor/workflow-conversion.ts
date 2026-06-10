@@ -23,15 +23,6 @@ import { expandDynamicPorts } from './dynamic-ports';
 
 export type BlockStatus = 'idle' | 'running' | 'completed' | 'error';
 
-export interface ExecutionLog {
-  id: string;
-  timestamp: number;
-  blockId: string;
-  type: 'start' | 'complete' | 'error' | 'log';
-  message: string;
-  data?: unknown;
-}
-
 export interface AvailableVariable {
   name: string;
   source: string;

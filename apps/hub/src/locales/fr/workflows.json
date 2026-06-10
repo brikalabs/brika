@@ -55,16 +55,16 @@
     "clear": "Effacer",
     "all": "Tout",
     "logsOnly": "Logs",
-    "emitsOnly": "Émissions"
+    "emitsOnly": "Émissions",
+    "tabs": {
+      "runs": "Exécutions",
+      "live": "Direct"
+    }
   },
   "editor": {
     "title": "Éditeur de Workflow",
     "blocks": "Blocs",
     "properties": "Propriétés",
-    "save": "Enregistrer le Workflow",
-    "discard": "Annuler les modifications",
-    "unsaved": "Non enregistré",
-    "unsavedChanges": "Modifications non enregistrées",
     "panels": {
       "blocks": "Blocs",
       "blocksDescription": "Glissez pour ajouter des blocs",
@@ -86,6 +86,48 @@
       "availableVariables": "Variables disponibles",
       "clickToCopy": "Cliquez pour copier · Utilisez dans n'importe quel champ"
     },
-    "workflowName": "Nom du workflow"
+    "workflowName": "Nom du workflow",
+    "autosave": {
+      "saving": "Enregistrement...",
+      "saved": "Enregistré",
+      "retry": "Réessayer"
+    },
+    "palette": {
+      "placeholder": "Rechercher des blocs et des actions...",
+      "addBlock": "Ajouter un bloc",
+      "goToBlock": "Aller au bloc",
+      "actions": "Actions",
+      "fitView": "Ajuster la vue",
+      "undo": "Annuler",
+      "redo": "Rétablir",
+      "noResults": "Aucun résultat"
+    },
+    "picker": {
+      "search": "Rechercher un bloc compatible...",
+      "noCompatible": "Aucun bloc compatible"
+    },
+    "connection": {
+      "incompatible": "Types incompatibles : {{output}} ne peut pas alimenter {{input}}",
+      "selfConnection": "Un bloc ne peut pas se connecter à lui-même"
+    },
+    "runBlock": {
+      "label": "Exécuter",
+      "notRunning": "Activez le workflow pour exécuter des blocs",
+      "failed": "Échec de la demande d'exécution",
+      "replay": "Exécuter avec la dernière entrée",
+      "empty": "Exécuter avec un déclencheur vide",
+      "replayHint": "Relance avec la valeur reçue en dernier sur cette entrée",
+      "history": "Entrées précédentes"
+    },
+    "diagnostics": {
+      "errors": "erreurs",
+      "warnings": "avertissements",
+      "messages": {
+        "type-mismatch": "{{source}} ({{sourceType}}) est incompatible avec {{target}} ({{targetType}})",
+        "missing-config": "{{block}} : le champ requis \"{{field}}\" est vide",
+        "unknown-block": "{{block}} : le type de bloc \"{{type}}\" n'est pas installé",
+        "cycle": "Boucle de rétroaction : {{path}}. Elle tournera sans fin si aucun bloc ne l'interrompt."
+      }
+    }
   }
 }

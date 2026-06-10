@@ -336,6 +336,31 @@ describe('defineReactiveBlock', () => {
     expect(block.schema.properties?.enabled).toBeDefined();
   });
 
+  test('preserves format, label, and showWhen meta on config fields', () => {
+    const block = defineReactiveBlock(
+      {
+        id: 'meta-block',
+        inputs: {},
+        outputs: {},
+        config: z.object({
+          model: z.string().meta({ label: 'Model', format: 'dynamic-dropdown' }),
+          baseUrl: z
+            .string()
+            .optional()
+            .meta({ showWhen: { field: 'provider', equals: 'openai' } }),
+        }),
+      },
+      () => undefined
+    );
+
+    expect(block.schema.properties?.model?.format).toBe('dynamic-dropdown');
+    expect(block.schema.properties?.model?.label).toBe('Model');
+    expect(block.schema.properties?.baseUrl?.showWhen).toEqual({
+      field: 'provider',
+      equals: 'openai',
+    });
+  });
+
   test('start() returns block instance with pushInput and stop', () => {
     const block = defineReactiveBlock(
       {
@@ -1232,5 +1257,156 @@ describe('typeDescriptor generation for complex output schemas', () => {
       () => undefined
     );
     expect(block.outputs[0]?.type).toBeDefined();
+  });
+});
+
+describe('block-scoped log and causation', () => {
+  test('ctx.log routes through the runtime log channel with structured data', () => {
+    const logFn = mock();
+
+    const block = defineReactiveBlock(
+      {
+        id: 'log-block',
+        inputs: {},
+        outputs: {},
+        config: z.object({}),
+      },
+      ({ log }) => {
+        log.info('step done', { iteration: 1 });
+      }
+    );
+
+    block.start({
+      blockId: 'block-1',
+      workflowId: 'workflow-1',
+      config: {},
+      emit: mock(),
+      log: logFn,
+    });
+
+    expect(logFn).toHaveBeenCalledWith('info', 'step done', { iteration: 1 });
+  });
+
+  test('input validation drops are reported on the scoped log channel', () => {
+    const logFn = mock();
+
+    const block = defineReactiveBlock(
+      {
+        id: 'strict-block',
+        inputs: {
+          in: input(z.number(), { name: 'Input' }),
+        },
+        outputs: {},
+        config: z.object({}),
+      },
+      () => {}
+    );
+
+    const instance = block.start({
+      blockId: 'block-1',
+      workflowId: 'workflow-1',
+      config: {},
+      emit: mock(),
+      log: logFn,
+    });
+
+    instance.pushInput('in', 'not-a-number');
+
+    expect(logFn).toHaveBeenCalled();
+    const call = logFn.mock.calls[0];
+    expect(call?.[0]).toBe('warn');
+    expect(String(call?.[1])).toContain('Input validation failed');
+  });
+
+  test('emits carry the causation id of the input that triggered them, across await', async () => {
+    const emitFn = mock();
+
+    const block = defineReactiveBlock(
+      {
+        id: 'causal-block',
+        inputs: {
+          in: input(z.number(), { name: 'Input' }),
+        },
+        outputs: {
+          out: output(z.number(), { name: 'Output' }),
+        },
+        config: z.object({}),
+      },
+      ({ inputs, outputs }) => {
+        inputs.in.on(async (value) => {
+          await Promise.resolve();
+          outputs.out.emit(value * 2);
+        });
+      }
+    );
+
+    const instance = block.start({
+      blockId: 'block-1',
+      workflowId: 'workflow-1',
+      config: {},
+      emit: emitFn,
+    });
+
+    instance.pushInput('in', 21, 'run-abc');
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(emitFn).toHaveBeenCalledWith('out', 42, 'run-abc');
+  });
+
+  test('handler crashes land on the scoped log channel as errors', async () => {
+    const logFn = mock();
+
+    const block = defineReactiveBlock(
+      {
+        id: 'crashy-block',
+        inputs: {
+          in: input(z.number(), { name: 'Input' }),
+        },
+        outputs: {},
+        config: z.object({}),
+      },
+      ({ inputs }) => {
+        inputs.in.on(async () => {
+          await Promise.resolve();
+          throw new Error('handler exploded');
+        });
+      }
+    );
+
+    const instance = block.start({
+      blockId: 'block-1',
+      workflowId: 'workflow-1',
+      config: {},
+      emit: mock(),
+      log: logFn,
+    });
+
+    instance.pushInput('in', 1);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const errorCall = logFn.mock.calls.find((c) => c[0] === 'error');
+    expect(errorCall).toBeDefined();
+    expect(String(errorCall?.[1])).toContain('handler exploded');
+  });
+});
+
+describe('config schema required semantics', () => {
+  test('defaulted and optional fields are not listed as required', () => {
+    const block = defineReactiveBlock(
+      {
+        id: 'req-block',
+        inputs: {},
+        outputs: {},
+        config: z.object({
+          prompt: z.string(),
+          maxTokens: z.number().default(4096),
+          tools: z.array(z.string()).default([]),
+          note: z.string().optional(),
+        }),
+      },
+      () => {}
+    );
+
+    expect(block.schema.required).toEqual(['prompt']);
   });
 });

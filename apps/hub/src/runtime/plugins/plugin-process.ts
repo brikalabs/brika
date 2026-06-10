@@ -86,8 +86,14 @@ export interface PluginProcessCallbacks {
   onLog: (level: string, message: string, meta?: Record<string, Json>) => void;
   onCapture: (name: string, props?: Record<string, Json>, distinctId?: string) => void;
   onBlock: (block: BlockRegistration) => void;
-  onBlockEmit: (instanceId: string, port: string, data: Json) => void;
-  onBlockLog: (instanceId: string, workflowId: string, level: string, message: string) => void;
+  onBlockEmit: (instanceId: string, port: string, data: Json, causationId?: string) => void;
+  onBlockLog: (
+    instanceId: string,
+    workflowId: string,
+    level: string,
+    message: string,
+    data?: Json
+  ) => void;
   onSpark: (spark: SparkRegistration) => void;
   onSparkEmit: (sparkId: string, payload: Json) => void;
   onSparkSubscribe: (
@@ -289,7 +295,7 @@ export class PluginProcess {
     }
   }
 
-  pushInput(instanceId: string, port: string, data: Json): void {
+  pushInput(instanceId: string, port: string, data: Json, causationId?: string): void {
     if (this.#stopped) {
       return;
     }
@@ -297,6 +303,7 @@ export class PluginProcess {
       instanceId,
       port,
       data,
+      causationId,
     });
   }
 
@@ -418,10 +425,14 @@ export class PluginProcess {
    * Fetch dynamic options for a preference from the plugin via IPC.
    * Returns empty array if the plugin is stopped or the RPC fails.
    */
-  async fetchPreferenceOptions(name: string): Promise<
+  async fetchPreferenceOptions(
+    name: string,
+    params?: Record<string, unknown>
+  ): Promise<
     Array<{
       value: string;
       label: string;
+      description?: string;
     }>
   > {
     if (this.#stopped) {
@@ -430,6 +441,7 @@ export class PluginProcess {
     try {
       const result = await this.#channel.call(preferenceOptions, {
         name,
+        ...(params !== undefined ? { params } : {}),
       });
       return result.options;
     } catch (e) {
@@ -700,12 +712,12 @@ export class PluginProcess {
       this.callbacks.onSparkUnsubscribe(subscriptionId);
     });
 
-    this.#channel.on(blockEmit, ({ instanceId, port, data }) => {
-      this.callbacks.onBlockEmit(instanceId, port, data);
+    this.#channel.on(blockEmit, ({ instanceId, port, data, causationId }) => {
+      this.callbacks.onBlockEmit(instanceId, port, data, causationId);
     });
 
-    this.#channel.on(blockLog, ({ instanceId, workflowId, level, message }) => {
-      this.callbacks.onBlockLog(instanceId, workflowId, level, message);
+    this.#channel.on(blockLog, ({ instanceId, workflowId, level, message, data }) => {
+      this.callbacks.onBlockLog(instanceId, workflowId, level, message, data);
     });
 
     this.#channel.on(registerBrickType, ({ brickType }) => {

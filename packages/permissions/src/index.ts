@@ -12,6 +12,7 @@ export const { PERMISSIONS, PERMISSION_LIST, isValidPermission, filterValidPermi
     location: { icon: 'map-pin' },
     secrets: { icon: 'key-round' },
     net: { icon: 'globe' },
+    netLocal: { icon: 'server' },
     rawSocket: { icon: 'ethernet-port', requiresRestart: true },
     fs: { icon: 'folder' },
     ws: { icon: 'plug' },

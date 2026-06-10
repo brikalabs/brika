@@ -158,6 +158,38 @@ describe('Bootstrap', () => {
     expect(order).toEqual(['p1-init', 'p2-init', 'p1-load', 'p2-load', 'p1-start', 'p2-start']);
   });
 
+  test('a non-fatal plugin failure is logged and the boot continues', async () => {
+    const b = get(Bootstrap);
+    const after = mock();
+
+    b.use({
+      name: 'boom',
+      onStart: () => {
+        throw new Error('bind failed');
+      },
+    }).use({ name: 'after', onStart: after });
+
+    await b.start();
+
+    expect(after).toHaveBeenCalled();
+  });
+
+  test('a fatal plugin failure aborts the boot', async () => {
+    const b = get(Bootstrap);
+    const after = mock();
+
+    b.use({
+      name: 'api-server',
+      fatal: true,
+      onStart: () => {
+        throw new Error('port 3001 in use');
+      },
+    }).use({ name: 'after', onStart: after });
+
+    await expect(b.start()).rejects.toThrow('port 3001 in use');
+    expect(after).not.toHaveBeenCalled();
+  });
+
   test('start() skips on hot reload', async () => {
     const b = get(Bootstrap);
     const onInit = mock();

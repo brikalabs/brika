@@ -20,14 +20,16 @@
  * the schema and the inline default.
  */
 
-import { dirname, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { createCli, defineCommand } from '@brika/cli';
 import { runTui } from '@brika/cli/tui';
 import pc from 'picocolors';
 import React from 'react';
 import { configExists, loadConfig, type ResolvedConfig, saveDefaultConfig } from './config';
 import { writeDefaultAndAnnounce } from './config/prompts';
+import { SHUTDOWN_GRACE_MS } from './constants';
 import { Supervisor } from './supervisor';
+import { reapStaleRun } from './supervisor/run-state';
 import { App } from './tui/App';
 
 const startCommand = defineCommand({
@@ -84,6 +86,25 @@ async function resolveAndLoad(explicitPath: string | undefined): Promise<Resolve
 }
 
 async function runStack(resolved: ResolvedConfig, { plain }: { plain: boolean }): Promise<void> {
+  // Recover from a previous session that died without running shutdown()
+  // (kill -9, runtime crash, terminal hard-close). Children are spawned
+  // detached, so they survive ANY unclean mortar death; the run-state
+  // file is how the next session finds and reaps them.
+  const previous = await reapStaleRun(resolved.root);
+  if (previous.kind === 'active') {
+    console.error(
+      `${pc.red('✗')} another mortar session (pid ${previous.mortarPid}) is already running this stack`
+    );
+    process.exit(1);
+  }
+  if (previous.kind === 'reaped' && previous.reaped > 0) {
+    process.stdout.write(
+      `${pc.yellow('⚠')} reaped ${previous.reaped} orphaned service(s) from a previous mortar run\n`
+    );
+  }
+
+  spawnSentinel(resolved.root);
+
   const supervisor = new Supervisor(resolved.config.services, { projectRoot: resolved.root });
 
   const shutdown = (): void => {
@@ -91,6 +112,38 @@ async function runStack(resolved: ResolvedConfig, { plain }: { plain: boolean })
   };
   process.once('SIGINT', shutdown);
   process.once('SIGTERM', shutdown);
+  // SIGHUP: terminal/pane closed, ssh session dropped. Without this the
+  // detached children (which do NOT receive the terminal's SIGHUP) all
+  // outlive mortar as orphans.
+  process.once('SIGHUP', shutdown);
+
+  // Children are spawned detached (process-group leaders), so a mortar crash
+  // that skips shutdown() would orphan the WHOLE stack (hub + its plugins).
+  // Tear the tree down before dying, whatever the error was.
+  const crash = (error: unknown): void => {
+    console.error('[mortar] fatal:', error);
+    void supervisor.shutdown().then(() => process.exit(1));
+  };
+  process.once('uncaughtException', crash);
+  process.once('unhandledRejection', crash);
+
+  // Last resort, runs even when an exit path skipped the async
+  // shutdown(): synchronously SIGKILL each child's process group.
+  // (`process.on('exit')` handlers must not await.)
+  process.on('exit', () => {
+    for (const pid of supervisor.livePids()) {
+      try {
+        process.kill(-pid, 'SIGKILL');
+      } catch {
+        /* already dead */
+      }
+      try {
+        process.kill(pid, 'SIGKILL');
+      } catch {
+        /* already dead */
+      }
+    }
+  });
 
   if (plain) {
     await runPlain(supervisor, resolved);
@@ -106,6 +159,45 @@ async function runStack(resolved: ResolvedConfig, { plain }: { plain: boolean })
     }),
     { exitOnCtrlC: false }
   );
+}
+
+/**
+ * Spawn the per-session orphan sentinel: a detached `/bin/sh` loop that
+ * polls `kill -0 <our pid>` once a second and, when mortar disappears,
+ * waits out the shutdown grace period and execs `sentinel.ts` to reap
+ * whatever the run-state file still records.
+ *
+ * This is the only layer that catches an UNCLEAN mortar death (kill -9,
+ * runtime crash, terminal hard-close) within seconds; the signal
+ * handlers above need mortar alive, and the start-time reaper only runs
+ * at the NEXT `mortar start`. A shell loop (not a Bun process) keeps
+ * the resident cost at ~1 MB; positional `$1..$5` args dodge any
+ * quoting of paths. Own process group + ignored stdio so it survives
+ * the terminal and every signal aimed at mortar's group; it self-exits
+ * after one shot. On a clean shutdown the state file is already gone
+ * and the reap is a no-op.
+ */
+function spawnSentinel(root: string): void {
+  if (process.platform === 'win32') {
+    return;
+  }
+  const sentinel = join(import.meta.dir, 'supervisor', 'sentinel.ts');
+  const graceSeconds = Math.ceil(SHUTDOWN_GRACE_MS / 1000) + 2;
+  const proc = Bun.spawn(
+    [
+      '/bin/sh',
+      '-c',
+      'while kill -0 "$1" 2>/dev/null; do sleep 1; done; sleep "$2"; exec "$3" "$4" "$5"',
+      'mortar-sentinel',
+      String(process.pid),
+      String(graceSeconds),
+      process.execPath,
+      sentinel,
+      root,
+    ],
+    { stdin: 'ignore', stdout: 'ignore', stderr: 'ignore', detached: true }
+  );
+  proc.unref();
 }
 
 async function runPlain(supervisor: Supervisor, resolved: ResolvedConfig): Promise<void> {

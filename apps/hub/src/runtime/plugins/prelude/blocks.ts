@@ -13,6 +13,7 @@
 import type { Channel, Json } from '@brika/ipc';
 import {
   blockEmit,
+  blockLog,
   invokeTool,
   type LogLevelType,
   listTools as listToolsRpc,
@@ -30,13 +31,15 @@ interface BlockRuntimeContext {
   blockId: string;
   workflowId: string;
   config: Record<string, unknown>;
-  emit(portId: string, data: unknown): void;
+  emit(portId: string, data: unknown, causationId?: string): void;
   callTool(tool: string, args: Record<string, Json>): Promise<ToolResult>;
   listTools(): Promise<ToolDefinition[]>;
+  /** Block-scoped log: lands in the workflow run trace, with structured data. */
+  log(level: LogLevelType, message: string, data?: Json): void;
 }
 
 interface BlockInstance {
-  pushInput(portId: string, data: unknown): void;
+  pushInput(portId: string, data: unknown, causationId?: string): void;
   stop(): void;
 }
 
@@ -95,11 +98,14 @@ export function setupBlocks(
         blockId: instanceId,
         workflowId,
         config,
-        emit: (port, data) => {
-          channel.send(blockEmit, { instanceId, port, data: data as Json });
+        emit: (port, data, causationId) => {
+          channel.send(blockEmit, { instanceId, port, data: data as Json, causationId });
         },
         callTool: (tool, args) => channel.call(invokeTool, { tool, args }, 0),
         listTools: async () => (await channel.call(listToolsRpc, {}, 0)).tools,
+        log: (level, message, data) => {
+          channel.send(blockLog, { instanceId, workflowId, level, message, data });
+        },
       });
       blockInstances.set(instanceId, instance);
       return { ok: true };
@@ -109,8 +115,8 @@ export function setupBlocks(
   });
 
   // ---- Message: hub pushes data to a block input port ----
-  channel.on(pushInputMsg, ({ instanceId, port, data }) => {
-    blockInstances.get(instanceId)?.pushInput(port, data);
+  channel.on(pushInputMsg, ({ instanceId, port, data, causationId }) => {
+    blockInstances.get(instanceId)?.pushInput(port, data, causationId);
   });
 
   // ---- Message: hub asks plugin to stop a block instance ----

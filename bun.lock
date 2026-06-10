@@ -79,7 +79,6 @@
         "@brika/sdk": "workspace:*",
         "@brika/type-system": "workspace:*",
         "@brika/ui-kit": "workspace:*",
-        "@brika/workflow": "workspace:*",
         "date-fns": "^4.4.0",
         "hono": "^4.12.24",
         "picocolors": "^1.1.1",
@@ -625,20 +624,6 @@
       "name": "@brika/ui-kit",
       "version": "0.4.0",
     },
-    "packages/workflow": {
-      "name": "@brika/workflow",
-      "version": "0.4.0",
-      "dependencies": {
-        "@brika/errors": "workspace:*",
-        "@brika/serializable": "workspace:*",
-        "yaml": "^2.8.2",
-        "zod": "^4.3.4",
-      },
-      "devDependencies": {
-        "@brika/testing": "workspace:*",
-        "@types/bun": "latest",
-      },
-    },
     "packages/workspace-tools": {
       "name": "@brika/workspace-tools",
       "version": "0.4.0",
@@ -862,8 +847,6 @@
     "@brika/ui": ["@brika/ui@workspace:apps/ui"],
 
     "@brika/ui-kit": ["@brika/ui-kit@workspace:packages/ui-kit"],
-
-    "@brika/workflow": ["@brika/workflow@workspace:packages/workflow"],
 
     "@brika/workspace-tools": ["@brika/workspace-tools@workspace:packages/workspace-tools"],
 

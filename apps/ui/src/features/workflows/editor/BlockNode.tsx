@@ -4,12 +4,54 @@
  * Dynamic block node with clear multi-input/multi-output visualization.
  */
 
-import { Badge, cn } from '@brika/clay';
-import { displayType, parsePortType } from '@brika/type-system';
-import { Handle, type NodeProps, Position, useNodeId } from '@xyflow/react';
-import { CheckCircle, Loader2, XCircle } from 'lucide-react';
+import {
+  Badge,
+  Button,
+  ButtonGroup,
+  cn,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+  toast,
+} from '@brika/clay';
+import {
+  displayType,
+  isCompatible,
+  type PortTypeMap,
+  parsePortType,
+  portKey,
+  type TypeDescriptor,
+} from '@brika/type-system';
+import { useQuery } from '@tanstack/react-query';
+import {
+  Handle,
+  type NodeProps,
+  NodeToolbar,
+  Position,
+  useConnection,
+  useNodeId,
+  useUpdateNodeInternals,
+} from '@xyflow/react';
+import {
+  CheckCircle,
+  ChevronDown,
+  Clock,
+  HelpCircle,
+  Loader2,
+  MessageSquare,
+  PencilLine,
+  Play,
+  RotateCcw,
+  Send,
+  Wrench,
+  XCircle,
+  Zap,
+} from 'lucide-react';
 import { DynamicIcon, type IconName } from 'lucide-react/dynamic';
-import React, { memo } from 'react';
+import React, { memo, useContext, useEffect, useState } from 'react';
 import {
   BaseNode,
   BaseNodeContent,
@@ -17,9 +59,11 @@ import {
   BaseNodeHeaderTitle,
 } from '@/components/base-node';
 import { useLocale } from '@/lib/use-locale';
+import { fetchBlockInputHistory, injectBlock } from '../api';
+import { resolveConfigForView, useBlockInputValues, useWorkflowId } from './block-input-values';
 import { ClientBlockView } from './ClientBlockView';
 import type { BlockStatus } from './useWorkflowEditor';
-import { usePortTypeName } from './WorkflowTypeContext';
+import { WorkflowTypeContext } from './WorkflowTypeContext';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -76,13 +120,25 @@ const StatusIndicator = memo(function StatusIndicator({
   }
 
   if (status === 'running') {
-    return <Loader2 className="size-4 animate-spin text-status-running" />;
+    return (
+      <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-status-running/15">
+        <Loader2 className="size-3 animate-spin text-status-running" />
+      </span>
+    );
   }
   if (status === 'completed') {
-    return <CheckCircle className="size-4 text-status-completed" />;
+    return (
+      <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-status-completed/15">
+        <CheckCircle className="size-3 text-status-completed" />
+      </span>
+    );
   }
   if (status === 'error') {
-    return <XCircle className="size-4 text-status-error" />;
+    return (
+      <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-status-error/15">
+        <XCircle className="size-3 text-status-error" />
+      </span>
+    );
   }
   return null;
 });
@@ -119,74 +175,151 @@ function portColor(resolvedType: string | undefined, fallbackTypeDisplay: string
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Output Port Component
+// Port Component (inputs and outputs)
 // ─────────────────────────────────────────────────────────────────────────────
 
-interface OutputPortProps {
-  port: BlockPort;
-  index: number;
-  total: number;
-}
+const ORIGIN_SEPARATOR = '\u0000';
 
-const OutputPort = memo(function OutputPort({ port, index, total }: Readonly<OutputPortProps>) {
-  const nodeId = useNodeId() ?? '';
-  const resolvedType = usePortTypeName(nodeId, port.id);
-  const offset = total > 1 ? ((index + 1) / (total + 1)) * 100 : 50;
-  const portTypeDisplay = displayType(parsePortType(port));
-  const color = portColor(resolvedType, portTypeDisplay);
-  const label = resolvedType ?? portTypeDisplay;
-
-  return (
-    <>
-      <Handle
-        type="source"
-        position={Position.Bottom}
-        id={port.id}
-        className="absolute! -bottom-1! h-3! w-3! rounded-full! border-2! border-background!"
-        style={{ backgroundColor: color, left: `${offset}%`, transform: 'translateX(-50%)' }}
-      />
-      <span
-        className="pointer-events-none absolute max-w-20 truncate text-center font-mono text-[9px] leading-tight"
-        style={{ color, left: `${offset}%`, transform: 'translateX(-50%)', bottom: '-1.1rem' }}
-        title={`${port.name}: ${label}`}
-      >
-        {label}
-      </span>
-    </>
+/**
+ * The in-progress connection origin, encoded as a string so the per-frame
+ * pointer updates of a wire drag never re-render the ports.
+ */
+function useConnectionOrigin(): {
+  inProgress: boolean;
+  fromNodeId: string;
+  fromHandleId: string;
+  fromHandleType: 'source' | 'target';
+} {
+  const encoded = useConnection((c) =>
+    c.inProgress
+      ? [
+          c.fromNode.id,
+          c.fromHandle.id ?? (c.fromHandle.type === 'source' ? 'out' : 'in'),
+          c.fromHandle.type,
+        ].join(ORIGIN_SEPARATOR)
+      : ''
   );
-});
+  if (!encoded) {
+    return { inProgress: false, fromNodeId: '', fromHandleId: '', fromHandleType: 'source' };
+  }
+  const [fromNodeId, fromHandleId, fromHandleType] = encoded.split(ORIGIN_SEPARATOR);
+  return {
+    inProgress: true,
+    fromNodeId,
+    fromHandleId,
+    fromHandleType: fromHandleType === 'target' ? 'target' : 'source',
+  };
+}
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Input Port Component
-// ─────────────────────────────────────────────────────────────────────────────
+type PortRole = 'origin' | 'candidate' | 'blocked' | null;
 
-interface InputPortProps {
+interface PortRoleContext {
+  origin: ReturnType<typeof useConnectionOrigin>;
+  nodeId: string;
+  portId: string;
+  direction: 'input' | 'output';
+  typeMap: PortTypeMap;
+  ownType: TypeDescriptor;
+}
+
+/**
+ * Role of this port while a wire is being dragged: the drag origin itself, a
+ * compatible candidate (glows), a type-incompatible port (dims), or null when
+ * no drag is in progress / the port is on the same side as the origin.
+ */
+function computePortRole({
+  origin,
+  nodeId,
+  portId,
+  direction,
+  typeMap,
+  ownType,
+}: Readonly<PortRoleContext>): PortRole {
+  if (!origin.inProgress) {
+    return null;
+  }
+  if (origin.fromNodeId === nodeId && origin.fromHandleId === portId) {
+    return 'origin';
+  }
+  const isOppositeSide =
+    direction === 'input' ? origin.fromHandleType === 'source' : origin.fromHandleType === 'target';
+  if (!isOppositeSide || origin.fromNodeId === nodeId) {
+    return null;
+  }
+  const originType = typeMap.get(portKey(origin.fromNodeId, origin.fromHandleId));
+  const compatible =
+    !originType ||
+    (direction === 'input' ? isCompatible(originType, ownType) : isCompatible(ownType, originType));
+  return compatible ? 'candidate' : 'blocked';
+}
+
+interface PortProps {
   port: BlockPort;
   index: number;
   total: number;
+  direction: 'input' | 'output';
 }
 
-const InputPort = memo(function InputPort({ port, index, total }: Readonly<InputPortProps>) {
+const Port = memo(function Port({ port, index, total, direction }: Readonly<PortProps>) {
   const nodeId = useNodeId() ?? '';
-  const resolvedType = usePortTypeName(nodeId, port.id);
+  const typeMap = useContext(WorkflowTypeContext);
+  const resolved = typeMap.get(portKey(nodeId, port.id));
+  const declared = parsePortType(port);
+  const typeDisplay = resolved ? displayType(resolved) : displayType(declared);
   const offset = total > 1 ? ((index + 1) / (total + 1)) * 100 : 50;
-  const portTypeDisplay = displayType(parsePortType(port));
-  const color = portColor(resolvedType, portTypeDisplay);
-  const label = resolvedType ?? portTypeDisplay;
+  const color = portColor(resolved ? typeDisplay : undefined, typeDisplay);
+
+  // Live feedback while a wire is being dragged: candidate ports glow,
+  // type-incompatible ports dim, everything else stays untouched.
+  const origin = useConnectionOrigin();
+  const role = computePortRole({
+    origin,
+    nodeId,
+    portId: port.id,
+    direction,
+    typeMap,
+    ownType: resolved ?? declared,
+  });
+
+  const showTypeLabel = origin.inProgress && role !== null;
+  const label = showTypeLabel ? typeDisplay : port.name;
+
+  const handleStyle: React.CSSProperties = {
+    backgroundColor: color,
+    left: `${offset}%`,
+    transform: role === 'candidate' ? 'translateX(-50%) scale(1.5)' : 'translateX(-50%)',
+    boxShadow: role === 'candidate' ? `0 0 0 4px ${color}40` : undefined,
+    opacity: role === 'blocked' ? 0.25 : undefined,
+    transition: 'transform 120ms ease, box-shadow 120ms ease, opacity 120ms ease',
+  };
 
   return (
     <>
       <Handle
-        type="target"
-        position={Position.Top}
+        type={direction === 'input' ? 'target' : 'source'}
+        position={direction === 'input' ? Position.Top : Position.Bottom}
         id={port.id}
-        className="absolute! -top-1! h-3! w-3! rounded-full! border-2! border-background!"
-        style={{ backgroundColor: color, left: `${offset}%`, transform: 'translateX(-50%)' }}
+        className={cn(
+          'absolute! h-3! w-3! rounded-full! border-2! border-background!',
+          direction === 'input' ? '-top-1!' : '-bottom-1!'
+        )}
+        style={handleStyle}
       />
       <span
-        className="pointer-events-none absolute max-w-20 truncate text-center font-mono text-[9px] leading-tight"
-        style={{ color, left: `${offset}%`, transform: 'translateX(-50%)', top: '-1.1rem' }}
-        title={`${port.name}: ${label}`}
+        className={cn(
+          'pointer-events-none absolute max-w-24 truncate text-center font-mono text-[9px] leading-tight',
+          'opacity-0 transition-opacity duration-150 group-hover:opacity-100',
+          String.raw`[.react-flow\_\_node.selected_&]:opacity-100`,
+          showTypeLabel && 'opacity-100',
+          role === 'blocked' && 'opacity-40!'
+        )}
+        style={{
+          color,
+          left: `${offset}%`,
+          transform: 'translateX(-50%)',
+          ...(direction === 'input' ? { top: '-1.1rem' } : { bottom: '-1.1rem' }),
+        }}
+        title={`${port.name}: ${typeDisplay}`}
       >
         {label}
       </span>
@@ -206,55 +339,95 @@ function configToString(value: unknown): string {
   return String(value);
 }
 
-/** Render a summary snippet for a block's config */
+/** One config-summary chip: an icon plus a truncated value, color-themed. */
+function ConfigSummaryChip({
+  icon,
+  className,
+  mono = true,
+  children,
+}: Readonly<{
+  icon: React.ReactNode;
+  className: string;
+  mono?: boolean;
+  children: React.ReactNode;
+}>) {
+  return (
+    <div className={`flex items-center gap-1.5 rounded-md px-2 py-1 text-xs ${className}`}>
+      <span className="shrink-0">{icon}</span>
+      <span className={`truncate ${mono ? 'font-mono' : ''}`}>{children}</span>
+    </div>
+  );
+}
+
+/** Render a summary snippet for a block's config (lucide icons, never emoji). */
 function renderConfigSummary(config: Record<string, unknown>): React.ReactNode {
   if (config.tool) {
     return (
-      <code className="block truncate rounded-md bg-muted/50 px-2 py-1 font-mono text-muted-foreground text-xs">
-        ⚡ {configToString(config.tool)}
-      </code>
+      <ConfigSummaryChip
+        icon={<Wrench className="size-3" />}
+        className="bg-muted/50 text-muted-foreground"
+      >
+        {configToString(config.tool)}
+      </ConfigSummaryChip>
     );
   }
   if (config.if) {
     return (
-      <code className="block truncate rounded-md bg-warning/10 px-2 py-1 font-mono text-warning text-xs">
-        ❓ {configToString(config.if).slice(0, 35)}
-      </code>
+      <ConfigSummaryChip
+        icon={<HelpCircle className="size-3" />}
+        className="bg-warning/10 text-warning"
+      >
+        {configToString(config.if).slice(0, 35)}
+      </ConfigSummaryChip>
     );
   }
   if (config.duration) {
     return (
-      <div className="rounded-md bg-muted/50 px-2 py-1 text-muted-foreground text-xs">
-        ⏱️ {configToString(config.duration)}
-      </div>
+      <ConfigSummaryChip
+        icon={<Clock className="size-3" />}
+        className="bg-muted/50 text-muted-foreground"
+        mono={false}
+      >
+        {configToString(config.duration)}
+      </ConfigSummaryChip>
     );
   }
   if (config.event) {
     return (
-      <code className="block truncate rounded-md bg-success/10 px-2 py-1 font-mono text-success text-xs">
-        📤 {configToString(config.event)}
-      </code>
+      <ConfigSummaryChip icon={<Send className="size-3" />} className="bg-success/10 text-success">
+        {configToString(config.event)}
+      </ConfigSummaryChip>
     );
   }
   if (config.message) {
     return (
-      <div className="truncate rounded-md bg-muted/50 px-2 py-1 text-xs">
-        💬 "{configToString(config.message).slice(0, 25)}..."
-      </div>
+      <ConfigSummaryChip
+        icon={<MessageSquare className="size-3" />}
+        className="bg-muted/50"
+        mono={false}
+      >
+        "{configToString(config.message).slice(0, 25)}..."
+      </ConfigSummaryChip>
     );
   }
   if (config.var) {
     return (
-      <code className="block truncate rounded-md bg-data-8/10 px-2 py-1 font-mono text-data-8 text-xs">
-        📝 {configToString(config.var)} = ...
-      </code>
+      <ConfigSummaryChip
+        icon={<PencilLine className="size-3" />}
+        className="bg-data-8/10 text-data-8"
+      >
+        {configToString(config.var)} = ...
+      </ConfigSummaryChip>
     );
   }
   if (config.sparkType) {
     return (
-      <code className="block truncate rounded-md bg-amber-500/10 px-2 py-1 font-mono text-amber-600 text-xs">
-        ⚡ {configToString(config.sparkType)}
-      </code>
+      <ConfigSummaryChip
+        icon={<Zap className="size-3" />}
+        className="bg-amber-500/10 text-amber-600"
+      >
+        {configToString(config.sparkType)}
+      </ConfigSummaryChip>
     );
   }
   return null;
@@ -300,10 +473,104 @@ const ExecutionResult = memo(function ExecutionResult({
 const DEFAULT_INPUTS: BlockPort[] = [{ id: 'in', name: 'Input' }];
 const DEFAULT_OUTPUTS: BlockPort[] = [{ id: 'out', name: 'Output' }];
 
+/**
+ * Run control for a selected block: the primary action re-triggers it with
+ * the LAST value that flowed into its input (replay); the dropdown offers an
+ * empty trigger for blocks that just need a poke.
+ */
+function RunBlockButton({
+  blockId,
+  port,
+}: Readonly<{
+  blockId: string;
+  port: string;
+}>) {
+  const { t } = useLocale();
+  const workflowId = useWorkflowId();
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  // Previous inputs (persisted in the run store), loaded when the menu opens.
+  const { data: history = [] } = useQuery({
+    queryKey: ['workflows', workflowId, 'input-history', blockId, port],
+    queryFn: () => fetchBlockInputHistory(workflowId, blockId, port),
+    enabled: menuOpen && workflowId.length > 0,
+    staleTime: 5000,
+  });
+
+  const run = async (options: { replay?: boolean; data?: unknown }) => {
+    try {
+      const res = await injectBlock(blockId, port, options);
+      if (!res.ok) {
+        toast.error(t('workflows:editor.runBlock.notRunning'));
+      }
+    } catch {
+      toast.error(t('workflows:editor.runBlock.failed'));
+    }
+  };
+
+  const segment =
+    'h-7 border-primary/30 bg-background/95 font-medium text-primary text-xs shadow-lg backdrop-blur hover:bg-primary/10 hover:text-primary';
+
+  return (
+    <ButtonGroup>
+      <Button
+        size="sm"
+        variant="outline"
+        className={cn(segment, 'gap-1.5 px-3')}
+        title={t('workflows:editor.runBlock.replayHint')}
+        onClick={() => run({ replay: true })}
+      >
+        <Play className="size-3 fill-current" />
+        {t('workflows:editor.runBlock.label')}
+      </Button>
+      <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
+        <DropdownMenuTrigger asChild>
+          <Button size="sm" variant="outline" className={cn(segment, 'px-1.5')}>
+            <ChevronDown className="size-3" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" sideOffset={6} className="max-w-80">
+          <DropdownMenuItem onClick={() => run({ replay: true })}>
+            <RotateCcw className="size-3.5" />
+            {t('workflows:editor.runBlock.replay')}
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => run({})}>
+            <Play className="size-3.5" />
+            {t('workflows:editor.runBlock.empty')}
+          </DropdownMenuItem>
+          {history.length > 0 && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel className="text-[10px] text-muted-foreground uppercase">
+                {t('workflows:editor.runBlock.history')}
+              </DropdownMenuLabel>
+              {history.map((entry) => (
+                <DropdownMenuItem
+                  key={`${entry.ts}:${JSON.stringify(entry.value)}`}
+                  onClick={() => run({ data: entry.value })}
+                  className="flex items-start gap-2"
+                >
+                  <span className="mt-0.5 shrink-0 font-mono text-[10px] text-muted-foreground">
+                    {new Date(entry.ts).toLocaleTimeString()}
+                  </span>
+                  <span className="min-w-0 truncate font-mono text-xs">
+                    {JSON.stringify(entry.value)}
+                  </span>
+                </DropdownMenuItem>
+              ))}
+            </>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </ButtonGroup>
+  );
+}
+
 export const BlockNode = memo(function BlockNode(props: NodeProps) {
   const { tp } = useLocale();
   const data = props.data as unknown as BlockNodeData;
   const selected = props.selected;
+  const inputValues = useBlockInputValues(typeof data.id === 'string' ? data.id : '');
 
   const iconName = (data.icon || 'box') as IconName;
   const color = data.color || '#6b7280';
@@ -321,24 +588,41 @@ export const BlockNode = memo(function BlockNode(props: NodeProps) {
   const inputs = data.inputs ?? DEFAULT_INPUTS;
   const outputs = data.outputs ?? DEFAULT_OUTPUTS;
 
+  // Dynamic template ports (switch cases, ...) appear and disappear with the
+  // config. React Flow caches handle positions per node, so it must re-measure
+  // whenever the port set changes or edges keep anchoring to stale spots.
+  const updateNodeInternals = useUpdateNodeInternals();
+  const portsSignature = [...inputs, ...outputs].map((p) => p.id).join('|');
+  useEffect(() => {
+    updateNodeInternals(data.id);
+  }, [portsSignature, updateNodeInternals, data.id]);
+
   const statusStyles: Record<string, string> = {
     idle: '',
     running: 'ring-2 ring-status-running ring-offset-2 ring-offset-background animate-pulse',
-    completed: 'ring-2 ring-status-completed ring-offset-1 ring-offset-background',
-    error: 'ring-2 ring-status-error ring-offset-1 ring-offset-background',
+    completed: 'ring-1 ring-status-completed/50',
+    error: 'ring-1 ring-status-error/60',
   };
 
   return (
     <BaseNode
       className={cn(
-        'relative w-64 transition-all duration-200',
+        'group relative w-64 transition-all duration-200',
         statusStyles[status] || '',
         selected && 'ring-2 ring-primary ring-offset-2'
       )}
     >
+      {/* Run-once toolbar (selected nodes with a pokeable input). Sits above
+          the node so it never collides with the inspector panel. */}
+      {inputs.length > 0 && (
+        <NodeToolbar isVisible={selected} position={Position.Top} align="end" offset={10}>
+          <RunBlockButton blockId={data.id} port={inputs[0].id} />
+        </NodeToolbar>
+      )}
+
       {/* Input Handles */}
       {inputs.map((port: BlockPort, i: number) => (
-        <InputPort key={port.id} port={port} index={i} total={inputs.length} />
+        <Port key={port.id} port={port} index={i} total={inputs.length} direction="input" />
       ))}
 
       <BaseNodeHeader className="pb-1">
@@ -367,7 +651,7 @@ export const BlockNode = memo(function BlockNode(props: NodeProps) {
             pluginUid={data.pluginUid}
             moduleUrl={data.nodeModuleUrl}
             scopeId={`${data.pluginId}:blocks/${blockKey}.node`}
-            config={config}
+            config={resolveConfigForView(config, inputValues)}
             data={data.output}
             compact
           />
@@ -398,7 +682,7 @@ export const BlockNode = memo(function BlockNode(props: NodeProps) {
 
       {/* Output Handles */}
       {outputs.map((port: BlockPort, i: number) => (
-        <OutputPort key={port.id} port={port} index={i} total={outputs.length} />
+        <Port key={port.id} port={port} index={i} total={outputs.length} direction="output" />
       ))}
     </BaseNode>
   );

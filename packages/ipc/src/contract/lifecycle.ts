@@ -75,12 +75,15 @@ export const preferenceOptions = rpc(
   'preferenceOptions',
   z.object({
     name: z.string(),
+    /** Caller context (e.g. sibling field values) the options may depend on. */
+    params: z.record(z.string(), z.unknown()).optional(),
   }),
   z.object({
     options: z.array(
       z.object({
         value: z.string(),
         label: z.string(),
+        description: z.string().optional(),
       })
     ),
   })

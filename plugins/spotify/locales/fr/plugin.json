@@ -36,7 +36,13 @@
   },
   "player": {
     "title": "Spotify",
-    "login": "Se connecter à Spotify"
+    "login": "Se connecter à Spotify",
+    "nothingPlaying": "Aucune lecture en cours",
+    "searchPlaceholder": "Rechercher des titres, des artistes...",
+    "noResults": "Aucun résultat",
+    "loadingDevices": "Chargement des appareils...",
+    "defaultDevice": "Appareil par défaut du plugin",
+    "noDevices": "Aucun appareil actif trouvé. Ouvrez Spotify sur un appareil, puis actualisez."
   },
   "blocks": {
     "play": {
@@ -48,6 +54,44 @@
     "track-changed": {
       "name": "Piste modifiée",
       "description": "Émis lorsque la piste en cours de lecture change"
+    },
+    "playback-started": {
+      "name": "Lecture démarrée",
+      "description": "Émis lorsque la lecture reprend"
+    },
+    "playback-paused": {
+      "name": "Lecture en pause",
+      "description": "Émis lorsque la lecture est mise en pause ou arrêtée"
+    },
+    "volume-changed": {
+      "name": "Volume modifié",
+      "description": "Émis lorsque le volume de l'appareil actif change"
+    },
+    "device-changed": {
+      "name": "Appareil modifié",
+      "description": "Émis lorsque la lecture passe sur un autre appareil"
+    }
+  },
+  "tools": {
+    "get-now-playing": {
+      "name": "Lecture en cours",
+      "description": "Obtenir la piste en cours de lecture ou la plus récente sur Spotify"
+    },
+    "search-tracks": {
+      "name": "Rechercher des pistes",
+      "description": "Rechercher des pistes dans le catalogue Spotify par titre, artiste ou album"
+    },
+    "play-track": {
+      "name": "Lire une piste",
+      "description": "Démarrer la lecture d'une piste, éventuellement sur un appareil choisi"
+    },
+    "control-playback": {
+      "name": "Contrôler la lecture",
+      "description": "Lire, mettre en pause, changer de piste, avancer ou régler le volume"
+    },
+    "list-devices": {
+      "name": "Lister les appareils",
+      "description": "Lister les appareils Spotify Connect disponibles"
     }
   }
 }

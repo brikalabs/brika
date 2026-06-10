@@ -8,7 +8,7 @@
  * nothing is playing.
  */
 
-import { useAction } from '@brika/sdk/ui-kit/hooks';
+import { useAction, useLocale } from '@brika/sdk/ui-kit/hooks';
 import { Music } from 'lucide-react';
 import { useEffect } from 'react';
 import { getNowPlaying } from '../actions';
@@ -16,6 +16,7 @@ import { getNowPlaying } from '../actions';
 const REFRESH_MS = 4000;
 
 export default function PlayNode() {
+  const { t } = useLocale();
   const { data, loading, refetch } = useAction(getNowPlaying);
 
   // Keep the node in sync with live playback while it is mounted.
@@ -38,7 +39,7 @@ export default function PlayNode() {
     return (
       <div className="flex h-16 flex-col items-center justify-center gap-1 rounded-md border border-dashed text-muted-foreground">
         <Music className="size-5 text-[#1DB954]" />
-        <span className="text-[10px]">Nothing playing</span>
+        <span className="text-[10px]">{t('player.nothingPlaying')}</span>
       </div>
     );
   }

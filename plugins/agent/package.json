@@ -39,6 +39,9 @@
         "api.mistral.ai",
         "*.openai.azure.com"
       ]
+    },
+    "dev.brika.net.local.fetch": {
+      "allowLoopbackPorts": [11434]
     }
   },
   "preferences": [
@@ -46,13 +49,25 @@
       "name": "anthropicApiKey",
       "type": "password",
       "label": "Anthropic API Key",
-      "description": "Your Anthropic API key (sk-ant-...). Used when a block's provider is Anthropic. Stored securely in the OS keychain."
+      "description": "Your Anthropic API key (sk-ant-...). Setting it enables Claude models in every AI block. Stored securely in the OS keychain."
     },
     {
       "name": "openaiApiKey",
       "type": "password",
       "label": "OpenAI API Key",
-      "description": "Your OpenAI (or OpenAI-compatible) API key. Used when a block's provider is OpenAI. Stored securely in the OS keychain."
+      "description": "Your OpenAI (or OpenAI-compatible) API key. Setting it enables those models in every AI block. Stored securely in the OS keychain."
+    },
+    {
+      "name": "openaiBaseUrl",
+      "type": "text",
+      "label": "OpenAI-compatible Base URL",
+      "description": "Optional. Point the OpenAI key at a compatible endpoint (OpenRouter, Groq, Azure...). Defaults to api.openai.com."
+    },
+    {
+      "name": "ollamaBaseUrl",
+      "type": "text",
+      "label": "Ollama Server",
+      "description": "Optional. Your local Ollama server; defaults to http://localhost:11434. Installed models appear automatically when the server is running."
     }
   ],
   "blocks": [

@@ -488,9 +488,14 @@ describe('PluginLifecycle (with mocked spawn)', () => {
       callbacks.onBlockEmit('instance-1', 'output', {
         value: 42,
       });
-      expect(mockEventHandler.onBlockEmit).toHaveBeenCalledWith('instance-1', 'output', {
-        value: 42,
-      });
+      expect(mockEventHandler.onBlockEmit).toHaveBeenCalledWith(
+        'instance-1',
+        'output',
+        {
+          value: 42,
+        },
+        undefined
+      );
     });
 
     test('onBlockLog callback delegates to event handler', async () => {
@@ -500,7 +505,8 @@ describe('PluginLifecycle (with mocked spawn)', () => {
         'instance-1',
         'workflow-1',
         'info',
-        'Block log message'
+        'Block log message',
+        undefined
       );
     });
 

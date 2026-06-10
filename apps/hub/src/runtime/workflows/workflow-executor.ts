@@ -75,9 +75,17 @@ export class WorkflowExecutor {
   readonly #buffers = new Map<string, PortBuffer>(); // "blockId:port" -> last value
   // This executor's own emit/log handlers, kept so stop() removes exactly its
   // own (the plugin event handler now fans out to every running workflow).
-  #blockEmitHandler: ((instanceId: string, port: string, data: Json) => void) | null = null;
+  #blockEmitHandler:
+    | ((instanceId: string, port: string, data: Json, causationId?: string) => void)
+    | null = null;
   #blockLogHandler:
-    | ((instanceId: string, workflowId: string, level: string, message: string) => void)
+    | ((
+        instanceId: string,
+        workflowId: string,
+        level: string,
+        message: string,
+        data?: Json
+      ) => void)
     | null = null;
   readonly #blockDefCache = new Map<
     string,
@@ -118,8 +126,13 @@ export class WorkflowExecutor {
 
     // Register this workflow's own emit/log handlers (kept as refs so stop()
     // removes exactly these, not every workflow's).
-    this.#blockEmitHandler = (instanceId: string, port: string, data: Json) => {
-      this.#onBlockEmit(instanceId, port, data);
+    this.#blockEmitHandler = (
+      instanceId: string,
+      port: string,
+      data: Json,
+      causationId?: string
+    ) => {
+      this.#onBlockEmit(instanceId, port, data, causationId);
     };
     this.#plugins.setBlockEmitHandler(this.#blockEmitHandler);
 
@@ -127,9 +140,10 @@ export class WorkflowExecutor {
       instanceId: string,
       workflowId: string,
       level: string,
-      message: string
+      message: string,
+      data?: Json
     ) => {
-      this.#onBlockLog(instanceId, workflowId, level, message);
+      this.#onBlockLog(instanceId, workflowId, level, message, data);
     };
     this.#plugins.setBlockLogHandler(this.#blockLogHandler);
 
@@ -222,7 +236,7 @@ export class WorkflowExecutor {
    * Inject data into a block's input port.
    * Use this to trigger the workflow from external events.
    */
-  inject(blockId: string, port: string, data: Json): boolean {
+  inject(blockId: string, port: string, data: Json, options?: { replay?: boolean }): boolean {
     const workflow = this.#workflow;
     if (!workflow) {
       return false;
@@ -235,19 +249,53 @@ export class WorkflowExecutor {
       return false;
     }
 
+    // Replay: re-trigger the block with the value that last flowed into this
+    // input (the freshest upstream buffer across fan-in). Falls back to the
+    // provided payload when nothing has flowed yet.
+    const payload = options?.replay ? (this.#lastInputValue(blockId, port) ?? data) : data;
+
     // An external injection is a fresh run root.
     const correlationId = crypto.randomUUID();
     this.#lastCorrelationId.set(blockId, correlationId);
     this.#emit({ type: 'run.opened', workflowId: workflow.id, blockId, correlationId });
     this.#emit({ type: 'block.start', workflowId: workflow.id, blockId, port, correlationId });
 
-    this.#plugins.pushBlockInput(blockId, port, data);
+    this.#plugins.pushBlockInput(blockId, port, payload, correlationId);
     return true;
+  }
+
+  /**
+   * The value that last arrived on a block's input port: the most recent
+   * output buffer among the connections feeding it (fan-in picks the
+   * freshest). Undefined when nothing has flowed yet.
+   */
+  #lastInputValue(blockId: string, port: string): Json | undefined {
+    const connections = this.#workflow?.connections ?? [];
+    let best: PortBuffer | undefined;
+    for (const conn of connections) {
+      if (conn.to !== blockId || (conn.toPort ?? 'in') !== port) {
+        continue;
+      }
+      const buffer = this.#buffers.get(`${conn.from}:${conn.fromPort ?? 'out'}`);
+      if (buffer && (!best || buffer.ts > best.ts)) {
+        best = buffer;
+      }
+    }
+    return best?.value;
   }
 
   /** Whether this executor is running the given block instance. */
   ownsBlock(blockId: string): boolean {
     return this.#instanceIds.has(blockId);
+  }
+
+  /**
+   * Last value seen on each output port since start. Lets the editor restore
+   * node previews and {{ }} resolution after a reload instead of waiting for
+   * the next emission.
+   */
+  portBuffers(): PortBuffer[] {
+    return [...this.#buffers.values()];
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -336,7 +384,7 @@ export class WorkflowExecutor {
   /**
    * Called when a block emits data on an output port.
    */
-  #onBlockEmit(blockId: string, port: string, data: Json): void {
+  #onBlockEmit(blockId: string, port: string, data: Json, causationId?: string): void {
     const workflow = this.#workflow;
     if (!workflow) {
       return;
@@ -348,16 +396,26 @@ export class WorkflowExecutor {
       return;
     }
 
-    // Determine the run this emit belongs to. A source (no inbound connection)
-    // opens a fresh run on every emit; a downstream block inherits the
-    // correlation of its most recent input (lazily opening one if it emitted
-    // without a recorded input, e.g. a timer block).
-    let correlationId = this.#lastCorrelationId.get(blockId);
-    if (!correlationId || this.#sourceInstances.has(blockId)) {
-      correlationId = crypto.randomUUID();
-      this.#lastCorrelationId.set(blockId, correlationId);
-      this.#emit({ type: 'run.opened', workflowId: workflow.id, blockId, correlationId });
+    // Determine the run this emit belongs to. The SDK traces causation through
+    // the block's async handlers, so an emit normally names the exact run that
+    // caused it (fan-in safe). Fallbacks: a source (no inbound connection)
+    // opens a fresh run on every uncaused emit; a downstream block inherits
+    // the correlation of its most recent input (lazily opening one if it
+    // emitted without a recorded input, e.g. a timer block).
+    let correlationId = causationId;
+    if (!correlationId) {
+      correlationId = this.#lastCorrelationId.get(blockId);
+      if (!correlationId || this.#sourceInstances.has(blockId)) {
+        correlationId = crypto.randomUUID();
+        this.#emit({
+          type: 'run.opened',
+          workflowId: workflow.id,
+          blockId,
+          correlationId,
+        });
+      }
     }
+    this.#lastCorrelationId.set(blockId, correlationId);
 
     // Update buffer
     const key = `${blockId}:${port}`;
@@ -387,7 +445,13 @@ export class WorkflowExecutor {
   /**
    * Called when a block emits a log message.
    */
-  #onBlockLog(blockId: string, workflowId: string, level: string, message: string): void {
+  #onBlockLog(
+    blockId: string,
+    workflowId: string,
+    level: string,
+    message: string,
+    data?: Json
+  ): void {
     // Only emit if this is from the current workflow
     if (this.#workflow?.id !== workflowId) {
       return;
@@ -399,6 +463,7 @@ export class WorkflowExecutor {
       blockId,
       level,
       message,
+      data,
       correlationId: this.#lastCorrelationId.get(blockId),
     });
   }
@@ -439,7 +504,7 @@ export class WorkflowExecutor {
         correlationId,
       });
 
-      this.#plugins.pushBlockInput(conn.to, targetPort, data);
+      this.#plugins.pushBlockInput(conn.to, targetPort, data, correlationId);
     }
   }
 

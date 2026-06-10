@@ -15,9 +15,19 @@ import {
 } from '@brika/clay';
 import type { Plugin, PluginHealth } from '@brika/plugin';
 import { Link } from '@tanstack/react-router';
-import { AlertTriangle, ArrowUp, Boxes, LayoutDashboard, Loader2, Plug, Zap } from 'lucide-react';
+import {
+  AlertTriangle,
+  ArrowUp,
+  Boxes,
+  LayoutDashboard,
+  Loader2,
+  Plug,
+  Wrench,
+  Zap,
+} from 'lucide-react';
 import React from 'react';
 import { useCapture } from '@/features/analytics/hooks';
+import { splitToolId, useTools } from '@/features/tools/api';
 import { useLocale } from '@/lib/use-locale';
 import { paths } from '@/routes/paths';
 import { pluginsApi } from '../api';
@@ -117,6 +127,33 @@ function ActionButtonsOverlay({
   );
 }
 
+/**
+ * Tools register at runtime (not in the manifest), so the count comes from
+ * the live registry, matched by the qualified-id prefix. React Query dedupes
+ * the shared ['tools'] fetch across cards.
+ */
+function ToolCountBadge({
+  pluginName,
+  t,
+}: Readonly<{
+  pluginName: string;
+  t: (key: string, params?: Record<string, unknown>) => string;
+}>) {
+  const { data: tools = [] } = useTools();
+  const count = tools.filter((tool) => splitToolId(tool.id).plugin === pluginName).length;
+  if (count === 0) {
+    return null;
+  }
+  return (
+    <div className="flex items-center gap-1 text-[11px] text-purple-600 dark:text-purple-400">
+      <Wrench className="size-3" />
+      <span>
+        {count} {t('common:items.tool', { count }).toLowerCase()}
+      </span>
+    </div>
+  );
+}
+
 function CapabilityBadges({
   plugin,
   t,
@@ -156,6 +193,7 @@ function CapabilityBadges({
           </span>
         </div>
       )}
+      <ToolCountBadge pluginName={plugin.name} t={t} />
     </div>
   );
 }

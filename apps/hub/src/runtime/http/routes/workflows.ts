@@ -127,12 +127,22 @@ export const workflowsRoutes = group({
       },
     }),
 
-    // Manually trigger a block on a running workflow (backs the button block).
+    // Manually trigger a block on a running workflow (backs the button block
+    // and the editor's Run control). `replay: true` re-delivers the value
+    // that last flowed into the port instead of an empty poke.
     route.post({
       path: '/inject',
-      body: z.object({ blockId: z.string(), port: z.string() }),
+      body: z.object({
+        blockId: z.string(),
+        port: z.string(),
+        replay: z.boolean().optional(),
+        /** Explicit payload (e.g. a previous input picked from history). */
+        data: z.custom<Json>(() => true).optional(),
+      }),
       handler: ({ body, inject }) => {
-        const ok = inject(WorkflowEngine).inject(body.blockId, body.port, {});
+        const ok = inject(WorkflowEngine).inject(body.blockId, body.port, body.data ?? {}, {
+          replay: body.replay ?? false,
+        });
         return { ok };
       },
     }),
@@ -196,6 +206,40 @@ export const workflowsRoutes = group({
       }),
       handler: ({ params, inject }) => {
         return getOrThrow(inject(RunStore).get(params.runId), 'Run not found');
+      },
+    }),
+
+    // Last-seen output value per port of a RUNNING workflow. The editor seeds
+    // its live previews and {{ }} view-resolution from this on load, so node
+    // views keep their last data across reloads instead of starting blank.
+    // Previous values that flowed into one block input (from the run store),
+    // newest first, deduplicated. Backs "run with a previous input".
+    route.get({
+      path: '/:id/input-history',
+      params: z.object({
+        id: workflowIdSchema,
+      }),
+      query: z.object({
+        blockId: z.string(),
+        port: z.string(),
+        limit: z.coerce.number().int().min(1).max(50).optional(),
+      }),
+      handler: ({ params, query, inject }) => {
+        const workflow = getOrThrow(inject(WorkflowEngine).get(params.id), 'Workflow not found');
+        const refs = (workflow.connections ?? [])
+          .filter((c) => c.to === query.blockId && (c.toPort ?? 'in') === query.port)
+          .map((c) => ({ blockId: c.from, port: c.fromPort ?? 'out' }));
+        return inject(RunStore).recentEmittedValues(params.id, refs, query.limit ?? 10);
+      },
+    }),
+
+    route.get({
+      path: '/:id/values',
+      params: z.object({
+        id: workflowIdSchema,
+      }),
+      handler: ({ params, inject }) => {
+        return inject(WorkflowEngine).portValues(params.id);
       },
     }),
 

@@ -12,7 +12,7 @@ import { BlockRegistry } from '@/runtime/blocks';
 import { Logger, type ScopedLogger } from '@/runtime/logs/log-router';
 import type { Json } from '@/types';
 import type { Workflow } from './types';
-import { type ExecutionListener, WorkflowExecutor } from './workflow-executor';
+import { type ExecutionListener, type PortBuffer, WorkflowExecutor } from './workflow-executor';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Engine
@@ -261,10 +261,15 @@ export class WorkflowEngine {
    * pushes to the block's input port. Returns false if no running workflow owns
    * the block (e.g. the workflow is disabled).
    */
-  inject(blockId: string, port: string, data: Json): boolean {
+  /** Last-seen output values of a running workflow's ports (empty if stopped). */
+  portValues(id: string): PortBuffer[] {
+    return this.#executors.get(id)?.portBuffers() ?? [];
+  }
+
+  inject(blockId: string, port: string, data: Json, options?: { replay?: boolean }): boolean {
     for (const executor of this.#executors.values()) {
       if (executor.ownsBlock(blockId)) {
-        return executor.inject(blockId, port, data);
+        return executor.inject(blockId, port, data, options);
       }
     }
     return false;

@@ -127,6 +127,27 @@ config: z.object({
 });
 ```
 
+### Required, defaults, and conditional fields
+
+A config field is REQUIRED in the editor only when it is neither `.optional()`
+nor `.default(...)`: defaulted fields are filled by the runtime, so the editor
+never flags them. To show a field only when another field has a given value,
+attach a `showWhen` condition via `.meta()`:
+
+```ts
+config: z.object({
+  method: z.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']).default('GET'),
+  body: z
+    .string()
+    .optional()
+    .meta({ showWhen: { field: 'method', equals: ['POST', 'PUT', 'PATCH'] } })
+    .describe('Request body'),
+}),
+```
+
+The editor hides the field (and skips its required check) until the condition
+holds; `equals` accepts a single value or an array of allowed values.
+
 ## Multiple inputs
 
 Multiple inputs become multiple `Flow`s on `inputs`. Combine them with the combinators from [Reactive Streams](reactive-streams.md):
@@ -195,14 +216,39 @@ inputs.trigger.on(async () => {
 
 Awaits inside `.on()` are fire-and-forget. There is no backpressure — if the upstream emits faster than your handler can process, every event is still delivered. Use `throttle`, `debounce`, or `switchMap` to control that — see [Reactive Streams](reactive-streams.md).
 
+A handler that throws (or rejects) does not crash the block or die as an unhandled rejection: the runtime captures the error and records it in the workflow's run trace as a structured error entry, keyed to your block. Other subscribers still receive the event.
+
+For flaky side effects (HTTP calls, device commands), the SDK ships a bounded backoff helper:
+
+```ts
+import { retry } from '@brika/sdk';
+
+const res = await retry(() => fetch(config.url), { attempts: 3, backoffMs: 250 });
+```
+
+## Logging into the run trace
+
+`ctx.log` is a block-scoped logger whose entries land in the workflow's RUN trace (visible in the editor's Runs panel), with an optional structured payload, unlike the global `log`, which goes to the plugin's global journal:
+
+```ts
+run: ({ inputs, outputs, log }) => {
+  inputs.in.on(async (data) => {
+    log.info('processing', { size: JSON.stringify(data).length });
+    // ...
+  });
+};
+```
+
+Use it for anything a user debugging a run would want to see: per-step progress, token usage, cost. The `runBlock` test harness captures these entries on `h.logs`.
+
 ## Validation errors
 
-When `outputs.X.emit(value)` is called with a value that does not match the output's schema, the emission is silently dropped and a warning is logged. Reasons:
+When `outputs.X.emit(value)` is called with a value that does not match the output's schema, the emission is dropped and the failure is reported into the run trace (port + zod error) through the block's scoped log channel. Reasons:
 
 * The whole purpose of typed ports is to keep type mismatches from leaking into downstream blocks. A connected block that expects `{ temp: number }` should never receive a string.
 * The plugin can keep running even when one emission is malformed — better than crashing the whole process.
 
-If you see the warning, fix the producing block; the schema is the source of truth.
+The same applies to inbound data: an input value that fails the port schema is dropped loudly, not silently. If you see the warning in a run, fix the producing block; the schema is the source of truth.
 
 ## What you can return
 

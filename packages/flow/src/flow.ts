@@ -4,7 +4,7 @@
  * Core FlowImpl class and CleanupRegistry.
  */
 
-import type { Cleanup, Emitter, Flow, Operator, Subscriber } from './types';
+import type { Cleanup, Emitter, Flow, FlowErrorHandler, Operator, Subscriber } from './types';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Cleanup Registry
@@ -48,22 +48,46 @@ export class CleanupRegistry {
  * Internal methods (_push, _derive, etc.) are prefixed with underscore.
  * These are used by operators but hidden from users who work with Flow<T>.
  */
+const defaultFlowErrorHandler: FlowErrorHandler = (error) => {
+  console.error('Unhandled flow subscriber error:', error);
+};
+
 export class FlowImpl<T> implements Flow<T> {
   readonly #subscribers = new Set<Subscriber<T>>();
   readonly #setTimeoutFn: (fn: () => void, ms: number) => Cleanup;
   readonly #cleanup: CleanupRegistry;
+  readonly #onError: FlowErrorHandler;
   #latest: T | undefined;
 
-  constructor(setTimeoutFn: (fn: () => void, ms: number) => Cleanup, cleanup: CleanupRegistry) {
+  constructor(
+    setTimeoutFn: (fn: () => void, ms: number) => Cleanup,
+    cleanup: CleanupRegistry,
+    onError: FlowErrorHandler = defaultFlowErrorHandler
+  ) {
     this.#setTimeoutFn = setTimeoutFn;
     this.#cleanup = cleanup;
+    this.#onError = onError;
   }
 
-  /** Push a value to subscribers */
+  /**
+   * Push a value to subscribers. A subscriber that throws (or returns a
+   * rejecting promise) is reported to the flow's error handler; it never
+   * breaks delivery to the other subscribers or escapes as an unhandled
+   * rejection.
+   */
   push(value: T): void {
     this.#latest = value;
     for (const sub of this.#subscribers) {
-      sub(value);
+      try {
+        // Subscribers are typed void, but async handlers hand back a promise;
+        // observe it so rejections are reported instead of unhandled.
+        const result: unknown = sub(value);
+        if (result instanceof Promise) {
+          result.catch((error: unknown) => this.#onError(error));
+        }
+      } catch (error) {
+        this.#onError(error);
+      }
     }
   }
 
@@ -87,7 +111,7 @@ export class FlowImpl<T> implements Flow<T> {
 
   /** Create a derived flow with same context */
   derive<R>(): FlowImpl<R> {
-    return new FlowImpl<R>(this.#setTimeoutFn, this.#cleanup);
+    return new FlowImpl<R>(this.#setTimeoutFn, this.#cleanup, this.#onError);
   }
 
   /** setTimeout with auto-cleanup */
@@ -123,7 +147,8 @@ export class FlowImpl<T> implements Flow<T> {
 /** Create a Flow with auto-cleanup */
 export function createFlow<T>(
   setTimeoutFn: (fn: () => void, ms: number) => Cleanup,
-  cleanup: CleanupRegistry
+  cleanup: CleanupRegistry,
+  onError?: FlowErrorHandler
 ): FlowImpl<T> {
-  return new FlowImpl<T>(setTimeoutFn, cleanup);
+  return new FlowImpl<T>(setTimeoutFn, cleanup, onError);
 }

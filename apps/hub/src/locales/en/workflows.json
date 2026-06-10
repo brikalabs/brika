@@ -55,16 +55,16 @@
     "clear": "Clear",
     "all": "All",
     "logsOnly": "Logs",
-    "emitsOnly": "Emits"
+    "emitsOnly": "Emits",
+    "tabs": {
+      "runs": "Runs",
+      "live": "Live"
+    }
   },
   "editor": {
     "title": "Workflow Editor",
     "blocks": "Blocks",
     "properties": "Properties",
-    "save": "Save Workflow",
-    "discard": "Discard Changes",
-    "unsaved": "Unsaved",
-    "unsavedChanges": "Unsaved changes",
     "panels": {
       "blocks": "Blocks",
       "blocksDescription": "Drag to add blocks",
@@ -86,6 +86,48 @@
       "availableVariables": "Available Variables",
       "clickToCopy": "Click to copy · Use in any text field"
     },
-    "workflowName": "Workflow name"
+    "workflowName": "Workflow name",
+    "autosave": {
+      "saving": "Saving...",
+      "saved": "Saved",
+      "retry": "Retry save"
+    },
+    "palette": {
+      "placeholder": "Search blocks and actions...",
+      "addBlock": "Add block",
+      "goToBlock": "Go to block",
+      "actions": "Actions",
+      "fitView": "Fit view",
+      "undo": "Undo",
+      "redo": "Redo",
+      "noResults": "No results"
+    },
+    "picker": {
+      "search": "Search compatible blocks...",
+      "noCompatible": "No compatible blocks"
+    },
+    "connection": {
+      "incompatible": "Incompatible types: {{output}} cannot feed {{input}}",
+      "selfConnection": "A block cannot connect to itself"
+    },
+    "runBlock": {
+      "label": "Run",
+      "notRunning": "Enable the workflow to run blocks",
+      "failed": "Run request failed",
+      "replay": "Run with last input",
+      "empty": "Run with empty trigger",
+      "replayHint": "Re-triggers with the value that last arrived on this input",
+      "history": "Previous inputs"
+    },
+    "diagnostics": {
+      "errors": "errors",
+      "warnings": "warnings",
+      "messages": {
+        "type-mismatch": "{{source}} ({{sourceType}}) does not fit {{target}} ({{targetType}})",
+        "missing-config": "{{block}}: required field \"{{field}}\" is empty",
+        "unknown-block": "{{block}}: block type \"{{type}}\" is not installed",
+        "cycle": "Feedback loop: {{path}}. It will run forever unless a block breaks it."
+      }
+    }
   }
 }

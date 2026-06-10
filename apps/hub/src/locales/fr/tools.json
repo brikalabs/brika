@@ -1,33 +1,7 @@
 {
-  "title": "$t(common:items.tool_other)",
-  "subtitle": "Outils enregistrés depuis les $t(common:items.plugin_other)",
-  "empty": "Aucun $t(common:items.tool_one) enregistré...",
-  "noArguments": "Cet $t(common:items.tool_one) n'a pas d'arguments d'entrée",
-  "count_one": "{{count}} outil",
-  "count_other": "{{count}} outils",
-  "labels": {
-    "tool": "Outil",
-    "arguments": "Arguments",
-    "args": "Args",
-    "owner": "Propriétaire"
-  },
-  "table": {
-    "tool": "Outil",
-    "description": "Description",
-    "args": "Args",
-    "owner": "Propriétaire"
-  },
-  "actions": {
-    "call": "Appeler"
-  },
-  "dialog": {
-    "title": "Appeler un outil",
-    "arguments": "Arguments",
-    "noArgs": "Cet outil n'a pas d'arguments d'entrée",
-    "call": "Appeler",
-    "result": {
-      "success": "Succès",
-      "failed": "Échoué"
-    }
-  }
+  "title": "Outils",
+  "description": "Capacités enregistrées dans le hub, découvrables et appelables par tout agent IA ou workflow",
+  "search": "Rechercher des outils...",
+  "empty": "Aucun outil enregistré. Activez un plugin qui fournit des outils.",
+  "noResults": "Aucun outil ne correspond à la recherche"
 }

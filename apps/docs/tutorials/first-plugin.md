@@ -67,6 +67,8 @@ In `package.json` add the entry the hub uses to advertise the spark in the UI:
 
 ## 3. Define the block
 
+`brika create block <id>` scaffolds a typed block, a `runBlock` test beside it, and the `package.json` manifest entry in one step. (And once you have blocks, `brika docs` generates a BLOCKS.md reference from the manifest.) For this tutorial we write the file by hand.
+
 Replace `src/blocks/example.ts` with `src/blocks/price.ts`:
 
 ```ts

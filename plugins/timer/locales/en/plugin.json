@@ -63,6 +63,16 @@
       }
     }
   },
+  "blocks": {
+    "timer": {
+      "name": "Timer",
+      "description": "Set a one-shot timer that fires after a duration"
+    },
+    "countdown": {
+      "name": "Countdown",
+      "description": "Countdown with progress ticks"
+    }
+  },
   "events": {
     "completed": "Timer completed",
     "cancelled": "Timer cancelled"
@@ -70,7 +80,8 @@
   "fields": {
     "name": {
       "label": "Name",
-      "description": "Timer name"
+      "description": "Timer name",
+      "placeholder": "timer"
     },
     "seconds": {
       "label": "Seconds",

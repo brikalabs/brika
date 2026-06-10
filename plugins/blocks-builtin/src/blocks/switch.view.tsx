@@ -9,6 +9,7 @@
 
 import { useBlockConfig, useUpdateBlockConfig } from '@brika/sdk/block-views';
 import { Button, Input, Label } from '@brika/sdk/ui-kit';
+import { useLocale } from '@brika/sdk/ui-kit/hooks';
 import { GitFork, Plus, Trash2 } from 'lucide-react';
 
 interface SwitchCase {
@@ -23,6 +24,7 @@ interface SwitchConfig {
 }
 
 export default function SwitchView() {
+  const { t } = useLocale();
   const config = useBlockConfig<SwitchConfig>();
   const update = useUpdateBlockConfig();
   const cases = config.cases ?? [];
@@ -54,7 +56,7 @@ export default function SwitchView() {
         <Label className="text-xs">Cases</Label>
         {cases.length === 0 && (
           <p className="rounded-md border border-dashed px-3 py-2 text-muted-foreground text-xs">
-            No cases yet. Add one to create a matching output.
+            {t('blocks.switch.noCases')}
           </p>
         )}
         {cases.map((c, i) => (

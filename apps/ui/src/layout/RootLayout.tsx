@@ -43,6 +43,7 @@ import {
   Settings,
   Users,
   Workflow,
+  Wrench,
   Zap,
 } from 'lucide-react';
 import { UserAvatar } from '@/components/user-avatar';
@@ -107,6 +108,11 @@ const NAV_GROUPS: NavGroup[] = [
         to: '/blocks',
         labelKey: 'nav:blocks',
         icon: Blocks,
+      },
+      {
+        to: '/tools',
+        labelKey: 'nav:tools',
+        icon: Wrench,
       },
     ],
   },

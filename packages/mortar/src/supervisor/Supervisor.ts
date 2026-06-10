@@ -19,6 +19,7 @@ import { DuplicateServiceIdError } from '../errors';
 import { runHealthcheck, spawnService, terminateService } from './lifecycle';
 import { parsePortFromLog } from './log-port-parser';
 import { isPortListening } from './port-detect';
+import { clearRunState, writeRunState } from './run-state';
 import type { Listener, ServiceState, ServiceStatus, SupervisorEvent } from './types';
 
 /**
@@ -168,6 +169,39 @@ export class Supervisor {
     return svc !== undefined && svc.proc !== null;
   }
 
+  /**
+   * PIDs of every child still running. Used by the CLI's synchronous
+   * last-resort `process.on('exit')` killer, which can't await
+   * `shutdown()`.
+   */
+  livePids(): number[] {
+    const pids: number[] = [];
+    for (const svc of this.services.values()) {
+      const pid = svc.proc?.pid;
+      if (pid !== undefined && this.isAlive(svc.spec.id)) {
+        pids.push(pid);
+      }
+    }
+    return pids;
+  }
+
+  /**
+   * Persist the live child set to the run-state file so an UNCLEAN
+   * mortar death (kill -9, runtime crash, terminal hard-close) can be
+   * recovered by the next session's reaper. Rewritten on every spawn
+   * and exit; deleted on clean shutdown.
+   */
+  private persistRunState(): void {
+    const services: Array<{ id: string; pid: number; command: string }> = [];
+    for (const svc of this.services.values()) {
+      const pid = svc.proc?.pid;
+      if (pid !== undefined && this.isAlive(svc.spec.id)) {
+        services.push({ id: svc.spec.id, pid, command: svc.spec.command });
+      }
+    }
+    writeRunState(this.projectRoot, { mortarPid: process.pid, services });
+  }
+
   subscribe(listener: Listener): () => void {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);
@@ -291,6 +325,11 @@ export class Supervisor {
       await new Promise((r) => setTimeout(r, this.renderHoldMs));
     }
 
+    // Every child is down: the state file has served its purpose. A
+    // file left behind here would make the next session's reaper do a
+    // pointless (but harmless) PID sweep.
+    clearRunState(this.projectRoot);
+
     this.emit({ kind: 'shutdown' });
   }
 
@@ -329,6 +368,7 @@ export class Supervisor {
       this.bumpState(svc);
       return;
     }
+    this.persistRunState();
     void this.checkHealth(svc);
   }
 
@@ -425,6 +465,7 @@ export class Supervisor {
       return;
     }
     svc.healthAbort?.abort();
+    this.persistRunState();
     if (this.shuttingDown) {
       // Don't mutate status during shutdown — the user shouldn't see
       // "crashed" badges for services they asked to terminate. But DO

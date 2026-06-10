@@ -12,6 +12,11 @@ export function routes(definitions: RouteDefinition[]): BootstrapPlugin {
 
   return {
     name: 'routes',
+    // A hub that can't bind its API port must not keep running: it
+    // would load plugins and execute workflows while unreachable (the
+    // classic symptom is a second hub booting while an orphaned one
+    // still holds the port).
+    fatal: true,
     onStart: () => server.start(),
     // Drain in-flight requests: server.stop() stops accepting new
     // connections immediately and resolves once active requests finish.

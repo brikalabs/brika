@@ -17,7 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@brika/sdk/ui-kit';
-import { useAction, useCallAction } from '@brika/sdk/ui-kit/hooks';
+import { useAction, useCallAction, useLocale } from '@brika/sdk/ui-kit/hooks';
 import { Link2, Music, RefreshCw, Search, Speaker, X } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { listDevices, searchTracks } from '../actions';
@@ -30,6 +30,7 @@ interface PlayConfig {
 }
 
 export default function PlayView() {
+  const { t } = useLocale();
   const config = useBlockConfig<PlayConfig>();
   const update = useUpdateBlockConfig();
   const callAction = useCallAction();
@@ -114,7 +115,7 @@ export default function PlayView() {
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search songs, artists..."
+            placeholder={t('player.searchPlaceholder')}
             className="bg-background pl-9"
           />
         </div>
@@ -125,7 +126,9 @@ export default function PlayView() {
               <p className="px-3 py-3 text-center text-muted-foreground text-xs">Searching...</p>
             )}
             {!searching && results.length === 0 && (
-              <p className="px-3 py-3 text-center text-muted-foreground text-xs">No results</p>
+              <p className="px-3 py-3 text-center text-muted-foreground text-xs">
+                {t('player.noResults')}
+              </p>
             )}
             {results.map((track) => (
               <button
@@ -190,7 +193,9 @@ export default function PlayView() {
           <Select value={deviceId} onValueChange={(v) => update({ deviceId: v })}>
             <SelectTrigger className="bg-background">
               <SelectValue
-                placeholder={devicesLoading ? 'Loading devices...' : 'Plugin default device'}
+                placeholder={
+                  devicesLoading ? t('player.loadingDevices') : t('player.defaultDevice')
+                }
               />
             </SelectTrigger>
             <SelectContent>
@@ -219,9 +224,7 @@ export default function PlayView() {
         </div>
 
         {!devicesLoading && (devices ?? []).length === 0 && (
-          <p className="text-muted-foreground text-xs">
-            No active devices found. Open Spotify on a device, then refresh.
-          </p>
+          <p className="text-muted-foreground text-xs">{t('player.noDevices')}</p>
         )}
       </div>
     </div>

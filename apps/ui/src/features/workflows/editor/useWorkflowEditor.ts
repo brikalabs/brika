@@ -25,7 +25,7 @@ import { type MouseEvent, useCallback, useEffect, useMemo, useRef, useState } fr
 import type { Workflow, WorkflowBlock } from '../api';
 import type { BlockNodeData } from './BlockNode';
 import type { BlockDefinition, BlockTypeInfo } from './BlockToolbar';
-import { expandDynamicPorts } from './dynamic-ports';
+import { expandDynamicPorts, portsEqual } from './dynamic-ports';
 import type { RegisteredSpark } from './WorkflowEditor';
 import {
   collectConfigVariables,
@@ -38,13 +38,91 @@ import {
 } from './workflow-conversion';
 
 // Re-export so existing consumers (BlockNode, editor barrel) keep working.
-export type { BlockStatus, ExecutionLog } from './workflow-conversion';
+export type { BlockStatus } from './workflow-conversion';
 
-import type { BlockStatus, ExecutionLog } from './workflow-conversion';
+import type { BlockStatus } from './workflow-conversion';
 
 export interface UseWorkflowEditorOptions {
   /** Lookup function for external type data (e.g., spark schemas) */
   typeLookup?: <T>(key: string) => T | undefined;
+}
+
+interface HistoryEntry {
+  nodes: Node[];
+  edges: Edge[];
+}
+
+const MAX_HISTORY = 100;
+
+/** Where to attach the new node when adding a block pre-wired to an existing port. */
+export interface ConnectionOrigin {
+  nodeId: string;
+  handleId: string;
+  handleType: 'source' | 'target';
+}
+
+/** Build a canvas edge with the canonical id/arrow/curve for a wire. */
+function buildEdge(
+  source: string,
+  sourceHandle: string,
+  target: string,
+  targetHandle: string
+): Edge {
+  return {
+    id: `${source}:${sourceHandle}->${target}:${targetHandle}`,
+    source,
+    sourceHandle,
+    target,
+    targetHandle,
+    type: 'smoothstep',
+    markerEnd: { type: MarkerType.ArrowClosed },
+  };
+}
+
+/** Build a fresh canvas node for a block type (shared by plain and wired adds). */
+function buildBlockNode(blockType: BlockTypeInfo, position: { x: number; y: number }): Node {
+  const blockTypeId = blockType.type || blockType.name;
+  const nodeId = generateNodeId(blockTypeId.split(':').pop() || 'block');
+  // Use translated label if available (from drag data), otherwise fall back to name
+  const label = blockType.translatedLabel || blockType.name || nodeId;
+  const data: BlockNodeData = {
+    id: nodeId,
+    type: blockTypeId,
+    label,
+    config: {
+      ...blockType.defaultConfig,
+    },
+    icon: blockType.icon,
+    color: blockType.color,
+    pluginId: blockType.pluginId,
+    pluginUid: blockType.pluginUid,
+    nodeModuleUrl: blockType.nodeModuleUrl,
+    inputs: blockType.inputs,
+    outputs: expandDynamicPorts(blockType.outputs, { ...blockType.defaultConfig }),
+    isFirst: false,
+    isLast: blockTypeId.includes('end'),
+    status: 'idle',
+  };
+  return {
+    id: nodeId,
+    type: 'block',
+    position,
+    data,
+  };
+}
+
+/**
+ * Return the previous value while its JSON signature is unchanged, so
+ * downstream memos keyed on the value skip recomputation when a new object is
+ * structurally identical.
+ */
+function useSignatureMemo<T>(value: T): T {
+  const signature = JSON.stringify(value);
+  const ref = useRef({ signature, value });
+  if (ref.current.signature !== signature) {
+    ref.current = { signature, value };
+  }
+  return ref.current.value;
 }
 
 export function useWorkflowEditor(
@@ -62,13 +140,79 @@ export function useWorkflowEditor(
   const [edges, setEdges, onEdgesChangeBase] = useEdgesState(initialEdges);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [isDirty, setIsDirty] = useState(false);
-  const [blockStatuses, setBlockStatuses] = useState<Record<string, BlockStatus>>({});
   const [blockOutputs, setBlockOutputs] = useState<Record<string, unknown>>({});
-  const [executionLogs, setExecutionLogs] = useState<ExecutionLog[]>([]);
+  // Last emitted value per "blockId:port", feeding live previews and the
+  // client-side {{ }} resolution of node-body views.
+  const [portValues, setPortValues] = useState<Record<string, unknown>>({});
 
   // Track onChange callback in ref to avoid stale closures
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
+
+  // Undo/redo history. Snapshots hold the immutable nodes/edges arrays from
+  // before a structural mutation; refs keep snapshotting out of the render
+  // path while historyVersion re-renders consumers of canUndo/canRedo.
+  const pastRef = useRef<HistoryEntry[]>([]);
+  const futureRef = useRef<HistoryEntry[]>([]);
+  const [historyVersion, setHistoryVersion] = useState(0);
+  const nodesRef = useRef(nodes);
+  nodesRef.current = nodes;
+  const edgesRef = useRef(edges);
+  edgesRef.current = edges;
+
+  const takeSnapshot = useCallback(() => {
+    // Dedupe: node+edge deletions of one gesture both land here in the same
+    // batch (refs unchanged), and that must stay a single undo step.
+    const top = pastRef.current.at(-1);
+    if (top && top.nodes === nodesRef.current && top.edges === edgesRef.current) {
+      return;
+    }
+    pastRef.current = [
+      ...pastRef.current.slice(-(MAX_HISTORY - 1)),
+      { nodes: nodesRef.current, edges: edgesRef.current },
+    ];
+    futureRef.current = [];
+    setHistoryVersion((v) => v + 1);
+  }, []);
+
+  const undo = useCallback(() => {
+    const previous = pastRef.current.at(-1);
+    if (!previous) {
+      return;
+    }
+    pastRef.current = pastRef.current.slice(0, -1);
+    futureRef.current = [
+      ...futureRef.current,
+      { nodes: nodesRef.current, edges: edgesRef.current },
+    ];
+    setNodes(previous.nodes);
+    setEdges(previous.edges);
+    setIsDirty(true);
+    setHistoryVersion((v) => v + 1);
+  }, [setNodes, setEdges]);
+
+  const redo = useCallback(() => {
+    const next = futureRef.current.at(-1);
+    if (!next) {
+      return;
+    }
+    futureRef.current = futureRef.current.slice(0, -1);
+    pastRef.current = [...pastRef.current, { nodes: nodesRef.current, edges: edgesRef.current }];
+    setNodes(next.nodes);
+    setEdges(next.edges);
+    setIsDirty(true);
+    setHistoryVersion((v) => v + 1);
+  }, [setNodes, setEdges]);
+
+  // historyVersion is the dependency that keeps these in sync with the refs.
+  const canUndo = useMemo(
+    () => historyVersion >= 0 && pastRef.current.length > 0,
+    [historyVersion]
+  );
+  const canRedo = useMemo(
+    () => historyVersion >= 0 && futureRef.current.length > 0,
+    [historyVersion]
+  );
 
   // Build block schema map for type inference
   const blockSchemaMap = useMemo(() => {
@@ -109,9 +253,24 @@ export function useWorkflowEditor(
     setIsDirty(false);
   }, [initialWorkflow]);
 
-  // Wrap onNodesChange to detect position changes and mark dirty
+  // Tracks whether the in-flight drag already snapshotted, so a multi-event
+  // drag produces a single undo step.
+  const dragSnapshotTakenRef = useRef(false);
+
+  // Wrap onNodesChange to snapshot history and mark dirty on real mutations
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
+      const dragStarted = changes.some(
+        (change) => change.type === 'position' && change.dragging === true
+      );
+      const removed = changes.some((change) => change.type === 'remove');
+      if (removed || (dragStarted && !dragSnapshotTakenRef.current)) {
+        takeSnapshot();
+      }
+      if (dragStarted) {
+        dragSnapshotTakenRef.current = true;
+      }
+
       onNodesChangeBase(changes);
 
       // Check if any change affects position (drag end)
@@ -120,28 +279,38 @@ export function useWorkflowEditor(
       );
 
       if (hasPositionChange) {
+        dragSnapshotTakenRef.current = false;
         setIsDirty(true);
       }
     },
-    [onNodesChangeBase]
+    [onNodesChangeBase, takeSnapshot]
   );
 
-  // Wrap onEdgesChange to mark dirty
+  // Wrap onEdgesChange to snapshot history and mark dirty on real mutations
+  // (selection changes don't count as edits).
   const onEdgesChange = useCallback(
     (changes: Parameters<typeof onEdgesChangeBase>[0]) => {
+      const mutated = changes.some((change) => change.type === 'remove' || change.type === 'add');
+      if (changes.some((change) => change.type === 'remove')) {
+        takeSnapshot();
+      }
       onEdgesChangeBase(changes);
-      // Any edge change is considered a change
-      if (changes.length > 0) {
+      if (mutated) {
         setIsDirty(true);
       }
     },
-    [onEdgesChangeBase]
+    [onEdgesChangeBase, takeSnapshot]
   );
 
-  // Memoize graph conversions separately — position-only node changes
-  // won't retrigger type inference since ports/types haven't changed
-  const graphNodes = useMemo(() => nodesToGraphNodes(nodes), [nodes]);
-  const graphEdges = useMemo(() => edgesToGraphEdges(edges), [edges]);
+  // Memoize graph conversions on a STRUCTURAL signature: live-stream status/
+  // output updates and node drags replace node objects constantly, but the
+  // type graph only changes when ids/ports/config/wiring do. Keeping the
+  // arrays (and thus portTypeMap) referentially stable skips whole-graph
+  // re-inference per event and stops every Port from re-rendering.
+  const graphNodesRaw = useMemo(() => nodesToGraphNodes(nodes), [nodes]);
+  const graphEdgesRaw = useMemo(() => edgesToGraphEdges(edges), [edges]);
+  const graphNodes = useSignatureMemo(graphNodesRaw);
+  const graphEdges = useSignatureMemo(graphEdgesRaw);
 
   // Pure derived type inference — no useEffect/setNodes cascade
   const portTypeMap: PortTypeMap = useMemo(
@@ -211,19 +380,18 @@ export function useWorkflowEditor(
   // still enforced at drag time by isValidConnection above.
   const onConnect: OnConnect = useCallback(
     (connection: Connection) => {
-      const newEdge: Edge = {
-        ...connection,
-        id: `${connection.source}:${connection.sourceHandle || 'out'}->${connection.target}:${connection.targetHandle || 'in'}`,
-        type: 'smoothstep',
-        markerEnd: {
-          type: MarkerType.ArrowClosed,
-        },
-      } as Edge;
+      const newEdge = buildEdge(
+        connection.source,
+        connection.sourceHandle || 'out',
+        connection.target,
+        connection.targetHandle || 'in'
+      );
 
+      takeSnapshot();
       setEdges((eds) => addEdge(newEdge, eds));
       setIsDirty(true);
     },
-    [setEdges]
+    [setEdges, takeSnapshot]
   );
 
   // Handle node selection
@@ -260,53 +428,56 @@ export function useWorkflowEditor(
         y: number;
       }
     ) => {
-      const blockTypeId = blockType.type || blockType.name;
-      const nodeId = generateNodeId(blockTypeId.split(':').pop() || 'block');
-      // Use translated label if available (from drag data), otherwise fall back to name
-      const label =
-        (
-          blockType as BlockTypeInfo & {
-            translatedLabel?: string;
-          }
-        ).translatedLabel ||
-        blockType.name ||
-        nodeId;
-      const newNode: Node = {
-        id: nodeId,
-        type: 'block',
-        position,
-        data: {
-          id: nodeId,
-          type: blockTypeId,
-          label,
-          config: {
-            ...blockType.defaultConfig,
-          },
-          icon: blockType.icon,
-          color: blockType.color,
-          pluginId: blockType.pluginId,
-          pluginUid: blockType.pluginUid,
-          nodeModuleUrl: blockType.nodeModuleUrl,
-          inputs: blockType.inputs,
-          outputs: expandDynamicPorts(blockType.outputs, { ...blockType.defaultConfig }),
-          isFirst: false,
-          isLast: blockTypeId.includes('end'),
-          status: 'idle',
-        } as BlockNodeData,
-      };
+      const newNode = buildBlockNode(blockType, position);
+      takeSnapshot();
       setNodes((nds) => [...nds, newNode]);
-      setSelectedNodeId(nodeId);
+      setSelectedNodeId(newNode.id);
       setIsDirty(true);
-      return nodeId;
+      return newNode.id;
     },
-    [setNodes]
+    [setNodes, takeSnapshot]
+  );
+
+  // Add a block already wired to an existing port (the wire-drop picker).
+  // One snapshot for the whole gesture, so undo removes node and edge together.
+  const addConnectedBlock = useCallback(
+    (
+      blockType: BlockTypeInfo,
+      position: { x: number; y: number },
+      origin: ConnectionOrigin,
+      portId: string
+    ) => {
+      const newNode = buildBlockNode(blockType, position);
+      const newEdge =
+        origin.handleType === 'source'
+          ? buildEdge(origin.nodeId, origin.handleId, newNode.id, portId)
+          : buildEdge(newNode.id, portId, origin.nodeId, origin.handleId);
+
+      takeSnapshot();
+      setNodes((nds) => [...nds, newNode]);
+      setEdges((eds) => addEdge(newEdge, eds));
+      setSelectedNodeId(newNode.id);
+      setIsDirty(true);
+      return newNode.id;
+    },
+    [setNodes, setEdges, takeSnapshot]
   );
 
   // Update block config (targeted — only creates new object for the changed node).
   // When the block has dynamic (templated) output ports, recompute them from the
   // merged config so adding/removing a case adds/removes its handle immediately.
+  // Throttle config snapshots: typing in a field produces one undo step per
+  // pause, not one per keystroke.
+  const lastConfigSnapshotRef = useRef({ nodeId: '', at: 0 });
+
   const updateBlockConfig = useCallback(
     (nodeId: string, config: Partial<WorkflowBlock>) => {
+      const now = Date.now();
+      const last = lastConfigSnapshotRef.current;
+      if (last.nodeId !== nodeId || now - last.at > 800) {
+        takeSnapshot();
+      }
+      lastConfigSnapshotRef.current = { nodeId, at: now };
       setNodes((nds) => {
         const idx = nds.findIndex((n) => n.id === nodeId);
         if (idx === -1) {
@@ -319,17 +490,24 @@ export function useWorkflowEditor(
         const data = node.data as BlockNodeData;
         const mergedConfig = { ...data.config, ...config };
         const def = blockSchemaMap[data.type];
-        const outputs = def?.outputs?.some((p) => p.dynamic)
-          ? expandDynamicPorts(
-              def.outputs.map((p) => ({
-                id: p.id,
-                name: p.name || p.id,
-                type: p.type,
-                dynamic: p.dynamic,
-              })),
-              mergedConfig
-            )
-          : data.outputs;
+        let outputs = data.outputs;
+        if (def?.outputs?.some((p) => p.dynamic)) {
+          const expanded = expandDynamicPorts(
+            def.outputs.map((p) => ({
+              id: p.id,
+              name: p.name || p.id,
+              type: p.type,
+              dynamic: p.dynamic,
+            })),
+            mergedConfig
+          );
+          // Keep the existing array identity when nothing structural changed:
+          // handle re-measurement and edge revalidation only run on real
+          // port-set changes, not on every config keystroke.
+          if (!data.outputs || !portsEqual(expanded, data.outputs)) {
+            outputs = expanded;
+          }
+        }
         const updated = [...nds];
         updated[idx] = {
           ...node,
@@ -339,7 +517,7 @@ export function useWorkflowEditor(
       });
       setIsDirty(true);
     },
-    [setNodes, blockSchemaMap]
+    [setNodes, blockSchemaMap, takeSnapshot]
   );
 
   // Keep edges valid as dynamic ports appear/disappear: drop any edge whose
@@ -373,10 +551,6 @@ export function useWorkflowEditor(
   // Set block status (for debugging)
   const setBlockStatus = useCallback(
     (blockId: string, status: BlockStatus, output?: unknown) => {
-      setBlockStatuses((prev) => ({
-        ...prev,
-        [blockId]: status,
-      }));
       if (output !== undefined) {
         setBlockOutputs((prev) => ({
           ...prev,
@@ -402,6 +576,18 @@ export function useWorkflowEditor(
     [setNodes]
   );
 
+  // Record the latest value seen on an output port (for previews and the
+  // editor-side template scope of downstream blocks).
+  const setPortValue = useCallback((blockId: string, port: string, value: unknown) => {
+    setPortValues((prev) => {
+      const key = `${blockId}:${port}`;
+      if (Object.is(prev[key], value)) {
+        return prev;
+      }
+      return { ...prev, [key]: value };
+    });
+  }, []);
+
   // Push the latest emitted value into a block's node data so node-body views
   // (useBlockData) render live. Scoped to blocks that actually ship a node view,
   // so high-frequency workflows don't re-render the whole graph.
@@ -422,44 +608,6 @@ export function useWorkflowEditor(
     },
     [setNodes]
   );
-
-  // Add execution log
-  const addExecutionLog = useCallback((log: Omit<ExecutionLog, 'id' | 'timestamp'>) => {
-    setExecutionLogs((prev) => [
-      ...prev,
-      {
-        ...log,
-        id: crypto.randomUUID(),
-        timestamp: Date.now(),
-      },
-    ]);
-  }, []);
-
-  // Clear execution state
-  const clearExecutionState = useCallback(() => {
-    setBlockStatuses({});
-    setBlockOutputs({});
-    setExecutionLogs([]);
-    setNodes((nds) =>
-      nds.map((node) => {
-        if (node.type === 'block') {
-          return {
-            ...node,
-            data: {
-              ...node.data,
-              status: 'idle',
-            },
-          };
-        }
-        return node;
-      })
-    );
-  }, [setNodes]);
-
-  // Mark workflow as clean (after successful save)
-  const markClean = useCallback(() => {
-    setIsDirty(false);
-  }, []);
 
   const getAvailableVariables = useCallback(
     (blockId: string) => {
@@ -493,18 +641,20 @@ export function useWorkflowEditor(
     selectedNode,
     isDirty,
     addBlock,
+    addConnectedBlock,
     updateBlockConfig,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
     setSelectedNodeId,
-    blockStatuses,
     blockOutputs,
-    executionLogs,
+    portValues,
+    setPortValue,
     setBlockStatus,
     setBlockLiveOutput,
-    addExecutionLog,
-    clearExecutionState,
     getAvailableVariables,
     portTypeMap,
     blockSchemaMap,
-    markClean,
   };
 }

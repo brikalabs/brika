@@ -48,6 +48,15 @@
         }
       }
     },
+    "text": {
+      "name": "Text",
+      "description": "Display text on the canvas and pass values through"
+    },
+    "image": {
+      "name": "Image",
+      "description": "Display an image on the canvas and pass values through",
+      "wireHint": "Wire media in or set an image URL"
+    },
     "switch": {
       "name": "Switch",
       "description": "Multi-way branch based on value",
@@ -72,7 +81,8 @@
           "name": "Default",
           "description": "Output when no case matches"
         }
-      }
+      },
+      "noCases": "No cases yet. Add one to create a matching output."
     },
     "delay": {
       "name": "Delay",
@@ -170,7 +180,12 @@
           "name": "Payload",
           "description": "The spark event payload"
         }
-      }
+      },
+      "noSparks": "No sparks registered"
+    },
+    "button": {
+      "name": "Button",
+      "description": "Manually trigger the workflow with a button click"
     }
   },
   "fields": {

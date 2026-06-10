@@ -174,21 +174,70 @@ export async function disableWorkflow(id: string): Promise<{
   return res.json();
 }
 
-// Create test workflow event source
-export function createTestEventSource(
-  workflowId: string,
-  payload: Record<string, unknown>
-): EventSource {
-  const params = new URLSearchParams({
-    id: workflowId,
-    payload: JSON.stringify(payload),
-  });
-  return new EventSource(`${API_BASE}/workflows/test?${params}`);
+export interface PortValue {
+  blockId: string;
+  port: string;
+  value: unknown;
+  ts: number;
+  count: number;
 }
 
-// Create live workflow events SSE connection
-export function createWorkflowEventsSource(workflowId: string): EventSource {
-  return new EventSource(`${API_BASE}/workflows/${workflowId}/events`);
+/** Last-seen output values per port of a running workflow (empty when stopped). */
+export async function fetchWorkflowPortValues(id: string): Promise<PortValue[]> {
+  const res = await fetch(`${API_BASE}/workflows/${id}/values`);
+  if (!res.ok) {
+    return [];
+  }
+  return res.json();
+}
+
+/**
+ * Manually poke a block's input on a RUNNING workflow (the Run control).
+ * With `replay`, the hub re-delivers the value that last flowed into the
+ * port; with `data`, that explicit payload (e.g. a previous input picked
+ * from history) is delivered instead of an empty trigger.
+ */
+export async function injectBlock(
+  blockId: string,
+  port: string,
+  options?: { replay?: boolean; data?: unknown }
+): Promise<{
+  ok: boolean;
+}> {
+  const res = await fetch(`${API_BASE}/workflows/inject`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      blockId,
+      port,
+      replay: options?.replay ?? false,
+      ...(options?.data === undefined ? {} : { data: options.data }),
+    }),
+  });
+  return res.json();
+}
+
+export interface InputHistoryEntry {
+  ts: number;
+  value: unknown;
+}
+
+/** Previous values that flowed into one block input, newest first, deduped. */
+export async function fetchBlockInputHistory(
+  workflowId: string,
+  blockId: string,
+  port: string
+): Promise<InputHistoryEntry[]> {
+  const query = new URLSearchParams({ blockId, port });
+  const res = await fetch(
+    `${API_BASE}/workflows/${encodeURIComponent(workflowId)}/input-history?${query}`
+  );
+  if (!res.ok) {
+    return [];
+  }
+  return res.json();
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

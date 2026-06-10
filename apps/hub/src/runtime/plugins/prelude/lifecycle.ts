@@ -11,6 +11,7 @@ import type { LogLevelType } from '@brika/ipc/contract';
 interface PreferenceOption {
   value: string;
   label: string;
+  description?: string;
 }
 
 import {
@@ -23,7 +24,9 @@ import {
 type InitHandler = () => void | Promise<void>;
 type UninstallHandler = () => void | Promise<void>;
 type PreferencesChangeHandler = (preferences: Record<string, unknown>) => void;
-type PreferenceOptionsProvider = () => PreferenceOption[] | Promise<PreferenceOption[]>;
+type PreferenceOptionsProvider = (
+  params?: Record<string, unknown>
+) => PreferenceOption[] | Promise<PreferenceOption[]>;
 
 export function setupLifecycle(
   channel: Channel,
@@ -86,13 +89,13 @@ export function setupLifecycle(
     }
   });
 
-  channel.implement(preferenceOptionsRpc, async ({ name }) => {
+  channel.implement(preferenceOptionsRpc, async ({ name, params }) => {
     const provider = prefOptionsProviders.get(name);
     if (!provider) {
       return { options: [] };
     }
     try {
-      return { options: await provider() };
+      return { options: await provider(params) };
     } catch (e) {
       log('error', `Preference options provider error for "${name}": ${e}`);
       return { options: [] };

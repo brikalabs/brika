@@ -620,12 +620,22 @@ describe('PluginManager', () => {
           value: 42,
         });
 
-        expect(process1.pushInput).toHaveBeenCalledWith('instance-1', 'input', {
-          value: 42,
-        });
-        expect(process2.pushInput).toHaveBeenCalledWith('instance-1', 'input', {
-          value: 42,
-        });
+        expect(process1.pushInput).toHaveBeenCalledWith(
+          'instance-1',
+          'input',
+          {
+            value: 42,
+          },
+          undefined
+        );
+        expect(process2.pushInput).toHaveBeenCalledWith(
+          'instance-1',
+          'input',
+          {
+            value: 42,
+          },
+          undefined
+        );
       });
     });
 

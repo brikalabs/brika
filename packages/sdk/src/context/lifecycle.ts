@@ -19,7 +19,9 @@ type InitHandler = () => void | Promise<void>;
 type StopHandler = () => void | Promise<void>;
 type UninstallHandler = () => void | Promise<void>;
 type PreferencesChangeHandler = (preferences: Record<string, unknown>) => void;
-type PreferenceOptionsProvider = () => PreferenceOption[] | Promise<PreferenceOption[]>;
+type PreferenceOptionsProvider = (
+  params?: Record<string, unknown>
+) => PreferenceOption[] | Promise<PreferenceOption[]>;
 
 // ─── Setup ────────────────────────────────────────────────────────────────────
 

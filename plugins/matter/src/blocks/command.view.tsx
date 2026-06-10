@@ -22,7 +22,7 @@ import {
   SelectValue,
   Slider,
 } from '@brika/sdk/ui-kit';
-import { useAction } from '@brika/sdk/ui-kit/hooks';
+import { useAction, useLocale } from '@brika/sdk/ui-kit/hooks';
 import { Cpu, Network, Palette, Radar, RefreshCw, Sun, Sunset, Thermometer } from 'lucide-react';
 import { listDevices } from '../actions';
 import type { DeviceType } from '../matter-controller';
@@ -65,6 +65,7 @@ const SETPOINT_MODES: ReadonlyArray<{ value: string; label: string }> = [
 ];
 
 export default function CommandView() {
+  const { t } = useLocale();
   const config = useBlockConfig<CommandConfig>();
   const update = useUpdateBlockConfig();
   const { data: devices, loading, error, refetch } = useAction(listDevices);
@@ -124,14 +125,14 @@ export default function CommandView() {
         {!error && !loading && (devices?.length ?? 0) === 0 && (
           <div className="flex items-center gap-2 rounded-md border bg-muted/50 px-3 py-2 text-muted-foreground text-sm">
             <Cpu className="size-4" />
-            <span>No commissioned devices</span>
+            <span>{t('device.noDevicesCommissioned')}</span>
           </div>
         )}
 
         {!error && (devices?.length ?? 0) > 0 && (
           <Select value={config.nodeId ?? ''} onValueChange={(v) => update({ nodeId: v })}>
             <SelectTrigger className="bg-background">
-              <SelectValue placeholder="Select a device...">
+              <SelectValue placeholder={t('device.selectDevice')}>
                 {selected && (
                   <span className="flex items-center gap-2">
                     <DeviceIcon className="size-4 text-indigo-500" />
@@ -178,7 +179,7 @@ export default function CommandView() {
           <Label className="text-xs">Command</Label>
           <Select value={command ?? ''} onValueChange={(v) => update({ command: v })}>
             <SelectTrigger className="bg-background">
-              <SelectValue placeholder="Select a command...">
+              <SelectValue placeholder={t('device.selectCommand')}>
                 {selectedCommand && (
                   <span className="flex items-center gap-2">
                     <CommandIcon className="size-4 text-indigo-500" />

@@ -30,25 +30,52 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@brika/clay';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@brika/clay/components/command';
+import { Popover, PopoverContent, PopoverTrigger } from '@brika/clay/components/popover';
 import { displayType, parsePortType } from '@brika/type-system';
 import type { Node } from '@xyflow/react';
 import {
+  AlertTriangle,
   ArrowDownToLine,
   ArrowUpFromLine,
   Check,
   ChevronRight,
+  ChevronsUpDown,
   Copy,
   HelpCircle,
+  PencilLine,
   Plus,
   Sparkles,
   Trash2,
+  Wrench,
+  X,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useCapture } from '@/features/analytics/hooks';
+import { fetcher } from '@/lib/query';
 import { useLocale } from '@/lib/use-locale';
+import { fetchTools, type ToolSummary } from '../api';
 import type { BlockNodeData, BlockPort } from './BlockNode';
 import { ClientBlockView } from './ClientBlockView';
+import { lintExpressions } from './expression-lint';
+import {
+  type DynamicOption,
+  type ResolvedFieldInfo,
+  type ShowWhen,
+  showWhenSatisfied,
+  toDisplayString,
+  toShowWhen,
+  type Variable,
+} from './field-shared';
+import { ToolArgField, ToolMultiSelectField, ToolSelectField } from './ToolFields';
 import { usePortTypeName } from './WorkflowTypeContext';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -92,45 +119,24 @@ function getTypeMarker(description?: string): {
   };
 }
 
-/**
- * Safely convert a value to string, handling objects and nullish values
- */
-function toDisplayString(value: unknown, fallback = ''): string {
-  if (value === undefined || value === null) {
-    return fallback;
-  }
-  if (typeof value === 'object') {
-    return JSON.stringify(value);
-  }
-  if (typeof value === 'string') {
-    return value;
-  }
-  if (typeof value === 'number' || typeof value === 'boolean' || typeof value === 'bigint') {
-    return String(value);
-  }
-  // symbol | function — not expected for config values.
-  return fallback;
-}
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
 // ─────────────────────────────────────────────────────────────────────────────
-
-interface Variable {
-  name: string;
-  source: string;
-  type: string;
-  /** Short rendering of the value last seen on this path, when one has flowed. */
-  preview?: string;
-}
 
 interface SchemaProperty {
   type: string;
   description?: string;
   default?: unknown;
   enum?: unknown[];
+  /** UI widget hint from z.dynamicDropdown(), e.g. 'dynamic-dropdown'. */
+  format?: string;
+  /** UI label from z.meta({ label }). */
+  label?: string;
+  /** Show this field only when a sibling field equals a value (or one of several). */
+  showWhen?: ShowWhen;
 }
 
+/** Narrow an unknown value to the showWhen shape (scalar or array of scalars). */
 interface BlockSchema {
   type: 'object';
   properties?: Record<string, unknown>;
@@ -150,6 +156,9 @@ function toSchemaProperty(value: unknown): SchemaProperty {
     description: typeof obj.description === 'string' ? obj.description : undefined,
     default: obj.default,
     enum: Array.isArray(obj.enum) ? obj.enum : undefined,
+    format: typeof obj.format === 'string' ? obj.format : undefined,
+    label: typeof obj.label === 'string' ? obj.label : undefined,
+    showWhen: toShowWhen(obj.showWhen),
   };
 }
 
@@ -176,6 +185,10 @@ interface ExpressionFieldProps {
   variables: Variable[];
   placeholder?: string;
   multiline?: boolean;
+  /** Declared input port ids; enables inline `{{ }}` linting when provided. */
+  inputPortIds?: string[];
+  /** Declared config keys for `{{ config.x }}` linting. */
+  configKeys?: string[];
 }
 
 function ExpressionField({
@@ -184,23 +197,41 @@ function ExpressionField({
   variables,
   placeholder,
   multiline,
+  inputPortIds,
+  configKeys,
 }: Readonly<ExpressionFieldProps>) {
   const capture = useCapture();
-  const [showVars, setShowVars] = useState(false);
-  const [copied, setCopied] = useState<string | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
+  // Callback ref: the Input/Textarea union needs a contravariant function ref.
+  const setInputRef = (el: HTMLInputElement | HTMLTextAreaElement | null) => {
+    inputRef.current = el;
+  };
 
+  // Inline expression linting: typo'd ports/keys surface while typing.
+  const expressionWarnings = useMemo(
+    () => (inputPortIds ? lintExpressions(value, inputPortIds, configKeys ?? []) : []),
+    [value, inputPortIds, configKeys]
+  );
+
+  // Insert at the cursor (falling back to append), then restore focus.
   const insertVariable = (varName: string) => {
     capture('workflow.config_variable_inserted');
     const expr = `{{ ${varName} }}`;
-    onChange(value + expr);
-    setShowVars(false);
-  };
-
-  const copyVariable = (varName: string) => {
-    capture('workflow.config_variable_copied', { surface: 'expression_field' });
-    navigator.clipboard.writeText(`{{ ${varName} }}`);
-    setCopied(varName);
-    setTimeout(() => setCopied(null), 1500);
+    const el = inputRef.current;
+    if (el && typeof el.selectionStart === 'number') {
+      const start = el.selectionStart;
+      const end = el.selectionEnd ?? start;
+      onChange(value.slice(0, start) + expr + value.slice(end));
+      requestAnimationFrame(() => {
+        el.focus();
+        const position = start + expr.length;
+        el.setSelectionRange(position, position);
+      });
+    } else {
+      onChange(value + expr);
+    }
+    setPickerOpen(false);
   };
 
   const InputComponent = multiline ? Textarea : Input;
@@ -209,75 +240,80 @@ function ExpressionField({
     <div className="space-y-2">
       <div className="relative">
         <InputComponent
+          ref={setInputRef}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
           className={cn('pr-10 font-mono text-sm', multiline && 'min-h-[80px]')}
         />
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="absolute top-1 right-1 h-7 w-7 p-0"
-          onClick={() => {
-            if (!showVars) {
-              capture('workflow.config_variable_picker_opened', {
-                variableCount: variables.length,
-              });
-            }
-            setShowVars(!showVars);
-          }}
-          title="Insert variable"
-        >
-          <Sparkles className="size-4 text-primary" />
-        </Button>
+        {variables.length > 0 && (
+          <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="absolute top-1 right-1 h-7 w-7 p-0"
+                onClick={() => {
+                  if (!pickerOpen) {
+                    capture('workflow.config_variable_picker_opened', {
+                      variableCount: variables.length,
+                    });
+                  }
+                }}
+                title="Insert variable"
+              >
+                <Sparkles className="size-4 text-primary" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="end" sideOffset={6} className="w-80 p-0">
+              <Command>
+                <CommandInput autoFocus placeholder="Search variables..." />
+                <CommandList className="max-h-60">
+                  <CommandEmpty>No matching variable</CommandEmpty>
+                  <CommandGroup>
+                    {variables.map((v) => (
+                      <CommandItem
+                        key={v.name}
+                        value={`${v.name} ${v.type}`}
+                        onSelect={() => insertVariable(v.name)}
+                        className="flex flex-col items-start gap-0.5"
+                      >
+                        <span className="flex w-full min-w-0 items-center gap-2">
+                          <code className="min-w-0 flex-1 truncate font-mono text-primary text-xs">
+                            {`{{ ${v.name} }}`}
+                          </code>
+                          <span className="shrink-0 rounded bg-muted px-1 py-0.5 font-mono text-[9px] text-muted-foreground">
+                            {v.type}
+                          </span>
+                        </span>
+                        {v.preview !== undefined && (
+                          <span className="w-full truncate text-left font-mono text-[10px] text-muted-foreground">
+                            {v.preview}
+                          </span>
+                        )}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
+        )}
       </div>
 
-      {/* Variable suggestions dropdown */}
-      {showVars && variables.length > 0 && (
-        <div className="overflow-hidden rounded-lg border bg-popover shadow-lg">
-          <div className="border-b bg-muted/50 p-2 font-medium text-muted-foreground text-xs">
-            Click to insert variable
-          </div>
-          <div className="max-h-[150px] overflow-y-auto">
-            {variables.map((v) => (
-              <div
-                key={v.name}
-                className="group flex cursor-pointer items-center justify-between px-3 py-2 hover:bg-accent"
-              >
-                <button
-                  type="button"
-                  className="flex min-w-0 flex-1 flex-col gap-0.5 text-left"
-                  onClick={() => insertVariable(v.name)}
-                >
-                  <span className="flex items-center gap-2">
-                    <code className="font-mono text-primary text-xs">{`{{ ${v.name} }}`}</code>
-                    <span className="text-muted-foreground text-xs">{v.type}</span>
-                  </span>
-                  {v.preview !== undefined && (
-                    <span className="truncate font-mono text-[10px] text-muted-foreground">
-                      {v.preview}
-                    </span>
-                  )}
-                </button>
-                <button
-                  type="button"
-                  className="rounded p-1 opacity-0 hover:bg-muted group-hover:opacity-100"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    copyVariable(v.name);
-                  }}
-                  title="Copy to clipboard"
-                >
-                  {copied === v.name ? (
-                    <Check className="size-3 text-success" />
-                  ) : (
-                    <Copy className="size-3 text-muted-foreground" />
-                  )}
-                </button>
-              </div>
-            ))}
-          </div>
+      {expressionWarnings.length > 0 && (
+        <div className="space-y-0.5">
+          {expressionWarnings.map((w) => (
+            <p
+              key={`${w.expression}:${w.message}`}
+              className="flex items-center gap-1 text-warning text-xs"
+            >
+              <AlertTriangle className="size-3 shrink-0" />
+              <span className="truncate font-mono">{`{{ ${w.expression} }}`}</span>
+              <span className="shrink-0">{w.message}</span>
+            </p>
+          ))}
         </div>
       )}
     </div>
@@ -392,18 +428,17 @@ interface FieldProps {
   variables: Variable[];
   required?: boolean;
   pluginId?: string;
+  /** Full block type id, used to resolve dynamic-dropdown options. */
+  blockType?: string;
+  /** Sibling config values, forwarded to provider-aware option providers. */
+  allConfig?: Record<string, unknown>;
+  /** Declared input port ids, for `{{ inputs.x }}` expression linting. */
+  inputPortIds?: string[];
+  /** Declared config keys, for `{{ config.x }}` expression linting. */
+  configKeys?: string[];
 }
 
 /** Resolved display info passed to each field renderer */
-interface ResolvedFieldInfo {
-  label: string;
-  cleanDescription: string | undefined;
-  value: unknown;
-  onChange: (value: unknown) => void;
-  variables: Variable[];
-  defaultValue: unknown;
-  name: string;
-}
 
 function DurationField({ value, onChange, cleanDescription, label }: Readonly<ResolvedFieldInfo>) {
   const numericValue = typeof value === 'number' ? value : undefined;
@@ -441,6 +476,8 @@ function ExpressionMarkerField({
   variables,
   cleanDescription,
   label,
+  inputPortIds,
+  configKeys,
 }: Readonly<ResolvedFieldInfo>) {
   return (
     <ExpressionField
@@ -449,6 +486,8 @@ function ExpressionMarkerField({
       variables={variables}
       placeholder={cleanDescription || `Enter ${label.toLowerCase()}`}
       multiline
+      inputPortIds={inputPortIds}
+      configKeys={configKeys}
     />
   );
 }
@@ -564,6 +603,8 @@ function StringField({
   cleanDescription,
   label,
   name,
+  inputPortIds,
+  configKeys,
 }: Readonly<ResolvedFieldInfo>) {
   const isMultiline =
     name === 'message' ||
@@ -579,7 +620,218 @@ function StringField({
       variables={variables}
       placeholder={cleanDescription || `Enter ${label.toLowerCase()}`}
       multiline={isMultiline}
+      inputPortIds={inputPortIds}
+      configKeys={configKeys}
     />
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Dynamic Dropdown (z.dynamicDropdown) - options fetched live, scoped by siblings
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Short string values longer than this are not forwarded as options params. */
+const MAX_PARAM_LENGTH = 200;
+
+/**
+ * Short scalar sibling fields, forwarded as the options query (self excluded).
+ * Long strings are dropped: option providers key off discriminators (provider,
+ * baseUrl), and forwarding a user prompt would bloat the URL and leak its
+ * content into request logs.
+ */
+function siblingParams(
+  config: Record<string, unknown> | undefined,
+  self: string
+): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [key, val] of Object.entries(config ?? {})) {
+    if (key === self) {
+      continue;
+    }
+    if (typeof val === 'string') {
+      if (val.length <= MAX_PARAM_LENGTH) {
+        out[key] = val;
+      }
+    } else if (typeof val === 'number' || typeof val === 'boolean') {
+      out[key] = String(val);
+    }
+  }
+  return out;
+}
+
+function fetchBlockConfigOptions(
+  blockType: string,
+  name: string,
+  params: Record<string, string>
+): Promise<{ options: DynamicOption[] }> {
+  const qs = new URLSearchParams(params).toString();
+  const base = `/api/blocks/${encodeURIComponent(blockType)}/config/${encodeURIComponent(name)}/options`;
+  return fetcher<{ options: DynamicOption[] }>(qs ? `${base}?${qs}` : base);
+}
+
+/**
+ * A filter-as-you-type picker whose options are fetched live and re-fetched when
+ * a sibling field changes (e.g. the model list for the chosen provider). A
+ * persistent escape hatch flips to a free-text input for ids not in the list.
+ */
+function DynamicSelectField({
+  name,
+  value,
+  onChange,
+  label,
+  blockType,
+  allConfig,
+}: Readonly<ResolvedFieldInfo>) {
+  const capture = useCapture();
+  const current = toDisplayString(value);
+  const [open, setOpen] = useState(false);
+  const [filter, setFilter] = useState('');
+  const [custom, setCustom] = useState(false);
+  const [options, setOptions] = useState<DynamicOption[]>([]);
+  const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle');
+
+  const params = useMemo(() => siblingParams(allConfig, name), [allConfig, name]);
+  const paramsKey = useMemo(() => JSON.stringify(params), [params]);
+
+  useEffect(() => {
+    if (!blockType || custom) {
+      return;
+    }
+    let cancelled = false;
+    setStatus('loading');
+    fetchBlockConfigOptions(blockType, name, JSON.parse(paramsKey))
+      .then((data) => {
+        if (!cancelled) {
+          setOptions(data.options);
+          setStatus('idle');
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setStatus('error');
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [blockType, name, paramsKey, custom]);
+
+  if (custom) {
+    return (
+      <div className="space-y-1.5">
+        <Input
+          value={current}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={`Enter a custom ${label.toLowerCase()}`}
+          className="bg-background font-mono text-sm"
+        />
+        <button
+          type="button"
+          className="text-muted-foreground text-xs hover:text-foreground"
+          onClick={() => setCustom(false)}
+        >
+          Back to the list
+        </button>
+      </div>
+    );
+  }
+
+  const needle = filter.trim().toLowerCase();
+  const filtered = needle
+    ? options.filter((o) =>
+        `${o.label} ${o.value} ${o.description ?? ''}`.toLowerCase().includes(needle)
+      )
+    : options;
+  const selected = options.find((o) => o.value === current);
+
+  return (
+    <div className="space-y-2">
+      <Button
+        type="button"
+        variant="outline"
+        className="w-full justify-between bg-background font-normal"
+        onClick={() => {
+          if (!open) {
+            capture('workflow.config_dynamic_options_opened', { field: name });
+          }
+          setOpen(!open);
+        }}
+      >
+        <span className="truncate">
+          {selected?.label ?? (current || `Select ${label.toLowerCase()}`)}
+        </span>
+        <ChevronsUpDown className="size-4 shrink-0 opacity-50" />
+      </Button>
+
+      {open && (
+        <div className="overflow-hidden rounded-lg border bg-popover shadow-lg">
+          <div className="border-b p-2">
+            <Input
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              placeholder={`Filter ${label.toLowerCase()}`}
+              className="h-8 bg-background text-sm"
+            />
+          </div>
+          <div className="max-h-[220px] overflow-y-auto">
+            {status === 'loading' && (
+              <p className="px-3 py-2 text-muted-foreground text-xs">Loading...</p>
+            )}
+            {status === 'error' && (
+              <p className="px-3 py-2 text-destructive text-xs">
+                Could not load options. Check the provider API key in plugin settings.
+              </p>
+            )}
+            {status === 'idle' && filtered.length === 0 && (
+              <p className="px-3 py-2 text-muted-foreground text-xs">
+                {options.length === 0
+                  ? 'Nothing available yet. Configure a provider in the plugin settings.'
+                  : 'No matches'}
+              </p>
+            )}
+            {filtered.map((o) => (
+              <button
+                key={o.value}
+                type="button"
+                className="flex w-full flex-col gap-0.5 px-3 py-2 text-left hover:bg-accent"
+                onClick={() => {
+                  capture('workflow.config_dynamic_option_picked', { field: name });
+                  onChange(o.value);
+                  setOpen(false);
+                  setFilter('');
+                }}
+              >
+                <span className="flex items-center justify-between gap-2">
+                  <span className="truncate font-medium text-sm">{o.label}</span>
+                  {o.value === current && <Check className="size-3.5 shrink-0 text-primary" />}
+                </span>
+                <span className="flex items-center justify-between gap-2">
+                  <code className="truncate font-mono text-[10px] text-muted-foreground">
+                    {o.value}
+                  </code>
+                  {o.description && (
+                    <span className="shrink-0 text-[10px] text-muted-foreground">
+                      {o.description}
+                    </span>
+                  )}
+                </span>
+              </button>
+            ))}
+          </div>
+          <button
+            type="button"
+            className="flex w-full items-center gap-1.5 border-t px-3 py-2 text-left text-muted-foreground text-xs hover:bg-accent hover:text-foreground"
+            onClick={() => {
+              setCustom(true);
+              setOpen(false);
+            }}
+          >
+            <PencilLine className="size-3" />
+            {`Use a custom ${label.toLowerCase()}`}
+          </button>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -607,6 +859,10 @@ function resolveFieldInfo(
     variables: props.variables,
     defaultValue: props.schema.default,
     name: props.name,
+    blockType: props.blockType,
+    allConfig: props.allConfig,
+    inputPortIds: props.inputPortIds,
+    configKeys: props.configKeys,
   };
 }
 
@@ -618,6 +874,22 @@ function renderFieldControl(
   if (typeMarker) {
     const renderer = markerRenderers[typeMarker];
     return renderer(info);
+  }
+
+  if (schema.format === 'dynamic-dropdown') {
+    return <DynamicSelectField {...info} />;
+  }
+
+  if (schema.format === 'tool-multiselect') {
+    return <ToolMultiSelectField {...info} />;
+  }
+
+  if (schema.format === 'tool-select') {
+    return <ToolSelectField {...info} />;
+  }
+
+  if (schema.format === 'tool-arg-select') {
+    return <ToolArgField {...info} />;
   }
 
   if (schema.type === 'boolean') {
@@ -650,11 +922,13 @@ function SchemaField(props: Readonly<FieldProps>) {
   // Clean description (remove type marker) - used as fallback
   const fallbackDescription = description?.replaceAll(/\$type:\w+(:\w+)?/g, '').trim();
 
-  // Pretty label from camelCase (fallback)
-  const fallbackLabel = name
-    .replaceAll(/([A-Z])/g, ' $1')
-    .replace(/^./, (s) => s.toUpperCase())
-    .trim();
+  // Pretty label: prefer an explicit meta label, else humanize the camelCase key.
+  const fallbackLabel =
+    schema.label ??
+    name
+      .replaceAll(/([A-Z])/g, ' $1')
+      .replace(/^./, (s) => s.toUpperCase())
+      .trim();
 
   // Translate field label and description using plugin's fields translations
   const label = pluginId ? tp(pluginId, `fields.${name}.label`, fallbackLabel) : fallbackLabel;
@@ -808,13 +1082,17 @@ function BlockConfig({
     );
   }
 
-  // Render form fields from schema
+  // Render form fields from schema, skipping any whose showWhen condition is unmet.
   const properties = schema.properties;
   const requiredFields = new Set(schema.required ?? []);
+  const visibleFields = Object.entries(properties).filter(([, fieldSchema]) => {
+    const { showWhen } = toSchemaProperty(fieldSchema);
+    return !showWhen || showWhenSatisfied(config[showWhen.field], showWhen.equals);
+  });
 
   return (
     <div className="space-y-4">
-      {Object.entries(properties).map(([name, fieldSchema]) => (
+      {visibleFields.map(([name, fieldSchema]) => (
         <SchemaField
           key={name}
           name={name}
@@ -829,6 +1107,10 @@ function BlockConfig({
           variables={availableVariables}
           required={requiredFields.has(name)}
           pluginId={pluginId}
+          blockType={data.type}
+          allConfig={config}
+          inputPortIds={(data.inputs ?? []).map((p) => p.id)}
+          configKeys={Object.keys(properties)}
         />
       ))}
     </div>
@@ -936,12 +1218,30 @@ interface IOTypesSectionProps {
   outputs: BlockPort[];
 }
 
+/**
+ * Ports are already visible on the canvas node; this section is a closed-by-
+ * default disclosure so the panel leads with what the user came for (config).
+ */
 function IOTypesSection({ nodeId, inputs, outputs }: Readonly<IOTypesSectionProps>) {
+  const [open, setOpen] = useState(false);
   const hasInputs = inputs.length > 0;
   const hasOutputs = outputs.length > 0;
 
   if (!hasInputs && !hasOutputs) {
     return null;
+  }
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="mt-3 flex w-full items-center gap-1.5 border-t pt-3 text-left text-muted-foreground text-xs transition-colors hover:text-foreground"
+      >
+        <ChevronRight className="size-3.5" />
+        {`${inputs.length} in / ${outputs.length} out`}
+      </button>
+    );
   }
 
   return (
@@ -1075,14 +1375,14 @@ function VariablesReference({ variables }: Readonly<VariablesReferenceProps>) {
               }}
               title={t('workflows:editor.panels.clickToCopy')}
             >
-              <div className="flex w-full items-center justify-between gap-2">
-                <code className="font-mono text-primary">{`{{ ${v.name} }}`}</code>
-                <Badge variant="outline" className="h-5 text-[10px]">
-                  {v.type}
+              <div className="flex w-full min-w-0 items-center justify-between gap-2">
+                <code className="min-w-0 break-all font-mono text-primary">{`{{ ${v.name} }}`}</code>
+                <Badge variant="outline" className="h-5 max-w-[45%] shrink-0 text-[10px]">
+                  <span className="truncate">{v.type}</span>
                 </Badge>
               </div>
               {v.preview !== undefined && (
-                <span className="truncate font-mono text-[10px] text-muted-foreground">
+                <span className="w-full truncate font-mono text-[10px] text-muted-foreground">
                   {v.preview}
                 </span>
               )}
@@ -1126,7 +1426,7 @@ export function ConfigPanel({
         onCollapse={onCollapse}
       />
 
-      <ScrollArea className="min-h-0 flex-1 overflow-hidden">
+      <ScrollArea className="[&_[data-radix-scroll-area-viewport]>div]:block! min-h-0 flex-1 overflow-hidden [&_[data-radix-scroll-area-viewport]>div]:w-full [&_[data-radix-scroll-area-viewport]>div]:max-w-full">
         <div className="p-4">
           {viewModuleUrl && pluginUid && blockData.pluginId ? (
             <ClientBlockView
@@ -1154,7 +1454,7 @@ export function ConfigPanel({
         <VariablesReference variables={availableVariables} />
       </ScrollArea>
 
-      <div className="border-t bg-background/80 p-3 text-center text-muted-foreground text-xs">
+      <div className="truncate border-t bg-background/80 p-2 text-center text-[10px] text-muted-foreground">
         {t('workflows:editor.panels.nodeId')}: <code className="font-mono">{node.id}</code>
       </div>
     </div>

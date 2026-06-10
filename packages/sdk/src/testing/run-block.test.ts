@@ -80,3 +80,25 @@ describe('runBlock', () => {
     expect(h.sparks.all).toEqual([]);
   });
 });
+
+const chatty = defineBlock({
+  id: 'chatty',
+  inputs: {
+    in: input(z.number()),
+  },
+  outputs: {},
+  config: z.object({}),
+  run: ({ inputs, log }) => {
+    inputs.in.on((value) => {
+      log.info('got value', { value });
+    });
+  },
+});
+
+describe('runBlock log capture', () => {
+  test('captures ctx.log entries with structured data', () => {
+    using h = runBlock(chatty);
+    h.inputs.in?.push(7);
+    expect(h.logs).toEqual([{ level: 'info', message: 'got value', data: { value: 7 } }]);
+  });
+});

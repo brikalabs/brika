@@ -13,6 +13,12 @@
       "description": "The message to echo back"
     }
   },
+  "blocks": {
+    "echo": {
+      "prefixPlaceholder": "e.g. > ",
+      "suffixPlaceholder": "e.g.  !"
+    }
+  },
   "preferences": {
     "apiKey": {
       "title": "API Key",

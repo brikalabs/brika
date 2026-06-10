@@ -94,13 +94,15 @@ export {
   LocationScopeSchema,
   locationGet,
 } from './location';
-export type { FetchArgs, FetchResult, NetScope, NetSocketScope } from './net';
+export type { FetchArgs, FetchResult, LocalNetScope, NetScope, NetSocketScope } from './net';
 export {
   FetchArgsSchema,
   FetchResultSchema,
+  LocalNetScopeSchema,
   NetScopeSchema,
   NetSocketScopeSchema,
   netFetch,
+  netLocal,
   netSocket,
 } from './net';
 export type {

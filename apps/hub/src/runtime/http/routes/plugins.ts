@@ -320,14 +320,16 @@ export const pluginsRoutes = group({
         const permService = inject(PluginPermissionService);
 
         const updated = permService.setPermission(plugin.name, body.permission, body.granted);
-        // Most grants are checked per-call against the cached vector, so
-        // invalidating it makes the toggle take effect on the next `ctx.*`
-        // call with no restart. Spawn-time permissions (e.g. rawSocket, whose
-        // env the sandbox lockdown reads at boot) can't be applied to a live
-        // process, so those reload the plugin instead.
+        // REVOKES take effect live: the hub re-checks the (invalidated) vector
+        // on every grant.request. GRANTS do not: the plugin-side ctx proxy is
+        // built from the vector frozen into its process at spawn, so a newly
+        // granted family stays PERMISSION_DENIED client-side until the plugin
+        // restarts. Reload on grant (and for spawn-time families like
+        // rawSocket, whose env the sandbox lockdown reads at boot).
         const requiresRestart =
-          isValidPermission(body.permission) &&
-          PERMISSIONS[body.permission].requiresRestart === true;
+          body.granted ||
+          (isValidPermission(body.permission) &&
+            PERMISSIONS[body.permission].requiresRestart === true);
         if (requiresRestart) {
           await inject(PluginManager).reload(plugin.uid);
         } else {

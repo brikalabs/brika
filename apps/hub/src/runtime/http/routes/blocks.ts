@@ -1,4 +1,5 @@
 import { group, route } from '@brika/router';
+import { z } from 'zod';
 import { BlockRegistry } from '@/runtime/blocks';
 import type { RegisteredBlock } from '@/runtime/blocks/block-registry';
 import { ModuleCompiler } from '@/runtime/modules';
@@ -59,6 +60,31 @@ export const blocksRoutes = group({
       path: '/categories',
       handler: ({ inject }) => {
         return inject(BlockRegistry).listByCategory();
+      },
+    }),
+
+    /**
+     * Fetch dynamic options for a block config field via IPC. The query string
+     * (e.g. the selected provider) is forwarded to the plugin's options
+     * provider so the list can depend on sibling field values.
+     */
+    route.get({
+      path: '/:typeId/config/:name/options',
+      params: z.object({
+        typeId: z.string(),
+        name: z.string(),
+      }),
+      query: z.record(z.string(), z.string()),
+      handler: async ({ params, query, inject }) => {
+        const block = inject(BlockRegistry).get(params.typeId);
+        if (!block?.pluginId) {
+          return { options: [] };
+        }
+        const process = inject(PluginLifecycle).getProcess(block.pluginId);
+        if (!process) {
+          return { options: [] };
+        }
+        return { options: await process.fetchPreferenceOptions(params.name, query) };
       },
     }),
   ],

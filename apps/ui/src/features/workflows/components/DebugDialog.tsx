@@ -131,7 +131,10 @@ export function DebugDialog({
 
         {view === 'live' ? (
           <div className="rounded-lg border bg-muted/50 p-2">
-            <ScrollArea className="h-100" ref={scrollRef}>
+            <ScrollArea
+              className="[&_[data-radix-scroll-area-viewport]>div]:block! h-100 [&_[data-radix-scroll-area-viewport]>div]:w-full [&_[data-radix-scroll-area-viewport]>div]:max-w-full"
+              ref={scrollRef}
+            >
               {filteredEvents.length === 0 ? (
                 <div className="flex h-full items-center justify-center text-muted-foreground text-sm">
                   {t('workflows:debug.waiting')}

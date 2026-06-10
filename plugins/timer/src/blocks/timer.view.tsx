@@ -8,6 +8,7 @@
 
 import { useBlockConfig, useUpdateBlockConfig } from '@brika/sdk/block-views';
 import { Input, Label } from '@brika/sdk/ui-kit';
+import { useLocale } from '@brika/sdk/ui-kit/hooks';
 import { Tag, Timer } from 'lucide-react';
 import { DurationBuilder } from './_duration-builder';
 
@@ -25,6 +26,7 @@ const PRESETS: ReadonlyArray<{ label: string; ms: number }> = [
 ];
 
 export default function TimerView() {
+  const { t } = useLocale();
   const config = useBlockConfig<TimerConfig>();
   const update = useUpdateBlockConfig();
   const duration = config.duration ?? 60_000;
@@ -44,7 +46,7 @@ export default function TimerView() {
         <Input
           value={config.name ?? ''}
           onChange={(e) => update({ name: e.target.value })}
-          placeholder="timer"
+          placeholder={t('fields.name.placeholder')}
           className="bg-background"
         />
       </div>

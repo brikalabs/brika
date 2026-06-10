@@ -4,12 +4,23 @@
  * Handles converting between Workflow objects and YAML format.
  * Includes schema validation and connection parsing.
  */
-import { parsePortRef } from '@brika/workflow';
 import { parse as parseYAML, stringify as stringifyYAML } from 'yaml';
 import { z } from 'zod';
 import type { Json } from '@/types';
 import { nonEmptyRecord, PositionSchema } from './schemas';
 import type { BlockConnection, Workflow, WorkflowBlock } from './types';
+
+/** Parse a "blockId:portId" reference; throws on a ref with no colon. */
+function parsePortRef(ref: string): { blockId: string; portId: string } {
+  const colonIndex = ref.indexOf(':');
+  if (colonIndex === -1) {
+    throw new Error(`Invalid port reference: "${ref}" - must be "blockId:portId"`);
+  }
+  return {
+    blockId: ref.slice(0, colonIndex),
+    portId: ref.slice(colonIndex + 1),
+  };
+}
 
 const YAML_OPTIONS = {
   indent: 2,
@@ -218,7 +229,7 @@ export class YAMLSerializer {
     for (const [fromPort, refValue] of Object.entries(block.outputs)) {
       for (const ref of YAMLSerializer.#toRefs(refValue)) {
         try {
-          const { blockId: to, portId: toPort } = parsePortRef(ref as `${string}:${string}`);
+          const { blockId: to, portId: toPort } = parsePortRef(ref);
           const key = `${block.id}:${fromPort}->${to}:${toPort}`;
           if (seen.has(key)) {
             continue;
@@ -250,7 +261,7 @@ export class YAMLSerializer {
     for (const [toPort, refValue] of Object.entries(block.inputs)) {
       for (const ref of YAMLSerializer.#toRefs(refValue)) {
         try {
-          const { blockId: from, portId: fromPort } = parsePortRef(ref as `${string}:${string}`);
+          const { blockId: from, portId: fromPort } = parsePortRef(ref);
           const key = `${from}:${fromPort}->${block.id}:${toPort}`;
           if (seen.has(key)) {
             continue;

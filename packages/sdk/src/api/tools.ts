@@ -8,26 +8,30 @@
  *
  * @example
  * ```ts
- * import { defineTool } from '@brika/sdk';
+ * import { defineTool, z } from '@brika/sdk';
  *
  * defineTool(
  *   {
  *     id: 'living-room-light',
  *     description: 'Turn the living-room light on or off.',
- *     inputSchema: {
- *       type: 'object',
- *       properties: { on: { type: 'boolean' } },
- *       required: ['on'],
- *     },
+ *     input: z.object({ on: z.boolean().describe('Desired state') }),
  *   },
- *   async (args) => {
- *     await setLight(Boolean(args.on));
- *     return `Light turned ${args.on ? 'on' : 'off'}`;
+ *   async ({ on }) => {
+ *     await setLight(on);
+ *     return `Light turned ${on ? 'on' : 'off'}`;
  *   },
  * );
  * ```
+ *
+ * The `input` zod schema is the single source of truth: the JSON Schema shown
+ * to the model is derived from it, the incoming arguments are validated
+ * against it, and the handler receives the PARSED, fully-typed value
+ * (defaults applied). A raw `inputSchema` JSON object is still accepted for
+ * schemas that zod cannot express.
  */
 
+import type { z } from 'zod';
+import { zodToJsonSchema } from '../blocks/reactive';
 import { getContext } from '../context';
 import type { Json } from '../types';
 
@@ -62,11 +66,74 @@ export type ToolHandler = (
   ctx: ToolCallContext
 ) => Json | Promise<Json>;
 
+/** A {@link ToolDefinition} whose arguments are declared as a zod schema. */
+export type TypedToolDefinition<S extends z.ZodObject<Record<string, z.ZodType>>> = Omit<
+  ToolDefinition,
+  'inputSchema'
+> & {
+  /** Argument schema: drives the model-facing JSON Schema AND runtime parsing. */
+  input: S;
+};
+
+/** Shape the generated JSON into the wire `ToolInputSchema` contract. */
+function toToolInputSchema(json: Record<string, Json>): ToolInputSchema {
+  const schema: ToolInputSchema = { type: 'object' };
+  const properties = json.properties;
+  if (properties && typeof properties === 'object' && !Array.isArray(properties)) {
+    schema.properties = properties;
+  }
+  const required = json.required;
+  if (Array.isArray(required)) {
+    schema.required = required.filter((entry): entry is string => typeof entry === 'string');
+  }
+  return schema;
+}
+
 /**
  * Register a tool with the hub. Returning a string emits it as the tool's
  * `content` (the text the model reads); any other JSON value is returned as
  * structured `data`.
+ *
+ * The `input` zod object is required and is the single source of truth: the
+ * model-facing JSON Schema is derived from it, arguments are validated
+ * against it before your handler runs, and the handler receives the PARSED,
+ * fully-typed value with defaults applied. For a tool with no arguments,
+ * pass `z.object({})`. For a JSON Schema zod cannot express, use
+ * {@link defineRawTool}.
  */
-export function defineTool(definition: ToolDefinition, handler: ToolHandler): void {
+export function defineTool<S extends z.ZodObject<Record<string, z.ZodType>>>(
+  definition: TypedToolDefinition<S>,
+  handler: (args: z.output<S>, ctx: ToolCallContext) => Json | Promise<Json>
+): void {
+  const { input, ...rest } = definition;
+  const inputSchema = toToolInputSchema(zodToJsonSchema(input));
+  // A field that accepts undefined (optional or defaulted) is not required
+  // for the caller; blocks treat defaults differently, so recompute here.
+  inputSchema.required = Object.entries(input.shape)
+    .filter(([, field]) => !field.safeParse(undefined).success)
+    .map(([key]) => key);
+  if (inputSchema.required.length === 0) {
+    inputSchema.required = undefined;
+  }
+  const wireDefinition: ToolDefinition = {
+    ...rest,
+    inputSchema,
+  };
+  const wrapped: ToolHandler = (args, ctx) => {
+    const parsed = input.safeParse(args);
+    if (!parsed.success) {
+      throw new Error(`Invalid arguments for "${definition.id}": ${parsed.error.message}`);
+    }
+    return handler(parsed.data, ctx);
+  };
+  getContext().registerTool(wireDefinition, wrapped);
+}
+
+/**
+ * Escape hatch: register a tool with a hand-written JSON `inputSchema` and an
+ * unvalidated handler. Prefer {@link defineTool}; this exists for schemas zod
+ * cannot express.
+ */
+export function defineRawTool(definition: ToolDefinition, handler: ToolHandler): void {
   getContext().registerTool(definition, handler);
 }

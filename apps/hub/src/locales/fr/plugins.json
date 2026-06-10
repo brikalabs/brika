@@ -24,7 +24,7 @@
     "uptime": "Temps de fonctionnement",
     "startedAt": "Démarré",
     "availableTools": "Outils disponibles",
-    "availableToolsDesc": "Outils fournis par ce plugin",
+    "availableToolsDesc": "Capacités appelables par l'IA que ce plugin enregistre dans le hub",
     "availableBlocks": "Blocs disponibles",
     "availableBlocksDesc": "Blocs de workflow fournis par ce plugin",
     "availableSparks": "Sparks disponibles",

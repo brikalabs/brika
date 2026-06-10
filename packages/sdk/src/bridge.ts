@@ -32,6 +32,8 @@ export type StopHandler = () => void | Promise<void>;
 export interface PreferenceOption {
   value: string;
   label: string;
+  /** Optional secondary line (e.g. a model's context window and price). */
+  description?: string;
 }
 
 // ---- Manifest ----
@@ -84,7 +86,7 @@ export interface PreludeBridge {
   updatePreference(key: string, value: unknown): void;
   definePreferenceOptions(
     name: string,
-    provider: () => PreferenceOption[] | Promise<PreferenceOption[]>
+    provider: (params?: Record<string, unknown>) => PreferenceOption[] | Promise<PreferenceOption[]>
   ): void;
 
   // -- Actions --

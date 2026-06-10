@@ -1,5 +1,5 @@
-import { defineBlock, input, log, output, z } from '@brika/sdk';
-import { askLlm, providerConfig } from '../providers';
+import { defineBlock, input, output, z } from '@brika/sdk';
+import { askLlm } from '../providers';
 
 /**
  * Ask AI: a trigger fires, a prompt goes out, the completion text comes back.
@@ -9,9 +9,9 @@ import { askLlm, providerConfig } from '../providers';
  * incoming payload with `{{ inputs.in }}` or `{{ inputs.in.field }}`; leave the
  * field empty to use a string piped straight into the trigger.
  *
- * Provider-agnostic: Anthropic (Claude) or any OpenAI-compatible endpoint via
- * the `provider` config. Keys come from the plugin-global preferences; egress is
- * the operator-consented `dev.brika.net.fetch` grant.
+ * No provider plumbing on the block: pick a model from your configured
+ * providers (keys + endpoints live in the plugin settings) and the model ref
+ * names where it runs (Anthropic, OpenAI-compatible, or local Ollama).
  */
 export const llmBlock = defineBlock({
   id: 'llm',
@@ -36,11 +36,10 @@ export const llmBlock = defineBlock({
       .describe(
         'Prompt sent to the model. Reference incoming data with {{ inputs.in }} or {{ inputs.in.field }}. Leave empty to use a string piped into the Input.'
       ),
-    ...providerConfig,
     model: z
-      .string()
-      .default('claude-opus-4-8')
-      .describe('Model id (provider-specific, e.g. claude-opus-4-8 or gpt-4o)'),
+      .dynamicDropdown({ label: 'Model' })
+      .default('anthropic:claude-opus-4-8')
+      .describe('Pick a model from your configured providers (set keys in the plugin settings)'),
     systemPrompt: z
       .string()
       .optional()
@@ -48,7 +47,7 @@ export const llmBlock = defineBlock({
     effort: z
       .enum(['low', 'medium', 'high'])
       .default('high')
-      .describe('Reasoning effort and token spend (Anthropic)'),
+      .describe('Reasoning effort and token spend (Claude models)'),
     maxTokens: z
       .number()
       .int()
@@ -57,7 +56,7 @@ export const llmBlock = defineBlock({
       .default(4096)
       .describe('Maximum tokens in the reply'),
   }),
-  run: ({ inputs, outputs, config }) => {
+  run: ({ inputs, outputs, config, log }) => {
     inputs.in.on(async (data) => {
       const templated = config.prompt?.trim();
       const prompt = templated && templated.length > 0 ? templated : stringInput(data);
@@ -67,8 +66,6 @@ export const llmBlock = defineBlock({
       }
       try {
         const text = await askLlm(prompt, {
-          provider: config.provider,
-          baseUrl: config.baseUrl,
           model: config.model,
           systemPrompt: config.systemPrompt,
           effort: config.effort,

@@ -251,22 +251,38 @@ export class PluginManager {
   // Reactive Block Operations
   // ─────────────────────────────────────────────────────────────────────────
 
-  setBlockEmitHandler(handler: (instanceId: string, port: string, data: Json) => void): void {
+  setBlockEmitHandler(
+    handler: (instanceId: string, port: string, data: Json, causationId?: string) => void
+  ): void {
     this.#eventHandler.setBlockEmitHandler(handler);
   }
 
-  clearBlockEmitHandler(handler?: (instanceId: string, port: string, data: Json) => void): void {
+  clearBlockEmitHandler(
+    handler?: (instanceId: string, port: string, data: Json, causationId?: string) => void
+  ): void {
     this.#eventHandler.clearBlockEmitHandler(handler);
   }
 
   setBlockLogHandler(
-    handler: (instanceId: string, workflowId: string, level: string, message: string) => void
+    handler: (
+      instanceId: string,
+      workflowId: string,
+      level: string,
+      message: string,
+      data?: Json
+    ) => void
   ): void {
     this.#eventHandler.setBlockLogHandler(handler);
   }
 
   clearBlockLogHandler(
-    handler?: (instanceId: string, workflowId: string, level: string, message: string) => void
+    handler?: (
+      instanceId: string,
+      workflowId: string,
+      level: string,
+      message: string,
+      data?: Json
+    ) => void
   ): void {
     this.#eventHandler.clearBlockLogHandler(handler);
   }
@@ -305,11 +321,11 @@ export class PluginManager {
     }
   }
 
-  pushBlockInput(instanceId: string, port: string, data: Json): void {
+  pushBlockInput(instanceId: string, port: string, data: Json, causationId?: string): void {
     // Find the process that owns this block instance
     // For now, broadcast to all processes (they'll ignore if instance not found)
     for (const process of this.#lifecycle.listProcesses()) {
-      process.pushInput(instanceId, port, data);
+      process.pushInput(instanceId, port, data, causationId);
     }
   }
 

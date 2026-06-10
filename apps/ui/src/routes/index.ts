@@ -15,6 +15,7 @@ import { settingRoutes } from './settings';
 import { setupRoutes } from './setup';
 import { sparkRoutes } from './sparks';
 import { storeRoutes } from './store';
+import { toolRoutes } from './tools';
 import { workflowRoutes } from './workflows';
 
 export const rootRoute = createRootRoute({
@@ -26,6 +27,7 @@ export const { routes, routeTree } = createProtectedRoutes(
   {
     dashboard: dashboardRoutes,
     blocks: blockRoutes,
+    tools: toolRoutes,
     plugins: pluginRoutes,
     workflows: workflowRoutes,
     boards: boardRoutes,
