@@ -28,18 +28,24 @@ export const ToolResult = z.object({
 });
 export type ToolResult = z.infer<typeof ToolResult>;
 
-export const ToolInputSchemaProperty = z.object({
-  type: z.enum(['string', 'number', 'boolean', 'array', 'object']),
-  description: z.string().optional(),
-  default: Json.optional(),
-  enum: z.array(Json).optional(),
-  items: z
-    .object({
-      type: z.string(),
-    })
-    .optional(),
-  required: z.boolean().optional(),
-});
+// Extra JSON Schema keywords (minimum, maximum, nested properties, ...) are
+// kept via catchall(Json) so zod-derived schemas reach the model intact while
+// every value stays Json-typed for the bridge.
+export const ToolInputSchemaProperty = z
+  .object({
+    type: z.enum(['string', 'number', 'integer', 'boolean', 'array', 'object']),
+    description: z.string().optional(),
+    default: Json.optional(),
+    enum: z.array(Json).optional(),
+    items: z
+      .object({
+        type: z.string(),
+      })
+      .catchall(Json)
+      .optional(),
+    required: z.boolean().optional(),
+  })
+  .catchall(Json);
 export type ToolInputSchemaProperty = z.infer<typeof ToolInputSchemaProperty>;
 
 export const ToolInputSchema = z.object({

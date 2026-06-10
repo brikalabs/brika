@@ -103,5 +103,13 @@ export async function startHub(): Promise<void> {
 }
 
 if (import.meta.main) {
-  await startHub();
+  try {
+    await startHub();
+  } catch (error) {
+    // A fatal bootstrap plugin (e.g. the API port is held by another hub)
+    // already logged the abort; exit cleanly instead of re-crashing through
+    // the uncaught-exception handler.
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exit(1);
+  }
 }
