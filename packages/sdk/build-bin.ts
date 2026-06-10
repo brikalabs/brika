@@ -16,7 +16,9 @@ const result = await Bun.build({
   entrypoints: [`${import.meta.dir}/src/cli/brika.ts`],
   outdir: `${import.meta.dir}/dist/bin`,
   target: 'bun',
-  external: ['@brika/sdk', '@typescript/native-preview'],
+  // brika:embedded-cli is the compiled-binary delegation module; the lean bin
+  // never runs compiled, so the dynamic import stays dormant and unresolved.
+  external: ['@brika/sdk', '@typescript/native-preview', 'brika:embedded-cli'],
   banner: '#!/usr/bin/env bun',
 });
 

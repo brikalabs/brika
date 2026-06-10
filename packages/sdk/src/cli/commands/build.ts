@@ -17,6 +17,7 @@ import { defineCommand } from '@brika/cli';
 import { type GeneratedManifest, generateEntry, generateManifest } from '@brika/compiler';
 import { PluginPackageSchema } from '@brika/schema';
 import pc from 'picocolors';
+import { runEmbeddedBuild, shouldDelegateToEmbeddedCli } from '../embedded-cli';
 
 async function readFileOrNull(path: string): Promise<string | null> {
   try {
@@ -205,6 +206,12 @@ function applyArrayDrift(
  * or, under `check`, on drift; callers set the process exit code.
  */
 export async function runBuild(root: string, check: boolean): Promise<boolean> {
+  // A compiled binary cannot import plugin source in-process (the standalone
+  // runtime loader does not resolve a plugin's node_modules); re-run through
+  // the embedded CLI in a plain-bun child instead.
+  if (shouldDelegateToEmbeddedCli()) {
+    return runEmbeddedBuild(root, check);
+  }
   const result = await generateManifest(root);
   printDiagnostics(result);
   if (!result.ok) {

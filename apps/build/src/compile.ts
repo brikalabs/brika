@@ -12,6 +12,7 @@
 import { join } from 'node:path';
 import pc from 'picocolors';
 import { done, elapsed, fail, fileSize, log, step } from './log';
+import { bundleCliSource, embedCli } from './plugins/embed-cli';
 import { bundlePreludeSource, embedPrelude } from './plugins/embed-prelude';
 import { stubMockFiles } from './plugins/stub-mock-files';
 import { stubReactDevtoolsCore } from './plugins/stub-react-devtools-core';
@@ -53,11 +54,17 @@ export async function compile({ target, platform }: CompileOptions): Promise<voi
   step('Bundling & compiling...');
 
   const preludeSource = await bundlePreludeSource();
+  const cliSource = await bundleCliSource();
   const result = await Bun.build({
     entrypoints: [resolveEntrypoint(target)],
     target: 'bun',
     minify: true,
-    plugins: [stubReactDevtoolsCore(), stubMockFiles(), embedPrelude(preludeSource)],
+    plugins: [
+      stubReactDevtoolsCore(),
+      stubMockFiles(),
+      embedPrelude(preludeSource),
+      embedCli(cliSource),
+    ],
     compile: {
       outfile: outPath,
       ...(validPlatform
