@@ -45,6 +45,11 @@ const WATCHABLE_ATTRIBUTES = [
   'illuminance',
   'battery',
   'buttonPosition',
+  'lastPress',
+  'lastButton',
+  'fanMode',
+  'fanSpeed',
+  'vacuumState',
   'systemMode',
   'systemModeName',
 ] as const;

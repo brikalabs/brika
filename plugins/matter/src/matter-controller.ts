@@ -325,6 +325,7 @@ export class MatterController {
       press: press.press,
       count: press.count,
     });
+    this.#recordLastPress(device, button, press);
     if (device?.parentId !== undefined) {
       const parent = this.#deviceCache.get(device.parentId);
       this.#emitButtonPress({
@@ -334,6 +335,24 @@ export class MatterController {
         press: press.press,
         count: press.count,
       });
+      this.#recordLastPress(parent, button, press);
+    }
+  }
+
+  /**
+   * Record the last press into the device's state and notify subscribers, so
+   * boards show remotes ALIVE ("button 2, double") and workflows can watch
+   * `lastPress`/`lastButton` like any other attribute. Ephemeral by design:
+   * a node refresh rebuilds state and clears it.
+   */
+  #recordLastPress(device: MatterDevice | undefined, button: number, press: NormalizedPress): void {
+    if (!device) {
+      return;
+    }
+    device.state.lastPress = press.press;
+    device.state.lastButton = button;
+    for (const cb of this.#onStateChanged) {
+      cb(device);
     }
   }
 

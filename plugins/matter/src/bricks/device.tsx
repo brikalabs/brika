@@ -26,12 +26,35 @@ import type { DeviceState } from './types';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
+/** Controllable switch: power state. Battery remote: last press, then battery. */
+function switchStateLabel(device: DeviceState): string {
+  if (device.commands?.includes('toggle')) {
+    return device.state.on ? 'On' : 'Off';
+  }
+  const { lastPress, lastButton, battery } = device.state;
+  if (typeof lastPress === 'string') {
+    return lastButton === undefined ? lastPress : `B${String(lastButton)} ${lastPress}`;
+  }
+  if (battery !== undefined && battery !== null) {
+    return `${String(battery)}%`;
+  }
+  return device.online ? 'Online' : 'Offline';
+}
+
 /** Short state label for micro / strip layouts */
 function stateLabel(device: DeviceState): string {
   switch (device.deviceType) {
     case 'light':
-    case 'switch':
       return device.state.on ? 'On' : 'Off';
+    case 'switch':
+      return switchStateLabel(device);
+    case 'vacuum': {
+      const vacuumState = device.state.vacuumState;
+      if (typeof vacuumState === 'string') {
+        return vacuumState;
+      }
+      return device.online ? 'Ready' : 'Offline';
+    }
     case 'lock':
       return device.state.locked ? 'Locked' : 'Unlocked';
     case 'cover': {
