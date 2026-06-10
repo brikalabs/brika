@@ -11,7 +11,12 @@
 import { useLocale } from '@brika/sdk/ui-kit/hooks';
 import clsx from 'clsx';
 import { BatteryMedium, CircleDot } from 'lucide-react';
-import { PRESS_LABEL_KEYS, PRESS_SHORT_LABELS } from '../../display/attributes';
+import {
+  asText,
+  formatAttribute,
+  PRESS_LABEL_KEYS,
+  PRESS_SHORT_LABELS,
+} from '../../display/attributes';
 import { StatCard } from '../_components';
 import { getDeviceTheme } from '../theme';
 import type { DeviceState } from '../types';
@@ -70,7 +75,7 @@ function BatteryCard({ device }: Readonly<{ device: DeviceState }>) {
     <StatCard
       icon={BatteryMedium}
       label={t('device.attributes.battery')}
-      value={`${String(battery)}%`}
+      value={formatAttribute('battery', battery, t)}
       accentColor={getDeviceTheme('switch').accentColor}
     />
   );
@@ -101,7 +106,7 @@ export function RemoteControls({
         </div>
         {lastPress !== undefined && (
           <span className="text-white/60 text-xs">
-            {`${t('device.values.button')} ${String(lastButton ?? '?')}: ${pressLabel(lastPress, t)}`}
+            {`${t('device.values.button')} ${lastButton === undefined ? '?' : asText(lastButton)}: ${pressLabel(lastPress, t)}`}
           </span>
         )}
         <BatteryCard device={device} />
@@ -131,7 +136,7 @@ export function RemoteControls({
           <span className="font-semibold text-sm text-white">
             {lastButton === undefined
               ? t('device.values.button')
-              : `${t('device.values.button')} ${String(lastButton)}`}
+              : `${t('device.values.button')} ${asText(lastButton)}`}
           </span>
           <span className="text-white/60 text-xs">{pressLabel(lastPress, t)}</span>
         </div>

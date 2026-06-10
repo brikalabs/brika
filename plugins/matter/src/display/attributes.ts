@@ -110,7 +110,11 @@ export const VACUUM_STATE_KEYS: Readonly<Record<string, string>> = {
 
 // ─── Formatting helpers (pure, tolerant of any input) ───────────────────────
 
-function asText(value: unknown): string {
+/**
+ * Stringify an arbitrary state value without `[object Object]` artifacts.
+ * The shared coercion for every consumer that renders raw state values.
+ */
+export function asText(value: unknown): string {
   if (typeof value === 'string') {
     return value;
   }

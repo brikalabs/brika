@@ -9,6 +9,7 @@ import { log, onInit, onStop, onUninstall } from '@brika/sdk/lifecycle';
 import { clearAllData } from '@brika/sdk/storage';
 import { deviceBrick } from './bricks/device.brick';
 import { devicesBrick } from './bricks/devices.brick';
+import { asText } from './display/attributes';
 import { getMatterController } from './engine/controller';
 import { serializeDevice } from './serialize';
 import {
@@ -111,7 +112,7 @@ onInit(async () => {
     const now = Date.now();
     const state: Record<string, string> = {};
     for (const [k, v] of Object.entries(device.state)) {
-      state[k] = String(v);
+      state[k] = asText(v);
     }
 
     const prev = prevByNode.get(device.nodeId);

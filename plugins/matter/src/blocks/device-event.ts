@@ -20,7 +20,7 @@
  */
 
 import { defineBlock, output, z } from '@brika/sdk';
-import { WATCHABLE_ATTRIBUTE_KEYS } from '../display/attributes';
+import { asText, WATCHABLE_ATTRIBUTE_KEYS } from '../display/attributes';
 import { getMatterController } from '../engine/controller';
 import type { MatterDevice, MatterDeviceEvent } from '../engine/device-model';
 import { ATTRIBUTE_CONDITION_VALUES, conditionMet } from './attribute-condition';
@@ -28,7 +28,7 @@ import { ATTRIBUTE_CONDITION_VALUES, conditionMet } from './attribute-condition'
 function toStringState(device: MatterDevice): Record<string, string> {
   const state: Record<string, string> = {};
   for (const [k, v] of Object.entries(device.state)) {
-    state[k] = String(v);
+    state[k] = asText(v);
   }
   return state;
 }
