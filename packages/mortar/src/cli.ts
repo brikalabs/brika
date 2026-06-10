@@ -20,13 +20,14 @@
  * the schema and the inline default.
  */
 
-import { dirname, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { createCli, defineCommand } from '@brika/cli';
 import { runTui } from '@brika/cli/tui';
 import pc from 'picocolors';
 import React from 'react';
 import { configExists, loadConfig, type ResolvedConfig, saveDefaultConfig } from './config';
 import { writeDefaultAndAnnounce } from './config/prompts';
+import { SHUTDOWN_GRACE_MS } from './constants';
 import { Supervisor } from './supervisor';
 import { reapStaleRun } from './supervisor/run-state';
 import { App } from './tui/App';
@@ -102,6 +103,8 @@ async function runStack(resolved: ResolvedConfig, { plain }: { plain: boolean })
     );
   }
 
+  spawnSentinel(resolved.root);
+
   const supervisor = new Supervisor(resolved.config.services, { projectRoot: resolved.root });
 
   const shutdown = (): void => {
@@ -156,6 +159,45 @@ async function runStack(resolved: ResolvedConfig, { plain }: { plain: boolean })
     }),
     { exitOnCtrlC: false }
   );
+}
+
+/**
+ * Spawn the per-session orphan sentinel: a detached `/bin/sh` loop that
+ * polls `kill -0 <our pid>` once a second and, when mortar disappears,
+ * waits out the shutdown grace period and execs `sentinel.ts` to reap
+ * whatever the run-state file still records.
+ *
+ * This is the only layer that catches an UNCLEAN mortar death (kill -9,
+ * runtime crash, terminal hard-close) within seconds; the signal
+ * handlers above need mortar alive, and the start-time reaper only runs
+ * at the NEXT `mortar start`. A shell loop (not a Bun process) keeps
+ * the resident cost at ~1 MB; positional `$1..$5` args dodge any
+ * quoting of paths. Own process group + ignored stdio so it survives
+ * the terminal and every signal aimed at mortar's group; it self-exits
+ * after one shot. On a clean shutdown the state file is already gone
+ * and the reap is a no-op.
+ */
+function spawnSentinel(root: string): void {
+  if (process.platform === 'win32') {
+    return;
+  }
+  const sentinel = join(import.meta.dir, 'supervisor', 'sentinel.ts');
+  const graceSeconds = Math.ceil(SHUTDOWN_GRACE_MS / 1000) + 2;
+  const proc = Bun.spawn(
+    [
+      '/bin/sh',
+      '-c',
+      'while kill -0 "$1" 2>/dev/null; do sleep 1; done; sleep "$2"; exec "$3" "$4" "$5"',
+      'mortar-sentinel',
+      String(process.pid),
+      String(graceSeconds),
+      process.execPath,
+      sentinel,
+      root,
+    ],
+    { stdin: 'ignore', stdout: 'ignore', stderr: 'ignore', detached: true }
+  );
+  proc.unref();
 }
 
 async function runPlain(supervisor: Supervisor, resolved: ResolvedConfig): Promise<void> {

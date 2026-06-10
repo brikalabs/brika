@@ -126,6 +126,37 @@ describe('reapStaleRun', () => {
     expect(await reapStaleRun(root)).toEqual({ kind: 'reaped', reaped: 0 });
   });
 
+  test('sentinel.ts reaps an orphan when invoked after an unclean death', async () => {
+    const root = mkRoot();
+    const orphan = Bun.spawn(['sleep', '30'], { stdout: 'ignore', stderr: 'ignore' });
+    writeRunState(root, {
+      mortarPid: await deadPid(),
+      services: [{ id: 'hub', pid: orphan.pid, command: 'sleep 30' }],
+    });
+
+    const sentinel = Bun.spawn(
+      [process.execPath, new URL('./sentinel.ts', import.meta.url).pathname, root],
+      {
+        stdout: 'ignore',
+        stderr: 'ignore',
+        env: { ...process.env, MORTAR_REAP_GRACE_MS: '50' },
+      }
+    );
+    expect(await sentinel.exited).toBe(0);
+
+    await orphan.exited;
+    expect(orphan.exitCode === 0).toBe(false);
+    expect(existsSync(runStatePath(root))).toBe(false);
+  });
+
+  test('sentinel.ts exits 2 without a root argument', async () => {
+    const sentinel = Bun.spawn(
+      [process.execPath, new URL('./sentinel.ts', import.meta.url).pathname],
+      { stdout: 'ignore', stderr: 'ignore' }
+    );
+    expect(await sentinel.exited).toBe(2);
+  });
+
   test('reports a still-running mortar session as active', async () => {
     const root = mkRoot();
     // argv0 renames the process so its `ps` command line contains
