@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import { Glob } from 'bun';
 import { join } from 'node:path';
+import { Glob } from 'bun';
 import { z } from 'zod';
 
 /**
@@ -19,7 +19,9 @@ import { z } from 'zod';
 const REPO_ROOT = join(import.meta.dir, '..', '..', '..');
 
 const configSchema = z.object({ ignore: z.array(z.string()) }).loose();
-const pkgSchema = z.object({ name: z.string().optional(), private: z.boolean().optional() }).loose();
+const pkgSchema = z
+  .object({ name: z.string().optional(), private: z.boolean().optional() })
+  .loose();
 
 const config = configSchema.parse(
   JSON.parse(await Bun.file(join(REPO_ROOT, '.changeset/config.json')).text())
@@ -27,7 +29,11 @@ const config = configSchema.parse(
 
 async function workspacePackages(): Promise<Array<{ name: string; private: boolean }>> {
   const out: Array<{ name: string; private: boolean }> = [];
-  for (const pattern of ['apps/*/package.json', 'packages/*/package.json', 'plugins/*/package.json']) {
+  for (const pattern of [
+    'apps/*/package.json',
+    'packages/*/package.json',
+    'plugins/*/package.json',
+  ]) {
     for await (const rel of new Glob(pattern).scan({ cwd: REPO_ROOT })) {
       const pkg = pkgSchema.parse(JSON.parse(await Bun.file(join(REPO_ROOT, rel)).text()));
       if (pkg.name) {
