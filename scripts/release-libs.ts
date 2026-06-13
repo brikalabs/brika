@@ -62,11 +62,16 @@ const PUBLISH_ORDER: readonly string[] = [
   'plugins/sil-electricity',
 ];
 
+const depMapSchema = z.record(z.string(), z.string()).optional();
+
 const manifestSchema = z
   .object({
     name: z.string(),
     version: z.string(),
     private: z.boolean().optional(),
+    dependencies: depMapSchema,
+    peerDependencies: depMapSchema,
+    optionalDependencies: depMapSchema,
   })
   .loose();
 
@@ -85,6 +90,22 @@ interface ShippedPackage {
   readonly dir: string;
   readonly name: string;
   readonly version: string;
+  /** Dependency names still carrying a `workspace:` range (must be empty to publish). */
+  readonly workspaceRanges: readonly string[];
+}
+
+/** Names of deps whose range is the `workspace:` protocol npm cannot resolve. */
+function workspaceRangeDeps(manifest: z.infer<typeof manifestSchema>): string[] {
+  const maps = [manifest.dependencies, manifest.peerDependencies, manifest.optionalDependencies];
+  const names = new Set<string>();
+  for (const map of maps) {
+    for (const [name, range] of Object.entries(map ?? {})) {
+      if (range.startsWith('workspace:')) {
+        names.add(name);
+      }
+    }
+  }
+  return [...names].sort();
 }
 
 /** Read + validate a workspace manifest; returns null for a private package. */
@@ -96,7 +117,12 @@ async function readManifest(relDir: string): Promise<ShippedPackage | null> {
     console.log(`  skip ${relDir}: private`);
     return null;
   }
-  return { dir: join(REPO_ROOT, relDir), name: manifest.name, version: manifest.version };
+  return {
+    dir: join(REPO_ROOT, relDir),
+    name: manifest.name,
+    version: manifest.version,
+    workspaceRanges: workspaceRangeDeps(manifest),
+  };
 }
 
 /**
@@ -159,6 +185,21 @@ async function main(): Promise<void> {
     if (pkg !== null) {
       packages.push(pkg);
     }
+  }
+
+  // Preflight: npm does NOT rewrite `workspace:*` ranges, and `npm publish
+  // --dry-run` packs them WITHOUT error, so a rehearsal would pass while the real
+  // publish ships a manifest no consumer can install. `changeset version` rewrites
+  // these to concrete `^x.y.z`; abort here if it has not run yet.
+  const unresolved = packages.filter((p) => p.workspaceRanges.length > 0);
+  if (unresolved.length > 0) {
+    console.error('Refusing to publish: these manifests still carry workspace: ranges.');
+    console.error('Run `changeset version` (or `bun run version-packages`) first so the');
+    console.error('workspace: protocol is rewritten to concrete ranges.');
+    for (const p of unresolved) {
+      console.error(`  ${p.name}: ${p.workspaceRanges.join(', ')}`);
+    }
+    process.exit(1);
   }
 
   for (const pkg of packages) {
