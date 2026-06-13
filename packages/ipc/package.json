@@ -30,7 +30,9 @@
     "!src/**/*.spec.tsx",
     "!src/**/*_test-utils.ts",
     "!src/**/tsconfig.json",
-    "!**/*.tsbuildinfo"
+    "!**/*.tsbuildinfo",
+    "!src/**/*.bench.ts",
+    "!src/**/__benchmarks__/**"
   ],
   "scripts": {
     "test": "bun test",

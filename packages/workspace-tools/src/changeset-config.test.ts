@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { join } from 'node:path';
 import { Glob } from 'bun';
 import { z } from 'zod';
+import { PUBLISH_ORDER } from '../../../scripts/release-libs';
 
 /**
  * Guard: the Changesets config and per-package `private` flags must agree, so the
@@ -18,7 +19,9 @@ import { z } from 'zod';
 
 const REPO_ROOT = join(import.meta.dir, '..', '..', '..');
 
-const configSchema = z.object({ ignore: z.array(z.string()) }).loose();
+const configSchema = z
+  .object({ ignore: z.array(z.string()), fixed: z.array(z.array(z.string())).default([]) })
+  .loose();
 const pkgSchema = z
   .object({ name: z.string().optional(), private: z.boolean().optional() })
   .loose();
@@ -66,5 +69,33 @@ describe('changeset config stays in sync with package privacy', () => {
   test('create-brika (the one non-@brika published package) is not private', async () => {
     const createBrika = (await workspacePackages()).find((p) => p.name === 'create-brika');
     expect(createBrika?.private).toBe(false);
+  });
+
+  test('every `fixed`-group member is a published (non-private) package', async () => {
+    const published = new Set(
+      (await workspacePackages()).filter((p) => !p.private).map((p) => p.name)
+    );
+    const fixedMembers = config.fixed.flat().sort();
+    const notPublished = fixedMembers.filter((name) => !published.has(name));
+    expect(notPublished).toEqual([]);
+  });
+
+  test('release-libs PUBLISH_ORDER equals the published (non-private) set', async () => {
+    const packages = await workspacePackages();
+    const published = packages
+      .filter((p) => !p.private)
+      .map((p) => p.name)
+      .sort();
+    // Resolve each PUBLISH_ORDER dir to its package name.
+    const publishOrderNames: string[] = [];
+    for (const relDir of PUBLISH_ORDER) {
+      const pkg = pkgSchema.parse(
+        JSON.parse(await Bun.file(join(REPO_ROOT, relDir, 'package.json')).text())
+      );
+      if (pkg.name) {
+        publishOrderNames.push(pkg.name);
+      }
+    }
+    expect(publishOrderNames.sort()).toEqual(published);
   });
 });

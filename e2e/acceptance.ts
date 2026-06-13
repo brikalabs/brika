@@ -115,15 +115,19 @@ async function startVerdaccio(cleanup: Cleanup): Promise<void> {
 
 const tokenSchema = z.object({ token: z.string().min(1) }).loose();
 
-/** Register a throwaway user and return its publish token. */
+/**
+ * Register a throwaway user and return its publish token. The username is unique
+ * per run so registration always succeeds with a fresh token (201 + token),
+ * which also works against a reused VERDACCIO_REGISTRY (no token-less 409 path).
+ */
 async function createToken(): Promise<string> {
-  const user = 'brika-e2e';
+  const user = `brika-e2e-${Date.now()}`;
   const res = await fetch(`${REGISTRY}/-/user/org.couchdb.user:${user}`, {
     method: 'PUT',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ name: user, password: 'brika-e2e', email: 'e2e@brika.dev' }),
   });
-  if (!res.ok && res.status !== 409) {
+  if (!res.ok) {
     throw new Error(`could not create verdaccio user: ${res.status} ${await res.text()}`);
   }
   return tokenSchema.parse(await res.json()).token;
@@ -192,12 +196,14 @@ async function drainInstallStream(res: Response): Promise<void> {
   }
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
+  let buffer = '';
   for (;;) {
     const { value, done } = await reader.read();
-    if (done) {
-      return;
-    }
-    for (const line of decoder.decode(value).split('\n')) {
+    buffer += decoder.decode(value, { stream: !done });
+    const lines = buffer.split('\n');
+    // Keep the trailing partial line in the buffer until the next read completes it.
+    buffer = done ? '' : (lines.pop() ?? '');
+    for (const line of lines) {
       if (!line.startsWith('data:')) {
         continue;
       }
@@ -209,6 +215,9 @@ async function drainInstallStream(res: Response): Promise<void> {
       if (phase === 'complete') {
         return;
       }
+    }
+    if (done) {
+      return;
     }
   }
 }
