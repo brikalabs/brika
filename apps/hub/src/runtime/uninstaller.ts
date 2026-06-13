@@ -33,7 +33,8 @@ interface UninstallPlan {
 
 /** Print what the run will remove, before the confirmation prompt. */
 function printPlan({ installDir, brikaHome, purge, isWindows }: UninstallPlan): void {
-  console.log(`${pc.cyan('brika')} ${pc.dim(`v${hub.version}`)}`);
+  const versionLabel = pc.dim(`v${hub.version}`);
+  console.log(`${pc.cyan('brika')} ${versionLabel}`);
   console.log();
   if (isWindows) {
     // The running .exe holds a lock and can't delete itself; the PowerShell
@@ -46,7 +47,8 @@ function printPlan({ installDir, brikaHome, purge, isWindows }: UninstallPlan): 
     console.log(`  ${pc.bold('This will also remove:')} ${brikaHome}`);
     console.log(`  ${pc.bold('and:')} stored secrets in the OS keychain`);
   } else {
-    console.log(`  ${pc.dim(`Your data is kept at ${brikaHome} (use --purge to remove it).`)}`);
+    const keptNote = pc.dim(`Your data is kept at ${brikaHome} (use --purge to remove it).`);
+    console.log(`  ${keptNote}`);
   }
   console.log();
 }
@@ -56,7 +58,8 @@ function printWindowsBinaryNote(): void {
   console.log(`  ${pc.yellow('Note:')} The binary cannot be deleted while running on Windows.`);
   console.log('  Run the PowerShell uninstaller to remove it:');
   console.log();
-  console.log(`    ${pc.cyan(`irm ${HUB_REPO_URL}/raw/main/scripts/uninstall.ps1 | iex`)}`);
+  const psCommand = pc.cyan(`irm ${HUB_REPO_URL}/raw/main/scripts/uninstall.ps1 | iex`);
+  console.log(`    ${psCommand}`);
   console.log();
 }
 
@@ -95,7 +98,8 @@ async function cleanShellPathEntries(installDir: string): Promise<void> {
         return !(isPathLine || isMarker);
       });
       await writeFile(rcFile, cleaned.join('\n'), 'utf8');
-      console.log(`  ${pc.dim(`Cleaned ${rcFile}`)}`);
+      const cleanedLabel = pc.dim(`Cleaned ${rcFile}`);
+      console.log(`  ${cleanedLabel}`);
     } catch {
       // Non-critical: leftover lines are harmless.
     }
@@ -112,9 +116,9 @@ async function purgeWorkspace(brikaHome: string, isWindows: boolean): Promise<vo
   try {
     const removed = await purgeServiceSecrets(brikaContext.serviceName);
     if (removed > 0) {
-      console.log(
-        `  ${pc.dim(`Removed ${removed} keychain ${removed === 1 ? 'entry' : 'entries'}`)}`
-      );
+      const word = removed === 1 ? 'entry' : 'entries';
+      const keychainLabel = pc.dim(`Removed ${removed} keychain ${word}`);
+      console.log(`  ${keychainLabel}`);
     }
   } catch {
     // Non-critical: a host with no keychain has nothing to remove.
@@ -124,13 +128,15 @@ async function purgeWorkspace(brikaHome: string, isWindows: boolean): Promise<vo
     // The running .exe lives inside brikaHome and is locked, so we can't remove
     // the data dir here; the PowerShell uninstaller does it once this process
     // has exited.
-    console.log(`  ${pc.dim(`Data dir ${brikaHome} is removed by the uninstaller script.`)}`);
+    const pendingLabel = pc.dim(`Data dir ${brikaHome} is removed by the uninstaller script.`);
+    console.log(`  ${pendingLabel}`);
     return;
   }
   if (existsSync(brikaHome)) {
     console.log(`  ${pc.dim('Removing workspace data...')}`);
     await rm(brikaHome, { recursive: true, force: true });
-    console.log(`  ${pc.dim(`Removed ${brikaHome}`)}`);
+    const removedLabel = pc.dim(`Removed ${brikaHome}`);
+    console.log(`  ${removedLabel}`);
   }
 }
 
