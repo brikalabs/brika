@@ -9,8 +9,10 @@
  * and execs it. Later runs use the cache.
  *
  * `BRIKA_INSTALL=npm` is exported so the binary stores data in the per-user dir
- * (~/.brika or %LOCALAPPDATA%\brika) and treats itself as package-manager-managed
- * (`brika update` defers to `npm update -g brika` instead of self-patching).
+ * (~/.brika or %LOCALAPPDATA%\brika) and treats itself as package-manager-managed:
+ * `brika update` defers to the package manager instead of self-patching. The
+ * marker is set for ANY npm-registry install (npm, pnpm, yarn, bun), since they
+ * all install this bin the same way; "npm" just names the registry/ecosystem.
  *
  * Zero dependencies: Node 18+ built-ins only (global fetch, node:crypto, and the
  * system `tar`, which handles .tar.gz and .zip on macOS, Linux, and Windows 10+).
