@@ -71,12 +71,6 @@ interface WorkspacePackage {
   readonly brikaDeps: readonly string[];
 }
 
-interface ShippedPackage {
-  readonly dir: string;
-  readonly name: string;
-  readonly version: string;
-}
-
 /** Scan the workspace once: each package's dir, version, privacy, and @brika deps. */
 async function discoverWorkspace(): Promise<WorkspacePackage[]> {
   const packages: WorkspacePackage[] = [];
@@ -199,7 +193,7 @@ function isPublished(name: string, version: string): boolean {
  * legitimate skip (already-published), false on a real publish failure.
  */
 async function publishPackage(
-  pkg: ShippedPackage,
+  pkg: WorkspacePackage,
   versions: Map<string, string>
 ): Promise<boolean> {
   const tag = resolveTag(pkg.version);
@@ -211,7 +205,8 @@ async function publishPackage(
     return true;
   }
 
-  const manifestPath = join(pkg.dir, 'package.json');
+  const dir = join(REPO_ROOT, pkg.relDir);
+  const manifestPath = join(dir, 'package.json');
   const original = await Bun.file(manifestPath).text();
   const rewritten = rewriteWorkspaceRanges(original, versions);
   if (rewritten?.includes('"workspace:')) {
@@ -234,7 +229,7 @@ async function publishPackage(
 
   // Packages list LICENSE in files[] but keep only the root LICENSE on disk; copy
   // it in for the publish so npm shows the license, then remove the copy.
-  const licensePath = join(pkg.dir, 'LICENSE');
+  const licensePath = join(dir, 'LICENSE');
   const rootLicense = join(REPO_ROOT, 'LICENSE');
   const addLicense = !existsSync(licensePath) && existsSync(rootLicense);
 
@@ -246,7 +241,7 @@ async function publishPackage(
     if (addLicense) {
       await Bun.write(licensePath, Bun.file(rootLicense));
     }
-    const proc = Bun.spawnSync(args, { cwd: pkg.dir, stdout: 'inherit', stderr: 'inherit' });
+    const proc = Bun.spawnSync(args, { cwd: dir, stdout: 'inherit', stderr: 'inherit' });
     return proc.exitCode === 0;
   } finally {
     if (rewritten !== null) {
@@ -267,12 +262,7 @@ async function main(): Promise<void> {
   console.log(`  ${order.length} packages: ${order.map((p) => p.name).join(', ')}`);
 
   for (const pkg of order) {
-    const shipped: ShippedPackage = {
-      dir: join(REPO_ROOT, pkg.relDir),
-      name: pkg.name,
-      version: pkg.version,
-    };
-    if (!(await publishPackage(shipped, versions))) {
+    if (!(await publishPackage(pkg, versions))) {
       // A real publish error aborts: do not push dependents whose dependency
       // failed to go live. The idempotent skip lets a fixed re-run resume.
       console.error(`Failed to publish ${pkg.name}@${pkg.version}. Aborting.`);

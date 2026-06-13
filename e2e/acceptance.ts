@@ -78,6 +78,25 @@ async function waitFor(check: () => Promise<boolean>, what: string, timeoutMs: n
   throw new Error(`${what} not ready within ${timeoutMs}ms`);
 }
 
+/** GET + zod-parse; null on any network/HTTP/parse failure, so it is safe to poll. */
+async function fetchJson<T>(url: string, schema: z.ZodType<T>, init?: RequestInit): Promise<T | null> {
+  try {
+    const res = await fetch(url, init);
+    return res.ok ? schema.parse(await res.json()) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Best-effort text body of an endpoint, for failure diagnostics only. */
+async function dump(url: string, init?: RequestInit): Promise<string> {
+  try {
+    return await (await fetch(url, init)).text();
+  } catch {
+    return '<unreachable>';
+  }
+}
+
 /** Start verdaccio via bunx (temp storage) unless one is already serving REGISTRY. */
 async function startVerdaccio(cleanup: Cleanup): Promise<void> {
   if (await ping(`${REGISTRY}/-/ping`)) {
@@ -243,13 +262,8 @@ async function hubLoad(cleanup: Cleanup): Promise<void> {
   cleanup.push(() => hub.kill());
 
   await waitFor(
-    async () => {
-      const res = await fetch(`${HUB_URL}/api/health`).catch(() => null);
-      if (!res?.ok) {
-        return false;
-      }
-      return z.object({ ready: z.boolean() }).loose().parse(await res.json()).ready === true;
-    },
+    async () =>
+      (await fetchJson(`${HUB_URL}/api/health`, z.object({ ready: z.boolean() }).loose()))?.ready === true,
     'hub',
     60_000
   );
@@ -270,14 +284,10 @@ async function hubLoad(cleanup: Cleanup): Promise<void> {
 
   // The plugin loads + compiles shortly after install completes; poll for it.
   await waitFor(
-    async () => {
-      const res = await fetch(`${HUB_URL}/api/plugins`, { headers: auth }).catch(() => null);
-      if (!res?.ok) {
-        return false;
-      }
-      const plugins = z.array(pluginSchema).parse(await res.json());
-      return plugins.some((p) => p.name === HUB_PLUGIN);
-    },
+    async () =>
+      ((await fetchJson(`${HUB_URL}/api/plugins`, z.array(pluginSchema), { headers: auth })) ?? []).some(
+        (p) => p.name === HUB_PLUGIN
+      ),
     `${HUB_PLUGIN} in /api/plugins`,
     30_000
   );
@@ -290,28 +300,22 @@ async function hubLoad(cleanup: Cleanup): Promise<void> {
     b.id === 'countdown';
 
   let blockCount = 0;
-  const deadline = Date.now() + 30_000;
-  while (Date.now() < deadline) {
-    const res = await fetch(`${HUB_URL}/api/blocks`, { headers: auth }).catch(() => null);
-    if (res?.ok) {
-      blockCount = z.array(blockSchema).parse(await res.json()).filter(matchesTimer).length;
-      if (blockCount > 0) {
-        break;
-      }
-    }
-    await Bun.sleep(1000);
-  }
-  if (blockCount === 0) {
-    const plugins = await fetch(`${HUB_URL}/api/plugins`, { headers: auth })
-      .then((r) => r.text())
-      .catch(() => '<unreachable>');
-    const blocks = await fetch(`${HUB_URL}/api/blocks`, { headers: auth })
-      .then((r) => r.text())
-      .catch(() => '<unreachable>');
+  await waitFor(
+    async () => {
+      const blocks =
+        (await fetchJson(`${HUB_URL}/api/blocks`, z.array(blockSchema), { headers: auth })) ?? [];
+      blockCount = blocks.filter(matchesTimer).length;
+      return blockCount > 0;
+    },
+    `${HUB_PLUGIN} blocks`,
+    30_000
+  ).catch(async () => {
+    const plugins = await dump(`${HUB_URL}/api/plugins`, { headers: auth });
+    const blocks = await dump(`${HUB_URL}/api/blocks`, { headers: auth });
     throw new Error(
       `[e2e] FAIL: ${HUB_PLUGIN} registered no blocks.\n/api/plugins=${plugins}\n/api/blocks=${blocks}`
     );
-  }
+  });
   console.log(`[e2e] hub load OK (${HUB_PLUGIN} loaded, ${blockCount} block(s) registered)`);
 }
 
