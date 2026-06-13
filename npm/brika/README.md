@@ -13,9 +13,9 @@ npx brika
 This package is a tiny launcher. Brika itself is a self-contained, Bun-compiled
 binary; rather than ship a package per platform, the launcher downloads the binary
 matching your machine on first run, verifies it against the release checksums,
-caches it under your data dir, and execs it. Subsequent runs use the cache. No Bun
-or Node toolchain is required to run brika (only Node, which you already have via
-npm, to run the launcher).
+caches it under your data dir, and execs it. Subsequent runs use the cache.
+Running brika needs no Bun and no extra toolchain: the launcher runs on the Node
+that ships with npm, and the downloaded binary is fully self-contained.
 
 First run downloads ~100 MB once; after that it is instant.
 
@@ -50,8 +50,8 @@ install.)
 ## Uninstalling
 
 ```sh
-npm uninstall -g brika      # removes the launcher + cached binary path
-brika uninstall --purge     # also removes data + stored secrets (run before uninstalling)
+brika uninstall --purge     # first: remove the cached binary, data, and secrets
+npm uninstall -g brika      # then: remove the launcher (npm won't touch the cache or data)
 ```
 
 ## Offline / restricted networks

@@ -76,6 +76,14 @@ export function computeRuntimeMode(input: DetectInput): RuntimeMode {
     return 'supervised';
   }
 
+  // An npm install (the launcher exports BRIKA_INSTALL=npm) is managed by npm,
+  // like a system package: refuse in-place self-update and let `npm update -g
+  // brika` own the binary. The npm-cached binary lives under the data dir, not a
+  // system prefix, so without this it would misdetect as `standalone`.
+  if (input.env.BRIKA_INSTALL === 'npm') {
+    return 'system-package';
+  }
+
   if (SYSTEM_PACKAGE_PREFIXES.some((p) => input.execPath.startsWith(p))) {
     return 'system-package';
   }

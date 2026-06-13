@@ -85,9 +85,11 @@ Before downloading, the installer calls `brika version --json` to check if there
 ## Uninstall scripts
 
 `scripts/uninstall.sh` and `scripts/uninstall.ps1` are thin delegators: when the
-binary works they `exec brika uninstall --purge` (the single source of truth for
-the removal logic), and only fall back to a hardcoded directory removal when the
-binary is missing or broken.
+binary works they delegate the removal to `brika uninstall --purge` (the single
+source of truth for the logic), and only fall back to a hardcoded directory
+removal when the binary is missing or broken. (Unix `exec`s it; Windows calls it
+and then removes the install tree itself, since the running `.exe` can't delete
+itself.)
 
 * `brika uninstall` removes the binary, PATH entries, and shell completions, and
   keeps the data dir by default.

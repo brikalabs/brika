@@ -89,6 +89,17 @@ describe('computeRuntimeMode', () => {
     ).toBe('system-package');
   });
 
+  test('BRIKA_INSTALL=npm detects system-package (npm owns the binary, no self-update)', () => {
+    expect(
+      computeRuntimeMode({
+        ...baseInput,
+        // The npm-cached binary lives under the data dir, not a system prefix.
+        execPath: '/Users/example/.brika/npm-bin/0.4.0/brika',
+        env: { BRIKA_INSTALL: 'npm' },
+      })
+    ).toBe('system-package');
+  });
+
   test('non-compiled (running from source) detects dev', () => {
     expect(
       computeRuntimeMode({
