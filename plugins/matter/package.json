@@ -8,7 +8,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/brikalabs/brika.git",
+    "url": "git+https://github.com/brikalabs/brika.git",
     "directory": "plugins/matter"
   },
   "icon": "./icon.svg",
@@ -148,5 +148,19 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1"
   },
-  "files": ["src", "locales", "icon.svg", "README.md"]
+  "files": [
+    "src",
+    "locales",
+    "icon.svg",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md",
+    "!src/**/*.test.ts",
+    "!src/**/*.test.tsx",
+    "!src/**/*.spec.ts",
+    "!src/**/*.spec.tsx",
+    "!src/**/*_test-utils.ts",
+    "!src/**/tsconfig.json",
+    "!**/*.tsbuildinfo"
+  ]
 }

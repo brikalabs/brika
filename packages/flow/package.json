@@ -21,11 +21,15 @@
   "files": [
     "src",
     "README.md",
+    "LICENSE",
+    "CHANGELOG.md",
     "!src/**/*.test.ts",
     "!src/**/*.test.tsx",
     "!src/**/*.spec.ts",
     "!src/**/*.spec.tsx",
-    "!src/**/*_test-utils.ts"
+    "!src/**/*_test-utils.ts",
+    "!src/**/tsconfig.json",
+    "!**/*.tsbuildinfo"
   ],
   "scripts": {
     "test": "bun test --parallel",

@@ -8,7 +8,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/brikalabs/brika.git",
+    "url": "git+https://github.com/brikalabs/brika.git",
     "directory": "plugins/weather"
   },
   "icon": "./icon.svg",
@@ -177,10 +177,14 @@
     "locales",
     "icon.svg",
     "README.md",
+    "LICENSE",
+    "CHANGELOG.md",
     "!src/**/*.test.ts",
     "!src/**/*.test.tsx",
     "!src/**/*.spec.ts",
     "!src/**/*.spec.tsx",
-    "!src/**/*_test-utils.ts"
+    "!src/**/*_test-utils.ts",
+    "!src/**/tsconfig.json",
+    "!**/*.tsbuildinfo"
   ]
 }
