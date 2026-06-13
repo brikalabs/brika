@@ -23,7 +23,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { z } from 'zod';
 
-const REGISTRY = (process.env.VERDACCIO_REGISTRY ?? 'http://localhost:4873').replace(/\/+$/, '');
+const REGISTRY = (process.env.VERDACCIO_REGISTRY ?? 'http://localhost:4873').replace(/\/$/, '');
 const REGISTRY_HOST = REGISTRY.replace(/^https?:/, ''); // //localhost:4873
 const REPO_ROOT = resolve(import.meta.dir, '..');
 

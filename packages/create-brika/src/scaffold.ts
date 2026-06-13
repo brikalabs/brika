@@ -39,7 +39,7 @@ async function fetchLatestVersion(packageName: string): Promise<string> {
   // Honor the configured npm registry (set by `npm config` / the env) so this
   // works against a private or local registry, not just npmjs.org.
   const registry = (process.env.npm_config_registry ?? 'https://registry.npmjs.org').replace(
-    /\/+$/,
+    /\/$/,
     ''
   );
   const response = await fetch(`${registry}/${packageName}/latest`);
