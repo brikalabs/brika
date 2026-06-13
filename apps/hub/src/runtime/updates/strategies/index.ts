@@ -21,9 +21,12 @@ export {
   UpdateRefusedError,
   type UpdateStrategy,
 } from './strategy';
-export { SystemPackageStrategy } from './system-package';
+export { type SystemPackageKind, SystemPackageStrategy } from './system-package';
 
-export function strategyForMode(mode: RuntimeMode): UpdateStrategy {
+export function strategyForMode(
+  mode: RuntimeMode,
+  opts?: { readonly managed?: boolean }
+): UpdateStrategy {
   switch (mode) {
     case 'standalone':
     case 'supervised':
@@ -36,7 +39,9 @@ export function strategyForMode(mode: RuntimeMode): UpdateStrategy {
     case 'container':
       return new ContainerStrategy();
     case 'system-package':
-      return new SystemPackageStrategy();
+      // `managed` (npm/pnpm/yarn/bun) vs an OS package only changes the
+      // refusal wording, so the user is pointed at the right upgrade command.
+      return new SystemPackageStrategy(opts?.managed ? 'managed' : 'os');
     case 'dev':
       return new DevStrategy();
   }

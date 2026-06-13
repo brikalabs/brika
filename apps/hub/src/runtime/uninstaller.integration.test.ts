@@ -32,6 +32,7 @@ let originalExecPath: string;
 let originalPlatform: PropertyDescriptor | undefined;
 let originalPrompt: typeof globalThis.prompt;
 let originalBrikaHome: string | undefined;
+let originalBrikaInstall: string | undefined;
 let secretsMock: BunSecretsMock;
 
 beforeEach(async () => {
@@ -51,6 +52,7 @@ beforeEach(async () => {
   originalPlatform = Object.getOwnPropertyDescriptor(process, 'platform');
   originalPrompt = globalThis.prompt;
   originalBrikaHome = process.env.BRIKA_HOME;
+  originalBrikaInstall = process.env.BRIKA_INSTALL;
 });
 
 afterEach(async () => {
@@ -65,6 +67,11 @@ afterEach(async () => {
     delete process.env.BRIKA_HOME;
   } else {
     process.env.BRIKA_HOME = originalBrikaHome;
+  }
+  if (originalBrikaInstall === undefined) {
+    delete process.env.BRIKA_INSTALL;
+  } else {
+    process.env.BRIKA_INSTALL = originalBrikaInstall;
   }
   await rm(tmpDir, {
     recursive: true,
@@ -285,6 +292,27 @@ describe('selfUninstall', () => {
 
       const output = log.lines.join('\n');
       expect(output).not.toContain('Aborted');
+    });
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Managed (package-manager) install
+  // ─────────────────────────────────────────────────────────────────────────
+
+  describe('managed (package-manager) install', () => {
+    test('keeps the package-manager-owned binary and points at the manager', async () => {
+      const installDir = await setupFakeInstallDir();
+      // The `brika` launcher exports this marker before exec'ing the binary.
+      process.env.BRIKA_INSTALL = 'managed';
+      stubPrompt('y');
+
+      await selfUninstall();
+
+      // The binary stays put: npm/pnpm/yarn/bun owns it and removes it.
+      expect(existsSync(installDir)).toBe(true);
+      const output = log.lines.join('\n');
+      expect(output).toContain('npm uninstall -g brika');
+      expect(output).not.toContain('Removing installation');
     });
   });
 

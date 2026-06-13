@@ -21,7 +21,7 @@
  */
 
 import { existsSync } from 'node:fs';
-import { isCompiledFrom } from '@brika/sdk/exec-context';
+import { isCompiledFrom, isManagedInstall } from '@brika/sdk/exec-context';
 import { z } from 'zod';
 
 const RuntimeModeSchema = z.enum([
@@ -33,6 +33,19 @@ const RuntimeModeSchema = z.enum([
 ]);
 
 export type RuntimeMode = z.infer<typeof RuntimeModeSchema>;
+
+/**
+ * Whether the running binary is owned by a JS package manager (npm/pnpm/yarn/bun).
+ * Used to tailor the update-refusal guidance (npm vs OS package manager). Gated on
+ * `isCompiled` so it can never fire in a dev process. Production-only seam; pure
+ * callers test {@link isManagedInstall} directly.
+ */
+export function detectManagedInstall(): boolean {
+  return (
+    isCompiledFrom(import.meta.path) &&
+    isManagedInstall({ env: process.env, execPath: process.execPath })
+  );
+}
 
 const SYSTEM_PACKAGE_PREFIXES = [
   '/usr/bin/',
@@ -74,6 +87,15 @@ export function computeRuntimeMode(input: DetectInput): RuntimeMode {
 
   if (input.env.SYSTEMD_EXEC_PID !== undefined || input.env.LAUNCHD_SOCKET !== undefined) {
     return 'supervised';
+  }
+
+  // A package-manager install (the launcher exports the managed marker for any
+  // of npm/pnpm/yarn/bun, and the binary lives under node_modules) is
+  // manager-owned, like a system package: refuse in-place self-update and let
+  // the package manager own the binary. Without this it would misdetect as
+  // `standalone`. Gated on isCompiled so a dev runtime under node_modules stays `dev`.
+  if (input.isCompiled && isManagedInstall({ env: input.env, execPath: input.execPath })) {
+    return 'system-package';
   }
 
   if (SYSTEM_PACKAGE_PREFIXES.some((p) => input.execPath.startsWith(p))) {

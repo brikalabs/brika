@@ -19,7 +19,7 @@ import { Logger } from '@/runtime/logs/log-router';
 import type { UpdateInfo, UpdatePhase } from '@/runtime/updates/updater';
 import { UpdateAuditLog } from './audit-log';
 import type { UpdateChannelId } from './channels';
-import { detectRuntimeMode, type RuntimeMode } from './runtime-mode';
+import { detectManagedInstall, detectRuntimeMode, type RuntimeMode } from './runtime-mode';
 import { clearPreviousBackup } from './staged-install';
 import { strategyForMode, UpdateRefusedError, type UpdateStrategy } from './strategies';
 import { emitUpdateTelemetry } from './telemetry';
@@ -44,7 +44,9 @@ export interface OrchestratorApplyResult {
 export class UpdateOrchestrator {
   readonly #logs = inject(Logger).withSource('updates');
   #mode: RuntimeMode = detectRuntimeMode();
-  #strategy: UpdateStrategy = strategyForMode(this.#mode);
+  #strategy: UpdateStrategy = strategyForMode(this.#mode, {
+    managed: detectManagedInstall(),
+  });
   #lock: UpdateLock = new UpdateLock(brikaContext.brikaDir);
   #audit: UpdateAuditLog = new UpdateAuditLog(brikaContext.brikaDir);
   #versionState: VersionStateStore = new VersionStateStore(

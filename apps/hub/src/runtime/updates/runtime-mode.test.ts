@@ -89,6 +89,37 @@ describe('computeRuntimeMode', () => {
     ).toBe('system-package');
   });
 
+  test('managed install via the marker detects system-package (package manager owns the binary, no self-update)', () => {
+    expect(
+      computeRuntimeMode({
+        ...baseInput,
+        // Pattern A: the binary lives in node_modules; the launcher exports the marker.
+        execPath: '/usr/local/lib/node_modules/@brika/cli-linux-x64/bin/brika',
+        env: { BRIKA_INSTALL: 'managed' },
+      })
+    ).toBe('system-package');
+  });
+
+  test('managed install via the node_modules path (marker stripped) still detects system-package', () => {
+    expect(
+      computeRuntimeMode({
+        ...baseInput,
+        execPath: '/usr/local/lib/node_modules/@brika/cli-darwin-arm64/bin/brika',
+        env: {},
+      })
+    ).toBe('system-package');
+  });
+
+  test('non-compiled runtime under node_modules stays dev (not misread as a managed install)', () => {
+    expect(
+      computeRuntimeMode({
+        ...baseInput,
+        isCompiled: false,
+        execPath: '/repo/node_modules/.bin/bun',
+      })
+    ).toBe('dev');
+  });
+
   test('non-compiled (running from source) detects dev', () => {
     expect(
       computeRuntimeMode({
@@ -122,7 +153,7 @@ describe('canSelfUpdate', () => {
     expect(canSelfUpdate('supervised')).toBe(true);
   });
 
-  test('dev cannot self-update — matches DevStrategy.canApply()', () => {
+  test('dev cannot self-update (matches DevStrategy.canApply())', () => {
     expect(canSelfUpdate('dev')).toBe(false);
   });
 

@@ -3,7 +3,7 @@
 The [Brika](https://github.com/brikalabs/brika) automation hub, distributed via npm.
 
 ```sh
-npm install -g brika
+npm install -g brika        # or: pnpm add -g brika / bun add -g brika / yarn global add brika
 # or run once without installing:
 npx brika
 ```
@@ -34,17 +34,18 @@ so the two install methods share one data directory.
 
 ## Updating
 
-Use your package manager:
+Upgrade with whichever package manager you installed it with:
 
 ```sh
-npm update -g brika
+npm i -g brika@latest       # or: pnpm add -g brika / bun add -g brika / yarn global upgrade brika
 ```
 
-(`brika update` self-patches only the standalone `curl | sh` install.)
+(`brika update` self-patches only the standalone `curl | sh` install; under a
+package manager it defers back to that manager.)
 
 ## Uninstalling
 
 ```sh
-npm uninstall -g brika      # removes the binary
-brika uninstall --purge     # also removes data + stored secrets (run before uninstalling)
+brika uninstall --purge     # first: remove data, secrets, and keychain entries
+npm uninstall -g brika      # then: remove the launcher + binary (or pnpm/bun/yarn equivalent)
 ```

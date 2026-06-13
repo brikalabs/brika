@@ -77,8 +77,9 @@ if ($KeepData) {
 }
 Write-Host ""
 
-# Confirm (skip if BRIKA_YES=1)
-if ($env:BRIKA_YES -ne "1") {
+# Confirm, unless BRIKA_YES=1 or input is redirected (e.g. `irm ... | iex`), so
+# the piped one-liner runs non-interactively, matching uninstall.sh.
+if ($env:BRIKA_YES -ne "1" -and -not [Console]::IsInputRedirected) {
     $Confirm = Read-Host "  Continue? [y/N]"
     if ($Confirm -notmatch '^[yY]') {
         Write-Info "  Aborted."

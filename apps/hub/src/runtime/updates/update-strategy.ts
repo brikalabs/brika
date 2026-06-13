@@ -12,7 +12,7 @@
  * flag, so it resolves identically in the CLI process and the hub.
  */
 
-import { detectRuntimeMode } from './runtime-mode';
+import { detectManagedInstall, detectRuntimeMode } from './runtime-mode';
 import { strategyForMode, type UpdateStrategy } from './strategies';
 
 export type { UpdateChannelId } from './channels';
@@ -20,5 +20,5 @@ export { UpdateRefusedError, type UpdateStrategy } from './strategies';
 
 /** The update strategy for the current runtime mode. */
 export function resolveUpdateStrategy(): UpdateStrategy {
-  return strategyForMode(detectRuntimeMode());
+  return strategyForMode(detectRuntimeMode(), { managed: detectManagedInstall() });
 }

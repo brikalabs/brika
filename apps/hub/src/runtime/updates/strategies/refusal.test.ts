@@ -24,11 +24,37 @@ describe('refusal strategies', () => {
       await strategy.apply({});
       throw new Error('expected refusal');
     } catch (err) {
-      expect(err).toBeInstanceOf(UpdateRefusedError);
-      const refused = err as UpdateRefusedError;
-      expect(refused.code).toBe(expectedCode);
-      expect(refused.guidance.length).toBeGreaterThan(0);
+      if (!(err instanceof UpdateRefusedError)) {
+        throw err;
+      }
+      expect(err.code).toBe(expectedCode);
+      expect(err.guidance.length).toBeGreaterThan(0);
     }
+  });
+
+  test('system-package guidance is package-manager-aware', async () => {
+    const expectGuidance = async (strategy: SystemPackageStrategy): Promise<string> => {
+      try {
+        await strategy.apply({});
+        throw new Error('expected refusal');
+      } catch (err) {
+        if (!(err instanceof UpdateRefusedError)) {
+          throw err;
+        }
+        return err.guidance;
+      }
+    };
+
+    // OS package manager (default): point at brew/apt, never npm.
+    const os = await expectGuidance(new SystemPackageStrategy('os'));
+    expect(os).toContain('apt upgrade brika');
+    expect(os).not.toContain('npm');
+
+    // JS package manager: point at npm and friends, never apt/brew.
+    const managed = await expectGuidance(new SystemPackageStrategy('managed'));
+    expect(managed).toContain('npm i -g brika@latest');
+    expect(managed).toContain('pnpm add -g brika');
+    expect(managed).not.toContain('apt upgrade');
   });
 });
 
@@ -44,6 +70,19 @@ describe('strategyForMode', () => {
 
   test('system-package maps to SystemPackageStrategy', () => {
     expect(strategyForMode('system-package')).toBeInstanceOf(SystemPackageStrategy);
+  });
+
+  test('system-package with { managed } yields JS-package-manager guidance', async () => {
+    const strategy = strategyForMode('system-package', { managed: true });
+    try {
+      await strategy.apply({});
+      throw new Error('expected refusal');
+    } catch (err) {
+      if (!(err instanceof UpdateRefusedError)) {
+        throw err;
+      }
+      expect(err.guidance).toContain('npm i -g brika@latest');
+    }
   });
 
   test('dev maps to DevStrategy', () => {

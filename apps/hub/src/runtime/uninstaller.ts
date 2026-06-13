@@ -9,7 +9,7 @@ import { existsSync } from 'node:fs';
 import { readFile, rm, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { dirname } from 'node:path';
-import { isCompiledFrom, resolveDataDir } from '@brika/sdk/exec-context';
+import { isCompiledFrom, isManagedInstall, resolveDataDir } from '@brika/sdk/exec-context';
 import pc from 'picocolors';
 import { HUB_REPO_URL, hub } from '../hub';
 import { brikaContext } from './context/brika-context';
@@ -29,10 +29,11 @@ interface UninstallPlan {
   readonly brikaHome: string;
   readonly purge: boolean;
   readonly isWindows: boolean;
+  readonly managed: boolean;
 }
 
 /** Print what the run will remove, before the confirmation prompt. */
-function printPlan({ installDir, brikaHome, purge, isWindows }: UninstallPlan): void {
+function printPlan({ installDir, brikaHome, purge, isWindows, managed }: UninstallPlan): void {
   const versionLabel = pc.dim(`v${hub.version}`);
   console.log(`${pc.cyan('brika')} ${versionLabel}`);
   console.log();
@@ -40,6 +41,10 @@ function printPlan({ installDir, brikaHome, purge, isWindows }: UninstallPlan): 
     // The running .exe holds a lock and can't delete itself; the PowerShell
     // uninstaller removes the binary. We still clean everything else below.
     console.log(`  ${pc.bold('This will remove:')} PATH entries and completions`);
+  } else if (managed) {
+    // A package-manager-owned binary (npm/pnpm/yarn/bun) stays put; the manager
+    // removes it. We only clean completions + PATH entries here.
+    console.log(`  ${pc.bold('This will remove:')} shell completions and PATH entries`);
   } else {
     console.log(`  ${pc.bold('This will remove:')} ${installDir}`);
   }
@@ -60,6 +65,24 @@ function printWindowsBinaryNote(): void {
   console.log();
   const psCommand = pc.cyan(`irm ${HUB_REPO_URL}/raw/main/scripts/uninstall.ps1 | iex`);
   console.log(`    ${psCommand}`);
+  console.log();
+}
+
+/**
+ * Point the user at their package manager for the manager-owned binary. We must
+ * NOT `rm` it ourselves: it lives in `node_modules`, and deleting files out from
+ * under npm/pnpm/yarn/bun leaves the manager's metadata inconsistent.
+ */
+function printManagedBinaryNote(): void {
+  console.log(
+    `  ${pc.yellow('Note:')} Brika was installed by a package manager, which owns the binary.`
+  );
+  console.log('  Remove it with that manager:');
+  console.log();
+  console.log(`    ${pc.cyan('npm uninstall -g brika')}`);
+  console.log(
+    `    ${pc.dim('# or: pnpm rm -g brika / bun rm -g brika / yarn global remove brika')}`
+  );
   console.log();
 }
 
@@ -145,6 +168,10 @@ export async function selfUninstall(options?: { purge?: boolean; yes?: boolean }
   const isWindows = process.platform === 'win32';
   const purge = options?.purge ?? false;
   const yes = options?.yes ?? false;
+  // A package-manager-owned binary (npm/pnpm/yarn/bun) must not be `rm`'d here;
+  // the manager owns it. Checked ungated (no isCompiled) so declining to delete
+  // is the safe default whenever the binary looks manager-owned.
+  const managed = isManagedInstall({ env: process.env, execPath: process.execPath });
   // Resolve via the SHARED resolver (same logic the hub used to create the dir),
   // not a raw cwd-relative `.brika`: --purge `rm -rf`s this path, so a divergent
   // guess could delete the wrong directory or miss the real one.
@@ -157,7 +184,7 @@ export async function selfUninstall(options?: { purge?: boolean; yes?: boolean }
     platform: process.platform,
   }).path;
 
-  printPlan({ installDir, brikaHome, purge, isWindows });
+  printPlan({ installDir, brikaHome, purge, isWindows, managed });
 
   if (!yes) {
     const answer = prompt(`  Continue? ${pc.dim('[y/N]')} `) ?? '';
@@ -171,6 +198,8 @@ export async function selfUninstall(options?: { purge?: boolean; yes?: boolean }
 
   if (isWindows) {
     printWindowsBinaryNote();
+  } else if (managed) {
+    printManagedBinaryNote();
   } else {
     // Removing the install dir is safe on Unix (the running process keeps its fd).
     console.log(`  ${pc.dim('Removing installation...')}`);
@@ -191,6 +220,14 @@ export async function selfUninstall(options?: { purge?: boolean; yes?: boolean }
     console.log();
     console.log(
       `  ${pc.dim('Run the PowerShell uninstaller to remove the binary and PATH entry.')}`
+    );
+  } else if (managed) {
+    // The binary is still in node_modules; the package manager (note above)
+    // removes it, so don't claim full completion here.
+    console.log(`  ${pc.green('Cleanup complete.')}`);
+    console.log();
+    console.log(
+      `  ${pc.dim("Run your package manager's uninstall (shown above) to remove the binary.")}`
     );
   } else {
     console.log(`  ${pc.green('Uninstalled successfully!')}`);

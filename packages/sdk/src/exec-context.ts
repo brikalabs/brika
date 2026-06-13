@@ -77,7 +77,7 @@ export function peekInstanceId(dataDir: string): string | null {
 }
 
 /** Which rule decided the data dir. Lets `brika doctor` explain the resolution. */
-export type DataDirSource = 'env' | 'npm' | 'compiled-parent' | 'workspace' | 'cwd';
+export type DataDirSource = 'env' | 'managed' | 'compiled-parent' | 'workspace' | 'cwd';
 
 export interface DataDirInput {
   /** Usually `process.env`; reads BRIKA_HOME, BRIKA_INSTALL, and (Windows) LOCALAPPDATA/HOME/USERPROFILE. */
@@ -88,25 +88,52 @@ export interface DataDirInput {
   readonly execPath: string;
   /** `process.cwd()`. */
   readonly cwd: string;
-  /** `os.homedir()`. Only consulted for the npm-install (per-user) path. */
+  /** `os.homedir()`. Only consulted for the package-manager-install (per-user) path. */
   readonly home?: string;
-  /** `process.platform`. Only consulted for the npm-install (per-user) path. */
+  /** `process.platform`. Only consulted for the package-manager-install (per-user) path. */
   readonly platform?: string;
 }
 
 /**
- * True when the compiled binary was installed via npm rather than the
- * `curl | sh` installer. Two signals: the bin shim exports `BRIKA_INSTALL=npm`
- * before exec'ing the binary, and an npm-placed binary lives under a
- * `node_modules` tree. Either is enough.
+ * The env var the package-manager launcher (the npm/pnpm/yarn/bun `bin` shim)
+ * exports before exec'ing the binary, and its value. Single source of truth for
+ * the "a JS package manager owns this binary" marker, shared by the data-dir
+ * resolver here and the hub's runtime-mode / update-guidance logic. The shim
+ * itself (`npm/brika/bin/brika.mjs`) hardcodes the same literal, since a
+ * standalone `.mjs` can't import from the SDK.
  */
-function isNpmInstall(input: DataDirInput): boolean {
-  return input.env.BRIKA_INSTALL === 'npm' || input.execPath.includes('node_modules');
+export const MANAGED_INSTALL_ENV = 'BRIKA_INSTALL';
+export const MANAGED_INSTALL_MARKER = 'managed';
+
+/** Inputs for {@link isManagedInstall}: the running binary's env and path. */
+export interface ManagedInstallInput {
+  /** Usually `process.env`; reads {@link MANAGED_INSTALL_ENV}. */
+  readonly env: Readonly<Record<string, string | undefined>>;
+  /** `process.execPath` (the running binary). */
+  readonly execPath: string;
 }
 
 /**
- * Per-user data dir, used for npm installs (the binary lives in node_modules,
- * which `npm update`/reinstall would wipe, so data must NOT be binary-relative).
+ * True when the binary is owned by a JS package manager (npm/pnpm/yarn/bun)
+ * rather than the `curl | sh` installer. Two signals: the bin shim exports the
+ * managed marker before exec'ing the binary, and a package-manager-placed binary
+ * lives under a `node_modules` tree. Either suffices.
+ *
+ * Compiled-only callers (data dir, runtime mode) additionally gate on
+ * `isCompiled` so a dev runtime that happens to live under node_modules isn't
+ * misread; the uninstaller calls it ungated, since declining to delete a
+ * possibly-manager-owned binary is the safe default.
+ */
+export function isManagedInstall(input: ManagedInstallInput): boolean {
+  return (
+    input.env[MANAGED_INSTALL_ENV] === MANAGED_INSTALL_MARKER ||
+    input.execPath.includes('node_modules')
+  );
+}
+
+/**
+ * Per-user data dir, used for package-manager installs (the binary lives in
+ * node_modules, which an update/reinstall would wipe, so data must NOT be binary-relative).
  * Matches what the `curl | sh` / PowerShell installers already produce, so the
  * two install methods share one location:
  *   - Windows -> `%LOCALAPPDATA%\brika`
@@ -125,8 +152,8 @@ function userDataDir(input: DataDirInput): string {
  * Resolve Brika's data directory (the `.brika` dir holding config, db,
  * cli-token, instance.id) from injected facts. Precedence:
  *   1. $BRIKA_HOME (explicit override)
- *   2. compiled binary installed via npm -> per-user dir (NOT binary-relative,
- *      since the binary sits in node_modules)
+ *   2. compiled binary installed by a package manager -> per-user dir (NOT
+ *      binary-relative, since the binary sits in node_modules)
  *   3. compiled binary -> parent of the install dir (dirname(dirname(execPath)))
  *   4. dev -> the workspace root's .brika (so the hub and the CLIs share ONE dir
  *      regardless of which package dir launched the process)
@@ -136,8 +163,8 @@ export function resolveDataDir(input: DataDirInput): { path: string; source: Dat
   if (input.env.BRIKA_HOME) {
     return { path: input.env.BRIKA_HOME, source: 'env' };
   }
-  if (input.isCompiled && isNpmInstall(input)) {
-    return { path: userDataDir(input), source: 'npm' };
+  if (input.isCompiled && isManagedInstall(input)) {
+    return { path: userDataDir(input), source: 'managed' };
   }
   if (input.isCompiled) {
     return { path: dirname(dirname(input.execPath)), source: 'compiled-parent' };
