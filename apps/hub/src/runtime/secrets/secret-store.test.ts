@@ -3,11 +3,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { get, reset } from '@brika/di/testing';
 import { type BunSecretsMock, installBunSecretsMock } from '@/helpers/_bun-secrets-mock';
 import { brikaContext } from '@/runtime/context/brika-context';
-import {
-  purgeServiceSecrets,
-  INDEX_ENTRY_NAME,
-  SecretStore,
-} from '@/runtime/secrets/secret-store';
+import { INDEX_ENTRY_NAME, purgeServiceSecrets, SecretStore } from '@/runtime/secrets/secret-store';
 
 const SERVICE = brikaContext.serviceName;
 const INDEX_KEY = `${SERVICE}::${INDEX_ENTRY_NAME}`;
