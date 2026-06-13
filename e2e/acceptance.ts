@@ -1,31 +1,42 @@
 #!/usr/bin/env bun
 /**
- * npm publish/install acceptance e2e.
+ * npm publish/install acceptance e2e (Bun-only, no Docker required).
  *
  * Publishes the shipped Brika surface to a throwaway verdaccio registry exactly
  * as a real release would (`bun publish` rewrites `workspace:*` to concrete
- * ranges), then installs it into a clean consumer straight from that registry
- * and imports the SDK. This is the high-fidelity counterpart to the in-process
- * closure-install test: it exercises the real publish -> registry -> install
- * round-trip, so a misdeclared dependency, an unrewritten `workspace:*` range, or
- * a broken tarball fails here the way it would for an end user.
+ * ranges), then exercises two real consumer paths against that registry:
  *
- * Prereq: verdaccio reachable at $VERDACCIO_REGISTRY (default http://localhost:4873).
- * The gated `e2e-acceptance` workflow brings it up via e2e/docker-compose.yml.
+ *   1. CONSUMER ROUND-TRIP: a clean dir `bun add`s @brika/sdk + plugins straight
+ *      from the registry and imports the SDK. Catches a misdeclared dependency,
+ *      an unrewritten `workspace:*` range, or a broken tarball.
+ *   2. HUB LOAD: a real headless hub installs @brika/plugin-timer from the
+ *      registry through its own install path and we assert the plugin loaded and
+ *      registered a block. Catches host-integration regressions the import test
+ *      cannot (the compiler externalizing @brika/sdk to host globals, block
+ *      registration, plugin compile/load).
  *
- *   docker compose -f e2e/docker-compose.yml up -d
+ * Verdaccio runs as a plain process via `bunx` (it is just an npm package), so
+ * this needs no Docker daemon and runs anywhere Bun runs. Set VERDACCIO_REGISTRY
+ * to reuse an already-running registry instead of spawning one.
+ *
  *   bun run e2e/acceptance.ts
- *   docker compose -f e2e/docker-compose.yml down -v
  */
 
-import { mkdtemp, rm } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { z } from 'zod';
 
-const REGISTRY = (process.env.VERDACCIO_REGISTRY ?? 'http://localhost:4873').replace(/\/$/, '');
-const REGISTRY_HOST = REGISTRY.replace(/^https?:/, ''); // //localhost:4873
 const REPO_ROOT = resolve(import.meta.dir, '..');
+const VERDACCIO_PORT = 4873;
+const REGISTRY = (process.env.VERDACCIO_REGISTRY ?? `http://localhost:${VERDACCIO_PORT}`).replace(
+  /\/$/,
+  ''
+);
+const REGISTRY_HOST = REGISTRY.replace(/^https?:/, ''); // //localhost:4873
+const HUB_PORT = 3999;
+const HUB_URL = `http://127.0.0.1:${HUB_PORT}`;
 
 /** Publish order: closure leaves -> mid libs -> sdk -> scaffold -> sample plugins. */
 const PUBLISH_ORDER = [
@@ -44,6 +55,11 @@ const PUBLISH_ORDER = [
 const CLOSURE = ['errors', 'flow', 'grants', 'ipc', 'serializable', 'ui-kit'];
 const REACT_FREE_SUBPATHS = ['@brika/sdk/ctx', '@brika/sdk/sparks', '@brika/sdk/schema', '@brika/sdk/grants'];
 
+/** Plugin used for the hub-load assertion: grant-free, so it installs ENABLED. */
+const HUB_PLUGIN = '@brika/plugin-timer';
+
+type Cleanup = Array<() => void | Promise<void>>;
+
 function run(cmd: string[], opts: { cwd?: string; env?: Record<string, string> } = {}): void {
   const proc = Bun.spawnSync(cmd, {
     cwd: opts.cwd ?? REPO_ROOT,
@@ -56,20 +72,45 @@ function run(cmd: string[], opts: { cwd?: string; env?: Record<string, string> }
   }
 }
 
-async function waitForRegistry(timeoutMs: number): Promise<void> {
+async function ping(url: string): Promise<boolean> {
+  try {
+    return (await fetch(url)).ok;
+  } catch {
+    return false;
+  }
+}
+
+async function waitFor(check: () => Promise<boolean>, what: string, timeoutMs: number): Promise<void> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
-    try {
-      const res = await fetch(`${REGISTRY}/-/ping`);
-      if (res.ok) {
-        return;
-      }
-    } catch {
-      // not up yet
+    if (await check()) {
+      return;
     }
     await Bun.sleep(1000);
   }
-  throw new Error(`verdaccio not reachable at ${REGISTRY} within ${timeoutMs}ms`);
+  throw new Error(`${what} not ready within ${timeoutMs}ms`);
+}
+
+/** Start verdaccio via bunx (temp storage) unless one is already serving REGISTRY. */
+async function startVerdaccio(cleanup: Cleanup): Promise<void> {
+  if (await ping(`${REGISTRY}/-/ping`)) {
+    console.log(`[e2e] reusing verdaccio at ${REGISTRY}`);
+    return;
+  }
+  const dir = await mkdtemp(join(tmpdir(), 'brika-e2e-verdaccio-'));
+  cleanup.push(() => rm(dir, { recursive: true, force: true }));
+  const template = await readFile(join(REPO_ROOT, 'e2e/verdaccio.config.yaml'), 'utf8');
+  const configPath = join(dir, 'config.yaml');
+  await writeFile(configPath, template.replaceAll('/verdaccio/storage', join(dir, 'storage')));
+
+  console.log('[e2e] starting verdaccio (bunx, no docker)');
+  const proc = Bun.spawn(['bunx', 'verdaccio@6', '--config', configPath, '--listen', String(VERDACCIO_PORT)], {
+    cwd: REPO_ROOT,
+    stdout: 'ignore',
+    stderr: 'ignore',
+  });
+  cleanup.push(() => proc.kill());
+  await waitFor(() => ping(`${REGISTRY}/-/ping`), 'verdaccio', 90_000);
 }
 
 const tokenSchema = z.object({ token: z.string().min(1) }).loose();
@@ -88,47 +129,42 @@ async function createToken(): Promise<string> {
   return tokenSchema.parse(await res.json()).token;
 }
 
-async function main(): Promise<void> {
-  console.log(`[e2e] verdaccio: ${REGISTRY}`);
-  await waitForRegistry(60_000);
-  const token = await createToken();
-
+/** Publish the shipped surface to verdaccio (bun publish rewrites workspace:*). */
+async function publishAll(cleanup: Cleanup): Promise<void> {
   const home = await mkdtemp(join(tmpdir(), 'brika-e2e-home-'));
+  cleanup.push(() => rm(home, { recursive: true, force: true }));
+  const token = await createToken();
   await Bun.write(
     join(home, '.npmrc'),
     `${REGISTRY_HOST}/:_authToken=${token}\n@brika:registry=${REGISTRY}/\nregistry=${REGISTRY}/\n`
   );
-  const publishEnv = { HOME: home };
 
-  // Build the artifact producers explicitly; publish with --ignore-scripts so the
-  // prebuilt dist (sdk bin, create-brika) ships without re-running lifecycle hooks.
   console.log('[e2e] building artifact producers');
   run(['bun', 'run', '--filter', '@brika/sdk', 'build:bin']);
   run(['bun', 'run', '--filter', 'create-brika', 'build']);
 
-  console.log('[e2e] publishing to verdaccio (bun publish rewrites workspace:*)');
+  console.log('[e2e] publishing to verdaccio');
   for (const relDir of PUBLISH_ORDER) {
     run(['bun', 'publish', '--registry', `${REGISTRY}/`, '--tolerate-republish', '--ignore-scripts'], {
       cwd: join(REPO_ROOT, relDir),
-      env: publishEnv,
+      env: { HOME: home },
     });
   }
+}
 
-  // Clean consumer: install straight from verdaccio, no workspace, no overrides.
+/** Phase 1: a clean Bun consumer installs + imports the SDK straight from the registry. */
+async function consumerRoundTrip(cleanup: Cleanup): Promise<void> {
   const consumer = await mkdtemp(join(tmpdir(), 'brika-e2e-consumer-'));
+  cleanup.push(() => rm(consumer, { recursive: true, force: true }));
   await Bun.write(join(consumer, '.npmrc'), `@brika:registry=${REGISTRY}/\nregistry=${REGISTRY}/\n`);
   await Bun.write(
     join(consumer, 'package.json'),
     `${JSON.stringify({ name: 'brika-e2e-consumer', version: '0.0.0', private: true }, null, 2)}\n`
   );
 
-  console.log('[e2e] installing @brika/sdk + plugins from verdaccio (bun add)');
-  run(['bun', 'add', '@brika/sdk', '@brika/plugin-timer', '@brika/plugin-weather'], {
-    cwd: consumer,
-  });
+  console.log('[e2e] consumer: bun add @brika/sdk + plugins from verdaccio');
+  run(['bun', 'add', '@brika/sdk', '@brika/plugin-timer', '@brika/plugin-weather'], { cwd: consumer });
 
-  // Assert the SDK closure + the plugins resolved from the registry.
-  const { existsSync } = await import('node:fs');
   const missing = ['sdk', ...CLOSURE, 'plugin-timer', 'plugin-weather'].filter(
     (n) => !existsSync(join(consumer, 'node_modules', '@brika', n))
   );
@@ -136,17 +172,160 @@ async function main(): Promise<void> {
     throw new Error(`[e2e] FAIL: not installed from registry: ${missing.join(', ')}`);
   }
 
-  console.log('[e2e] importing react-free SDK subpaths from the installed package');
   const script = `${REACT_FREE_SUBPATHS.map((s) => `await import(${JSON.stringify(s)});`).join(' ')} console.log('IMPORT-OK');`;
   const imported = Bun.spawnSync(['bun', '-e', script], { cwd: consumer, stdout: 'pipe', stderr: 'pipe' });
-  const stderr = imported.stderr.toString();
   if (imported.exitCode !== 0 || !imported.stdout.toString().includes('IMPORT-OK')) {
-    throw new Error(`[e2e] FAIL: SDK import failed:\n${stderr}`);
+    throw new Error(`[e2e] FAIL: SDK import failed:\n${imported.stderr.toString()}`);
   }
+  console.log('[e2e] consumer round-trip OK');
+}
 
-  await rm(home, { recursive: true, force: true });
-  await rm(consumer, { recursive: true, force: true });
-  console.log('[e2e] PASS: publish -> registry -> install -> import round-trip succeeded.');
+const pluginSchema = z.object({ name: z.string(), status: z.string().optional() }).loose();
+const blockSchema = z
+  .object({ id: z.string().optional(), pluginId: z.string().optional(), typeId: z.string().optional() })
+  .loose();
+
+/** Consume the install SSE stream until it completes or errors. */
+async function drainInstallStream(res: Response): Promise<void> {
+  if (!res.body) {
+    throw new Error(`install returned no stream (${res.status})`);
+  }
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  for (;;) {
+    const { value, done } = await reader.read();
+    if (done) {
+      return;
+    }
+    for (const line of decoder.decode(value).split('\n')) {
+      if (!line.startsWith('data:')) {
+        continue;
+      }
+      const frame: unknown = JSON.parse(line.slice(5).trim());
+      const phase = z.object({ phase: z.string().optional() }).loose().parse(frame).phase;
+      if (phase === 'error') {
+        throw new Error(`[e2e] FAIL: hub install errored: ${line}`);
+      }
+      if (phase === 'complete') {
+        return;
+      }
+    }
+  }
+}
+
+/** Phase 2: a real headless hub installs the plugin from the registry and loads it. */
+async function hubLoad(cleanup: Cleanup): Promise<void> {
+  const home = await mkdtemp(join(tmpdir(), 'brika-e2e-hub-'));
+  cleanup.push(() => rm(home, { recursive: true, force: true }));
+
+  console.log('[e2e] booting headless hub');
+  const hub = Bun.spawn(['bun', 'run', 'apps/hub/src/main.ts'], {
+    cwd: REPO_ROOT,
+    env: {
+      ...process.env,
+      BRIKA_HOME: home,
+      BRIKA_PORT: String(HUB_PORT),
+      BRIKA_HOST: '127.0.0.1',
+      BRIKA_SECRETS_BACKEND: 'file',
+      // The hub's plugin-install child inherits this and fetches from verdaccio.
+      npm_config_registry: `${REGISTRY}/`,
+    },
+    stdout: 'ignore',
+    stderr: 'ignore',
+  });
+  cleanup.push(() => hub.kill());
+
+  await waitFor(
+    async () => {
+      const res = await fetch(`${HUB_URL}/api/health`).catch(() => null);
+      if (!res?.ok) {
+        return false;
+      }
+      return z.object({ ready: z.boolean() }).loose().parse(await res.json()).ready === true;
+    },
+    'hub',
+    60_000
+  );
+
+  const token = (await readFile(join(home, 'cli-token'), 'utf8')).trim();
+  const auth = { Authorization: `Bearer ${token}` };
+
+  console.log(`[e2e] installing ${HUB_PLUGIN} into the hub from verdaccio`);
+  const installRes = await fetch(`${HUB_URL}/api/registry/install`, {
+    method: 'POST',
+    headers: { ...auth, 'content-type': 'application/json' },
+    body: JSON.stringify({ package: HUB_PLUGIN }),
+  });
+  if (!installRes.ok) {
+    throw new Error(`[e2e] FAIL: install request rejected: ${installRes.status} ${await installRes.text()}`);
+  }
+  await drainInstallStream(installRes);
+
+  // The plugin loads + compiles shortly after install completes; poll for it.
+  await waitFor(
+    async () => {
+      const res = await fetch(`${HUB_URL}/api/plugins`, { headers: auth }).catch(() => null);
+      if (!res?.ok) {
+        return false;
+      }
+      const plugins = z.array(pluginSchema).parse(await res.json());
+      return plugins.some((p) => p.name === HUB_PLUGIN);
+    },
+    `${HUB_PLUGIN} in /api/plugins`,
+    30_000
+  );
+
+  // Blocks register via the ModuleCompiler shortly after the plugin appears, so poll.
+  const matchesTimer = (b: z.infer<typeof blockSchema>): boolean =>
+    b.pluginId === HUB_PLUGIN ||
+    (b.typeId ?? '').includes('plugin-timer') ||
+    b.id === 'timer' ||
+    b.id === 'countdown';
+
+  let blockCount = 0;
+  const deadline = Date.now() + 30_000;
+  while (Date.now() < deadline) {
+    const res = await fetch(`${HUB_URL}/api/blocks`, { headers: auth }).catch(() => null);
+    if (res?.ok) {
+      blockCount = z.array(blockSchema).parse(await res.json()).filter(matchesTimer).length;
+      if (blockCount > 0) {
+        break;
+      }
+    }
+    await Bun.sleep(1000);
+  }
+  if (blockCount === 0) {
+    const plugins = await fetch(`${HUB_URL}/api/plugins`, { headers: auth })
+      .then((r) => r.text())
+      .catch(() => '<unreachable>');
+    const blocks = await fetch(`${HUB_URL}/api/blocks`, { headers: auth })
+      .then((r) => r.text())
+      .catch(() => '<unreachable>');
+    throw new Error(
+      `[e2e] FAIL: ${HUB_PLUGIN} registered no blocks.\n/api/plugins=${plugins}\n/api/blocks=${blocks}`
+    );
+  }
+  console.log(`[e2e] hub load OK (${HUB_PLUGIN} loaded, ${blockCount} block(s) registered)`);
+}
+
+async function main(): Promise<void> {
+  console.log(`[e2e] registry: ${REGISTRY}`);
+  const cleanup: Cleanup = [];
+  try {
+    await startVerdaccio(cleanup);
+    await publishAll(cleanup);
+    await consumerRoundTrip(cleanup);
+    await hubLoad(cleanup);
+    console.log('[e2e] PASS: publish -> registry -> consumer install + hub load all succeeded.');
+  } finally {
+    for (const fn of cleanup.reverse()) {
+      try {
+        await fn();
+      } catch {
+        // best-effort teardown
+      }
+    }
+  }
 }
 
 await main();

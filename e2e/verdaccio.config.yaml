@@ -1,6 +1,8 @@
-# Throwaway verdaccio registry for the npm publish/install acceptance e2e.
-# Anonymous publish + access are intentionally wide open: this registry only
-# ever exists inside the e2e container and is discarded afterward.
+# Throwaway verdaccio registry for the npm publish/install acceptance e2e
+# (e2e/acceptance.ts runs it via `bunx verdaccio`, no Docker). Wide-open publish +
+# access are intentional: this registry only exists for the duration of one e2e
+# run and is discarded afterward. `acceptance.ts` rewrites the storage path below
+# to a throwaway temp dir at runtime.
 storage: /verdaccio/storage
 listen: 0.0.0.0:4873
 

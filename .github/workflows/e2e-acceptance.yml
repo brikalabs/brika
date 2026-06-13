@@ -1,14 +1,15 @@
 # npm publish/install acceptance e2e (gated, not per-PR).
 #
 # Publishes the shipped Brika surface to a throwaway verdaccio registry exactly as
-# a release would (bun publish rewrites workspace:*), then installs it into a clean
-# consumer straight from that registry and imports the SDK. Catches the dependency
-# round-trip bugs the static + in-process closure guards approximate: a misdeclared
-# dependency, an unrewritten workspace: range, or a broken tarball fails here.
+# a release would (bun publish rewrites workspace:*), then exercises two real
+# consumer paths against it: a clean `bun add` + SDK import, and a headless hub
+# installing a plugin from the registry and loading it (blocks register). Catches
+# the dependency round-trip + host-integration bugs the per-PR closure guards
+# can only approximate.
 #
-# Heavy (spins up a registry, builds, publishes), so it runs on a manual dispatch
-# and nightly, not on every PR. Uses only Bun: the SDK ships raw .ts and Bun is its
-# real consumer.
+# Bun-only and Docker-free: e2e/acceptance.ts runs verdaccio as a plain `bunx`
+# process and boots the hub from source, so it needs no daemon. Heavy (registry +
+# publish + hub boot), so it runs on a manual dispatch and nightly, not per-PR.
 name: e2e acceptance (npm round-trip)
 
 on:
@@ -33,14 +34,6 @@ jobs:
 
       - run: bun install
 
-      - name: Start verdaccio
-        run: docker compose -f e2e/docker-compose.yml up -d --wait
-
-      - name: Run acceptance e2e
-        env:
-          VERDACCIO_REGISTRY: http://localhost:4873
-        run: bun run e2e/acceptance.ts
-
-      - name: Tear down verdaccio
-        if: always()
-        run: docker compose -f e2e/docker-compose.yml down -v
+      # Self-contained: starts verdaccio (bunx), publishes, installs into a clean
+      # consumer + a headless hub, asserts, and tears everything down.
+      - run: bun run e2e/acceptance.ts
