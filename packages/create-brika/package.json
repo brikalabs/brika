@@ -16,6 +16,7 @@
   },
   "exports": {
     "./run": {
+      "types": "./src/run.ts",
       "bun": "./src/run.ts",
       "default": "./dist/run.js"
     }
