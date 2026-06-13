@@ -42,7 +42,16 @@ brika update --check  # see what is available without installing
 
 ### Uninstalling
 
-Run the uninstaller script (there is no dedicated `brika` subcommand for this):
+Use the `brika uninstall` command. It keeps your data by default:
+
+```sh
+brika uninstall            # remove the binary, PATH entry, and completions; KEEP data
+brika uninstall --purge    # also delete the data dir AND stored secrets (irreversible)
+brika uninstall --yes      # skip the confirmation prompt (scripts/CI)
+```
+
+Or run the uninstaller script, which delegates to that command (and falls back to a
+plain directory removal if the binary is broken):
 
 ```sh
 # macOS / Linux
@@ -52,7 +61,12 @@ curl -fsSL https://brika.dev/uninstall.sh | bash
 iwr -useb https://brika.dev/uninstall.ps1 | iex
 ```
 
-Pass `--purge` (Unix) or `-Purge` (PowerShell) to also delete every `.brika/` workspace this user owns.
+The piped script purges by default (binary + data dir + OS keychain entries), since
+running it is an explicit "remove everything" gesture, and it runs non-interactively
+(no prompt). Set `BRIKA_KEEP_DATA=1` to keep the data dir, or `BRIKA_YES=1` to skip the
+prompt when running the script from a terminal. On Windows the running binary cannot
+delete itself, so the PowerShell script removes the install tree after the
+`brika uninstall` step has cleared the data dir and keychain.
 
 ## Docker
 

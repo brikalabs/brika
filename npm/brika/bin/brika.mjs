@@ -3,17 +3,19 @@
  * brika: npm launcher shim.
  *
  * The real `brika` is a Bun-compiled, self-contained binary shipped per platform
- * as an optionalDependency (`@brika/cli-<platform>-<arch>`). npm installs only the
- * package matching the host's os/cpu; this shim resolves that binary and execs it,
- * forwarding argv, stdio, and the exit code.
+ * as an optionalDependency (`@brika/cli-<platform>-<arch>`). The package manager
+ * (npm/pnpm/yarn/bun) installs only the one matching the host's os/cpu; this shim
+ * resolves that binary and execs it, forwarding argv, stdio, and the exit code.
  *
- * `BRIKA_INSTALL=npm` is exported so the binary knows it was installed via npm:
- * it then stores data in the per-user dir (~/.brika or %LOCALAPPDATA%\brika)
- * instead of next to the binary in node_modules, and routes `brika update` to npm.
+ * `BRIKA_INSTALL=managed` is exported so the binary knows it was installed by a
+ * package manager: it then stores data in the per-user dir (~/.brika or
+ * %LOCALAPPDATA%\brika) instead of next to the binary in node_modules, and defers
+ * `brika update` to the package manager rather than self-patching.
  */
 
 import { spawnSync } from 'node:child_process';
 import { createRequire } from 'node:module';
+import { constants } from 'node:os';
 
 const require = createRequire(import.meta.url);
 
@@ -35,7 +37,7 @@ try {
 
 const result = spawnSync(binPath, process.argv.slice(2), {
   stdio: 'inherit',
-  env: { ...process.env, BRIKA_INSTALL: 'npm' },
+  env: { ...process.env, BRIKA_INSTALL: 'managed' },
 });
 
 if (result.error) {
@@ -43,5 +45,8 @@ if (result.error) {
   process.exit(1);
 }
 
-// Mirror the child's exit code; a signal-terminated child has a null status.
+// Mirror the child's exit: a signal-terminated child reports 128+signum.
+if (result.signal) {
+  process.exit(128 + (constants.signals[result.signal] ?? 0));
+}
 process.exit(result.status ?? 1);

@@ -51,19 +51,19 @@ describe('resolveDataDir matrix', () => {
     expect(r).toEqual({ path: '/opt/brika', source: 'compiled-parent' });
   });
 
-  test('npm install (env marker) -> per-user ~/.brika, NOT binary-relative', () => {
+  test('package-manager install (env marker) -> per-user ~/.brika, NOT binary-relative', () => {
     const r = resolveDataDir({
-      env: { BRIKA_INSTALL: 'npm' },
+      env: { BRIKA_INSTALL: 'managed' },
       isCompiled: true,
       execPath: '/usr/local/lib/node_modules/@brika/cli-linux-x64/bin/brika',
       cwd: '/anywhere',
       home: '/home/me',
       platform: 'linux',
     });
-    expect(r).toEqual({ path: '/home/me/.brika', source: 'npm' });
+    expect(r).toEqual({ path: '/home/me/.brika', source: 'managed' });
   });
 
-  test('npm install (node_modules in execPath) -> per-user dir without the marker', () => {
+  test('package-manager install (node_modules in execPath) -> per-user dir without the marker', () => {
     const r = resolveDataDir({
       env: {},
       isCompiled: true,
@@ -72,12 +72,12 @@ describe('resolveDataDir matrix', () => {
       home: '/Users/me',
       platform: 'darwin',
     });
-    expect(r).toEqual({ path: '/Users/me/.brika', source: 'npm' });
+    expect(r).toEqual({ path: '/Users/me/.brika', source: 'managed' });
   });
 
-  test('npm install on Windows -> %LOCALAPPDATA%\\brika', () => {
+  test('package-manager install on Windows -> %LOCALAPPDATA%\\brika', () => {
     const r = resolveDataDir({
-      env: { BRIKA_INSTALL: 'npm', LOCALAPPDATA: 'C:\\Users\\me\\AppData\\Local' },
+      env: { BRIKA_INSTALL: 'managed', LOCALAPPDATA: 'C:\\Users\\me\\AppData\\Local' },
       isCompiled: true,
       execPath:
         'C:\\Users\\me\\AppData\\Roaming\\npm\\node_modules\\@brika\\cli-win32-x64\\bin\\brika.exe',
@@ -85,12 +85,12 @@ describe('resolveDataDir matrix', () => {
       home: 'C:\\Users\\me',
       platform: 'win32',
     });
-    expect(r).toEqual({ path: join('C:\\Users\\me\\AppData\\Local', 'brika'), source: 'npm' });
+    expect(r).toEqual({ path: join('C:\\Users\\me\\AppData\\Local', 'brika'), source: 'managed' });
   });
 
-  test('$BRIKA_HOME still wins over an npm install', () => {
+  test('$BRIKA_HOME still wins over an package-manager install', () => {
     const r = resolveDataDir({
-      env: { BRIKA_HOME: '/custom', BRIKA_INSTALL: 'npm' },
+      env: { BRIKA_HOME: '/custom', BRIKA_INSTALL: 'managed' },
       isCompiled: true,
       execPath: '/usr/local/lib/node_modules/@brika/cli-linux-x64/bin/brika',
       cwd: '/anywhere',
