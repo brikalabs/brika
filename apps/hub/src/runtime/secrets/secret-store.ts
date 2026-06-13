@@ -28,11 +28,11 @@ import { Logger } from '../logs/log-router';
 import { FileBackend } from './backends/file-backend';
 import { KeychainBackend } from './backends/keychain-backend';
 import type { SecretBackend } from './backends/types';
-import { SECRET_INDEX_NAME, SECRET_INDEX_SCHEMA } from './purge';
+import { INDEX_ENTRY_NAME, INDEX_ENTRY_SCHEMA } from './purge';
 
 // Re-exported so the standalone purge stays importable via the SecretStore
 // module (its public surface) without pulling the Logger graph into consumers.
-export { purgeServiceSecrets, SECRET_INDEX_NAME } from './purge';
+export { INDEX_ENTRY_NAME, purgeServiceSecrets } from './purge';
 
 const SEPARATOR = '::';
 /**
@@ -70,7 +70,7 @@ export class SecretStore {
   #backend: SecretBackend;
   /** Has the chosen backend been logged at least once? Avoids noise on every call. */
   #announced = false;
-  /** Serialises read-modify-write of {@link SECRET_INDEX_NAME} so concurrent
+  /** Serialises read-modify-write of {@link INDEX_ENTRY_NAME} so concurrent
    *  set/delete from async callers cannot lose an index entry. */
   #indexChain: Promise<unknown> = Promise.resolve();
 
@@ -150,12 +150,12 @@ export class SecretStore {
   // entries the caller can't re-derive (runtime `user.*` secrets, OAuth blobs).
 
   async #readIndex(): Promise<string[]> {
-    const raw = await this.#call((b) => b.get({ service: this.#service, name: SECRET_INDEX_NAME }));
+    const raw = await this.#call((b) => b.get({ service: this.#service, name: INDEX_ENTRY_NAME }));
     if (raw === null || raw === '') {
       return [];
     }
     try {
-      const parsed = SECRET_INDEX_SCHEMA.safeParse(JSON.parse(raw));
+      const parsed = INDEX_ENTRY_SCHEMA.safeParse(JSON.parse(raw));
       return parsed.success ? parsed.data : [];
     } catch {
       // Corrupt index: treat as empty rather than wedging every secret write.
@@ -165,11 +165,11 @@ export class SecretStore {
 
   async #writeIndex(names: string[]): Promise<void> {
     if (names.length === 0) {
-      await this.#call((b) => b.delete({ service: this.#service, name: SECRET_INDEX_NAME }));
+      await this.#call((b) => b.delete({ service: this.#service, name: INDEX_ENTRY_NAME }));
       return;
     }
     await this.#call((b) =>
-      b.set({ service: this.#service, name: SECRET_INDEX_NAME, value: JSON.stringify(names) })
+      b.set({ service: this.#service, name: INDEX_ENTRY_NAME, value: JSON.stringify(names) })
     );
   }
 

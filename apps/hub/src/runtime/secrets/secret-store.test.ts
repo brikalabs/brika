@@ -5,12 +5,12 @@ import { type BunSecretsMock, installBunSecretsMock } from '@/helpers/_bun-secre
 import { brikaContext } from '@/runtime/context/brika-context';
 import {
   purgeServiceSecrets,
-  SECRET_INDEX_NAME,
+  INDEX_ENTRY_NAME,
   SecretStore,
 } from '@/runtime/secrets/secret-store';
 
 const SERVICE = brikaContext.serviceName;
-const INDEX_KEY = `${SERVICE}::${SECRET_INDEX_NAME}`;
+const INDEX_KEY = `${SERVICE}::${INDEX_ENTRY_NAME}`;
 
 describe('SecretStore', () => {
   let store: SecretStore;

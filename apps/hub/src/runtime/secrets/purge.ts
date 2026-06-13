@@ -17,13 +17,13 @@ import { z } from 'zod';
  * (`<plugin>::<key>`) under a service. The double-underscore name can never
  * collide with a real qualified name (those always contain the `::` separator).
  */
-export const SECRET_INDEX_NAME = '__index__';
+export const INDEX_ENTRY_NAME = '__index__';
 
-export const SECRET_INDEX_SCHEMA = z.array(z.string());
+export const INDEX_ENTRY_SCHEMA = z.array(z.string());
 
 /**
  * Delete every keychain entry written under `serviceName`, driven by the
- * {@link SECRET_INDEX_NAME} index. Used by `brika uninstall --purge` to wipe
+ * {@link INDEX_ENTRY_NAME} index. Used by `brika uninstall --purge` to wipe
  * the OS keychain bucket: file-backend secrets live under `${BRIKA_HOME}` and
  * go with the data dir, but keychain entries are external to it and must be
  * removed explicitly while the service name is still known.
@@ -45,11 +45,11 @@ export const SECRET_INDEX_SCHEMA = z.array(z.string());
 export async function purgeServiceSecrets(serviceName: string): Promise<number> {
   let names: string[];
   try {
-    const raw = await Bun.secrets.get({ service: serviceName, name: SECRET_INDEX_NAME });
+    const raw = await Bun.secrets.get({ service: serviceName, name: INDEX_ENTRY_NAME });
     if (raw === null || raw === '') {
       return 0;
     }
-    const parsed = SECRET_INDEX_SCHEMA.safeParse(JSON.parse(raw));
+    const parsed = INDEX_ENTRY_SCHEMA.safeParse(JSON.parse(raw));
     names = parsed.success ? parsed.data : [];
   } catch {
     return 0;
@@ -65,8 +65,6 @@ export async function purgeServiceSecrets(serviceName: string): Promise<number> 
       // Best-effort: skip an entry we can't remove rather than aborting the rest.
     }
   }
-  await Bun.secrets
-    .delete({ service: serviceName, name: SECRET_INDEX_NAME })
-    .catch(() => undefined);
+  await Bun.secrets.delete({ service: serviceName, name: INDEX_ENTRY_NAME }).catch(() => undefined);
   return removed;
 }
