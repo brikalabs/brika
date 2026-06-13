@@ -36,11 +36,12 @@ import { discoverWorkspace } from './release-libs';
 const DEPRECATE_MESSAGE = 'Internal Brika package, not published for standalone use.';
 
 /**
- * Private in THIS repo but intentionally kept on npm because it is published from
- * elsewhere. @brika/i18n-devtools is being extracted to its own repo and
- * republished there, so the cleanup must never deprecate or unpublish it.
+ * Live on npm but published from a SIBLING repo, not this monorepo. The cleanup
+ * must never touch these even though they are absent here: @brika/i18n-devtools
+ * (being extracted to its own repo), @brika/clay (the Clay design system), and
+ * @brika/icon-studio (icon.brika.dev). Add a package here when it gets its own repo.
  */
-const KEEP_ON_NPM = new Set(['@brika/i18n-devtools']);
+const KEEP_ON_NPM = new Set(['@brika/i18n-devtools', '@brika/clay', '@brika/icon-studio']);
 
 const { values } = parseArgs({
   args: Bun.argv.slice(2),
@@ -104,47 +105,85 @@ function npm(args: string[]): number {
 const isPublishable = (name: string): boolean =>
   name.startsWith('@brika/') || name === 'create-brika';
 
+const ownedSchema = z.record(z.string(), z.string());
+
+/**
+ * Every @brika package the logged-in user owns (`npm access list packages`).
+ * Needed to catch ORPHANS: packages live on npm but deleted from the repo, which
+ * a repo-only scan can't see. Returns null when not logged in (orphan detection
+ * is then skipped with a warning).
+ */
+function listOwnedPackages(): Set<string> | null {
+  const proc = Bun.spawnSync(['npm', 'access', 'list', 'packages', '--json'], {
+    stdout: 'pipe',
+    stderr: 'pipe',
+  });
+  if (proc.exitCode !== 0) {
+    return null;
+  }
+  const parsed = ownedSchema.safeParse(JSON.parse(proc.stdout.toString()));
+  if (!parsed.success) {
+    return null;
+  }
+  return new Set(Object.keys(parsed.data).filter((n) => n.startsWith('@brika/')));
+}
+
 interface Reconciliation {
-  readonly stale: string[];
+  /** Packages to clean up: private-in-repo-but-live, plus orphans (live, not in repo). */
+  readonly targets: string[];
+  readonly orphans: Set<string>;
   readonly kept: string[];
   readonly keeperNames: Set<string>;
   readonly npmByName: Map<string, NpmInfo>;
+  readonly ownedKnown: boolean;
 }
 
-/** Find packages that are private in the repo but still live on npm. */
+/** Reconcile npm against the repo: find stale (private-in-repo) + orphan packages. */
 async function reconcile(now: number): Promise<Reconciliation> {
-  const workspace = await discoverWorkspace();
-  const privateNames = workspace
-    .filter((p) => p.isPrivate && isPublishable(p.name))
-    .map((p) => p.name);
-  const keeperNames = new Set(
-    workspace.filter((p) => !p.isPrivate && isPublishable(p.name)).map((p) => p.name)
+  const workspace = await discoverWorkspace().then((w) => w.filter((p) => isPublishable(p.name)));
+  const repoNames = new Set(workspace.map((p) => p.name));
+  const privateNames = workspace.filter((p) => p.isPrivate).map((p) => p.name);
+  const keeperNames = new Set(workspace.filter((p) => !p.isPrivate).map((p) => p.name));
+
+  const owned = listOwnedPackages();
+  const orphanCandidates = [...(owned ?? [])].filter(
+    (name) => !repoNames.has(name) && !KEEP_ON_NPM.has(name)
   );
 
   const npmByName = new Map<string, NpmInfo>();
-  for (const name of [...privateNames, ...keeperNames]) {
+  for (const name of new Set([
+    ...privateNames,
+    ...keeperNames,
+    ...orphanCandidates,
+    ...KEEP_ON_NPM,
+  ])) {
     npmByName.set(name, await fetchNpm(name, now));
   }
+  const isLive = (name: string): boolean => npmByName.get(name)?.live === true;
 
-  const live = privateNames.filter((name) => npmByName.get(name)?.live === true);
+  const staleLive = privateNames.filter(isLive).filter((name) => !KEEP_ON_NPM.has(name));
+  const orphans = new Set(orphanCandidates.filter(isLive));
   return {
-    stale: live.filter((name) => !KEEP_ON_NPM.has(name)).sort(),
-    kept: live.filter((name) => KEEP_ON_NPM.has(name)).sort(),
+    targets: [...staleLive, ...orphans].sort(),
+    orphans,
+    kept: [...KEEP_ON_NPM].filter(isLive).sort(),
     keeperNames,
     npmByName,
+    ownedKnown: owned !== null,
   };
 }
 
-/** Deprecate every stale package (the default, reversible cleanup). */
-function deprecate(stale: string[], npmByName: Map<string, NpmInfo>): void {
+const tag = (name: string, orphans: Set<string>): string =>
+  orphans.has(name) ? ' (orphan: not in repo)' : '';
+
+/** Deprecate every target package (the default, reversible cleanup). */
+function deprecate(targets: string[], orphans: Set<string>, npmByName: Map<string, NpmInfo>): void {
   console.log(
-    `DEPRECATE ${stale.length} stale package(s)${execute ? '' : '  (dry run -- pass --execute to run)'}:`
+    `DEPRECATE ${targets.length} package(s)${execute ? '' : '  (dry run -- pass --execute to run)'}:`
   );
   let failures = 0;
-  for (const name of stale) {
-    console.log(
-      `  npm deprecate "${name}" "${message}"   (npm latest ${npmByName.get(name)?.latest ?? '?'})`
-    );
+  for (const name of targets) {
+    console.log(`  npm deprecate "${name}" "${message}"${tag(name, orphans)}`);
     if (execute && npm(['deprecate', name, message]) !== 0) {
       failures += 1;
       console.error(`    FAILED to deprecate ${name}`);
@@ -155,7 +194,7 @@ function deprecate(stale: string[], npmByName: Map<string, NpmInfo>): void {
     return;
   }
   console.log(
-    failures === 0 ? `\nDeprecated ${stale.length} package(s).` : `\n${failures} failed.`
+    failures === 0 ? `\nDeprecated ${targets.length} package(s).` : `\n${failures} failed.`
   );
   if (failures > 0) {
     process.exit(1);
@@ -219,18 +258,19 @@ function keeperBlockers(
 
 /** Print (never run) the ordered, blocker-annotated unpublish plan. */
 function unpublishPlan(
-  stale: string[],
+  targets: string[],
+  orphans: Set<string>,
   keeperNames: Set<string>,
   npmByName: Map<string, NpmInfo>
 ): void {
-  console.log(`UNPUBLISH plan for ${stale.length} stale package(s) (dependents-first order).`);
+  console.log(`UNPUBLISH plan for ${targets.length} package(s) (dependents-first order).`);
   console.log('Unpublish is destructive + irreversible; this prints the plan only.\n');
-  for (const name of unpublishOrder(stale, npmByName)) {
+  for (const name of unpublishOrder(targets, npmByName)) {
     const ageDays = npmByName.get(name)?.ageDays ?? -1;
     const past72 = ageDays > 3 ? '   # >72h: npm may refuse -> email support@npmjs.com' : '';
-    console.log(`  npm unpublish "${name}" --force${past72}`);
+    console.log(`  npm unpublish "${name}" --force${past72}${tag(name, orphans)}`);
   }
-  const blockers = keeperBlockers(stale, keeperNames, npmByName);
+  const blockers = keeperBlockers(targets, keeperNames, npmByName);
   if (blockers.length > 0) {
     console.log('\nBLOCKERS (npm refuses these until the dependent is removed/changed):');
     for (const b of blockers) {
@@ -256,7 +296,7 @@ function unpublishPlan(
     '  earlier release, have since been internalized into @brika/sdk, are not intended for'
   );
   console.log('  standalone use, and we are the sole maintainer:');
-  for (const name of stale) {
+  for (const name of targets) {
     console.log(`    ${name}`);
   }
   console.log('  ---');
@@ -264,20 +304,24 @@ function unpublishPlan(
 
 async function main(): Promise<void> {
   const now = Date.parse(new Date().toISOString());
-  const { stale, kept, keeperNames, npmByName } = await reconcile(now);
+  const { targets, orphans, kept, keeperNames, npmByName, ownedKnown } = await reconcile(now);
 
   if (kept.length > 0) {
     console.log(`Keeping on npm (published from elsewhere): ${kept.join(', ')}\n`);
   }
-  if (stale.length === 0) {
-    console.log('Registry is clean: no private-in-repo packages are live on npm.');
+  if (!ownedKnown) {
+    console.log('Note: `npm access list packages` failed (run `npm login`), so orphan');
+    console.log('packages (live on npm but absent from the repo) were NOT checked.\n');
+  }
+  if (targets.length === 0) {
+    console.log('Registry is clean: nothing private-in-repo or orphaned is live on npm.');
     return;
   }
 
   if (values.unpublish) {
-    unpublishPlan(stale, keeperNames, npmByName);
+    unpublishPlan(targets, orphans, keeperNames, npmByName);
   } else {
-    deprecate(stale, npmByName);
+    deprecate(targets, orphans, npmByName);
   }
 }
 
