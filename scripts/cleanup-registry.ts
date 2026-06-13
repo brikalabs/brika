@@ -243,8 +243,21 @@ function unpublishPlan(
     );
   }
   console.log(
-    '\nReminder: unpublished versions can never be reused; deprecate is the reversible alternative.'
+    '\nReminder: unpublished versions can never be reused; the package NAME returns after 24h.'
   );
+
+  // Past 72h, the CLI usually refuses (dependents + npm policy), so removal goes
+  // through npm support. Emit a ready-to-send request listing the whole set.
+  console.log('\nIf the CLI refuses any, send this to support@npmjs.com (you are the sole owner):');
+  console.log('  ---');
+  console.log('  Subject: Unpublish request for internalized @brika/* packages');
+  console.log('  Please remove these packages from the public registry. They were published in an');
+  console.log('  earlier release, have since been internalized into @brika/sdk, are not intended for');
+  console.log('  standalone use, and we are the sole maintainer:');
+  for (const name of stale) {
+    console.log(`    ${name}`);
+  }
+  console.log('  ---');
 }
 
 async function main(): Promise<void> {
