@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { join } from 'node:path';
 import { Glob } from 'bun';
 import { z } from 'zod';
-import { PUBLISH_ORDER } from '../../../scripts/release-libs';
+import { discoverPublishOrder } from '../../../scripts/release-libs';
 
 /**
  * Guard: the Changesets config and per-package `private` flags must agree, so the
@@ -80,22 +80,25 @@ describe('changeset config stays in sync with package privacy', () => {
     expect(notPublished).toEqual([]);
   });
 
-  test('release-libs PUBLISH_ORDER equals the published (non-private) set', async () => {
-    const packages = await workspacePackages();
-    const published = packages
+  test('derived publish order equals the published set and is topologically valid', async () => {
+    const order = await discoverPublishOrder();
+    const orderedNames = order.map((p) => p.name);
+    const published = (await workspacePackages())
       .filter((p) => !p.private)
       .map((p) => p.name)
       .sort();
-    // Resolve each PUBLISH_ORDER dir to its package name.
-    const publishOrderNames: string[] = [];
-    for (const relDir of PUBLISH_ORDER) {
-      const pkg = pkgSchema.parse(
-        JSON.parse(await Bun.file(join(REPO_ROOT, relDir, 'package.json')).text())
-      );
-      if (pkg.name) {
-        publishOrderNames.push(pkg.name);
+    // The derived order is exactly the published (non-private) set.
+    expect([...orderedNames].sort()).toEqual(published);
+    // Topological: every @brika dep that is itself published appears before its dependent.
+    const inSet = new Set(orderedNames);
+    const seen = new Set<string>();
+    for (const pkg of order) {
+      for (const dep of pkg.brikaDeps) {
+        if (inSet.has(dep)) {
+          expect(seen.has(dep)).toBe(true);
+        }
       }
+      seen.add(pkg.name);
     }
-    expect(publishOrderNames.sort()).toEqual(published);
   });
 });

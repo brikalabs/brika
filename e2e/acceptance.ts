@@ -27,6 +27,7 @@ import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { z } from 'zod';
+import { discoverPublishOrder } from '../scripts/release-libs';
 
 const REPO_ROOT = resolve(import.meta.dir, '..');
 const VERDACCIO_PORT = 4873;
@@ -37,20 +38,6 @@ const REGISTRY = (process.env.VERDACCIO_REGISTRY ?? `http://localhost:${VERDACCI
 const REGISTRY_HOST = REGISTRY.replace(/^https?:/, ''); // //localhost:4873
 const HUB_PORT = 3999;
 const HUB_URL = `http://127.0.0.1:${HUB_PORT}`;
-
-/** Publish order: closure leaves -> mid libs -> sdk -> scaffold -> sample plugins. */
-const PUBLISH_ORDER = [
-  'packages/errors',
-  'packages/grants',
-  'packages/ipc',
-  'packages/serializable',
-  'packages/flow',
-  'packages/ui-kit',
-  'packages/sdk',
-  'packages/create-brika',
-  'plugins/timer',
-  'plugins/weather',
-];
 
 const CLOSURE = ['errors', 'flow', 'grants', 'ipc', 'serializable', 'ui-kit'];
 const REACT_FREE_SUBPATHS = ['@brika/sdk/ctx', '@brika/sdk/sparks', '@brika/sdk/schema', '@brika/sdk/grants'];
@@ -147,10 +134,14 @@ async function publishAll(cleanup: Cleanup): Promise<void> {
   run(['bun', 'run', '--filter', '@brika/sdk', 'build:bin']);
   run(['bun', 'run', '--filter', 'create-brika', 'build']);
 
+  // Reuse the same derived publish order as the real release (no duplicate list).
+  // bun publish rewrites workspace:* and only uploads each package's own files, so
+  // publishing the full set is cheap even for heavy plugins (their deps are not
+  // fetched at publish time).
   console.log('[e2e] publishing to verdaccio');
-  for (const relDir of PUBLISH_ORDER) {
+  for (const pkg of await discoverPublishOrder()) {
     run(['bun', 'publish', '--registry', `${REGISTRY}/`, '--tolerate-republish', '--ignore-scripts'], {
-      cwd: join(REPO_ROOT, relDir),
+      cwd: join(REPO_ROOT, pkg.relDir),
       env: { HOME: home },
     });
   }
