@@ -1,6 +1,7 @@
 {
   "name": "@brika/analytics",
   "version": "0.4.0",
+  "private": true,
   "type": "module",
   "license": "MIT",
   "repository": {

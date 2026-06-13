@@ -1,6 +1,7 @@
 {
   "name": "@brika/db",
   "version": "0.4.0",
+  "private": true,
   "description": "Database layer and migration system for Brika",
   "type": "module",
   "exports": {
