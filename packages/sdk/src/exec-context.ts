@@ -95,13 +95,40 @@ export interface DataDirInput {
 }
 
 /**
- * True when the compiled binary was installed by a JS package manager
- * (npm/pnpm/yarn/bun) rather than the `curl | sh` installer. Two signals: the
- * bin shim exports `BRIKA_INSTALL=managed` before exec'ing the binary, and a
- * package-manager-placed binary lives under a `node_modules` tree. Either suffices.
+ * The env var the package-manager launcher (the npm/pnpm/yarn/bun `bin` shim)
+ * exports before exec'ing the binary, and its value. Single source of truth for
+ * the "a JS package manager owns this binary" marker, shared by the data-dir
+ * resolver here and the hub's runtime-mode / update-guidance logic. The shim
+ * itself (`npm/brika/bin/brika.mjs`) hardcodes the same literal, since a
+ * standalone `.mjs` can't import from the SDK.
  */
-function isManagedInstall(input: DataDirInput): boolean {
-  return input.env.BRIKA_INSTALL === 'managed' || input.execPath.includes('node_modules');
+export const MANAGED_INSTALL_ENV = 'BRIKA_INSTALL';
+export const MANAGED_INSTALL_MARKER = 'managed';
+
+/** Inputs for {@link isManagedInstall}: the running binary's env and path. */
+export interface ManagedInstallInput {
+  /** Usually `process.env`; reads {@link MANAGED_INSTALL_ENV}. */
+  readonly env: Readonly<Record<string, string | undefined>>;
+  /** `process.execPath` (the running binary). */
+  readonly execPath: string;
+}
+
+/**
+ * True when the binary is owned by a JS package manager (npm/pnpm/yarn/bun)
+ * rather than the `curl | sh` installer. Two signals: the bin shim exports the
+ * managed marker before exec'ing the binary, and a package-manager-placed binary
+ * lives under a `node_modules` tree. Either suffices.
+ *
+ * Compiled-only callers (data dir, runtime mode) additionally gate on
+ * `isCompiled` so a dev runtime that happens to live under node_modules isn't
+ * misread; the uninstaller calls it ungated, since declining to delete a
+ * possibly-manager-owned binary is the safe default.
+ */
+export function isManagedInstall(input: ManagedInstallInput): boolean {
+  return (
+    input.env[MANAGED_INSTALL_ENV] === MANAGED_INSTALL_MARKER ||
+    input.execPath.includes('node_modules')
+  );
 }
 
 /**

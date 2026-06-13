@@ -3,13 +3,40 @@ import { existsSync } from 'node:fs';
 import { mkdir, mkdtemp, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { findWorkspaceRoot, isCompiledFrom, peekInstanceId, resolveDataDir } from './exec-context';
+import {
+  findWorkspaceRoot,
+  isCompiledFrom,
+  isManagedInstall,
+  peekInstanceId,
+  resolveDataDir,
+} from './exec-context';
 
 describe('isCompiledFrom', () => {
   test('true only for the bunfs virtual path', () => {
     expect(isCompiledFrom('/$bunfs/root/main.ts')).toBe(true);
     expect(isCompiledFrom('/Users/x/project/apps/hub/src/main.ts')).toBe(false);
     expect(isCompiledFrom('')).toBe(false);
+  });
+});
+
+describe('isManagedInstall', () => {
+  test('true when the launcher exported the managed marker', () => {
+    expect(
+      isManagedInstall({ env: { BRIKA_INSTALL: 'managed' }, execPath: '/usr/local/bin/brika' })
+    ).toBe(true);
+  });
+
+  test('true when the binary lives under node_modules (marker stripped)', () => {
+    expect(
+      isManagedInstall({
+        env: {},
+        execPath: '/usr/local/lib/node_modules/@brika/cli-darwin-arm64/bin/brika',
+      })
+    ).toBe(true);
+  });
+
+  test('false for a curl|sh install (no marker, not under node_modules)', () => {
+    expect(isManagedInstall({ env: {}, execPath: '/Users/me/.brika/bin/brika' })).toBe(false);
   });
 });
 
@@ -75,17 +102,19 @@ describe('resolveDataDir matrix', () => {
     expect(r).toEqual({ path: '/Users/me/.brika', source: 'managed' });
   });
 
-  test('package-manager install on Windows -> %LOCALAPPDATA%\\brika', () => {
+  test(String.raw`package-manager install on Windows -> %LOCALAPPDATA%\brika`, () => {
     const r = resolveDataDir({
-      env: { BRIKA_INSTALL: 'managed', LOCALAPPDATA: 'C:\\Users\\me\\AppData\\Local' },
+      env: { BRIKA_INSTALL: 'managed', LOCALAPPDATA: String.raw`C:\Users\me\AppData\Local` },
       isCompiled: true,
-      execPath:
-        'C:\\Users\\me\\AppData\\Roaming\\npm\\node_modules\\@brika\\cli-win32-x64\\bin\\brika.exe',
-      cwd: 'C:\\anywhere',
-      home: 'C:\\Users\\me',
+      execPath: String.raw`C:\Users\me\AppData\Roaming\npm\node_modules\@brika\cli-win32-x64\bin\brika.exe`,
+      cwd: String.raw`C:\anywhere`,
+      home: String.raw`C:\Users\me`,
       platform: 'win32',
     });
-    expect(r).toEqual({ path: join('C:\\Users\\me\\AppData\\Local', 'brika'), source: 'managed' });
+    expect(r).toEqual({
+      path: join(String.raw`C:\Users\me\AppData\Local`, 'brika'),
+      source: 'managed',
+    });
   });
 
   test('$BRIKA_HOME still wins over an package-manager install', () => {
