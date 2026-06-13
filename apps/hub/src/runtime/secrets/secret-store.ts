@@ -28,6 +28,11 @@ import { Logger } from '../logs/log-router';
 import { FileBackend } from './backends/file-backend';
 import { KeychainBackend } from './backends/keychain-backend';
 import type { SecretBackend } from './backends/types';
+import { INDEX_ENTRY_NAME, INDEX_ENTRY_SCHEMA } from './purge';
+
+// Re-exported so the standalone purge stays importable via the SecretStore
+// module (its public surface) without pulling the Logger graph into consumers.
+export { INDEX_ENTRY_NAME, purgeServiceSecrets } from './purge';
 
 const SEPARATOR = '::';
 /**
@@ -65,6 +70,9 @@ export class SecretStore {
   #backend: SecretBackend;
   /** Has the chosen backend been logged at least once? Avoids noise on every call. */
   #announced = false;
+  /** Serialises read-modify-write of {@link INDEX_ENTRY_NAME} so concurrent
+   *  set/delete from async callers cannot lose an index entry. */
+  #indexChain: Promise<unknown> = Promise.resolve();
 
   constructor() {
     this.#mode = parseMode(process.env.BRIKA_SECRETS_BACKEND);
@@ -125,15 +133,61 @@ export class SecretStore {
   }
 
   async set(pluginName: string, key: string, value: string): Promise<void> {
-    await this.#call((b) =>
-      b.set({ service: this.#service, name: this.#qualify(pluginName, key), value })
-    );
+    const name = this.#qualify(pluginName, key);
+    await this.#call((b) => b.set({ service: this.#service, name, value }));
+    await this.#mutateIndex((names) => names.add(name));
   }
 
   async delete(pluginName: string, key: string): Promise<boolean> {
-    return await this.#call((b) =>
-      b.delete({ service: this.#service, name: this.#qualify(pluginName, key) })
+    const name = this.#qualify(pluginName, key);
+    const existed = await this.#call((b) => b.delete({ service: this.#service, name }));
+    await this.#mutateIndex((names) => names.delete(name));
+    return existed;
+  }
+
+  // ─── Key index ─────────────────────────────────────────────────────────
+  // Persisted so `deleteAllForPlugin` and the uninstall purge can enumerate
+  // entries the caller can't re-derive (runtime `user.*` secrets, OAuth blobs).
+
+  async #readIndex(): Promise<string[]> {
+    const raw = await this.#call((b) => b.get({ service: this.#service, name: INDEX_ENTRY_NAME }));
+    if (raw === null || raw === '') {
+      return [];
+    }
+    try {
+      const parsed = INDEX_ENTRY_SCHEMA.safeParse(JSON.parse(raw));
+      return parsed.success ? parsed.data : [];
+    } catch {
+      // Corrupt index: treat as empty rather than wedging every secret write.
+      return [];
+    }
+  }
+
+  async #writeIndex(names: string[]): Promise<void> {
+    if (names.length === 0) {
+      await this.#call((b) => b.delete({ service: this.#service, name: INDEX_ENTRY_NAME }));
+      return;
+    }
+    await this.#call((b) =>
+      b.set({ service: this.#service, name: INDEX_ENTRY_NAME, value: JSON.stringify(names) })
     );
+  }
+
+  #mutateIndex(mutate: (names: Set<string>) => void): Promise<void> {
+    const next = this.#indexChain.then(async () => {
+      const current = await this.#readIndex();
+      const set = new Set(current);
+      mutate(set);
+      const unchanged = set.size === current.length && current.every((n) => set.has(n));
+      if (unchanged) {
+        return;
+      }
+      await this.#writeIndex([...set]);
+    });
+    // Swallow on the chain so one failed mutation doesn't poison later writes;
+    // the original promise still rejects to this caller.
+    this.#indexChain = next.catch(() => undefined);
+    return next;
   }
 
   /** Round-trip arbitrary JSON-serializable values (e.g. OAuth token blobs). */
@@ -153,8 +207,20 @@ export class SecretStore {
     await this.set(pluginName, key, JSON.stringify(value));
   }
 
-  async deleteAllForPlugin(pluginName: string, keys: readonly string[]): Promise<void> {
-    await Promise.all(keys.map((key) => this.delete(pluginName, key)));
+  /**
+   * Delete every secret a plugin owns. `keys` (declared password prefs +
+   * `__secret_*` from the schema/YAML) covers entries written before the index
+   * existed; the index covers everything else, notably runtime `setSecret`
+   * (`user.*`) keys that have no other on-disk trace. Each `delete` keeps the
+   * index in sync, so the entry self-removes as it goes.
+   */
+  async deleteAllForPlugin(pluginName: string, keys: readonly string[] = []): Promise<void> {
+    const prefix = `${pluginName}${SEPARATOR}`;
+    const fromIndex = (await this.#readIndex())
+      .filter((name) => name.startsWith(prefix))
+      .map((name) => name.slice(prefix.length));
+    const all = new Set<string>([...keys, ...fromIndex]);
+    await Promise.all([...all].map((key) => this.delete(pluginName, key)));
   }
 
   // ─── Hub-internal secrets ──────────────────────────────────────────────

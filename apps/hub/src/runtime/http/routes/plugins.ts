@@ -1,12 +1,16 @@
+import { rm } from 'node:fs/promises';
+import { join } from 'node:path';
 import { Analytics } from '@brika/analytics';
 import { isValidPermission, PERMISSIONS } from '@brika/permissions';
 import type { Plugin } from '@brika/plugin';
 import { group, route, UnprocessableEntity } from '@brika/router';
 import { z } from 'zod';
+import { brikaContext } from '@/runtime/context/brika-context';
 import { getProcessMetrics, MetricsStore } from '@/runtime/metrics';
 import { ModuleCompiler } from '@/runtime/modules';
 import { MODULE_KINDS, resolveModuleUrl } from '@/runtime/modules/module-kinds';
 import { DiskUsageCache } from '@/runtime/plugins/disk-usage';
+import { pluginDataDir } from '@/runtime/plugins/fs-dirs';
 import { PluginConfigService } from '@/runtime/plugins/plugin-config';
 import { PluginLifecycle } from '@/runtime/plugins/plugin-lifecycle';
 import { PluginManager } from '@/runtime/plugins/plugin-manager';
@@ -418,7 +422,17 @@ export const pluginsRoutes = group({
         // Remove from state store
         state.remove(plugin.name);
 
-        // Remove credentials from the OS keychain
+        // Remove the plugin's writable storage (data/cache/tmp under
+        // `<brikaDir>/plugins/data/<uid>/`). The boot prune migration is only a
+        // safety net for crashes/legacy rows; an always-on hub would otherwise
+        // keep this (quota-sized, holds streamed uploads) on disk until restart.
+        await rm(join(pluginDataDir(brikaContext.brikaDir), plugin.uid), {
+          recursive: true,
+          force: true,
+        });
+
+        // Remove credentials from the OS keychain (declared keys + any runtime
+        // `setSecret` keys tracked in the secret index).
         await secrets.deleteAllForPlugin(plugin.name, secretKeys);
 
         // Only remove npm package if it's a registry package (not local)

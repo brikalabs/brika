@@ -19,6 +19,7 @@
  *   brika version          short non-TUI version line
  *   brika update           check for a new release and apply it
  *   brika completions      shell tab-completion install
+ *   brika uninstall        remove brika (--purge also wipes data + secrets)
  *   brika help             auto-generated help
  */
 
@@ -40,6 +41,7 @@ import open from './commands/open';
 import start from './commands/start';
 import status from './commands/status';
 import stop from './commands/stop';
+import uninstall from './commands/uninstall';
 import update from './commands/update';
 import version from './commands/version';
 
@@ -88,6 +90,7 @@ export const cli = createCli({ name: 'brika', defaultCommand: 'dashboard', helpF
   .addCommand(version)
   .addCommand(update)
   .addCommand(completions)
+  .addCommand(uninstall)
   // Hidden internal command — `brika start` re-invokes it to act as
   // the standalone-install supervisor (respawns the hub on exit-code
   // 42). Hidden from help.

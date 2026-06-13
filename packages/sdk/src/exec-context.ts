@@ -77,10 +77,10 @@ export function peekInstanceId(dataDir: string): string | null {
 }
 
 /** Which rule decided the data dir. Lets `brika doctor` explain the resolution. */
-export type DataDirSource = 'env' | 'compiled-parent' | 'workspace' | 'cwd';
+export type DataDirSource = 'env' | 'npm' | 'compiled-parent' | 'workspace' | 'cwd';
 
 export interface DataDirInput {
-  /** Usually `process.env`; only BRIKA_HOME is read. */
+  /** Usually `process.env`; reads BRIKA_HOME, BRIKA_INSTALL, and (Windows) LOCALAPPDATA/HOME/USERPROFILE. */
   readonly env: Readonly<Record<string, string | undefined>>;
   /** From {@link isCompiledFrom}(import.meta.path) at the call site. */
   readonly isCompiled: boolean;
@@ -88,20 +88,56 @@ export interface DataDirInput {
   readonly execPath: string;
   /** `process.cwd()`. */
   readonly cwd: string;
+  /** `os.homedir()`. Only consulted for the npm-install (per-user) path. */
+  readonly home?: string;
+  /** `process.platform`. Only consulted for the npm-install (per-user) path. */
+  readonly platform?: string;
+}
+
+/**
+ * True when the compiled binary was installed via npm rather than the
+ * `curl | sh` installer. Two signals: the bin shim exports `BRIKA_INSTALL=npm`
+ * before exec'ing the binary, and an npm-placed binary lives under a
+ * `node_modules` tree. Either is enough.
+ */
+function isNpmInstall(input: DataDirInput): boolean {
+  return input.env.BRIKA_INSTALL === 'npm' || input.execPath.includes('node_modules');
+}
+
+/**
+ * Per-user data dir, used for npm installs (the binary lives in node_modules,
+ * which `npm update`/reinstall would wipe, so data must NOT be binary-relative).
+ * Matches what the `curl | sh` / PowerShell installers already produce, so the
+ * two install methods share one location:
+ *   - Windows -> `%LOCALAPPDATA%\brika`
+ *   - else    -> `~/.brika`
+ */
+function userDataDir(input: DataDirInput): string {
+  const home = input.home ?? input.env.HOME ?? input.env.USERPROFILE ?? '';
+  if (input.platform === 'win32') {
+    const localAppData = input.env.LOCALAPPDATA ?? (home ? join(home, 'AppData', 'Local') : '');
+    return join(localAppData, 'brika');
+  }
+  return join(home, '.brika');
 }
 
 /**
  * Resolve Brika's data directory (the `.brika` dir holding config, db,
  * cli-token, instance.id) from injected facts. Precedence:
  *   1. $BRIKA_HOME (explicit override)
- *   2. compiled binary -> parent of the install dir (dirname(dirname(execPath)))
- *   3. dev -> the workspace root's .brika (so the hub and the CLIs share ONE dir
+ *   2. compiled binary installed via npm -> per-user dir (NOT binary-relative,
+ *      since the binary sits in node_modules)
+ *   3. compiled binary -> parent of the install dir (dirname(dirname(execPath)))
+ *   4. dev -> the workspace root's .brika (so the hub and the CLIs share ONE dir
  *      regardless of which package dir launched the process)
- *   4. fallback -> <cwd>/.brika
+ *   5. fallback -> <cwd>/.brika
  */
 export function resolveDataDir(input: DataDirInput): { path: string; source: DataDirSource } {
   if (input.env.BRIKA_HOME) {
     return { path: input.env.BRIKA_HOME, source: 'env' };
+  }
+  if (input.isCompiled && isNpmInstall(input)) {
+    return { path: userDataDir(input), source: 'npm' };
   }
   if (input.isCompiled) {
     return { path: dirname(dirname(input.execPath)), source: 'compiled-parent' };

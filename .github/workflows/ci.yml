@@ -72,6 +72,20 @@ jobs:
       - run: bun install --frozen-lockfile
       - run: bun run lint
 
+  # Static analysis for the workflow files themselves: syntax, expression
+  # errors, needs/outputs wiring, and shellcheck on every `run:` block (the
+  # rhysd/actionlint image bundles shellcheck). The fastest "test our CI" signal.
+  actionlint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Lint workflows
+        # actionlint 1.7.12, pinned by digest for supply-chain safety (a mutable
+        # tag would let a re-point run arbitrary code in CI). Bump deliberately.
+        uses: docker://rhysd/actionlint@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667
+        with:
+          args: -color
+
   version-gate:
     needs: setup
     runs-on: ubuntu-latest

@@ -51,6 +51,68 @@ describe('resolveDataDir matrix', () => {
     expect(r).toEqual({ path: '/opt/brika', source: 'compiled-parent' });
   });
 
+  test('npm install (env marker) -> per-user ~/.brika, NOT binary-relative', () => {
+    const r = resolveDataDir({
+      env: { BRIKA_INSTALL: 'npm' },
+      isCompiled: true,
+      execPath: '/usr/local/lib/node_modules/@brika/cli-linux-x64/bin/brika',
+      cwd: '/anywhere',
+      home: '/home/me',
+      platform: 'linux',
+    });
+    expect(r).toEqual({ path: '/home/me/.brika', source: 'npm' });
+  });
+
+  test('npm install (node_modules in execPath) -> per-user dir without the marker', () => {
+    const r = resolveDataDir({
+      env: {},
+      isCompiled: true,
+      execPath: '/usr/local/lib/node_modules/@brika/cli-darwin-arm64/bin/brika',
+      cwd: '/anywhere',
+      home: '/Users/me',
+      platform: 'darwin',
+    });
+    expect(r).toEqual({ path: '/Users/me/.brika', source: 'npm' });
+  });
+
+  test('npm install on Windows -> %LOCALAPPDATA%\\brika', () => {
+    const r = resolveDataDir({
+      env: { BRIKA_INSTALL: 'npm', LOCALAPPDATA: 'C:\\Users\\me\\AppData\\Local' },
+      isCompiled: true,
+      execPath:
+        'C:\\Users\\me\\AppData\\Roaming\\npm\\node_modules\\@brika\\cli-win32-x64\\bin\\brika.exe',
+      cwd: 'C:\\anywhere',
+      home: 'C:\\Users\\me',
+      platform: 'win32',
+    });
+    expect(r).toEqual({ path: join('C:\\Users\\me\\AppData\\Local', 'brika'), source: 'npm' });
+  });
+
+  test('$BRIKA_HOME still wins over an npm install', () => {
+    const r = resolveDataDir({
+      env: { BRIKA_HOME: '/custom', BRIKA_INSTALL: 'npm' },
+      isCompiled: true,
+      execPath: '/usr/local/lib/node_modules/@brika/cli-linux-x64/bin/brika',
+      cwd: '/anywhere',
+      home: '/home/me',
+      platform: 'linux',
+    });
+    expect(r).toEqual({ path: '/custom', source: 'env' });
+  });
+
+  test('curl install (compiled, no node_modules, no marker) stays binary-relative', () => {
+    const r = resolveDataDir({
+      env: {},
+      isCompiled: true,
+      execPath: '/home/me/.brika/bin/brika',
+      cwd: '/anywhere',
+      home: '/home/me',
+      platform: 'linux',
+    });
+    // The npm branch must NOT trigger for a normal curl install.
+    expect(r).toEqual({ path: '/home/me/.brika', source: 'compiled-parent' });
+  });
+
   test('dev, cwd = workspace root -> <root>/.brika', async () => {
     const root = await makeWorkspace();
     const r = resolveDataDir({ env: {}, isCompiled: false, execPath: '/usr/bin/bun', cwd: root });

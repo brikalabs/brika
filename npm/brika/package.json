@@ -1,0 +1,22 @@
+{
+  "name": "brika",
+  "version": "0.0.0",
+  "description": "Brika: the local-first automation hub. Self-contained CLI + hub, installed via npm.",
+  "keywords": ["brika", "automation", "hub", "cli", "self-hosted", "local-first"],
+  "license": "MIT",
+  "homepage": "https://github.com/brikalabs/brika#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/brikalabs/brika.git",
+    "directory": "npm/brika"
+  },
+  "bin": {
+    "brika": "bin/brika.mjs"
+  },
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "files": ["bin", "README.md"],
+  "optionalDependencies": {}
+}

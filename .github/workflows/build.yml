@@ -103,17 +103,9 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - uses: oven-sh/setup-bun@v2
+      - uses: ./.github/actions/setup-bun
         with:
           bun-version: ${{ needs.setup.outputs.bun_version }}
-
-      - uses: actions/cache@v5
-        with:
-          path: ~/.bun/install/cache
-          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
-          restore-keys: bun-${{ runner.os }}-
-
-      - run: bun install --frozen-lockfile
 
       - run: bun run --filter @brika/ui build
 
@@ -149,17 +141,9 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - uses: oven-sh/setup-bun@v2
+      - uses: ./.github/actions/setup-bun
         with:
           bun-version: ${{ needs.setup.outputs.bun_version }}
-
-      - uses: actions/cache@v5
-        with:
-          path: ~/.bun/install/cache
-          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
-          restore-keys: bun-${{ runner.os }}-
-
-      - run: bun install --frozen-lockfile
 
       - uses: actions/download-artifact@v5
         with:
@@ -563,3 +547,80 @@ jobs:
             echo "  - ${tag}"
             gh release delete "$tag" --yes --cleanup-tag
           done
+
+  # ───────────────────────────────────────────────────────────────────────
+  # npm: publish the launcher (`brika`) + per-platform binary packages
+  # (`@brika/cli-<os>-<cpu>`) wrapping the same compiled binaries.
+  #
+  # Tagged releases only. Canary is intentionally skipped (npm versions are
+  # immutable, so per-push canaries would spam the registry; canary stays on
+  # GitHub Releases / `curl | sh`).
+  #
+  # Auth is npm Trusted Publishing (OIDC), no long-lived NPM_TOKEN. It needs
+  # `id-token: write`, npm CLI >= 11.5.1, and a trusted publisher configured on
+  # npmjs.com for EACH of the six package names (repo `brikalabs/brika`,
+  # workflow `build.yml`). Provenance is attached automatically. NPM_TOKEN is
+  # kept only as a bootstrap fallback for the FIRST publish of a brand-new
+  # package (a trusted publisher can't be configured before the package
+  # exists); remove the secret once all six packages exist + are configured.
+  # ───────────────────────────────────────────────────────────────────────
+  publish-npm:
+    needs: [setup, release]
+    if: needs.setup.outputs.is_release == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # mint the OIDC token npm exchanges for a short-lived publish credential
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: ./.github/actions/setup-bun
+        with:
+          bun-version: ${{ needs.setup.outputs.bun_version }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22 # >= 22.14.0; resolves to latest 22.x
+          registry-url: https://registry.npmjs.org
+
+      # Trusted publishing requires npm CLI >= 11.5.1; node 22 ships an older npm.
+      - run: npm install -g npm@latest
+
+      - uses: actions/download-artifact@v5
+        with:
+          pattern: brika-*
+          path: artifacts/
+          merge-multiple: true
+
+      - name: Extract binaries into per-platform dirs
+        run: |
+          # The npm-dist generator expects <dir>/<artifact>/<binary>; the
+          # release archives carry the binary at the root (plus a `ui/` sidecar
+          # the npm package doesn't need, since the binary embeds the UI).
+          mkdir -p staging
+          cd artifacts
+          for f in brika-*; do
+            case "$f" in
+              *.tar.gz) base="${f%.tar.gz}"; mkdir -p "../staging/$base"; tar xzf "$f" -C "../staging/$base" ;;
+              *.zip)    base="${f%.zip}";    mkdir -p "../staging/$base"; unzip -oq "$f" -d "../staging/$base" ;;
+              *) echo "skip non-archive $f" ;;
+            esac
+          done
+
+      - name: Publish to npm
+        working-directory: apps/build
+        env:
+          # Bootstrap fallback only: the npm CLI prefers OIDC when a trusted
+          # publisher is configured, and falls back to this token otherwise
+          # (needed for the very first publish of a not-yet-existing package).
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          VERSION: ${{ needs.setup.outputs.binary_version }}
+        run: |
+          # A prerelease version (e.g. 0.5.0-rc.1) must NOT clobber the `latest`
+          # dist-tag (the default `npm install brika` target); route it to `next`.
+          TAG=latest
+          case "$VERSION" in *-*) TAG=next ;; esac
+          bun run src/npm-dist.ts \
+            --binaries="$GITHUB_WORKSPACE/staging" \
+            --version="$VERSION" \
+            --publish --provenance --tag="$TAG"

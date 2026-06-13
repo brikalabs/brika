@@ -14,6 +14,7 @@
  */
 
 import { mkdir } from 'node:fs/promises';
+import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { isCompiledFrom, resolveDataDir } from '../exec-context';
 
@@ -76,6 +77,8 @@ export async function runEmbeddedBuild(
     isCompiled: true,
     execPath: process.execPath,
     cwd: process.cwd(),
+    home: homedir(),
+    platform: process.platform,
   }).path;
   const cliPath = await materializeEmbeddedCli(source, dataDir);
   const args = ['build', '--dir', root, ...(check ? ['--check'] : [])];

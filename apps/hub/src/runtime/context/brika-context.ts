@@ -20,6 +20,7 @@
 
 import { randomBytes } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { isCompiledFrom, resolveDataDir } from '@brika/sdk/exec-context';
 import { buildInfo } from '../../build-info';
@@ -47,6 +48,8 @@ function resolveBrikaDir(): string {
     isCompiled,
     execPath: process.execPath,
     cwd: process.cwd(),
+    home: homedir(),
+    platform: process.platform,
   }).path;
 }
 

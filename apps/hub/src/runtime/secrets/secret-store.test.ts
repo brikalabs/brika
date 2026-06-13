@@ -3,13 +3,17 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { get, reset } from '@brika/di/testing';
 import { type BunSecretsMock, installBunSecretsMock } from '@/helpers/_bun-secrets-mock';
 import { brikaContext } from '@/runtime/context/brika-context';
-import { SecretStore } from '@/runtime/secrets/secret-store';
+import { INDEX_ENTRY_NAME, purgeServiceSecrets, SecretStore } from '@/runtime/secrets/secret-store';
 
 const SERVICE = brikaContext.serviceName;
+const INDEX_KEY = `${SERVICE}::${INDEX_ENTRY_NAME}`;
 
 describe('SecretStore', () => {
   let store: SecretStore;
   let mock: BunSecretsMock;
+
+  /** Keychain keys excluding the bookkeeping index entry. */
+  const nonIndexKeys = (): string[] => [...mock.store.keys()].filter((k) => k !== INDEX_KEY);
 
   beforeEach(() => {
     reset();
@@ -93,6 +97,72 @@ describe('SecretStore', () => {
     expect(mock.store.has(`${SERVICE}::@brika/plugin-a::apiKey`)).toBe(true);
   });
 
+  // ─── Key index (enumeration for delete-all + uninstall purge) ─────────────
+
+  describe('key index', () => {
+    test('writes maintain a namespaced bookkeeping index entry', async () => {
+      await store.set('@plugin-a', 'apiKey', 'v');
+      expect(mock.store.has(INDEX_KEY)).toBe(true);
+    });
+
+    test('deleting the last key also removes the now-empty index entry', async () => {
+      await store.set('@plugin-a', 'apiKey', 'v');
+      await store.delete('@plugin-a', 'apiKey');
+      expect(mock.store.size).toBe(0);
+    });
+
+    test('deleteAllForPlugin removes runtime secrets the caller never listed', async () => {
+      // A declared pref the caller knows about, plus a runtime `setSecret`
+      // (`user.*`) key it does not; the index is the only trace of the latter.
+      await store.set('@plugin-a', 'apiKey', 'declared');
+      await store.set('@plugin-a', 'user.session', 'runtime-only');
+
+      await store.deleteAllForPlugin('@plugin-a', ['apiKey']);
+
+      expect(await store.get('@plugin-a', 'apiKey')).toBeNull();
+      expect(await store.get('@plugin-a', 'user.session')).toBeNull();
+      expect(nonIndexKeys().length).toBe(0);
+    });
+
+    test('purgeServiceSecrets wipes every entry under the service', async () => {
+      await store.set('@plugin-a', 'apiKey', 'a');
+      await store.set('@plugin-b', 'user.token', 'b');
+
+      const removed = await purgeServiceSecrets(SERVICE);
+
+      expect(removed).toBe(2);
+      expect(mock.store.size).toBe(0);
+    });
+
+    test('concurrent writes all land in the index (serialised #indexChain)', async () => {
+      // If the index read-modify-write were not serialised, a race would drop
+      // an entry and deleteAllForPlugin (index-driven) would leak it.
+      await Promise.all([
+        store.set('@plugin-a', 'k1', '1'),
+        store.set('@plugin-a', 'k2', '2'),
+        store.set('@plugin-a', 'k3', '3'),
+      ]);
+
+      await store.deleteAllForPlugin('@plugin-a');
+
+      expect(await store.get('@plugin-a', 'k1')).toBeNull();
+      expect(await store.get('@plugin-a', 'k2')).toBeNull();
+      expect(await store.get('@plugin-a', 'k3')).toBeNull();
+      expect(nonIndexKeys().length).toBe(0);
+    });
+
+    test('deleteAllForPlugin does not catch a prefix-overlapping plugin name', async () => {
+      await store.set('@plugin-a', 'k', 'a');
+      await store.set('@plugin-ab', 'k', 'ab'); // shares the "@plugin-a" textual prefix
+
+      await store.deleteAllForPlugin('@plugin-a');
+
+      // The "::" separator means "@plugin-a::" is not a prefix of "@plugin-ab::".
+      expect(await store.get('@plugin-a', 'k')).toBeNull();
+      expect(await store.get('@plugin-ab', 'k')).toBe('ab');
+    });
+  });
+
   // ─── Namespace boundary (security) ────────────────────────────────────────
 
   describe('namespace boundary', () => {
@@ -105,8 +175,7 @@ describe('SecretStore', () => {
 
     test('the wire format is exactly service::pluginName::key', async () => {
       await store.set('@plugin-a', 'a-key', 'a-value');
-      const keys = [...mock.store.keys()];
-      expect(keys).toEqual([`${SERVICE}::@plugin-a::a-key`]);
+      expect(nonIndexKeys()).toEqual([`${SERVICE}::@plugin-a::a-key`]);
     });
 
     test('declared password pref and SDK user-secret with same name occupy different slots', async () => {
@@ -119,7 +188,7 @@ describe('SecretStore', () => {
       expect(await store.get('@plugin', 'apiKey')).toBe('pref-value');
       expect(await store.get('@plugin', 'user.apiKey')).toBe('sdk-value');
       // And both rows physically exist in the keychain.
-      expect(mock.store.size).toBe(2);
+      expect(nonIndexKeys().length).toBe(2);
     });
 
     test('a key cannot reach another plugin via crafted separators', async () => {
@@ -136,18 +205,19 @@ describe('SecretStore', () => {
       expect(mock.store.has(`${SERVICE}::@plugin-b::stolen`)).toBe(true);
     });
 
-    test('deleteAllForPlugin only removes the listed keys for the named plugin', async () => {
+    test('deleteAllForPlugin removes every key the plugin owns, never another plugin', async () => {
       await store.set('@plugin-a', 'pref', 'a-pref');
       await store.set('@plugin-a', 'user.token', 'a-user');
-      await store.set('@plugin-a', 'untouched', 'survives');
+      await store.set('@plugin-a', 'untracked', 'also-gone');
       await store.set('@plugin-b', 'pref', 'b-pref');
 
-      await store.deleteAllForPlugin('@plugin-a', ['pref', 'user.token']);
+      // Caller lists only the declared pref; the index covers the rest, so an
+      // uninstall leaves no secret of this plugin behind.
+      await store.deleteAllForPlugin('@plugin-a', ['pref']);
 
       expect(await store.get('@plugin-a', 'pref')).toBeNull();
       expect(await store.get('@plugin-a', 'user.token')).toBeNull();
-      // Keys not in the deletion list are kept.
-      expect(await store.get('@plugin-a', 'untouched')).toBe('survives');
+      expect(await store.get('@plugin-a', 'untracked')).toBeNull();
       // Other plugins are never touched.
       expect(await store.get('@plugin-b', 'pref')).toBe('b-pref');
     });
@@ -158,12 +228,12 @@ describe('SecretStore', () => {
 
       expect(await store.get('@plugin', 'token')).toBe('short');
       // Only one row; the old value is fully replaced (not appended).
-      expect(mock.store.size).toBe(1);
+      expect(nonIndexKeys().length).toBe(1);
     });
 
     test('delete removes the underlying keychain entry, not just our view', async () => {
       await store.set('@plugin', 'token', 'value');
-      expect(mock.store.size).toBe(1);
+      expect(nonIndexKeys().length).toBe(1);
 
       await store.delete('@plugin', 'token');
       expect(mock.store.size).toBe(0);
