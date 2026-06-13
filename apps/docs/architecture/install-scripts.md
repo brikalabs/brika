@@ -84,13 +84,24 @@ Before downloading, the installer calls `brika version --json` to check if there
 
 ## Uninstall scripts
 
-`scripts/uninstall.sh` and `scripts/uninstall.ps1`:
+`scripts/uninstall.sh` and `scripts/uninstall.ps1` are thin delegators: when the
+binary works they `exec brika uninstall --purge` (the single source of truth for
+the removal logic), and only fall back to a hardcoded directory removal when the
+binary is missing or broken.
 
-* Stop the running hub (`brika stop`).
-* Remove `~/.brika/bin/`.
-* With `--purge`: also remove every `.brika/` workspace this user owns (heuristic — walks home + common roots).
+* `brika uninstall` removes the binary, PATH entries, and shell completions, and
+  keeps the data dir by default.
+* `--purge` additionally deletes the resolved data dir (`$BRIKA_HOME`, else
+  `~/.brika` or `%LOCALAPPDATA%\brika`) and the OS keychain bucket for this
+  instance, driven by the secret index.
+* On Windows the running `.exe` cannot delete itself, so `brika uninstall` clears
+  the data dir + keychain and the PowerShell script removes the install tree once
+  the process has exited.
 
-The script is conservative: it never deletes `.brika/` directories outside the user's home without `--purge`, and even then it asks for confirmation.
+The scripts purge by default, since invoking `curl ... | bash` is an explicit
+"remove everything" gesture. When piped they run non-interactively (no prompt);
+set `BRIKA_KEEP_DATA=1` to keep the data dir, or `BRIKA_YES=1` to skip the prompt
+in an interactive run.
 
 ## Self-update
 

@@ -35,7 +35,7 @@ Every `BRIKA_*` environment variable the hub, CLI, TUI, plugin processes, and in
 
 ## Build / install scripts
 
-These only matter for the installer (`scripts/install.sh`, `scripts/install.ps1`) and CI builds.
+These only matter for the install/uninstall scripts (`scripts/install.sh`, `scripts/install.ps1`, `scripts/uninstall.sh`, `scripts/uninstall.ps1`) and CI builds.
 
 | Variable | Default | Purpose |
 |---|---|---|
@@ -43,6 +43,8 @@ These only matter for the installer (`scripts/install.sh`, `scripts/install.ps1`
 | `BRIKA_INSTALL_DIR` | `~/.brika/bin` / `%LOCALAPPDATA%\brika\bin` | Override the binary install directory |
 | `BRIKA_INSECURE` | unset | When `1`, skip minisign signature verification even when a public key is embedded |
 | `BRIKA_MINISIGN_PUBKEY` | (embedded at build time) | The minisign public key the installer checks downloads against |
+| `BRIKA_KEEP_DATA` | unset | Uninstall scripts: when `1`, keep the data dir + secrets (default is a full purge) |
+| `BRIKA_YES` | unset | Uninstall scripts: when `1`, skip the confirmation prompt |
 
 ## Logging
 
