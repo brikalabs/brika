@@ -570,10 +570,12 @@
         "picocolors": "^1.1.1",
       },
       "peerDependencies": {
+        "@brika/testing": "workspace:*",
         "lucide-react": "^1.17.0",
         "zod": "^4.0.0",
       },
       "optionalPeers": [
+        "@brika/testing",
         "lucide-react",
       ],
     },

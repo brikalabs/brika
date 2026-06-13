@@ -24,15 +24,9 @@
     "README.md",
     "LICENSE",
     "CHANGELOG.md",
-    "!src/**/*.test.ts",
-    "!src/**/*.test.tsx",
-    "!src/**/*.spec.ts",
-    "!src/**/*.spec.tsx",
-    "!src/**/*_test-utils.ts",
-    "!src/**/tsconfig.json",
-    "!**/*.tsbuildinfo",
-    "!src/**/*.bench.ts",
-    "!src/**/__benchmarks__/**"
+    "!src/**/*.{test,spec}.{ts,tsx}",
+    "!src/**/{*_test-utils.ts,tsconfig.json,*.bench.ts,__benchmarks__/**}",
+    "!**/*.tsbuildinfo"
   ],
   "scripts": {
     "test": "bun test",

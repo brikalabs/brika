@@ -26,6 +26,7 @@
     "!@brika/grants",
     "!@brika/ipc",
     "!@brika/serializable",
+    "!@brika/testing",
     "!@brika/plugin-agent",
     "!@brika/blocks-builtin",
     "!@brika/plugin-matter",
