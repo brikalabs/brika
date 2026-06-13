@@ -43,9 +43,11 @@ adversarial verification pass.
   does this rewrite as part of versioning; the publisher then publishes the
   already-rewritten manifests.
 
-- **Versioning: hybrid via Changesets**, with two `fixed` groups (a platform
-  group: SDK + closure libs + `create-brika`; and a plugin group). Per-package
-  changelogs stay meaningful while leaving a single derivable platform number.
+- **Versioning: hybrid via Changesets**, with one `fixed` group (the platform:
+  SDK + closure libs + `create-brika`, which are tightly coupled) and independent
+  plugins (a lone plugin fix bumps only that plugin). The `ignore` list is
+  deny-by-default (ignore all `@brika/*`, un-ignore the published set) so it stays
+  short and a new internal package never silently cascade-publishes.
 
 - **`engines.brika` must track the binary release line, not the Changesets
   number.** The hub's compatibility gate checks
@@ -145,14 +147,18 @@ based, not name based. Treat `matter` as higher blast radius (it pulls the full
 line by policy.**
 
 - Platform group (`fixed`): `@brika/sdk` + closure libs (`flow`, `ui-kit`,
-  `errors`, `grants`, `ipc`, `serializable`) + `create-brika`. One version line.
-- Plugin group (`fixed`): all 7 plugins share one version line.
-- Everything else: ignored (private apps + Tier-3 libs + dormant Tier-2).
+  `errors`, `grants`, `ipc`, `serializable`) + `create-brika`. One version line,
+  because the SDK re-exports the closure (they are one coupled surface).
+- Plugins: independent. A lone plugin fix bumps only that plugin (no empty
+  "version-bump-only" entries across the others). When the SDK bumps, plugins
+  still cascade because they depend on it: correct, not a fixed group.
+- Everything else: deny-by-default `ignore` (Tier-3 libs, private apps, dormant
+  Tier-2).
 
 Pure lockstep floods per-package changelogs with empty "version bump only"
 entries; fully independent makes the platform compatibility number impossible to
-derive. Hybrid keeps the platform a single number while letting plugins log only
-when they change.
+derive. This hybrid keeps the coupled platform a single number while letting each
+plugin log only when it actually changes.
 
 **Two-version-source reconciliation:** the running hub's version is
 `buildInfo.version` (build-time macro from the binary release version, surfaced
@@ -185,10 +191,10 @@ has no version or dep-graph awareness.
 
 Use `changeset version` to mutate manifests (rewriting `workspace:*` to concrete
 ranges), then `npm publish --provenance` those manifests. Do not use
-`changeset publish` (it shells `npm publish` with its own semantics; we want a
-toposorted, idempotent, provenance publisher).
+`changeset publish` (it shells `npm publish` with its own semantics; we want the
+toposorted, idempotent, provenance publisher in `scripts/release-libs.ts`).
 
-`.changeset/config.json` sketch:
+`.changeset/config.json`:
 ```json
 {
   "$schema": "https://unpkg.com/@changesets/config/schema.json",
@@ -198,28 +204,38 @@ toposorted, idempotent, provenance publisher).
   "baseBranch": "main",
   "updateInternalDependencies": "patch",
   "fixed": [
-    ["@brika/sdk", "@brika/flow", "@brika/ui-kit", "@brika/errors", "@brika/grants", "@brika/ipc", "@brika/serializable", "create-brika"],
-    ["@brika/plugin-agent", "@brika/blocks-builtin", "@brika/plugin-matter", "@brika/plugin-spotify", "@brika/plugin-timer", "@brika/plugin-weather", "@brika/plugin-sil-electricity"]
+    ["@brika/sdk", "@brika/flow", "@brika/ui-kit", "@brika/errors", "@brika/grants", "@brika/ipc", "@brika/serializable", "create-brika"]
   ],
   "ignore": [
-    "@brika/analytics", "@brika/auth", "@brika/banner", "@brika/cli", "@brika/compiler",
-    "@brika/components", "@brika/db", "@brika/di", "@brika/events", "@brika/http",
-    "@brika/permissions", "@brika/plugin", "@brika/registry", "@brika/remote-access-protocol",
-    "@brika/router", "@brika/schema", "@brika/type-system", "@brika/testing",
-    "@brika/i18n", "@brika/i18n-devtools",
-    "@brika/console", "@brika/hub", "@brika/ui", "@brika/build", "@brika/plugin-playground"
+    "@brika/*",
+    "!@brika/sdk", "!@brika/flow", "!@brika/ui-kit", "!@brika/errors", "!@brika/grants", "!@brika/ipc", "!@brika/serializable",
+    "!@brika/plugin-agent", "!@brika/blocks-builtin", "!@brika/plugin-matter", "!@brika/plugin-spotify", "!@brika/plugin-timer", "!@brika/plugin-weather", "!@brika/plugin-sil-electricity"
   ]
 }
 ```
-`ignore` must list every package Changesets should NOT touch, not just the dormant
-public ones. Changesets DOES version private packages when they depend (transitively)
-on a bumped package: a dependency-cascade bump. So the internal libraries, the
-dormant public libs (`i18n` / `i18n-devtools`), AND the private apps that depend on
-the platform group (`console`, `hub`, `ui`, `build`, `plugin-playground`) are all
-ignored, leaving `changeset status` to report exactly the 15 published packages. The
-apps in particular must be ignored so Changesets does not collide with `bump-version`
-on the binary/app version line. Verify with `bunx changeset status` after any change;
-promote `i18n` / `i18n-devtools` out of `ignore` when they are marketed.
+
+Two design choices keep this maintainable:
+
+- **`ignore` is deny-by-default.** Changesets DOES version a private package when
+  it depends (transitively) on a bumped one (a cascade bump), so every
+  non-published package would otherwise need to be enumerated, and a newly-added
+  internal package would silently cascade-publish-version. Instead we ignore all
+  `@brika/*` and un-ignore exactly the published set: the `!` entries ARE the
+  published allowlist, a new internal package is ignored by default (safe), and
+  `create-brika` (not `@brika`-scoped) plus the dormant `i18n` / `i18n-devtools`
+  fall out correctly without extra lines. Verify with `bunx changeset status`
+  (it must list exactly the 15). Adding a published package = add one `!` line.
+
+- **Only the platform is a `fixed` group.** The SDK and its runtime closure are
+  tightly coupled (the SDK re-exports them), so they version in lockstep; a
+  changeset on any one bumps all. Plugins are independent products, so a lone
+  plugin fix bumps only that plugin (no empty "version-bump-only" changelog
+  entries across the others). When the SDK bumps, plugins still cascade because
+  they depend on it: that is correct, not a fixed group.
+
+`engines.brika` does not come from these versions: `sync:engines-brika` derives it
+from the binary release line (see Section 3), so independent plugin versions are
+fine. Promote `i18n` / `i18n-devtools` by adding `!` entries when they are marketed.
 
 Scripts to add:
 ```jsonc
