@@ -556,13 +556,18 @@ jobs:
   # immutable, so per-push canaries would spam the registry; canary stays on
   # GitHub Releases / `curl | sh`).
   #
+  # `brika` is a single launcher package (npm/brika): no binaries are bundled
+  # here, it downloads the matching compiled binary from this release on first
+  # run. So there is exactly one package to publish, and the binaries it fetches
+  # are the GitHub-release assets produced by the `release` job above (hence the
+  # `needs: release` ordering).
+  #
   # Auth is npm Trusted Publishing (OIDC), no long-lived NPM_TOKEN. It needs
   # `id-token: write`, npm CLI >= 11.5.1, and a trusted publisher configured on
-  # npmjs.com for EACH of the six package names (repo `brikalabs/brika`,
-  # workflow `build.yml`). Provenance is attached automatically. NPM_TOKEN is
-  # kept only as a bootstrap fallback for the FIRST publish of a brand-new
-  # package (a trusted publisher can't be configured before the package
-  # exists); remove the secret once all six packages exist + are configured.
+  # npmjs.com for `brika` (repo `brikalabs/brika`, workflow `build.yml`).
+  # Provenance is attached automatically. NPM_TOKEN is kept only as a bootstrap
+  # fallback for the FIRST publish (a trusted publisher can't be configured
+  # before the package exists); remove the secret once `brika` exists + is set up.
   # ───────────────────────────────────────────────────────────────────────
   publish-npm:
     needs: [setup, release]
@@ -586,27 +591,6 @@ jobs:
       # Trusted publishing requires npm CLI >= 11.5.1; node 22 ships an older npm.
       - run: npm install -g npm@latest
 
-      - uses: actions/download-artifact@v5
-        with:
-          pattern: brika-*
-          path: artifacts/
-          merge-multiple: true
-
-      - name: Extract binaries into per-platform dirs
-        run: |
-          # The npm-dist generator expects <dir>/<artifact>/<binary>; the
-          # release archives carry the binary at the root (plus a `ui/` sidecar
-          # the npm package doesn't need, since the binary embeds the UI).
-          mkdir -p staging
-          cd artifacts
-          for f in brika-*; do
-            case "$f" in
-              *.tar.gz) base="${f%.tar.gz}"; mkdir -p "../staging/$base"; tar xzf "$f" -C "../staging/$base" ;;
-              *.zip)    base="${f%.zip}";    mkdir -p "../staging/$base"; unzip -oq "$f" -d "../staging/$base" ;;
-              *) echo "skip non-archive $f" ;;
-            esac
-          done
-
       - name: Publish to npm
         working-directory: apps/build
         env:
@@ -621,6 +605,5 @@ jobs:
           TAG=latest
           case "$VERSION" in *-*) TAG=next ;; esac
           bun run src/npm-dist.ts \
-            --binaries="$GITHUB_WORKSPACE/staging" \
             --version="$VERSION" \
             --publish --provenance --tag="$TAG"

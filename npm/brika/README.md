@@ -8,10 +8,16 @@ npm install -g brika
 npx brika
 ```
 
-`brika` is a self-contained, Bun-compiled binary. This package is a thin launcher:
-on install, npm pulls the single prebuilt binary that matches your platform
-(`@brika/cli-<platform>-<arch>`) as an optional dependency, and the `brika` command
-execs it. No Bun or Node toolchain is required at runtime.
+## How it works
+
+This package is a tiny launcher. Brika itself is a self-contained, Bun-compiled
+binary; rather than ship a package per platform, the launcher downloads the binary
+matching your machine on first run, verifies it against the release checksums,
+caches it under your data dir, and execs it. Subsequent runs use the cache. No Bun
+or Node toolchain is required to run brika (only Node, which you already have via
+npm, to run the launcher).
+
+First run downloads ~100 MB once; after that it is instant.
 
 ## Supported platforms
 
@@ -23,8 +29,7 @@ execs it. No Bun or Node toolchain is required at runtime.
 
 ## Where data is stored
 
-An npm install keeps its data in the per-user directory, **not** inside
-`node_modules` (which a reinstall would wipe):
+An npm install keeps its data in the per-user directory (not inside `node_modules`):
 
 - macOS / Linux: `~/.brika`
 - Windows: `%LOCALAPPDATA%\brika`
@@ -34,17 +39,26 @@ so the two install methods share one data directory.
 
 ## Updating
 
-Use your package manager:
-
 ```sh
 npm update -g brika
 ```
 
-(`brika update` self-patches only the standalone `curl | sh` install.)
+The launcher fetches the binary matching its own version, so updating the package
+updates the binary. (`brika update` self-patches only the standalone `curl | sh`
+install.)
 
 ## Uninstalling
 
 ```sh
-npm uninstall -g brika      # removes the binary
+npm uninstall -g brika      # removes the launcher + cached binary path
 brika uninstall --purge     # also removes data + stored secrets (run before uninstalling)
+```
+
+## Offline / restricted networks
+
+The launcher needs network access on first run to fetch the binary. In air-gapped
+environments, use the standalone installer instead:
+
+```sh
+curl -fsSL https://brika.dev/install.sh | sh
 ```

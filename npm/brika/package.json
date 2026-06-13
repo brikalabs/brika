@@ -17,6 +17,5 @@
   "engines": {
     "node": ">=18"
   },
-  "files": ["bin", "README.md"],
-  "optionalDependencies": {}
+  "files": ["bin", "README.md"]
 }
