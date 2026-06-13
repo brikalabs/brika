@@ -63,12 +63,14 @@ const { values } = parseArgs({
     version: { type: 'string' },
     out: { type: 'string' },
     publish: { type: 'boolean', default: false },
+    provenance: { type: 'boolean', default: false },
     'dry-run': { type: 'boolean', default: false },
     tag: { type: 'string', default: 'latest' },
   },
 });
 
 const publish = values.publish === true;
+const provenance = values.provenance === true;
 const dryRun = values['dry-run'] === true;
 const tag = typeof values.tag === 'string' ? values.tag : 'latest';
 const binariesDir = typeof values.binaries === 'string' ? values.binaries : undefined;
@@ -162,6 +164,12 @@ function publishPackage(dir: string, name: string): boolean {
     return true;
   }
   const args = ['npm', 'publish', '--access', 'public', '--tag', tag];
+  if (provenance) {
+    // Trusted-publishing (OIDC) attaches provenance; the explicit flag makes it
+    // deterministic across npm versions. Only passed in CI, where the OIDC
+    // id-token is available; a local --dry-run omits it.
+    args.push('--provenance');
+  }
   if (dryRun) {
     args.push('--dry-run');
   }

@@ -553,13 +553,24 @@ jobs:
   # (`@brika/cli-<os>-<cpu>`) wrapping the same compiled binaries.
   #
   # Tagged releases only. Canary is intentionally skipped (npm versions are
-  # immutable, so per-push canaries would spam the registry). Requires an
-  # NPM_TOKEN secret with publish rights to the `@brika` scope and `brika`.
+  # immutable, so per-push canaries would spam the registry; canary stays on
+  # GitHub Releases / `curl | sh`).
+  #
+  # Auth is npm Trusted Publishing (OIDC), no long-lived NPM_TOKEN. It needs
+  # `id-token: write`, npm CLI >= 11.5.1, and a trusted publisher configured on
+  # npmjs.com for EACH of the six package names (repo `brikalabs/brika`,
+  # workflow `build.yml`). Provenance is attached automatically. NPM_TOKEN is
+  # kept only as a bootstrap fallback for the FIRST publish of a brand-new
+  # package (a trusted publisher can't be configured before the package
+  # exists); remove the secret once all six packages exist + are configured.
   # ───────────────────────────────────────────────────────────────────────
   publish-npm:
     needs: [setup, release]
     if: needs.setup.outputs.is_release == 'true'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # mint the OIDC token npm exchanges for a short-lived publish credential
     steps:
       - uses: actions/checkout@v5
 
@@ -569,8 +580,11 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 22 # >= 22.14.0; resolves to latest 22.x
           registry-url: https://registry.npmjs.org
+
+      # Trusted publishing requires npm CLI >= 11.5.1; node 22 ships an older npm.
+      - run: npm install -g npm@latest
 
       - uses: actions/download-artifact@v5
         with:
@@ -596,6 +610,9 @@ jobs:
       - name: Publish to npm
         working-directory: apps/build
         env:
+          # Bootstrap fallback only: the npm CLI prefers OIDC when a trusted
+          # publisher is configured, and falls back to this token otherwise
+          # (needed for the very first publish of a not-yet-existing package).
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           VERSION: ${{ needs.setup.outputs.binary_version }}
         run: |
@@ -606,4 +623,4 @@ jobs:
           bun run src/npm-dist.ts \
             --binaries="$GITHUB_WORKSPACE/staging" \
             --version="$VERSION" \
-            --publish --tag="$TAG"
+            --publish --provenance --tag="$TAG"
