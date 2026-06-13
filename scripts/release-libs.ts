@@ -61,7 +61,7 @@ const { values } = parseArgs({
 
 const dryRun = values['dry-run'] === true;
 
-export interface WorkspacePackage {
+interface WorkspacePackage {
   /** Workspace dir relative to the repo root. */
   readonly relDir: string;
   readonly name: string;
@@ -72,7 +72,7 @@ export interface WorkspacePackage {
 }
 
 /** Scan the workspace once: each package's dir, version, privacy, and @brika deps. */
-export async function discoverWorkspace(): Promise<WorkspacePackage[]> {
+async function discoverWorkspace(): Promise<WorkspacePackage[]> {
   const packages: WorkspacePackage[] = [];
   for (const pattern of [
     'packages/*/package.json',
