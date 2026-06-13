@@ -166,6 +166,34 @@ function rewriteWorkspaceRanges(text: string, versions: Map<string, string>): st
   return out === text ? null : out;
 }
 
+const exportsManifestSchema = z
+  .object({ exports: z.record(z.string(), z.unknown()).optional() })
+  .loose();
+
+/**
+ * Drop every `./internal/*` exports subpath from the published manifest. These
+ * are workspace-only entries (they resolve the private build toolchain, e.g.
+ * `@brika/sdk/internal/cli`), so importing one from npm would fail to resolve a
+ * private package. The source files stay in the tarball as harmless dead code;
+ * only the resolvable public surface is trimmed. Returns the rewritten JSON
+ * (normalized, restored after publish), or null when there are no such entries.
+ */
+export function stripInternalExports(text: string): string | null {
+  const parsed = exportsManifestSchema.safeParse(JSON.parse(text));
+  if (!parsed.success || parsed.data.exports === undefined) {
+    return null;
+  }
+  const map = parsed.data.exports;
+  const internal = Object.keys(map).filter((key) => key.startsWith('./internal/'));
+  if (internal.length === 0) {
+    return null;
+  }
+  for (const key of internal) {
+    delete map[key];
+  }
+  return `${JSON.stringify(parsed.data, null, 2)}\n`;
+}
+
 /**
  * Default dist-tag: a prerelease version (containing `-`, e.g. `0.5.0-rc.1`)
  * routes to `next`; a stable version routes to `latest`. An explicit `--tag`
@@ -214,6 +242,10 @@ async function publishPackage(
     console.error(`  ${pkg.name}: unresolved workspace: range after rewrite; aborting.`);
     return false;
   }
+  // Trim workspace-only `./internal/*` exports from the published manifest. The
+  // strip runs on top of the workspace-range rewrite, so publishText carries both.
+  const stripped = stripInternalExports(rewritten ?? original);
+  const publishText = stripped ?? rewritten;
 
   // --ignore-scripts: CI pre-builds the artifacts (sdk bin, create-brika dist);
   // a lifecycle script failing mid-loop would leave a partial publish of
@@ -235,8 +267,8 @@ async function publishPackage(
 
   console.log(`  publish ${pkg.name}@${pkg.version}  tag:${tag}${dryRun ? '  (dry run)' : ''}`);
   try {
-    if (rewritten !== null) {
-      await Bun.write(manifestPath, rewritten);
+    if (publishText !== null) {
+      await Bun.write(manifestPath, publishText);
     }
     if (addLicense) {
       await Bun.write(licensePath, Bun.file(rootLicense));
@@ -244,7 +276,7 @@ async function publishPackage(
     const proc = Bun.spawnSync(args, { cwd: dir, stdout: 'inherit', stderr: 'inherit' });
     return proc.exitCode === 0;
   } finally {
-    if (rewritten !== null) {
+    if (publishText !== null) {
       await Bun.write(manifestPath, original);
     }
     if (addLicense) {

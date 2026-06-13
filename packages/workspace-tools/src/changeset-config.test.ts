@@ -1,8 +1,9 @@
 import { describe, expect, test } from 'bun:test';
+import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { Glob } from 'bun';
 import { z } from 'zod';
-import { discoverPublishOrder } from '../../../scripts/release-libs';
+import { discoverPublishOrder, stripInternalExports } from '../../../scripts/release-libs';
 
 /**
  * Guard: the Changesets config and per-package `private` flags must agree, so the
@@ -100,5 +101,37 @@ describe('changeset config stays in sync with package privacy', () => {
       }
       seen.add(pkg.name);
     }
+  });
+});
+
+describe('publisher strips workspace-only ./internal/* exports', () => {
+  test('removes ./internal/* keys and leaves the public surface intact', () => {
+    const stripped = stripInternalExports(
+      JSON.stringify({ name: 'x', exports: { '.': './a.ts', './internal/cli': './b.ts' } })
+    );
+    expect(stripped).not.toBeNull();
+    const reparsed = z
+      .object({ exports: z.record(z.string(), z.string()) })
+      .parse(JSON.parse(stripped ?? '{}'));
+    expect(reparsed.exports['.']).toBe('./a.ts');
+    expect(reparsed.exports['./internal/cli']).toBeUndefined();
+  });
+
+  test('a manifest with no internal exports is left unchanged', () => {
+    expect(stripInternalExports(JSON.stringify({ exports: { '.': './a.ts' } }))).toBeNull();
+  });
+
+  test('the shipped @brika/sdk manifest declares ./internal/cli (which the publisher strips)', () => {
+    const sdkManifest = z
+      .object({ exports: z.record(z.string(), z.string()) })
+      .loose()
+      .parse(JSON.parse(readFileSync(join(REPO_ROOT, 'packages/sdk/package.json'), 'utf8')));
+    expect(sdkManifest.exports['./internal/cli']).toBeDefined();
+    const published = stripInternalExports(JSON.stringify(sdkManifest));
+    const reparsed = z
+      .object({ exports: z.record(z.string(), z.string()) })
+      .loose()
+      .parse(JSON.parse(published ?? '{}'));
+    expect(reparsed.exports['./internal/cli']).toBeUndefined();
   });
 });
