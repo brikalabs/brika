@@ -67,8 +67,11 @@
   },
   "dependencies": {
     "@brika/errors": "workspace:*",
+    "@brika/flow": "workspace:*",
     "@brika/grants": "workspace:*",
     "@brika/ipc": "workspace:*",
+    "@brika/serializable": "workspace:*",
+    "@brika/ui-kit": "workspace:*",
     "zod": "^4.3.4"
   },
   "peerDependencies": {
@@ -83,11 +86,8 @@
   "devDependencies": {
     "@brika/cli": "workspace:*",
     "@brika/compiler": "workspace:*",
-    "@brika/flow": "workspace:*",
     "@brika/schema": "workspace:*",
-    "@brika/serializable": "workspace:*",
     "@brika/testing": "workspace:*",
-    "@brika/ui-kit": "workspace:*",
     "@types/bun": "^1.3.5",
     "picocolors": "^1.1.1"
   }

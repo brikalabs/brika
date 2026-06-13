@@ -25,10 +25,8 @@
     "typecheck": "tsgo --noEmit",
     "prepublishOnly": "bun run build"
   },
-  "dependencies": {
-    "@brika/cli": "workspace:*"
-  },
   "devDependencies": {
+    "@brika/cli": "workspace:*",
     "@types/bun": "^1.3.5",
     "picocolors": "^1.1.1"
   }
