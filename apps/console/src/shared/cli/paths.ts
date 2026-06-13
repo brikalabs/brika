@@ -8,6 +8,7 @@
  * exec-context is a leaf module (node:fs/node:path only).
  */
 
+import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { isCompiledFrom, resolveDataDir } from '@brika/sdk/exec-context';
 
@@ -17,6 +18,8 @@ export function brikaHome(): string {
     isCompiled: isCompiledFrom(import.meta.path),
     execPath: process.execPath,
     cwd: process.cwd(),
+    home: homedir(),
+    platform: process.platform,
   }).path;
 }
 

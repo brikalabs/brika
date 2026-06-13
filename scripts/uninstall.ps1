@@ -1,5 +1,11 @@
 # BRIKA Uninstaller for Windows
 #
+# The binary can't delete its own running .exe on Windows, so this script owns
+# the file removal. It first delegates the data + keychain cleanup to
+# `brika uninstall` (single source of truth for that logic), then removes the
+# install tree and PATH entry once the brika process has exited and unlocked
+# the .exe.
+#
 # Usage:
 #   brika uninstall
 #   irm https://raw.githubusercontent.com/brikalabs/brika/main/scripts/uninstall.ps1 | iex
@@ -7,6 +13,7 @@
 # Environment variables:
 #   BRIKA_INSTALL_DIR  - Installation directory (default: %LOCALAPPDATA%\brika\bin)
 #   BRIKA_YES          - Set to 1 to skip confirmation prompt
+#   BRIKA_KEEP_DATA    - Set to 1 to keep the data dir (DB, plugins, secrets)
 
 $ErrorActionPreference = "Stop"
 
@@ -15,6 +22,9 @@ $ErrorActionPreference = "Stop"
 # ─────────────────────────────────────────────────────────────────────────────
 
 $InstallDir = if ($env:BRIKA_INSTALL_DIR) { $env:BRIKA_INSTALL_DIR } else { "$env:LOCALAPPDATA\brika\bin" }
+# The data dir is the parent of the bin dir (matches the binary's resolver).
+$DataDir = Split-Path -Parent $InstallDir
+$KeepData = $env:BRIKA_KEEP_DATA -eq "1"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Helpers
@@ -59,7 +69,12 @@ if (Test-Path $BinaryPath) {
     } catch {}
 }
 
-Write-Dim "  Will remove: $InstallDir"
+if ($KeepData) {
+    Write-Dim "  Will remove: $InstallDir"
+} else {
+    Write-Dim "  Will remove: $DataDir (binary + all data)"
+    Write-Dim "  and stored secrets in Windows Credential Manager"
+}
 Write-Host ""
 
 # Confirm (skip if BRIKA_YES=1)
@@ -71,9 +86,21 @@ if ($env:BRIKA_YES -ne "1") {
     }
 }
 
-# Remove installation directory
-Write-Info "Removing $InstallDir..."
-Remove-Item -Path $InstallDir -Recurse -Force -ErrorAction SilentlyContinue
+# Delegate the data dir + keychain cleanup to the binary (single source of
+# truth). On Windows the binary purges the keychain but leaves the file tree to
+# us, since its own .exe is locked while running. Best-effort.
+if ((Test-Path $BinaryPath) -and (-not $KeepData)) {
+    Write-Info "Cleaning data and secrets..."
+    try {
+        & $BinaryPath uninstall --purge --yes 2>$null | Out-Null
+    } catch {}
+}
+
+# Remove the install tree. The brika process has exited by now, so the .exe is
+# unlocked. Removing the data dir takes the bin subdir with it.
+$Target = if ($KeepData) { $InstallDir } else { $DataDir }
+Write-Info "Removing $Target..."
+Remove-Item -Path $Target -Recurse -Force -ErrorAction SilentlyContinue
 
 # Remove from user PATH
 $CurrentPath = [Environment]::GetEnvironmentVariable("Path", "User")

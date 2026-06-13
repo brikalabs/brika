@@ -18,6 +18,7 @@ import { existsSync } from 'node:fs';
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { type BunSecretsMock, installBunSecretsMock } from '@/helpers/_bun-secrets-mock';
 import { captureLog } from '@/helpers/capture';
 import { selfUninstall } from '@/runtime/uninstaller';
 
@@ -31,6 +32,7 @@ let originalExecPath: string;
 let originalPlatform: PropertyDescriptor | undefined;
 let originalPrompt: typeof globalThis.prompt;
 let originalBrikaHome: string | undefined;
+let secretsMock: BunSecretsMock;
 
 beforeEach(async () => {
   tmpDir = join(
@@ -42,6 +44,9 @@ beforeEach(async () => {
   });
 
   log = captureLog();
+  // Isolate the keychain so `--purge`'s `purgeServiceSecrets` can't reach the
+  // real dev bucket (the service name is frozen from the workspace .brika).
+  secretsMock = installBunSecretsMock();
   originalExecPath = process.execPath;
   originalPlatform = Object.getOwnPropertyDescriptor(process, 'platform');
   originalPrompt = globalThis.prompt;
@@ -50,6 +55,7 @@ beforeEach(async () => {
 
 afterEach(async () => {
   log.restore();
+  secretsMock.restore();
   process.execPath = originalExecPath;
   if (originalPlatform) {
     Object.defineProperty(process, 'platform', originalPlatform);
@@ -311,16 +317,18 @@ describe('selfUninstall', () => {
       expect(output).toContain(brikaHome);
     });
 
-    test('does not display BRIKA_HOME when purge is false', async () => {
+    test('shows where data is kept (and how to purge) when purge is false', async () => {
       await setupFakeInstallDir();
-      const brikaHome = join(tmpDir, 'brika-home-hidden');
+      const brikaHome = join(tmpDir, 'brika-home-kept');
       process.env.BRIKA_HOME = brikaHome;
       stubPrompt('n');
 
       await selfUninstall();
 
       const output = log.lines.join('\n');
-      expect(output).not.toContain(brikaHome);
+      // Non-purge no longer hides the data dir; it tells the user it remains.
+      expect(output).toContain(brikaHome);
+      expect(output).toContain('--purge');
     });
 
     test('displays version string', async () => {
@@ -472,7 +480,7 @@ describe('selfUninstall', () => {
   // ─────────────────────────────────────────────────────────────────────────
 
   describe('windows platform', () => {
-    test('prints PowerShell instructions and returns early on Windows', async () => {
+    test('points at the PowerShell uninstaller for the locked binary', async () => {
       const installDir = await setupFakeInstallDir();
       stubPrompt('y');
       Object.defineProperty(process, 'platform', {
@@ -485,14 +493,12 @@ describe('selfUninstall', () => {
       const output = log.lines.join('\n');
       expect(output).toContain('PowerShell');
       expect(output).toContain('uninstall.ps1');
-      // Should NOT have removed the install dir (early return)
+      // The running .exe can't delete itself; the PS1 removes the install dir.
       expect(existsSync(installDir)).toBe(true);
-      // Should NOT print success message
-      expect(output).not.toContain('Uninstalled successfully');
     });
 
-    test('does not attempt to remove install directory on Windows', async () => {
-      const installDir = await setupFakeInstallDir();
+    test('still cleans up the rest (PATH/completions) on Windows', async () => {
+      await setupFakeInstallDir();
       stubPrompt('y');
       Object.defineProperty(process, 'platform', {
         value: 'win32',
@@ -501,7 +507,53 @@ describe('selfUninstall', () => {
 
       await selfUninstall();
 
-      expect(existsSync(installDir)).toBe(true);
+      // No longer an early return: the non-binary cleanup runs to the end. The
+      // Windows message stops short of "Uninstalled successfully" because the
+      // PS1 still has to remove the binary + PATH.
+      const output = log.lines.join('\n');
+      expect(output).toContain('Cleanup staged');
+      expect(output).not.toContain('Uninstalled successfully');
+    });
+
+    test('leaves the data dir for the PS1 to remove when purging on Windows', async () => {
+      await setupFakeInstallDir();
+      const brikaHome = join(tmpDir, 'brika-home-win');
+      await mkdir(brikaHome, {
+        recursive: true,
+      });
+      process.env.BRIKA_HOME = brikaHome;
+      stubPrompt('y');
+      Object.defineProperty(process, 'platform', {
+        value: 'win32',
+        configurable: true,
+      });
+
+      await selfUninstall({
+        purge: true,
+      });
+
+      // The binary lives inside brikaHome and is locked; the PS1 removes it.
+      expect(existsSync(brikaHome)).toBe(true);
+      const output = log.lines.join('\n');
+      expect(output).toContain('removed by the uninstaller');
+    });
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // --yes (skip prompt)
+  // ─────────────────────────────────────────────────────────────────────────
+
+  describe('--yes', () => {
+    test('skips the prompt and proceeds when yes is true', async () => {
+      const installDir = await setupFakeInstallDir();
+      // Prompt would abort if consulted: assert it is never read.
+      stubPrompt('n');
+
+      await selfUninstall({ yes: true });
+
+      const output = log.lines.join('\n');
+      expect(output).not.toContain('Aborted');
+      expect(existsSync(installDir)).toBe(false);
     });
   });
 

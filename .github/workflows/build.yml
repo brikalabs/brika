@@ -103,17 +103,9 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - uses: oven-sh/setup-bun@v2
+      - uses: ./.github/actions/setup-bun
         with:
           bun-version: ${{ needs.setup.outputs.bun_version }}
-
-      - uses: actions/cache@v5
-        with:
-          path: ~/.bun/install/cache
-          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
-          restore-keys: bun-${{ runner.os }}-
-
-      - run: bun install --frozen-lockfile
 
       - run: bun run --filter @brika/ui build
 
@@ -149,17 +141,9 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - uses: oven-sh/setup-bun@v2
+      - uses: ./.github/actions/setup-bun
         with:
           bun-version: ${{ needs.setup.outputs.bun_version }}
-
-      - uses: actions/cache@v5
-        with:
-          path: ~/.bun/install/cache
-          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
-          restore-keys: bun-${{ runner.os }}-
-
-      - run: bun install --frozen-lockfile
 
       - uses: actions/download-artifact@v5
         with:
@@ -563,3 +547,63 @@ jobs:
             echo "  - ${tag}"
             gh release delete "$tag" --yes --cleanup-tag
           done
+
+  # ───────────────────────────────────────────────────────────────────────
+  # npm: publish the launcher (`brika`) + per-platform binary packages
+  # (`@brika/cli-<os>-<cpu>`) wrapping the same compiled binaries.
+  #
+  # Tagged releases only. Canary is intentionally skipped (npm versions are
+  # immutable, so per-push canaries would spam the registry). Requires an
+  # NPM_TOKEN secret with publish rights to the `@brika` scope and `brika`.
+  # ───────────────────────────────────────────────────────────────────────
+  publish-npm:
+    needs: [setup, release]
+    if: needs.setup.outputs.is_release == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: ./.github/actions/setup-bun
+        with:
+          bun-version: ${{ needs.setup.outputs.bun_version }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+
+      - uses: actions/download-artifact@v5
+        with:
+          pattern: brika-*
+          path: artifacts/
+          merge-multiple: true
+
+      - name: Extract binaries into per-platform dirs
+        run: |
+          # The npm-dist generator expects <dir>/<artifact>/<binary>; the
+          # release archives carry the binary at the root (plus a `ui/` sidecar
+          # the npm package doesn't need, since the binary embeds the UI).
+          mkdir -p staging
+          cd artifacts
+          for f in brika-*; do
+            case "$f" in
+              *.tar.gz) base="${f%.tar.gz}"; mkdir -p "../staging/$base"; tar xzf "$f" -C "../staging/$base" ;;
+              *.zip)    base="${f%.zip}";    mkdir -p "../staging/$base"; unzip -oq "$f" -d "../staging/$base" ;;
+              *) echo "skip non-archive $f" ;;
+            esac
+          done
+
+      - name: Publish to npm
+        working-directory: apps/build
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          VERSION: ${{ needs.setup.outputs.binary_version }}
+        run: |
+          # A prerelease version (e.g. 0.5.0-rc.1) must NOT clobber the `latest`
+          # dist-tag (the default `npm install brika` target); route it to `next`.
+          TAG=latest
+          case "$VERSION" in *-*) TAG=next ;; esac
+          bun run src/npm-dist.ts \
+            --binaries="$GITHUB_WORKSPACE/staging" \
+            --version="$VERSION" \
+            --publish --tag="$TAG"

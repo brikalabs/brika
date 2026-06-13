@@ -12,6 +12,7 @@
   },
   "scripts": {
     "build": "bun run src/index.ts",
+    "npm-dist": "bun run src/npm-dist.ts",
     "typecheck": "tsgo --noEmit"
   },
   "dependencies": {

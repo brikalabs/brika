@@ -8,6 +8,7 @@
  * dir, so a data-dir/hub mismatch is reported BEFORE it turns into a 401.
  */
 
+import { homedir } from 'node:os';
 import { defineCommand } from '@brika/cli';
 import { detectRuntimeMode } from '@brika/hub/runtime-mode';
 import { isCompiledFrom, peekInstanceId, resolveDataDir } from '@brika/sdk/exec-context';
@@ -50,6 +51,8 @@ export default defineCommand({
       isCompiled: compiled,
       execPath: process.execPath,
       cwd: process.cwd(),
+      home: homedir(),
+      platform: process.platform,
     });
     const runtimeMode = detectRuntimeMode();
     const canSelfUpdate = runtimeMode === 'standalone' || runtimeMode === 'supervised';
