@@ -1,0 +1,84 @@
+# INERT until OIDC trusted publishers are registered for the 15 package names on
+# npmjs.com (7 libs + create-brika + 7 plugins); first publish of each new name
+# uses NPM_TOKEN bootstrap.
+#
+# This workflow has NO push/tag trigger on purpose: it can ONLY be started by a
+# manual `workflow_dispatch`, so it cannot publish anything until a human runs
+# it. The default `dry_run: true` makes an accidental dispatch a no-op rehearsal.
+#
+# Auth mirrors build.yml's `publish-npm` job: npm Trusted Publishing (OIDC) needs
+# `id-token: write` and npm CLI >= 11.5.1 (node 22 ships an older npm, hence the
+# `npm install -g npm@latest` step). Provenance is attached automatically; the
+# release-libs.ts publisher passes `--provenance`. A trusted publisher is per
+# package name and cannot be set before the package exists, so the FIRST publish
+# of each new name falls back to `NPM_TOKEN` (surfaced as `NODE_AUTH_TOKEN`);
+# remove that secret once all 16 names exist and are configured for OIDC.
+#
+# One job, not two: `scripts/release-libs.ts` (run by `bun run release`) already
+# toposorts the 8 Tier-1 packages first and the 7 plugins after them in a single
+# idempotent pass, so a `publish-libs` -> `publish-plugins` split would buy no
+# extra ordering. The single `publish-packages` job below is the cleaner shape.
+
+name: Release packages (npm)
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "npm dist-tag to route the publish to"
+        required: true
+        default: latest
+        type: choice
+        options:
+          - latest
+          - next
+      dry_run:
+        description: "Rehearse without publishing (npm publish --dry-run)"
+        required: false
+        default: true
+        type: boolean
+
+# Never run two real publishes concurrently (npm versions are immutable).
+concurrency:
+  group: release-packages
+  cancel-in-progress: false
+
+jobs:
+  publish-packages:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # mint the OIDC token npm exchanges for a short-lived publish credential
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ^1.3.14
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22 # >= 22.14.0; resolves to latest 22.x
+          registry-url: https://registry.npmjs.org
+
+      # Trusted publishing requires npm CLI >= 11.5.1; node 22 ships an older npm.
+      - run: npm install -g npm@latest
+
+      - run: bun install
+
+      # The publisher does not rely on lifecycle scripts, so build the artifact
+      # producers explicitly: the @brika/sdk author CLI bin and the create-brika
+      # scaffold both ship prebuilt and must exist before publish.
+      - run: bun --filter @brika/sdk run build:bin
+      - run: bun --filter create-brika run build
+
+      - run: bun run typecheck
+
+      - name: Publish libraries and plugins to npm
+        env:
+          # Bootstrap fallback only: the npm CLI prefers OIDC when a trusted
+          # publisher is configured for the package, and falls back to this
+          # token otherwise (the very first publish of a not-yet-existing name).
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          bun run release -- --tag=${{ inputs.tag }} ${{ inputs.dry_run && '--dry-run' || '' }}
