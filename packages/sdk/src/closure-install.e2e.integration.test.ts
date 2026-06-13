@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -8,19 +8,21 @@ import { z } from 'zod';
 /**
  * Closure-install e2e: prove the PUBLISHED @brika/sdk is self-contained.
  *
- * @brika/sdk ships raw `.ts`, so an npm consumer must be able to resolve its
- * entire runtime closure from the SDK's *declared* dependencies. This packs the
- * SDK + closure to tarballs and installs them into an isolated consumer the way
- * npm would (`overrides` redirect the internal `workspace:*` ranges to the local
- * tarballs, mirroring what `changeset version` does at release time), then
- * imports the react-free SDK subpaths under Bun.
+ * @brika/sdk ships raw `.ts`, so a consumer (Bun is the real audience for a
+ * raw-`.ts` package) must resolve its entire runtime closure from the SDK's
+ * *declared* dependencies. This `bun pm pack`s the SDK + closure to tarballs
+ * (which rewrites the internal `workspace:*` ranges to concrete versions, as a
+ * real publish does) and `bun install`s them into an isolated consumer where
+ * `overrides` point those concrete ranges at the local tarballs, then imports the
+ * react-free SDK subpaths under Bun.
  *
  * If any closure package were declared in `devDependencies` instead of
  * `dependencies` (the class of bug PR 1 fixed: `@brika/flow` was a devDep), it
- * would NOT land in the SDK's published deps, npm would not install it, and the
+ * would NOT land in the SDK's published deps, bun would not install it, and the
  * import below would throw `Cannot find module '@brika/flow'`. This is the
  * runtime counterpart to `published-dependency-closure.test.ts` (which checks the
- * declaration statically): here we install + import the real packed artifacts.
+ * declaration statically): here we pack + install + import the real artifacts
+ * built from the current codebase, using only Bun.
  *
  * Network: a single small fetch (zod, the SDK's only external runtime dep). The
  * ui-kit closure member is installed but not imported (it needs React peers); its
@@ -41,22 +43,23 @@ const REACT_FREE_SUBPATHS = [
   '@brika/sdk/grants', // -> @brika/grants
 ];
 
-const packResultSchema = z.array(z.object({ filename: z.string() })).min(1);
+const manifestSchema = z.object({ name: z.string(), version: z.string() }).loose();
 
-/** `npm pack` a package dir into `dest`, returning the tarball's absolute path. */
+/** `bun pm pack` a package dir into `dest`, returning the tarball's absolute path. */
 function pack(pkgDir: string, dest: string): string {
-  const proc = Bun.spawnSync(
-    ['npm', 'pack', '--json', '--ignore-scripts', '--pack-destination', dest],
-    { cwd: pkgDir, stdout: 'pipe', stderr: 'pipe' }
-  );
+  const proc = Bun.spawnSync(['bun', 'pm', 'pack', '--destination', dest], {
+    cwd: pkgDir,
+    stdout: 'pipe',
+    stderr: 'pipe',
+  });
   if (proc.exitCode !== 0) {
-    throw new Error(`npm pack failed in ${pkgDir}: ${proc.stderr.toString()}`);
+    throw new Error(`bun pm pack failed in ${pkgDir}: ${proc.stderr.toString()}`);
   }
-  const first = packResultSchema.parse(JSON.parse(proc.stdout.toString()))[0];
-  if (first === undefined) {
-    throw new Error(`npm pack produced no tarball in ${pkgDir}`);
-  }
-  return join(dest, first.filename);
+  const manifest = manifestSchema.parse(
+    JSON.parse(readFileSync(join(pkgDir, 'package.json'), 'utf8'))
+  );
+  const tarball = `${manifest.name.replace(/^@/, '').replace(/\//g, '-')}-${manifest.version}.tgz`;
+  return join(dest, tarball);
 }
 
 let workdir: string;
@@ -89,13 +92,13 @@ beforeAll(async () => {
     )}\n`
   );
 
-  const install = Bun.spawnSync(['npm', 'install', '--no-audit', '--no-fund', '--loglevel=error'], {
+  const install = Bun.spawnSync(['bun', 'install'], {
     cwd: consumer,
     stdout: 'pipe',
     stderr: 'pipe',
   });
   if (install.exitCode !== 0) {
-    throw new Error(`npm install failed: ${install.stderr.toString()}`);
+    throw new Error(`bun install failed: ${install.stderr.toString()}`);
   }
 }, 180_000);
 
