@@ -1,0 +1,37 @@
+# Throwaway verdaccio registry for the npm publish/install acceptance e2e.
+# Anonymous publish + access are intentionally wide open: this registry only
+# ever exists inside the e2e container and is discarded afterward.
+storage: /verdaccio/storage
+listen: 0.0.0.0:4873
+
+auth:
+  htpasswd:
+    file: /verdaccio/storage/htpasswd
+    # Allow the e2e to register its throwaway publishing user on demand
+    # (the default cap; -1 would DISABLE registration).
+    max_users: 1000
+
+uplinks:
+  npmjs:
+    url: https://registry.npmjs.org/
+    cache: true
+
+packages:
+  # Brika packages are served ONLY from what the e2e publishes locally: no
+  # proxy, so a missing/misdeclared dependency fails instead of silently
+  # resolving against real npm.
+  '@brika/*':
+    access: $all
+    publish: $all
+    unpublish: $all
+  'create-brika':
+    access: $all
+    publish: $all
+    unpublish: $all
+  # Everything else (zod, react, ...) proxies to npmjs so transitive deps resolve.
+  '**':
+    access: $all
+    publish: $all
+    proxy: npmjs
+
+log: { type: stdout, format: pretty, level: warn }

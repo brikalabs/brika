@@ -1,0 +1,46 @@
+# npm publish/install acceptance e2e (gated, not per-PR).
+#
+# Publishes the shipped Brika surface to a throwaway verdaccio registry exactly as
+# a release would (bun publish rewrites workspace:*), then installs it into a clean
+# consumer straight from that registry and imports the SDK. Catches the dependency
+# round-trip bugs the static + in-process closure guards approximate: a misdeclared
+# dependency, an unrewritten workspace: range, or a broken tarball fails here.
+#
+# Heavy (spins up a registry, builds, publishes), so it runs on a manual dispatch
+# and nightly, not on every PR. Uses only Bun: the SDK ships raw .ts and Bun is its
+# real consumer.
+name: e2e acceptance (npm round-trip)
+
+on:
+  workflow_dispatch: {}
+  schedule:
+    # Nightly at 03:17 UTC.
+    - cron: "17 3 * * *"
+
+concurrency:
+  group: e2e-acceptance
+  cancel-in-progress: true
+
+jobs:
+  acceptance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ^1.3.14
+
+      - run: bun install
+
+      - name: Start verdaccio
+        run: docker compose -f e2e/docker-compose.yml up -d --wait
+
+      - name: Run acceptance e2e
+        env:
+          VERDACCIO_REGISTRY: http://localhost:4873
+        run: bun run e2e/acceptance.ts
+
+      - name: Tear down verdaccio
+        if: always()
+        run: docker compose -f e2e/docker-compose.yml down -v
