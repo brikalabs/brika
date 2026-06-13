@@ -121,7 +121,8 @@ nothing else.** This shrinks the public contract from 35 to 15.
   "files": ["src", "README.md", "LICENSE", "CHANGELOG.md",
     "!src/**/*.test.ts", "!src/**/*.test.tsx",
     "!src/**/*.spec.ts", "!src/**/*.spec.tsx",
-    "!src/**/*_test-utils.ts", "!src/**/tsconfig.json", "!**/*.tsbuildinfo"]
+    "!src/**/*_test-utils.ts", "!src/**/tsconfig.json", "!**/*.tsbuildinfo",
+    "!src/**/*.bench.ts", "!src/**/__benchmarks__/**"]
   ```
 - `plugins/matter/package.json`: add the negation block; delete the stray
   `src/pages/tsconfig.json` (it `extends ../../../../tsconfig.json`, path-broken
@@ -262,6 +263,15 @@ Merging it on the release tag publishes.
 
 ## 5. Publish pipeline (CI)
 
+**Shipped now (inert):** a single `release-packages.yml` job, `workflow_dispatch`
+only (no tag trigger), `dry_run` defaulting true, that runs `bun run release`
+(`scripts/release-libs.ts`). It cannot publish until OIDC trusted publishers are
+registered for the package names on npmjs.com. The `tag` input defaults to `auto`
+(release-libs derives `next` for prereleases, else `latest`); the binary launcher
+keeps publishing from `build.yml`'s existing `publish-npm` job. The multi-job,
+tag-triggered design below is the TARGET once the publishers are registered and
+the changesets/action "Version Packages" PR drives releases.
+
 Converge on the `npm-dist.ts`-style `npm publish --provenance` publisher. Do not
 reuse `buildPublishArgs` / `bun publish` (no provenance, no OIDC). Lift only the
 good parts of the interactive `publish.ts`: package discovery + `!private` filter,
@@ -277,7 +287,7 @@ Three jobs ordered by `needs`:
    platform packages via `npm-dist.ts` (OIDC, npm >= 11.5.1, provenance, dist-tag
    routing, NPM_TOKEN bootstrap fallback).
 2. `publish-libs` (new): prebuild `sdk` + `create-brika`, typecheck, then publish
-   the 9 Tier-1 libs toposorted
+   the 8 Tier-1 packages toposorted
    (`errors/grants/ipc/serializable -> flow/ui-kit -> sdk -> create-brika`),
    idempotent, `npm publish --provenance`, dist-tag `latest` (or `next` for
    prerelease).
@@ -321,7 +331,43 @@ fallback; OIDC takes over afterward.
 8. **(Deferred) Promote Tier-2.** When `i18n` / `i18n-devtools` get standalone
    READMEs, remove them from `ignore` and register their trusted publishers.
 
-## 7. Open decisions for the owner
+## 7. Already-published packages on npm
+
+Several names are already live on npm (owner: maxscharwath; `@brika` scope owned),
+up to `0.3.1`: `create-brika`, `@brika/sdk`, `@brika/compiler`, `@brika/schema`,
+`@brika/flow`, `@brika/ui-kit`, `@brika/ipc`, `@brika/serializable`,
+`@brika/i18n-devtools` (`0.1.1`), `@brika/plugin-timer`, `@brika/plugin-weather`,
+`@brika/blocks-builtin`. The repo is at `0.4.0`, so the first release continues the
+line cleanly (no version-number collision).
+
+- **Do not unpublish.** It breaks installs, burns the version number permanently,
+  and locks the name for 24h. The names stay yours regardless.
+- **`@brika/compiler` + `@brika/schema`** are made `private` here (internalized:
+  bundled into the `brika` bin), so they freeze at `0.3.1`. If they have no
+  external consumers, `npm deprecate` them with a pointer ("bundled into
+  @brika/sdk") rather than unpublishing.
+- **`@brika/i18n-devtools`** is at `0.1.1`; keep publishing it (relocating its
+  source does not require unpublishing).
+
+## 8. Verification layers (tests)
+
+Three layers guard that the published surface actually installs and runs, fastest
+to strongest:
+
+1. **Static** (`published-dependency-closure.test.ts`, `changeset-config.test.ts`):
+   per-PR, instant. The SDK runtime closure is in `dependencies`; the Changesets
+   allowlist, `PUBLISH_ORDER`, and the `fixed` group all equal the non-private
+   published set.
+2. **Isolated install** (`closure-install.e2e.integration.test.ts`): per-PR, ~1s,
+   Bun-only. `bun pm pack` the SDK closure, `bun install` into a clean consumer via
+   `file:` overrides, import the react-free subpaths. Reproduces the
+   missing-dependency crash class.
+3. **Registry round-trip** (`e2e/acceptance.ts`, gated nightly + dispatch,
+   Docker-free): start verdaccio via `bunx`, `bun publish` the shipped surface,
+   `bun add` into a clean consumer, AND boot a headless hub that installs
+   `@brika/plugin-timer` from the registry and asserts it loads + registers blocks.
+
+## 9. Open decisions for the owner
 
 1. Keep the platform-group version equal to the binary release version (one tag
    drives both)? Recommended: yes (the only way `engines.brika ^<minor>` stays
