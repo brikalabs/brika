@@ -1,6 +1,7 @@
 {
   "name": "@brika/i18n",
   "version": "0.4.0",
+  "private": true,
   "description": "Generic i18n runtime: translation registry, React hooks, Node loaders, and SSE-driven live reload. Works with any React + Vite + Bun project.",
   "type": "module",
   "license": "MIT",

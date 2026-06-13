@@ -86,8 +86,11 @@ entries are compiled at install/load by `@brika/compiler` (by design).
 ### Tier 2: publish on a product decision, 2 libraries
 
 `@brika/i18n`, `@brika/i18n-devtools`. Fully decoupled from the SDK closure (zero
-`@brika/*` runtime deps). Defer until they have standalone READMEs; promoting
-later is zero risk.
+`@brika/*` runtime deps). Kept `private: true` for now (not published yet) so that
+`private` is the single source of truth for "is it published"; defer until they
+have standalone READMEs. To promote: set `private: false` AND add the `!` negation
+to the Changesets `ignore` (the `changeset-config` guard test fails until both are
+done, so they can never drift apart).
 
 ### Tier 3: keep internal (`private: true`)
 
@@ -235,7 +238,11 @@ Two design choices keep this maintainable:
 
 `engines.brika` does not come from these versions: `sync:engines-brika` derives it
 from the binary release line (see Section 3), so independent plugin versions are
-fine. Promote `i18n` / `i18n-devtools` by adding `!` entries when they are marketed.
+fine. `private` is the single source of truth for "is it published," and the
+`changeset-config` guard test (`packages/workspace-tools/src/changeset-config.test.ts`)
+asserts the `!` negations equal the non-private `@brika/*` packages, so the config
+and the package flags can never silently drift. Promote `i18n` / `i18n-devtools`
+by setting `private: false` and adding their `!` entries together.
 
 Scripts to add:
 ```jsonc

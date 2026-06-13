@@ -1,6 +1,7 @@
 {
   "name": "@brika/i18n-devtools",
   "version": "0.4.0",
+  "private": true,
   "type": "module",
   "license": "MIT",
   "description": "i18n developer tools: Vite plugin + browser overlay for translation key validation, coverage tracking, and in-app editing. Works with any React + i18next project.",
