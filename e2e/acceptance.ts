@@ -167,7 +167,8 @@ async function consumerRoundTrip(cleanup: Cleanup): Promise<void> {
     throw new Error(`[e2e] FAIL: not installed from registry: ${missing.join(', ')}`);
   }
 
-  const script = `${REACT_FREE_SUBPATHS.map((s) => `await import(${JSON.stringify(s)});`).join(' ')} console.log('IMPORT-OK');`;
+  const imports = REACT_FREE_SUBPATHS.map((s) => `await import(${JSON.stringify(s)});`).join(' ');
+  const script = `${imports} console.log('IMPORT-OK');`;
   const imported = Bun.spawnSync(['bun', '-e', script], { cwd: consumer, stdout: 'pipe', stderr: 'pipe' });
   if (imported.exitCode !== 0 || !imported.stdout.toString().includes('IMPORT-OK')) {
     throw new Error(`[e2e] FAIL: SDK import failed:\n${imported.stderr.toString()}`);
@@ -179,6 +180,20 @@ const pluginSchema = z.object({ name: z.string(), status: z.string().optional() 
 const blockSchema = z
   .object({ id: z.string().optional(), pluginId: z.string().optional(), typeId: z.string().optional() })
   .loose();
+
+const ssePhaseSchema = z.object({ phase: z.string().optional() }).loose();
+
+/** Parse one SSE `data:` line; returns true at the terminal `complete`, throws on `error`. */
+function installFrameComplete(line: string): boolean {
+  if (!line.startsWith('data:')) {
+    return false;
+  }
+  const phase = ssePhaseSchema.parse(JSON.parse(line.slice(5).trim())).phase;
+  if (phase === 'error') {
+    throw new Error(`[e2e] FAIL: hub install errored: ${line}`);
+  }
+  return phase === 'complete';
+}
 
 /** Consume the install SSE stream until it completes or errors. */
 async function drainInstallStream(res: Response): Promise<void> {
@@ -195,15 +210,7 @@ async function drainInstallStream(res: Response): Promise<void> {
     // Keep the trailing partial line in the buffer until the next read completes it.
     buffer = done ? '' : (lines.pop() ?? '');
     for (const line of lines) {
-      if (!line.startsWith('data:')) {
-        continue;
-      }
-      const frame: unknown = JSON.parse(line.slice(5).trim());
-      const phase = z.object({ phase: z.string().optional() }).loose().parse(frame).phase;
-      if (phase === 'error') {
-        throw new Error(`[e2e] FAIL: hub install errored: ${line}`);
-      }
-      if (phase === 'complete') {
+      if (installFrameComplete(line)) {
         return;
       }
     }
@@ -318,7 +325,7 @@ async function main(): Promise<void> {
     await hubLoad(cleanup);
     console.log('[e2e] PASS: publish -> registry -> consumer install + hub load all succeeded.');
   } finally {
-    for (const fn of cleanup.reverse()) {
+    for (const fn of cleanup.toReversed()) {
       try {
         await fn();
       } catch {
