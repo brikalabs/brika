@@ -171,7 +171,11 @@
   "dependencies": {
     "@brika/sdk": "workspace:*"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "@types/react": "^19.2.17",
+    "lucide-react": "^1.17.0",
+    "react": "^19.2.7"
+  },
   "files": [
     "src",
     "locales",

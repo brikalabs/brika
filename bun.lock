@@ -572,7 +572,6 @@
       "peerDependencies": {
         "@brika/testing": "workspace:*",
         "lucide-react": "^1.17.0",
-        "zod": "^4.0.0",
       },
       "optionalPeers": [
         "@brika/testing",
@@ -662,7 +661,12 @@
       "version": "0.4.0",
       "dependencies": {
         "@brika/sdk": "workspace:*",
-        "zod": "^4.3.6",
+      },
+      "devDependencies": {
+        "@types/react": "^19.2.17",
+        "lucide-react": "^1.17.0",
+        "react": "^19.2.7",
+        "zod": "^4.3.4",
       },
     },
     "plugins/matter": {
@@ -675,9 +679,12 @@
         "@project-chip/matter.js": "^0.17.1",
       },
       "devDependencies": {
+        "@types/react": "^19.2.17",
         "bun-types": "^1.3.5",
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",
+        "lucide-react": "^1.17.0",
+        "react": "^19.2.7",
       },
     },
     "plugins/playground": {
@@ -692,9 +699,12 @@
       "version": "0.4.0",
       "dependencies": {
         "@brika/sdk": "workspace:*",
+        "recharts": "^3.8.1",
       },
       "devDependencies": {
-        "recharts": "^3.8.1",
+        "@types/react": "^19.2.17",
+        "lucide-react": "^1.17.0",
+        "react": "^19.2.7",
       },
     },
     "plugins/spotify": {
@@ -704,8 +714,11 @@
         "@brika/sdk": "workspace:*",
       },
       "devDependencies": {
+        "@types/react": "^19.2.17",
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",
+        "lucide-react": "^1.17.0",
+        "react": "^19.2.7",
       },
     },
     "plugins/timer": {
@@ -715,9 +728,12 @@
         "@brika/sdk": "workspace:*",
       },
       "devDependencies": {
+        "@types/react": "^19.2.17",
         "bun-types": "^1.3.5",
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",
+        "lucide-react": "^1.17.0",
+        "react": "^19.2.7",
       },
     },
     "plugins/weather": {
@@ -725,6 +741,11 @@
       "version": "0.4.0",
       "dependencies": {
         "@brika/sdk": "workspace:*",
+      },
+      "devDependencies": {
+        "@types/react": "^19.2.17",
+        "lucide-react": "^1.17.0",
+        "react": "^19.2.7",
       },
     },
   },

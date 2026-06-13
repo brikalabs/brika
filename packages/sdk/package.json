@@ -41,7 +41,6 @@
     "./actions": "./src/actions.ts",
     "./collect": "./src/internal/collect.ts",
     "./exec-context": "./src/exec-context.ts",
-    "./verify-plugin": "./src/verify-plugin.ts",
     "./cli": "./src/cli/index.ts",
     "./tsconfig.plugin.json": "./tsconfig.plugin.json"
   },
@@ -76,7 +75,6 @@
     "zod": "^4.3.4"
   },
   "peerDependencies": {
-    "zod": "^4.0.0",
     "lucide-react": "^1.17.0",
     "@brika/testing": "workspace:*"
   },
