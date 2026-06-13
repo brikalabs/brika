@@ -8,11 +8,11 @@
  * (fail closed, like scripts/install.sh), caches it under the user's data dir,
  * and execs it. Later runs use the cache.
  *
- * `BRIKA_INSTALL=npm` is exported so the binary stores data in the per-user dir
- * (~/.brika or %LOCALAPPDATA%\brika) and treats itself as package-manager-managed:
- * `brika update` defers to the package manager instead of self-patching. The
- * marker is set for ANY npm-registry install (npm, pnpm, yarn, bun), since they
- * all install this bin the same way; "npm" just names the registry/ecosystem.
+ * `BRIKA_INSTALL=managed` is exported so the binary stores data in the per-user
+ * dir (~/.brika or %LOCALAPPDATA%\brika) and treats itself as
+ * package-manager-managed: `brika update` defers to the package manager instead
+ * of self-patching. Set for any package-manager install (npm/pnpm/yarn/bun),
+ * since they all install this bin the same way.
  *
  * Zero dependencies: Node 18+ built-ins only (global fetch, node:crypto, and the
  * system `tar`, which handles .tar.gz and .zip on macOS, Linux, and Windows 10+).
@@ -193,7 +193,7 @@ if (!existsSync(binPath)) {
 
 const result = spawnSync(binPath, process.argv.slice(2), {
   stdio: 'inherit',
-  env: { ...process.env, BRIKA_INSTALL: 'npm' },
+  env: { ...process.env, BRIKA_INSTALL: 'managed' },
 });
 if (result.error) {
   fail(`failed to launch the binary: ${result.error.message}`);

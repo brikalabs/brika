@@ -76,12 +76,12 @@ export function computeRuntimeMode(input: DetectInput): RuntimeMode {
     return 'supervised';
   }
 
-  // A package-manager install (the launcher exports BRIKA_INSTALL=npm for any of
-  // npm/pnpm/yarn/bun) is manager-owned, like a system package: refuse in-place
+  // A package-manager install (the launcher exports BRIKA_INSTALL=managed for any
+  // of npm/pnpm/yarn/bun) is manager-owned, like a system package: refuse in-place
   // self-update and let the package manager own the binary. The cached binary
   // lives under the data dir, not a system prefix, so without this it would
   // misdetect as `standalone`.
-  if (input.env.BRIKA_INSTALL === 'npm') {
+  if (input.env.BRIKA_INSTALL === 'managed') {
     return 'system-package';
   }
 

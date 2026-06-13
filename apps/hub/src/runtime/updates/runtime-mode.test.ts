@@ -89,13 +89,13 @@ describe('computeRuntimeMode', () => {
     ).toBe('system-package');
   });
 
-  test('BRIKA_INSTALL=npm detects system-package (npm owns the binary, no self-update)', () => {
+  test('BRIKA_INSTALL=managed detects system-package (package manager owns the binary, no self-update)', () => {
     expect(
       computeRuntimeMode({
         ...baseInput,
-        // The npm-cached binary lives under the data dir, not a system prefix.
+        // The package-manager-cached binary lives under the data dir, not a system prefix.
         execPath: '/Users/example/.brika/npm-bin/0.4.0/brika',
-        env: { BRIKA_INSTALL: 'npm' },
+        env: { BRIKA_INSTALL: 'managed' },
       })
     ).toBe('system-package');
   });

@@ -77,7 +77,7 @@ export function peekInstanceId(dataDir: string): string | null {
 }
 
 /** Which rule decided the data dir. Lets `brika doctor` explain the resolution. */
-export type DataDirSource = 'env' | 'npm' | 'compiled-parent' | 'workspace' | 'cwd';
+export type DataDirSource = 'env' | 'managed' | 'compiled-parent' | 'workspace' | 'cwd';
 
 export interface DataDirInput {
   /** Usually `process.env`; reads BRIKA_HOME, BRIKA_INSTALL, and (Windows) LOCALAPPDATA/HOME/USERPROFILE. */
@@ -88,25 +88,25 @@ export interface DataDirInput {
   readonly execPath: string;
   /** `process.cwd()`. */
   readonly cwd: string;
-  /** `os.homedir()`. Only consulted for the npm-install (per-user) path. */
+  /** `os.homedir()`. Only consulted for the package-manager-install (per-user) path. */
   readonly home?: string;
-  /** `process.platform`. Only consulted for the npm-install (per-user) path. */
+  /** `process.platform`. Only consulted for the package-manager-install (per-user) path. */
   readonly platform?: string;
 }
 
 /**
- * True when the compiled binary was installed via npm rather than the
- * `curl | sh` installer. Two signals: the bin shim exports `BRIKA_INSTALL=npm`
- * before exec'ing the binary, and an npm-placed binary lives under a
- * `node_modules` tree. Either is enough.
+ * True when the compiled binary was installed by a JS package manager
+ * (npm/pnpm/yarn/bun) rather than the `curl | sh` installer. Two signals: the
+ * bin shim exports `BRIKA_INSTALL=managed` before exec'ing the binary, and a
+ * package-manager-placed binary lives under a `node_modules` tree. Either suffices.
  */
-function isNpmInstall(input: DataDirInput): boolean {
-  return input.env.BRIKA_INSTALL === 'npm' || input.execPath.includes('node_modules');
+function isManagedInstall(input: DataDirInput): boolean {
+  return input.env.BRIKA_INSTALL === 'managed' || input.execPath.includes('node_modules');
 }
 
 /**
- * Per-user data dir, used for npm installs (the binary lives in node_modules,
- * which `npm update`/reinstall would wipe, so data must NOT be binary-relative).
+ * Per-user data dir, used for package-manager installs (the binary lives in
+ * node_modules, which an update/reinstall would wipe, so data must NOT be binary-relative).
  * Matches what the `curl | sh` / PowerShell installers already produce, so the
  * two install methods share one location:
  *   - Windows -> `%LOCALAPPDATA%\brika`
@@ -125,8 +125,8 @@ function userDataDir(input: DataDirInput): string {
  * Resolve Brika's data directory (the `.brika` dir holding config, db,
  * cli-token, instance.id) from injected facts. Precedence:
  *   1. $BRIKA_HOME (explicit override)
- *   2. compiled binary installed via npm -> per-user dir (NOT binary-relative,
- *      since the binary sits in node_modules)
+ *   2. compiled binary installed by a package manager -> per-user dir (NOT
+ *      binary-relative, since the binary sits in node_modules)
  *   3. compiled binary -> parent of the install dir (dirname(dirname(execPath)))
  *   4. dev -> the workspace root's .brika (so the hub and the CLIs share ONE dir
  *      regardless of which package dir launched the process)
@@ -136,8 +136,8 @@ export function resolveDataDir(input: DataDirInput): { path: string; source: Dat
   if (input.env.BRIKA_HOME) {
     return { path: input.env.BRIKA_HOME, source: 'env' };
   }
-  if (input.isCompiled && isNpmInstall(input)) {
-    return { path: userDataDir(input), source: 'npm' };
+  if (input.isCompiled && isManagedInstall(input)) {
+    return { path: userDataDir(input), source: 'managed' };
   }
   if (input.isCompiled) {
     return { path: dirname(dirname(input.execPath)), source: 'compiled-parent' };
