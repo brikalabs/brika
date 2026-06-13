@@ -38,6 +38,7 @@
     "deadcode": "bun run --filter @brika/workspace-tools deadcode",
     "changeset": "changeset",
     "version-packages": "changeset version && bun run sync:engines-brika && bun install --lockfile-only",
+    "cleanup:registry": "bun run scripts/cleanup-registry.ts",
     "release": "bun run scripts/release-libs.ts",
     "sync:engines-brika": "bun run scripts/sync-engines-brika.ts"
   },
