@@ -15,7 +15,10 @@
     "create-brika": "./dist/index.js"
   },
   "exports": {
-    "./run": "./src/run.ts"
+    "./run": {
+      "bun": "./src/run.ts",
+      "default": "./dist/run.js"
+    }
   },
   "files": [
     "dist",

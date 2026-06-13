@@ -12,8 +12,9 @@ adversarial verification pass.
   exposes 28 non-private libraries in `packages/*` plus 7 plugins (35 public).
   Most libraries have no external consumer: plugins reach them only through the
   `@brika/sdk` facade, and the author toolchain (`cli`, `compiler`, `schema`) is
-  bundled into `dist/bin/brika.js`. Final surface: **7 libraries + `create-brika`
-  + 7 plugins = 15 public packages.**
+  bundled into `dist/bin/brika.js`. Final surface: **8 libraries + `create-brika`
+  + 7 plugins = 16 public packages** (the 8th library is `@brika/testing`, which
+  backs the documented `@brika/sdk/testing` author API).
 
 - **Two correctness blockers gate everything (fixed in PR 1):**
   1. `@brika/sdk` value-imports `@brika/flow` and `@brika/ui-kit` but declared
@@ -64,10 +65,11 @@ adversarial verification pass.
 
 ## 2. What to publish
 
-### Tier 1: must publish (SDK runtime closure + scaffold), 8 packages
+### Tier 1: must publish (SDK runtime closure + scaffold), 9 packages
 
 `@brika/sdk`, `create-brika`, `@brika/flow`, `@brika/ui-kit`, `@brika/errors`,
-`@brika/grants`, `@brika/ipc`, `@brika/serializable`.
+`@brika/grants`, `@brika/ipc`, `@brika/serializable`, and `@brika/testing` (an
+optional peer of the SDK backing the `@brika/sdk/testing` author API).
 
 Closure derivation (verified): `sdk -> {errors, grants, ipc}` (declared) +
 `sdk -> {flow, ui-kit}` (value imports) + `sdk -> serializable` (type-only, but
@@ -102,8 +104,8 @@ bundled into `dist/bin/brika.js`, so it never enters a plugin's install closure.
 `@brika/components` is mislabeled today (its description reads "Private React
 components" but `private` is unset): flip it to `private: true`.
 
-**Decisive default: publish the 8 Tier-1 packages + 7 plugins (15 packages),
-nothing else.** This shrinks the public contract from 35 to 15.
+**Decisive default: publish the 9 Tier-1 packages + 7 plugins (16 packages),
+nothing else.** This shrinks the public contract from 35 to 16.
 
 ### Per-package fix list (only for what we ship)
 
@@ -115,14 +117,13 @@ nothing else.** This shrinks the public contract from 35 to 15.
 
 **P1 (tarball hygiene, shipped set):**
 - Convert each shipped library to a `files[]` allowlist; delete `.npmignore`.
-  Canonical negation block, including two additions the repo's standard block
-  lacks (`!src/**/tsconfig.json`, `!**/*.tsbuildinfo`):
+  Canonical negation block (brace globs keep it to three lines; npm + bun pack
+  both honor them):
   ```json
   "files": ["src", "README.md", "LICENSE", "CHANGELOG.md",
-    "!src/**/*.test.ts", "!src/**/*.test.tsx",
-    "!src/**/*.spec.ts", "!src/**/*.spec.tsx",
-    "!src/**/*_test-utils.ts", "!src/**/tsconfig.json", "!**/*.tsbuildinfo",
-    "!src/**/*.bench.ts", "!src/**/__benchmarks__/**"]
+    "!src/**/*.{test,spec}.{ts,tsx}",
+    "!src/**/{*_test-utils.ts,tsconfig.json,*.bench.ts,__benchmarks__/**}",
+    "!**/*.tsbuildinfo"]
   ```
 - `plugins/matter/package.json`: add the negation block; delete the stray
   `src/pages/tsconfig.json` (it `extends ../../../../tsconfig.json`, path-broken
@@ -228,7 +229,7 @@ Two design choices keep this maintainable:
   published allowlist, a new internal package is ignored by default (safe), and
   `create-brika` (not `@brika`-scoped) plus the dormant `i18n` / `i18n-devtools`
   fall out correctly without extra lines. Verify with `bunx changeset status`
-  (it must list exactly the 15). Adding a published package = add one `!` line.
+  (it must list exactly the 16). Adding a published package = add one `!` line.
 
 - **Only the platform is a `fixed` group.** The SDK and its runtime closure are
   tightly coupled (the SDK re-exports them), so they version in lockstep; a

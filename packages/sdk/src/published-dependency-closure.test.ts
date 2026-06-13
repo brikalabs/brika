@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { Glob } from 'bun';
 import { z } from 'zod';
 
 /**
@@ -55,5 +56,26 @@ describe('@brika/sdk published dependency closure', () => {
   )('%s stays a devDependency (bundled into the bin or dev-only)', (name) => {
     expect(manifest.devDependencies[name]).toBeDefined();
     expect(manifest.dependencies[name]).toBeUndefined();
+  });
+
+  test('every @brika/* imported in src is categorized (no new undeclared closure)', async () => {
+    const srcDir = join(import.meta.dir);
+    const known = new Set([...RUNTIME_CLOSURE, ...BUNDLED_OR_DEV, '@brika/sdk']);
+    const importRe = /from\s*['"](@brika\/[a-z0-9-]+)/g;
+    const seen = new Set<string>();
+    for await (const rel of new Glob('**/*.{ts,tsx}').scan({ cwd: srcDir })) {
+      if (/\.(test|spec)\.tsx?$/.test(rel)) {
+        continue;
+      }
+      const text = readFileSync(join(srcDir, rel), 'utf8');
+      for (const m of text.matchAll(importRe)) {
+        if (m[1] !== undefined) {
+          seen.add(m[1]);
+        }
+      }
+    }
+    // A new @brika import that is in neither list means the closure lists are stale.
+    const uncategorized = [...seen].filter((name) => !known.has(name)).sort();
+    expect(uncategorized).toEqual([]);
   });
 });

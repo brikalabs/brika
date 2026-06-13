@@ -32,6 +32,8 @@
  *   bun run scripts/release-libs.ts --tag=next       # force a dist-tag (omit to auto-derive)
  */
 
+import { existsSync } from 'node:fs';
+import { rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { parseArgs } from 'node:util';
 import { Glob } from 'bun';
@@ -230,16 +232,28 @@ async function publishPackage(
     args.push('--dry-run');
   }
 
+  // Packages list LICENSE in files[] but keep only the root LICENSE on disk; copy
+  // it in for the publish so npm shows the license, then remove the copy.
+  const licensePath = join(pkg.dir, 'LICENSE');
+  const rootLicense = join(REPO_ROOT, 'LICENSE');
+  const addLicense = !existsSync(licensePath) && existsSync(rootLicense);
+
   console.log(`  publish ${pkg.name}@${pkg.version}  tag:${tag}${dryRun ? '  (dry run)' : ''}`);
   try {
     if (rewritten !== null) {
       await Bun.write(manifestPath, rewritten);
+    }
+    if (addLicense) {
+      await Bun.write(licensePath, Bun.file(rootLicense));
     }
     const proc = Bun.spawnSync(args, { cwd: pkg.dir, stdout: 'inherit', stderr: 'inherit' });
     return proc.exitCode === 0;
   } finally {
     if (rewritten !== null) {
       await Bun.write(manifestPath, original);
+    }
+    if (addLicense) {
+      await rm(licensePath, { force: true });
     }
   }
 }
