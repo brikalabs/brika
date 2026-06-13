@@ -25,11 +25,12 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "npm dist-tag to route the publish to"
+        description: "npm dist-tag (auto = next for prereleases, else latest)"
         required: true
-        default: latest
+        default: auto
         type: choice
         options:
+          - auto
           - latest
           - next
       dry_run:
@@ -80,5 +81,6 @@ jobs:
           # publisher is configured for the package, and falls back to this
           # token otherwise (the very first publish of a not-yet-existing name).
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        # 'auto' passes no --tag, so release-libs.ts derives next (prerelease) / latest.
         run: |
-          bun run release -- --tag=${{ inputs.tag }} ${{ inputs.dry_run && '--dry-run' || '' }}
+          bun run release -- ${{ inputs.tag != 'auto' && format('--tag={0}', inputs.tag) || '' }} ${{ inputs.dry_run && '--dry-run' || '' }}
