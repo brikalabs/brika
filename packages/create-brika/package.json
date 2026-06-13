@@ -41,6 +41,7 @@
   "devDependencies": {
     "@brika/cli": "workspace:*",
     "@types/bun": "^1.3.5",
-    "picocolors": "^1.1.1"
+    "picocolors": "^1.1.1",
+    "zod": "^4.3.4"
   }
 }
