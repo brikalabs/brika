@@ -1,0 +1,1 @@
+# @brika/serializable

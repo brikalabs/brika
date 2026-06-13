@@ -12,8 +12,8 @@ adversarial verification pass.
   exposes 28 non-private libraries in `packages/*` plus 7 plugins (35 public).
   Most libraries have no external consumer: plugins reach them only through the
   `@brika/sdk` facade, and the author toolchain (`cli`, `compiler`, `schema`) is
-  bundled into `dist/bin/brika.js`. Final surface: **9 libraries + 7 plugins =
-  16 public packages.**
+  bundled into `dist/bin/brika.js`. Final surface: **7 libraries + `create-brika`
+  + 7 plugins = 15 public packages.**
 
 - **Two correctness blockers gate everything (fixed in PR 1):**
   1. `@brika/sdk` value-imports `@brika/flow` and `@brika/ui-kit` but declared
@@ -62,7 +62,7 @@ adversarial verification pass.
 
 ## 2. What to publish
 
-### Tier 1: must publish (SDK runtime closure + scaffold), 9 packages
+### Tier 1: must publish (SDK runtime closure + scaffold), 8 packages
 
 `@brika/sdk`, `create-brika`, `@brika/flow`, `@brika/ui-kit`, `@brika/errors`,
 `@brika/grants`, `@brika/ipc`, `@brika/serializable`.
@@ -97,8 +97,8 @@ bundled into `dist/bin/brika.js`, so it never enters a plugin's install closure.
 `@brika/components` is mislabeled today (its description reads "Private React
 components" but `private` is unset): flip it to `private: true`.
 
-**Decisive default: publish 9 Tier-1 libraries + 7 plugins (16 packages),
-nothing else.** This shrinks the public contract from 35 to 16.
+**Decisive default: publish the 8 Tier-1 packages + 7 plugins (15 packages),
+nothing else.** This shrinks the public contract from 35 to 15.
 
 ### Per-package fix list (only for what we ship)
 
@@ -206,13 +206,20 @@ toposorted, idempotent, provenance publisher).
     "@brika/components", "@brika/db", "@brika/di", "@brika/events", "@brika/http",
     "@brika/permissions", "@brika/plugin", "@brika/registry", "@brika/remote-access-protocol",
     "@brika/router", "@brika/schema", "@brika/type-system", "@brika/testing",
-    "@brika/i18n", "@brika/i18n-devtools"
+    "@brika/i18n", "@brika/i18n-devtools",
+    "@brika/console", "@brika/hub", "@brika/ui", "@brika/build", "@brika/plugin-playground"
   ]
 }
 ```
-`ignore` lists only public packages we choose not to version yet (private packages
-are never versioned, so listing them is noise). Promote `i18n` / `i18n-devtools`
-out of `ignore` when they are marketed.
+`ignore` must list every package Changesets should NOT touch, not just the dormant
+public ones. Changesets DOES version private packages when they depend (transitively)
+on a bumped package: a dependency-cascade bump. So the internal libraries, the
+dormant public libs (`i18n` / `i18n-devtools`), AND the private apps that depend on
+the platform group (`console`, `hub`, `ui`, `build`, `plugin-playground`) are all
+ignored, leaving `changeset status` to report exactly the 15 published packages. The
+apps in particular must be ignored so Changesets does not collide with `bump-version`
+on the binary/app version line. Verify with `bunx changeset status` after any change;
+promote `i18n` / `i18n-devtools` out of `ignore` when they are marketed.
 
 Scripts to add:
 ```jsonc
@@ -261,7 +268,7 @@ continue-on-skip / abort-on-real-error so a partial-failure re-run resumes
 cleanly; topological order; dist-tag routing (`*-*` -> `next`); non-interactive.
 
 OIDC one-time setup (manual on npmjs.com): trusted publishing is per package name.
-The 16 new names each need the repo `brikalabs/brika`, the workflow filename, and
+The 15 new names each need the repo `brikalabs/brika`, the workflow filename, and
 any gating environment. A trusted publisher cannot be set before the package
 exists, so the first publish of each new name uses the `NPM_TOKEN` bootstrap
 fallback; OIDC takes over afterward.
