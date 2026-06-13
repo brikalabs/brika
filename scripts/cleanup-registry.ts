@@ -252,7 +252,9 @@ function unpublishPlan(
   console.log('  ---');
   console.log('  Subject: Unpublish request for internalized @brika/* packages');
   console.log('  Please remove these packages from the public registry. They were published in an');
-  console.log('  earlier release, have since been internalized into @brika/sdk, are not intended for');
+  console.log(
+    '  earlier release, have since been internalized into @brika/sdk, are not intended for'
+  );
   console.log('  standalone use, and we are the sole maintainer:');
   for (const name of stale) {
     console.log(`    ${name}`);
