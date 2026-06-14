@@ -1,0 +1,112 @@
+# Automated npm release (Changesets "Version Packages PR" model).
+#
+# Flow:
+#   1. Feature PRs include a changeset (`bun run changeset`).
+#   2. On push to main, changesets/action opens/updates a "Version Packages" PR
+#      that runs `version-packages` (bumps versions, writes CHANGELOGs via the
+#      GitHub formatter, syncs plugin engines, refreshes the lockfile).
+#   3. Merging that PR consumes the changesets; the next main run finds none, so
+#      the action runs `publish` -> `release-libs.ts` ships the 9 public packages
+#      to npm (topo order, idempotent, provenance under GitHub Actions).
+#   4. This workflow then tags `v<@brika/sdk version>`, which triggers build.yml
+#      (is_release=true) to publish the binary wrappers + the production release.
+#
+# OIDC trusted publishing is per package NAME and must be registered on npmjs.com
+# AFTER the name first exists, so the FIRST publish of each new name falls back to
+# NPM_TOKEN (surfaced as NODE_AUTH_TOKEN); OIDC + provenance take over afterwards.
+#
+# Prerequisite (one-time, in repo Settings -> Actions -> General): enable
+# "Allow GitHub Actions to create and approve pull requests" so the action can
+# open the Version Packages PR with the default GITHUB_TOKEN.
+
+name: Release (npm)
+
+on:
+  push:
+    branches: [main]
+
+# Never overlap a release with itself (npm versions are immutable; a tag push
+# must not race a second publish).
+concurrency:
+  group: release-npm
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # commit the version PR branch + push the release tag
+      pull-requests: write # open / update the "Version Packages" PR
+      id-token: write # mint the OIDC token npm exchanges for a publish credential
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0 # changesets needs full history to diff against the base
+
+      - id: bun-version
+        run: echo "value=$(jq -r '.engines.bun' package.json)" >> "$GITHUB_OUTPUT"
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ steps.bun-version.outputs.value }}
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22 # >= 22.14.0; resolves to latest 22.x
+          registry-url: https://registry.npmjs.org
+
+      # Trusted publishing requires npm CLI >= 11.5.1; node 22 ships an older npm.
+      - run: npm install -g npm@latest
+
+      - run: bun install
+
+      # release-libs.ts publishes with --ignore-scripts, so the prebuilt artifacts
+      # it ships (the @brika/sdk author CLI bin and the create-brika scaffold) must
+      # already exist. Cheap when the publish path does not run.
+      - run: bun --filter @brika/sdk run build:bin
+      - run: bun --filter create-brika run build
+
+      - name: Version PR or publish
+        id: changesets
+        uses: changesets/action@v1
+        with:
+          version: bun run version-packages
+          publish: bun run release
+          commit: "chore: version packages"
+          title: "chore: version packages"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Bootstrap fallback only: npm prefers OIDC when a trusted publisher is
+          # configured for the package and uses this token otherwise (the first
+          # publish of a not-yet-existing name).
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      # On the publish path (a merged Version Packages PR), tag the release so
+      # build.yml ships the binary wrappers + the production GitHub release. The
+      # tag name IS the version build.yml reads, so @brika/sdk (the fixed-group
+      # anchor) defines the release version. Guarded on tag-absence: a normal main
+      # push with no version bump leaves the tag in place and does nothing.
+      #
+      # The tag MUST be pushed with a PAT / App token (RELEASE_PAT), NOT the
+      # default GITHUB_TOKEN: tags pushed by the workflow token do not start new
+      # workflow runs (GitHub's recursion guard), so build.yml would never fire.
+      # If RELEASE_PAT is unset the libs still publish; the step warns and you push
+      # the tag by hand to cut the binary release.
+      - name: Tag release
+        if: steps.changesets.outputs.hasChangesets == 'false'
+        env:
+          RELEASE_PAT: ${{ secrets.RELEASE_PAT }}
+        run: |
+          VERSION=$(jq -r '.version' packages/sdk/package.json)
+          TAG="v${VERSION}"
+          if git rev-parse "$TAG" >/dev/null 2>&1 || git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null 2>&1; then
+            echo "Tag $TAG already exists; nothing to release."
+            exit 0
+          fi
+          if [ -z "$RELEASE_PAT" ]; then
+            echo "::warning title=Binary release not triggered::RELEASE_PAT is not set, so tag $TAG was not pushed. Push it manually to run build.yml (binary wrappers + production release). The npm libraries were still published."
+            exit 0
+          fi
+          git tag "$TAG"
+          git push "https://x-access-token:${RELEASE_PAT}@github.com/${GITHUB_REPOSITORY}.git" "$TAG"
+          echo "Pushed $TAG -> triggers build.yml (binary wrappers + production release)."

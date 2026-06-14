@@ -1,6 +1,9 @@
-# INERT until OIDC trusted publishers are registered for the 15 package names on
-# npmjs.com (7 libs + create-brika + 7 plugins); first publish of each new name
-# uses NPM_TOKEN bootstrap.
+# MANUAL FALLBACK / BOOTSTRAP. The automated path is `.github/workflows/release.yml`
+# (Changesets "Version Packages PR": merge the version PR -> libs publish). Use
+# THIS workflow for the one-time bootstrap (first publish of each name, before its
+# OIDC trusted publisher can be registered) or for a manual rehearsal/recovery.
+# Both run the same `bun run release` (release-libs.ts), so they cannot conflict:
+# npm versions are immutable and the publisher idempotently skips what is live.
 #
 # This workflow has NO push/tag trigger on purpose: it can ONLY be started by a
 # manual `workflow_dispatch`, so it cannot publish anything until a human runs
