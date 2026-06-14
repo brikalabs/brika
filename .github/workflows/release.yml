@@ -70,8 +70,8 @@ jobs:
       # release-libs.ts publishes with --ignore-scripts, so the prebuilt artifacts
       # it ships (the @brika/sdk author CLI bin and the create-brika scaffold) must
       # already exist. Cheap when the publish path does not run.
-      - run: bun --filter @brika/sdk run build:bin
-      - run: bun --filter create-brika run build
+      - run: bun run --filter @brika/sdk build:bin
+      - run: bun run --filter create-brika build
 
       # OIDC only: no NPM_TOKEN. Publishing relies on npm Trusted Publishing
       # (id-token: write + npm CLI >= 11.5.1 + a trusted publisher configured per

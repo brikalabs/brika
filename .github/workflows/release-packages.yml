@@ -74,8 +74,8 @@ jobs:
       # The publisher does not rely on lifecycle scripts, so build the artifact
       # producers explicitly: the @brika/sdk author CLI bin and the create-brika
       # scaffold both ship prebuilt and must exist before publish.
-      - run: bun --filter @brika/sdk run build:bin
-      - run: bun --filter create-brika run build
+      - run: bun run --filter @brika/sdk build:bin
+      - run: bun run --filter create-brika build
 
       - run: bun run typecheck
 
