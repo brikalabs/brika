@@ -333,16 +333,22 @@ export class PluginManager {
     }
   }
 
-  pushBlockInput(instanceId: string, port: string, data: Json, causationId?: string): void {
-    // Broadcast to all processes; each delivers only to instances it owns.
-    // Unlike startBlock this does NOT lazily respawn a reaped target: callers
-    // rely on the downstream block's provider being kept resident (the executor
-    // pins every non-trigger block's provider while a workflow runs). A
-    // host-scheduled trigger fires hub-side and dispatches here, so its
-    // downstream provider must stay pinned for the tick to land.
+  /**
+   * Deliver input to a block instance by broadcasting to all processes; each
+   * delivers only to instances it owns. Returns true if some process owned and
+   * delivered it. A false return means no resident process owns the instance
+   * (e.g. its plugin was reaped), which the executor uses to respawn the plugin,
+   * re-create the instance, and retry. This itself does NOT respawn, so it stays
+   * a cheap fire-and-forget on the hot path.
+   */
+  pushBlockInput(instanceId: string, port: string, data: Json, causationId?: string): boolean {
+    let delivered = false;
     for (const process of this.#lifecycle.listProcesses()) {
-      process.pushInput(instanceId, port, data, causationId);
+      if (process.pushInput(instanceId, port, data, causationId)) {
+        delivered = true;
+      }
     }
+    return delivered;
   }
 
   stopBlockInstance(instanceId: string): void {

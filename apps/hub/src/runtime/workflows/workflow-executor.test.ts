@@ -135,7 +135,7 @@ describe('WorkflowExecutor - Lifecycle', () => {
         });
       },
       stopBlockInstance: () => undefined,
-      pushBlockInput: () => undefined,
+      pushBlockInput: () => true,
     });
 
     stub(BlockRegistry, {
@@ -239,7 +239,7 @@ describe('WorkflowExecutor - Connection Map Building', () => {
           ok: true,
         }),
       stopBlockInstance: () => undefined,
-      pushBlockInput: () => undefined,
+      pushBlockInput: () => true,
     });
 
     stub(BlockRegistry, {
@@ -369,6 +369,7 @@ describe('WorkflowExecutor - Data Injection', () => {
           port,
           data,
         });
+        return true;
       },
     });
 
@@ -621,6 +622,7 @@ describe('WorkflowExecutor - Block Emit and Data Flow', () => {
           port,
           data,
         });
+        return true;
       },
     });
 
@@ -913,7 +915,7 @@ describe('WorkflowExecutor - Block Start Error Handling', () => {
           error: 'Block start failed',
         }),
       stopBlockInstance: () => undefined,
-      pushBlockInput: () => undefined,
+      pushBlockInput: () => true,
     });
 
     stub(BlockRegistry, {
@@ -960,7 +962,7 @@ describe('WorkflowExecutor - Block Start Error Handling', () => {
       clearBlockLogHandler: () => undefined,
       startBlock: () => Promise.reject(new Error('Exception thrown')),
       stopBlockInstance: () => undefined,
-      pushBlockInput: () => undefined,
+      pushBlockInput: () => true,
     });
 
     stub(BlockRegistry, {
@@ -1006,7 +1008,7 @@ describe('WorkflowExecutor - Block Type Resolution', () => {
         });
       },
       stopBlockInstance: () => undefined,
-      pushBlockInput: () => undefined,
+      pushBlockInput: () => true,
     });
 
     const shortNames: Record<string, string> = {
@@ -1096,7 +1098,7 @@ describe('WorkflowExecutor - Complex Workflows', () => {
           ok: true,
         }),
       stopBlockInstance: () => undefined,
-      pushBlockInput: () => undefined,
+      pushBlockInput: () => true,
     });
 
     stub(BlockRegistry, {
@@ -1303,6 +1305,7 @@ describe('WorkflowExecutor - Hosted triggers', () => {
       stopBlockInstance: () => undefined,
       pushBlockInput: (instanceId: string, port: string, data: Json) => {
         pushed.push({ instanceId, port, data });
+        return true;
       },
     });
     stub(BlockRegistry, {
@@ -1339,12 +1342,116 @@ describe('WorkflowExecutor - Hosted triggers', () => {
     expect(executor.ownsBlock('c1')).toBeTrue();
   });
 
-  test('does not pin a trigger-only plugin (its provider stays reapable)', async () => {
+  test('pins neither a hosted trigger nor a downstream block (both reap)', async () => {
     await executor.start(clockWorkflow(999_999));
     expect(reapGuard).not.toBeNull();
-    // The trigger provider is NOT pinned; the downstream provider IS.
+    // The hosted trigger fires from the hub; the downstream block is re-created
+    // on demand. Neither provider is pinned, so both can scale to zero.
     expect(reapGuard?.('trigger-plugin')).toBeFalse();
+    expect(reapGuard?.('normal-plugin')).toBeFalse();
+  });
+
+  test('pins an in-plugin source block provider (it must stay resident)', async () => {
+    // A source block (no inbound connection) that is NOT a hosted trigger runs
+    // its own timer/subscription in the plugin, so its provider must stay pinned.
+    await executor.start({
+      id: 'wf-src',
+      name: 'src',
+      enabled: true,
+      blocks: [{ id: 's1', type: 'logger' }],
+      connections: [],
+    });
     expect(reapGuard?.('normal-plugin')).toBeTrue();
+  });
+
+  test('re-creates a reaped downstream block on delivery, then delivers', async () => {
+    // Simulate the downstream provider having been reaped: pushBlockInput finds
+    // no owner (false) until startBlock re-creates the instance, after which the
+    // retry delivers. This is the front-door respawn-on-dispatch path.
+    let owned = false;
+    const restarted: string[] = [];
+    reset();
+    stub(PluginManager, {
+      addReapGuard: () => () => undefined,
+      setBlockEmitHandler: () => undefined,
+      setBlockLogHandler: () => undefined,
+      clearBlockEmitHandler: () => undefined,
+      clearBlockLogHandler: () => undefined,
+      startBlock: (_t: string, instanceId: string) => {
+        if (instanceId === 'l1') {
+          owned = true; // respawn makes the instance deliverable
+          restarted.push(instanceId);
+        }
+        return Promise.resolve({ ok: true });
+      },
+      stopBlockInstance: () => undefined,
+      pushBlockInput: (instanceId: string, port: string, data: Json) => {
+        if (instanceId === 'l1' && !owned) {
+          return false; // reaped: no resident owner yet
+        }
+        pushed.push({ instanceId, port, data });
+        return true;
+      },
+    });
+    stub(BlockRegistry, {
+      has: () => true,
+      get: (type: string) => defFor(type),
+      resolve: (t: string) => t,
+      getProvider: (type: string) => defFor(type).pluginId,
+    });
+    executor = new WorkflowExecutor();
+    // l1 is eager-started at start(); mark it reaped so the next tick must respawn.
+    await executor.start(clockWorkflow(25));
+    owned = false;
+    await waitFor(() => pushed.length >= 1, { timeoutMs: 2000 });
+    expect(restarted).toContain('l1'); // respawned on delivery
+    expect(pushed[0]?.instanceId).toBe('l1'); // then delivered
+  });
+
+  test('serializes delivery to a reaped instance: respawns once, preserves order', async () => {
+    let resident = false;
+    let startCount = 0;
+    reset();
+    stub(PluginManager, {
+      addReapGuard: () => () => undefined,
+      setBlockEmitHandler: () => undefined,
+      setBlockLogHandler: () => undefined,
+      clearBlockEmitHandler: () => undefined,
+      clearBlockLogHandler: () => undefined,
+      startBlock: (_t: string, instanceId: string) => {
+        if (instanceId === 'l1') {
+          startCount++;
+          resident = true;
+        }
+        return Promise.resolve({ ok: true });
+      },
+      stopBlockInstance: () => undefined,
+      pushBlockInput: (instanceId: string, port: string, data: Json) => {
+        if (instanceId === 'l1' && !resident) {
+          return false;
+        }
+        pushed.push({ instanceId, port, data });
+        return true;
+      },
+    });
+    stub(BlockRegistry, {
+      has: () => true,
+      get: (type: string) => defFor(type),
+      resolve: (t: string) => t,
+      getProvider: (type: string) => defFor(type).pluginId,
+    });
+    executor = new WorkflowExecutor();
+    await executor.start(clockWorkflow(999_999));
+    // Mark l1 reaped and reset the eager-start count: the only startBlock we now
+    // expect is the single respawn shared by both queued deliveries.
+    resident = false;
+    startCount = 0;
+    executor.inject('l1', 'input', { n: 1 });
+    executor.inject('l1', 'input', { n: 2 });
+    await waitFor(() => pushed.length >= 2, { timeoutMs: 2000 });
+    expect(startCount).toBe(1); // respawned exactly once for the burst
+    expect((pushed[0]?.data as { n: number }).n).toBe(1); // delivered in order
+    expect((pushed[1]?.data as { n: number }).n).toBe(2);
   });
 
   test('fires on its interval and dispatches a { count, ts } tick downstream', async () => {

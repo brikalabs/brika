@@ -360,15 +360,21 @@ export class PluginProcess {
     }
   }
 
-  pushInput(instanceId: string, port: string, data: Json, causationId?: string): void {
+  /**
+   * Deliver input to a block instance. Returns true if this process owns the
+   * instance and delivered it, false otherwise (broadcast: every process is
+   * asked, only the owner delivers). The boolean lets the executor detect a
+   * target whose plugin was reaped (no owner) and respawn it.
+   */
+  pushInput(instanceId: string, port: string, data: Json, causationId?: string): boolean {
     if (this.#stopped) {
-      return;
+      return false;
     }
     // pushInput is broadcast to every process; ignore instances we do not own
     // so another plugin's traffic neither crosses our IPC nor resets our idle
     // clock.
     if (!this.#ownedInstances.has(instanceId)) {
-      return;
+      return false;
     }
     this.touch();
     this.#channel.send(pushInput, {
@@ -377,6 +383,7 @@ export class PluginProcess {
       data,
       causationId,
     });
+    return true;
   }
 
   stopBlockInstance(instanceId: string): void {
