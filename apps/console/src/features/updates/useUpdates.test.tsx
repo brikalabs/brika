@@ -144,7 +144,9 @@ describe('useUpdates', () => {
         })
       )
     );
-    await flush();
+    await waitFor(
+      () => latest.current?.info?.latestVersion === '1.2.0' && latest.current?.channel === 'canary'
+    );
     expect(latest.current?.info?.latestVersion).toBe('1.2.0');
     expect(latest.current?.channel).toBe('canary');
     expect(latest.current?.checking).toBe(false);
@@ -171,7 +173,7 @@ describe('useUpdates', () => {
         })
       )
     );
-    await flush();
+    await waitFor(() => typeof latest.current?.error === 'string');
     expect(latest.current?.error).toMatch(/502/);
     expect(latest.current?.info).toBeNull();
     unmount();
@@ -205,11 +207,11 @@ describe('useUpdates', () => {
         })
       )
     );
-    await flush();
+    await waitFor(() => latest.current?.channel === 'stable');
     expect(latest.current?.channel).toBe('stable');
 
     latest.current?.cycleChannel();
-    await flush();
+    await waitFor(() => putBody !== '' && latest.current?.channel === 'canary');
 
     expect(JSON.parse(putBody)).toEqual({ channel: 'canary' });
     expect(latest.current?.channel).toBe('canary');
@@ -244,7 +246,7 @@ describe('useUpdates', () => {
         })
       )
     );
-    await flush();
+    await waitFor(() => latest.current !== null);
     latest.current?.startApply();
     await waitFor(() => latest.current?.progress?.phase === 'complete');
 
@@ -282,7 +284,7 @@ describe('useUpdates', () => {
         })
       )
     );
-    await flush();
+    await waitFor(() => latest.current !== null);
     latest.current?.startApply();
     await waitFor(() => latest.current?.progress?.phase === 'error');
 
@@ -319,9 +321,9 @@ describe('useUpdates', () => {
         })
       )
     );
-    await flush();
+    await waitFor(() => latest.current !== null);
     latest.current?.startApply();
-    // SSE stream emits installing → restarting → complete; the hook
+    // SSE stream emits installing -> restarting -> complete; the hook
     // stops at restarting. Poll until that final state lands instead
     // of guessing how long the stream takes.
     await waitFor(() => latest.current?.progress?.phase === 'restarting');

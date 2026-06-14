@@ -66,7 +66,11 @@ describe('useHubResource', () => {
   });
 
   test('fetches once and populates data when hub is running', async () => {
-    const fetcher = mock(async () => [{ name: 'a' }, { name: 'b' }]);
+    let calls = 0;
+    const fetcher = mock(async () => {
+      calls += 1;
+      return [{ name: 'a' }, { name: 'b' }];
+    });
     const latest: { current: HubResource<Array<{ name: string }>> | null } = { current: null };
     const { unmount } = render(
       withCli(
@@ -79,7 +83,7 @@ describe('useHubResource', () => {
         })
       )
     );
-    await flush();
+    await waitFor(() => calls >= 1 && latest.current?.data !== null);
     expect(fetcher).toHaveBeenCalledTimes(1);
     expect(latest.current?.data).toEqual([{ name: 'a' }, { name: 'b' }]);
     expect(latest.current?.error).toBeNull();
@@ -103,7 +107,7 @@ describe('useHubResource', () => {
         })
       )
     );
-    await flush();
+    await waitFor(() => latest.current?.error === 'hub down');
     expect(latest.current?.error).toBe('hub down');
     expect(latest.current?.data).toBeNull();
     expect(latest.current?.loading).toBe(false);
