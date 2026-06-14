@@ -91,6 +91,7 @@
     "@brika/serializable": "workspace:*",
     "@brika/testing": "workspace:*",
     "@brika/ui-kit": "workspace:*",
+    "@brika/workspace-tools": "workspace:*",
     "@types/bun": "^1.3.5",
     "picocolors": "^1.1.1",
     "tsdown": "^0.22.2"

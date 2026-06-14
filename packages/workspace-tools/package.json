@@ -26,7 +26,8 @@
   "dependencies": {
     "@brika/cli": "workspace:*",
     "jsonc-parser": "^3.3.1",
-    "picocolors": "^1.1.1"
+    "picocolors": "^1.1.1",
+    "zod": "^4.3.4"
   },
   "devDependencies": {
     "@brika/testing": "workspace:*",

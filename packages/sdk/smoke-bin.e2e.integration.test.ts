@@ -7,7 +7,7 @@ import {
   packPublishForm,
   run,
   startMockRegistry,
-} from '../../scripts/test-registry';
+} from '@brika/workspace-tools/src/test-registry';
 
 /**
  * Registry e2e for the published @brika/sdk.

@@ -3,8 +3,8 @@
  *
  * Reproduces the real npm publish -> install path without a network registry or
  * any dependency: pack a workspace package in its exact publish form (reusing
- * the release-libs transforms so the test can't drift from the real publish) and
- * serve it from a throwaway, native-Bun npm registry (the frozen npm GET
+ * the ./publish-manifest transforms so the test can't drift from the real
+ * publish) and serve it from a throwaway, native-Bun npm registry (the npm GET
  * protocol: packument + tarball with sha512 integrity). A fixture then installs
  * the package by version, exactly as a public consumer would.
  *
@@ -15,7 +15,7 @@
 import { createHash } from 'node:crypto';
 import { readdir } from 'node:fs/promises';
 import { basename, join } from 'node:path';
-import { bundleExports, stripDevManifestFields, stripInternalExports } from './release-libs';
+import { bundleExports, stripDevManifestFields, stripInternalExports } from './publish-manifest';
 
 export interface RunResult {
   code: number;
@@ -44,7 +44,7 @@ export async function run(
 
 /**
  * Pack a workspace package in its npm publish form into `dest`. Applies the same
- * manifest transforms as scripts/release-libs.ts (strip `./internal/*` exports,
+ * manifest transforms as the release CLI (strip `./internal/*` exports,
  * repoint exports src -> dist for bundle packages, drop the dev-only `knip`
  * key), then `bun pm pack`, then restores the on-disk manifest.
  */
