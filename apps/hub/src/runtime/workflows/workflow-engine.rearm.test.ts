@@ -38,6 +38,7 @@ describe('WorkflowEngine re-arm on plugin reload', () => {
   beforeEach(() => {
     stub(PluginManager, {
       setBlockEmitHandler: () => undefined,
+      addReapGuard: () => () => undefined,
       setBlockLogHandler: () => undefined,
       clearBlockEmitHandler: () => undefined,
       clearBlockLogHandler: () => undefined,

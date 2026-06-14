@@ -238,6 +238,27 @@ export class PluginManagerConfig {
    */
   readonly rssBreachSamples = 3;
 
+  /**
+   * Scale-to-zero idle window (ms). When > 0, a plugin process is reaped after
+   * this long with no activity (block input, route, tool call, or trigger
+   * fire), freeing its runtime; the next event that targets it lazily respawns
+   * it. `0` disables reaping (plugins stay resident). A plugin hosting a live,
+   * not-yet-hub-hosted trigger block is never reaped regardless of this value.
+   * Env override: `BRIKA_PLUGIN_IDLE_REAP_MS`.
+   */
+  readonly idleReapMs: number;
+  /**
+   * Keep the N most-recently-active reapable plugins resident past their idle
+   * window, to hide cold-start latency on the hot set. Env override:
+   * `BRIKA_PLUGIN_KEEP_WARM_COUNT`.
+   */
+  readonly keepWarmCount: number;
+  /**
+   * Compile plugin server bundles to JSC bytecode to cut cold-start parse
+   * time. Env override: `BRIKA_PLUGIN_BYTECODE` (1/true/yes/on).
+   */
+  readonly bytecode: boolean;
+
   // Auto-restart configuration
   readonly autoRestartEnabled = true;
   readonly restartBaseDelayMs = 1000;
@@ -253,6 +274,17 @@ export class PluginManagerConfig {
       this.heartbeatEveryMs = config.hub.plugins.heartbeatInterval;
       this.heartbeatTimeoutMs = config.hub.plugins.heartbeatTimeout;
       this.rssSoftLimitBytes = config.hub.plugins.rssSoftLimitBytes;
+      this.idleReapMs = nonNegativeIntEnv(
+        process.env.BRIKA_PLUGIN_IDLE_REAP_MS,
+        config.hub.plugins.idleReapMs
+      );
+      this.keepWarmCount = nonNegativeIntEnv(
+        process.env.BRIKA_PLUGIN_KEEP_WARM_COUNT,
+        config.hub.plugins.keepWarmCount
+      );
+      this.bytecode = process.env.BRIKA_PLUGIN_BYTECODE
+        ? isTruthyEnv(process.env.BRIKA_PLUGIN_BYTECODE)
+        : config.hub.plugins.bytecode;
     } catch {
       // Defaults: ping every 10s, declare dead after 60s without a pong.
       // A 15s timeout was too tight — under any non-trivial IPC load
@@ -264,6 +296,27 @@ export class PluginManagerConfig {
       this.heartbeatTimeoutMs = 60_000;
       // 512 MiB — mirrors ConfigLoader's DEFAULT_RSS_SOFT_LIMIT_BYTES.
       this.rssSoftLimitBytes = 512 * 1024 * 1024;
+      // Scale-to-zero off by default; env can still opt a CI/dev hub in
+      // before the config file is loaded.
+      this.idleReapMs = nonNegativeIntEnv(process.env.BRIKA_PLUGIN_IDLE_REAP_MS, 0);
+      this.keepWarmCount = nonNegativeIntEnv(process.env.BRIKA_PLUGIN_KEEP_WARM_COUNT, 0);
+      this.bytecode = isTruthyEnv(process.env.BRIKA_PLUGIN_BYTECODE);
     }
   }
+}
+
+/**
+ * Parse a non-negative integer env override, falling back to `fallback` when
+ * the value is unset or malformed (a typo must not silently disable reaping
+ * or, worse, set a nonsensical window).
+ */
+function nonNegativeIntEnv(raw: string | undefined, fallback: number): number {
+  if (raw === undefined || raw.trim() === '') {
+    return fallback;
+  }
+  const parsed = Number(raw);
+  if (!Number.isInteger(parsed) || parsed < 0) {
+    return fallback;
+  }
+  return parsed;
 }

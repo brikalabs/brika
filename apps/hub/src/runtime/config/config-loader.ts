@@ -137,6 +137,26 @@ export interface BrikaConfig {
        * killing it abruptly. `0` disables the limit (no RSS-based restarts).
        */
       rssSoftLimitBytes: number;
+      /**
+       * Scale-to-zero: reap an idle plugin process after this many milliseconds
+       * with no activity (no block input, route call, tool call, or trigger
+       * fire). `0` disables reaping (plugins stay resident, the behaviour
+       * before scale-to-zero). A plugin that hosts a live (not yet hub-hosted)
+       * trigger block is never reaped regardless of this value.
+       */
+      idleReapMs: number;
+      /**
+       * Keep the N most-recently-active plugins resident even once their idle
+       * window elapses, to hide cold-start latency on the hot set. `0` keeps
+       * none warm (every idle plugin is eligible for reaping).
+       */
+      keepWarmCount: number;
+      /**
+       * Compile plugin server bundles to JSC bytecode (`bun build --bytecode`)
+       * so cold starts skip parse/compile. Off by default; bytecode is tied to
+       * the Bun version and is regenerated transparently on mismatch.
+       */
+      bytecode: boolean;
     };
     logs: {
       /**
@@ -174,6 +194,15 @@ export interface BrikaConfig {
 const DEFAULT_RSS_SOFT_LIMIT_BYTES = 512 * 1024 * 1024;
 
 /**
+ * Scale-to-zero defaults. `idleReapMs: 0` keeps the pre-scale-to-zero
+ * behaviour (plugins resident forever) so the feature is strictly opt-in;
+ * operators enable it by setting a positive idle window in `brika.yml`.
+ */
+const DEFAULT_IDLE_REAP_MS = 0;
+const DEFAULT_KEEP_WARM_COUNT = 0;
+const DEFAULT_BYTECODE = false;
+
+/**
  * Default config *template*. Never assign this object (or its nested
  * arrays) to `this.#config` directly — mutating methods like `addPlugin`
  * push into `config.plugins`, which would corrupt this module-level
@@ -191,6 +220,9 @@ const DEFAULT_CONFIG: BrikaConfig = {
       heartbeatInterval: 5000,
       heartbeatTimeout: 15000,
       rssSoftLimitBytes: DEFAULT_RSS_SOFT_LIMIT_BYTES,
+      idleReapMs: DEFAULT_IDLE_REAP_MS,
+      keepWarmCount: DEFAULT_KEEP_WARM_COUNT,
+      bytecode: DEFAULT_BYTECODE,
     },
     logs: {
       retentionDays: 7,
@@ -224,6 +256,16 @@ const RssSoftLimitSchema = z.coerce
   .int()
   .nonnegative()
   .catch(DEFAULT_RSS_SOFT_LIMIT_BYTES);
+
+/**
+ * Scale-to-zero field schemas. Like {@link RssSoftLimitSchema}, each falls
+ * back to its documented default on a missing or malformed value rather than
+ * failing the whole config load. `bytecode` is a native YAML boolean (no
+ * coercion, so the string "false" can never read as true).
+ */
+const IdleReapMsSchema = z.coerce.number().int().nonnegative().catch(DEFAULT_IDLE_REAP_MS);
+const KeepWarmCountSchema = z.coerce.number().int().nonnegative().catch(DEFAULT_KEEP_WARM_COUNT);
+const BytecodeSchema = z.boolean().catch(DEFAULT_BYTECODE);
 
 const SECRET_PREFIX = '__secret_';
 
@@ -304,6 +346,9 @@ export class ConfigLoader {
               hubPluginsParsed.rssSoftLimitBytes === undefined
                 ? DEFAULT_CONFIG.hub.plugins.rssSoftLimitBytes
                 : RssSoftLimitSchema.parse(hubPluginsParsed.rssSoftLimitBytes),
+            idleReapMs: IdleReapMsSchema.parse(hubPluginsParsed.idleReapMs),
+            keepWarmCount: KeepWarmCountSchema.parse(hubPluginsParsed.keepWarmCount),
+            bytecode: BytecodeSchema.parse(hubPluginsParsed.bytecode),
           },
           logs: {
             retentionDays:

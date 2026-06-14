@@ -102,10 +102,16 @@ export class BlockRegistry {
   register(block: BlockDefinition, plugin: PluginInfo): void {
     const type = `${plugin.id}:${block.id}`;
 
-    if (this.#blocks.has(type)) {
+    // Warn only when a DIFFERENT plugin claims a type that is already taken.
+    // The same plugin re-registering its own block is legitimate: it happens
+    // every time a scale-to-zero-reaped plugin respawns and replays its blocks
+    // (registrations are kept across reap so the palette and routing survive).
+    const existing = this.#blocks.get(type);
+    if (existing && existing.pluginId !== plugin.id) {
       this.logs.warn('Duplicate block registration', {
         type,
         plugin: plugin.id,
+        existingOwner: existing.pluginId,
       });
     }
 

@@ -30,6 +30,7 @@ const baseBlockMock = {
   list: () => [],
   listByCategory: () => ({}),
   resolve: (t: string) => t,
+  getProvider: () => undefined,
   onBlockRegistered: () => () => {},
   onBlockUnregistered: () => () => {},
 };
@@ -360,6 +361,7 @@ describe('WorkflowEngine - Execution Control', () => {
   beforeEach(() => {
     mockPluginManager = {
       setBlockEmitHandler: () => undefined,
+      addReapGuard: () => () => undefined,
       setBlockLogHandler: () => undefined,
       clearBlockEmitHandler: () => undefined,
       clearBlockLogHandler: () => undefined,
@@ -537,6 +539,7 @@ describe('WorkflowEngine - Global Listeners', () => {
     });
     provide(PluginManager, {
       setBlockEmitHandler: () => undefined,
+      addReapGuard: () => () => undefined,
       setBlockLogHandler: () => undefined,
       clearBlockEmitHandler: () => undefined,
       clearBlockLogHandler: () => undefined,
@@ -631,6 +634,7 @@ describe('WorkflowEngine - Lifecycle', () => {
     });
     provide(PluginManager, {
       setBlockEmitHandler: () => undefined,
+      addReapGuard: () => () => undefined,
       setBlockLogHandler: () => undefined,
       clearBlockEmitHandler: () => undefined,
       clearBlockLogHandler: () => undefined,

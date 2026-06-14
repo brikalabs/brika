@@ -71,6 +71,10 @@ export class WorkflowExecutor {
   // Active workflow state
   #workflow: Workflow | null = null;
   readonly #instanceIds = new Set<string>(); // Block instance IDs
+  /** Plugins that provide this workflow's blocks; pinned against reaping while running. */
+  readonly #providerPlugins = new Set<string>();
+  /** Disposer for the reap guard registered in start(). */
+  #reapGuardDispose: (() => void) | null = null;
   #connections = new Map<string, BlockConnection[]>(); // "blockId.port" -> targets
   readonly #buffers = new Map<string, PortBuffer>(); // "blockId:port" -> last value
   // This executor's own emit/log handlers, kept so stop() removes exactly its
@@ -123,6 +127,19 @@ export class WorkflowExecutor {
     this.#buildBlockDefCache(workflow);
     this.#computeSourceInstances(workflow);
     this.#lastCorrelationId.clear();
+
+    // Pin every plugin this workflow depends on against scale-to-zero reaping,
+    // BEFORE starting any block, so a concurrent reaper sweep cannot kill a
+    // plugin out from under the workflow as it boots. The guard is removed in
+    // stop(). With reaping off this registers an inert predicate.
+    this.#providerPlugins.clear();
+    for (const block of workflow.blocks) {
+      const provider = this.#blocks.getProvider(this.#resolveBlockType(block.type));
+      if (provider) {
+        this.#providerPlugins.add(provider);
+      }
+    }
+    this.#reapGuardDispose = this.#plugins.addReapGuard((name) => this.#providerPlugins.has(name));
 
     // Register this workflow's own emit/log handlers (kept as refs so stop()
     // removes exactly these, not every workflow's).
@@ -181,6 +198,12 @@ export class WorkflowExecutor {
     }
     this.#lastCorrelationId.clear();
     this.#sourceInstances.clear();
+
+    // Release the reap pins: the plugins this workflow held resident may now be
+    // reaped once they go idle (unless another running workflow still owns them).
+    this.#reapGuardDispose?.();
+    this.#reapGuardDispose = null;
+    this.#providerPlugins.clear();
 
     // Stop all block instances via IPC
     for (const instanceId of this.#instanceIds) {

@@ -20,7 +20,8 @@ export const pluginRoutesHandler = group({
       }),
       handler: async ({ params, req, inject }) => {
         const plugin = getOrThrow(inject(PluginManager).get(params.uid), 'Plugin not found');
-        const process = inject(PluginLifecycle).getProcess(plugin.name);
+        // Respawn the plugin if scale-to-zero reaped it (no-op when resident).
+        const process = await inject(PluginLifecycle).ensureStarted(plugin.name);
         if (!process) {
           throw new NotFound('Plugin not running');
         }

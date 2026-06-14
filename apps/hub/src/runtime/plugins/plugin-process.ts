@@ -163,6 +163,28 @@ export class PluginProcess {
   readonly #channel: PluginChannel;
   #lastPong: number;
   #heartbeat?: Timer;
+  /**
+   * Last time the plugin did real work (block input, route, action, tool, or
+   * stream op) or produced output. The scale-to-zero reaper measures idleness
+   * from here. Heartbeats and metric samples deliberately do NOT touch it, or
+   * a plugin would never look idle. Seeded at spawn so a freshly-started plugin
+   * gets a full idle window before it can be reaped.
+   */
+  #lastActivityAt: number;
+  /**
+   * Count of in-flight request/response IPC calls. The reaper never reaps a
+   * plugin mid-call (a route/action/tool awaiting a reply), independent of the
+   * idle window, so a long-running request can't be killed under it.
+   */
+  #inFlight = 0;
+  /**
+   * Block instance IDs this process owns (started here and not yet stopped).
+   * `pushInput` is broadcast to every process, so this lets a process ignore
+   * instances it does not own without an IPC round-trip and, crucially, avoids
+   * counting another plugin's traffic as this one's activity (which would keep
+   * idle plugins alive and defeat scale-to-zero).
+   */
+  readonly #ownedInstances = new Set<string>();
   readonly #blocks = new Set<string>();
   readonly #sparks = new Set<string>();
   readonly #brickTypes = new Set<string>();
@@ -214,6 +236,7 @@ export class PluginProcess {
     this.#channel = channel;
     this.#lastPong = now();
     this.startedAt = now();
+    this.#lastActivityAt = now();
 
     this.name = info.name;
     this.rootDirectory = info.rootDirectory;
@@ -239,6 +262,42 @@ export class PluginProcess {
 
   get lastPong(): number {
     return this.#lastPong;
+  }
+
+  /** Timestamp of the plugin's most recent real work or output. */
+  get lastActivityAt(): number {
+    return this.#lastActivityAt;
+  }
+
+  /** True while one or more request/response IPC calls are awaiting a reply. */
+  get hasInFlight(): boolean {
+    return this.#inFlight > 0;
+  }
+
+  /**
+   * Mark the plugin active "now". Called at every workload entry point and when
+   * the plugin emits, so the reaper measures idleness from genuine work. Public
+   * so the lifecycle can record output activity (block/spark emits) that arrives
+   * over callbacks rather than through this object's methods.
+   */
+  touch(): void {
+    this.#lastActivityAt = now();
+  }
+
+  /**
+   * Run a request/response call while counting it as in-flight and touching
+   * activity on both ends, so the reaper neither kills a plugin mid-call nor
+   * reaps one that just finished work.
+   */
+  async #tracked<T>(fn: () => Promise<T>): Promise<T> {
+    this.#inFlight++;
+    this.touch();
+    try {
+      return await fn();
+    } finally {
+      this.#inFlight--;
+      this.touch();
+    }
   }
 
   get blocks(): ReadonlySet<string> {
@@ -281,12 +340,18 @@ export class PluginProcess {
       };
     }
     try {
-      return await this.#channel.call(startBlock, {
-        blockType,
-        instanceId,
-        workflowId,
-        config,
-      });
+      const result = await this.#tracked(() =>
+        this.#channel.call(startBlock, {
+          blockType,
+          instanceId,
+          workflowId,
+          config,
+        })
+      );
+      if (result.ok) {
+        this.#ownedInstances.add(instanceId);
+      }
+      return result;
     } catch (e) {
       return {
         ok: false,
@@ -299,6 +364,13 @@ export class PluginProcess {
     if (this.#stopped) {
       return;
     }
+    // pushInput is broadcast to every process; ignore instances we do not own
+    // so another plugin's traffic neither crosses our IPC nor resets our idle
+    // clock.
+    if (!this.#ownedInstances.has(instanceId)) {
+      return;
+    }
+    this.touch();
     this.#channel.send(pushInput, {
       instanceId,
       port,
@@ -308,6 +380,7 @@ export class PluginProcess {
   }
 
   stopBlockInstance(instanceId: string): void {
+    this.#ownedInstances.delete(instanceId);
     if (this.#stopped) {
       return;
     }
@@ -402,14 +475,16 @@ export class PluginProcess {
       };
     }
     try {
-      return await this.#channel.call(routeRequest, {
-        routeId,
-        method,
-        path,
-        query,
-        headers,
-        body,
-      });
+      return await this.#tracked(() =>
+        this.#channel.call(routeRequest, {
+          routeId,
+          method,
+          path,
+          query,
+          headers,
+          body,
+        })
+      );
     } catch (e) {
       this.callbacks.onLog('error', `Route handler failed [${method} ${path}]: ${e}`);
       return {
@@ -439,10 +514,12 @@ export class PluginProcess {
       return [];
     }
     try {
-      const result = await this.#channel.call(preferenceOptions, {
-        name,
-        ...(params !== undefined ? { params } : {}),
-      });
+      const result = await this.#tracked(() =>
+        this.#channel.call(preferenceOptions, {
+          name,
+          ...(params !== undefined ? { params } : {}),
+        })
+      );
       return result.options;
     } catch (e) {
       this.callbacks.onLog('warn', `Failed to fetch preference options for "${name}": ${e}`);
@@ -477,13 +554,15 @@ export class PluginProcess {
       };
     }
     try {
-      return await this.#channel.call(
-        callAction,
-        {
-          actionId,
-          input,
-        },
-        0
+      return await this.#tracked(() =>
+        this.#channel.call(
+          callAction,
+          {
+            actionId,
+            input,
+          },
+          0
+        )
       );
     } catch (e) {
       this.callbacks.onLog('error', `Action call failed [${actionId}]: ${e}`);
@@ -507,7 +586,9 @@ export class PluginProcess {
       return { ok: false, content: 'Plugin stopped' };
     }
     try {
-      return await this.#channel.call(callTool, { tool: toolId, args, ctx }, 0);
+      return await this.#tracked(() =>
+        this.#channel.call(callTool, { tool: toolId, args, ctx }, 0)
+      );
     } catch (e) {
       this.callbacks.onLog('error', `Tool call failed [${toolId}]: ${e}`);
       return { ok: false, content: 'Tool call failed' };
@@ -695,6 +776,7 @@ export class PluginProcess {
     });
 
     this.#channel.on(emitSpark, ({ sparkId, payload }) => {
+      this.touch();
       this.callbacks.onSparkEmit(sparkId, payload);
     });
 
@@ -713,6 +795,9 @@ export class PluginProcess {
     });
 
     this.#channel.on(blockEmit, ({ instanceId, port, data, causationId }) => {
+      // A plugin emitting is doing real work (e.g. a long async task that
+      // finishes well after its triggering input): defer the reaper.
+      this.touch();
       this.callbacks.onBlockEmit(instanceId, port, data, causationId);
     });
 

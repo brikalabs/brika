@@ -99,6 +99,7 @@ describe('WorkflowExecutor - Lifecycle', () => {
     logHandler = null;
     startedBlocks = [];
     stub(PluginManager, {
+      addReapGuard: () => () => undefined,
       setBlockEmitHandler: (
         handler: (instanceId: string, port: string, data: Json, causationId?: string) => void
       ) => {
@@ -227,6 +228,7 @@ describe('WorkflowExecutor - Connection Map Building', () => {
 
   beforeEach(() => {
     stub(PluginManager, {
+      addReapGuard: () => () => undefined,
       setBlockEmitHandler: () => undefined,
       setBlockLogHandler: () => undefined,
       clearBlockEmitHandler: () => undefined,
@@ -350,6 +352,7 @@ describe('WorkflowExecutor - Data Injection', () => {
     injectedData = [];
 
     stub(PluginManager, {
+      addReapGuard: () => () => undefined,
       setBlockEmitHandler: () => undefined,
       setBlockLogHandler: () => undefined,
       clearBlockEmitHandler: () => undefined,
@@ -464,6 +467,7 @@ describe('WorkflowExecutor - Event Listeners', () => {
 
   beforeEach(() => {
     stub(PluginManager, {
+      addReapGuard: () => () => undefined,
       startBlock: () =>
         Promise.resolve({
           ok: true,
@@ -582,6 +586,7 @@ describe('WorkflowExecutor - Block Emit and Data Flow', () => {
     pushedInputs = [];
 
     stub(PluginManager, {
+      addReapGuard: () => () => undefined,
       setBlockEmitHandler: (
         handler: (instanceId: string, port: string, data: Json, causationId?: string) => void
       ) => {
@@ -896,6 +901,7 @@ describe('WorkflowExecutor - Block Start Error Handling', () => {
 
   beforeEach(() => {
     stub(PluginManager, {
+      addReapGuard: () => () => undefined,
       setBlockEmitHandler: () => undefined,
       setBlockLogHandler: () => undefined,
       clearBlockEmitHandler: () => undefined,
@@ -946,6 +952,7 @@ describe('WorkflowExecutor - Block Start Error Handling', () => {
     reset();
 
     stub(PluginManager, {
+      addReapGuard: () => () => undefined,
       setBlockEmitHandler: () => undefined,
       setBlockLogHandler: () => undefined,
       clearBlockEmitHandler: () => undefined,
@@ -986,6 +993,7 @@ describe('WorkflowExecutor - Block Type Resolution', () => {
     startedTypes = [];
 
     stub(PluginManager, {
+      addReapGuard: () => () => undefined,
       setBlockEmitHandler: () => undefined,
       setBlockLogHandler: () => undefined,
       clearBlockEmitHandler: () => undefined,
@@ -1077,6 +1085,7 @@ describe('WorkflowExecutor - Complex Workflows', () => {
 
   beforeEach(() => {
     stub(PluginManager, {
+      addReapGuard: () => () => undefined,
       setBlockEmitHandler: () => undefined,
       setBlockLogHandler: () => undefined,
       clearBlockEmitHandler: () => undefined,
