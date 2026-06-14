@@ -131,6 +131,11 @@ export interface PreludeBridge {
       ): Promise<{ ok: boolean; content?: string; data?: Json }>;
       listTools(): Promise<Array<{ id: string; description?: string; inputSchema?: Json }>>;
     }) => { pushInput(portId: string, data: unknown): void; stop(): void };
+    /**
+     * Host-scheduled trigger declaration; forwarded to the hub if present.
+     * Structural mirror of `BlockTrigger` in `./blocks/types`.
+     */
+    trigger?: { kind: 'interval'; intervalField: string; output: string };
   }): { id: string };
 
   // -- Sparks (manifest-validated) --

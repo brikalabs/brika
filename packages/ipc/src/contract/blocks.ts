@@ -29,6 +29,24 @@ export const BlockPort = z.object({
 });
 export type BlockPort = z.infer<typeof BlockPort>;
 
+/**
+ * Host-scheduled trigger declaration. A discriminated union on `kind` so new
+ * schedule kinds (cron, webhook, ...) are added as additional members without
+ * breaking older peers: an unknown `kind` simply fails this optional field's
+ * parse and the block degrades to a normal (non-hosted) block.
+ *
+ * Wire mirror of `@brika/sdk`'s `BlockTrigger` type; adding a `kind` means
+ * updating both, plus the prelude's `BlockTriggerSpec` and the executor switch.
+ */
+export const BlockTrigger = z.discriminatedUnion('kind', [
+  z.object({
+    kind: z.literal('interval'),
+    intervalField: z.string(),
+    output: z.string(),
+  }),
+]);
+export type BlockTrigger = z.infer<typeof BlockTrigger>;
+
 export const BlockDefinition = z.object({
   id: z.string(),
   name: z.string(),
@@ -39,6 +57,15 @@ export const BlockDefinition = z.object({
   inputs: z.array(BlockPort),
   outputs: z.array(BlockPort),
   schema: JsonRecord.optional(),
+  /**
+   * Present when the block is a host-scheduled trigger; absent otherwise.
+   * `.catch(undefined)` is load-bearing for forward-compat: a future trigger
+   * `kind` this peer doesn't know fails the union, and without the catch that
+   * would fail the WHOLE block parse and drop the block from the registry. With
+   * it, only the trigger degrades to undefined, so the block still registers and
+   * runs via its in-plugin fallback.
+   */
+  trigger: BlockTrigger.optional().catch(undefined),
 });
 export type BlockDefinition = z.infer<typeof BlockDefinition>;
 

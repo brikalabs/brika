@@ -236,6 +236,13 @@ export const clock = defineBlock({
   config: z.object({
     interval: z.duration(undefined, 'Interval between ticks'),
   }),
+  // Host-scheduled: the hub owns the interval and fires `tick`, so this block
+  // needs no resident process and a clock-only plugin can be reaped between
+  // ticks. The `run()` below is kept as a fallback: an older hub that does not
+  // understand `trigger` ignores it and schedules the clock in-process instead,
+  // so the block behaves identically either way (no double-fire, since a hub
+  // that honours `trigger` never starts the block in the plugin).
+  trigger: { kind: 'interval', intervalField: 'interval', output: 'tick' },
   run: ({ outputs, config, start }) => {
     start(interval(config.interval))
       .pipe(

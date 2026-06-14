@@ -7,11 +7,13 @@
  */
 
 import { inject } from '@brika/di';
+import type { BlockTrigger } from '@brika/sdk';
 import { inferType, isCompatible, type TypeDescriptor } from '@brika/type-system';
 import { BlockRegistry } from '@/runtime/blocks';
 import { Logger } from '@/runtime/logs/log-router';
 import { PluginManager } from '@/runtime/plugins/plugin-manager';
 import type { Json } from '@/types';
+import { TriggerRegistry } from './trigger-registry';
 import type { BlockConnection, Workflow, WorkflowBlock } from './types';
 
 /**
@@ -71,6 +73,16 @@ export class WorkflowExecutor {
   // Active workflow state
   #workflow: Workflow | null = null;
   readonly #instanceIds = new Set<string>(); // Block instance IDs
+  /** Plugins that provide this workflow's blocks; pinned against reaping while running. */
+  readonly #providerPlugins = new Set<string>();
+  /** Disposer for the reap guard registered in start(). */
+  #reapGuardDispose: (() => void) | null = null;
+  /** Host-scheduled triggers for this workflow's hub-owned trigger blocks. */
+  readonly #triggers = new TriggerRegistry();
+  /** Per-trigger fire count, so each tick carries an incrementing `count`. */
+  readonly #triggerFireCount = new Map<string, number>();
+  /** Per-instance delivery chains: serialize delivery + respawn for one block. */
+  readonly #deliverChains = new Map<string, Promise<void>>();
   #connections = new Map<string, BlockConnection[]>(); // "blockId.port" -> targets
   readonly #buffers = new Map<string, PortBuffer>(); // "blockId:port" -> last value
   // This executor's own emit/log handlers, kept so stop() removes exactly its
@@ -124,6 +136,31 @@ export class WorkflowExecutor {
     this.#computeSourceInstances(workflow);
     this.#lastCorrelationId.clear();
 
+    // Pin every plugin this workflow depends on against scale-to-zero reaping,
+    // BEFORE starting any block, so a concurrent reaper sweep cannot kill a
+    // plugin out from under the workflow as it boots. The guard is removed in
+    // stop(). With reaping off this registers an inert predicate.
+    // Pin only the providers that MUST stay resident: in-plugin source blocks
+    // (run roots that run their own timer/subscription in the plugin). A hosted
+    // trigger fires from the hub, and a downstream block is re-created on demand
+    // when input arrives (see #deliverOnce), so their plugins may reap while
+    // idle and respawn on the next event. This is what lets an action plugin
+    // scale to zero between infrequent trigger fires. A respawned downstream
+    // block is re-created fresh, so a block must not rely on in-memory state
+    // surviving an idle reap (persist via the storage API if it must endure).
+    this.#providerPlugins.clear();
+    for (const block of workflow.blocks) {
+      const isInPluginSource = this.#sourceInstances.has(block.id) && !this.#hostedTrigger(block);
+      if (!isInPluginSource) {
+        continue;
+      }
+      const provider = this.#blocks.getProvider(this.#resolveBlockType(block.type));
+      if (provider) {
+        this.#providerPlugins.add(provider);
+      }
+    }
+    this.#reapGuardDispose = this.#plugins.addReapGuard((name) => this.#providerPlugins.has(name));
+
     // Register this workflow's own emit/log handlers (kept as refs so stop()
     // removes exactly these, not every workflow's).
     this.#blockEmitHandler = (
@@ -147,9 +184,15 @@ export class WorkflowExecutor {
     };
     this.#plugins.setBlockLogHandler(this.#blockLogHandler);
 
-    // Start all blocks
+    // Start all blocks. Hub-owned triggers are scheduled here instead of being
+    // started in the plugin, so their plugin need not be resident.
     for (const block of workflow.blocks) {
-      await this.#startBlock(block, workflow);
+      const trigger = this.#hostedTrigger(block);
+      if (trigger) {
+        this.#startHostedTrigger(block, trigger, workflow);
+      } else {
+        await this.#startBlock(block, workflow);
+      }
     }
 
     this.#emit({
@@ -181,6 +224,17 @@ export class WorkflowExecutor {
     }
     this.#lastCorrelationId.clear();
     this.#sourceInstances.clear();
+
+    // Cancel host-scheduled triggers for this workflow.
+    this.#triggers.clear();
+    this.#triggerFireCount.clear();
+    this.#deliverChains.clear();
+
+    // Release the reap pins: the plugins this workflow held resident may now be
+    // reaped once they go idle (unless another running workflow still owns them).
+    this.#reapGuardDispose?.();
+    this.#reapGuardDispose = null;
+    this.#providerPlugins.clear();
 
     // Stop all block instances via IPC
     for (const instanceId of this.#instanceIds) {
@@ -260,7 +314,7 @@ export class WorkflowExecutor {
     this.#emit({ type: 'run.opened', workflowId: workflow.id, blockId, correlationId });
     this.#emit({ type: 'block.start', workflowId: workflow.id, blockId, port, correlationId });
 
-    this.#plugins.pushBlockInput(blockId, port, payload, correlationId);
+    this.#deliverTo(blockId, port, payload, correlationId);
     return true;
   }
 
@@ -379,6 +433,48 @@ export class WorkflowExecutor {
         }
       );
     }
+  }
+
+  /**
+   * The hosted-trigger declaration for a block, if it is a hub-owned trigger of
+   * a kind this hub understands. An unknown/absent kind degrades to a normal
+   * block, which is what makes new trigger kinds forward-compatible.
+   */
+  #hostedTrigger(block: WorkflowBlock): BlockTrigger | undefined {
+    const trigger = this.#blockDefCache.get(block.id)?.def.trigger;
+    return trigger?.kind === 'interval' ? trigger : undefined;
+  }
+
+  /**
+   * Schedule a hub-owned trigger block. The hub drives the interval and fires
+   * the block's output, so the providing plugin needs no resident process. The
+   * block is recorded as a run root so dispatch/ownsBlock treat it like a source.
+   */
+  #startHostedTrigger(block: WorkflowBlock, trigger: BlockTrigger, workflow: Workflow): void {
+    this.#instanceIds.add(block.id);
+    this.#triggerFireCount.set(block.id, 0);
+    const intervalMs = Number((block.config ?? {})[trigger.intervalField]);
+    const scheduled = this.#triggers.register(block.id, { kind: 'interval', intervalMs }, () =>
+      this.#fireTrigger(block.id, trigger.output)
+    );
+    if (!scheduled) {
+      this.#emit({
+        type: 'block.error',
+        workflowId: workflow.id,
+        blockId: block.id,
+        error: `Trigger not scheduled: config "${trigger.intervalField}" must be a positive number of milliseconds`,
+      });
+    }
+  }
+
+  /**
+   * Fire a hub-owned trigger: emit a `{ count, ts }` tick on its output through
+   * the normal run path (opens a fresh run, buffers, dispatches downstream).
+   */
+  #fireTrigger(blockId: string, port: string): void {
+    const count = (this.#triggerFireCount.get(blockId) ?? 0) + 1;
+    this.#triggerFireCount.set(blockId, count);
+    this.#onBlockEmit(blockId, port, { count, ts: Date.now() });
   }
 
   /**
@@ -504,7 +600,107 @@ export class WorkflowExecutor {
         correlationId,
       });
 
-      this.#plugins.pushBlockInput(conn.to, targetPort, data, correlationId);
+      this.#deliverTo(conn.to, targetPort, data, correlationId);
+    }
+  }
+
+  /**
+   * Deliver input to a block instance, respawning its plugin if scale-to-zero
+   * reaped it. Fast path: a single broadcast that the owning process handles.
+   * Slow path (no owner): the plugin was reaped while idle between events, so
+   * re-create the instance (startBlock, which lazily respawns the plugin) and
+   * retry once. Deliveries to one instance are serialized so a burst neither
+   * double-respawns nor reorders, and the queued events act as the front-door
+   * buffer that holds work while the plugin boots.
+   */
+  #deliverTo(blockId: string, port: string, data: Json, correlationId: string): void {
+    const pending = this.#deliverChains.get(blockId);
+    if (!pending) {
+      // Fast path: no respawn in flight for this instance, deliver synchronously
+      // to the resident owner. This keeps the common case allocation- and
+      // microtask-free, and delivery stays synchronous (what callers expect).
+      if (this.#plugins.pushBlockInput(blockId, port, data, correlationId)) {
+        return;
+      }
+      // No owner: the target's plugin was reaped. Begin a respawn+deliver chain.
+      this.#enqueueDeliver(blockId, Promise.resolve(), port, data, correlationId);
+      return;
+    }
+    // A respawn is already in flight for this instance: queue behind it so a
+    // burst delivers in order and respawns at most once.
+    this.#enqueueDeliver(blockId, pending, port, data, correlationId);
+  }
+
+  #enqueueDeliver(
+    blockId: string,
+    prev: Promise<void>,
+    port: string,
+    data: Json,
+    correlationId: string
+  ): void {
+    const run = prev.then(() => this.#deliverOnce(blockId, port, data, correlationId));
+    // Swallow rejections so one failed delivery cannot wedge the chain, and drop
+    // the chain entry once drained so later deliveries take the sync fast path.
+    const guarded = run
+      .catch(() => undefined)
+      .then(() => {
+        if (this.#deliverChains.get(blockId) === guarded) {
+          this.#deliverChains.delete(blockId);
+        }
+      });
+    this.#deliverChains.set(blockId, guarded);
+  }
+
+  async #deliverOnce(
+    blockId: string,
+    port: string,
+    data: Json,
+    correlationId: string
+  ): Promise<void> {
+    if (this.#plugins.pushBlockInput(blockId, port, data, correlationId)) {
+      return;
+    }
+    // No resident owner: the target's plugin was reaped. Re-create the instance
+    // (respawns the plugin on demand) then deliver. Bail if the workflow stopped
+    // while this was queued.
+    const workflow = this.#workflow;
+    const entry = this.#blockDefCache.get(blockId);
+    if (!workflow || !entry || !this.#instanceIds.has(blockId)) {
+      return;
+    }
+    const resolvedType = this.#resolveBlockType(entry.block.type);
+    const result = await this.#plugins.startBlock(
+      resolvedType,
+      blockId,
+      workflow.id,
+      entry.block.config ?? {}
+    );
+    if (!this.#instanceIds.has(blockId)) {
+      // The workflow stopped during the respawn. startBlock may have revived the
+      // plugin and created a live instance; stop it so it does not linger
+      // untracked (which would also collide with a later restart's startBlock).
+      if (result.ok) {
+        this.#plugins.stopBlockInstance(blockId);
+      }
+      return;
+    }
+    if (!result.ok) {
+      this.#emit({
+        type: 'block.error',
+        workflowId: workflow.id,
+        blockId,
+        error: result.error ?? 'Failed to respawn block for delivery',
+      });
+      return;
+    }
+    if (!this.#plugins.pushBlockInput(blockId, port, data, correlationId)) {
+      // Respawned but still no owner: surface it rather than silently dropping.
+      this.#emit({
+        type: 'block.error',
+        workflowId: workflow.id,
+        blockId,
+        error: 'Respawned block but delivery found no owner',
+      });
     }
   }
 

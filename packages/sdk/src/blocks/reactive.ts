@@ -9,6 +9,7 @@ import type { FlowErrorHandler } from '@brika/flow';
 import { z } from 'zod';
 import type { Json } from '../types';
 import type { GenericRef, PassthroughRef, ResolvedRef } from './schema-types';
+import type { BlockTrigger } from './types';
 
 // Re-export everything from @brika/flow
 export * from '@brika/flow';
@@ -245,6 +246,12 @@ export interface ReactiveBlockSpec<
   outputs?: TOutputs;
   /** Zod config schema */
   config: TConfig;
+  /**
+   * Declare this block as a host-scheduled trigger (see {@link BlockTrigger}).
+   * The hub owns the schedule and fires `trigger.output`, so the block needs no
+   * in-process timer and a trigger-only plugin can be reaped between fires.
+   */
+  trigger?: BlockTrigger;
 }
 
 /**

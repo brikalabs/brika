@@ -87,7 +87,13 @@ export { getTypeMarker, parseResolvedMarker, TypeMarker } from './blocks/schema-
 // Block Metadata Types
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type { BlockDefinition, BlockPort, BlockSchema, PortDirection } from './blocks';
+export type {
+  BlockDefinition,
+  BlockPort,
+  BlockSchema,
+  BlockTrigger,
+  PortDirection,
+} from './blocks';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Logging

@@ -53,6 +53,7 @@
 * [System Overview](architecture/overview.md)
 * [Hub Server](architecture/hub.md)
 * [Plugin Supervisor](architecture/plugin-supervisor.md)
+* [Scale to Zero](architecture/scale-to-zero.md)
 * [IPC Protocol](architecture/ipc-protocol.md)
 * [Compiler](architecture/compiler.md)
 * [Externals Rewrite](architecture/externals-rewrite.md)

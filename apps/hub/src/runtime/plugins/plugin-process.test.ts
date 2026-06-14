@@ -286,12 +286,20 @@ describe('PluginProcess', () => {
     });
 
     describe('pushInput', () => {
-      test('sends input to channel', () => {
+      test('sends input to channel', async () => {
+        // pushInput only delivers to instances this process owns; start one first.
+        await process.startBlock('test-block', 'instance-1', 'workflow-1', {});
         process.pushInput('instance-1', 'input', {
           value: 42,
         });
 
         expect(mockChannel.send).toHaveBeenCalled();
+      });
+
+      test('ignores input for an instance it does not own', () => {
+        process.pushInput('unowned-instance', 'input', { value: 1 });
+
+        expect(mockChannel.send).not.toHaveBeenCalled();
       });
 
       test('does nothing when stopped', () => {

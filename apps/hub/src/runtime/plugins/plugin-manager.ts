@@ -287,7 +287,7 @@ export class PluginManager {
     this.#eventHandler.clearBlockLogHandler(handler);
   }
 
-  startBlock(
+  async startBlock(
     blockType: string,
     instanceId: string,
     workflowId: string,
@@ -298,21 +298,33 @@ export class PluginManager {
   }> {
     const pluginName = this.#blocks.getProvider(blockType);
     if (!pluginName) {
-      return Promise.resolve({
+      return {
         ok: false,
         error: `Unknown block type: ${blockType}`,
-      });
+      };
     }
 
-    const process = this.#lifecycle.getProcess(pluginName);
+    // Lazily respawn the owning plugin if it was reaped by scale-to-zero (or
+    // never started). With reaping off this is just a Map lookup, so the
+    // pre-scale-to-zero path is unchanged.
+    const process = await this.#lifecycle.ensureStarted(pluginName);
     if (!process) {
-      return Promise.resolve({
+      return {
         ok: false,
         error: `Plugin not loaded: ${pluginName}`,
-      });
+      };
     }
 
     return process.startBlock(blockType, instanceId, workflowId, config);
+  }
+
+  /**
+   * Pin plugins against scale-to-zero reaping while a caller needs them
+   * resident (e.g. a running workflow that owns their blocks). Returns a
+   * disposer. See {@link PluginLifecycle.addReapGuard}.
+   */
+  addReapGuard(guard: (name: string) => boolean): () => void {
+    return this.#lifecycle.addReapGuard(guard);
   }
 
   broadcastTimezone(timezone: string | null): void {
@@ -321,12 +333,22 @@ export class PluginManager {
     }
   }
 
-  pushBlockInput(instanceId: string, port: string, data: Json, causationId?: string): void {
-    // Find the process that owns this block instance
-    // For now, broadcast to all processes (they'll ignore if instance not found)
+  /**
+   * Deliver input to a block instance by broadcasting to all processes; each
+   * delivers only to instances it owns. Returns true if some process owned and
+   * delivered it. A false return means no resident process owns the instance
+   * (e.g. its plugin was reaped), which the executor uses to respawn the plugin,
+   * re-create the instance, and retry. This itself does NOT respawn, so it stays
+   * a cheap fire-and-forget on the hot path.
+   */
+  pushBlockInput(instanceId: string, port: string, data: Json, causationId?: string): boolean {
+    let delivered = false;
     for (const process of this.#lifecycle.listProcesses()) {
-      process.pushInput(instanceId, port, data, causationId);
+      if (process.pushInput(instanceId, port, data, causationId)) {
+        delivered = true;
+      }
     }
+    return delivered;
   }
 
   stopBlockInstance(instanceId: string): void {
