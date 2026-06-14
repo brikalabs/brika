@@ -15,9 +15,9 @@
  *
  * Threshold defaults to 0.80 (mirrors `bunfig.toml`) and can be overridden:
  *
- *   bun scripts/check-coverage.ts                 # 0.80
- *   bun scripts/check-coverage.ts --threshold=0.85
- *   bun scripts/check-coverage.ts --threshold=0.75 --skip=packages/i18n-dev
+ *   bun packages/workspace-tools/src/check-coverage.ts                 # 0.80
+ *   bun packages/workspace-tools/src/check-coverage.ts --threshold=0.85
+ *   bun packages/workspace-tools/src/check-coverage.ts --threshold=0.75 --skip=packages/i18n-dev
  *
  * Multiple --skip flags are allowed. Skipped packages still run their
  * tests; their numbers just don't gate the run.

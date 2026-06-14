@@ -6,7 +6,7 @@
 # Surfaces here are either pending a test-framework decision (apps/ui),
 # pure content (apps/docs), thin CLI wrappers (apps/console, apps/build),
 # or rendering primitives without a harness yet (packages/tui).
-# Keep in sync with scripts/check-coverage.ts DEFAULT_EXEMPT.
+# Keep in sync with packages/workspace-tools/src/check-coverage.ts DEFAULT_EXEMPT.
 coverageSkipSourceFiles = [
   "apps/ui/**/*",
   "apps/docs/**/*",
@@ -18,7 +18,7 @@ coverageSkipSourceFiles = [
   "**/*.d.ts"
 ]
 # Bun 1.3.14 reads this value but does not yet enforce it in the runner.
-# `scripts/check-coverage.ts` is the actual CI gate (see TESTING.md).
+# `packages/workspace-tools/src/check-coverage.ts` is the actual CI gate (see TESTING.md).
 # The threshold here documents intent and will be honoured once Bun
 # implements the check.
 coverageThreshold = 0.80

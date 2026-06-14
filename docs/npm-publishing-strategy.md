@@ -320,7 +320,7 @@ fallback; OIDC takes over afterward.
    metadata to `sil-electricity`. Verify with `bun pm pack --dry-run`.
 4. **Changesets spike + adoption.** Add and configure Changesets; spike-verify
    `changeset version` against `bun.lock`; add scripts and
-   `scripts/sync-engines-brika.ts` + `scripts/release-libs.ts`. No CI yet.
+   `packages/workspace-tools/src/sync-engines-brika.ts` + `scripts/release-libs.ts`. No CI yet.
 5. **`publish-libs` CI job.** Tagged-gated, OIDC, prebuild, typecheck, toposorted
    idempotent provenance publish. Register trusted publishers for the 9 lib names.
 6. **`publish-plugins` CI job + verified badge.** `needs: publish-libs`; verify

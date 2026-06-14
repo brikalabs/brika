@@ -105,9 +105,9 @@ jobs:
           restore-keys: bun-${{ runner.os }}-
       - run: bun install --frozen-lockfile
       - name: Unit-test the version-gate logic
-        run: bun test scripts/check-version-monotonic.test.ts
+        run: bun test packages/workspace-tools/src/check-version-monotonic.test.ts
       - name: Fail PR if release version regresses below latest tag
-        run: bun scripts/check-version-monotonic.ts
+        run: bun packages/workspace-tools/src/check-version-monotonic.ts
 
   smoke-bin:
     needs: setup
@@ -162,7 +162,7 @@ jobs:
       - run: bun install --frozen-lockfile
 
       - name: Run tests with coverage
-        run: bun scripts/test-ci.ts
+        run: bun packages/workspace-tools/src/test-ci.ts
 
       - name: Upload coverage report
         if: ${{ !cancelled() }}

@@ -18,14 +18,16 @@
  * manifests the publisher ships always advertise the correct hub range.
  *
  * Usage:
- *   bun run scripts/sync-engines-brika.ts
- *   BRIKA_RELEASE_VERSION=0.5.0 bun run scripts/sync-engines-brika.ts
+ *   bun run packages/workspace-tools/src/sync-engines-brika.ts
+ *   BRIKA_RELEASE_VERSION=0.5.0 bun run packages/workspace-tools/src/sync-engines-brika.ts
  */
 
+import { join } from 'node:path';
 import { Glob } from 'bun';
 import { z } from 'zod';
 
-const REPO_ROOT = new URL('..', import.meta.url).pathname;
+// Always invoked from the repo root (via the root `sync:engines-brika` script).
+const REPO_ROOT = process.cwd();
 
 /** Minimal shape we read/write; everything else in the manifest is preserved. */
 const pluginManifestSchema = z
@@ -46,7 +48,7 @@ async function resolveReleaseVersion(): Promise<string> {
   if (typeof fromEnv === 'string' && fromEnv.trim() !== '') {
     return semverSchema.parse(fromEnv.trim());
   }
-  const rootRaw: unknown = await Bun.file(new URL('../package.json', import.meta.url)).json();
+  const rootRaw: unknown = await Bun.file(join(REPO_ROOT, 'package.json')).json();
   const root = z.object({ version: z.string() }).loose().parse(rootRaw);
   return semverSchema.parse(root.version);
 }
@@ -67,7 +69,7 @@ async function main(): Promise<void> {
   const unchanged: string[] = [];
 
   for await (const relPath of glob.scan({ cwd: REPO_ROOT, onlyFiles: true })) {
-    const file = Bun.file(new URL(`../${relPath}`, import.meta.url));
+    const file = Bun.file(join(REPO_ROOT, relPath));
     const raw = z.record(z.string(), z.unknown()).parse(JSON.parse(await file.text()));
     const manifest = pluginManifestSchema.parse(raw);
 
