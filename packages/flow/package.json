@@ -1,6 +1,7 @@
 {
   "name": "@brika/flow",
   "version": "0.4.0",
+  "private": true,
   "description": "Reactive stream library for BRIKA workflows",
   "type": "module",
   "license": "MIT",

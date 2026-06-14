@@ -1,6 +1,7 @@
 {
   "name": "@brika/serializable",
   "version": "0.4.0",
+  "private": true,
   "description": "Serialization utilities for BRIKA with Zod schema support",
   "type": "module",
   "license": "MIT",

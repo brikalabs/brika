@@ -19,6 +19,10 @@ const result = await Bun.build({
   // brika:embedded-cli is the compiled-binary delegation module; the lean bin
   // never runs compiled, so the dynamic import stays dormant and unresolved.
   external: ['@brika/sdk', '@typescript/native-preview', 'brika:embedded-cli'],
+  // Minify the shipped bin: it inlines the whole build toolchain, so mangling
+  // the internal closure ~halves the on-disk size. String literals (user-facing
+  // messages, the external module specifiers) are preserved, so behavior holds.
+  minify: true,
   banner: '#!/usr/bin/env bun',
 });
 

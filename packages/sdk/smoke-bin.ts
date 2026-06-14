@@ -1,26 +1,30 @@
 /**
- * Packed-tarball smoke test for the `brika` author CLI.
+ * Packed-tarball smoke test for the published @brika/sdk.
  *
- * Proves the published @brika/sdk gives a plugin a WORKING, self-contained
- * `brika` bin when the plugin depends on ONLY @brika/sdk. It packs the SDK
- * (plus its workspace runtime-dep closure, since those aren't on npm yet),
- * installs the tarballs into a throwaway fixture plugin (so the SDK's
- * devDependencies, @brika/compiler / @brika/cli / @brika/schema, are NOT
- * present), and runs `brika build`/`verify` from the plugin's node_modules.
+ * Proves the BUNDLED @brika/sdk gives a plugin a working, self-contained
+ * toolchain when the plugin depends on ONLY @brika/sdk. It reproduces the exact
+ * npm publish artifact: build the dist bundle (private closure inlined) plus the
+ * `brika` bin, apply the publish manifest transform (exports src -> dist, strip
+ * the workspace-only `./internal/*` subpaths) reusing scripts/release-libs.ts so
+ * the test can never drift from the real publish, pack JUST @brika/sdk (NO
+ * closure tarballs -- they're inlined into dist/pkg), install it into a throwaway
+ * fixture plugin, and run `brika build`/`verify`/`install` from the plugin's
+ * node_modules.
  *
- * If the bin were not bundled (toolchain inlined) this fails with
- * "cannot find @brika/compiler", which is exactly the regression this guards:
- * a missing build step, `files` not shipping dist/bin, or a non-self-contained bin.
+ * If the bundle leaked a private @brika/* import, or `files` failed to ship
+ * dist/pkg or dist/bin, or the bin were not self-contained, the install or the
+ * `brika build` here fails: exactly the regressions this guards.
  *
  * Run: `bun run smoke:bin` (also wired into CI).
  */
 
 import { mkdir, mkdtemp, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { join } from 'node:path';
+import { bundleExports, stripInternalExports } from '../../scripts/release-libs';
 
 const sdkDir = import.meta.dir;
-const packagesDir = dirname(sdkDir);
+const manifestPath = join(sdkDir, 'package.json');
 
 function fail(message: string): never {
   console.error(`\n✗ smoke: ${message}\n`);
@@ -47,57 +51,6 @@ async function run(
   return { code, output: `${stdout}${stderr}` };
 }
 
-type Manifest = { name: string; dependencies?: Record<string, string> };
-
-/** Map every workspace package name to its directory. */
-async function workspaceIndex(): Promise<Map<string, string>> {
-  const index = new Map<string, string>();
-  for (const entry of await readdir(packagesDir, { withFileTypes: true })) {
-    if (!entry.isDirectory()) {
-      continue;
-    }
-    const dir = join(packagesDir, entry.name);
-    const pkgPath = join(dir, 'package.json');
-    if (!(await Bun.file(pkgPath).exists())) {
-      continue;
-    }
-    const pkg: Manifest = await Bun.file(pkgPath).json();
-    index.set(pkg.name, dir);
-  }
-  return index;
-}
-
-/**
- * Walk @brika/sdk's `workspace:` dependency closure. These siblings aren't on
- * npm, so the fixture must install them from local tarballs to mimic what the
- * registry will serve once @brika/sdk is published.
- */
-async function workspaceDepClosure(
-  start: string,
-  index: Map<string, string>
-): Promise<Set<string>> {
-  const closure = new Set<string>();
-  const queue = [start];
-  while (queue.length > 0) {
-    const name = queue.pop();
-    if (!name) {
-      continue;
-    }
-    const dir = index.get(name);
-    if (!dir) {
-      continue;
-    }
-    const pkg: Manifest = await Bun.file(join(dir, 'package.json')).json();
-    for (const [dep, spec] of Object.entries(pkg.dependencies ?? {})) {
-      if (spec.startsWith('workspace:') && index.has(dep) && !closure.has(dep)) {
-        closure.add(dep);
-        queue.push(dep);
-      }
-    }
-  }
-  return closure;
-}
-
 /** Pack a workspace package into `dest` and return its tarball path. */
 async function pack(dir: string, dest: string): Promise<string> {
   const before = new Set(await readdir(dest));
@@ -112,10 +65,17 @@ async function pack(dir: string, dest: string): Promise<string> {
   return join(dest, produced);
 }
 
-const sdkVersion: string = (await Bun.file(join(sdkDir, 'package.json')).json()).version;
+const sdkVersion: string = (await Bun.file(manifestPath).json()).version;
 
-// 1. Build the bin so the tarball ships a fresh dist/bin/brika.js.
-console.log('• building bin');
+// 1. Build the publish artifacts: the dist bundle (private closure inlined) and
+//    the self-contained `brika` bin.
+console.log('• building dist bundle + bin');
+if (
+  (await run(['bun', 'run', 'build:dist'], sdkDir, { NODE_OPTIONS: '--max-old-space-size=8192' }))
+    .code !== 0
+) {
+  fail('build:dist failed');
+}
 if ((await run(['bun', 'run', 'build:bin'], sdkDir)).code !== 0) {
   fail('build:bin failed');
 }
@@ -125,22 +85,26 @@ try {
   const tarDir = join(work, 'tarballs');
   await mkdir(tarDir, { recursive: true });
 
-  // 2. Pack @brika/sdk plus its workspace runtime-dep closure.
-  console.log('• packing @brika/sdk and its workspace deps');
-  const index = await workspaceIndex();
-  const sdkTarball = await pack(sdkDir, tarDir);
-  const overrides: Record<string, string> = {};
-  for (const dep of await workspaceDepClosure('@brika/sdk', index)) {
-    const depDir = index.get(dep);
-    if (!depDir) {
-      fail(`workspace dep ${dep} has no directory`);
-    }
-    overrides[dep] = `file:${await pack(depDir, tarDir)}`;
+  // 2. Pack @brika/sdk in PUBLISH form: repoint exports src -> dist (so consumers
+  //    get the inlined bundle, not raw `.ts`) and strip the workspace-only
+  //    `./internal/*` subpaths, exactly as scripts/release-libs.ts does at
+  //    publish. NO closure tarballs: the closure is inlined into dist/pkg, so a
+  //    plugin installs ONLY @brika/sdk.
+  console.log('• packing @brika/sdk (publish form, closure inlined)');
+  const original = await Bun.file(manifestPath).text();
+  const stripped = stripInternalExports(original) ?? original;
+  const publishText = bundleExports(stripped) ?? stripped;
+  let sdkTarball: string;
+  try {
+    await Bun.write(manifestPath, publishText);
+    sdkTarball = await pack(sdkDir, tarDir);
+  } finally {
+    await Bun.write(manifestPath, original);
   }
 
-  // 3. A throwaway fixture plugin that depends on ONLY @brika/sdk. The closure
-  //    deps go through `overrides` so they resolve to the packed tarballs the
-  //    way the registry would once they're published alongside @brika/sdk.
+  // 3. A throwaway fixture plugin that depends on ONLY @brika/sdk. No `overrides`:
+  //    the runtime closure is inlined into the bundle, so nothing else resolves
+  //    from the registry, which is precisely what a published install looks like.
   console.log('• scaffolding fixture plugin');
   const pluginDir = join(work, 'plugin');
   await mkdir(join(pluginDir, 'src'), { recursive: true });
@@ -160,15 +124,15 @@ try {
         icon: './icon.svg',
         files: ['src', 'icon.svg'],
         dependencies: { '@brika/sdk': `file:${sdkTarball}` },
-        overrides,
       },
       null,
       2
     )}\n`
   );
 
-  // 4. Install the tarballs (the SDK's devDependencies are NOT installed).
-  console.log('• installing the tarballs');
+  // 4. Install the tarball (only @brika/sdk + its real external deps; the private
+  //    closure and the SDK's devDependencies are NOT present).
+  console.log('• installing the tarball');
   const install = await run(['bun', 'install'], pluginDir);
   if (install.code !== 0) {
     fail(`install failed:\n${install.output}`);

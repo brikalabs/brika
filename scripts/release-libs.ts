@@ -194,6 +194,45 @@ export function stripInternalExports(text: string): string | null {
   return `${JSON.stringify(parsed.data, null, 2)}\n`;
 }
 
+const bundleManifestSchema = z
+  .object({
+    scripts: z.record(z.string(), z.string()).default({}),
+    exports: z.record(z.string(), z.unknown()).default({}),
+  })
+  .loose();
+
+/** A package opts into bundle-publish by having a `build:dist` script (tsdown). */
+function isBundlePublished(text: string): boolean {
+  const parsed = bundleManifestSchema.safeParse(JSON.parse(text));
+  return parsed.success && parsed.data.scripts['build:dist'] !== undefined;
+}
+
+/**
+ * Repoint every source-backed public export at the built `dist/pkg` bundle (JS +
+ * types). The workspace keeps committed `exports` -> `src` for zero-build dev;
+ * this runs ONLY at publish, after `build:dist`, so npm consumers get the
+ * self-contained bundle (private closure inlined) instead of raw `.ts`. Entry
+ * names mirror tsdown's derivation (`.` -> index, `./x` -> x). Returns the
+ * rewritten JSON, or null when nothing is source-backed.
+ */
+export function bundleExports(text: string): string | null {
+  const parsed = bundleManifestSchema.safeParse(JSON.parse(text));
+  if (!parsed.success) {
+    return null;
+  }
+  const map = parsed.data.exports;
+  let changed = false;
+  for (const [key, target] of Object.entries(map)) {
+    if (typeof target !== 'string' || !target.startsWith('./src/') || !target.endsWith('.ts')) {
+      continue;
+    }
+    const name = key === '.' ? 'index' : key.slice(2);
+    map[key] = { types: `./dist/pkg/${name}.d.ts`, default: `./dist/pkg/${name}.js` };
+    changed = true;
+  }
+  return changed ? `${JSON.stringify(parsed.data, null, 2)}\n` : null;
+}
+
 /**
  * Default dist-tag: a prerelease version (containing `-`, e.g. `0.5.0-rc.1`)
  * routes to `next`; a stable version routes to `latest`. An explicit `--tag`
@@ -245,7 +284,24 @@ async function publishPackage(
   // Trim workspace-only `./internal/*` exports from the published manifest. The
   // strip runs on top of the workspace-range rewrite, so publishText carries both.
   const stripped = stripInternalExports(rewritten ?? original);
-  const publishText = stripped ?? rewritten;
+  let publishText = stripped ?? rewritten;
+
+  // Bundle-published packages (build:dist script): build the dist, then repoint
+  // exports src -> dist so consumers get the self-contained bundle. The build
+  // must run before publish since release-libs uses --ignore-scripts.
+  if (isBundlePublished(original)) {
+    console.log(`  ${pkg.name}: building publish bundle (build:dist)`);
+    const build = Bun.spawnSync(['bun', 'run', 'build:dist'], {
+      cwd: dir,
+      stdout: 'inherit',
+      stderr: 'inherit',
+    });
+    if (build.exitCode !== 0) {
+      console.error(`  ${pkg.name}: build:dist failed; aborting.`);
+      return false;
+    }
+    publishText = bundleExports(publishText ?? original) ?? publishText;
+  }
 
   // --ignore-scripts: CI pre-builds the artifacts (sdk bin, create-brika dist);
   // a lifecycle script failing mid-loop would leave a partial publish of

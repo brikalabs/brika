@@ -1,0 +1,29 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "declarationMap": false,
+    "sourceMap": false
+  },
+  "include": [
+    "sdk/src/**/*",
+    "errors/src/**/*",
+    "flow/src/**/*",
+    "grants/src/**/*",
+    "ipc/src/**/*",
+    "serializable/src/**/*",
+    "ui-kit/src/**/*",
+    "schema/src/**/*"
+  ],
+  "exclude": [
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/*.spec.ts",
+    "**/*_test-utils.ts",
+    "**/*.bench.ts",
+    "**/__tests__/**",
+    "**/__benchmarks__/**"
+  ]
+}

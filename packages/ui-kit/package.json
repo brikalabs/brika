@@ -1,6 +1,7 @@
 {
   "name": "@brika/ui-kit",
   "version": "0.4.0",
+  "private": true,
   "description": "Descriptor types and builder functions for BRIKA plugin UI bricks",
   "type": "module",
   "license": "MIT",

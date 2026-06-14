@@ -5,27 +5,10 @@
   "access": "public",
   "baseBranch": "main",
   "updateInternalDependencies": "patch",
-  "fixed": [
-    [
-      "@brika/sdk",
-      "@brika/flow",
-      "@brika/ui-kit",
-      "@brika/errors",
-      "@brika/grants",
-      "@brika/ipc",
-      "@brika/serializable",
-      "create-brika"
-    ]
-  ],
+  "fixed": [["@brika/sdk", "create-brika"]],
   "ignore": [
     "@brika/*",
     "!@brika/sdk",
-    "!@brika/flow",
-    "!@brika/ui-kit",
-    "!@brika/errors",
-    "!@brika/grants",
-    "!@brika/ipc",
-    "!@brika/serializable",
     "!@brika/testing",
     "!@brika/plugin-agent",
     "!@brika/blocks-builtin",

@@ -1,132 +1,76 @@
-import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import { existsSync, readFileSync } from 'node:fs';
-import { mkdtemp, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
-import { z } from 'zod';
+import { join } from 'node:path';
+import { Glob } from 'bun';
 
 /**
- * Closure-install e2e: prove the PUBLISHED @brika/sdk is self-contained.
+ * Publish-bundle e2e: prove the BUNDLED @brika/sdk is self-contained.
  *
- * @brika/sdk ships raw `.ts`, so a consumer (Bun is the real audience for a
- * raw-`.ts` package) must resolve its entire runtime closure from the SDK's
- * *declared* dependencies. This `bun pm pack`s the SDK + closure to tarballs
- * (which rewrites the internal `workspace:*` ranges to concrete versions, as a
- * real publish does) and `bun install`s them into an isolated consumer where
- * `overrides` point those concrete ranges at the local tarballs, then imports the
- * react-free SDK subpaths under Bun.
+ * The SDK publishes a tsdown bundle (`build:dist`) with its private runtime
+ * closure (@brika/errors/flow/grants/ipc/serializable/ui-kit) INLINED. A consumer
+ * installs only @brika/sdk + its real external deps (zod, react peers); the
+ * closure never resolves from npm because it never appears in the shipped bundle.
  *
- * If any closure package were declared in `devDependencies` instead of
- * `dependencies` (the class of bug PR 1 fixed: `@brika/flow` was a devDep), it
- * would NOT land in the SDK's published deps, bun would not install it, and the
- * import below would throw `Cannot find module '@brika/flow'`. This is the
- * runtime counterpart to `published-dependency-closure.test.ts` (which checks the
- * declaration statically): here we pack + install + import the real artifacts
- * built from the current codebase, using only Bun.
- *
- * Network: a single small fetch (zod, the SDK's only external runtime dep). The
- * ui-kit closure member is installed but not imported (it needs React peers); its
- * resolution is covered by the static guard and the verdaccio/Docker acceptance
- * e2e.
+ * This builds the real bundle and asserts (1) the entry artifacts exist, (2) no
+ * private closure import survives in the emitted JS or `.d.ts`, and (3) the
+ * react-free entries import under Bun. It is the runtime counterpart to the
+ * static layout guard in published-dependency-closure.test.ts.
  */
 
-const PACKAGES_DIR = resolve(import.meta.dir, '..', '..');
+const sdkDir = join(import.meta.dir, '..');
+const distPkg = join(sdkDir, 'dist', 'pkg');
+const CLOSURE_RE = /@brika\/(errors|flow|grants|ipc|serializable|ui-kit|schema)\b/;
+const REACT_FREE = ['ctx', 'sparks', 'schema', 'grants'];
 
-/** SDK closure members (the @brika/* packages @brika/sdk depends on at runtime). */
-const CLOSURE = ['errors', 'flow', 'grants', 'ipc', 'serializable', 'ui-kit'];
-
-/** React-free SDK subpaths whose import exercises the closure without needing React. */
-const REACT_FREE_SUBPATHS = [
-  '@brika/sdk/ctx', // -> @brika/errors, @brika/grants, @brika/ipc
-  '@brika/sdk/sparks', // -> @brika/flow
-  '@brika/sdk/schema', // -> @brika/serializable
-  '@brika/sdk/grants', // -> @brika/grants
-];
-
-const manifestSchema = z.object({ name: z.string(), version: z.string() }).loose();
-
-/** `bun pm pack` a package dir into `dest`, returning the tarball's absolute path. */
-function pack(pkgDir: string, dest: string): string {
-  const proc = Bun.spawnSync(['bun', 'pm', 'pack', '--destination', dest], {
-    cwd: pkgDir,
+let built = false;
+function buildDist(): void {
+  if (built) {
+    return;
+  }
+  const proc = Bun.spawnSync(['bun', 'run', 'build:dist'], {
+    cwd: sdkDir,
     stdout: 'pipe',
     stderr: 'pipe',
+    env: { ...process.env, NODE_OPTIONS: '--max-old-space-size=8192' },
   });
   if (proc.exitCode !== 0) {
-    throw new Error(`bun pm pack failed in ${pkgDir}: ${proc.stderr.toString()}`);
+    throw new Error(`build:dist failed:\n${proc.stderr.toString()}`);
   }
-  const manifest = manifestSchema.parse(
-    JSON.parse(readFileSync(join(pkgDir, 'package.json'), 'utf8'))
-  );
-  const tarball = `${manifest.name.replace(/^@/, '').replace(/\//g, '-')}-${manifest.version}.tgz`;
-  return join(dest, tarball);
+  built = true;
 }
 
-let workdir: string;
-let consumer: string;
+describe('published @brika/sdk bundle is self-contained', () => {
+  test('build:dist emits the index entry (JS + types)', () => {
+    buildDist();
+    expect(existsSync(join(distPkg, 'index.js'))).toBe(true);
+    expect(existsSync(join(distPkg, 'index.d.ts'))).toBe(true);
+  }, 60_000);
 
-beforeAll(async () => {
-  workdir = await mkdtemp(join(tmpdir(), 'brika-closure-'));
-  const tarballs = join(workdir, 'tarballs');
-  consumer = join(workdir, 'consumer');
-  await Bun.write(join(tarballs, '.keep'), '');
-
-  const sdkTarball = pack(join(PACKAGES_DIR, 'sdk'), tarballs);
-  const overrides: Record<string, string> = {};
-  for (const name of CLOSURE) {
-    overrides[`@brika/${name}`] = `file:${pack(join(PACKAGES_DIR, name), tarballs)}`;
-  }
-
-  await Bun.write(
-    join(consumer, 'package.json'),
-    `${JSON.stringify(
-      {
-        name: 'closure-consumer',
-        version: '0.0.0',
-        private: true,
-        dependencies: { '@brika/sdk': `file:${sdkTarball}` },
-        overrides,
-      },
-      null,
-      2
-    )}\n`
-  );
-
-  const install = Bun.spawnSync(['bun', 'install'], {
-    cwd: consumer,
-    stdout: 'pipe',
-    stderr: 'pipe',
-  });
-  if (install.exitCode !== 0) {
-    throw new Error(`bun install failed: ${install.stderr.toString()}`);
-  }
-}, 180_000);
-
-afterAll(async () => {
-  if (workdir) {
-    await rm(workdir, { recursive: true, force: true });
-  }
-});
-
-describe('published @brika/sdk closure installs and imports in isolation', () => {
-  test('every declared closure package is installed from the published deps', () => {
-    for (const name of ['sdk', ...CLOSURE]) {
-      expect(existsSync(join(consumer, 'node_modules', '@brika', name))).toBe(true);
+  test('no private closure import survives in the bundled JS or types', async () => {
+    buildDist();
+    const importRe = /^\s*(?:import|export)\b[^;]*?\bfrom\s*['"](@brika\/[a-z/-]+)['"]/;
+    const leaks: string[] = [];
+    for await (const rel of new Glob('**/*.{js,d.ts}').scan({ cwd: distPkg })) {
+      for (const line of readFileSync(join(distPkg, rel), 'utf8').split('\n')) {
+        const m = importRe.exec(line);
+        if (m?.[1] !== undefined && CLOSURE_RE.test(m[1])) {
+          leaks.push(`${rel}: ${m[1]}`);
+        }
+      }
     }
-  });
+    expect(leaks).toEqual([]);
+  }, 60_000);
 
-  test('react-free SDK subpaths import without a missing-module error', () => {
-    const script = `${REACT_FREE_SUBPATHS.map((s) => `await import(${JSON.stringify(s)});`).join(
-      ' '
-    )} console.log('IMPORT-OK');`;
-    const run = Bun.spawnSync(['bun', '-e', script], {
-      cwd: consumer,
+  test('react-free bundled entries import under Bun', () => {
+    buildDist();
+    const imports = REACT_FREE.map(
+      (e) => `await import(${JSON.stringify(join(distPkg, `${e}.js`))});`
+    ).join(' ');
+    const run = Bun.spawnSync(['bun', '-e', `${imports} console.log('IMPORT-OK');`], {
       stdout: 'pipe',
       stderr: 'pipe',
     });
-    const stderr = run.stderr.toString();
-    expect(stderr).not.toContain('Cannot find module');
-    expect(run.exitCode).toBe(0);
+    expect(run.stderr.toString()).not.toContain('Cannot find module');
     expect(run.stdout.toString()).toContain('IMPORT-OK');
   }, 30_000);
 });
