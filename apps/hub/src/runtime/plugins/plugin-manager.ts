@@ -334,8 +334,12 @@ export class PluginManager {
   }
 
   pushBlockInput(instanceId: string, port: string, data: Json, causationId?: string): void {
-    // Find the process that owns this block instance
-    // For now, broadcast to all processes (they'll ignore if instance not found)
+    // Broadcast to all processes; each delivers only to instances it owns.
+    // Unlike startBlock this does NOT lazily respawn a reaped target: callers
+    // rely on the downstream block's provider being kept resident (the executor
+    // pins every non-trigger block's provider while a workflow runs). A
+    // host-scheduled trigger fires hub-side and dispatches here, so its
+    // downstream provider must stay pinned for the tick to land.
     for (const process of this.#lifecycle.listProcesses()) {
       process.pushInput(instanceId, port, data, causationId);
     }

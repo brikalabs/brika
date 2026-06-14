@@ -51,12 +51,20 @@ interface BlockPort {
   dynamic?: string;
 }
 
+/** Host-scheduled trigger declaration (structural mirror of the SDK's BlockTrigger). */
+export interface BlockTriggerSpec {
+  kind: 'interval';
+  intervalField: string;
+  output: string;
+}
+
 export interface RegisterBlockSpec {
   id: string;
   inputs: BlockPort[];
   outputs: BlockPort[];
   schema: unknown;
   start?: (ctx: BlockRuntimeContext) => BlockInstance;
+  trigger?: BlockTriggerSpec;
 }
 
 // ---- Module ----
@@ -171,6 +179,9 @@ export function setupBlocks(
           inputs: block.inputs.map(mapPort),
           outputs: block.outputs.map(mapPort),
           schema: block.schema as Record<string, Json>,
+          // Forward the host-scheduled trigger declaration so the hub can own
+          // the schedule. Absent for ordinary blocks.
+          ...(block.trigger ? { trigger: block.trigger } : {}),
         },
       });
 

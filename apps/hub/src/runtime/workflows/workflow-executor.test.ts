@@ -5,6 +5,7 @@
 import 'reflect-metadata';
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { reset, stub, useTestBed } from '@brika/di/testing';
+import { waitFor } from '@brika/testing';
 import { BlockRegistry } from '@/runtime/blocks';
 import { PluginManager } from '@/runtime/plugins/plugin-manager';
 import type { Workflow } from '@/runtime/workflows/types';
@@ -1246,5 +1247,125 @@ describe('WorkflowExecutor - Complex Workflows', () => {
     await executor.start(workflow);
 
     expect(executor.isRunning).toBeTrue();
+  });
+});
+
+describe('WorkflowExecutor - Hosted triggers', () => {
+  let executor: WorkflowExecutor;
+  let startedBlocks: string[];
+  let pushed: Array<{ instanceId: string; port: string; data: Json }>;
+  let reapGuard: ((name: string) => boolean) | null;
+
+  // A trigger-block type whose registry def carries a `trigger` descriptor, and
+  // a normal downstream block. `clock` is provided by `trigger-plugin`, `logger`
+  // by `normal-plugin`.
+  const defFor = (type: string) => {
+    if (type === 'clock') {
+      return {
+        id: 'clock',
+        type,
+        inputs: [],
+        outputs: [{ id: 'tick', name: 'Tick' }],
+        schema: {},
+        pluginId: 'trigger-plugin',
+        trigger: { kind: 'interval' as const, intervalField: 'interval', output: 'tick' },
+      };
+    }
+    return {
+      id: type,
+      type,
+      inputs: [{ id: 'input', name: 'In' }],
+      outputs: [],
+      schema: {},
+      pluginId: 'normal-plugin',
+    };
+  };
+
+  beforeEach(() => {
+    startedBlocks = [];
+    pushed = [];
+    reapGuard = null;
+    stub(PluginManager, {
+      addReapGuard: (g: (name: string) => boolean) => {
+        reapGuard = g;
+        return () => {
+          reapGuard = null;
+        };
+      },
+      setBlockEmitHandler: () => undefined,
+      setBlockLogHandler: () => undefined,
+      clearBlockEmitHandler: () => undefined,
+      clearBlockLogHandler: () => undefined,
+      startBlock: (_t: string, instanceId: string) => {
+        startedBlocks.push(instanceId);
+        return Promise.resolve({ ok: true });
+      },
+      stopBlockInstance: () => undefined,
+      pushBlockInput: (instanceId: string, port: string, data: Json) => {
+        pushed.push({ instanceId, port, data });
+      },
+    });
+    stub(BlockRegistry, {
+      has: () => true,
+      get: (type: string) => defFor(type),
+      resolve: (t: string) => t,
+      getProvider: (type: string) => defFor(type).pluginId,
+    });
+    executor = new WorkflowExecutor();
+  });
+
+  afterEach(() => {
+    if (executor.isRunning) {
+      executor.stop();
+    }
+  });
+
+  const clockWorkflow = (intervalMs: number): Workflow => ({
+    id: 'wf-trigger',
+    name: 'Trigger WF',
+    enabled: true,
+    blocks: [
+      { id: 'c1', type: 'clock', config: { interval: intervalMs } },
+      { id: 'l1', type: 'logger' },
+    ],
+    connections: [{ from: 'c1', fromPort: 'tick', to: 'l1', toPort: 'input' }],
+  });
+
+  test('schedules the trigger in the hub, does not start it in the plugin', async () => {
+    await executor.start(clockWorkflow(999_999));
+    // The clock is hub-owned: never started in the plugin, but is a run root.
+    expect(startedBlocks).not.toContain('c1');
+    expect(startedBlocks).toContain('l1');
+    expect(executor.ownsBlock('c1')).toBeTrue();
+  });
+
+  test('does not pin a trigger-only plugin (its provider stays reapable)', async () => {
+    await executor.start(clockWorkflow(999_999));
+    expect(reapGuard).not.toBeNull();
+    // The trigger provider is NOT pinned; the downstream provider IS.
+    expect(reapGuard?.('trigger-plugin')).toBeFalse();
+    expect(reapGuard?.('normal-plugin')).toBeTrue();
+  });
+
+  test('fires on its interval and dispatches a { count, ts } tick downstream', async () => {
+    await executor.start(clockWorkflow(25));
+    await waitFor(() => pushed.length >= 2, { timeoutMs: 2000 });
+    expect(pushed[0]?.instanceId).toBe('l1');
+    expect(pushed[0]?.port).toBe('input');
+    expect((pushed[0]?.data as { count: number }).count).toBe(1);
+    expect((pushed[1]?.data as { count: number }).count).toBe(2);
+  });
+
+  test('does not schedule when the interval config is missing or invalid', async () => {
+    const events: ExecutionEvent[] = [];
+    executor.addListener((e) => events.push(e));
+    await executor.start({
+      id: 'wf-bad',
+      name: 'bad',
+      enabled: true,
+      blocks: [{ id: 'c1', type: 'clock', config: {} }],
+      connections: [],
+    });
+    expect(events.some((e) => e.type === 'block.error' && e.blockId === 'c1')).toBeTrue();
   });
 });

@@ -7,11 +7,13 @@
  */
 
 import { inject } from '@brika/di';
+import type { BlockTrigger } from '@brika/sdk';
 import { inferType, isCompatible, type TypeDescriptor } from '@brika/type-system';
 import { BlockRegistry } from '@/runtime/blocks';
 import { Logger } from '@/runtime/logs/log-router';
 import { PluginManager } from '@/runtime/plugins/plugin-manager';
 import type { Json } from '@/types';
+import { TriggerRegistry } from './trigger-registry';
 import type { BlockConnection, Workflow, WorkflowBlock } from './types';
 
 /**
@@ -75,6 +77,10 @@ export class WorkflowExecutor {
   readonly #providerPlugins = new Set<string>();
   /** Disposer for the reap guard registered in start(). */
   #reapGuardDispose: (() => void) | null = null;
+  /** Host-scheduled triggers for this workflow's hub-owned trigger blocks. */
+  readonly #triggers = new TriggerRegistry();
+  /** Per-trigger fire count, so each tick carries an incrementing `count`. */
+  readonly #triggerFireCount = new Map<string, number>();
   #connections = new Map<string, BlockConnection[]>(); // "blockId.port" -> targets
   readonly #buffers = new Map<string, PortBuffer>(); // "blockId:port" -> last value
   // This executor's own emit/log handlers, kept so stop() removes exactly its
@@ -132,8 +138,14 @@ export class WorkflowExecutor {
     // BEFORE starting any block, so a concurrent reaper sweep cannot kill a
     // plugin out from under the workflow as it boots. The guard is removed in
     // stop(). With reaping off this registers an inert predicate.
+    // A hosted-trigger block is fired by the hub, not run in the plugin, so its
+    // provider is intentionally NOT pinned: a trigger-only plugin stays reapable
+    // and keeps firing from the hub. Providers of normal blocks are pinned.
     this.#providerPlugins.clear();
     for (const block of workflow.blocks) {
+      if (this.#hostedTrigger(block)) {
+        continue;
+      }
       const provider = this.#blocks.getProvider(this.#resolveBlockType(block.type));
       if (provider) {
         this.#providerPlugins.add(provider);
@@ -164,9 +176,15 @@ export class WorkflowExecutor {
     };
     this.#plugins.setBlockLogHandler(this.#blockLogHandler);
 
-    // Start all blocks
+    // Start all blocks. Hub-owned triggers are scheduled here instead of being
+    // started in the plugin, so their plugin need not be resident.
     for (const block of workflow.blocks) {
-      await this.#startBlock(block, workflow);
+      const trigger = this.#hostedTrigger(block);
+      if (trigger) {
+        this.#startHostedTrigger(block, trigger, workflow);
+      } else {
+        await this.#startBlock(block, workflow);
+      }
     }
 
     this.#emit({
@@ -198,6 +216,10 @@ export class WorkflowExecutor {
     }
     this.#lastCorrelationId.clear();
     this.#sourceInstances.clear();
+
+    // Cancel host-scheduled triggers for this workflow.
+    this.#triggers.clear();
+    this.#triggerFireCount.clear();
 
     // Release the reap pins: the plugins this workflow held resident may now be
     // reaped once they go idle (unless another running workflow still owns them).
@@ -402,6 +424,48 @@ export class WorkflowExecutor {
         }
       );
     }
+  }
+
+  /**
+   * The hosted-trigger declaration for a block, if it is a hub-owned trigger of
+   * a kind this hub understands. An unknown/absent kind degrades to a normal
+   * block, which is what makes new trigger kinds forward-compatible.
+   */
+  #hostedTrigger(block: WorkflowBlock): BlockTrigger | undefined {
+    const trigger = this.#blockDefCache.get(block.id)?.def.trigger;
+    return trigger?.kind === 'interval' ? trigger : undefined;
+  }
+
+  /**
+   * Schedule a hub-owned trigger block. The hub drives the interval and fires
+   * the block's output, so the providing plugin needs no resident process. The
+   * block is recorded as a run root so dispatch/ownsBlock treat it like a source.
+   */
+  #startHostedTrigger(block: WorkflowBlock, trigger: BlockTrigger, workflow: Workflow): void {
+    this.#instanceIds.add(block.id);
+    this.#triggerFireCount.set(block.id, 0);
+    const intervalMs = Number((block.config ?? {})[trigger.intervalField]);
+    const scheduled = this.#triggers.register(block.id, { kind: 'interval', intervalMs }, () =>
+      this.#fireTrigger(block.id, trigger.output)
+    );
+    if (!scheduled) {
+      this.#emit({
+        type: 'block.error',
+        workflowId: workflow.id,
+        blockId: block.id,
+        error: `Trigger not scheduled: config "${trigger.intervalField}" must be a positive number of milliseconds`,
+      });
+    }
+  }
+
+  /**
+   * Fire a hub-owned trigger: emit a `{ count, ts }` tick on its output through
+   * the normal run path (opens a fresh run, buffers, dispatches downstream).
+   */
+  #fireTrigger(blockId: string, port: string): void {
+    const count = (this.#triggerFireCount.get(blockId) ?? 0) + 1;
+    this.#triggerFireCount.set(blockId, count);
+    this.#onBlockEmit(blockId, port, { count, ts: Date.now() });
   }
 
   /**
