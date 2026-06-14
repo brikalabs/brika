@@ -8,9 +8,11 @@
  * engines.brika)`, so each plugin's `engines.brika` must track the binary line,
  * not the Changesets number.
  *
- * This script reads the binary release version from `BRIKA_RELEASE_VERSION`
- * (falling back to the root `package.json` version), derives a `^<major>.<minor>.0`
- * range, and rewrites every `plugins/<name>/package.json`'s `engines.brika` to
+ * This script reads the binary release version from `BRIKA_RELEASE_VERSION`,
+ * falling back to `@brika/sdk`'s version (the fixed-group release anchor, and the
+ * tag `build.yml` reads; NOT the never-bumped private root manifest). It derives a
+ * `^<major>.<minor>.0` range, and rewrites every `plugins/<name>/package.json`'s
+ * `engines.brika` to
  * match. It is idempotent: a plugin already on the target range is left untouched
  * (and reported as unchanged).
  *
@@ -42,15 +44,21 @@ const semverSchema = z.string().regex(/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0
   message: 'expected a semver string like "0.4.0" or "0.4.0-rc.1"',
 });
 
-/** Resolve the binary release version, env first, root manifest second. */
+/** Resolve the binary release version, env first, the @brika/sdk manifest second. */
 async function resolveReleaseVersion(): Promise<string> {
   const fromEnv = process.env.BRIKA_RELEASE_VERSION;
   if (typeof fromEnv === 'string' && fromEnv.trim() !== '') {
     return semverSchema.parse(fromEnv.trim());
   }
-  const rootRaw: unknown = await Bun.file(join(REPO_ROOT, 'package.json')).json();
-  const root = z.object({ version: z.string() }).loose().parse(rootRaw);
-  return semverSchema.parse(root.version);
+  // Fall back to @brika/sdk, the fixed-group anchor whose version IS the release
+  // line (and the tag build.yml reads). `changeset version` has already bumped it
+  // when this runs. The root manifest is private, outside the Changesets
+  // workspaces, and never bumped, so reading it would pin every plugin's
+  // engines.brika to a stale minor and the new hub would reject all first-party
+  // plugins on the first minor release.
+  const sdkRaw: unknown = await Bun.file(join(REPO_ROOT, 'packages/sdk/package.json')).json();
+  const sdk = z.object({ version: z.string() }).loose().parse(sdkRaw);
+  return semverSchema.parse(sdk.version);
 }
 
 /** Derive the `^<major>.<minor>.0` engines range from a release version. */

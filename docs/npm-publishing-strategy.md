@@ -264,48 +264,51 @@ Merging it on the release tag publishes.
 
 ## 5. Publish pipeline (CI)
 
-**Shipped now (inert):** a single `release-packages.yml` job, `workflow_dispatch`
-only (no tag trigger), `dry_run` defaulting true, that runs `bun run release`
-(`packages/workspace-tools/src/release-libs.ts`). It cannot publish until OIDC trusted publishers are
-registered for the package names on npmjs.com. The `tag` input defaults to `auto`
-(release-libs derives `next` for prereleases, else `latest`); the binary launcher
-keeps publishing from `build.yml`'s existing `publish-npm` job. The multi-job,
-tag-triggered design below is the TARGET once the publishers are registered and
-the changesets/action "Version Packages" PR drives releases.
+**Automated (`.github/workflows/release.yml`, Changesets "Version Packages PR"
+model).** On every push to `main`, `changesets/action` either opens/updates a
+"Version Packages" PR (running `bun run version-packages`: bump versions, write
+CHANGELOGs via the GitHub formatter, sync plugin engines, refresh the lockfile)
+or, when no changesets remain (the version PR was merged), runs the publish
+command. The publish command is `bun run release`
+(`packages/workspace-tools/src/release-libs.ts`), NOT `changeset publish`: it
+publishes with `npm publish --provenance` (Bun has no `--provenance`/OIDC). It
+toposorts the libraries and plugins in ONE idempotent pass
+(`errors/grants/ipc/serializable -> flow/ui-kit -> sdk -> create-brika -> the 7
+plugins`), so no `publish-libs` / `publish-plugins` split is needed; the manifest
+transforms (`workspace:` rewrite, `./internal/*` strip, bundle-exports repoint,
+dev-key strip) and idempotent skip-if-published live in the shared
+`publish-package.ts`.
 
-Converge on the `npm-dist.ts`-style `npm publish --provenance` publisher. Do not
-reuse `buildPublishArgs` / `bun publish` (no provenance, no OIDC). Lift only the
-good parts of the interactive `publish.ts`: package discovery + `!private` filter,
-plugin detection, and the verify-runner gate (promote private-edge warnings to
-hard errors in CI).
+After the publish path, `release.yml` cuts the binary release by dispatching
+`build.yml` with the just-published version (`@brika/sdk`, the fixed-group
+anchor, defines it). `build.yml` (`is_release=true`) then publishes the binary
+launcher (`brika` + `@brika/cli-*` via `npm-dist.ts`) and creates the production
+`v<version>` GitHub release + tag. NO PAT is needed: the dispatch uses
+`gh workflow run` (workflow_dispatch), which GitHub's recursion guard EXEMPTS, so
+the default `GITHUB_TOKEN` with `actions: write` can trigger it (a pushed tag
+cannot). The per-push canary stays binary-only (npm versions are immutable).
 
-Trigger: tagged-release only (`tags: ['v*']`), gated on `is_release`. Do not
-publish per-push canaries to npm (immutable versions); the canary stays
-binary-only.
-
-Three jobs ordered by `needs`:
-1. `publish-npm` (existing, unchanged): the `brika` launcher + 5 `@brika/cli-*`
-   platform packages via `npm-dist.ts` (OIDC, npm >= 11.5.1, provenance, dist-tag
-   routing, NPM_TOKEN bootstrap fallback).
-2. `publish-libs` (new): prebuild `sdk` + `create-brika`, typecheck, then publish
-   the 8 Tier-1 packages toposorted
-   (`errors/grants/ipc/serializable -> flow/ui-kit -> sdk -> create-brika`),
-   idempotent, `npm publish --provenance`, dist-tag `latest` (or `next` for
-   prerelease).
-3. `publish-plugins` (new): `needs: publish-libs` (so `@brika/sdk` is live before
-   plugins, which now pin `@brika/sdk: ^<platform>`), runs the verify gate, then
-   publishes the 7 plugins idempotently with provenance.
+`release-packages.yml` remains as a manual `workflow_dispatch` fallback (dry-run
+by default) running the same `bun run release`, for the one-time bootstrap and
+for recovery. The two cannot conflict (immutable versions + idempotent skip).
 
 Publisher semantics: `npm publish --provenance`; idempotency via
 `isPublished(name, version)` (`npm view`); explicit skip-if-published /
 continue-on-skip / abort-on-real-error so a partial-failure re-run resumes
 cleanly; topological order; dist-tag routing (`*-*` -> `next`); non-interactive.
 
-OIDC one-time setup (manual on npmjs.com): trusted publishing is per package name.
-The 15 new names each need the repo `brikalabs/brika`, the workflow filename, and
+Auth is **OIDC trusted publishing only** (no long-lived `NPM_TOKEN`). A stored
+automation token is precisely what self-propagating npm supply-chain worms
+(Shai-Hulud and variants) harvest to push trojaned versions; removing it removes
+that blast radius. OIDC mints a short-lived, per-run credential and attaches
+provenance. One-time setup (manual on npmjs.com): trusted publishing is per
+package name; each needs the repo `brikalabs/brika`, the workflow filename, and
 any gating environment. A trusted publisher cannot be set before the package
-exists, so the first publish of each new name uses the `NPM_TOKEN` bootstrap
-fallback; OIDC takes over afterward.
+exists, so each brand-new name needs ONE manual first publish by a maintainer
+(locally, interactive 2FA); OIDC publishes every release thereafter. Today the
+new names are `@brika/plugin-agent`, `@brika/plugin-sil-electricity`, and
+`@brika/plugin-builtin` (the renamed `@brika/blocks-builtin`); the other six
+already exist on npm and only need their trusted publisher configured.
 
 ## 6. Phased rollout (each an independently shippable PR)
 
@@ -326,9 +329,9 @@ fallback; OIDC takes over afterward.
 6. **`publish-plugins` CI job + verified badge.** `needs: publish-libs`; verify
    gate; publish the 7 plugins; add the 6 first-party plugins to
    `verified-plugins.json`. Register trusted publishers for the 7 plugin names.
-7. **Wire Changesets end to end.** Add the `changesets/action` step (overridden
-   for Bun) so the "Version Packages" PR drives the flow; verify
-   `sync:engines-brika` and the platform/binary version equality on the tag.
+7. **Wire Changesets end to end (shipped: `release.yml`).** The `changesets/action`
+   step drives the "Version Packages" PR; merging it runs `bun run release` and
+   dispatches `build.yml` (via `gh workflow run`, no PAT) for the binary release.
 8. **(Deferred) Promote Tier-2.** When `i18n` / `i18n-devtools` get standalone
    READMEs, remove them from `ignore` and register their trusted publishers.
 

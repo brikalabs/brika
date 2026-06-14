@@ -17,11 +17,11 @@
  * serializable/ui-kit/schema -- is `private` and inlined by `build:dist`, never
  * published).
  *
- * OIDC trusted publishing is per package NAME and must be registered on
- * npmjs.com BEFORE OIDC can attach provenance. A trusted publisher cannot exist
- * before the package does, so the FIRST publish of each new name uses the
- * `NPM_TOKEN` bootstrap fallback (written into ~/.npmrc in CI); OIDC takes over
- * on every subsequent release.
+ * Auth is OIDC trusted publishing ONLY (no long-lived NPM_TOKEN): the publish
+ * runs with `npm publish --provenance` and relies on the OIDC token the CI job
+ * mints (`id-token: write`, npm CLI >= 11.5.1). A trusted publisher is per
+ * package NAME and cannot exist before the package does, so each brand-new name
+ * needs ONE manual first publish by a maintainer; OIDC publishes thereafter.
  *
  * Usage:
  *   bun run packages/workspace-tools/src/release-libs.ts                  # publish (tag auto: next for prereleases, else latest)
@@ -167,6 +167,13 @@ async function main(): Promise<void> {
       // failed to go live. The idempotent skip lets a fixed re-run resume.
       console.error(`Failed to publish ${pkg.name}@${pkg.version}: ${outcome.reason}. Aborting.`);
       process.exit(1);
+    }
+    // A package actually went live. Emit the marker changesets/action greps for
+    // to populate its `published` / `publishedPackages` outputs (we publish with
+    // a custom command, not `changeset publish`). release.yml gates the binary
+    // release on `published == 'true'`, so it fires iff something published here.
+    if (!dryRun) {
+      console.log(`New tag: ${pkg.name}@${pkg.version}`);
     }
   }
 
