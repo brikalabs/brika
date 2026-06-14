@@ -41,7 +41,7 @@
     "deadcode": "bun run --filter @brika/workspace-tools deadcode",
     "changeset": "changeset",
     "version-packages": "changeset version && bun run sync:engines-brika && bun install --lockfile-only",
-    "release": "bun run scripts/release-libs.ts",
+    "release": "bun run packages/workspace-tools/src/release-libs.ts",
     "sync:engines-brika": "bun run packages/workspace-tools/src/sync-engines-brika.ts"
   },
   "engines": {

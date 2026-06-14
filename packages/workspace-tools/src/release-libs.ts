@@ -29,26 +29,26 @@
  * deps, so a dependent never publishes before a dependency it pins is live.
  *
  * Usage:
- *   bun run scripts/release-libs.ts                  # publish (tag auto: next for prereleases, else latest)
- *   bun run scripts/release-libs.ts --dry-run        # exercise every package, publish nothing
- *   bun run scripts/release-libs.ts --tag=next       # force a dist-tag (omit to auto-derive)
+ *   bun run packages/workspace-tools/src/release-libs.ts                  # publish (tag auto: next for prereleases, else latest)
+ *   bun run packages/workspace-tools/src/release-libs.ts --dry-run        # exercise every package, publish nothing
+ *   bun run packages/workspace-tools/src/release-libs.ts --tag=next       # force a dist-tag (omit to auto-derive)
  */
 
 import { existsSync } from 'node:fs';
 import { rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { parseArgs } from 'node:util';
+import { Glob } from 'bun';
+import { z } from 'zod';
 import {
   bundleExports,
   isBundlePublished,
   rewriteWorkspaceRanges,
   stripDevManifestFields,
   stripInternalExports,
-} from '@brika/workspace-tools/src/publish-manifest';
-import { Glob } from 'bun';
-import { z } from 'zod';
+} from './publish-manifest';
 
-const REPO_ROOT = new URL('..', import.meta.url).pathname;
+const REPO_ROOT = process.cwd();
 
 const manifestSchema = z
   .object({

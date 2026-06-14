@@ -27,7 +27,7 @@ import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { z } from 'zod';
-import { discoverPublishOrder } from '../scripts/release-libs';
+import { discoverPublishOrder } from '../packages/workspace-tools/src/release-libs';
 
 const REPO_ROOT = resolve(import.meta.dir, '..');
 const VERDACCIO_PORT = 4873;

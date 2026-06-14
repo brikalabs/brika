@@ -11,7 +11,7 @@ import { z } from 'zod';
  * `devDependencies` (build-time only) and never become a consumer's install
  * dependency. The publisher repoints `exports` src -> dist at publish; dev keeps
  * committed `exports` -> `src` and resolves the closure via workspace links.
- * See packages/sdk/tsdown.config.ts + scripts/release-libs.ts (bundleExports).
+ * See packages/sdk/tsdown.config.ts + packages/workspace-tools/src/release-libs.ts (bundleExports).
  *
  * The runtime counterpart (build the bundle, assert it is leak-free + imports) is
  * packages/sdk/src/closure-install.e2e.integration.test.ts.

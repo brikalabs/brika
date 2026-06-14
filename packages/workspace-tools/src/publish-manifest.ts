@@ -1,6 +1,6 @@
 /**
  * Pure package.json transforms applied at publish time, shared by the release
- * CLI (scripts/release-libs.ts) and the registry test harness (./test-registry).
+ * CLI (packages/workspace-tools/src/release-libs.ts) and the registry test harness (./test-registry).
  *
  * Each takes the manifest text and returns the rewritten JSON (normalized), or
  * null when nothing changed. The publisher applies them on disk just before

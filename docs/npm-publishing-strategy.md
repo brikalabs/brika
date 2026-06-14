@@ -197,7 +197,7 @@ has no version or dep-graph awareness.
 Use `changeset version` to mutate manifests (rewriting `workspace:*` to concrete
 ranges), then `npm publish --provenance` those manifests. Do not use
 `changeset publish` (it shells `npm publish` with its own semantics; we want the
-toposorted, idempotent, provenance publisher in `scripts/release-libs.ts`).
+toposorted, idempotent, provenance publisher in `packages/workspace-tools/src/release-libs.ts`).
 
 `.changeset/config.json`:
 ```json
@@ -250,10 +250,10 @@ Scripts to add:
 ```jsonc
 "changeset": "changeset",
 "version-packages": "changeset version && bun run sync:engines-brika && bun install --lockfile-only",
-"release": "bun run scripts/release-libs.ts"
+"release": "bun run packages/workspace-tools/src/release-libs.ts"
 ```
 `sync:engines-brika` rewrites each plugin's `engines.brika` to
-`^<binary-release minor>`. `scripts/release-libs.ts` reuses the verify-runner gate
+`^<binary-release minor>`. `packages/workspace-tools/src/release-libs.ts` reuses the verify-runner gate
 plus the `npm-dist.ts` idempotency / order / provenance pattern.
 
 Contributor DX: open a PR, run `bun run changeset` (multiselect auto-selects a
@@ -266,7 +266,7 @@ Merging it on the release tag publishes.
 
 **Shipped now (inert):** a single `release-packages.yml` job, `workflow_dispatch`
 only (no tag trigger), `dry_run` defaulting true, that runs `bun run release`
-(`scripts/release-libs.ts`). It cannot publish until OIDC trusted publishers are
+(`packages/workspace-tools/src/release-libs.ts`). It cannot publish until OIDC trusted publishers are
 registered for the package names on npmjs.com. The `tag` input defaults to `auto`
 (release-libs derives `next` for prereleases, else `latest`); the binary launcher
 keeps publishing from `build.yml`'s existing `publish-npm` job. The multi-job,
@@ -320,7 +320,7 @@ fallback; OIDC takes over afterward.
    metadata to `sil-electricity`. Verify with `bun pm pack --dry-run`.
 4. **Changesets spike + adoption.** Add and configure Changesets; spike-verify
    `changeset version` against `bun.lock`; add scripts and
-   `packages/workspace-tools/src/sync-engines-brika.ts` + `scripts/release-libs.ts`. No CI yet.
+   `packages/workspace-tools/src/sync-engines-brika.ts` + `packages/workspace-tools/src/release-libs.ts`. No CI yet.
 5. **`publish-libs` CI job.** Tagged-gated, OIDC, prebuild, typecheck, toposorted
    idempotent provenance publish. Register trusted publishers for the 9 lib names.
 6. **`publish-plugins` CI job + verified badge.** `needs: publish-libs`; verify

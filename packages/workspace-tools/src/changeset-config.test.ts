@@ -3,8 +3,8 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { Glob } from 'bun';
 import { z } from 'zod';
-import { discoverPublishOrder } from '../../../scripts/release-libs';
 import { stripInternalExports } from './publish-manifest';
+import { discoverPublishOrder } from './release-libs';
 
 /**
  * Guard: the Changesets config and per-package `private` flags must agree, so the

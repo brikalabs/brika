@@ -14,7 +14,7 @@
 # of each new name falls back to `NPM_TOKEN` (surfaced as `NODE_AUTH_TOKEN`);
 # remove that secret once all 16 names exist and are configured for OIDC.
 #
-# One job, not two: `scripts/release-libs.ts` (run by `bun run release`) already
+# One job, not two: `packages/workspace-tools/src/release-libs.ts` (run by `bun run release`) already
 # toposorts the 8 Tier-1 packages first and the 7 plugins after them in a single
 # idempotent pass, so a `publish-libs` -> `publish-plugins` split would buy no
 # extra ordering. The single `publish-packages` job below is the cleaner shape.
