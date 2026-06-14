@@ -573,11 +573,9 @@
         "tsdown": "^0.22.2",
       },
       "peerDependencies": {
-        "@brika/testing": "workspace:*",
         "lucide-react": "^1.17.0",
       },
       "optionalPeers": [
-        "@brika/testing",
         "lucide-react",
       ],
     },
@@ -660,8 +658,8 @@
         "bun-types": "^1.3.5",
       },
     },
-    "plugins/blocks-builtin": {
-      "name": "@brika/blocks-builtin",
+    "plugins/builtin": {
+      "name": "@brika/plugin-builtin",
       "version": "0.4.0",
       "dependencies": {
         "@brika/sdk": "workspace:*",
@@ -797,8 +795,6 @@
 
     "@brika/banner": ["@brika/banner@workspace:packages/banner"],
 
-    "@brika/blocks-builtin": ["@brika/blocks-builtin@workspace:plugins/blocks-builtin"],
-
     "@brika/brix": ["@brika/brix@workspace:packages/brix"],
 
     "@brika/build": ["@brika/build@workspace:apps/build"],
@@ -842,6 +838,8 @@
     "@brika/plugin": ["@brika/plugin@workspace:packages/plugin"],
 
     "@brika/plugin-agent": ["@brika/plugin-agent@workspace:plugins/agent"],
+
+    "@brika/plugin-builtin": ["@brika/plugin-builtin@workspace:plugins/builtin"],
 
     "@brika/plugin-matter": ["@brika/plugin-matter@workspace:plugins/matter"],
 

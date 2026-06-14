@@ -78,7 +78,7 @@ required because the SDK ships raw `.ts`). Transitively `grants -> errors`,
 
 ### Tier 1 plugins: publish all 7
 
-`@brika/plugin-agent`, `@brika/blocks-builtin`, `@brika/plugin-matter`,
+`@brika/plugin-agent`, `@brika/plugin-builtin`, `@brika/plugin-matter`,
 `@brika/plugin-spotify`, `@brika/plugin-timer`, `@brika/plugin-weather`,
 `@brika/plugin-sil-electricity`. Each depends only on `@brika/sdk` via
 `workspace:*`. They are how the npm-backed store discovers (`keywords:brika`) and
@@ -140,9 +140,9 @@ nothing else.** This shrinks the public contract from 35 to 16.
 Publish all 7. Distinguish official from community via the existing verified
 plugins allowlist (`apps/hub/src/runtime/store/verified.ts`, served from
 `registry.brika.dev/verified-plugins.json`), not by withholding publication. Add
-the 6 first-party plugins (agent, blocks-builtin, matter, spotify, timer,
+the 6 first-party plugins (agent, builtin, matter, spotify, timer,
 weather) as `featured`; leave `sil-electricity` published-but-unbadged. Keep the
-`@brika/blocks-builtin` name (no `plugin-` prefix): discovery is keyword/engines
+`@brika/plugin-builtin` name (no `plugin-` prefix): discovery is keyword/engines
 based, not name based. Treat `matter` as higher blast radius (it pulls the full
 `@matter/*` tree at install).
 
@@ -214,7 +214,7 @@ toposorted, idempotent, provenance publisher in `packages/workspace-tools/src/re
   "ignore": [
     "@brika/*",
     "!@brika/sdk", "!@brika/flow", "!@brika/ui-kit", "!@brika/errors", "!@brika/grants", "!@brika/ipc", "!@brika/serializable",
-    "!@brika/plugin-agent", "!@brika/blocks-builtin", "!@brika/plugin-matter", "!@brika/plugin-spotify", "!@brika/plugin-timer", "!@brika/plugin-weather", "!@brika/plugin-sil-electricity"
+    "!@brika/plugin-agent", "!@brika/plugin-builtin", "!@brika/plugin-matter", "!@brika/plugin-spotify", "!@brika/plugin-timer", "!@brika/plugin-weather", "!@brika/plugin-sil-electricity"
   ]
 }
 ```
@@ -338,7 +338,7 @@ Several names are already live on npm (owner: maxscharwath; `@brika` scope owned
 up to `0.3.1`: `create-brika`, `@brika/sdk`, `@brika/compiler`, `@brika/schema`,
 `@brika/flow`, `@brika/ui-kit`, `@brika/ipc`, `@brika/serializable`,
 `@brika/i18n-devtools` (`0.1.1`), `@brika/plugin-timer`, `@brika/plugin-weather`,
-`@brika/blocks-builtin`. The repo is at `0.4.0`, so the first release continues the
+`@brika/plugin-builtin`. The repo is at `0.4.0`, so the first release continues the
 line cleanly (no version-number collision).
 
 - **Do not unpublish.** It breaks installs, burns the version number permanently,
@@ -378,7 +378,7 @@ to strongest:
    hubs).
 3. Publish Tier-2 (`i18n` / `i18n-devtools`) now or defer? Recommended: defer
    until they have standalone READMEs (zero risk to promote later).
-4. Keep the `@brika/blocks-builtin` name (immutable once published)? Recommended:
+4. Keep the `@brika/plugin-builtin` name (immutable once published)? Recommended:
    keep (built-in blocks bundle; discovery is keyword/engines based).
 5. `sil-electricity` badge status? Recommended: publish unbadged (community tier).
 6. Treat `matter` as higher risk (conservative `@matter/*` pins)? Recommended:

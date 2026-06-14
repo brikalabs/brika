@@ -3,7 +3,7 @@
  *
  * @example
  * ```ts
- * import { useBunMock } from '@brika/testing';
+ * import { useBunMock } from '@brika/sdk/testing';
  *
  * describe('MyService', () => {
  *   const bun = useBunMock(); // Auto lifecycle

@@ -59,7 +59,7 @@ describe('unpackTemplates (BrikaInitializer.init internals)', () => {
       expect(content).toContain('hub:');
       expect(content).toContain('port: 3001');
       expect(content).toContain('plugins:');
-      expect(content).toContain('@brika/blocks-builtin');
+      expect(content).toContain('@brika/plugin-builtin');
       expect(content).toContain('rules: []');
       expect(content).toContain('schedules: []');
     });

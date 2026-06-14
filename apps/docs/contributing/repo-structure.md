@@ -70,7 +70,7 @@ First-party plugins. Real, shipping integrations — also the canonical examples
 
 | Path | What it provides |
 |---|---|
-| [`plugins/blocks-builtin/`](https://github.com/brikalabs/brika/tree/main/plugins/blocks-builtin) | Core blocks — `condition`, `switch`, `delay`, `transform`, `log`, `merge`, `split`, `end`, `spark-receiver`, `http-request`, `clock` |
+| [`plugins/builtin/`](https://github.com/brikalabs/brika/tree/main/plugins/builtin) | Core blocks — `condition`, `switch`, `delay`, `transform`, `log`, `merge`, `split`, `end`, `spark-receiver`, `http-request`, `clock` |
 | [`plugins/timer/`](https://github.com/brikalabs/brika/tree/main/plugins/timer) | Timer + countdown blocks; timers-dashboard / photo / camera bricks |
 | [`plugins/weather/`](https://github.com/brikalabs/brika/tree/main/plugins/weather) | Weather integration + dashboard bricks |
 | [`plugins/matter/`](https://github.com/brikalabs/brika/tree/main/plugins/matter) | Matter/Thread smart-home integration |

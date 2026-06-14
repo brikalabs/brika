@@ -14,9 +14,9 @@ const KNOWN_SOURCES = new Set(['npm', 'local']);
 
 export function StorePluginDetailPage() {
   // Route: /store/$source/$  →  e.g. /store/npm/@brika/plugin-timer
-  // Old-format URLs (no source prefix): /store/@brika/blocks-builtin
-  //   → TanStack Router matches source='@brika', _splat='blocks-builtin'
-  //   → reconstruct full name '@brika/blocks-builtin', pass unprefixed to backend
+  // Old-format URLs (no source prefix): /store/@brika/plugin-builtin
+  //   → TanStack Router matches source='@brika', _splat='plugin-builtin'
+  //   → reconstruct full name '@brika/plugin-builtin', pass unprefixed to backend
   const { source, _splat } = useParams({
     strict: false,
   });

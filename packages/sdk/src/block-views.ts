@@ -38,7 +38,7 @@ export function useBlockId(): string {
   throw new Error('useBlockId() is only available in client-rendered block views');
 }
 
-/** The fully-qualified block type (e.g. "@brika/blocks-builtin:spark-receiver"). */
+/** The fully-qualified block type (e.g. "@brika/plugin-builtin:spark-receiver"). */
 export function useBlockType(): string {
   throw new Error('useBlockType() is only available in client-rendered block views');
 }
