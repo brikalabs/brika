@@ -1,6 +1,7 @@
 {
   "name": "@brika/grants",
   "version": "0.4.0",
+  "private": true,
   "description": "Typed capability/grant registry — the single primitive every plugin uses to call the hub",
   "type": "module",
   "license": "MIT",
@@ -13,6 +14,15 @@
   "exports": {
     ".": "./src/index.ts"
   },
+  "files": [
+    "src",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md",
+    "!src/**/*.{test,spec}.{ts,tsx}",
+    "!src/**/{*_test-utils.ts,tsconfig.json,*.bench.ts,__benchmarks__/**}",
+    "!**/*.tsbuildinfo"
+  ],
   "scripts": {
     "typecheck": "tsgo --noEmit",
     "test": "bun test"

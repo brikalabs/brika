@@ -164,7 +164,7 @@ describe('useLiveTail', () => {
         },
       })
     );
-    await flush();
+    await waitFor(() => latest.current?.events.length === 5 && latest.current?.revision === 4);
     expect(latest.current?.events).toHaveLength(5);
     expect(latest.current?.lines).toHaveLength(5);
     // hydrate bumps revision once, then each of 3 SSE events bumps it.
@@ -193,7 +193,7 @@ describe('useLiveTail', () => {
         },
       })
     );
-    await flush();
+    await waitFor(() => /502/.test(latest.current?.streamError ?? ''));
     expect(latest.current?.events).toEqual([]);
     expect(latest.current?.lines).toEqual([]);
     expect(latest.current?.revision).toBe(0);
@@ -268,13 +268,13 @@ describe('useLiveTail', () => {
         },
       })
     );
-    await flush();
+    await waitFor(() => controls.length === 1);
     // Stream is established and consuming.
     expect(controls.length).toBe(1);
 
     // Push one event while mounted — should land.
     controls[0]?.push(makeEvent({ ts: 1, message: 'pre-unmount' }));
-    await flush();
+    await waitFor(() => latest.current?.events.some((e) => e.message === 'pre-unmount') === true);
     expect(latest.current?.events.some((e) => e.message === 'pre-unmount')).toBe(true);
 
     const renderCountBeforeUnmount = renderCount;

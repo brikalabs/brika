@@ -1,0 +1,21 @@
+{
+  "$schema": "https://unpkg.com/@changesets/config/schema.json",
+  "changelog": ["@changesets/changelog-github", { "repo": "brikalabs/brika" }],
+  "commit": false,
+  "access": "public",
+  "baseBranch": "main",
+  "updateInternalDependencies": "patch",
+  "fixed": [["@brika/sdk", "create-brika"]],
+  "ignore": [
+    "@brika/*",
+    "!@brika/sdk",
+    "!@brika/testing",
+    "!@brika/plugin-agent",
+    "!@brika/blocks-builtin",
+    "!@brika/plugin-matter",
+    "!@brika/plugin-spotify",
+    "!@brika/plugin-timer",
+    "!@brika/plugin-weather",
+    "!@brika/plugin-sil-electricity"
+  ]
+}

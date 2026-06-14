@@ -12,9 +12,7 @@ Extensible serialization system for BRIKA with support for custom types and Zod 
 
 ## Installation
 
-```bash
-npm install @brika/serializable
-```
+Internal package. It is bundled into `@brika/sdk` and is not published to npm or installable on its own. The `Serializable` type and the reactive serialization helpers are re-exported from the main `@brika/sdk` entry, and the curated `z` (with custom types like `z.duration()`, `z.color()`, and `z.generic()`) is exposed through the `@brika/sdk/schema` subpath. The examples below import from `@brika/serializable` as an internal reference.
 
 ## Usage
 

@@ -1,6 +1,7 @@
 {
   "$schema": "https://schema.brika.dev/plugin.schema.json",
   "name": "@brika/plugin-agent",
+  "knip": { "entry": ["src/blocks/**/*.{ts,tsx}"] },
   "displayName": "AI Agent",
   "version": "0.4.0",
   "description": "Run LLMs (Claude or any OpenAI-compatible endpoint) inside your workflows: prompt-in, text-out AI blocks",
@@ -8,7 +9,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/brikalabs/brika.git",
+    "url": "git+https://github.com/brikalabs/brika.git",
     "directory": "plugins/agent"
   },
   "icon": "./icon.svg",
@@ -102,5 +103,15 @@
   "devDependencies": {
     "bun-types": "^1.3.5"
   },
-  "files": ["src", "locales", "icon.svg", "README.md", "!src/**/*.test.ts", "!src/**/*.test.tsx"]
+  "files": [
+    "src",
+    "locales",
+    "icon.svg",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md",
+    "!src/**/*.{test,spec}.{ts,tsx}",
+    "!src/**/{*_test-utils.ts,tsconfig.json,*.bench.ts,__benchmarks__/**}",
+    "!**/*.tsbuildinfo"
+  ]
 }

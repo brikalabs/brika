@@ -1,18 +1,26 @@
 /**
  * Generate a Knip configuration from the repo's own conventions.
  *
- * Most of what we'd otherwise hand-write into knip.json is derivable:
- *   - `bin` / `main` / `exports` fields point at the public source entries.
- *   - Library packages whose `exports` targets `dist/x.js` map back to `src/x.ts`
- *     (the build mirrors src 1:1).
- *   - Plugin workspaces follow the convention `src/{bricks,blocks,pages}/**`
- *     for dynamically-loaded code.
- *   - The hub loads `src/runtime/plugins/prelude/**` at runtime by path.
- *   - The UI app uses shadcn — `src/components/ui/**` is opt-in scaffolding.
+ * The generator knows NO package, framework, or dependency by name. Every
+ * workspace's config comes from three domain-agnostic sources:
+ *   1. Manifest fields: `bin` / `main` / `exports` point at the public source
+ *      entries (library `exports` targeting `dist/x.js` map back to `src/x.ts`,
+ *      since the build mirrors src 1:1). Workspace `paths` are derived the same
+ *      way, so a cross-package `@scope/pkg/subpath` import resolves to source.
+ *   2. Universal JS/monorepo conventions, gated purely on what exists on disk:
+ *      co-located tests + fixtures, `examples/` + `scripts/`, root `*.config.ts`
+ *      and Bun `*.macro.ts` (tool/build entry points), `__benchmarks__/` (bench
+ *      runner entries), and a `template/` scaffolding dir (ignored).
+ *   3. Per-package declarations: anything domain-specific (a framework's
+ *      path-loaded entry dirs, a host-provided peer dependency a bundler
+ *      externalizes, a bundled-bin source) lives in that package's own
+ *      `package.json#knip` (the native knip workspace shape), so the knowledge
+ *      sits WITH the package instead of as a branch in this file.
  */
 
 import { stat } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
+import { Glob } from 'bun';
 import { isObjectRecord } from './type-guards';
 import { discoverPackages, type WorkspacePackage } from './workspace';
 
@@ -33,9 +41,6 @@ export interface KnipConfig {
   paths?: Record<string, string[]>;
 }
 
-const PLUGIN_PEER_DEPS = ['react', 'lucide-react'];
-const SHADCN_DIR = 'src/components/ui/**';
-const SDK_PACKAGE = 'packages/sdk';
 const DIST_JS_RE = /^\.\/dist\/(.+)\.js$/;
 const byLocale = (a: string, b: string): number => a.localeCompare(b);
 
@@ -63,6 +68,12 @@ function* iterExportTargets(value: unknown): Generator<string> {
 
 function resolveExportToSource(value: unknown): string | undefined {
   for (const target of iterExportTargets(value)) {
+    // A `types` condition points at a `.d.ts` stub that carries no runtime
+    // import graph; skip it so a `{ types, default }` export resolves to its
+    // real source (e.g. apps/hub `{ types: ./src/types.d.ts, default: ./src/main.ts }`).
+    if (target.endsWith('.d.ts')) {
+      continue;
+    }
     if (target.startsWith('./src/')) {
       return stripDot(target);
     }
@@ -112,10 +123,6 @@ function collectExportEntries(exports: unknown): string[] {
   return [...out];
 }
 
-async function pathExists(absPath: string): Promise<boolean> {
-  return await Bun.file(absPath).exists();
-}
-
 async function dirExists(absDir: string): Promise<boolean> {
   try {
     return (await stat(absDir)).isDirectory();
@@ -124,9 +131,20 @@ async function dirExists(absDir: string): Promise<boolean> {
   }
 }
 
+/** True when at least one file under `absDir` matches the glob. */
+async function hasMatch(absDir: string, pattern: string): Promise<boolean> {
+  const scan = new Glob(pattern).scan({ cwd: absDir, onlyFiles: true });
+  const first = await scan.next();
+  return first.done !== true;
+}
+
 async function loadManifest(path: string): Promise<Record<string, unknown>> {
   const raw: unknown = await Bun.file(path).json();
   return isObjectRecord(raw) ? raw : {};
+}
+
+function toStringArray(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((v): v is string => typeof v === 'string') : [];
 }
 
 interface BuildContext {
@@ -167,64 +185,55 @@ async function addManifestEntries(ctx: BuildContext, entries: Set<string>): Prom
   }
 }
 
-async function addPluginEntries(ctx: BuildContext, entries: Set<string>): Promise<void> {
-  for (const sub of ['bricks', 'blocks', 'pages']) {
-    if (await dirExists(join(ctx.absDir, 'src', sub))) {
-      entries.add(`src/${sub}/**/*.{ts,tsx}`);
-    }
+/**
+ * Structural conventions gated only on disk layout, never on a package name:
+ * tool configs and Bun macros are entry points (loaded by path), benchmarks are
+ * bench-runner roots like tests, and a `template/` dir is scaffolding copied
+ * verbatim rather than imported.
+ */
+async function addConventionEntries(
+  ctx: BuildContext,
+  entries: Set<string>,
+  ignore: Set<string>
+): Promise<void> {
+  if (await hasMatch(ctx.absDir, '*.config.ts')) {
+    entries.add('*.config.ts');
   }
-  for (const file of ['src/actions.ts', 'src/routes.ts']) {
-    if (await pathExists(join(ctx.absDir, file))) {
-      entries.add(file);
-    }
+  if (await hasMatch(ctx.absDir, 'src/**/*.macro.ts')) {
+    entries.add('src/**/*.macro.ts');
   }
-}
-
-async function addAppHubEntries(ctx: BuildContext, entries: Set<string>): Promise<void> {
-  const macro = 'src/build-info.macro.ts';
-  if (await pathExists(join(ctx.absDir, macro))) {
-    entries.add(macro);
+  if (await hasMatch(ctx.absDir, 'src/**/__benchmarks__/**/*.{ts,tsx}')) {
+    entries.add('src/**/__benchmarks__/**/*.{ts,tsx}');
   }
-  if (await dirExists(join(ctx.absDir, 'src/runtime/plugins/prelude'))) {
-    entries.add('src/runtime/plugins/prelude/**/*.ts');
-  }
-}
-
-async function addAppUiEntries(ctx: BuildContext, entries: Set<string>): Promise<void> {
-  for (const file of ['src/main.tsx', 'src/router.tsx', 'arch.config.ts']) {
-    if (await pathExists(join(ctx.absDir, file))) {
-      entries.add(file);
-    }
-  }
-  if (await dirExists(join(ctx.absDir, 'src/routes'))) {
-    entries.add('src/routes/**/*.{ts,tsx}');
+  if (await dirExists(join(ctx.absDir, 'template'))) {
+    ignore.add('template/**');
   }
 }
 
-async function addPackageQuirks(ctx: BuildContext, entries: Set<string>): Promise<void> {
-  if (ctx.dir === 'packages/create-brika' && (await dirExists(join(ctx.absDir, 'src')))) {
-    entries.add('src/**/*.ts');
+/**
+ * Merge the package's own `package.json#knip` (native knip workspace shape) for
+ * anything not derivable from conventions: a bundled bin's real source entry, a
+ * path-loaded fixture, an intentionally-undeclared optional dependency. The
+ * knowledge lives with the package, not as a branch here.
+ */
+function mergeDeclaredKnip(
+  manifest: Record<string, unknown>,
+  entries: Set<string>,
+  ignore: Set<string>,
+  ignoreDependencies: Set<string>
+): void {
+  const declared = manifest.knip;
+  if (!isObjectRecord(declared)) {
+    return;
   }
-  // The SDK bin is `dist/bin/brika.js`, bundled from src/cli/brika.ts via a
-  // Bun.build string entrypoint (not an import knip can follow), so the dist->src
-  // mirror guess misses it. Register the real CLI entry so knip traverses into
-  // dev/doctor/install instead of flagging them as dead.
-  if (ctx.dir === 'packages/sdk' && (await pathExists(join(ctx.absDir, 'src/cli/brika.ts')))) {
-    entries.add('src/cli/brika.ts');
+  for (const entry of toStringArray(declared.entry)) {
+    entries.add(entry);
   }
-  if (ctx.dir === 'packages/db' && (await pathExists(join(ctx.absDir, 'database.config.ts')))) {
-    entries.add('database.config.ts');
+  for (const pattern of toStringArray(declared.ignore)) {
+    ignore.add(pattern);
   }
-  if (ctx.dir === 'packages/ipc') {
-    if (await dirExists(join(ctx.absDir, 'src/__tests__/fixtures'))) {
-      entries.add('src/__tests__/fixtures/**/*.ts');
-    }
-    if (await dirExists(join(ctx.absDir, 'src/__benchmarks__'))) {
-      entries.add('src/__benchmarks__/**/*.ts');
-    }
-    if (await pathExists(join(ctx.absDir, '.benchmark-plugin.ts'))) {
-      entries.add('.benchmark-plugin.ts');
-    }
+  for (const dep of toStringArray(declared.ignoreDependencies)) {
+    ignoreDependencies.add(dep);
   }
 }
 
@@ -245,35 +254,8 @@ async function buildWorkspaceConfig(
   const ignoreDependencies = new Set<string>();
 
   await addManifestEntries(ctx, entries);
-
-  if (dir.startsWith('plugins/')) {
-    await addPluginEntries(ctx, entries);
-    for (const dep of PLUGIN_PEER_DEPS) {
-      ignoreDependencies.add(dep);
-    }
-  }
-  if (dir === 'apps/hub') {
-    await addAppHubEntries(ctx, entries);
-  }
-  if (dir === 'apps/ui') {
-    await addAppUiEntries(ctx, entries);
-    ignore.add(SHADCN_DIR);
-  }
-  if (dir === 'packages/create-brika' && (await dirExists(join(ctx.absDir, 'template')))) {
-    ignore.add('template/**');
-  }
-  if (dir === 'apps/signaling') {
-    // Optional persistence backends: node:sqlite (Bun/Node builtin) with a
-    // graceful better-sqlite3 fallback. Intentionally undeclared optional deps.
-    ignoreDependencies.add('node:sqlite');
-    ignoreDependencies.add('better-sqlite3');
-  }
-  if (dir === 'packages/i18n-dev') {
-    // Used only by the runnable example under examples/, not the published package.
-    ignoreDependencies.add('@vitejs/plugin-react');
-  }
-
-  await addPackageQuirks(ctx, entries);
+  await addConventionEntries(ctx, entries, ignore);
+  mergeDeclaredKnip(ctx.manifest, entries, ignore, ignoreDependencies);
 
   const config: KnipWorkspaceConfig = { entry: [...entries].sort(byLocale) };
   if (ignore.size > 0) {
@@ -285,38 +267,69 @@ async function buildWorkspaceConfig(
   return config;
 }
 
-async function buildSdkPaths(root: string): Promise<Record<string, string[]>> {
-  const sdkPkgPath = join(root, SDK_PACKAGE, 'package.json');
-  if (!(await pathExists(sdkPkgPath))) {
-    return {};
-  }
-  const manifest = await loadManifest(sdkPkgPath);
+/** Map one package's public subpaths to their source files (`@scope/pkg/x` -> `./dir/src/x.ts`). */
+function packagePaths(dir: string, manifest: Record<string, unknown>): Record<string, string[]> {
+  const name = manifest.name;
   const exports = manifest.exports;
-  if (!isObjectRecord(exports)) {
+  if (typeof name !== 'string' || !isObjectRecord(exports)) {
     return {};
   }
   const paths: Record<string, string[]> = {};
   for (const [subpath, value] of Object.entries(exports)) {
-    if (!subpath.startsWith('.')) {
-      continue;
+    const sourceRel = subpath.startsWith('.') ? resolveExportToSource(value) : undefined;
+    if (sourceRel) {
+      paths[subpath === '.' ? name : `${name}${subpath.slice(1)}`] = [`./${dir}/${sourceRel}`];
     }
-    const sourceRel = resolveExportToSource(value);
-    if (!sourceRel) {
-      continue;
-    }
-    const importPath = subpath === '.' ? '@brika/sdk' : `@brika/sdk${subpath.slice(1)}`;
-    paths[importPath] = [`./${SDK_PACKAGE}/${sourceRel}`];
   }
   return paths;
+}
+
+/**
+ * Map every workspace package's public subpaths to source, so a cross-package
+ * `@scope/pkg/subpath` import resolves to `src/...` even when the published
+ * `exports` target `dist/` (which may not be built in a dev checkout). Derived
+ * from each manifest's name + exports; no package is named here.
+ */
+async function buildWorkspacePaths(
+  root: string,
+  packages: readonly WorkspacePackage[]
+): Promise<Record<string, string[]>> {
+  const paths: Record<string, string[]> = {};
+  for (const pkg of packages) {
+    if (pkg.relativePath !== 'package.json') {
+      const dir = dirname(pkg.relativePath);
+      Object.assign(paths, packagePaths(dir, await loadManifest(join(root, pkg.relativePath))));
+    }
+  }
+  return paths;
+}
+
+/**
+ * The repo-root workspace: `scripts/*.ts` are runnable entries, and the deps it
+ * uses only through tooling (which import paths knip can't follow) are declared
+ * in the root `package.json#knip`, like any other workspace.
+ */
+async function buildRootConfig(root: string): Promise<KnipWorkspaceConfig> {
+  const entries = new Set(['scripts/*.ts']);
+  const ignore = new Set<string>();
+  const ignoreDependencies = new Set<string>();
+  mergeDeclaredKnip(
+    await loadManifest(join(root, 'package.json')),
+    entries,
+    ignore,
+    ignoreDependencies
+  );
+  const config: KnipWorkspaceConfig = { entry: [...entries].sort(byLocale) };
+  if (ignoreDependencies.size > 0) {
+    config.ignoreDependencies = [...ignoreDependencies].sort(byLocale);
+  }
+  return config;
 }
 
 export async function buildKnipConfig(root: string): Promise<KnipConfig> {
   const packages = await discoverPackages(root);
   const workspaces: Record<string, KnipWorkspaceConfig> = {
-    '.': {
-      entry: ['scripts/*.ts'],
-      ignoreDependencies: ['@brika/hub', '@brika/i18n-devtools', '@brika/sdk', '@brika/testing'],
-    },
+    '.': await buildRootConfig(root),
   };
 
   for (const pkg of packages) {
@@ -332,6 +345,6 @@ export async function buildKnipConfig(root: string): Promise<KnipConfig> {
     workspaces,
     ignoreExportsUsedInFile: true,
     ignoreBinaries: ['ps'],
-    paths: await buildSdkPaths(root),
+    paths: await buildWorkspacePaths(root, packages),
   };
 }

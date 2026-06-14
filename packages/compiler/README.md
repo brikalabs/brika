@@ -11,16 +11,21 @@ Plugin bundler used by the hub and `create-brika`. Turns a plugin source tree in
 ## Usage
 
 ```bash
-brika build               # via @brika/hub CLI, in a plugin workspace
+brika build               # via @brika/sdk author CLI, in a plugin workspace
 ```
 
-```ts
-import { compilePlugin } from '@brika/compiler';
+The package exposes the steps `brika build` orchestrates rather than a single
+entry point. The main exports are `compileServerEntry`, `compileClientBundle` /
+`compileClientModule`, `generateEntry`, `generateManifest`, and `validatePlugin`
+(plus the `Bun.build` plugins `brikaExternalsPlugin`, `brikaActionsPlugin`, and
+`brikaServerActionsPlugin`).
 
-await compilePlugin({
-  entry: './src/index.ts',
-  outDir: './dist',
-  manifest: pkgJson.brika,
+```ts
+import { compileServerEntry } from '@brika/compiler';
+
+const result = await compileServerEntry({
+  entrypoint: '/abs/path/to/plugin/src/index.tsx',
+  outdir: '/abs/path/to/plugin/node_modules/.cache/brika/server',
 });
 ```
 

@@ -13,12 +13,16 @@ import { join, relative } from 'node:path';
 import { findWorkspaceRoot } from './src/exec-context';
 
 const result = await Bun.build({
-  entrypoints: [`${import.meta.dir}/src/cli/brika.ts`],
+  entrypoints: [`${import.meta.dir}/cli/brika.ts`],
   outdir: `${import.meta.dir}/dist/bin`,
   target: 'bun',
   // brika:embedded-cli is the compiled-binary delegation module; the lean bin
   // never runs compiled, so the dynamic import stays dormant and unresolved.
   external: ['@brika/sdk', '@typescript/native-preview', 'brika:embedded-cli'],
+  // Minify the shipped bin: it inlines the whole build toolchain, so mangling
+  // the internal closure ~halves the on-disk size. String literals (user-facing
+  // messages, the external module specifiers) are preserved, so behavior holds.
+  minify: true,
   banner: '#!/usr/bin/env bun',
 });
 

@@ -336,7 +336,15 @@ describe('useLogSearch', () => {
     latest.current?.commit('first');
     await flush();
     latest.current?.commit('second');
-    await flush(80);
+    // Wait for both fetches to register, the first to abort, and the
+    // second result to settle, rather than racing a fixed `flush(80)`.
+    await settle(
+      () =>
+        seenSignals.length === 2 &&
+        seenSignals[0]?.aborted === true &&
+        latest.current?.mode === 'ready' &&
+        latest.current?.results.length === 1
+    );
 
     expect(seenSignals).toHaveLength(2);
     expect(seenSignals[0]?.aborted).toBe(true);

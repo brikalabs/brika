@@ -41,8 +41,17 @@ export default function template(data: TemplateData): string {
   }
 
   pkg.dependencies = { '@brika/sdk': `^${data.sdkVersion}` };
-  // @typescript/native-preview (tsgo) backs `brika check`'s type pass.
-  pkg.devDependencies = { '@typescript/native-preview': 'latest', 'bun-types': '^1.3.5' };
+  // @typescript/native-preview (tsgo) backs `brika check`'s type pass; @brika/testing
+  // backs `@brika/sdk/testing` imports in the plugin's tests; react + lucide-react are
+  // externalized to host globals at build, declared here only for author-side typecheck.
+  pkg.devDependencies = {
+    '@brika/testing': `^${data.sdkVersion}`,
+    '@types/react': '^19.2.17',
+    '@typescript/native-preview': 'latest',
+    'bun-types': '^1.3.5',
+    'lucide-react': '^1.17.0',
+    react: '^19.2.7',
+  };
 
   return JSON.stringify(pkg, null, 2) + '\n';
 }

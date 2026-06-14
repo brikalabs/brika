@@ -1,6 +1,8 @@
 # @brika/grants
 
-Typed grant registry — the single primitive every plugin uses to talk to the hub.
+> Internal package. It is bundled into `@brika/sdk` and is not published to npm or installable on its own. The grant API is re-exported through the `@brika/sdk/grants` subpath; the examples below are an internal reference.
+
+Typed grant registry, the single primitive every plugin uses to talk to the hub.
 
 A **grant** is a capability a plugin requests in its manifest and the hub awards (or refuses) at install/runtime. Grants are the trust boundary between plugin code and the host: file-system access, secret reads, network calls, IPC channels — all gated by a grant.
 

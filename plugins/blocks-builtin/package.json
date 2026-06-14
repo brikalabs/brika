@@ -1,6 +1,10 @@
 {
   "$schema": "https://schema.brika.dev/plugin.schema.json",
   "name": "@brika/blocks-builtin",
+  "knip": {
+    "entry": ["src/blocks/**/*.{ts,tsx}"],
+    "ignoreDependencies": ["lucide-react", "react"]
+  },
   "displayName": "Core Blocks",
   "version": "0.4.0",
   "description": "Core workflow blocks for BRIKA automations",
@@ -40,11 +44,11 @@
     "locales",
     "icon.svg",
     "README.md",
-    "!src/**/*.test.ts",
-    "!src/**/*.test.tsx",
-    "!src/**/*.spec.ts",
-    "!src/**/*.spec.tsx",
-    "!src/**/*_test-utils.ts"
+    "LICENSE",
+    "CHANGELOG.md",
+    "!src/**/*.{test,spec}.{ts,tsx}",
+    "!src/**/{*_test-utils.ts,tsconfig.json,*.bench.ts,__benchmarks__/**}",
+    "!**/*.tsbuildinfo"
   ],
   "scripts": {
     "dev": "brika dev",
@@ -174,7 +178,12 @@
     }
   ],
   "dependencies": {
-    "@brika/sdk": "workspace:*",
-    "zod": "^4.3.6"
+    "@brika/sdk": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.17",
+    "lucide-react": "^1.17.0",
+    "react": "^19.2.7",
+    "zod": "^4.3.4"
   }
 }

@@ -6,6 +6,7 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as p from '@brika/cli/prompts';
 import pc from 'picocolors';
+import { z } from 'zod';
 import type { PluginConfig, PluginFeature } from './prompts';
 import { type TemplateData, walkTemplate } from './render';
 import { runCommand, toCamelCase, toPascalCase } from './utils';
@@ -32,15 +33,20 @@ export function createTemplateData(config: PluginConfig, sdkVersion: string): Te
   };
 }
 
+const latestVersionSchema = z.object({ version: z.string() }).loose();
+
 async function fetchLatestVersion(packageName: string): Promise<string> {
-  const response = await fetch(`https://registry.npmjs.org/${packageName}/latest`);
+  // Honor the configured npm registry (set by `npm config` / the env) so this
+  // works against a private or local registry, not just npmjs.org.
+  const registry = (process.env.npm_config_registry ?? 'https://registry.npmjs.org').replace(
+    /\/$/,
+    ''
+  );
+  const response = await fetch(`${registry}/${packageName}/latest`);
   if (!response.ok) {
-    throw new Error(`Failed to fetch ${packageName} version: ${response.status}`);
+    throw new Error(`Failed to fetch ${packageName} version from ${registry}: ${response.status}`);
   }
-  const data = (await response.json()) as {
-    version: string;
-  };
-  return data.version;
+  return latestVersionSchema.parse(await response.json()).version;
 }
 
 export async function scaffold(options: ScaffoldOptions): Promise<void> {

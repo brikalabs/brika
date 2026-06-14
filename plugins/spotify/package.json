@@ -1,6 +1,10 @@
 {
   "$schema": "https://schema.brika.dev/plugin.schema.json",
   "name": "@brika/plugin-spotify",
+  "knip": {
+    "entry": ["src/bricks/**/*.{ts,tsx}", "src/blocks/**/*.{ts,tsx}", "src/actions.ts"],
+    "ignoreDependencies": ["lucide-react", "react"]
+  },
   "displayName": "Spotify",
   "version": "0.4.0",
   "description": "Spotify Connect player for BRIKA dashboards",
@@ -8,7 +12,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/brikalabs/brika.git",
+    "url": "git+https://github.com/brikalabs/brika.git",
     "directory": "plugins/spotify"
   },
   "icon": "./icon.svg",
@@ -156,8 +160,21 @@
     "@brika/sdk": "workspace:*"
   },
   "devDependencies": {
+    "@types/react": "^19.2.17",
     "class-variance-authority": "^0.7.1",
-    "clsx": "^2.1.1"
+    "clsx": "^2.1.1",
+    "lucide-react": "^1.17.0",
+    "react": "^19.2.7"
   },
-  "files": ["src", "locales", "icon.svg", "README.md"]
+  "files": [
+    "src",
+    "locales",
+    "icon.svg",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md",
+    "!src/**/*.{test,spec}.{ts,tsx}",
+    "!src/**/{*_test-utils.ts,tsconfig.json,*.bench.ts,__benchmarks__/**}",
+    "!**/*.tsbuildinfo"
+  ]
 }

@@ -12,29 +12,28 @@ bun add @brika/sdk
 
 ```typescript
 // plugins/my-plugin/src/main.ts
-import { defineReactiveBlock, input, output, log, onStop, z } from "@brika/sdk";
+import { defineBlock, input, output, log, onStop, z } from "@brika/sdk";
 
 // Define a reactive block with typed inputs/outputs
-export const greet = defineReactiveBlock(
-  {
-    id: "greet",
-    inputs: {
-      trigger: input(z.generic(), { name: "Trigger" }),
-    },
-    outputs: {
-      message: output(z.object({ text: z.string() }), { name: "Message" }),
-    },
-    config: z.object({
-      name: z.string().describe("Name to greet"),
-    }),
+export const greet = defineBlock({
+  id: "greet",
+  meta: { name: "Greet", category: "action" },
+  inputs: {
+    trigger: input(z.generic(), { name: "Trigger" }),
   },
-  ({ inputs, outputs, config }) => {
+  outputs: {
+    message: output(z.object({ text: z.string() }), { name: "Message" }),
+  },
+  config: z.object({
+    name: z.string().describe("Name to greet"),
+  }),
+  run({ inputs, outputs, config }) {
     inputs.trigger.on(() => {
       log.info(`Greeting ${config.name}`);
       outputs.message.emit({ text: `Hello, ${config.name}!` });
     });
-  }
-);
+  },
+});
 
 // Lifecycle hooks
 onStop(() => log.info("Plugin stopping"));
@@ -48,7 +47,7 @@ Blocks are the building blocks of workflows. Each block has typed inputs, output
 
 ```typescript
 import {
-  defineReactiveBlock,
+  defineBlock,
   input,
   output,
   combine,
@@ -56,27 +55,26 @@ import {
   z,
 } from "@brika/sdk";
 
-export const temperatureAlert = defineReactiveBlock(
-  {
-    id: "temperature-alert",
-    inputs: {
-      temperature: input(z.number(), { name: "Temperature °C" }),
-      humidity: input(z.number(), { name: "Humidity %" }),
-    },
-    outputs: {
-      alert: output(z.object({ type: z.string(), message: z.string() }), {
-        name: "Alert",
-      }),
-      normal: output(z.object({ temp: z.number(), hum: z.number() }), {
-        name: "Normal",
-      }),
-    },
-    config: z.object({
-      maxTemp: z.number().default(30).describe("Max temperature threshold"),
-      maxHumidity: z.number().default(80).describe("Max humidity threshold"),
+export const temperatureAlert = defineBlock({
+  id: "temperature-alert",
+  meta: { name: "Temperature Alert", category: "transform" },
+  inputs: {
+    temperature: input(z.number(), { name: "Temperature °C" }),
+    humidity: input(z.number(), { name: "Humidity %" }),
+  },
+  outputs: {
+    alert: output(z.object({ type: z.string(), message: z.string() }), {
+      name: "Alert",
+    }),
+    normal: output(z.object({ temp: z.number(), hum: z.number() }), {
+      name: "Normal",
     }),
   },
-  ({ inputs, outputs, config }) => {
+  config: z.object({
+    maxTemp: z.number().default(30).describe("Max temperature threshold"),
+    maxHumidity: z.number().default(80).describe("Max humidity threshold"),
+  }),
+  run({ inputs, outputs, config }) {
     // Combine multiple inputs
     combine(inputs.temperature, inputs.humidity)
       .pipe(
@@ -101,8 +99,8 @@ export const temperatureAlert = defineReactiveBlock(
           });
         }
       });
-  }
-);
+  },
+});
 ```
 
 ## Port Types
@@ -215,25 +213,23 @@ Use `start()` for source blocks that generate data:
 ```typescript
 import { interval } from "@brika/sdk";
 
-export const clock = defineReactiveBlock(
-  {
-    id: "clock",
-    inputs: {},
-    outputs: {
-      tick: output(z.object({ count: z.number(), ts: z.number() }), {
-        name: "Tick",
-      }),
-    },
-    config: z.object({
-      interval: z.duration(undefined, "Tick interval"),
+export const clock = defineBlock({
+  id: "clock",
+  meta: { name: "Clock", category: "trigger" },
+  outputs: {
+    tick: output(z.object({ count: z.number(), ts: z.number() }), {
+      name: "Tick",
     }),
   },
-  ({ outputs, config, start }) => {
+  config: z.object({
+    interval: z.duration(undefined, "Tick interval"),
+  }),
+  run({ outputs, config, start }) {
     start(interval(config.interval))
       .pipe(map((count) => ({ count: count + 1, ts: Date.now() })))
       .to(outputs.tick);
-  }
-);
+  },
+});
 ```
 
 ## Logging
@@ -263,22 +259,39 @@ try {
 
 These are displayed in an expandable UI in the logs viewer at `/logs`.
 
-## Events
+## Sparks (Typed Events)
+
+Sparks are typed events broadcast across the hub. Define one with a Zod schema, then `emit()` validated payloads. Other blocks subscribe with `subscribeSpark()`, which returns a reactive `Source`.
 
 ```typescript
-import { emit, on } from "@brika/sdk";
+import { defineSpark, subscribeSpark, defineBlock, output, map, z } from "@brika/sdk";
 
-// Emit events to the hub event bus
-emit("device.updated", { id: "light-1", state: "on" });
-emit("motion.detected", { zone: "living-room", confidence: 0.95 });
-
-// Subscribe to events with pattern matching
-const unsub = on("motion.*", (event) => {
-  log.debug(`Motion event: ${event.type}`, event.payload);
+// Define a typed spark (discovered by `brika build` and lowered into the manifest)
+export const motionDetected = defineSpark({
+  id: "motion-detected",
+  meta: { name: "Motion Detected" },
+  schema: z.object({ zone: z.string(), confidence: z.number() }),
 });
 
-// Unsubscribe when done
-unsub();
+// Emit the spark (fully typed!)
+motionDetected.emit({ zone: "living-room", confidence: 0.95 });
+
+// Subscribe to a spark type from inside a block
+export const sparkReceiver = defineBlock({
+  id: "spark-receiver",
+  meta: { name: "Spark Receiver", category: "trigger" },
+  outputs: {
+    out: output(z.resolved("spark", "sparkType"), { name: "Payload" }),
+  },
+  config: z.object({
+    sparkType: z.sparkType("Spark type to listen for"),
+  }),
+  run({ config, outputs, start }) {
+    start(subscribeSpark(config.sparkType))
+      .pipe(map((event) => event.payload))
+      .to(outputs.out);
+  },
+});
 ```
 
 ## Lifecycle Hooks
@@ -307,7 +320,7 @@ onUninstall(() => {
 
 ## Plugin Configuration (Preferences)
 
-Access plugin configuration from `brika.yml`:
+Access plugin configuration (declared in the plugin's `package.json` `preferences` array, set by the operator) at runtime:
 
 ```typescript
 import { getPreferences, onPreferencesChange } from "@brika/sdk";
@@ -365,7 +378,7 @@ Use the schema for IDE autocomplete:
 ```typescript
 // Block definition
 export {
-  defineReactiveBlock,
+  defineBlock,
   input,
   output,
   isCompiledReactiveBlock,
@@ -386,12 +399,12 @@ export {
   interval,
 } from "@brika/sdk";
 
-// Lifecycle & Events
+// Sparks (typed events)
+export { defineSpark, subscribeSpark } from "@brika/sdk";
+
+// Lifecycle, Logging & Preferences
 export {
   log,
-  emit,
-  on,
-  onEvent,
   onInit,
   onStop,
   onUninstall,

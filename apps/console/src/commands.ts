@@ -24,9 +24,11 @@
  */
 
 import { type Command, createCli, generateHelp } from '@brika/cli';
-// The author verbs (build/check/verify) live in @brika/sdk so a plugin needs
-// only @brika/sdk to run them; the full hub CLI re-registers the same modules.
-import { build, check, verify } from '@brika/sdk/cli';
+// The author verbs (build/check/verify) live in @brika/sdk so the standalone
+// `brika` bin and this full hub CLI register the same modules. The `internal/`
+// subpath is a workspace-only entry (it pulls in the private build toolchain);
+// it is stripped from the published manifest, so it never leaks to consumers.
+import { build, check, verify } from '@brika/sdk/internal/cli';
 import pc from 'picocolors';
 import supervisor from './commands/__supervisor';
 import brix from './commands/brix';

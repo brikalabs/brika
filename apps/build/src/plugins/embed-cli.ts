@@ -10,11 +10,11 @@ import type { BunPlugin } from 'bun';
  * from disk files imported at runtime, so every plugin module failed with
  * `Cannot find module '@brika/sdk'`. Only the bundler resolver works there.
  *
- * Fix: bundle the author CLI (`packages/sdk/src/cli/brika.ts`, the same entry
+ * Fix: bundle the author CLI (`packages/sdk/cli/brika.ts`, the same entry
  * the lean `@brika/sdk` bin uses) into one self-contained JS string and serve
  * it as the virtual module `brika:embedded-cli`. At runtime a compiled binary
  * materializes it and re-runs the build in a plain-bun child, where plugin
- * imports resolve normally (see `packages/sdk/src/cli/embedded-cli.ts`).
+ * imports resolve normally (see `packages/sdk/cli/embedded-cli.ts`).
  *
  * Unlike the lean bin, `@brika/sdk` is inlined here: the materialized file
  * lives under `<dataDir>/runtime/` with no node_modules to resolve from. The
@@ -25,7 +25,7 @@ import type { BunPlugin } from 'bun';
  * `Bun.build` inside `onLoad` deadlocks on the bundler lock.
  */
 
-const CLI_ENTRY = join(import.meta.dir, '../../../../packages/sdk/src/cli/brika.ts');
+const CLI_ENTRY = join(import.meta.dir, '../../../../packages/sdk/cli/brika.ts');
 
 /** Bundle the author CLI to a single self-contained JS string. */
 export async function bundleCliSource(): Promise<string> {

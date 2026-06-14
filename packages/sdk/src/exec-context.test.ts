@@ -11,6 +11,33 @@ import {
   resolveDataDir,
 } from './exec-context';
 
+type DataDirInput = Parameters<typeof resolveDataDir>[0];
+type DataDirResult = ReturnType<typeof resolveDataDir>;
+
+// Every test that mints a temp dir registers it here; one afterEach reaps them all.
+const tmpDirs: string[] = [];
+afterEach(async () => {
+  await Promise.all(tmpDirs.splice(0).map((dir) => rm(dir, { recursive: true, force: true })));
+});
+
+/** A realpath'd temp dir, auto-cleaned after the test. */
+async function tempDir(prefix: string): Promise<string> {
+  const dir = await realpath(await mkdtemp(join(tmpdir(), prefix)));
+  tmpDirs.push(dir);
+  return dir;
+}
+
+/** A temp workspace root (package.json with `workspaces`) plus an apps/hub subdir. */
+async function makeWorkspace(): Promise<string> {
+  const root = await tempDir('brika-ws-');
+  await writeFile(
+    join(root, 'package.json'),
+    JSON.stringify({ name: 'ws', workspaces: ['apps/*'] })
+  );
+  await mkdir(join(root, 'apps', 'hub'), { recursive: true });
+  return root;
+}
+
 describe('isCompiledFrom', () => {
   test('true only for the bunfs virtual path', () => {
     expect(isCompiledFrom('/$bunfs/root/main.ts')).toBe(true);
@@ -20,167 +47,146 @@ describe('isCompiledFrom', () => {
 });
 
 describe('isManagedInstall', () => {
-  test('true when the launcher exported the managed marker', () => {
-    expect(
-      isManagedInstall({ env: { BRIKA_INSTALL: 'managed' }, execPath: '/usr/local/bin/brika' })
-    ).toBe(true);
-  });
-
-  test('true when the binary lives under node_modules (marker stripped)', () => {
-    expect(
-      isManagedInstall({
-        env: {},
-        execPath: '/usr/local/lib/node_modules/@brika/cli-darwin-arm64/bin/brika',
-      })
-    ).toBe(true);
-  });
-
-  test('false for a curl|sh install (no marker, not under node_modules)', () => {
-    expect(isManagedInstall({ env: {}, execPath: '/Users/me/.brika/bin/brika' })).toBe(false);
+  test.each<[string, Parameters<typeof isManagedInstall>[0], boolean]>([
+    [
+      'true when the launcher exported the managed marker',
+      { env: { BRIKA_INSTALL: 'managed' }, execPath: '/usr/local/bin/brika' },
+      true,
+    ],
+    [
+      'true when the binary lives under node_modules (marker stripped)',
+      { env: {}, execPath: '/usr/local/lib/node_modules/@brika/cli-darwin-arm64/bin/brika' },
+      true,
+    ],
+    [
+      'false for a curl|sh install (no marker, not under node_modules)',
+      { env: {}, execPath: '/Users/me/.brika/bin/brika' },
+      false,
+    ],
+  ])('%s', (_name, input, expected) => {
+    expect(isManagedInstall(input)).toBe(expected);
   });
 });
 
 describe('resolveDataDir matrix', () => {
-  const tmp: string[] = [];
-  afterEach(async () => {
-    await Promise.all(tmp.splice(0).map((d) => rm(d, { recursive: true, force: true })));
-  });
-
-  async function makeWorkspace(): Promise<string> {
-    const root = await realpath(await mkdtemp(join(tmpdir(), 'brika-ws-')));
-    tmp.push(root);
-    await writeFile(
-      join(root, 'package.json'),
-      JSON.stringify({ name: 'ws', workspaces: ['apps/*'] })
-    );
-    await mkdir(join(root, 'apps', 'hub'), { recursive: true });
-    return root;
-  }
-
-  test('$BRIKA_HOME wins over everything', () => {
-    const r = resolveDataDir({
-      env: { BRIKA_HOME: '/custom/home' },
-      isCompiled: true,
-      execPath: '/opt/brika/bin/brika',
-      cwd: '/anywhere',
-    });
-    expect(r).toEqual({ path: '/custom/home', source: 'env' });
-  });
-
-  test('compiled binary -> parent of the install dir', () => {
-    const r = resolveDataDir({
-      env: {},
-      isCompiled: true,
-      execPath: '/opt/brika/bin/brika',
-      cwd: '/anywhere',
-    });
-    // dirname(dirname('/opt/brika/bin/brika')) === '/opt/brika'
-    expect(r).toEqual({ path: '/opt/brika', source: 'compiled-parent' });
-  });
-
-  test('package-manager install (env marker) -> per-user ~/.brika, NOT binary-relative', () => {
-    const r = resolveDataDir({
-      env: { BRIKA_INSTALL: 'managed' },
-      isCompiled: true,
-      execPath: '/usr/local/lib/node_modules/@brika/cli-linux-x64/bin/brika',
-      cwd: '/anywhere',
-      home: '/home/me',
-      platform: 'linux',
-    });
-    expect(r).toEqual({ path: '/home/me/.brika', source: 'managed' });
-  });
-
-  test('package-manager install (node_modules in execPath) -> per-user dir without the marker', () => {
-    const r = resolveDataDir({
-      env: {},
-      isCompiled: true,
-      execPath: '/usr/local/lib/node_modules/@brika/cli-darwin-arm64/bin/brika',
-      cwd: '/anywhere',
-      home: '/Users/me',
-      platform: 'darwin',
-    });
-    expect(r).toEqual({ path: '/Users/me/.brika', source: 'managed' });
-  });
-
-  test(String.raw`package-manager install on Windows -> %LOCALAPPDATA%\brika`, () => {
-    const r = resolveDataDir({
-      env: { BRIKA_INSTALL: 'managed', LOCALAPPDATA: String.raw`C:\Users\me\AppData\Local` },
-      isCompiled: true,
-      execPath: String.raw`C:\Users\me\AppData\Roaming\npm\node_modules\@brika\cli-win32-x64\bin\brika.exe`,
-      cwd: String.raw`C:\anywhere`,
-      home: String.raw`C:\Users\me`,
-      platform: 'win32',
-    });
-    expect(r).toEqual({
-      path: join(String.raw`C:\Users\me\AppData\Local`, 'brika'),
-      source: 'managed',
-    });
-  });
-
-  test('$BRIKA_HOME still wins over an package-manager install', () => {
-    const r = resolveDataDir({
-      env: { BRIKA_HOME: '/custom', BRIKA_INSTALL: 'managed' },
-      isCompiled: true,
-      execPath: '/usr/local/lib/node_modules/@brika/cli-linux-x64/bin/brika',
-      cwd: '/anywhere',
-      home: '/home/me',
-      platform: 'linux',
-    });
-    expect(r).toEqual({ path: '/custom', source: 'env' });
-  });
-
-  test('curl install (compiled, no node_modules, no marker) stays binary-relative', () => {
-    const r = resolveDataDir({
-      env: {},
-      isCompiled: true,
-      execPath: '/home/me/.brika/bin/brika',
-      cwd: '/anywhere',
-      home: '/home/me',
-      platform: 'linux',
-    });
-    // The npm branch must NOT trigger for a normal curl install.
-    expect(r).toEqual({ path: '/home/me/.brika', source: 'compiled-parent' });
+  test.each<[string, DataDirInput, DataDirResult]>([
+    [
+      '$BRIKA_HOME wins over everything',
+      {
+        env: { BRIKA_HOME: '/custom/home' },
+        isCompiled: true,
+        execPath: '/opt/brika/bin/brika',
+        cwd: '/anywhere',
+      },
+      { path: '/custom/home', source: 'env' },
+    ],
+    [
+      // dirname(dirname('/opt/brika/bin/brika')) === '/opt/brika'
+      'compiled binary -> parent of the install dir',
+      { env: {}, isCompiled: true, execPath: '/opt/brika/bin/brika', cwd: '/anywhere' },
+      { path: '/opt/brika', source: 'compiled-parent' },
+    ],
+    [
+      'package-manager install (env marker) -> per-user ~/.brika, NOT binary-relative',
+      {
+        env: { BRIKA_INSTALL: 'managed' },
+        isCompiled: true,
+        execPath: '/usr/local/lib/node_modules/@brika/cli-linux-x64/bin/brika',
+        cwd: '/anywhere',
+        home: '/home/me',
+        platform: 'linux',
+      },
+      { path: '/home/me/.brika', source: 'managed' },
+    ],
+    [
+      'package-manager install (node_modules in execPath) -> per-user dir without the marker',
+      {
+        env: {},
+        isCompiled: true,
+        execPath: '/usr/local/lib/node_modules/@brika/cli-darwin-arm64/bin/brika',
+        cwd: '/anywhere',
+        home: '/Users/me',
+        platform: 'darwin',
+      },
+      { path: '/Users/me/.brika', source: 'managed' },
+    ],
+    [
+      String.raw`package-manager install on Windows -> %LOCALAPPDATA%\brika`,
+      {
+        env: { BRIKA_INSTALL: 'managed', LOCALAPPDATA: String.raw`C:\Users\me\AppData\Local` },
+        isCompiled: true,
+        execPath: String.raw`C:\Users\me\AppData\Roaming\npm\node_modules\@brika\cli-win32-x64\bin\brika.exe`,
+        cwd: String.raw`C:\anywhere`,
+        home: String.raw`C:\Users\me`,
+        platform: 'win32',
+      },
+      { path: join(String.raw`C:\Users\me\AppData\Local`, 'brika'), source: 'managed' },
+    ],
+    [
+      '$BRIKA_HOME still wins over an package-manager install',
+      {
+        env: { BRIKA_HOME: '/custom', BRIKA_INSTALL: 'managed' },
+        isCompiled: true,
+        execPath: '/usr/local/lib/node_modules/@brika/cli-linux-x64/bin/brika',
+        cwd: '/anywhere',
+        home: '/home/me',
+        platform: 'linux',
+      },
+      { path: '/custom', source: 'env' },
+    ],
+    [
+      // The npm branch must NOT trigger for a normal curl install.
+      'curl install (compiled, no node_modules, no marker) stays binary-relative',
+      {
+        env: {},
+        isCompiled: true,
+        execPath: '/home/me/.brika/bin/brika',
+        cwd: '/anywhere',
+        home: '/home/me',
+        platform: 'linux',
+      },
+      { path: '/home/me/.brika', source: 'compiled-parent' },
+    ],
+  ])('%s', (_name, input, expected) => {
+    expect(resolveDataDir(input)).toEqual(expected);
   });
 
   test('dev, cwd = workspace root -> <root>/.brika', async () => {
     const root = await makeWorkspace();
-    const r = resolveDataDir({ env: {}, isCompiled: false, execPath: '/usr/bin/bun', cwd: root });
-    expect(r).toEqual({ path: join(root, '.brika'), source: 'workspace' });
+    expect(
+      resolveDataDir({ env: {}, isCompiled: false, execPath: '/usr/bin/bun', cwd: root })
+    ).toEqual({
+      path: join(root, '.brika'),
+      source: 'workspace',
+    });
   });
 
   test('dev, cwd = a SUBDIR of the workspace -> still <root>/.brika (the mortar-drift cell)', async () => {
     const root = await makeWorkspace();
-    const r = resolveDataDir({
-      env: {},
-      isCompiled: false,
-      execPath: '/usr/bin/bun',
-      cwd: join(root, 'apps', 'hub'),
-    });
-    expect(r).toEqual({ path: join(root, '.brika'), source: 'workspace' });
+    expect(
+      resolveDataDir({
+        env: {},
+        isCompiled: false,
+        execPath: '/usr/bin/bun',
+        cwd: join(root, 'apps', 'hub'),
+      })
+    ).toEqual({ path: join(root, '.brika'), source: 'workspace' });
   });
 
   test('dev, cwd outside any workspace -> <cwd>/.brika', async () => {
-    const outside = await realpath(await mkdtemp(join(tmpdir(), 'brika-bare-')));
-    tmp.push(outside);
-    const r = resolveDataDir({
-      env: {},
-      isCompiled: false,
-      execPath: '/usr/bin/bun',
-      cwd: outside,
+    const outside = await tempDir('brika-bare-');
+    expect(
+      resolveDataDir({ env: {}, isCompiled: false, execPath: '/usr/bin/bun', cwd: outside })
+    ).toEqual({
+      path: join(outside, '.brika'),
+      source: 'cwd',
     });
-    expect(r).toEqual({ path: join(outside, '.brika'), source: 'cwd' });
   });
 });
 
 describe('peekInstanceId', () => {
-  const tmp: string[] = [];
-  afterEach(async () => {
-    await Promise.all(tmp.splice(0).map((d) => rm(d, { recursive: true, force: true })));
-  });
-
   test('reads a valid id, never generates, null on miss/corrupt', async () => {
-    const dir = await realpath(await mkdtemp(join(tmpdir(), 'brika-iid-')));
-    tmp.push(dir);
+    const dir = await tempDir('brika-iid-');
     expect(peekInstanceId(dir)).toBeNull(); // missing -> null, and NOT created
     expect(existsSync(join(dir, 'instance.id'))).toBe(false);
 
@@ -193,20 +199,13 @@ describe('peekInstanceId', () => {
 });
 
 describe('findWorkspaceRoot', () => {
-  const tmp: string[] = [];
-  afterEach(async () => {
-    await Promise.all(tmp.splice(0).map((d) => rm(d, { recursive: true, force: true })));
-  });
-
   test('returns undefined outside a workspace', async () => {
-    const dir = await realpath(await mkdtemp(join(tmpdir(), 'brika-no- ')));
-    tmp.push(dir);
+    const dir = await tempDir('brika-no-');
     expect(findWorkspaceRoot({ cwd: dir })).toBeUndefined();
   });
 
   test('respects the depth cap', async () => {
-    const root = await realpath(await mkdtemp(join(tmpdir(), 'brika-deep-')));
-    tmp.push(root);
+    const root = await tempDir('brika-deep-');
     await writeFile(join(root, 'package.json'), JSON.stringify({ workspaces: ['*'] }));
     const deep = join(root, 'a', 'b', 'c');
     await mkdir(deep, { recursive: true });
@@ -215,8 +214,7 @@ describe('findWorkspaceRoot', () => {
   });
 
   test('keeps climbing past a malformed package.json', async () => {
-    const root = await realpath(await mkdtemp(join(tmpdir(), 'brika-bad-')));
-    tmp.push(root);
+    const root = await tempDir('brika-bad-');
     await writeFile(join(root, 'package.json'), JSON.stringify({ workspaces: ['*'] }));
     const child = join(root, 'pkg');
     await mkdir(child, { recursive: true });

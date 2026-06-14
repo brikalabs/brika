@@ -111,11 +111,11 @@ Validate translations from the command line:
 
 ```bash
 # Validate locale parity using union semantics
-# (exits non-zero on errors — use in CI; pass --ci to also fail on warnings)
-bun packages/i18n-devtools/check --locales ./src/locales
+# (exits non-zero on errors; use in CI; pass --ci to also fail on warnings)
+bun packages/i18n-dev/src/check.ts --locales ./src/locales
 
 # Generate TypeScript type declarations from the reference locale
-bun packages/i18n-devtools/generate-types \
+bun packages/i18n-dev/src/generate-types.ts \
   --locales ./src/locales/en \
   --reference-locale en
 ```

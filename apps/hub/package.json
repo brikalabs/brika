@@ -1,5 +1,6 @@
 {
   "name": "@brika/hub",
+  "knip": { "entry": ["src/runtime/plugins/prelude/**/*.ts"] },
   "version": "0.4.0",
   "private": true,
   "type": "module",

@@ -7,7 +7,7 @@
 
 import { defineCommand } from '@brika/cli';
 import pc from 'picocolors';
-import { isCompiledFrom, peekInstanceId, resolveDataDir } from '../../exec-context';
+import { isCompiledFrom, peekInstanceId, resolveDataDir } from '../../src/exec-context';
 import { hubInstanceId, hubOrigin, pingHub } from '../hub';
 
 export default defineCommand({

@@ -1,6 +1,7 @@
 {
   "name": "@brika/components",
   "version": "0.4.0",
+  "private": true,
   "description": "Private React components shared across Brika apps (animated brand mark, splash bits, etc.)",
   "type": "module",
   "license": "MIT",

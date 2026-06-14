@@ -1,6 +1,10 @@
 {
   "$schema": "https://schema.brika.dev/plugin.schema.json",
   "name": "@brika/plugin-timer",
+  "knip": {
+    "entry": ["src/bricks/**/*.{ts,tsx}", "src/blocks/**/*.{ts,tsx}"],
+    "ignoreDependencies": ["lucide-react", "react"]
+  },
   "displayName": "Timer",
   "version": "0.4.0",
   "description": "Timer and countdown blocks for BRIKA workflows",
@@ -8,7 +12,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/brikalabs/brika.git",
+    "url": "git+https://github.com/brikalabs/brika.git",
     "directory": "plugins/timer"
   },
   "icon": "./icon.svg",
@@ -160,19 +164,22 @@
     "@brika/sdk": "workspace:*"
   },
   "devDependencies": {
+    "@types/react": "^19.2.17",
     "bun-types": "^1.3.5",
     "class-variance-authority": "^0.7.1",
-    "clsx": "^2.1.1"
+    "clsx": "^2.1.1",
+    "lucide-react": "^1.17.0",
+    "react": "^19.2.7"
   },
   "files": [
     "src",
     "locales",
     "icon.svg",
     "README.md",
-    "!src/**/*.test.ts",
-    "!src/**/*.test.tsx",
-    "!src/**/*.spec.ts",
-    "!src/**/*.spec.tsx",
-    "!src/**/*_test-utils.ts"
+    "LICENSE",
+    "CHANGELOG.md",
+    "!src/**/*.{test,spec}.{ts,tsx}",
+    "!src/**/{*_test-utils.ts,tsconfig.json,*.bench.ts,__benchmarks__/**}",
+    "!**/*.tsbuildinfo"
   ]
 }

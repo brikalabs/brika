@@ -1,5 +1,6 @@
 {
   "name": "create-brika",
+  "knip": { "entry": ["src/**/*.ts"] },
   "version": "0.4.0",
   "description": "Create a new BRIKA plugin with a single command",
   "type": "module",
@@ -15,21 +16,34 @@
     "create-brika": "./dist/index.js"
   },
   "exports": {
-    "./run": "./src/run.ts"
+    "./run": {
+      "types": "./src/run.ts",
+      "default": "./dist/run.js"
+    }
   },
-  "files": ["dist", "template"],
+  "files": [
+    "dist",
+    "template",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md",
+    "!src/**/*.{test,spec}.{ts,tsx}",
+    "!src/**/{*_test-utils.ts,tsconfig.json,*.bench.ts,__benchmarks__/**}",
+    "!**/*.tsbuildinfo"
+  ],
   "scripts": {
     "build": "bun run build.ts",
     "dev": "bun run src/index.ts",
     "test": "bun test",
     "typecheck": "tsgo --noEmit",
+    "smoke:bin": "BRIKA_BIN_SMOKE=1 bun test smoke-bin.e2e.integration.test.ts",
     "prepublishOnly": "bun run build"
   },
-  "dependencies": {
-    "@brika/cli": "workspace:*"
-  },
   "devDependencies": {
+    "@brika/cli": "workspace:*",
+    "@brika/workspace-tools": "workspace:*",
     "@types/bun": "^1.3.5",
-    "picocolors": "^1.1.1"
+    "picocolors": "^1.1.1",
+    "zod": "^4.3.4"
   }
 }

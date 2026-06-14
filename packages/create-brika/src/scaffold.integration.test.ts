@@ -266,7 +266,7 @@ describe('scaffold', () => {
       })
     );
     await expect(scaffold(defaultOptions)).rejects.toThrow(
-      'Failed to fetch @brika/sdk version: 404'
+      'Failed to fetch @brika/sdk version from https://registry.npmjs.org: 404'
     );
   });
 

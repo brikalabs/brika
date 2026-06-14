@@ -11,7 +11,7 @@
 import { readFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { defineCommand } from '@brika/cli';
-import { runBuild } from '@brika/sdk/cli';
+import { runBuild } from '@brika/sdk/internal/cli';
 import pc from 'picocolors';
 import { CliError } from '../shared/cli/errors';
 import { hubUrl } from '../shared/cli/hub-client';

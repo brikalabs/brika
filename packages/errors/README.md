@@ -1,5 +1,7 @@
 # @brika/errors
 
+> Internal package. It is bundled into `@brika/sdk` and is not published to npm or installable on its own. The error API (`BrikaError`, the `errors` factories, `matchBrikaError`) is re-exported from the main `@brika/sdk` entry; the examples below are an internal reference.
+
 Typed error catalog, factories, match helper, and RFC 9457 HTTP envelope for the Brika platform.
 
 Every error that crosses an IPC, HTTP, or workflow boundary in Brika is a `BrikaError`. The catalog is the single source of truth for error codes, their data shape, category, severity, and HTTP mapping — used by the hub, the SDK, plugins, and the UI to keep error handling exhaustive and refactor-safe.

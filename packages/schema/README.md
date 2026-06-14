@@ -13,9 +13,7 @@ Unified schema package for BRIKA plugins and configuration.
 
 ## Installation
 
-```bash
-bun add @brika/schema
-```
+Internal package. It is bundled into `@brika/sdk` and is not published to npm or installable on its own. Its runtime validation API ships inside `@brika/sdk`, and the generated JSON Schema is served separately over the CDN at `schema.brika.dev` (see below). The examples below import from `@brika/schema` as an internal reference.
 
 ## Usage
 
@@ -115,23 +113,22 @@ This:
 3. Injects version into `$id`
 4. Writes to `dist/plugin.schema.json`
 
-### 3. Publish to npm
+### 3. Publish the JSON Schema to the CDN
+
+The package itself is internal and never published to npm. Only the generated JSON Schema is published, served over the CDN at `schema.brika.dev` from the repo's `schemas/` directory:
 
 ```bash
-# Smart publish with safety checks
-bun run publish
+# Generate the JSON Schema
+bun run build
 
-# Force publish (skip version check)
-bun run publish --force
-
-# Dry run (see what would be published)
-bun run publish --dry-run
+# Release the generated schema to the CDN
+bun run release
 ```
 
-The publish script automatically:
+The release script automatically:
 - Builds the schemas
-- Checks if version exists (unless --force)
-- Publishes to npm
+- Checks if the version already exists
+- Publishes the JSON Schema to the CDN
 - Shows CDN URLs
 
 ### 4. Use Everywhere
@@ -224,7 +221,7 @@ Gets injected into JSON Schema:
 ### Updating Version
 
 1. Update `packages/schema/package.json` version
-2. Run `bun run publish`
+2. Run `bun run release`
 3. Push tags: `git push --follow-tags`
 4. GitHub Action creates git tag (if configured)
 5. New version accessible at `schema.brika.dev/x.y.z/...`
@@ -233,7 +230,7 @@ Or use npm's built-in version command:
 
 ```bash
 npm version patch   # 0.1.0 → 0.1.1
-bun run publish
+bun run release
 git push --follow-tags
 ```
 
@@ -318,20 +315,26 @@ async loadPlugin(packageJson: unknown) {
   "$schema": "https://schema.brika.dev/plugin.schema.json",
   "name": "@brika/plugin-timer",
   "dependencies": {
-    "@brika/schema": "workspace:*"
+    "@brika/sdk": "workspace:*"
   }
 }
 ```
 
-### External Plugins (Published)
+### External Plugins (via @brika/sdk)
 
-```bash
-npm install @brika/schema
-```
+`@brika/schema` is internal and not installable on its own. External plugins depend on `@brika/sdk`, which bundles this package, and use its validation API:
 
 ```typescript
-import { PluginPackageSchema } from "@brika/schema";
+import { PluginPackageSchema } from "@brika/sdk";
 // Validate your plugin programmatically
+```
+
+For IDE support, external plugins reference the JSON Schema over the CDN instead, with no install required:
+
+```json
+{
+  "$schema": "https://schema.brika.dev/plugin.schema.json"
+}
 ```
 
 ## Scripts
@@ -340,9 +343,7 @@ import { PluginPackageSchema } from "@brika/schema";
 |---------|-------------|
 | `bun run build` | Generate JSON Schema from Zod |
 | `bun run dev` | Watch mode - regenerate on changes |
-| `bun run publish` | Publish to npm with safety checks |
-| `bun run publish --force` | Force publish (skip version check) |
-| `bun run publish --dry-run` | See what would be published |
+| `bun run release` | Publish the generated JSON Schema to the CDN |
 
 ## Files
 

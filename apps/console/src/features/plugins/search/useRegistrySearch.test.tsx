@@ -229,8 +229,6 @@ describe('useRegistrySearch', () => {
         })
       )
     );
-    await flush();
-    expect(latest).not.toBeNull();
     const hit = (name: string, installed = false) => ({
       name,
       version: '1.0.0',
@@ -239,6 +237,9 @@ describe('useRegistrySearch', () => {
       downloadCount: 0,
       source: 'registry',
     });
+    // The installed-name set is populated by an async /api/plugins fetch.
+    // Wait until the merged result is present before asserting it.
+    await waitFor(() => latest.current?.isInstalled(hit('local-only')) === true);
     expect(latest.current?.isInstalled(hit('local-only'))).toBe(true);
     expect(latest.current?.isInstalled(hit('other', true))).toBe(true);
     expect(latest.current?.isInstalled(hit('fresh'))).toBe(false);
@@ -276,7 +277,7 @@ describe('useRegistrySearch', () => {
         })
       )
     );
-    await flush();
+    await waitFor(() => pluginsCalls === 1);
     expect(pluginsCalls).toBe(1);
 
     latest.current?.startInstall({
@@ -338,7 +339,9 @@ describe('useRegistrySearch', () => {
       downloadCount: 0,
       source: 'registry',
     });
-    await flush();
+    // The install generator iterates SSE events asynchronously; wait until
+    // the error phase has been surfaced before asserting it.
+    await waitFor(() => latest.current?.installError === 'install denied');
 
     expect(latest.current?.installError).toBe('install denied');
     expect(latest.current?.installingName).toBeNull();

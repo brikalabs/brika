@@ -1,0 +1,42 @@
+# npm publish/install acceptance e2e (gated, not per-PR).
+#
+# Publishes the shipped Brika surface to a throwaway verdaccio registry exactly as
+# a release would (bun publish rewrites workspace:*), then exercises two real
+# consumer paths against it: a clean `bun add` + SDK import, and a headless hub
+# installing a plugin from the registry and loading it (blocks register). Catches
+# the dependency round-trip + host-integration bugs the per-PR closure guards
+# can only approximate.
+#
+# Bun-only and Docker-free: e2e/acceptance.ts runs verdaccio as a plain `bunx`
+# process and boots the hub from source, so it needs no daemon. Heavy (registry +
+# publish + hub boot), so it runs on a manual dispatch and nightly, not per-PR.
+name: e2e acceptance (npm round-trip)
+
+on:
+  workflow_dispatch: {}
+  schedule:
+    # Nightly at 03:17 UTC.
+    - cron: "17 3 * * *"
+
+concurrency:
+  group: e2e-acceptance
+  cancel-in-progress: true
+
+jobs:
+  acceptance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: bun-version
+        run: echo "value=$(jq -r '.engines.bun' package.json)" >> "$GITHUB_OUTPUT"
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ steps.bun-version.outputs.value }}
+
+      - run: bun install
+
+      # Self-contained: starts verdaccio (bunx), publishes, installs into a clean
+      # consumer + a headless hub, asserts, and tears everything down.
+      - run: bun run e2e/acceptance.ts

@@ -5,28 +5,30 @@ Small CLI framework used by the Brika tools (`brika`, `create-brika`, internal s
 ## Usage
 
 ```ts
-import { defineCli } from '@brika/cli';
+import { createCli, defineCommand } from '@brika/cli';
 
-const cli = defineCli({
-  name: 'brika',
-  commands: {
-    start: {
-      summary: 'Start the hub in the background',
-      run: async ({ args }) => {
-        await startHub(args);
-      },
-    },
-    logs: {
-      summary: 'Tail hub logs',
-      flags: { follow: { type: 'boolean', alias: 'f' } },
-      run: async ({ flags }) => {
-        await tailLogs({ follow: flags.follow });
-      },
-    },
+const start = defineCommand({
+  name: 'start',
+  description: 'Start the hub in the background',
+  async handler({ positionals }) {
+    await startHub(positionals);
   },
 });
 
-await cli.run(process.argv.slice(2));
+const logs = defineCommand({
+  name: 'logs',
+  description: 'Tail hub logs',
+  options: { follow: { type: 'boolean', short: 'f' } },
+  async handler({ values }) {
+    await tailLogs({ follow: values.follow });
+  },
+});
+
+await createCli({ name: 'brika', defaultCommand: 'start' })
+  .addCommand(start)
+  .addCommand(logs)
+  .addHelp()
+  .run();
 ```
 
 ## Why not Commander/yargs

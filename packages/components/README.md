@@ -6,7 +6,7 @@ This package is intentionally tiny — it holds visual primitives that need to l
 
 ## What ships here
 
-- **`BrikaMark`** (default export) — the animated brand mark. Configurable state (`idle`, `thinking`, `error`, …) and respects `prefers-reduced-motion`.
+- **`BrikaMark`** (named export): the animated brand mark. Configurable state (`idle`, `thinking`, `error`, ...) and respects `prefers-reduced-motion`.
 - **`./styles`** (CSS entry) — the Tailwind/clay layer overrides the mark and any future component depends on. Apps `@import` it from their own stylesheet.
 
 ## Usage

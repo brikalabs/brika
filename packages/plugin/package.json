@@ -1,6 +1,7 @@
 {
   "name": "@brika/plugin",
   "version": "0.4.0",
+  "private": true,
   "description": "Core plugin runtime types and port compatibility for BRIKA",
   "type": "module",
   "license": "MIT",

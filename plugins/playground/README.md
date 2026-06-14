@@ -131,7 +131,7 @@ a tighter `maxFileBytes` if your plugin doesn't actually need 512 MiB.
 Add to your `.brika/brika.yml`:
 
 ```yaml
-install:
+plugins:
   "@brika/plugin-playground":
     version: workspace:*
 ```

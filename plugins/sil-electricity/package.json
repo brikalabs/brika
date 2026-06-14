@@ -1,11 +1,24 @@
 {
   "$schema": "https://schema.brika.dev/plugin.schema.json",
   "name": "@brika/plugin-sil-electricity",
+  "knip": {
+    "entry": ["src/bricks/**/*.{ts,tsx}"],
+    "ignoreDependencies": ["lucide-react", "react"]
+  },
   "displayName": "SIL Electricity",
   "version": "0.4.0",
   "description": "Monitor your electricity consumption from Services Industriels de Lausanne",
   "author": "Maxime Scharwath",
   "license": "MIT",
+  "homepage": "https://github.com/brikalabs/brika/tree/main/plugins/sil-electricity#readme",
+  "bugs": {
+    "url": "https://github.com/brikalabs/brika/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/brikalabs/brika.git",
+    "directory": "plugins/sil-electricity"
+  },
   "icon": "./icon.svg",
   "keywords": ["brika", "brika-plugin", "electricity", "energy", "sil", "lausanne"],
   "type": "module",
@@ -137,10 +150,23 @@
     }
   ],
   "dependencies": {
-    "@brika/sdk": "workspace:*"
-  },
-  "devDependencies": {
+    "@brika/sdk": "workspace:*",
     "recharts": "^3.8.1"
   },
-  "files": ["src", "locales", "icon.svg", "README.md"]
+  "devDependencies": {
+    "@types/react": "^19.2.17",
+    "lucide-react": "^1.17.0",
+    "react": "^19.2.7"
+  },
+  "files": [
+    "src",
+    "locales",
+    "icon.svg",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md",
+    "!src/**/*.{test,spec}.{ts,tsx}",
+    "!src/**/{*_test-utils.ts,tsconfig.json,*.bench.ts,__benchmarks__/**}",
+    "!**/*.tsbuildinfo"
+  ]
 }

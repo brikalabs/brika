@@ -1,11 +1,12 @@
 {
   "name": "@brika/testing",
   "version": "0.4.0",
+  "description": "Bun test helpers (mocks, fixtures) backing @brika/sdk/testing for plugin authors",
   "type": "module",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/brikalabs/brika.git",
+    "url": "git+https://github.com/brikalabs/brika.git",
     "directory": "packages/testing"
   },
   "keywords": ["brika", "testing", "bun", "mocks"],
@@ -14,6 +15,15 @@
   "exports": {
     ".": "./src/index.ts"
   },
+  "files": [
+    "src",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md",
+    "!src/**/*.{test,spec}.{ts,tsx}",
+    "!src/**/{*_test-utils.ts,tsconfig.json,*.bench.ts,__benchmarks__/**}",
+    "!**/*.tsbuildinfo"
+  ],
   "scripts": {
     "test": "bun test"
   },

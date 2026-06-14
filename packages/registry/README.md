@@ -4,10 +4,10 @@ Cryptographic verification for Brika's plugin registry. Wraps the Ed25519 signin
 
 ## What this gives you
 
-- `signManifest(manifest, privateKey)` — produce a detached signature over the canonical manifest bytes
-- `verifyManifest(manifest, signature, publicKey)` — return `true` if the signature is valid
-- Canonicalization helpers — JSON canonicalization that doesn't depend on field ordering
-- A small set of types describing the registry-side index and signature blobs
+- `verifyWithRawKey(data, signatureHex, publicKeyBase64)`: return `true` if the Ed25519 signature over `data` is valid
+- `canonicalize(value)`: deterministic JSON serialization (sorted keys, compact, no `undefined`) so signatures don't depend on field ordering
+- `REGISTRY_PUBLIC_KEY` / `SPKI_HEADER`: the embedded trusted Brika key and the DER prefix used to wrap a raw Ed25519 key
+- A small set of types (`VerifiedPlugin`, `VerifiedPluginsList`) describing the registry-side index
 
 ## Trust model
 

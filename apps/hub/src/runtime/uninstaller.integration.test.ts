@@ -100,6 +100,14 @@ function stubPrompt(answer: string | null): void {
   globalThis.prompt = (() => answer) as typeof globalThis.prompt;
 }
 
+/** Create a temp BRIKA_HOME dir, point process.env.BRIKA_HOME at it, return its path. */
+async function useBrikaHome(name: string): Promise<string> {
+  const home = join(tmpDir, name);
+  await mkdir(home, { recursive: true });
+  process.env.BRIKA_HOME = home;
+  return home;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // RC file line-filtering logic (unit test)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -224,74 +232,27 @@ describe('RC file line-filtering logic', () => {
 
 describe('selfUninstall', () => {
   describe('prompt abort', () => {
-    test('aborts when user answers "n"', async () => {
+    // A "no" answer (n, empty, null, No) aborts; an affirmative (y, Y, yes) proceeds.
+    test.each<[string | null, boolean]>([
+      ['n', true],
+      ['', true],
+      [null, true],
+      ['No', true],
+      ['y', false],
+      ['Y', false],
+      ['yes', false],
+    ])('answer %p -> aborts=%p', async (answer, aborts) => {
       await setupFakeInstallDir();
-      stubPrompt('n');
+      stubPrompt(answer);
 
       await selfUninstall();
 
       const output = log.lines.join('\n');
-      expect(output).toContain('Aborted');
-    });
-
-    test('aborts when user answers empty string', async () => {
-      await setupFakeInstallDir();
-      stubPrompt('');
-
-      await selfUninstall();
-
-      const output = log.lines.join('\n');
-      expect(output).toContain('Aborted');
-    });
-
-    test('aborts when prompt returns null', async () => {
-      await setupFakeInstallDir();
-      stubPrompt(null);
-
-      await selfUninstall();
-
-      const output = log.lines.join('\n');
-      expect(output).toContain('Aborted');
-    });
-
-    test('aborts when user answers "No"', async () => {
-      await setupFakeInstallDir();
-      stubPrompt('No');
-
-      await selfUninstall();
-
-      const output = log.lines.join('\n');
-      expect(output).toContain('Aborted');
-    });
-
-    test('does not abort when user answers "y"', async () => {
-      await setupFakeInstallDir();
-      stubPrompt('y');
-
-      await selfUninstall();
-
-      const output = log.lines.join('\n');
-      expect(output).not.toContain('Aborted');
-    });
-
-    test('does not abort when user answers "Y"', async () => {
-      await setupFakeInstallDir();
-      stubPrompt('Y');
-
-      await selfUninstall();
-
-      const output = log.lines.join('\n');
-      expect(output).not.toContain('Aborted');
-    });
-
-    test('does not abort when user answers "yes"', async () => {
-      await setupFakeInstallDir();
-      stubPrompt('yes');
-
-      await selfUninstall();
-
-      const output = log.lines.join('\n');
-      expect(output).not.toContain('Aborted');
+      if (aborts) {
+        expect(output).toContain('Aborted');
+      } else {
+        expect(output).not.toContain('Aborted');
+      }
     });
   });
 
@@ -333,8 +294,7 @@ describe('selfUninstall', () => {
 
     test('displays BRIKA_HOME path when purge is true', async () => {
       await setupFakeInstallDir();
-      const brikaHome = join(tmpDir, 'brika-home');
-      process.env.BRIKA_HOME = brikaHome;
+      const brikaHome = await useBrikaHome('brika-home');
       stubPrompt('n');
 
       await selfUninstall({
@@ -347,8 +307,7 @@ describe('selfUninstall', () => {
 
     test('shows where data is kept (and how to purge) when purge is false', async () => {
       await setupFakeInstallDir();
-      const brikaHome = join(tmpDir, 'brika-home-kept');
-      process.env.BRIKA_HOME = brikaHome;
+      const brikaHome = await useBrikaHome('brika-home-kept');
       stubPrompt('n');
 
       await selfUninstall();
@@ -424,12 +383,8 @@ describe('selfUninstall', () => {
   describe('purge', () => {
     test('removes BRIKA_HOME directory when purge is true', async () => {
       await setupFakeInstallDir();
-      const brikaHome = join(tmpDir, 'brika-home');
-      await mkdir(brikaHome, {
-        recursive: true,
-      });
+      const brikaHome = await useBrikaHome('brika-home');
       await writeFile(join(brikaHome, 'data.json'), '{}');
-      process.env.BRIKA_HOME = brikaHome;
       stubPrompt('y');
 
       await selfUninstall({
@@ -441,11 +396,7 @@ describe('selfUninstall', () => {
 
     test('does not remove BRIKA_HOME when purge is false', async () => {
       await setupFakeInstallDir();
-      const brikaHome = join(tmpDir, 'brika-home');
-      await mkdir(brikaHome, {
-        recursive: true,
-      });
-      process.env.BRIKA_HOME = brikaHome;
+      const brikaHome = await useBrikaHome('brika-home');
       stubPrompt('y');
 
       await selfUninstall({
@@ -457,11 +408,7 @@ describe('selfUninstall', () => {
 
     test('does not remove BRIKA_HOME when purge is omitted', async () => {
       await setupFakeInstallDir();
-      const brikaHome = join(tmpDir, 'brika-home');
-      await mkdir(brikaHome, {
-        recursive: true,
-      });
-      process.env.BRIKA_HOME = brikaHome;
+      const brikaHome = await useBrikaHome('brika-home');
       stubPrompt('y');
 
       await selfUninstall();
@@ -486,11 +433,7 @@ describe('selfUninstall', () => {
 
     test('prints workspace removal messages when purging', async () => {
       await setupFakeInstallDir();
-      const brikaHome = join(tmpDir, 'brika-home');
-      await mkdir(brikaHome, {
-        recursive: true,
-      });
-      process.env.BRIKA_HOME = brikaHome;
+      await useBrikaHome('brika-home');
       stubPrompt('y');
 
       await selfUninstall({
@@ -545,11 +488,7 @@ describe('selfUninstall', () => {
 
     test('leaves the data dir for the PS1 to remove when purging on Windows', async () => {
       await setupFakeInstallDir();
-      const brikaHome = join(tmpDir, 'brika-home-win');
-      await mkdir(brikaHome, {
-        recursive: true,
-      });
-      process.env.BRIKA_HOME = brikaHome;
+      const brikaHome = await useBrikaHome('brika-home-win');
       stubPrompt('y');
       Object.defineProperty(process, 'platform', {
         value: 'win32',
@@ -592,11 +531,7 @@ describe('selfUninstall', () => {
   describe('default options', () => {
     test('purge defaults to false when options is undefined', async () => {
       await setupFakeInstallDir();
-      const brikaHome = join(tmpDir, 'brika-home-default');
-      await mkdir(brikaHome, {
-        recursive: true,
-      });
-      process.env.BRIKA_HOME = brikaHome;
+      const brikaHome = await useBrikaHome('brika-home-default');
       stubPrompt('y');
 
       await selfUninstall(undefined);
@@ -606,11 +541,7 @@ describe('selfUninstall', () => {
 
     test('purge defaults to false when options is empty object', async () => {
       await setupFakeInstallDir();
-      const brikaHome = join(tmpDir, 'brika-home-empty');
-      await mkdir(brikaHome, {
-        recursive: true,
-      });
-      process.env.BRIKA_HOME = brikaHome;
+      const brikaHome = await useBrikaHome('brika-home-empty');
       stubPrompt('y');
 
       await selfUninstall({});

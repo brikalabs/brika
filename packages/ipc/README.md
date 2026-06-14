@@ -12,9 +12,7 @@ Type-safe binary IPC (Inter-Process Communication) for BRIKA plugins. Enables co
 
 ## Installation
 
-```bash
-npm install @brika/ipc
-```
+Internal package. It is bundled into `@brika/sdk` and is not published to npm or installable on its own. The IPC transport is wired internally by the hub prelude and the SDK runtime, so plugin authors do not import it directly. The examples below document the protocol as an internal reference.
 
 ## Usage
 

@@ -6,15 +6,17 @@ Scaffold a new BRIKA plugin with a single command.
 
 ```bash
 bun create brika my-plugin
+# or:
+bunx create-brika my-plugin
 ```
 
 This launches an interactive wizard that:
 
-1. Asks for plugin details (name, description, category, author)
-2. Fetches the latest SDK version from npm
+1. Asks for plugin details (name, description, category, author, features)
+2. Fetches the latest `@brika/sdk` version from npm and pins the new plugin to it
 3. Creates the complete plugin structure
-4. Installs dependencies
-5. Initializes a git repository
+4. Initializes a git repository (unless `--no-git`)
+5. Installs dependencies (unless `--no-install`)
 
 ## Options
 
@@ -37,17 +39,22 @@ bun create brika --help
 
 ## Generated Structure
 
+The exact files depend on which features (blocks, bricks, sparks) you select:
+
 ```
 my-plugin/
-├── package.json          # Plugin manifest with blocks
+├── package.json          # Plugin manifest
 ├── tsconfig.json         # TypeScript configuration
 ├── README.md             # Documentation
 ├── .gitignore
 ├── src/
-│   └── index.ts          # Block definitions
+│   ├── index.ts          # Plugin entry
+│   ├── blocks/           # Block definitions      (if blocks selected)
+│   ├── bricks/           # Brick descriptor + view (if bricks selected)
+│   └── sparks/           # Spark definitions       (if sparks selected)
 └── locales/
-    └── en/
-        └── plugin.json   # i18n translations
+    ├── en/               # i18n translations
+    └── fr/
 ```
 
 ## Categories
@@ -65,15 +72,16 @@ When prompted for category, choose based on your plugin's purpose:
 
 ```bash
 cd my-plugin
-bun link          # Link for local development
-bun run tsc       # Type check
+brika dev               # Build + load into your running hub, hot-reload on edits
+bun run typecheck       # Type check (brika check --types)
 ```
 
-Add to your `brika.yml`:
+To load the plugin from disk via config, add it to your `brika.yml` keyed by package name:
 
 ```yaml
 plugins:
-  - path: ./my-plugin
+  "@brika/plugin-my-plugin":
+    version: "workspace:./my-plugin"
 ```
 
 ## License

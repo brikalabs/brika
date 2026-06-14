@@ -1,5 +1,7 @@
 # @brika/ui-kit
 
+> Internal package. It is bundled into `@brika/sdk` and is not published to npm or installable on its own. The descriptor types are re-exported through the `@brika/sdk/ui-kit` subpath; the examples below are an internal reference.
+
 Descriptor types and builder functions for Brika plugin UI **bricks**.
 
 Bricks are the dashboard tiles a plugin contributes. They're described declaratively as a tree of typed nodes — buttons, layouts, tables, charts, intl strings — and rendered by the host UI without the plugin ever shipping React or DOM code itself. This package is the shared vocabulary that lets the SDK author bricks and the UI render them.

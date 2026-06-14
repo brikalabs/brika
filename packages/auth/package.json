@@ -1,6 +1,7 @@
 {
   "name": "@brika/auth",
   "version": "0.4.0",
+  "private": true,
   "description": "Authentication & authorization system for Brika",
   "type": "module",
   "license": "MIT",

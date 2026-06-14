@@ -19,10 +19,11 @@
  * tags) the gate is a no-op pass — there is nothing to regress against.
  *
  * Usage:
- *   bun scripts/check-version-monotonic.ts
+ *   bun packages/workspace-tools/src/check-version-monotonic.ts
  */
 
-import { compareVersions } from '@brika/workspace-tools/src/semver';
+import { join } from 'node:path';
+import { compareVersions } from './semver';
 
 /** Strips a leading `v`/`V` from a tag so it becomes a bare semver string. */
 export function stripTagPrefix(tag: string): string {
@@ -41,13 +42,16 @@ export function isReleaseTag(tag: string): boolean {
  * (`canary`, `next`, ...). Returns `null` when none qualify.
  */
 export function latestReleaseTag(tags: ReadonlyArray<string>): string | null {
-  const releases = tags.filter(isReleaseTag);
-  if (releases.length === 0) {
-    return null;
+  let best: string | null = null;
+  for (const tag of tags) {
+    if (!isReleaseTag(tag)) {
+      continue;
+    }
+    if (best === null || compareVersions(stripTagPrefix(tag), stripTagPrefix(best)) > 0) {
+      best = tag;
+    }
   }
-  return releases.reduce((best, tag) =>
-    compareVersions(stripTagPrefix(tag), stripTagPrefix(best)) > 0 ? tag : best
-  );
+  return best;
 }
 
 export type GateResult =
@@ -70,7 +74,7 @@ export function evaluateGate(version: string, tags: ReadonlyArray<string>): Gate
 }
 
 async function readRootVersion(): Promise<string> {
-  const pkg: unknown = await Bun.file(new URL('../package.json', import.meta.url)).json();
+  const pkg: unknown = await Bun.file(join(process.cwd(), 'package.json')).json();
   if (
     typeof pkg === 'object' &&
     pkg !== null &&

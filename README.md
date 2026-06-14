@@ -73,14 +73,14 @@ On first start BRIKA creates a `.brika/` directory in the current working direct
 
 | Command              | Description                                                              |
 |----------------------|--------------------------------------------------------------------------|
+| `brika`              | Launch the interactive TUI dashboard (default command)                   |
 | `brika start`        | Start the hub (detaches by default)                                      |
 | `brika stop`         | Stop a running hub                                                       |
-| `brika restart`      | Restart the running hub                                                  |
 | `brika status`       | Show whether the hub is running                                          |
 | `brika open`         | Open the web UI in the browser (starts the hub if it isn't running)      |
-| `brika log`          | Show and search application logs                                         |
-| `brika auth`         | Manage authentication and tokens                                         |
-| `brika plugin`       | Manage plugins (install, uninstall, list)                                |
+| `brika doctor`       | Show mode, data directory, and the hub this CLI targets                  |
+| `brika install`      | Install a plugin into the hub (local path or npm package)                |
+| `brika dev`          | Build a plugin and load it into the hub with hot-reload                  |
 | `brika version`      | Show version and platform info                                           |
 | `brika update`       | Update to the latest version (runs locally, no running hub required)     |
 | `brika uninstall`    | Remove BRIKA from this machine (`--purge` to also delete `.brika/` data) |
@@ -95,18 +95,6 @@ On first start BRIKA creates a `.brika/` directory in the current working direct
 | `--host <addr>`        | Listen address (default: `127.0.0.1`)          |
 | `-a, --attach`         | Keep attached to terminal (default: detach)    |
 | `--open`               | Open the UI in the browser once the hub is ready |
-
-### Log Flags
-
-| Flag                      | Description                                    |
-|---------------------------|------------------------------------------------|
-| `-f, --follow`            | Live tail via SSE (Ctrl+C to stop)             |
-| `-l, --level <level>`     | Filter by level (debug, info, warn, error)     |
-| `-s, --source <source>`   | Filter by source (hub, plugin, ...)            |
-| `-p, --plugin <name>`     | Filter by plugin name                          |
-| `-q, --search <text>`     | Search text in messages                        |
-| `-n, --limit <count>`     | Number of logs to show (default: 50)           |
-| `--clear`                 | Clear all stored logs                          |
 
 ### Global Flags
 
@@ -123,34 +111,23 @@ brika start -p 8080            # Start on port 8080
 brika start --host 0.0.0.0    # Listen on all interfaces (e.g. Docker/VM)
 brika start --attach           # Stay attached to terminal
 brika status                   # Check if hub is running
-brika log                      # Show recent logs
-brika log -f                   # Live tail logs
-brika log --level error -n 100 # Last 100 error logs
 brika update                   # Update to latest version
 brika completions              # Install shell completions
 ```
 
+Logs, plugin uninstall/list, and user/access-token administration live in the
+TUI dashboard (`brika`) and the web UI.
+
 ### Plugin Management
 
-Manage plugins directly from the CLI. The hub must be running.
+Install plugins directly from the CLI. The hub is started automatically if it
+isn't already running.
 
 ```sh
-brika plugin install @brika/plugin-timer           # Install a plugin
-brika plugin install @brika/plugin-timer@1.0.0     # Install a specific version
-brika plugin uninstall @brika/plugin-timer          # Uninstall a plugin
-brika plugin list                                   # List installed plugins
-brika plugin help                                   # Show plugin subcommand help
-```
-
-### Authentication
-
-Manage users and access tokens.
-
-```sh
-brika auth user add          # Create a new user
-brika auth user edit         # Edit an existing user
-brika auth user list         # List all users
-brika auth user delete       # Delete a user
+brika install @brika/plugin-timer           # Install a plugin from npm
+brika install @brika/plugin-timer@1.0.0     # Install a specific version
+brika install ./my-plugin                   # Install a local plugin directory
+brika install                               # Install the plugin in the current directory
 ```
 
 ---
@@ -205,17 +182,15 @@ Run 'brika stop' to stop it first.
 
 ## Installed Files
 
-| Path                    | Description                            |
-|-------------------------|----------------------------------------|
-| `~/.brika/bin/brika`    | The BRIKA binary                       |
-| `~/.brika/bin/bun`      | Bundled Bun runtime (used by plugins)  |
-| `~/.brika/bin/ui/`      | Bundled web UI static files            |
-| `~/.brika/bin/locales/` | Bundled UI translations                |
-| `.brika/`               | Workspace directory (per project)      |
-| `.brika/brika.yml`      | Hub configuration                      |
-| `.brika/brika.pid`      | PID of the running hub                 |
-| `.brika/logs/`          | Log files                              |
-| `.brika/plugins/`       | Installed plugins                      |
+| Path                    | Description                                     |
+|-------------------------|-------------------------------------------------|
+| `~/.brika/bin/brika`    | The BRIKA binary (Bun runtime embedded)         |
+| `~/.brika/bin/ui/`      | Bundled web UI static files                     |
+| `.brika/`               | Workspace directory (per project)               |
+| `.brika/brika.yml`      | Hub configuration                               |
+| `.brika/brika.pid`      | PID of the running hub                          |
+| `.brika/logs/`          | Log files                                       |
+| `.brika/plugins/`       | Installed plugins                               |
 
 On Windows the install directory is `%LOCALAPPDATA%\brika\bin\`.
 
@@ -265,8 +240,8 @@ bun create brika my-plugin
 
 ```typescript
 // src/index.ts — runs in an isolated Bun process
-import { defineReactiveBlock, input, output, log, onStop, z } from "@brika/sdk";
-import { setBrickData, onInit } from "@brika/sdk";
+import { defineReactiveBlock, input, output, log, onStop, onInit, z } from "@brika/sdk";
+import { statusBrick } from "./bricks/status.brick";
 
 export const greet = defineReactiveBlock(
   {
@@ -282,8 +257,8 @@ export const greet = defineReactiveBlock(
   }
 );
 
-// Push data to client-rendered bricks
-onInit(() => setBrickData("status", { greeting: "Hello!" }));
+// Push data to client-rendered bricks via the typed data channel
+onInit(() => statusBrick.data.set({ greeting: "Hello!" }));
 
 onStop(() => log.info("Stopping"));
 log.info("Plugin loaded");
@@ -291,14 +266,26 @@ log.info("Plugin loaded");
 
 ### Bricks — client-rendered dashboard UI
 
+```typescript
+// src/bricks/status.brick.ts: id, meta, and the typed data channel
+import { z } from "@brika/sdk";
+import { defineBrick } from "@brika/sdk/brick";
+
+export interface StatusData { greeting: string; }
+
+export const statusBrick = defineBrick({
+  id: "status",
+  meta: { name: "Status" },
+  data: z.custom<StatusData>(),
+});
+```
+
 ```tsx
 // src/bricks/status.tsx — real React, runs in the browser
-import { useBrickData } from "@brika/sdk/brick-views";
-
-interface StatusData { greeting: string; }
+import { statusBrick } from "./status.brick";
 
 export default function Status() {
-  const data = useBrickData<StatusData>();
+  const data = statusBrick.data.use();
   if (!data) return <div className="p-4 text-muted-foreground">Loading...</div>;
   return <div className="p-4 text-2xl font-bold">{data.greeting}</div>;
 }

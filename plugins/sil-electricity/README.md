@@ -5,7 +5,7 @@ Brika plugin that pulls your electricity-consumption data from [Services Industr
 ## Setup
 
 1. Install the plugin in the hub UI.
-2. Open the plugin's settings and add your SIL account credentials. They are stored in the OS keychain via `Bun.secrets`, not in plaintext config.
+2. Open the plugin's settings and add your SIL account credentials. The password is a `password` preference, so the hub stores it in the OS keychain rather than in plaintext config.
 3. The plugin polls SIL's portal on a configurable interval (default: 6 hours) and caches readings locally.
 
 ## What it exposes

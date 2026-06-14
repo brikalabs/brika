@@ -16,7 +16,7 @@
  */
 
 import { beforeEach, describe, expect, test } from 'bun:test';
-import { flush, useBunMock } from '@brika/testing';
+import { flush, useBunMock, waitFor } from '@brika/testing';
 import { Text } from 'ink';
 import { render } from 'ink-testing-library';
 import React from 'react';
@@ -116,8 +116,7 @@ describe('useLiveMetrics', () => {
         },
       })
     );
-    await flush();
-    expect(calls).toBeGreaterThanOrEqual(1);
+    await waitFor(() => calls >= 1 && latest.current !== null);
     expect(lastUrl).toContain('/api/plugins/plug-2/metrics');
     expect(latest.current?.pid).toBe(1234);
     expect(latest.current?.current?.cpu).toBe(5.5);
@@ -125,7 +124,11 @@ describe('useLiveMetrics', () => {
   });
 
   test('silently swallows fetch errors — metrics stays null', async () => {
-    bun.fetch(async () => new Response('boom', { status: 500 }));
+    let calls = 0;
+    bun.fetch(async () => {
+      calls += 1;
+      return new Response('boom', { status: 500 });
+    });
     const latest: { current: PluginMetrics | null } = { current: null };
     const { unmount } = render(
       React.createElement(Probe, {
@@ -136,8 +139,8 @@ describe('useLiveMetrics', () => {
         },
       })
     );
-    await flush();
-    // No throw, no metrics — error branch silently no-ops.
+    // Wait for the failing fetch to land, then assert the error branch no-ops.
+    await waitFor(() => calls >= 1);
     expect(latest.current).toBeNull();
     unmount();
   });
@@ -155,9 +158,8 @@ describe('useLiveMetrics', () => {
         onResult: () => undefined,
       })
     );
-    await flush();
+    await waitFor(() => calls >= 1);
     const before = calls;
-    expect(before).toBeGreaterThanOrEqual(1);
     unmount();
     // Wait a touch longer than the visible flush — if the interval
     // were still alive it would have ticked one more time by ~250ms,

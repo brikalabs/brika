@@ -50,8 +50,8 @@ Local helpers (per-package) use the `_` prefix convention so they sort to the to
 
 - Configured in [`bunfig.toml`](bunfig.toml) at the repo root.
 - The CI gate is **80% on each package's own `src/` files** (functions and lines).
-- The gate is enforced by [`scripts/check-coverage.ts`](scripts/check-coverage.ts), not by Bun directly — Bun 1.3.14 reads `coverageThreshold` in `bunfig.toml` but does not yet act on it. The script does the per-package aggregation Bun's runner doesn't.
-- Excluded paths (in both `bunfig.toml` `coverageSkipSourceFiles` and `scripts/check-coverage.ts` `DEFAULT_EXEMPT`):
+- The gate is enforced by [`packages/workspace-tools/src/check-coverage.ts`](packages/workspace-tools/src/check-coverage.ts), not by Bun directly — Bun 1.3.14 reads `coverageThreshold` in `bunfig.toml` but does not yet act on it. The script does the per-package aggregation Bun's runner doesn't.
+- Excluded paths (in both `bunfig.toml` `coverageSkipSourceFiles` and `packages/workspace-tools/src/check-coverage.ts` `DEFAULT_EXEMPT`):
   - `apps/ui`, `apps/docs`, `apps/schema-cdn` — pending a frontend test-framework decision.
   - `apps/build`, `apps/console` — thin orchestrators / CLI wrappers; coverage lives in the underlying packages.
   - `packages/tui` — Ink/React TUI primitives, no terminal-renderer harness in `bun:test` yet.
@@ -59,10 +59,10 @@ Local helpers (per-package) use the `_` prefix convention so they sort to the to
 To run the gate locally:
 
 ```sh
-bun scripts/check-coverage.ts                 # 80% on every src/ aggregate
-bun scripts/check-coverage.ts --threshold=0.85
-bun scripts/check-coverage.ts --skip=packages/foo
-bun scripts/check-coverage.ts --no-default-skip   # also gate the exempt packages
+bun packages/workspace-tools/src/check-coverage.ts                 # 80% on every src/ aggregate
+bun packages/workspace-tools/src/check-coverage.ts --threshold=0.85
+bun packages/workspace-tools/src/check-coverage.ts --skip=packages/foo
+bun packages/workspace-tools/src/check-coverage.ts --no-default-skip   # also gate the exempt packages
 ```
 
 To see raw per-file coverage for a single package:
