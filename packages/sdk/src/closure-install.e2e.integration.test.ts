@@ -38,40 +38,46 @@ function buildDist(): void {
   built = true;
 }
 
-describe('published @brika/sdk bundle is self-contained', () => {
-  test('build:dist emits the index entry (JS + types)', () => {
-    buildDist();
-    expect(existsSync(join(distPkg, 'index.js'))).toBe(true);
-    expect(existsSync(join(distPkg, 'index.d.ts'))).toBe(true);
-  }, 60_000);
+// Gated like the registry smoke e2es: spawning `build:dist` inside the parallel
+// unit-test job starves timing-sensitive suites in other packages. Run it in the
+// dedicated smoke-bin CI job via `bun run smoke:bin`.
+describe.skipIf(process.env.BRIKA_BIN_SMOKE !== '1')(
+  'published @brika/sdk bundle is self-contained',
+  () => {
+    test('build:dist emits the index entry (JS + types)', () => {
+      buildDist();
+      expect(existsSync(join(distPkg, 'index.js'))).toBe(true);
+      expect(existsSync(join(distPkg, 'index.d.ts'))).toBe(true);
+    }, 60_000);
 
-  test('no private closure import survives in the bundled JS or types', async () => {
-    buildDist();
-    const importRe = /^\s*(?:import|export)\b[^;]*?\bfrom\s*['"](@brika\/[a-z/-]+)['"]/;
-    const leaks: string[] = [];
-    for await (const rel of new Glob('**/*.{js,d.ts}').scan({ cwd: distPkg })) {
-      for (const line of readFileSync(join(distPkg, rel), 'utf8').split('\n')) {
-        const m = importRe.exec(line);
-        if (m?.[1] !== undefined && CLOSURE_RE.test(m[1])) {
-          leaks.push(`${rel}: ${m[1]}`);
+    test('no private closure import survives in the bundled JS or types', async () => {
+      buildDist();
+      const importRe = /^\s*(?:import|export)\b[^;]*?\bfrom\s*['"](@brika\/[a-z/-]+)['"]/;
+      const leaks: string[] = [];
+      for await (const rel of new Glob('**/*.{js,d.ts}').scan({ cwd: distPkg })) {
+        for (const line of readFileSync(join(distPkg, rel), 'utf8').split('\n')) {
+          const m = importRe.exec(line);
+          if (m?.[1] !== undefined && CLOSURE_RE.test(m[1])) {
+            leaks.push(`${rel}: ${m[1]}`);
+          }
         }
       }
-    }
-    expect(leaks).toEqual([]);
-  }, 60_000);
+      expect(leaks).toEqual([]);
+    }, 60_000);
 
-  test('react-free bundled entries import under Bun', () => {
-    buildDist();
-    const imports = REACT_FREE.map(
-      (e) => `await import(${JSON.stringify(join(distPkg, `${e}.js`))});`
-    ).join(' ');
-    const run = Bun.spawnSync(['bun', '-e', `${imports} console.log('IMPORT-OK');`], {
-      stdout: 'pipe',
-      stderr: 'pipe',
-    });
-    // exitCode catches ANY import failure regardless of message wording; the
-    // IMPORT-OK marker confirms every dynamic import actually resolved.
-    expect(run.exitCode).toBe(0);
-    expect(run.stdout.toString()).toContain('IMPORT-OK');
-  }, 30_000);
-});
+    test('react-free bundled entries import under Bun', () => {
+      buildDist();
+      const imports = REACT_FREE.map(
+        (e) => `await import(${JSON.stringify(join(distPkg, `${e}.js`))});`
+      ).join(' ');
+      const run = Bun.spawnSync(['bun', '-e', `${imports} console.log('IMPORT-OK');`], {
+        stdout: 'pipe',
+        stderr: 'pipe',
+      });
+      // exitCode catches ANY import failure regardless of message wording; the
+      // IMPORT-OK marker confirms every dynamic import actually resolved.
+      expect(run.exitCode).toBe(0);
+      expect(run.stdout.toString()).toContain('IMPORT-OK');
+    }, 30_000);
+  }
+);

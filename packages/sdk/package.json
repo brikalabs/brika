@@ -62,7 +62,7 @@
     "typecheck": "tsgo --noEmit",
     "build:bin": "bun build-bin.ts",
     "build:dist": "tsdown",
-    "smoke:bin": "BRIKA_BIN_SMOKE=1 bun test smoke-bin.e2e.integration.test.ts",
+    "smoke:bin": "BRIKA_BIN_SMOKE=1 bun test smoke-bin.e2e.integration.test.ts src/closure-install.e2e.integration.test.ts",
     "prepare": "bun run build:bin"
   },
   "dependencies": {
