@@ -370,7 +370,7 @@ describe('WorkflowEngine - Execution Control', () => {
           ok: true,
         }),
       stopBlockInstance: () => undefined,
-      pushBlockInput: () => undefined,
+      pushBlockInput: () => true,
     };
 
     stub(Logger);
