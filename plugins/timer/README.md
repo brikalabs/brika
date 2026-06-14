@@ -226,15 +226,7 @@ log.info("Timer plugin loaded");
 Add to your `brika.yml`:
 
 ```yaml
-install:
-  - ref: "workspace:timer"
-    enabled: true
-```
-
-Or install from npm:
-
-```yaml
-install:
-  - ref: "npm:@brika/plugin-timer"
-    enabled: true
+plugins:
+  "@brika/plugin-timer":
+    version: "latest"
 ```

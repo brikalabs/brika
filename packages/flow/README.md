@@ -12,9 +12,7 @@ Reactive flow primitives for event-driven programming in BRIKA. Type-safe, compo
 
 ## Installation
 
-```bash
-npm install @brika/flow
-```
+Internal package. It is bundled into `@brika/sdk` and is not published to npm or installable on its own. The reactive flow API is re-exported from the main `@brika/sdk` entry, so plugin authors use it via `import { createFlow, map, filter } from '@brika/sdk'`. The examples below import from `@brika/flow` as an internal reference.
 
 ## Usage
 

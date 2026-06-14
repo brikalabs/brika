@@ -1,19 +1,21 @@
 # @brika/workspace-tools
 
-Interactive CLI tools for managing the Brika monorepo — version bumping and npm publishing.
+Interactive CLI tools for managing the Brika monorepo: version bumping, npm publishing, local install, and dead-code scanning. It also hosts the pure publish-manifest transforms (`src/publish-manifest.ts`, shared with the release CLI) and a zero-dependency mock-registry e2e harness (`src/test-registry.ts`, used by the `@brika/sdk` and `create-brika` smoke tests).
 
 ## Commands
 
-Both commands are available from the **workspace root**:
+These commands are available from the **workspace root**:
 
 | Command | Description |
 |---|---|
 | `bun run bump` | Bump package versions |
 | `bun run publish-packages` | Publish packages to npm |
+| `bun run local-install` | Build from source and install the compiled `brika` binary locally |
+| `bun run deadcode` | Scan the workspace for dead code |
 
 ---
 
-## `bun run bump` — Version bumper
+## `bun run bump`: Version bumper
 
 Interactively (or non-interactively) bumps the `version` field across workspace packages.
 
@@ -42,7 +44,7 @@ bun run bump patch --dry-run                   # preview changes without writing
 | Flag | Short | Description |
 |---|---|---|
 | `--all` | `-a` | Skip package selection, apply to all (or all filtered) |
-| `--filter <pattern>` | `-f` | Filter packages by name — glob, exact, or substring. Repeatable. |
+| `--filter <pattern>` | `-f` | Filter packages by name (glob, exact, or substring). Repeatable. |
 | `--dry-run` | | Preview what would change without writing files |
 | `--help` | `-h` | Show help |
 
@@ -57,7 +59,7 @@ bun run bump patch --dry-run                   # preview changes without writing
 
 ---
 
-## `bun run publish-packages` — npm publisher
+## `bun run publish-packages`: npm publisher
 
 Interactively selects and publishes public workspace packages to npm.
 
@@ -72,12 +74,12 @@ bun run publish-packages --all --dry-run       # preview without publishing
 
 ### Publish flow
 
-1. **Select** — choose which public packages to publish (skipped with `--all` or `--filter`)
-2. **Preview** — shows a summary for each selected package: files, export paths, bin entries, lifecycle hooks
-3. **Confirm** — asks "Publish N packages to npm?" before doing anything
-4. **`bun install`** — runs at workspace root to resolve `workspace:` protocol versions
-5. **Publish** — runs `bun publish --access public` for each package sequentially
-6. **Summary** — reports successes and any failures
+1. **Select**: choose which public packages to publish (skipped with `--all` or `--filter`)
+2. **Preview**: shows a summary for each selected package: files, export paths, bin entries, lifecycle hooks
+3. **Confirm**: asks "Publish N packages to npm?" before doing anything
+4. **`bun install`**: runs at workspace root to resolve `workspace:` protocol versions
+5. **Publish**: runs `bun publish --access public` for each package sequentially
+6. **Summary**: reports successes and any failures
 
 ### 2FA / OTP
 
@@ -88,7 +90,7 @@ If your npm account requires 2FA, the terminal is kept open during each publish 
 | Flag | Short | Description |
 |---|---|---|
 | `--all` | `-a` | Skip package selection, publish all public packages |
-| `--filter <pattern>` | `-f` | Filter packages by name — glob, exact, or substring. Repeatable. |
+| `--filter <pattern>` | `-f` | Filter packages by name (glob, exact, or substring). Repeatable. |
 | `--dry-run` | | Preview what would be published without actually publishing |
 | `--help` | `-h` | Show help |
 

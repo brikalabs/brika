@@ -1,32 +1,42 @@
 # AI Agent
 
-Run Claude inside Brika workflows.
+Run LLMs (Claude, any OpenAI-compatible endpoint, or a local Ollama server)
+inside Brika workflows.
 
 ## Blocks
 
-### Ask Claude (`agent:llm`)
+### Ask AI (`agent:llm`)
 
-Prompt in, completion text out. One Anthropic Messages API call per input event,
-defaulting to Claude Opus 4.8 with adaptive thinking. Use it to summarize a sensor
-reading, classify an event, draft a notification, or rewrite text inside a flow.
+Prompt in, completion text out. One LLM call per input event. Use it to
+summarize a sensor reading, classify an event, draft a notification, or rewrite
+text inside a flow.
 
 - **Inputs:** `prompt` (string)
 - **Outputs:** `text` (string), `error` ({ message })
-- **Config:** `model` (claude-opus-4-8 | claude-sonnet-4-6), `systemPrompt`,
-  `effort` (low | medium | high), `maxTokens`, `apiKeySecret`
+- **Config:** `model`, `systemPrompt`, `effort` (low | medium | high), `maxTokens`
+
+### Call Tool (`agent:call-tool`)
+
+Invoke a hub-registered tool by id and emit its result.
+
+### AI Agent (`agent:agent`)
+
+An LLM that reasons over the prompt and calls hub-registered tools to answer it.
 
 ## Setup
 
-1. The plugin requests two grants, so it installs dormant until you enable it:
-   - `dev.brika.net.fetch` scoped to `api.anthropic.com` (LLM egress)
-   - `dev.brika.secrets.get` (read the API key)
-2. Store your Anthropic API key as the plugin secret named `anthropic-api-key`
-   (override the name per block via `apiKeySecret`).
+1. The plugin requests network grants, so it installs dormant until you enable it:
+   - `dev.brika.net.fetch` scoped to the supported provider hosts (Anthropic,
+     OpenAI, OpenRouter, Groq, Together, Mistral, Azure OpenAI)
+   - `dev.brika.net.local.fetch` on the Ollama loopback port (11434)
+2. Add a provider key in the plugin preferences (`Anthropic API Key`,
+   `OpenAI API Key`, an OpenAI-compatible base URL, and/or an Ollama server URL).
+   Password preferences are stored in the OS keychain.
 3. Wire a trigger or any block's output into `prompt`, and route `text` onward.
 
 ## Notes
 
-- The key never leaves the hub: it is read via the per-plugin secret store and
-  sent only to `api.anthropic.com`.
-- This is the single-call building block. A tool-calling agent (with memory and a
-  chat entrypoint) builds on it once the hub exposes a tool registry.
+- Keys never leave the hub: they are read from the plugin preferences and sent
+  only to the configured provider endpoint.
+- Provider setup lives in the plugin-global preferences, never in individual
+  blocks, so every AI block shares one set of credentials.

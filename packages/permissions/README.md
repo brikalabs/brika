@@ -12,25 +12,24 @@ The hub uses this package to:
 
 ```ts
 import {
-  isKnownPermission,
-  permissionMetadata,
-  validatePermissions,
+  PERMISSIONS,
+  filterValidPermissions,
+  isValidPermission,
 } from '@brika/permissions';
 
-const result = validatePermissions(manifest.permissions);
-if (!result.ok) {
-  throw new Error(`Bad manifest: ${result.errors.join(', ')}`);
-}
+// Keep only the declared permissions the registry recognizes.
+const granted = filterValidPermissions(manifest.permissions);
 
-for (const id of result.permissions) {
-  const meta = permissionMetadata[id];
-  console.log(meta.label, meta.risk);   // "Read filesystem", "high"
+for (const id of granted) {
+  if (!isValidPermission(id)) continue;
+  const meta = PERMISSIONS[id];
+  console.log(meta.labelKey, meta.icon); // i18n key + lucide icon for the consent UI
 }
 ```
 
 ## Permissions covered
 
-The current list — `fs:read`, `fs:write`, `net:*`, `process:spawn`, `keychain:*`, `device:*`, etc. — and their metadata lives in `src/metadata.ts`. Adding a new one requires both a metadata entry and (usually) a hub-side enforcement point.
+The permission families (`location`, `secrets`, `net`, `netLocal`, `rawSocket`, `fs`, `ws`, `dns`, `ui`) and their display metadata live in `src/registry.ts` (assembled into the exported `PERMISSIONS` map by `src/index.ts`). Adding a new one requires both a metadata entry and (usually) a hub-side enforcement point.
 
 ## Relationship to `@brika/grants`
 

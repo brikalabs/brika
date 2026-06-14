@@ -175,6 +175,16 @@ bun.getFile('/output.json'); // → { result: true }
 | `useBunMock()` | Hook-style helper with auto lifecycle (recommended) |
 | `mockBun()` | Create a new BunMock instance (manual lifecycle) |
 | `proxify(fn)` | Create proxy that delegates to lazily-resolved instance |
+| `realFetch` | The real `fetch` captured before any mock was installed (call it to bypass an installed spy) |
+
+### Timing Helpers
+
+| Export | Description |
+|--------|-------------|
+| `sleep(ms)` | Unconditional pause for `ms` milliseconds |
+| `flush(ms?)` | Yield long enough (default ~25ms) for an effect/fetch/setState/re-render chain to land |
+| `waitFor(predicate, options?)` | Poll until `predicate()` is true; throws on timeout. `options` is `{ timeoutMs?, intervalMs?, message? }` (default 2000ms / 10ms), or a plain `number` for `timeoutMs` |
+| `WaitForOptions` | Options type for `waitFor` |
 
 ### BunMock Methods
 
@@ -240,6 +250,7 @@ describe('test', () => {
 ```
 src/
 ├── index.ts       # Main exports
-├── mock-bun.ts    # BunMock implementation
-└── proxify.ts     # Proxy helper for hook-style utilities
+├── mock-bun.ts    # BunMock implementation + realFetch
+├── proxify.ts     # Proxy helper for hook-style utilities
+└── timing.ts      # sleep / flush / waitFor async-test helpers
 ```

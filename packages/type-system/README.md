@@ -11,18 +11,18 @@ Every Block / Spark / Workflow node exposes typed ports. The type can be:
 - A structured type: `{ kind: 'object', fields: { ... } }`
 - A union: `{ kind: 'union', members: [...] }`
 
-This package owns the **definitions** of those types, the **compatibility check** (`isAssignableTo`), the **serialization format**, and the **runtime guards** plugins use to validate values flowing through their ports.
+This package owns the **definitions** of those types, the **compatibility check** (`isCompatible`), the **serialization format**, and the **runtime guards** plugins use to validate values flowing through their ports.
 
 ## Quick start
 
 ```ts
-import { isAssignableTo, parse, type PortType } from '@brika/type-system';
+import { isCompatible, parseTypeName, type TypeDescriptor } from '@brika/type-system';
 
-const a: PortType = parse('temperature.celsius');
-const b: PortType = parse('number');
+const a: TypeDescriptor = parseTypeName('temperature.celsius');
+const b: TypeDescriptor = parseTypeName('number');
 
-isAssignableTo(a, b); // true — semantic types are assignable to their underlying primitive
-isAssignableTo(b, a); // false — going the other way would lose units
+isCompatible(a, b); // true: semantic types are compatible with their underlying primitive
+isCompatible(b, a); // false: going the other way would lose units
 ```
 
 ## Design
