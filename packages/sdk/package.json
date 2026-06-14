@@ -1,5 +1,6 @@
 {
   "name": "@brika/sdk",
+  "knip": { "entry": ["cli/brika.ts"] },
   "version": "0.4.0",
   "description": "SDK for building BRIKA plugins and workflow blocks",
   "type": "module",

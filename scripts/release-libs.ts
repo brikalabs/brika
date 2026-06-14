@@ -194,6 +194,23 @@ export function stripInternalExports(text: string): string | null {
   return `${JSON.stringify(parsed.data, null, 2)}\n`;
 }
 
+const recordSchema = z.record(z.string(), z.unknown());
+
+/**
+ * Drop dev-only tooling keys (currently `knip`, the per-package dead-code config
+ * read by the workspace knip generator) from the published manifest. They mean
+ * nothing to a consumer, so a published package should not carry them. Returns
+ * the rewritten JSON (normalized, restored after publish), or null when absent.
+ */
+export function stripDevManifestFields(text: string): string | null {
+  const data = recordSchema.parse(JSON.parse(text));
+  if (data.knip === undefined) {
+    return null;
+  }
+  delete data.knip;
+  return `${JSON.stringify(data, null, 2)}\n`;
+}
+
 const bundleManifestSchema = z
   .object({
     scripts: z.record(z.string(), z.string()).default({}),
@@ -302,6 +319,10 @@ async function publishPackage(
     }
     publishText = bundleExports(publishText ?? original) ?? publishText;
   }
+
+  // Drop dev-only tooling keys (e.g. `knip`) so the published manifest carries
+  // only what a consumer needs.
+  publishText = stripDevManifestFields(publishText ?? original) ?? publishText;
 
   // --ignore-scripts: CI pre-builds the artifacts (sdk bin, create-brika dist);
   // a lifecycle script failing mid-loop would leave a partial publish of
