@@ -9,9 +9,8 @@
   "ignore": [
     "@brika/*",
     "!@brika/sdk",
-    "!@brika/testing",
     "!@brika/plugin-agent",
-    "!@brika/blocks-builtin",
+    "!@brika/plugin-builtin",
     "!@brika/plugin-matter",
     "!@brika/plugin-spotify",
     "!@brika/plugin-timer",

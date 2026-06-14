@@ -15,7 +15,8 @@
     "ipc/src/**/*",
     "serializable/src/**/*",
     "ui-kit/src/**/*",
-    "schema/src/**/*"
+    "schema/src/**/*",
+    "testing/src/**/*"
   ],
   "exclude": [
     "**/*.test.ts",

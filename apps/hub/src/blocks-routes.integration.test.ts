@@ -10,8 +10,8 @@ import { PluginLifecycle } from '@/runtime/plugins/plugin-lifecycle';
 
 const SPARK_RECEIVER: RegisteredBlock = {
   id: 'spark-receiver',
-  type: '@brika/blocks-builtin:spark-receiver',
-  pluginId: '@brika/blocks-builtin',
+  type: '@brika/plugin-builtin:spark-receiver',
+  pluginId: '@brika/plugin-builtin',
   name: 'Spark Receiver',
   category: 'trigger',
   inputs: [],
@@ -21,8 +21,8 @@ const SPARK_RECEIVER: RegisteredBlock = {
 
 const PLAIN_BLOCK: RegisteredBlock = {
   id: 'log',
-  type: '@brika/blocks-builtin:log',
-  pluginId: '@brika/blocks-builtin',
+  type: '@brika/plugin-builtin:log',
+  pluginId: '@brika/plugin-builtin',
   name: 'Log',
   category: 'action',
   inputs: [{ id: 'in', name: 'In', direction: 'input', type: { kind: 'unknown' } }],
@@ -47,7 +47,7 @@ describe('block routes', () => {
     // Only the spark-receiver ships a compiled view module.
     mockCompiler = {
       get: mock().mockImplementation((key: string) =>
-        key === '@brika/blocks-builtin:blocks/spark-receiver.view'
+        key === '@brika/plugin-builtin:blocks/spark-receiver.view'
           ? { hash: 'abc123', filePath: '/tmp/x.js' }
           : undefined
       ),

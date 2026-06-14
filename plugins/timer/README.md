@@ -29,7 +29,7 @@ blocks:
       duration: 1800000  # 30 minutes in ms
 
   - id: notify
-    type: "@brika/blocks-builtin:log"
+    type: "@brika/plugin-builtin:log"
     config:
       message: "Timer completed!"
 
@@ -68,7 +68,7 @@ blocks:
       tickInterval: 1000   # Update every second
 
   - id: progress-log
-    type: "@brika/blocks-builtin:log"
+    type: "@brika/plugin-builtin:log"
     config:
       message: "{{ Math.round(inputs.in.progress * 100) }}% complete"
 
@@ -90,7 +90,7 @@ enabled: true
 
 blocks:
   - id: clock
-    type: "@brika/blocks-builtin:clock"
+    type: "@brika/plugin-builtin:clock"
     config:
       interval: 60000  # Check every minute
 
@@ -101,7 +101,7 @@ blocks:
       duration: 5000  # 5 second delay
 
   - id: action
-    type: "@brika/blocks-builtin:log"
+    type: "@brika/plugin-builtin:log"
     config:
       message: "Delayed action executed!"
 
@@ -125,7 +125,7 @@ enabled: true
 
 blocks:
   - id: start
-    type: "@brika/blocks-builtin:clock"
+    type: "@brika/plugin-builtin:clock"
     config:
       interval: 30000
 
@@ -136,13 +136,13 @@ blocks:
       tickInterval: 1000
 
   - id: progress
-    type: "@brika/blocks-builtin:log"
+    type: "@brika/plugin-builtin:log"
     config:
       message: "Countdown: {{ inputs.in.remaining }}ms remaining"
       level: debug
 
   - id: done
-    type: "@brika/blocks-builtin:log"
+    type: "@brika/plugin-builtin:log"
     config:
       message: "Countdown complete!"
       level: info
