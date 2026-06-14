@@ -279,14 +279,14 @@ transforms (`workspace:` rewrite, `./internal/*` strip, bundle-exports repoint,
 dev-key strip) and idempotent skip-if-published live in the shared
 `publish-package.ts`.
 
-After the publish path, `release.yml` tags `v<@brika/sdk version>` (the
-fixed-group anchor). The tag must be pushed with a PAT/App token (`RELEASE_PAT`),
-because tags pushed by the default `GITHUB_TOKEN` do not start new workflow runs;
-the tag then triggers `build.yml` (`is_release=true`) to publish the binary
-launcher (`brika` + `@brika/cli-*` via `npm-dist.ts`) and cut the production
-GitHub release. The per-push canary stays binary-only (npm versions are
-immutable). If `RELEASE_PAT` is unset the libraries still publish; the workflow
-warns and the tag is pushed by hand.
+After the publish path, `release.yml` cuts the binary release by dispatching
+`build.yml` with the just-published version (`@brika/sdk`, the fixed-group
+anchor, defines it). `build.yml` (`is_release=true`) then publishes the binary
+launcher (`brika` + `@brika/cli-*` via `npm-dist.ts`) and creates the production
+`v<version>` GitHub release + tag. NO PAT is needed: the dispatch uses
+`gh workflow run` (workflow_dispatch), which GitHub's recursion guard EXEMPTS, so
+the default `GITHUB_TOKEN` with `actions: write` can trigger it (a pushed tag
+cannot). The per-push canary stays binary-only (npm versions are immutable).
 
 `release-packages.yml` remains as a manual `workflow_dispatch` fallback (dry-run
 by default) running the same `bun run release`, for the one-time bootstrap and
@@ -331,7 +331,7 @@ already exist on npm and only need their trusted publisher configured.
    `verified-plugins.json`. Register trusted publishers for the 7 plugin names.
 7. **Wire Changesets end to end (shipped: `release.yml`).** The `changesets/action`
    step drives the "Version Packages" PR; merging it runs `bun run release` and
-   tags `v<sdk>` (via `RELEASE_PAT`) to trigger the binary release in `build.yml`.
+   dispatches `build.yml` (via `gh workflow run`, no PAT) for the binary release.
 8. **(Deferred) Promote Tier-2.** When `i18n` / `i18n-devtools` get standalone
    READMEs, remove them from `ignore` and register their trusted publishers.
 
