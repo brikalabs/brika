@@ -1,7 +1,6 @@
-# MANUAL FALLBACK / BOOTSTRAP. The automated path is `.github/workflows/release.yml`
+# MANUAL FALLBACK. The automated path is `.github/workflows/release.yml`
 # (Changesets "Version Packages PR": merge the version PR -> libs publish). Use
-# THIS workflow for the one-time bootstrap (first publish of each name, before its
-# OIDC trusted publisher can be registered) or for a manual rehearsal/recovery.
+# THIS workflow for a manual rehearsal (dry-run) or recovery of an EXISTING name.
 # Both run the same `bun run release` (release-libs.ts), so they cannot conflict:
 # npm versions are immutable and the publisher idempotently skips what is live.
 #
@@ -9,13 +8,12 @@
 # manual `workflow_dispatch`, so it cannot publish anything until a human runs
 # it. The default `dry_run: true` makes an accidental dispatch a no-op rehearsal.
 #
-# Auth mirrors build.yml's `publish-npm` job: npm Trusted Publishing (OIDC) needs
-# `id-token: write` and npm CLI >= 11.5.1 (node 22 ships an older npm, hence the
-# `npm install -g npm@latest` step). Provenance is attached automatically; the
-# release-libs.ts publisher passes `--provenance`. A trusted publisher is per
-# package name and cannot be set before the package exists, so the FIRST publish
-# of each new name falls back to `NPM_TOKEN` (surfaced as `NODE_AUTH_TOKEN`);
-# remove that secret once all 16 names exist and are configured for OIDC.
+# OIDC ONLY (no NPM_TOKEN): npm Trusted Publishing needs `id-token: write` and npm
+# CLI >= 11.5.1 (node 22 ships an older npm, hence the `npm install -g npm@latest`
+# step), and attaches provenance automatically. A trusted publisher is per package
+# name and cannot be set before the package exists, so a brand-new name's FIRST
+# publish must be done manually by a maintainer (locally, interactive 2FA) once;
+# OIDC takes over here afterward. This workflow does not create new names.
 #
 # One job, not two: `packages/workspace-tools/src/release-libs.ts` (run by `bun run release`) already
 # toposorts the 8 Tier-1 packages first and the 7 plugins after them in a single
@@ -81,12 +79,10 @@ jobs:
 
       - run: bun run typecheck
 
+      # OIDC only: no NPM_TOKEN. Relies on npm Trusted Publishing (id-token: write
+      # + a trusted publisher configured per package), which also attaches
+      # provenance. Cannot create a brand-new name (do that one-time manually).
       - name: Publish libraries and plugins to npm
-        env:
-          # Bootstrap fallback only: the npm CLI prefers OIDC when a trusted
-          # publisher is configured for the package, and falls back to this
-          # token otherwise (the very first publish of a not-yet-existing name).
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         # 'auto' passes no --tag, so release-libs.ts derives next (prerelease) / latest.
         run: |
           bun run release -- ${{ inputs.tag != 'auto' && format('--tag={0}', inputs.tag) || '' }} ${{ inputs.dry_run && '--dry-run' || '' }}

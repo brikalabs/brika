@@ -297,11 +297,18 @@ Publisher semantics: `npm publish --provenance`; idempotency via
 continue-on-skip / abort-on-real-error so a partial-failure re-run resumes
 cleanly; topological order; dist-tag routing (`*-*` -> `next`); non-interactive.
 
-OIDC one-time setup (manual on npmjs.com): trusted publishing is per package name.
-Each name needs the repo `brikalabs/brika`, the workflow filename, and any gating
-environment. A trusted publisher cannot be set before the package exists, so the
-first publish of each new name uses the `NPM_TOKEN` bootstrap fallback; OIDC takes
-over afterward.
+Auth is **OIDC trusted publishing only** (no long-lived `NPM_TOKEN`). A stored
+automation token is precisely what self-propagating npm supply-chain worms
+(Shai-Hulud and variants) harvest to push trojaned versions; removing it removes
+that blast radius. OIDC mints a short-lived, per-run credential and attaches
+provenance. One-time setup (manual on npmjs.com): trusted publishing is per
+package name; each needs the repo `brikalabs/brika`, the workflow filename, and
+any gating environment. A trusted publisher cannot be set before the package
+exists, so each brand-new name needs ONE manual first publish by a maintainer
+(locally, interactive 2FA); OIDC publishes every release thereafter. Today the
+new names are `@brika/plugin-agent`, `@brika/plugin-sil-electricity`, and
+`@brika/plugin-builtin` (the renamed `@brika/blocks-builtin`); the other six
+already exist on npm and only need their trusted publisher configured.
 
 ## 6. Phased rollout (each an independently shippable PR)
 

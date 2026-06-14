@@ -11,9 +11,12 @@
 #   4. This workflow then tags `v<@brika/sdk version>`, which triggers build.yml
 #      (is_release=true) to publish the binary wrappers + the production release.
 #
-# OIDC trusted publishing is per package NAME and must be registered on npmjs.com
-# AFTER the name first exists, so the FIRST publish of each new name falls back to
-# NPM_TOKEN (surfaced as NODE_AUTH_TOKEN); OIDC + provenance take over afterwards.
+# Publishing is OIDC ONLY (npm Trusted Publishing), no long-lived NPM_TOKEN: the
+# stored automation token is exactly what supply-chain worms (Shai-Hulud and kin)
+# steal to push trojaned versions, so there is none to steal. OIDC also attaches
+# provenance. A trusted publisher is per package NAME and can only be registered
+# AFTER the name exists, so each brand-new name needs ONE manual first publish by
+# a maintainer (locally, interactive 2FA); OIDC publishes every release thereafter.
 #
 # Prerequisite (one-time, in repo Settings -> Actions -> General): enable
 # "Allow GitHub Actions to create and approve pull requests" so the action can
@@ -66,9 +69,18 @@ jobs:
       - run: bun --filter @brika/sdk run build:bin
       - run: bun --filter create-brika run build
 
+      # OIDC only: no NPM_TOKEN. Publishing relies on npm Trusted Publishing
+      # (id-token: write + npm CLI >= 11.5.1 + a trusted publisher configured per
+      # package on npmjs.com), which also attaches provenance. A trusted publisher
+      # cannot be set before the package exists, so each brand-new name needs ONE
+      # manual first publish (locally, by a maintainer) before its OIDC publisher
+      # can be configured; thereafter every release publishes via OIDC here.
       - name: Version PR or publish
         id: changesets
-        uses: changesets/action@v1
+        # Pinned by commit SHA (not the mutable @v1 tag): this third-party action
+        # runs our version/publish commands with id-token: write, so a hijacked tag
+        # could mint an OIDC publish credential. SHA = v1.9.0.
+        uses: changesets/action@a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d # v1.9.0
         with:
           version: bun run version-packages
           publish: bun run release
@@ -76,10 +88,6 @@ jobs:
           title: "chore: version packages"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Bootstrap fallback only: npm prefers OIDC when a trusted publisher is
-          # configured for the package and uses this token otherwise (the first
-          # publish of a not-yet-existing name).
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       # On the publish path (a merged Version Packages PR), tag the release so
       # build.yml ships the binary wrappers + the production GitHub release. The

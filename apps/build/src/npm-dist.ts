@@ -163,7 +163,10 @@ function publishPackage(dir: string, name: string): boolean {
     log(pc.dim(`  ${name}@${version} already published (skip)`));
     return true;
   }
-  const args = ['npm', 'publish', '--access', 'public', '--tag', tag];
+  // --ignore-scripts: the wrappers are generated with no lifecycle scripts, but
+  // refusing to run any prepublish/postpublish hook keeps a publish from ever
+  // executing third-party script code (defense-in-depth, matches the lib publisher).
+  const args = ['npm', 'publish', '--access', 'public', '--tag', tag, '--ignore-scripts'];
   if (provenance) {
     // Trusted-publishing (OIDC) attaches provenance; the explicit flag makes it
     // deterministic across npm versions. Only passed in CI, where the OIDC
