@@ -2,11 +2,11 @@
  * `brika publish`: build, verify, and publish a plugin to npm.
  *
  * Chains the pieces a plugin author would otherwise run by hand:
- *   1. `brika build`  — regenerate the manifest (blocks/bricks/sparks) from source,
+ *   1. `brika build`:  regenerate the manifest (blocks/bricks/sparks) from source,
  *      so a stale capability list can never ship.
- *   2. `brika verify` — validate the manifest (schema, engines.brika, $schema,
+ *   2. `brika verify`: validate the manifest (schema, engines.brika, $schema,
  *      keywords, file coverage); a hard gate.
- *   3. `npm publish`  — publish the source package (plugins ship `src/`; the hub
+ *   3. `npm publish`:  publish the source package (plugins ship `src/`; the hub
  *      compiles them on install), idempotently.
  *
  * Safety + DX: skips a version already on npm (versions are immutable); confirms
@@ -20,6 +20,7 @@ import { resolve } from 'node:path';
 import { createInterface } from 'node:readline/promises';
 import { defineCommand } from '@brika/cli';
 import pc from 'picocolors';
+import { z } from 'zod';
 import { runBuild } from './build';
 import { runVerify } from './verify';
 
@@ -73,6 +74,14 @@ export function buildPublishArgs(opts: {
   return args;
 }
 
+const manifestSchema = z
+  .object({
+    name: z.string(),
+    version: z.string(),
+    private: z.boolean().optional(),
+  })
+  .loose();
+
 interface PluginManifest {
   name: string;
   version: string;
@@ -81,17 +90,15 @@ interface PluginManifest {
 
 async function readManifest(dir: string): Promise<PluginManifest | null> {
   try {
-    const raw: unknown = await Bun.file(resolve(dir, 'package.json')).json();
-    if (
-      typeof raw !== 'object' ||
-      raw === null ||
-      typeof (raw as { name?: unknown }).name !== 'string' ||
-      typeof (raw as { version?: unknown }).version !== 'string'
-    ) {
+    const parsed = manifestSchema.safeParse(await Bun.file(resolve(dir, 'package.json')).json());
+    if (!parsed.success) {
       return null;
     }
-    const m = raw as { name: string; version: string; private?: boolean };
-    return { name: m.name, version: m.version, isPrivate: m.private === true };
+    return {
+      name: parsed.data.name,
+      version: parsed.data.version,
+      isPrivate: parsed.data.private === true,
+    };
   } catch {
     return null;
   }
