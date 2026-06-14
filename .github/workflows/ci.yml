@@ -126,12 +126,15 @@ jobs:
           key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
           restore-keys: bun-${{ runner.os }}-
       - run: bun install --frozen-lockfile
-      # Pack @brika/sdk and install it into a fixture plugin that depends on ONLY
-      # @brika/sdk, proving the bundled `brika` bin is self-contained (no toolchain
-      # devDeps leak into a plugin's install closure). This is the gate the whole
-      # single-dependency design protects.
-      - name: Packed-tarball smoke test
+      # Publish each package to a throwaway registry and install it into a fresh
+      # consumer, proving the published bins are self-contained: @brika/sdk's
+      # `brika` (no toolchain devDeps leak into a plugin's install closure) and
+      # create-brika (bundles @brika/cli, so the scaffolder has no runtime deps).
+      # This is the gate the whole single-dependency design protects.
+      - name: Registry smoke test (@brika/sdk)
         run: bun run --filter @brika/sdk smoke:bin
+      - name: Registry smoke test (create-brika)
+        run: bun run --filter create-brika smoke:bin
 
   test:
     needs: setup

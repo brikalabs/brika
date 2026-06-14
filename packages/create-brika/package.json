@@ -36,6 +36,7 @@
     "dev": "bun run src/index.ts",
     "test": "bun test",
     "typecheck": "tsgo --noEmit",
+    "smoke:bin": "BRIKA_BIN_SMOKE=1 bun test smoke-bin.e2e.integration.test.ts",
     "prepublishOnly": "bun run build"
   },
   "devDependencies": {
