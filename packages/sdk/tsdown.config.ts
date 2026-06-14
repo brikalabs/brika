@@ -23,18 +23,18 @@ const { exports: exportMap } = z
   .object({ exports: z.record(z.string(), z.string()) })
   .parse(JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')));
 
-/** A public subpath is bundled when it points at TypeScript source under src/. */
-const isBundledSource = (subpath: string, target: string): boolean =>
-  target.startsWith('./src/') && target.endsWith('.ts') && !subpath.startsWith('./internal/');
-
-/** tsdown names each output after its entry key: `.` -> index, `./x` -> x. */
-const entryName = (subpath: string): string =>
-  subpath === '.' ? 'index' : subpath.slice('./'.length);
-
+/**
+ * Bundle every export whose target is source under `src/`. The only two exports
+ * that aren't: `./tsconfig.plugin.json` (an asset, not under `src/`) and the
+ * `./internal/*` tooling (workspace-only, the publisher strips it). tsdown names
+ * each output after the export key: `.` -> index, `./x` -> x.
+ */
 const entry = Object.fromEntries(
   Object.entries(exportMap)
-    .filter(([subpath, target]) => isBundledSource(subpath, target))
-    .map(([subpath, target]) => [entryName(subpath), target.slice('./'.length)])
+    .filter(
+      ([subpath, target]) => target.startsWith('./src/') && !subpath.startsWith('./internal/')
+    )
+    .map(([subpath, target]) => [subpath === '.' ? 'index' : subpath.slice(2), target.slice(2)])
 );
 
 export default defineConfig({
