@@ -305,7 +305,8 @@ try {
     } else if (outcome.status === 'skipped') {
       p.log.info(`${pc.dim('Skipped: ')}${label} ${pc.dim('(already published)')}`);
     } else {
-      p.log.error(`${pc.red('Failed: ')}${label} ${pc.dim(`(${outcome.reason})`)}`);
+      const reason = pc.dim(`(${outcome.reason})`);
+      p.log.error(`${pc.red('Failed: ')}${label} ${reason}`);
       failed.push(pkg.name);
     }
   }
