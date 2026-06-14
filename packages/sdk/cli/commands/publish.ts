@@ -149,7 +149,9 @@ async function publishToNpm(
 
   const tagNote = pc.dim(`tag:${tag}`);
   const dryNote = opts.dryRun ? pc.yellow('  (dry run)') : '';
-  process.stdout.write(`\n  ${pc.bold('Publish')} ${pc.cyan(nameVersion)} to npm  ${tagNote}${dryNote}\n`);
+  process.stdout.write(
+    `\n  ${pc.bold('Publish')} ${pc.cyan(nameVersion)} to npm  ${tagNote}${dryNote}\n`
+  );
 
   // Confirm before the irreversible publish, but only when a human is driving.
   if (!opts.dryRun && !opts.yes && isInteractive()) {
@@ -171,7 +173,9 @@ async function publishToNpm(
     process.stderr.write(pc.red(`\n  publish failed (npm exited ${code})\n`));
     return false;
   }
-  process.stdout.write(pc.green(`\n  Published ${nameVersion}${opts.dryRun ? ' (dry run)' : ''}\n`));
+  process.stdout.write(
+    pc.green(`\n  Published ${nameVersion}${opts.dryRun ? ' (dry run)' : ''}\n`)
+  );
   return true;
 }
 
