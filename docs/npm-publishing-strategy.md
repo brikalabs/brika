@@ -264,29 +264,34 @@ Merging it on the release tag publishes.
 
 ## 5. Publish pipeline (CI)
 
-**Automated (`.github/workflows/release.yml`, Changesets "Version Packages PR"
-model).** On every push to `main`, `changesets/action` either opens/updates a
-"Version Packages" PR (running `bun run version-packages`: bump versions, write
-CHANGELOGs via the GitHub formatter, sync plugin engines, refresh the lockfile)
-or, when no changesets remain (the version PR was merged), runs the publish
-command. The publish command is `bun run release`
-(`packages/workspace-tools/src/release-libs.ts`), NOT `changeset publish`: it
-publishes with `npm publish --provenance` (Bun has no `--provenance`/OIDC). It
-toposorts the libraries and plugins in ONE idempotent pass
-(`errors/grants/ipc/serializable -> flow/ui-kit -> sdk -> create-brika -> the 7
-plugins`), so no `publish-libs` / `publish-plugins` split is needed; the manifest
-transforms (`workspace:` rewrite, `./internal/*` strip, bundle-exports repoint,
-dev-key strip) and idempotent skip-if-published live in the shared
-`publish-package.ts`.
+**Tag-driven (`.github/workflows/release.yml`).** A release is cut by pushing a
+`v<x.y.z>` tag. The maintainer prepares the version locally first:
+`bun run version-packages` (= `changeset version`: consume changesets, bump
+versions, write CHANGELOGs via the GitHub formatter, sync plugin engines, refresh
+the lockfile), opens a normal `chore/...` PR with that diff, merges it, then
+`git tag vX.Y.Z && git push origin vX.Y.Z`. Tags are not covered by the
+`brika-branch-naming` ruleset (it targets branches), so this needs no repo-setting
+changes; the version commit arrives on an allowed `chore/` branch.
 
-After the publish path, `release.yml` cuts the binary release by dispatching
-`build.yml` with the just-published version (`@brika/sdk`, the fixed-group
-anchor, defines it). `build.yml` (`is_release=true`) then publishes the binary
-launcher (`brika` + `@brika/cli-*` via `npm-dist.ts`) and creates the production
-`v<version>` GitHub release + tag. NO PAT is needed: the dispatch uses
-`gh workflow run` (workflow_dispatch), which GitHub's recursion guard EXEMPTS, so
-the default `GITHUB_TOKEN` with `actions: write` can trigger it (a pushed tag
-cannot). The per-push canary stays binary-only (npm versions are immutable).
+The tag triggers BOTH publishers, one tag, two jobs, both OIDC:
+- `release.yml` runs `bun run release` (`packages/workspace-tools/src/release-libs.ts`):
+  it publishes the 9 libraries (sdk + create-brika + 7 plugins) with
+  `npm publish --provenance` in ONE idempotent topo pass
+  (`errors/grants/ipc/serializable -> flow/ui-kit -> sdk -> create-brika -> plugins`).
+  The manifest transforms (`workspace:` rewrite, `./internal/*` strip,
+  bundle-exports repoint, dev-key strip) and idempotent skip-if-published live in
+  the shared `publish-package.ts`.
+- `build.yml` (`is_release=true` from the tag) publishes the binary launcher
+  (`brika` + `@brika/cli-*` via `npm-dist.ts`) and creates the production GitHub
+  release.
+
+This was chosen over the Changesets "Version Packages PR" model: that model
+requires the Actions bot to create a `changeset-release/main` branch and open a
+PR, which collides with the strict branch-naming ruleset and needs both a ruleset
+exception and the "Allow Actions to create PRs" setting. Tag-driven keeps the
+automation surface minimal (no bot branch, no `actions: write`, no cross-workflow
+dispatch) and fits a solo maintainer who cuts releases deliberately. The per-push
+canary (build.yml on `main`) stays binary-only (npm versions are immutable).
 
 `release-packages.yml` remains as a manual `workflow_dispatch` fallback (dry-run
 by default) running the same `bun run release`, for the one-time bootstrap and
