@@ -10,6 +10,31 @@
 
 import { z } from 'zod';
 
+/**
+ * Rewrite every `@brika/*` dep whose range is the `workspace:` protocol to a
+ * concrete `^<version>`, preserving the file's formatting (textual replace, not
+ * JSON round-trip). Throws if a workspace dep is not a known workspace package.
+ * Returns the rewritten text, or null when nothing changed.
+ */
+export function rewriteWorkspaceRanges(text: string, versions: Map<string, string>): string | null {
+  let missing: string | null = null;
+  const out = text.replace(
+    /"(@brika\/[a-z0-9-]+)":\s*"workspace:[^"]*"/g,
+    (match, name: string) => {
+      const version = versions.get(name);
+      if (version === undefined) {
+        missing = name;
+        return match;
+      }
+      return `"${name}": "^${version}"`;
+    }
+  );
+  if (missing !== null) {
+    throw new Error(`Cannot resolve workspace dependency "${missing}" (not a workspace package)`);
+  }
+  return out === text ? null : out;
+}
+
 const exportsManifestSchema = z
   .object({ exports: z.record(z.string(), z.unknown()).optional() })
   .loose();
@@ -84,7 +109,14 @@ export function bundleExports(text: string): string | null {
   const map = parsed.data.exports;
   let changed = false;
   for (const [key, target] of Object.entries(map)) {
-    if (typeof target !== 'string' || !target.startsWith('./src/') || !target.endsWith('.ts')) {
+    // Match tsdown's entry filter (any TypeScript source under src/): a `.tsx`
+    // export would otherwise be built by tsdown but left pointing at raw src
+    // here, breaking the published subpath.
+    if (
+      typeof target !== 'string' ||
+      !target.startsWith('./src/') ||
+      !(target.endsWith('.ts') || target.endsWith('.tsx'))
+    ) {
       continue;
     }
     const name = key === '.' ? 'index' : key.slice(2);

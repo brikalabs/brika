@@ -31,7 +31,6 @@ function buildDist(): void {
     cwd: sdkDir,
     stdout: 'pipe',
     stderr: 'pipe',
-    env: { ...process.env, NODE_OPTIONS: '--max-old-space-size=8192' },
   });
   if (proc.exitCode !== 0) {
     throw new Error(`build:dist failed:\n${proc.stderr.toString()}`);
@@ -70,7 +69,9 @@ describe('published @brika/sdk bundle is self-contained', () => {
       stdout: 'pipe',
       stderr: 'pipe',
     });
-    expect(run.stderr.toString()).not.toContain('Cannot find module');
+    // exitCode catches ANY import failure regardless of message wording; the
+    // IMPORT-OK marker confirms every dynamic import actually resolved.
+    expect(run.exitCode).toBe(0);
     expect(run.stdout.toString()).toContain('IMPORT-OK');
   }, 30_000);
 });

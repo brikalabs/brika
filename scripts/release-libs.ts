@@ -22,9 +22,11 @@
  * `NPM_TOKEN` bootstrap fallback (written into ~/.npmrc in CI); OIDC takes over
  * on every subsequent release.
  *
- * Topological order (dependency-closure first): leaf libs (errors, grants, ipc,
- * serializable) -> flow, ui-kit -> sdk -> create-brika -> the 7 plugins. So a
- * dependent never publishes before the dependency it pins is live.
+ * The published set is `@brika/sdk`, `@brika/testing`, `create-brika`, and the
+ * 7 plugins (the @brika/sdk runtime closure -- errors/flow/grants/ipc/
+ * serializable/ui-kit/schema -- is `private` and inlined by `build:dist`, never
+ * published). Order is a topological sort over each package's `@brika/*` runtime
+ * deps, so a dependent never publishes before a dependency it pins is live.
  *
  * Usage:
  *   bun run scripts/release-libs.ts                  # publish (tag auto: next for prereleases, else latest)
@@ -39,6 +41,7 @@ import { parseArgs } from 'node:util';
 import {
   bundleExports,
   isBundlePublished,
+  rewriteWorkspaceRanges,
   stripDevManifestFields,
   stripInternalExports,
 } from '@brika/workspace-tools/src/publish-manifest';
@@ -145,31 +148,6 @@ export function publishOrder(workspace: readonly WorkspacePackage[]): WorkspaceP
 /** The published packages in dependency order (fully derived; for the guard test). */
 export async function discoverPublishOrder(): Promise<WorkspacePackage[]> {
   return publishOrder(await discoverWorkspace());
-}
-
-/**
- * Rewrite every `@brika/*` dep whose range is the `workspace:` protocol to a
- * concrete `^<version>`, preserving the file's formatting (textual replace, not
- * JSON round-trip). Throws if a workspace dep is not a known workspace package.
- * Returns the rewritten text, or null when nothing changed.
- */
-function rewriteWorkspaceRanges(text: string, versions: Map<string, string>): string | null {
-  let missing: string | null = null;
-  const out = text.replace(
-    /"(@brika\/[a-z0-9-]+)":\s*"workspace:[^"]*"/g,
-    (_match, name: string) => {
-      const version = versions.get(name);
-      if (version === undefined) {
-        missing = name;
-        return _match;
-      }
-      return `"${name}": "^${version}"`;
-    }
-  );
-  if (missing !== null) {
-    throw new Error(`Cannot resolve workspace dependency "${missing}" (not a workspace package)`);
-  }
-  return out === text ? null : out;
 }
 
 /**

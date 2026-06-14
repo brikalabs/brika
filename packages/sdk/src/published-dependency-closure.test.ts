@@ -17,11 +17,14 @@ import { z } from 'zod';
  * packages/sdk/src/closure-install.e2e.integration.test.ts.
  */
 
+// The private packages inlined into the published bundle. Keep in sync with the
+// CLOSURE_RE leak scan in closure-install.e2e.integration.test.ts.
 const CLOSURE = [
   '@brika/errors',
   '@brika/flow',
   '@brika/grants',
   '@brika/ipc',
+  '@brika/schema',
   '@brika/serializable',
   '@brika/ui-kit',
 ];

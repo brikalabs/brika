@@ -15,7 +15,13 @@
 import { createHash } from 'node:crypto';
 import { readdir } from 'node:fs/promises';
 import { basename, join } from 'node:path';
-import { bundleExports, stripDevManifestFields, stripInternalExports } from './publish-manifest';
+import {
+  bundleExports,
+  rewriteWorkspaceRanges,
+  stripDevManifestFields,
+  stripInternalExports,
+} from './publish-manifest';
+import { discoverPackages } from './workspace';
 
 export interface RunResult {
   code: number;
@@ -44,17 +50,24 @@ export async function run(
 
 /**
  * Pack a workspace package in its npm publish form into `dest`. Applies the same
- * manifest transforms as the release CLI (strip `./internal/*` exports,
- * repoint exports src -> dist for bundle packages, drop the dev-only `knip`
- * key), then `bun pm pack`, then restores the on-disk manifest.
+ * manifest transforms as the release CLI, in the same order: rewrite `workspace:`
+ * ranges to concrete `^<version>`, strip `./internal/*` exports, repoint exports
+ * src -> dist for bundle packages, drop the dev-only `knip` key. Then `bun pm
+ * pack`, then restores the on-disk manifest. The result is byte-for-byte what
+ * `npm publish` would ship, so the e2e cannot drift from the real publish.
  */
 export async function packPublishForm(
   pkgDir: string,
   dest: string
 ): Promise<{ tarball: string; manifest: Record<string, unknown> }> {
   const manifestPath = join(pkgDir, 'package.json');
+  // packages/* and plugins/* sit two levels under the repo root.
+  const versions = new Map(
+    (await discoverPackages(join(pkgDir, '..', '..'))).map((p) => [p.name, p.version])
+  );
   const original = await Bun.file(manifestPath).text();
-  let publishText = stripInternalExports(original) ?? original;
+  let publishText = rewriteWorkspaceRanges(original, versions) ?? original;
+  publishText = stripInternalExports(publishText) ?? publishText;
   publishText = bundleExports(publishText) ?? publishText;
   publishText = stripDevManifestFields(publishText) ?? publishText;
   try {
@@ -94,15 +107,16 @@ export function startMockRegistry(opts: {
 }): MockRegistry {
   const { name, version, manifest, tarballFile, bytes } = opts;
   const tarballRoute = `/${name}/-/${basename(tarballFile)}`;
+  // Modern clients verify the tarball via the sha512 `integrity`; the legacy
+  // sha1 `shasum` is intentionally omitted (bun does not require it).
   const integrity = `sha512-${createHash('sha512').update(bytes).digest('base64')}`;
-  const shasum = createHash('sha1').update(bytes).digest('hex');
   let baseUrl = '';
   const server = Bun.serve({
     port: 0,
     fetch(req) {
       const path = decodeURIComponent(new URL(req.url).pathname);
       if (path === `/${name}`) {
-        const dist = { tarball: `${baseUrl}${tarballRoute}`, integrity, shasum };
+        const dist = { tarball: `${baseUrl}${tarballRoute}`, integrity };
         return Response.json({
           name,
           'dist-tags': { latest: version },

@@ -68,6 +68,12 @@ function* iterExportTargets(value: unknown): Generator<string> {
 
 function resolveExportToSource(value: unknown): string | undefined {
   for (const target of iterExportTargets(value)) {
+    // A `types` condition points at a `.d.ts` stub that carries no runtime
+    // import graph; skip it so a `{ types, default }` export resolves to its
+    // real source (e.g. apps/hub `{ types: ./src/types.d.ts, default: ./src/main.ts }`).
+    if (target.endsWith('.d.ts')) {
+      continue;
+    }
     if (target.startsWith('./src/')) {
       return stripDot(target);
     }

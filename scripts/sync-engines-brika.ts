@@ -68,7 +68,7 @@ async function main(): Promise<void> {
 
   for await (const relPath of glob.scan({ cwd: REPO_ROOT, onlyFiles: true })) {
     const file = Bun.file(new URL(`../${relPath}`, import.meta.url));
-    const raw: unknown = await file.json();
+    const raw = z.record(z.string(), z.unknown()).parse(JSON.parse(await file.text()));
     const manifest = pluginManifestSchema.parse(raw);
 
     if (manifest.private === true) {
@@ -81,9 +81,14 @@ async function main(): Promise<void> {
       continue;
     }
 
-    const engines = { ...manifest.engines, brika: target };
-    const next = { ...manifest, engines };
-    await Bun.write(file, `${JSON.stringify(next, null, 2)}\n`);
+    // Mutate `engines.brika` in place on the order-preserving raw object, so the
+    // committed Version-Packages diff is one line, not a full key reorder.
+    const engines = raw.engines;
+    raw.engines = {
+      ...(typeof engines === 'object' && engines !== null ? engines : {}),
+      brika: target,
+    };
+    await Bun.write(file, `${JSON.stringify(raw, null, 2)}\n`);
     console.log(`  ${manifest.name}: ${current ?? '(unset)'} -> ${target}`);
     changed.push(manifest.name);
   }

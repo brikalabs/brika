@@ -39,9 +39,7 @@ describe.skipIf(process.env.BRIKA_BIN_SMOKE !== '1')(
     let registry: MockRegistry | undefined;
 
     beforeAll(async () => {
-      const dist = await run(['bun', 'run', 'build:dist'], sdkDir, {
-        NODE_OPTIONS: '--max-old-space-size=8192',
-      });
+      const dist = await run(['bun', 'run', 'build:dist'], sdkDir);
       if (dist.code !== 0) {
         throw new Error(`build:dist failed:\n${dist.output}`);
       }
