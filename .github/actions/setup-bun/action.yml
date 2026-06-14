@@ -9,11 +9,13 @@ inputs:
 runs:
   using: composite
   steps:
-    - uses: oven-sh/setup-bun@v2
+    # SHA-pinned: this composite runs in the publish-npm job (id-token: write), so
+    # a hijacked mutable tag could mint/exfiltrate the OIDC publish credential.
+    - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
       with:
         bun-version: ${{ inputs.bun-version }}
 
-    - uses: actions/cache@v5
+    - uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5
       with:
         path: ~/.bun/install/cache
         key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}

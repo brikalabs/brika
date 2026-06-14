@@ -75,13 +75,34 @@ export function resolveTag(version: string, explicitTag?: string): string {
   return version.includes('-') ? 'next' : 'latest';
 }
 
-/** True if `name@version` already exists on the registry (npm versions are immutable). */
-export function isPublished(name: string, version: string): boolean {
-  const proc = Bun.spawnSync(['npm', 'view', `${name}@${version}`, 'version'], {
-    stdout: 'pipe',
-    stderr: 'pipe',
-  });
-  return proc.exitCode === 0 && proc.stdout.toString().trim() === version;
+/**
+ * Probe the registry for `name@version`, distinguishing three states so a
+ * transient registry failure is never mistaken for "not published" (which would
+ * blind-publish into an immutable-version 409 and read as a real error):
+ *  - `published`: the version is already live, so skip it.
+ *  - `absent`: npm definitively reports it does not exist (a brand-new name 404s;
+ *    an existing name with a not-yet-published version exits 0 with empty output),
+ *    so publish it.
+ *  - `unknown`: the probe failed for any other reason (network, 5xx, registry
+ *    hiccup), so the caller must NOT blind-publish. Retried a few times first.
+ */
+export function probePublished(name: string, version: string): 'published' | 'absent' | 'unknown' {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const proc = Bun.spawnSync(['npm', 'view', `${name}@${version}`, 'version'], {
+      stdout: 'pipe',
+      stderr: 'pipe',
+    });
+    if (proc.exitCode === 0) {
+      return proc.stdout.toString().trim() === version ? 'published' : 'absent';
+    }
+    if (proc.stderr.toString().includes('E404')) {
+      return 'absent';
+    }
+    if (attempt < 2) {
+      Bun.sleepSync(500 * (attempt + 1));
+    }
+  }
+  return 'unknown';
 }
 
 /**
@@ -99,9 +120,20 @@ export async function publishPackage(
   const tag = resolveTag(target.version, options.tag);
 
   // Idempotent: npm versions are immutable, so a re-run after a partial publish
-  // must skip what is already live rather than 409 and wedge the release.
-  if (!dryRun && isPublished(target.name, target.version)) {
-    return { status: 'skipped', reason: 'already-published' };
+  // must skip what is already live rather than 409 and wedge the release. An
+  // `unknown` probe (registry unreachable) must NOT fall through to a publish:
+  // that would 409 on an already-live version and read as a real failure.
+  if (!dryRun) {
+    const state = probePublished(target.name, target.version);
+    if (state === 'published') {
+      return { status: 'skipped', reason: 'already-published' };
+    }
+    if (state === 'unknown') {
+      return {
+        status: 'failed',
+        reason: `registry probe for ${target.name}@${target.version} was indeterminate (npm view failed); not publishing to avoid a blind 409`,
+      };
+    }
   }
 
   const manifestPath = join(target.dir, 'package.json');

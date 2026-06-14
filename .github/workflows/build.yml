@@ -45,6 +45,12 @@ jobs:
 
       - name: Determine build metadata
         id: meta
+        # Pass the workflow_dispatch input through the environment, never
+        # interpolated into the script body: `${{ inputs.version }}` spliced into
+        # `run:` is a shell-injection vector (CodeQL/shellcheck). `$VERSION_INPUT`
+        # is an ordinary, quoted shell variable.
+        env:
+          VERSION_INPUT: ${{ inputs.version }}
         run: |
           BUN_VERSION=$(jq -r '.engines.bun' package.json)
           PKG_VERSION=$(jq -r '.version' apps/hub/package.json)
@@ -55,8 +61,8 @@ jobs:
             VERSION="${GITHUB_REF_NAME#v}"
             BINARY_VERSION="$VERSION"
             IS_RELEASE=true
-          elif [[ -n "${{ inputs.version }}" ]]; then
-            VERSION="${{ inputs.version }}"
+          elif [[ -n "$VERSION_INPUT" ]]; then
+            VERSION="$VERSION_INPUT"
             BINARY_VERSION="$VERSION"
             IS_RELEASE=true
           else
@@ -571,13 +577,16 @@ jobs:
       contents: read
       id-token: write # mint the OIDC token npm exchanges for a short-lived publish credential
     steps:
-      - uses: actions/checkout@v5
+      # SHA-pinned: this job holds id-token: write, so a hijacked mutable action
+      # tag could mint/exfiltrate the OIDC publish credential (the composite
+      # setup-bun + actions/cache are pinned inside .github/actions/setup-bun).
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
 
       - uses: ./.github/actions/setup-bun
         with:
           bun-version: ${{ needs.setup.outputs.bun_version }}
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22 # >= 22.14.0; resolves to latest 22.x
           registry-url: https://registry.npmjs.org
@@ -585,7 +594,7 @@ jobs:
       # Trusted publishing requires npm CLI >= 11.5.1; node 22 ships an older npm.
       - run: npm install -g npm@latest
 
-      - uses: actions/download-artifact@v5
+      - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
         with:
           pattern: brika-*
           path: artifacts/

@@ -168,6 +168,13 @@ async function main(): Promise<void> {
       console.error(`Failed to publish ${pkg.name}@${pkg.version}: ${outcome.reason}. Aborting.`);
       process.exit(1);
     }
+    // A package actually went live. Emit the marker changesets/action greps for
+    // to populate its `published` / `publishedPackages` outputs (we publish with
+    // a custom command, not `changeset publish`). release.yml gates the binary
+    // release on `published == 'true'`, so it fires iff something published here.
+    if (!dryRun) {
+      console.log(`New tag: ${pkg.name}@${pkg.version}`);
+    }
   }
 
   console.log(`Done. ${order.length} package(s) processed${dryRun ? ' (dry run)' : ''}.`);

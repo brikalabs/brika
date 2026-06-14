@@ -145,13 +145,30 @@ async function stampWrapper(version: string): Promise<string> {
   return wrapperOut;
 }
 
-/** True if `name@version` already exists on the registry (immutable, so a republish would 409). */
-function isPublished(name: string, version: string): boolean {
-  const proc = Bun.spawnSync(['npm', 'view', `${name}@${version}`, 'version'], {
-    stdout: 'pipe',
-    stderr: 'pipe',
-  });
-  return proc.exitCode === 0 && proc.stdout.toString().trim() === version;
+/**
+ * Probe the registry for `name@version`, distinguishing three states so a
+ * transient failure is never mistaken for "absent" (which would blind-publish
+ * into an immutable-version 409): `published` (live, skip), `absent` (a 404 or an
+ * existing name whose version is not yet up, publish), `unknown` (network/5xx, do
+ * NOT blind-publish). Retried a few times before giving up.
+ */
+function probePublished(name: string, version: string): 'published' | 'absent' | 'unknown' {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const proc = Bun.spawnSync(['npm', 'view', `${name}@${version}`, 'version'], {
+      stdout: 'pipe',
+      stderr: 'pipe',
+    });
+    if (proc.exitCode === 0) {
+      return proc.stdout.toString().trim() === version ? 'published' : 'absent';
+    }
+    if (proc.stderr.toString().includes('E404')) {
+      return 'absent';
+    }
+    if (attempt < 2) {
+      Bun.sleepSync(500 * (attempt + 1));
+    }
+  }
+  return 'unknown';
 }
 
 function publishPackage(dir: string, name: string): boolean {
@@ -159,9 +176,16 @@ function publishPackage(dir: string, name: string): boolean {
   // (or a transient mid-sequence failure) must skip what is already live rather
   // than 409 and wedge the release. Skipped only for real publishes; a dry run
   // still exercises every package.
-  if (!dryRun && isPublished(name, version)) {
-    log(pc.dim(`  ${name}@${version} already published (skip)`));
-    return true;
+  if (!dryRun) {
+    const state = probePublished(name, version);
+    if (state === 'published') {
+      log(pc.dim(`  ${name}@${version} already published (skip)`));
+      return true;
+    }
+    if (state === 'unknown') {
+      log(pc.yellow(`  ${name}@${version}: registry probe indeterminate (npm view failed); not publishing to avoid a blind 409`));
+      return false;
+    }
   }
   // --ignore-scripts: the wrappers are generated with no lifecycle scripts, but
   // refusing to run any prepublish/postpublish hook keeps a publish from ever
