@@ -48,7 +48,10 @@ import {
   stripInternalExports,
 } from './publish-manifest';
 
-const REPO_ROOT = process.cwd();
+// Anchored to this file's location, not process.cwd(): the changeset-config
+// guard imports discoverPublishOrder, and test-ci runs each suite with cwd set
+// to the package dir, so cwd would not be the repo root there.
+const REPO_ROOT = join(import.meta.dir, '..', '..', '..');
 
 const manifestSchema = z
   .object({
