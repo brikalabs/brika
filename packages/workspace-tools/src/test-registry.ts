@@ -17,6 +17,7 @@ import { readdir } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import {
   bundleExports,
+  isBundlePublished,
   rewriteWorkspaceRanges,
   stripDevManifestFields,
   stripInternalExports,
@@ -68,7 +69,12 @@ export async function packPublishForm(
   const original = await Bun.file(manifestPath).text();
   let publishText = rewriteWorkspaceRanges(original, versions) ?? original;
   publishText = stripInternalExports(publishText) ?? publishText;
-  publishText = bundleExports(publishText) ?? publishText;
+  // Only bundle packages (a `build:dist` script) repoint exports src -> dist;
+  // gate this exactly as the release CLI does, so a non-bundle package keeps its
+  // src exports instead of pointing at a dist/ that was never built.
+  if (isBundlePublished(publishText)) {
+    publishText = bundleExports(publishText) ?? publishText;
+  }
   publishText = stripDevManifestFields(publishText) ?? publishText;
   try {
     await Bun.write(manifestPath, publishText);
