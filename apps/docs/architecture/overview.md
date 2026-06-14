@@ -73,6 +73,7 @@ Each of these steps lives in a deeper page in this chapter.
 |---|---|
 | HTTP server, REST routes, SSE | [Hub Server](hub.md) |
 | Plugin spawning, heartbeat, restart policy, PID locking | [Plugin Supervisor](plugin-supervisor.md) |
+| Reaping idle plugins, lazy respawn, host-scheduled triggers | [Scale to Zero](scale-to-zero.md) |
 | Binary IPC: message format, RPC, contracts | [IPC Protocol](ipc-protocol.md) |
 | Brick/page bundling, action ID generation, Tailwind scoping | [Compiler](compiler.md) |
 | `globalThis.__brika.*` bridge between host UI and bricks | [Externals Rewrite](externals-rewrite.md) |
