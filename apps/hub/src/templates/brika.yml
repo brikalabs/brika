@@ -16,7 +16,7 @@ hub:
 #     config:
 #       key: value
 plugins:
-  "@brika/blocks-builtin":
+  "@brika/plugin-builtin":
     version: "latest"
 
 # Event-based rules

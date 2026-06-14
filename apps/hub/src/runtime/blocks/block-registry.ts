@@ -10,7 +10,7 @@ import { displayType, isCompatible, parsePortType } from '@brika/type-system';
 
 /** Runtime block info (includes ports from running plugin) */
 export interface BlockSummary {
-  /** Full block ID (e.g., "@brika/blocks-builtin:condition") */
+  /** Full block ID (e.g., "@brika/plugin-builtin:condition") */
   id: string;
   /** Display name */
   name?: string;

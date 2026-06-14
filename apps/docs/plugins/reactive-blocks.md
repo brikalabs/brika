@@ -298,7 +298,7 @@ Views import their hooks from `@brika/sdk/block-views`. They only work inside a 
 
 ### A config view
 
-The config view owns the whole settings panel. Read config with `useBlockConfig<T>()`, write it with `useUpdateBlockConfig()`. The built-in `condition` block (`plugins/blocks-builtin/src/blocks/condition.view.tsx`) renders a visual rule builder:
+The config view owns the whole settings panel. Read config with `useBlockConfig<T>()`, write it with `useUpdateBlockConfig()`. The built-in `condition` block (`plugins/builtin/src/blocks/condition.view.tsx`) renders a visual rule builder:
 
 ```tsx
 import { useBlockConfig, useUpdateBlockConfig } from '@brika/sdk/block-views';
@@ -329,7 +329,7 @@ export default function ConditionView() {
 
 ### A node-body view
 
-The node-body view renders a compact summary on the canvas. It commonly pairs `useBlockConfig` with `useBlockData<T>()` to preview the live value flowing through the block, as the built-in `text` block does (`plugins/blocks-builtin/src/blocks/text.node.tsx`):
+The node-body view renders a compact summary on the canvas. It commonly pairs `useBlockConfig` with `useBlockData<T>()` to preview the live value flowing through the block, as the built-in `text` block does (`plugins/builtin/src/blocks/text.node.tsx`):
 
 ```tsx
 import { useBlockConfig, useBlockData } from '@brika/sdk/block-views';
@@ -359,7 +359,7 @@ export default function TextNode() {
 
 Unlike [bricks](bricks.md), block views are **real React running in the host UI, same-origin**. That means a view can:
 
-* `fetch()` hub APIs directly. The built-in `spark-receiver` view (`plugins/blocks-builtin/src/blocks/spark-receiver.view.tsx`) calls `fetch('/api/sparks')` and renders a dropdown grouped by plugin, replacing what used to be a hardcoded spark field on the host config panel:
+* `fetch()` hub APIs directly. The built-in `spark-receiver` view (`plugins/builtin/src/blocks/spark-receiver.view.tsx`) calls `fetch('/api/sparks')` and renders a dropdown grouped by plugin, replacing what used to be a hardcoded spark field on the host config panel:
 
   ```tsx
   useEffect(() => {

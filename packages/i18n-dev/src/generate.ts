@@ -3,7 +3,7 @@ import { isPlainObject } from './object';
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 // PascalCase + strip any character that isn't valid in a TS identifier. Plugin
-// namespaces look like `plugin:@brika/blocks-builtin` — without sanitisation
+// namespaces look like `plugin:@brika/plugin-builtin` — without sanitisation
 // `toTypeName` would emit `Plugin:@brika/blocksBuiltinNs`, which is a syntax
 // error in an interface name.
 function toTypeName(name: string): string {

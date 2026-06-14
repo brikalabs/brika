@@ -349,7 +349,7 @@ packages/
   schema/           JSON Schema generation
   …                 See [`packages/`](packages/) for the full list
 plugins/
-  blocks-builtin/   Core blocks (condition, delay, log, …)
+  builtin/   Core blocks (condition, delay, log, …)
   timer/            Timer & countdown blocks
   weather/          Weather dashboard bricks
   matter/           Matter/Thread smart home

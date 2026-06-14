@@ -8,6 +8,7 @@
 import type { I18nRef } from '@brika/ui-kit';
 import { i18nRef } from '@brika/ui-kit';
 
+export type { BunMock } from '@brika/testing';
 // One import path for plugin tests: the block harness, the fetch mock, and the
 // translation mock all come from @brika/sdk/testing.
 export { useBunMock } from '@brika/testing';

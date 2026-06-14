@@ -69,14 +69,10 @@
     "zod": "^4.3.4"
   },
   "peerDependencies": {
-    "lucide-react": "^1.17.0",
-    "@brika/testing": "workspace:*"
+    "lucide-react": "^1.17.0"
   },
   "peerDependenciesMeta": {
     "lucide-react": {
-      "optional": true
-    },
-    "@brika/testing": {
       "optional": true
     }
   },
