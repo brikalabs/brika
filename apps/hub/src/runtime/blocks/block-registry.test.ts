@@ -77,13 +77,13 @@ describe('BlockRegistry - Registration', () => {
     };
 
     const plugin: PluginInfo = {
-      id: '@brika/blocks-builtin',
+      id: '@brika/plugin-builtin',
       version: '1.0.0',
     };
 
     registry.register(block, plugin);
 
-    expect(registry.has('@brika/blocks-builtin:timer')).toBeTrue();
+    expect(registry.has('@brika/plugin-builtin:timer')).toBeTrue();
   });
 
   test('should handle duplicate block registration gracefully', () => {

@@ -34,7 +34,7 @@ Brika is a monorepo with the following workspaces:
 
 - `apps/` — Application entrypoints (`hub`, `ui`, `console`, `signaling`, `build`, `docs`)
 - `packages/` — Shared libraries and utilities (SDK, compiler, IPC, flow, schema, …)
-- `plugins/` — Plugin implementations (`blocks-builtin`, `timer`, `spotify`, …)
+- `plugins/` — Plugin implementations (`builtin`, `timer`, `spotify`, …)
 
 > Some apps that used to live here have been extracted into their own repositories
 > in the `brikalabs` org: [`registry`](https://github.com/brikalabs/registry),

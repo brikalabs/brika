@@ -1,7 +1,8 @@
 {
   "name": "@brika/testing",
+  "private": true,
   "version": "0.4.0",
-  "description": "Bun test helpers (mocks, fixtures) backing @brika/sdk/testing for plugin authors",
+  "description": "Bun test helpers (mocks, fixtures) bundled into @brika/sdk/testing; not published standalone",
   "type": "module",
   "license": "MIT",
   "repository": {

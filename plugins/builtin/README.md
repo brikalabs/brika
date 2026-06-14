@@ -1,4 +1,4 @@
-# @brika/blocks-builtin
+# @brika/plugin-builtin
 
 Core reactive blocks for BRIKA workflow automations. This plugin provides essential building blocks for creating visual workflows.
 
@@ -20,7 +20,7 @@ Emit periodic ticks on an interval.
 
 ```yaml
 - id: clock
-  type: "@brika/blocks-builtin:clock"
+  type: "@brika/plugin-builtin:clock"
   config:
     interval: 5000  # 5 seconds
 ```
@@ -39,7 +39,7 @@ Branch based on a boolean condition.
 
 ```yaml
 - id: check
-  type: "@brika/blocks-builtin:condition"
+  type: "@brika/plugin-builtin:condition"
   config:
     field: "temperature"
     operator: "gt"
@@ -57,7 +57,7 @@ Multi-way branch based on a value.
 
 ```yaml
 - id: switch
-  type: "@brika/blocks-builtin:switch"
+  type: "@brika/plugin-builtin:switch"
   config:
     field: "status"
     case1: "active"
@@ -75,7 +75,7 @@ Wait for a duration before continuing.
 
 ```yaml
 - id: wait
-  type: "@brika/blocks-builtin:delay"
+  type: "@brika/plugin-builtin:delay"
   config:
     duration: 5000  # 5 seconds
 ```
@@ -89,7 +89,7 @@ Wait for multiple inputs before continuing.
 
 ```yaml
 - id: merge
-  type: "@brika/blocks-builtin:merge"
+  type: "@brika/plugin-builtin:merge"
   config: {}
 ```
 
@@ -102,7 +102,7 @@ Send data to multiple branches.
 
 ```yaml
 - id: split
-  type: "@brika/blocks-builtin:split"
+  type: "@brika/plugin-builtin:split"
   config: {}
 ```
 
@@ -116,7 +116,7 @@ Terminate a workflow branch.
 
 ```yaml
 - id: end
-  type: "@brika/blocks-builtin:end"
+  type: "@brika/plugin-builtin:end"
   config:
     status: success
 ```
@@ -136,7 +136,7 @@ Make HTTP requests to external APIs.
 
 ```yaml
 - id: api-call
-  type: "@brika/blocks-builtin:http-request"
+  type: "@brika/plugin-builtin:http-request"
   config:
     url: "https://api.example.com/data"
     method: GET
@@ -155,7 +155,7 @@ Log a message with variable interpolation.
 
 ```yaml
 - id: log
-  type: "@brika/blocks-builtin:log"
+  type: "@brika/plugin-builtin:log"
   config:
     message: "Received: {{inputs.in.value}}"
     level: info
@@ -175,13 +175,13 @@ Transform or extract data.
 ```yaml
 # Extract a field
 - id: extract
-  type: "@brika/blocks-builtin:transform"
+  type: "@brika/plugin-builtin:transform"
   config:
     field: "data.temperature"
 
 # Build new object
 - id: reshape
-  type: "@brika/blocks-builtin:transform"
+  type: "@brika/plugin-builtin:transform"
   config:
     template:
       temp: "data.temperature"
@@ -199,13 +199,13 @@ enabled: true
 
 blocks:
   - id: clock
-    type: "@brika/blocks-builtin:clock"
+    type: "@brika/plugin-builtin:clock"
     config:
       interval: 5000
     position: { x: 100, y: 100 }
 
   - id: log
-    type: "@brika/blocks-builtin:log"
+    type: "@brika/plugin-builtin:log"
     config:
       message: "Tick #{{inputs.in.count}}"
       level: info
@@ -227,25 +227,25 @@ enabled: true
 
 blocks:
   - id: clock
-    type: "@brika/blocks-builtin:clock"
+    type: "@brika/plugin-builtin:clock"
     config:
       interval: 10000
 
   - id: condition
-    type: "@brika/blocks-builtin:condition"
+    type: "@brika/plugin-builtin:condition"
     config:
       field: "count"
       operator: "gt"
       value: 5
 
   - id: high
-    type: "@brika/blocks-builtin:log"
+    type: "@brika/plugin-builtin:log"
     config:
       message: "Count is high: {{inputs.in.count}}"
       level: warn
 
   - id: low
-    type: "@brika/blocks-builtin:log"
+    type: "@brika/plugin-builtin:log"
     config:
       message: "Count is low: {{inputs.in.count}}"
       level: debug
@@ -274,35 +274,35 @@ enabled: true
 
 blocks:
   - id: clock
-    type: "@brika/blocks-builtin:clock"
+    type: "@brika/plugin-builtin:clock"
     config:
       interval: 5000
 
   - id: split
-    type: "@brika/blocks-builtin:split"
+    type: "@brika/plugin-builtin:split"
     config: {}
 
   - id: fast
-    type: "@brika/blocks-builtin:log"
+    type: "@brika/plugin-builtin:log"
     config:
       message: "Fast path"
 
   - id: slow
-    type: "@brika/blocks-builtin:delay"
+    type: "@brika/plugin-builtin:delay"
     config:
       duration: 2000
 
   - id: slow-log
-    type: "@brika/blocks-builtin:log"
+    type: "@brika/plugin-builtin:log"
     config:
       message: "Slow path (after 2s)"
 
   - id: merge
-    type: "@brika/blocks-builtin:merge"
+    type: "@brika/plugin-builtin:merge"
     config: {}
 
   - id: done
-    type: "@brika/blocks-builtin:log"
+    type: "@brika/plugin-builtin:log"
     config:
       message: "Both paths completed"
 

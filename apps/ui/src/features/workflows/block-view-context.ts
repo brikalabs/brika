@@ -15,7 +15,7 @@ export interface BlockVariable {
 export interface BlockViewContextValue {
   /** Workflow-local instance id (the editor node id). */
   blockId: string;
-  /** Fully-qualified block type (e.g. "@brika/blocks-builtin:spark-receiver"). */
+  /** Fully-qualified block type (e.g. "@brika/plugin-builtin:spark-receiver"). */
   blockType: string;
   /** Owning plugin package name. */
   pluginName: string;

@@ -2,14 +2,17 @@ import { describe, expect, test } from 'bun:test';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { Glob } from 'bun';
+import { z } from 'zod';
 
 /**
  * Publish-bundle e2e: prove the BUNDLED @brika/sdk is self-contained.
  *
- * The SDK publishes a tsdown bundle (`build:dist`) with its private runtime
- * closure (@brika/errors/flow/grants/ipc/serializable/ui-kit) INLINED. A consumer
- * installs only @brika/sdk + its real external deps (zod, react peers); the
- * closure never resolves from npm because it never appears in the shipped bundle.
+ * The SDK publishes a tsdown bundle (`build:dist`) with its private @brika
+ * closure (every `@brika/*` it lists as a devDependency, e.g. errors/flow/
+ * grants/ipc/schema/serializable/ui-kit and testing in the `./testing` entry)
+ * INLINED. A consumer installs only @brika/sdk + its real external deps (zod,
+ * react peers); the closure never resolves from npm because it never appears in
+ * the shipped bundle.
  *
  * This builds the real bundle and asserts (1) the entry artifacts exist, (2) no
  * private closure import survives in the emitted JS or `.d.ts`, and (3) the
@@ -19,7 +22,22 @@ import { Glob } from 'bun';
 
 const sdkDir = join(import.meta.dir, '..');
 const distPkg = join(sdkDir, 'dist', 'pkg');
-const CLOSURE_RE = /@brika\/(errors|flow|grants|ipc|serializable|ui-kit|schema)\b/;
+
+// Auto-detected, same source of truth as published-dependency-closure.test.ts:
+// the closure is the SDK's `@brika/*` devDependencies (tsdown bundles devDeps,
+// externalizes real deps/peers). None of them may survive as an import in the
+// shipped bundle. A newly bundled @brika dep is covered with no list to update.
+const sdkManifest = z
+  .object({ devDependencies: z.record(z.string(), z.string()).default({}) })
+  .loose()
+  .parse(JSON.parse(readFileSync(join(sdkDir, 'package.json'), 'utf8')));
+const CLOSURE_NAMES = Object.keys(sdkManifest.devDependencies).filter((d) =>
+  d.startsWith('@brika/')
+);
+// Match a bare closure package or any of its subpaths (`@brika/ui-kit/icons`).
+const CLOSURE_RE = new RegExp(
+  `^(?:${CLOSURE_NAMES.map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})(?:/|$)`
+);
 const REACT_FREE = ['ctx', 'sparks', 'schema', 'grants'];
 
 let built = false;

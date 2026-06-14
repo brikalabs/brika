@@ -70,7 +70,7 @@ packages/
   schema/      Zod → JSON Schema
   …            See contributing/repo-structure.md for the full list
 plugins/
-  blocks-builtin/   Core blocks: condition, delay, log, …
+  builtin/   Core blocks: condition, delay, log, …
   timer/ weather/ matter/ spotify/ …  First-party plugins
 ```
 

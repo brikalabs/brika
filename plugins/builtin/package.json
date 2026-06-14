@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.brika.dev/plugin.schema.json",
-  "name": "@brika/blocks-builtin",
+  "name": "@brika/plugin-builtin",
   "knip": {
     "entry": ["src/blocks/**/*.{ts,tsx}"],
     "ignoreDependencies": ["lucide-react", "react"]
@@ -10,14 +10,14 @@
   "description": "Core workflow blocks for BRIKA automations",
   "author": "BRIKA Team",
   "license": "MIT",
-  "homepage": "https://github.com/brikalabs/brika/tree/main/plugins/blocks-builtin#readme",
+  "homepage": "https://github.com/brikalabs/brika/tree/main/plugins/builtin#readme",
   "bugs": {
     "url": "https://github.com/brikalabs/brika/issues"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/brikalabs/brika.git",
-    "directory": "plugins/blocks-builtin"
+    "directory": "plugins/builtin"
   },
   "icon": "./icon.svg",
   "keywords": [

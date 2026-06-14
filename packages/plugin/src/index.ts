@@ -61,7 +61,7 @@ export interface Plugin {
   // ─── Identity ──────────────────────────────────────────────────────────────
   /** Short unique ID - primary identifier */
   uid: string;
-  /** Plugin name from package.json (e.g. "@brika/blocks-builtin") */
+  /** Plugin name from package.json (e.g. "@brika/plugin-builtin") */
   name: string;
   /** Plugin version */
   version: string;

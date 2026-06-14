@@ -3,7 +3,7 @@
  *
  * @example
  * ```ts
- * import { BunMock } from '@brika/testing';
+ * import { BunMock } from '@brika/sdk/testing';
  *
  * const bun = new BunMock();
  *
@@ -475,7 +475,7 @@ export function mockBun(): BunMock {
  *
  * @example
  * ```ts
- * import { useBunMock } from '@brika/testing';
+ * import { useBunMock } from '@brika/sdk/testing';
  *
  * describe('MyService', () => {
  *   const bun = useBunMock();
