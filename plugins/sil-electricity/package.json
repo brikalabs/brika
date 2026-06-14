@@ -1,6 +1,10 @@
 {
   "$schema": "https://schema.brika.dev/plugin.schema.json",
   "name": "@brika/plugin-sil-electricity",
+  "knip": {
+    "entry": ["src/bricks/**/*.{ts,tsx}"],
+    "ignoreDependencies": ["lucide-react", "react"]
+  },
   "displayName": "SIL Electricity",
   "version": "0.4.0",
   "description": "Monitor your electricity consumption from Services Industriels de Lausanne",

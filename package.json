@@ -1,5 +1,8 @@
 {
   "name": "brika",
+  "knip": {
+    "ignoreDependencies": ["@brika/hub", "@brika/i18n-devtools", "@brika/sdk", "@brika/testing"]
+  },
   "version": "0.4.0",
   "private": true,
   "type": "module",

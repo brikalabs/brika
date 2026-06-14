@@ -1,20 +1,21 @@
 /**
  * Generate a Knip configuration from the repo's own conventions.
  *
- * The generator knows NO package by name. Every workspace's config comes from
- * three generic sources:
+ * The generator knows NO package, framework, or dependency by name. Every
+ * workspace's config comes from three domain-agnostic sources:
  *   1. Manifest fields: `bin` / `main` / `exports` point at the public source
  *      entries (library `exports` targeting `dist/x.js` map back to `src/x.ts`,
- *      since the build mirrors src 1:1).
- *   2. Structural conventions, gated purely on what exists on disk: co-located
- *      tests + fixtures, `examples/` + `scripts/`, root `*.config.ts` and Bun
- *      `*.macro.ts` (tool/build entry points), `__benchmarks__/` (bench runner
- *      entries), a `template/` scaffolding dir (ignored), and the brika-plugin
- *      contract (`keywords: ["brika-plugin"]`) which loads `src/{bricks,blocks,
- *      pages}/**` by path and gets `react`/`lucide-react` as @brika/sdk peers.
- *   3. Per-package declarations: anything non-derivable lives in that package's
- *      own `package.json#knip` (the native knip workspace shape), so the
- *      knowledge sits WITH the package instead of as a branch in this file.
+ *      since the build mirrors src 1:1). Workspace `paths` are derived the same
+ *      way, so a cross-package `@scope/pkg/subpath` import resolves to source.
+ *   2. Universal JS/monorepo conventions, gated purely on what exists on disk:
+ *      co-located tests + fixtures, `examples/` + `scripts/`, root `*.config.ts`
+ *      and Bun `*.macro.ts` (tool/build entry points), `__benchmarks__/` (bench
+ *      runner entries), and a `template/` scaffolding dir (ignored).
+ *   3. Per-package declarations: anything domain-specific (a framework's
+ *      path-loaded entry dirs, a host-provided peer dependency a bundler
+ *      externalizes, a bundled-bin source) lives in that package's own
+ *      `package.json#knip` (the native knip workspace shape), so the knowledge
+ *      sits WITH the package instead of as a branch in this file.
  */
 
 import { stat } from 'node:fs/promises';
@@ -40,9 +41,6 @@ export interface KnipConfig {
   paths?: Record<string, string[]>;
 }
 
-const PLUGIN_PEER_DEPS = ['react', 'lucide-react'];
-const PLUGIN_KEYWORD = 'brika-plugin';
-const SDK_PACKAGE = 'packages/sdk';
 const DIST_JS_RE = /^\.\/dist\/(.+)\.js$/;
 const byLocale = (a: string, b: string): number => a.localeCompare(b);
 
@@ -119,10 +117,6 @@ function collectExportEntries(exports: unknown): string[] {
   return [...out];
 }
 
-async function pathExists(absPath: string): Promise<boolean> {
-  return await Bun.file(absPath).exists();
-}
-
 async function dirExists(absDir: string): Promise<boolean> {
   try {
     return (await stat(absDir)).isDirectory();
@@ -152,10 +146,6 @@ interface BuildContext {
   dir: string;
   absDir: string;
   manifest: Record<string, unknown>;
-}
-
-function isBrikaPlugin(manifest: Record<string, unknown>): boolean {
-  return toStringArray(manifest.keywords).includes(PLUGIN_KEYWORD);
 }
 
 async function addManifestEntries(ctx: BuildContext, entries: Set<string>): Promise<void> {
@@ -214,20 +204,6 @@ async function addConventionEntries(
   }
 }
 
-/** A brika plugin loads these by path at runtime; knip cannot follow the link. */
-async function addPluginEntries(ctx: BuildContext, entries: Set<string>): Promise<void> {
-  for (const sub of ['bricks', 'blocks', 'pages']) {
-    if (await dirExists(join(ctx.absDir, 'src', sub))) {
-      entries.add(`src/${sub}/**/*.{ts,tsx}`);
-    }
-  }
-  for (const file of ['src/actions.ts', 'src/routes.ts']) {
-    if (await pathExists(join(ctx.absDir, file))) {
-      entries.add(file);
-    }
-  }
-}
-
 /**
  * Merge the package's own `package.json#knip` (native knip workspace shape) for
  * anything not derivable from conventions: a bundled bin's real source entry, a
@@ -273,14 +249,6 @@ async function buildWorkspaceConfig(
 
   await addManifestEntries(ctx, entries);
   await addConventionEntries(ctx, entries, ignore);
-
-  if (isBrikaPlugin(ctx.manifest)) {
-    await addPluginEntries(ctx, entries);
-    for (const dep of PLUGIN_PEER_DEPS) {
-      ignoreDependencies.add(dep);
-    }
-  }
-
   mergeDeclaredKnip(ctx.manifest, entries, ignore, ignoreDependencies);
 
   const config: KnipWorkspaceConfig = { entry: [...entries].sort(byLocale) };
@@ -293,38 +261,69 @@ async function buildWorkspaceConfig(
   return config;
 }
 
-async function buildSdkPaths(root: string): Promise<Record<string, string[]>> {
-  const sdkPkgPath = join(root, SDK_PACKAGE, 'package.json');
-  if (!(await pathExists(sdkPkgPath))) {
-    return {};
-  }
-  const manifest = await loadManifest(sdkPkgPath);
+/** Map one package's public subpaths to their source files (`@scope/pkg/x` -> `./dir/src/x.ts`). */
+function packagePaths(dir: string, manifest: Record<string, unknown>): Record<string, string[]> {
+  const name = manifest.name;
   const exports = manifest.exports;
-  if (!isObjectRecord(exports)) {
+  if (typeof name !== 'string' || !isObjectRecord(exports)) {
     return {};
   }
   const paths: Record<string, string[]> = {};
   for (const [subpath, value] of Object.entries(exports)) {
-    if (!subpath.startsWith('.')) {
-      continue;
+    const sourceRel = subpath.startsWith('.') ? resolveExportToSource(value) : undefined;
+    if (sourceRel) {
+      paths[subpath === '.' ? name : `${name}${subpath.slice(1)}`] = [`./${dir}/${sourceRel}`];
     }
-    const sourceRel = resolveExportToSource(value);
-    if (!sourceRel) {
-      continue;
-    }
-    const importPath = subpath === '.' ? '@brika/sdk' : `@brika/sdk${subpath.slice(1)}`;
-    paths[importPath] = [`./${SDK_PACKAGE}/${sourceRel}`];
   }
   return paths;
+}
+
+/**
+ * Map every workspace package's public subpaths to source, so a cross-package
+ * `@scope/pkg/subpath` import resolves to `src/...` even when the published
+ * `exports` target `dist/` (which may not be built in a dev checkout). Derived
+ * from each manifest's name + exports; no package is named here.
+ */
+async function buildWorkspacePaths(
+  root: string,
+  packages: readonly WorkspacePackage[]
+): Promise<Record<string, string[]>> {
+  const paths: Record<string, string[]> = {};
+  for (const pkg of packages) {
+    if (pkg.relativePath !== 'package.json') {
+      const dir = dirname(pkg.relativePath);
+      Object.assign(paths, packagePaths(dir, await loadManifest(join(root, pkg.relativePath))));
+    }
+  }
+  return paths;
+}
+
+/**
+ * The repo-root workspace: `scripts/*.ts` are runnable entries, and the deps it
+ * uses only through tooling (which import paths knip can't follow) are declared
+ * in the root `package.json#knip`, like any other workspace.
+ */
+async function buildRootConfig(root: string): Promise<KnipWorkspaceConfig> {
+  const entries = new Set(['scripts/*.ts']);
+  const ignore = new Set<string>();
+  const ignoreDependencies = new Set<string>();
+  mergeDeclaredKnip(
+    await loadManifest(join(root, 'package.json')),
+    entries,
+    ignore,
+    ignoreDependencies
+  );
+  const config: KnipWorkspaceConfig = { entry: [...entries].sort(byLocale) };
+  if (ignoreDependencies.size > 0) {
+    config.ignoreDependencies = [...ignoreDependencies].sort(byLocale);
+  }
+  return config;
 }
 
 export async function buildKnipConfig(root: string): Promise<KnipConfig> {
   const packages = await discoverPackages(root);
   const workspaces: Record<string, KnipWorkspaceConfig> = {
-    '.': {
-      entry: ['scripts/*.ts'],
-      ignoreDependencies: ['@brika/hub', '@brika/i18n-devtools', '@brika/sdk', '@brika/testing'],
-    },
+    '.': await buildRootConfig(root),
   };
 
   for (const pkg of packages) {
@@ -340,6 +339,6 @@ export async function buildKnipConfig(root: string): Promise<KnipConfig> {
     workspaces,
     ignoreExportsUsedInFile: true,
     ignoreBinaries: ['ps'],
-    paths: await buildSdkPaths(root),
+    paths: await buildWorkspacePaths(root, packages),
   };
 }

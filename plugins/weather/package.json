@@ -1,6 +1,10 @@
 {
   "$schema": "https://schema.brika.dev/plugin.schema.json",
   "name": "@brika/plugin-weather",
+  "knip": {
+    "entry": ["src/bricks/**/*.{ts,tsx}"],
+    "ignoreDependencies": ["lucide-react", "react"]
+  },
   "displayName": "Weather",
   "version": "0.4.0",
   "description": "Beautiful weather display with current conditions, forecast, and compact widget",
