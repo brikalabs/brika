@@ -1,20 +1,21 @@
 #!/usr/bin/env bun
 
 /**
- * Publish the shipped public packages (the @brika/sdk runtime closure +
- * create-brika + the 7 plugins) to npm with provenance.
+ * The AUTOMATED publisher entry: ship the public packages (the @brika/sdk
+ * runtime closure + create-brika + the 7 plugins) to npm in dependency order,
+ * non-interactively, for CI. The interactive sibling is ./publish.ts; both
+ * delegate the per-package mechanism (manifest rewrite, idempotent skip,
+ * `npm publish` flags, provenance) to the shared ./publish-package.ts.
  *
- * Uses `npm publish --provenance`, NOT `bun publish`: Bun 1.3.14 has no
- * `--provenance` flag and no OIDC / trusted-publishing support.
+ * This file owns only what is specific to the automated release: discovering the
+ * workspace, deriving the topological publish order, and walking it. The order
+ * is a topological sort over each package's `@brika/*` runtime deps, so a
+ * dependent never publishes before a dependency it pins is live.
  *
- * THE workspace: REWRITE. The internal `@brika/*` deps use the `workspace:`
- * protocol. `changeset version` does NOT rewrite it (only `changeset publish` /
- * a workspace-aware `bun|pnpm|yarn publish` would, and we use `npm publish` for
- * provenance), and `npm publish` ships `workspace:*` verbatim -- which no consumer
- * can install. So this script rewrites every `@brika/*` `workspace:` range to a
- * concrete `^<version>` (resolved from the sibling package's current version) ON
- * DISK just before `npm publish`, then restores the manifest. Mirrors the
- * manifest-rewrite in apps/build/src/npm-dist.ts.
+ * The published set is `@brika/sdk`, `@brika/testing`, `create-brika`, and the
+ * 7 plugins (the @brika/sdk runtime closure -- errors/flow/grants/ipc/
+ * serializable/ui-kit/schema -- is `private` and inlined by `build:dist`, never
+ * published).
  *
  * OIDC trusted publishing is per package NAME and must be registered on
  * npmjs.com BEFORE OIDC can attach provenance. A trusted publisher cannot exist
@@ -22,31 +23,17 @@
  * `NPM_TOKEN` bootstrap fallback (written into ~/.npmrc in CI); OIDC takes over
  * on every subsequent release.
  *
- * The published set is `@brika/sdk`, `@brika/testing`, `create-brika`, and the
- * 7 plugins (the @brika/sdk runtime closure -- errors/flow/grants/ipc/
- * serializable/ui-kit/schema -- is `private` and inlined by `build:dist`, never
- * published). Order is a topological sort over each package's `@brika/*` runtime
- * deps, so a dependent never publishes before a dependency it pins is live.
- *
  * Usage:
  *   bun run packages/workspace-tools/src/release-libs.ts                  # publish (tag auto: next for prereleases, else latest)
  *   bun run packages/workspace-tools/src/release-libs.ts --dry-run        # exercise every package, publish nothing
  *   bun run packages/workspace-tools/src/release-libs.ts --tag=next       # force a dist-tag (omit to auto-derive)
  */
 
-import { existsSync } from 'node:fs';
-import { rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { parseArgs } from 'node:util';
 import { Glob } from 'bun';
 import { z } from 'zod';
-import {
-  bundleExports,
-  isBundlePublished,
-  rewriteWorkspaceRanges,
-  stripDevManifestFields,
-  stripInternalExports,
-} from './publish-manifest';
+import { publishPackage, resolveTag } from './publish-package';
 
 // Anchored to this file's location, not process.cwd(): the changeset-config
 // guard imports discoverPublishOrder, and test-ci runs each suite with cwd set
@@ -153,117 +140,8 @@ export async function discoverPublishOrder(): Promise<WorkspacePackage[]> {
   return publishOrder(await discoverWorkspace());
 }
 
-/**
- * Default dist-tag: a prerelease version (containing `-`, e.g. `0.5.0-rc.1`)
- * routes to `next`; a stable version routes to `latest`. An explicit `--tag`
- * overrides both.
- */
-function resolveTag(version: string): string {
-  if (typeof values.tag === 'string' && values.tag !== '') {
-    return values.tag;
-  }
-  return /-/.test(version) ? 'next' : 'latest';
-}
-
-/** True if `name@version` already exists on the registry (npm versions are immutable). */
-function isPublished(name: string, version: string): boolean {
-  const proc = Bun.spawnSync(['npm', 'view', `${name}@${version}`, 'version'], {
-    stdout: 'pipe',
-    stderr: 'pipe',
-  });
-  return proc.exitCode === 0 && proc.stdout.toString().trim() === version;
-}
-
-/**
- * Publish one package: rewrite its `workspace:` ranges to concrete versions,
- * `npm publish`, then restore the manifest. Returns true on success or a
- * legitimate skip (already-published), false on a real publish failure.
- */
-async function publishPackage(
-  pkg: WorkspacePackage,
-  versions: Map<string, string>
-): Promise<boolean> {
-  const tag = resolveTag(pkg.version);
-
-  // Idempotent: npm versions are immutable, so a re-run after a partial publish
-  // must skip what is already live rather than 409 and wedge the release.
-  if (!dryRun && isPublished(pkg.name, pkg.version)) {
-    console.log(`  ${pkg.name}@${pkg.version} already published (skip)`);
-    return true;
-  }
-
-  const dir = join(REPO_ROOT, pkg.relDir);
-  const manifestPath = join(dir, 'package.json');
-  const original = await Bun.file(manifestPath).text();
-  const rewritten = rewriteWorkspaceRanges(original, versions);
-  if (rewritten?.includes('"workspace:')) {
-    // A non-@brika workspace range survived the rewrite: never ship that.
-    console.error(`  ${pkg.name}: unresolved workspace: range after rewrite; aborting.`);
-    return false;
-  }
-  // Trim workspace-only `./internal/*` exports from the published manifest. The
-  // strip runs on top of the workspace-range rewrite, so publishText carries both.
-  const stripped = stripInternalExports(rewritten ?? original);
-  let publishText = stripped ?? rewritten;
-
-  // Bundle-published packages (build:dist script): build the dist, then repoint
-  // exports src -> dist so consumers get the self-contained bundle. The build
-  // must run before publish since release-libs uses --ignore-scripts.
-  if (isBundlePublished(original)) {
-    console.log(`  ${pkg.name}: building publish bundle (build:dist)`);
-    const build = Bun.spawnSync(['bun', 'run', 'build:dist'], {
-      cwd: dir,
-      stdout: 'inherit',
-      stderr: 'inherit',
-    });
-    if (build.exitCode !== 0) {
-      console.error(`  ${pkg.name}: build:dist failed; aborting.`);
-      return false;
-    }
-    publishText = bundleExports(publishText ?? original) ?? publishText;
-  }
-
-  // Drop dev-only tooling keys (e.g. `knip`) so the published manifest carries
-  // only what a consumer needs.
-  publishText = stripDevManifestFields(publishText ?? original) ?? publishText;
-
-  // --ignore-scripts: CI pre-builds the artifacts (sdk bin, create-brika dist);
-  // a lifecycle script failing mid-loop would leave a partial publish of
-  // immutable versions.
-  const args = ['npm', 'publish', '--access', 'public', '--tag', tag, '--ignore-scripts'];
-  // Provenance needs the OIDC id-token that only exists in GitHub Actions.
-  if (process.env.GITHUB_ACTIONS === 'true') {
-    args.push('--provenance');
-  }
-  if (dryRun) {
-    args.push('--dry-run');
-  }
-
-  // Packages list LICENSE in files[] but keep only the root LICENSE on disk; copy
-  // it in for the publish so npm shows the license, then remove the copy.
-  const licensePath = join(dir, 'LICENSE');
-  const rootLicense = join(REPO_ROOT, 'LICENSE');
-  const addLicense = !existsSync(licensePath) && existsSync(rootLicense);
-
-  console.log(`  publish ${pkg.name}@${pkg.version}  tag:${tag}${dryRun ? '  (dry run)' : ''}`);
-  try {
-    if (publishText !== null) {
-      await Bun.write(manifestPath, publishText);
-    }
-    if (addLicense) {
-      await Bun.write(licensePath, Bun.file(rootLicense));
-    }
-    const proc = Bun.spawnSync(args, { cwd: dir, stdout: 'inherit', stderr: 'inherit' });
-    return proc.exitCode === 0;
-  } finally {
-    if (publishText !== null) {
-      await Bun.write(manifestPath, original);
-    }
-    if (addLicense) {
-      await rm(licensePath, { force: true });
-    }
-  }
-}
+/** The explicit `--tag` override, or undefined to auto-derive per package. */
+const explicitTag = typeof values.tag === 'string' ? values.tag : undefined;
 
 async function main(): Promise<void> {
   console.log(`BRIKA library + plugin publish${dryRun ? '  (dry run)' : ''}`);
@@ -274,10 +152,20 @@ async function main(): Promise<void> {
   console.log(`  ${order.length} packages: ${order.map((p) => p.name).join(', ')}`);
 
   for (const pkg of order) {
-    if (!(await publishPackage(pkg, versions))) {
+    const tag = resolveTag(pkg.version, explicitTag);
+    console.log(`  publish ${pkg.name}@${pkg.version}  tag:${tag}${dryRun ? '  (dry run)' : ''}`);
+    const outcome = await publishPackage(
+      { dir: join(REPO_ROOT, pkg.relDir), name: pkg.name, version: pkg.version },
+      { versions, repoRoot: REPO_ROOT, dryRun, tag: explicitTag }
+    );
+    if (outcome.status === 'skipped') {
+      console.log(`  ${pkg.name}@${pkg.version} already published (skip)`);
+      continue;
+    }
+    if (outcome.status === 'failed') {
       // A real publish error aborts: do not push dependents whose dependency
       // failed to go live. The idempotent skip lets a fixed re-run resume.
-      console.error(`Failed to publish ${pkg.name}@${pkg.version}. Aborting.`);
+      console.error(`Failed to publish ${pkg.name}@${pkg.version}: ${outcome.reason}. Aborting.`);
       process.exit(1);
     }
   }

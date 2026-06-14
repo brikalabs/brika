@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'bun:test';
 import { useBunMock } from '@brika/testing';
 import { plurals } from './plurals';
+import { resolveTag } from './publish-package';
 import {
-  buildPublishArgs,
   countExports,
   fetchPublishedVersion,
   formatNpmStatus,
@@ -215,26 +215,22 @@ describe('formatNpmStatus', () => {
   });
 });
 
-describe('buildPublishArgs', () => {
-  test('returns base args when not dry-run', () => {
-    expect(buildPublishArgs(false)).toEqual([
-      'bun',
-      'publish',
-      '--access',
-      'public',
-      '--ignore-scripts',
-    ]);
+describe('resolveTag', () => {
+  test('routes a stable version to latest', () => {
+    expect(resolveTag('1.2.3')).toBe('latest');
   });
 
-  test('appends --dry-run flag', () => {
-    expect(buildPublishArgs(true)).toEqual([
-      'bun',
-      'publish',
-      '--access',
-      'public',
-      '--ignore-scripts',
-      '--dry-run',
-    ]);
+  test('routes a prerelease version to next', () => {
+    expect(resolveTag('0.5.0-rc.1')).toBe('next');
+  });
+
+  test('an explicit tag overrides the derived one', () => {
+    expect(resolveTag('1.2.3', 'beta')).toBe('beta');
+    expect(resolveTag('0.5.0-rc.1', 'beta')).toBe('beta');
+  });
+
+  test('an empty explicit tag falls back to the derived one', () => {
+    expect(resolveTag('1.2.3', '')).toBe('latest');
   });
 });
 

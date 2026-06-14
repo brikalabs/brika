@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 
 /**
- * workspace-tools — Interactive workspace publisher
+ * workspace-tools: Interactive workspace publisher
  *
  * Usage:
  *   bun run publish-packages                              # interactive: pick packages
@@ -15,8 +15,8 @@ import { parseArgs } from 'node:util';
 import * as p from '@brika/cli/prompts';
 import pc from 'picocolors';
 import { plurals } from './plurals';
+import { publishPackage } from './publish-package';
 import {
-  buildPublishArgs,
   fetchPublishedVersion,
   formatNpmHint,
   formatPackageLabel,
@@ -43,7 +43,7 @@ const pluginForms = {
 };
 
 const HELP = `
-${pc.bold('workspace-tools')} — Interactive Workspace Publisher
+${pc.bold('workspace-tools')}: Interactive Workspace Publisher
 
 ${pc.bold('Usage:')}
   ${pc.cyan('bun run publish-packages')}                            ${pc.dim('Interactive: pick packages')}
@@ -58,7 +58,7 @@ ${pc.bold('Flags:')}
   ${pc.cyan('-h, --help')}               Show this help
 
 ${pc.bold('Note:')}
-  npm 2FA / OTP prompts are handled interactively — the terminal is kept open
+  npm 2FA / OTP prompts are handled interactively: the terminal is kept open
   so you can paste your code when prompted by npm.
 
 ${pc.bold('Examples:')}
@@ -108,8 +108,8 @@ try {
 
   p.intro(
     dryRun
-      ? pc.bgYellow(pc.black(' workspace-tools — publish (dry run) '))
-      : pc.bgCyan(pc.black(' workspace-tools — publish '))
+      ? pc.bgYellow(pc.black(' workspace-tools: publish (dry run) '))
+      : pc.bgCyan(pc.black(' workspace-tools: publish '))
   );
 
   const allPackages = await discoverPackages(ROOT);
@@ -282,9 +282,12 @@ try {
 
   installSpinner.stop(pc.green('bun install complete'));
 
-  // Publish each package
+  // Publish each package through the shared mechanism (same manifest rewrite,
+  // idempotent skip, and `npm publish` flags as the automated CI release in
+  // release-libs.ts). `interactive: true` keeps stdin attached so npm can prompt
+  // for an OTP.
   const failed: string[] = [];
-  const publishArgs = buildPublishArgs(dryRun);
+  const versions = new Map(allPackages.map((pkg) => [pkg.name, pkg.version]));
 
   for (const pkg of selectedPackages) {
     const pkgDir = join(pkg.path, '..');
@@ -292,19 +295,17 @@ try {
 
     p.log.step(`Publishing ${label}…`);
 
-    const proc = Bun.spawn(publishArgs, {
-      cwd: pkgDir,
-      stdout: 'inherit',
-      stderr: 'inherit',
-      stdin: 'inherit', // keeps terminal open for interactive auth (OTP paste etc.)
-    });
+    const outcome = await publishPackage(
+      { dir: pkgDir, name: pkg.name, version: pkg.version },
+      { versions, repoRoot: ROOT, dryRun, interactive: true }
+    );
 
-    const exitCode = await proc.exited;
-
-    if (exitCode === 0) {
+    if (outcome.status === 'published') {
       p.log.success(`${pc.green('Published: ')}${label}${dryTag}`);
+    } else if (outcome.status === 'skipped') {
+      p.log.info(`${pc.dim('Skipped: ')}${label} ${pc.dim('(already published)')}`);
     } else {
-      p.log.error(`${pc.red('Failed: ')}${label}`);
+      p.log.error(`${pc.red('Failed: ')}${label} ${pc.dim(`(${outcome.reason})`)}`);
       failed.push(pkg.name);
     }
   }
@@ -319,7 +320,7 @@ try {
     p.outro(`${summary}\n  ${pc.red('Failed: ')}${failed.join(', ')}`);
     process.exit(1);
   } else {
-    const dryNote = dryRun ? ' (dry run — nothing written)' : '';
+    const dryNote = dryRun ? ' (dry run, nothing written)' : '';
     p.outro(pc.green(`${plurals(packageForms, count)} published${dryNote}`));
   }
 } catch (error) {
