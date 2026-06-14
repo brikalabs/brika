@@ -114,6 +114,33 @@ function printReport(result: VerifyResult, sdkVersion: string): boolean {
   return true;
 }
 
+/**
+ * Verify a plugin directory; returns true when it passed. Shared by the `verify`
+ * command and by `publish` (which gates on it). Resolves the SDK version, runs
+ * `verifyPlugin`, and prints the human report (or JSON when `opts.json`).
+ */
+export async function runVerify(
+  pluginDir: string,
+  opts: { json?: boolean } = {}
+): Promise<boolean> {
+  const sdkVersion = await resolveSdkVersion(pluginDir);
+
+  let result: VerifyResult;
+  try {
+    result = await verifyPlugin(pluginDir, sdkVersion);
+  } catch {
+    process.stderr.write(`${pc.red('✗')} Could not read ${resolve(pluginDir, 'package.json')}\n`);
+    return false;
+  }
+
+  if (opts.json) {
+    process.stdout.write(`${JSON.stringify({ ...result, sdkVersion })}\n`);
+    return result.passed;
+  }
+
+  return printReport(result, sdkVersion);
+}
+
 export default defineCommand({
   name: 'verify',
   description: 'Validate a plugin package.json (schema, engines.brika, $schema, keywords)',
@@ -128,26 +155,7 @@ export default defineCommand({
   examples: ['brika verify', 'brika verify --dir plugins/timer', 'brika verify --json'],
   async handler({ values }) {
     const pluginDir = resolve(values.dir ?? process.cwd());
-    const sdkVersion = await resolveSdkVersion(pluginDir);
-
-    let result: VerifyResult;
-    try {
-      result = await verifyPlugin(pluginDir, sdkVersion);
-    } catch {
-      process.stderr.write(`${pc.red('✗')} Could not read ${resolve(pluginDir, 'package.json')}\n`);
-      process.exitCode = 1;
-      return;
-    }
-
-    if (values.json) {
-      process.stdout.write(`${JSON.stringify({ ...result, sdkVersion })}\n`);
-      if (!result.passed) {
-        process.exitCode = 1;
-      }
-      return;
-    }
-
-    if (!printReport(result, sdkVersion)) {
+    if (!(await runVerify(pluginDir, { json: values.json }))) {
       process.exitCode = 1;
     }
   },

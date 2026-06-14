@@ -5,7 +5,7 @@
 import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from 'bun:test';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
-import { parseCondition, render, resolveFilename } from './render';
+import { parseCondition, render, resolveDirName, resolveFilename } from './render';
 import { createTemplateData, type ScaffoldOptions, scaffold } from './scaffold';
 
 // Mock @brika/cli/prompts (thin pass-through over @clack/prompts)
@@ -155,6 +155,16 @@ describe('parseCondition', () => {
   });
 });
 
+describe('resolveDirName', () => {
+  test('turns a leading underscore into a dot', () => {
+    expect(resolveDirName('_github')).toBe('.github');
+  });
+
+  test('passes through a normal directory name', () => {
+    expect(resolveDirName('workflows')).toBe('workflows');
+  });
+});
+
 // ─── Scaffold integration tests ─────────────────────────────────────────────
 
 describe('scaffold', () => {
@@ -244,6 +254,17 @@ describe('scaffold', () => {
     expect(gitignore).toBe(true);
     expect(src).toBe(true);
     expect(locales).toBe(true);
+  });
+
+  test('scaffolds the OIDC release workflow at .github/workflows/release.yml', async () => {
+    await scaffold(defaultOptions);
+
+    const workflow = await fs.readFile(
+      path.join(testDir, 'test-plugin', '.github', 'workflows', 'release.yml'),
+      'utf-8'
+    );
+    expect(workflow).toContain('bunx brika publish --yes');
+    expect(workflow).toContain('id-token: write');
   });
 
   test('fetches SDK version from npm', async () => {
