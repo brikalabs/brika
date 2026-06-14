@@ -15,4 +15,5 @@
 
 export { default as build, runBuild } from './commands/build';
 export { default as check, scanBoundary } from './commands/check';
-export { default as verify } from './commands/verify';
+export { buildPublishArgs, default as publish, resolveTag } from './commands/publish';
+export { default as verify, runVerify } from './commands/verify';

@@ -28,7 +28,7 @@ import { type Command, createCli, generateHelp } from '@brika/cli';
 // `brika` bin and this full hub CLI register the same modules. The `internal/`
 // subpath is a workspace-only entry (it pulls in the private build toolchain);
 // it is stripped from the published manifest, so it never leaks to consumers.
-import { build, check, verify } from '@brika/sdk/internal/cli';
+import { build, check, publish, verify } from '@brika/sdk/internal/cli';
 import pc from 'picocolors';
 import supervisor from './commands/__supervisor';
 import brix from './commands/brix';
@@ -87,6 +87,7 @@ export const cli = createCli({ name: 'brika', defaultCommand: 'dashboard', helpF
   .addCommand(build)
   .addCommand(check)
   .addCommand(verify)
+  .addCommand(publish)
   .addCommand(dev)
   .addCommand(install)
   .addCommand(version)

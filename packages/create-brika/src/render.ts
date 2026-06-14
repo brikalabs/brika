@@ -7,6 +7,7 @@
  *   [condition]dir/ → conditional folder (only created when data[condition] is truthy)
  *   {{key}}         → variable interpolation in filenames
  *   _gitignore      → renamed to .gitignore
+ *   _dir/           → leading underscore on a folder becomes a dot (`_github` → `.github`)
  *   other files     → copied as-is
  *
  * Template syntax (inside .tpl files):
@@ -79,6 +80,15 @@ export function parseCondition(name: string): {
   };
 }
 
+/**
+ * Resolve a directory's output name: drop a `[condition]` prefix, then turn a
+ * leading underscore into a dot (`_github` → `.github`) so dot-folders can live
+ * in the template tree without being treated as hidden by tooling or pack.
+ */
+export function resolveDirName(name: string): string {
+  return name.startsWith('_') ? `.${name.slice(1)}` : name;
+}
+
 // ─── Directory walker ────────────────────────────────────────────────────────
 
 /** Walk a template directory, process all files, write to target. */
@@ -103,7 +113,7 @@ export async function walkTemplate(
         continue;
       }
 
-      await walkTemplate(srcPath, path.join(targetDir, dirName), data);
+      await walkTemplate(srcPath, path.join(targetDir, resolveDirName(dirName)), data);
     } else if (entry.name.endsWith('.ts')) {
       // Generator: import + call default export → string
       const mod = await import(srcPath);

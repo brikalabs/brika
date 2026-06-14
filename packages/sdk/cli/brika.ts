@@ -15,6 +15,7 @@ import dev from './commands/dev';
 import docs from './commands/docs';
 import doctor from './commands/doctor';
 import install from './commands/install';
+import publish from './commands/publish';
 import verify from './commands/verify';
 
 await createCli({ name: 'brika' })
@@ -22,6 +23,7 @@ await createCli({ name: 'brika' })
   .addCommand(build)
   .addCommand(check)
   .addCommand(verify)
+  .addCommand(publish)
   .addCommand(dev)
   .addCommand(install)
   .addCommand(docs)

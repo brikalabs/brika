@@ -49,12 +49,23 @@ Event emitted by this plugin.
 ## Development
 
 ```bash
-# Link for local development
-bun link
-
-# Type check
-bun run tsc
+brika dev      # develop against a running hub, with hot-reload
+brika build    # regenerate the plugin manifest from your source
+brika check    # lint + typecheck
+brika verify   # validate package.json before publishing
 ```
+
+## Publishing
+
+```bash
+brika publish              # build + verify + publish to npm
+brika publish --dry-run    # rehearse without publishing
+```
+
+Pushing a `v*` git tag also publishes via the scaffolded
+`.github/workflows/release.yml`, with npm provenance over OIDC (no token). One
+time on npmjs.com: after the first publish, add this repo + `release.yml` as the
+package's Trusted Publisher.
 
 ## License
 

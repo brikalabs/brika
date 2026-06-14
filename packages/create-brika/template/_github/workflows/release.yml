@@ -1,0 +1,42 @@
+# Publish this plugin to npm when you push a version tag (e.g. `v1.2.3`).
+#
+# Cut a release locally:
+#   npm version patch        # bumps version + creates the git tag
+#   git push --follow-tags   # pushes the commit + tag -> triggers this workflow
+#
+# Auth is OIDC Trusted Publishing only (no NPM_TOKEN to store or leak): `brika
+# publish` runs `npm publish --provenance` and the id-token below lets npm mint a
+# short-lived credential. ONE-TIME setup on npmjs.com: after the package's first
+# publish, open its Settings -> Trusted Publisher and add this repo + workflow
+# (`release.yml`). A trusted publisher can't be configured before the package
+# exists, so do the first publish once by hand: `npm login && bunx brika publish`.
+
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write # OIDC: lets npm attach provenance without a stored token
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: oven-sh/setup-bun@v2
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22 # >= 22.14.0
+          registry-url: https://registry.npmjs.org
+      # Trusted publishing needs npm CLI >= 11.5.1; node 22 ships an older npm.
+      - run: npm install -g npm@latest
+      - run: bun install
+      # build (regenerate the manifest) + verify + npm publish, non-interactive.
+      - run: bunx brika publish --yes
