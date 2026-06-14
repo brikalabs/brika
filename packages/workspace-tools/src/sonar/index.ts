@@ -6,7 +6,7 @@
  * appropriate command in `./commands.ts` or `./coverage.ts`. Top-level
  * await is required to make the dispatcher fail fast on errors.
  *
- * Usage: bun run scripts/sonar-fp.ts <command> [options]
+ * Usage: bun run packages/workspace-tools/src/sonar-fp.ts <command> [options]
  */
 
 import { setPrKey } from './api';

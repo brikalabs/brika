@@ -92,25 +92,25 @@ curl -s "https://sonarcloud.io/api/issues/search?componentKeys=brika&statuses=OP
 
 ```bash
 # List all open issues
-bun run scripts/sonar-fp.ts list
+bun run packages/workspace-tools/src/sonar-fp.ts list
 
 # List security hotspots
-bun run scripts/sonar-fp.ts hotspots
+bun run packages/workspace-tools/src/sonar-fp.ts hotspots
 
 # Mark a specific issue as false positive
-bun run scripts/sonar-fp.ts fp <issue-key> "Reason for false positive"
+bun run packages/workspace-tools/src/sonar-fp.ts fp <issue-key> "Reason for false positive"
 
 # Mark as won't fix
-bun run scripts/sonar-fp.ts wontfix <issue-key> "Reason"
+bun run packages/workspace-tools/src/sonar-fp.ts wontfix <issue-key> "Reason"
 
 # Bulk mark by rule (e.g., all S4662 CSS at-rule issues)
-bun run scripts/sonar-fp.ts bulk-fp --rule css:S4662 "Tailwind CSS v4 syntax"
+bun run packages/workspace-tools/src/sonar-fp.ts bulk-fp --rule css:S4662 "Tailwind CSS v4 syntax"
 
 # Review hotspots — mark as safe
-bun run scripts/sonar-fp.ts hotspot-safe <hotspot-key> "Not a security risk because..."
+bun run packages/workspace-tools/src/sonar-fp.ts hotspot-safe <hotspot-key> "Not a security risk because..."
 
 # Reopen a resolved issue
-bun run scripts/sonar-fp.ts reopen <issue-key>
+bun run packages/workspace-tools/src/sonar-fp.ts reopen <issue-key>
 ```
 
 Requires `SONAR_TOKEN` env var for write operations. Read-only commands work without auth on public projects.

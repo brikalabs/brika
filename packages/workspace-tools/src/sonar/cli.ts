@@ -103,7 +103,7 @@ export function usage(): void {
 ${c.bold}  sonar-fp${c.reset} — SonarCloud Issue & Hotspot Manager
 
 ${c.bold}  USAGE${c.reset}
-    bun run scripts/sonar-fp.ts ${c.cyan}<command>${c.reset} [options]
+    bun run packages/workspace-tools/src/sonar-fp.ts ${c.cyan}<command>${c.reset} [options]
 
 ${c.bold}  COMMANDS${c.reset}
     ${c.cyan}summary${c.reset}                                     Overview of open issues & hotspots
@@ -137,15 +137,15 @@ ${c.bold}  ENVIRONMENT${c.reset}
 
 ${c.bold}  EXAMPLES${c.reset}
     ${c.dim}# Quick overview${c.reset}
-    bun run scripts/sonar-fp.ts summary
+    bun run packages/workspace-tools/src/sonar-fp.ts summary
 
     ${c.dim}# List all bugs${c.reset}
-    bun run scripts/sonar-fp.ts list --type BUG
+    bun run packages/workspace-tools/src/sonar-fp.ts list --type BUG
 
     ${c.dim}# Mark a CSS false positive${c.reset}
-    bun run scripts/sonar-fp.ts fp AYx... "Tailwind CSS v4 syntax"
+    bun run packages/workspace-tools/src/sonar-fp.ts fp AYx... "Tailwind CSS v4 syntax"
 
     ${c.dim}# Bulk mark all S2245 (Math.random) hotspots as safe${c.reset}
-    bun run scripts/sonar-fp.ts bulk-hotspot-safe --rule typescript:S2245 "UI/demo only, not security-sensitive"
+    bun run packages/workspace-tools/src/sonar-fp.ts bulk-hotspot-safe --rule typescript:S2245 "UI/demo only, not security-sensitive"
   `);
 }

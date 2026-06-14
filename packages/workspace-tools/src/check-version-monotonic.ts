@@ -42,13 +42,16 @@ export function isReleaseTag(tag: string): boolean {
  * (`canary`, `next`, ...). Returns `null` when none qualify.
  */
 export function latestReleaseTag(tags: ReadonlyArray<string>): string | null {
-  const releases = tags.filter(isReleaseTag);
-  if (releases.length === 0) {
-    return null;
+  let best: string | null = null;
+  for (const tag of tags) {
+    if (!isReleaseTag(tag)) {
+      continue;
+    }
+    if (best === null || compareVersions(stripTagPrefix(tag), stripTagPrefix(best)) > 0) {
+      best = tag;
+    }
   }
-  return releases.reduce((best, tag) =>
-    compareVersions(stripTagPrefix(tag), stripTagPrefix(best)) > 0 ? tag : best
-  );
+  return best;
 }
 
 export type GateResult =
