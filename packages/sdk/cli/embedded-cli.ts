@@ -16,7 +16,7 @@
 import { mkdir } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import { isCompiledFrom, resolveDataDir } from '../exec-context';
+import { isCompiledFrom, resolveDataDir } from '../src/exec-context';
 
 /** True when the running toolchain must delegate (compiled binary). */
 export function shouldDelegateToEmbeddedCli(): boolean {

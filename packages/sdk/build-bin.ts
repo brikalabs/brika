@@ -13,7 +13,7 @@ import { join, relative } from 'node:path';
 import { findWorkspaceRoot } from './src/exec-context';
 
 const result = await Bun.build({
-  entrypoints: [`${import.meta.dir}/src/cli/brika.ts`],
+  entrypoints: [`${import.meta.dir}/cli/brika.ts`],
   outdir: `${import.meta.dir}/dist/bin`,
   target: 'bun',
   // brika:embedded-cli is the compiled-binary delegation module; the lean bin

@@ -24,16 +24,15 @@ const { exports: exportMap } = z
   .parse(JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')));
 
 /**
- * Bundle every export whose target is source under `src/`. The only two exports
- * that aren't: `./tsconfig.plugin.json` (an asset, not under `src/`) and the
- * `./internal/*` tooling (workspace-only, the publisher strips it). tsdown names
- * each output after the export key: `.` -> index, `./x` -> x.
+ * Bundle every export whose target is source under `src/`. `src/` holds exactly
+ * the shippable runtime, so this is the whole rule: the `./tsconfig.plugin.json`
+ * asset and the `./internal/cli` author tooling (which lives in `cli/`, outside
+ * `src/`) fall away on their own. tsdown names each output after the export key:
+ * `.` -> index, `./x` -> x.
  */
 const entry = Object.fromEntries(
   Object.entries(exportMap)
-    .filter(
-      ([subpath, target]) => target.startsWith('./src/') && !subpath.startsWith('./internal/')
-    )
+    .filter(([, target]) => target.startsWith('./src/'))
     .map(([subpath, target]) => [subpath === '.' ? 'index' : subpath.slice(2), target.slice(2)])
 );
 

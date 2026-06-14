@@ -205,12 +205,12 @@ async function addPackageQuirks(ctx: BuildContext, entries: Set<string>): Promis
   if (ctx.dir === 'packages/create-brika' && (await dirExists(join(ctx.absDir, 'src')))) {
     entries.add('src/**/*.ts');
   }
-  // The SDK bin is `dist/bin/brika.js`, bundled from src/cli/brika.ts via a
+  // The SDK bin is `dist/bin/brika.js`, bundled from cli/brika.ts via a
   // Bun.build string entrypoint (not an import knip can follow), so the dist->src
   // mirror guess misses it. Register the real CLI entry so knip traverses into
   // dev/doctor/install instead of flagging them as dead.
-  if (ctx.dir === 'packages/sdk' && (await pathExists(join(ctx.absDir, 'src/cli/brika.ts')))) {
-    entries.add('src/cli/brika.ts');
+  if (ctx.dir === 'packages/sdk' && (await pathExists(join(ctx.absDir, 'cli/brika.ts')))) {
+    entries.add('cli/brika.ts');
   }
   if (ctx.dir === 'packages/db' && (await pathExists(join(ctx.absDir, 'database.config.ts')))) {
     entries.add('database.config.ts');

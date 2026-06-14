@@ -17,7 +17,7 @@ import { basename, dirname, join, resolve } from 'node:path';
 import { defineCommand } from '@brika/cli';
 import { browserAllowedSpecifiers } from '@brika/compiler';
 import pc from 'picocolors';
-import { verifyPlugin } from '../../verify-plugin';
+import { verifyPlugin } from '../../src/verify-plugin';
 
 export interface Violation {
   file: string;

@@ -16,7 +16,7 @@ import {
   readDependencyVersion,
   type VerifyResult,
   verifyPlugin,
-} from '../../verify-plugin';
+} from '../../src/verify-plugin';
 
 async function readVersion(pkgJsonPath: string | URL): Promise<string | null> {
   try {

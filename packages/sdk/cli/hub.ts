@@ -14,7 +14,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { CliError } from '@brika/cli';
 import pc from 'picocolors';
-import { resolveDataDir } from '../exec-context';
+import { resolveDataDir } from '../src/exec-context';
 
 const DEFAULT_HOST = '127.0.0.1';
 const DEFAULT_PORT = 3001;
