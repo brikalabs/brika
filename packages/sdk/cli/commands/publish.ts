@@ -17,11 +17,34 @@
  */
 
 import { resolve } from 'node:path';
+import { createInterface } from 'node:readline/promises';
 import { defineCommand } from '@brika/cli';
-import { confirmOrAbort, isCI } from '@brika/cli/prompts';
 import pc from 'picocolors';
 import { runBuild } from './build';
 import { runVerify } from './verify';
+
+/**
+ * A human is driving when there is a TTY on both ends and we are not in CI.
+ * Checked with env + tty only, so this command pulls in no prompt library (the
+ * lean @brika/sdk bin must stay free of @clack and its transitive deps).
+ */
+function isInteractive(): boolean {
+  if (process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true') {
+    return false;
+  }
+  return process.stdin.isTTY === true && process.stdout.isTTY === true;
+}
+
+/** Minimal y/N prompt over the built-in readline (no dependency). */
+async function confirm(message: string): Promise<boolean> {
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  try {
+    const answer = (await rl.question(`${message} ${pc.dim('(y/N)')} `)).trim().toLowerCase();
+    return answer === 'y' || answer === 'yes';
+  } finally {
+    rl.close();
+  }
+}
 
 /** Default dist-tag: a prerelease (version contains `-`) routes to `next`, else `latest`. */
 export function resolveTag(version: string, explicit?: string): string {
@@ -83,6 +106,69 @@ function isPublished(name: string, version: string): boolean {
   return proc.exitCode === 0 && proc.stdout.toString().trim() === version;
 }
 
+interface PublishStepOptions {
+  dryRun: boolean;
+  tag?: string;
+  yes: boolean;
+  noProvenance: boolean;
+}
+
+/**
+ * The npm-publish step (after build + verify): resolve the dist-tag, skip a
+ * version already live, confirm when interactive, and spawn `npm publish`.
+ * Returns false only on a real publish failure (a skip or a declined prompt is
+ * not a failure).
+ */
+async function publishToNpm(
+  dir: string,
+  manifest: PluginManifest,
+  opts: PublishStepOptions
+): Promise<boolean> {
+  const { name, version } = manifest;
+  const tag = resolveTag(version, opts.tag);
+
+  // Idempotent: a version already on npm is immutable, so skip rather than 409.
+  if (!opts.dryRun && isPublished(name, version)) {
+    process.stdout.write(
+      `\n  ${pc.cyan(`${name}@${version}`)} is already on npm ${pc.dim('(skip)')}\n`
+    );
+    return true;
+  }
+
+  const provenance = process.env.GITHUB_ACTIONS === 'true' && !opts.noProvenance;
+  const args = buildPublishArgs({ tag, dryRun: opts.dryRun, provenance });
+
+  const label = pc.cyan(`${name}@${version}`);
+  process.stdout.write(
+    `\n  ${pc.bold('Publish')} ${label} to npm  ${pc.dim(`tag:${tag}`)}${opts.dryRun ? pc.yellow('  (dry run)') : ''}\n`
+  );
+
+  // Confirm before the irreversible publish, but only when a human is driving.
+  if (!opts.dryRun && !opts.yes && isInteractive()) {
+    if (!(await confirm(`Publish ${name}@${version} to npm?`))) {
+      process.stdout.write('  Publish cancelled.\n');
+      return true;
+    }
+  }
+
+  // stdin inherited so npm can prompt for an OTP when 2FA is enabled.
+  const proc = Bun.spawn(args, {
+    cwd: dir,
+    stdout: 'inherit',
+    stderr: 'inherit',
+    stdin: 'inherit',
+  });
+  const code = await proc.exited;
+  if (code !== 0) {
+    process.stderr.write(pc.red(`\n  publish failed (npm exited ${code})\n`));
+    return false;
+  }
+  process.stdout.write(
+    pc.green(`\n  Published ${name}@${version}${opts.dryRun ? ' (dry run)' : ''}\n`)
+  );
+  return true;
+}
+
 export default defineCommand({
   name: 'publish',
   description: 'Build, verify, and publish a plugin to npm',
@@ -102,8 +188,6 @@ export default defineCommand({
   examples: ['brika publish', 'brika publish --dry-run', 'brika publish --tag next --yes'],
   async handler({ values }) {
     const dir = resolve(values.dir ?? process.cwd());
-    // @brika/cli re-keys hyphenated flags to camelCase (`--dry-run` -> values.dryRun).
-    const dryRun = values.dryRun === true;
 
     // 1. Build (regenerate the manifest from source).
     if (values.skipBuild !== true && !(await runBuild(dir, false))) {
@@ -117,7 +201,7 @@ export default defineCommand({
       return;
     }
 
-    // 3. Read the (now-regenerated) manifest.
+    // 3. Read the (now-regenerated) manifest and refuse to publish a private package.
     const manifest = await readManifest(dir);
     if (manifest === null) {
       process.stderr.write(
@@ -134,46 +218,15 @@ export default defineCommand({
       return;
     }
 
-    const { name, version } = manifest;
-    const tag = resolveTag(version, typeof values.tag === 'string' ? values.tag : undefined);
-
-    // Idempotent: a version already on npm is immutable, so skip rather than 409.
-    if (!dryRun && isPublished(name, version)) {
-      process.stdout.write(
-        `\n  ${pc.cyan(`${name}@${version}`)} is already on npm ${pc.dim('(skip)')}\n`
-      );
-      return;
-    }
-
-    const provenance = process.env.GITHUB_ACTIONS === 'true' && values.noProvenance !== true;
-    const args = buildPublishArgs({ tag, dryRun, provenance });
-
-    const label = pc.cyan(`${name}@${version}`);
-    process.stdout.write(
-      `\n  ${pc.bold('Publish')} ${label} to npm  ${pc.dim(`tag:${tag}`)}${dryRun ? pc.yellow('  (dry run)') : ''}\n`
-    );
-
-    // Confirm before the irreversible publish, but only when a human is driving
-    // (interactive TTY, not CI; isCI from @clack is a function evaluated here).
-    if (!dryRun && values.yes !== true && !isCI() && process.stdout.isTTY === true) {
-      await confirmOrAbort({ message: `Publish ${name}@${version} to npm?` });
-    }
-
-    // stdin inherited so npm can prompt for an OTP when 2FA is enabled.
-    const proc = Bun.spawn(args, {
-      cwd: dir,
-      stdout: 'inherit',
-      stderr: 'inherit',
-      stdin: 'inherit',
+    // 4. Publish (@brika/cli re-keys hyphenated flags to camelCase).
+    const ok = await publishToNpm(dir, manifest, {
+      dryRun: values.dryRun === true,
+      tag: typeof values.tag === 'string' ? values.tag : undefined,
+      yes: values.yes === true,
+      noProvenance: values.noProvenance === true,
     });
-    const code = await proc.exited;
-    if (code !== 0) {
-      process.stderr.write(pc.red(`\n  publish failed (npm exited ${code})\n`));
+    if (!ok) {
       process.exitCode = 1;
-      return;
     }
-    process.stdout.write(
-      pc.green(`\n  Published ${name}@${version}${dryRun ? ' (dry run)' : ''}\n`)
-    );
   },
 });
