@@ -134,25 +134,26 @@ async function publishToNpm(
   const { name, version } = manifest;
   const tag = resolveTag(version, opts.tag);
 
+  // Hoisted to a plain string so the colored interpolations below are not nested
+  // template literals (Sonar S4624).
+  const nameVersion = `${name}@${version}`;
+
   // Idempotent: a version already on npm is immutable, so skip rather than 409.
   if (!opts.dryRun && isPublished(name, version)) {
-    process.stdout.write(
-      `\n  ${pc.cyan(`${name}@${version}`)} is already on npm ${pc.dim('(skip)')}\n`
-    );
+    process.stdout.write(`\n  ${pc.cyan(nameVersion)} is already on npm ${pc.dim('(skip)')}\n`);
     return true;
   }
 
   const provenance = process.env.GITHUB_ACTIONS === 'true' && !opts.noProvenance;
   const args = buildPublishArgs({ tag, dryRun: opts.dryRun, provenance });
 
-  const label = pc.cyan(`${name}@${version}`);
-  process.stdout.write(
-    `\n  ${pc.bold('Publish')} ${label} to npm  ${pc.dim(`tag:${tag}`)}${opts.dryRun ? pc.yellow('  (dry run)') : ''}\n`
-  );
+  const tagNote = pc.dim(`tag:${tag}`);
+  const dryNote = opts.dryRun ? pc.yellow('  (dry run)') : '';
+  process.stdout.write(`\n  ${pc.bold('Publish')} ${pc.cyan(nameVersion)} to npm  ${tagNote}${dryNote}\n`);
 
   // Confirm before the irreversible publish, but only when a human is driving.
   if (!opts.dryRun && !opts.yes && isInteractive()) {
-    if (!(await confirm(`Publish ${name}@${version} to npm?`))) {
+    if (!(await confirm(`Publish ${nameVersion} to npm?`))) {
       process.stdout.write('  Publish cancelled.\n');
       return true;
     }
@@ -170,9 +171,7 @@ async function publishToNpm(
     process.stderr.write(pc.red(`\n  publish failed (npm exited ${code})\n`));
     return false;
   }
-  process.stdout.write(
-    pc.green(`\n  Published ${name}@${version}${opts.dryRun ? ' (dry run)' : ''}\n`)
-  );
+  process.stdout.write(pc.green(`\n  Published ${nameVersion}${opts.dryRun ? ' (dry run)' : ''}\n`));
   return true;
 }
 
