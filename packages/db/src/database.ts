@@ -33,6 +33,13 @@ function openDatabase<TSchema extends Record<string, unknown>>(
     mkdirSync(dirname(resolved), { recursive: true });
   }
   const sqlite = new Database(resolved, { create: true });
+  // auto_vacuum must be set BEFORE the first table is created to take effect
+  // without a full VACUUM. On a fresh DB this activates incremental vacuuming
+  // immediately; on a pre-existing DB it stays latent until the one-time
+  // reclaim below runs a VACUUM. Either way, freed pages are released by
+  // `incrementalVacuum` (called after a retention prune) rather than left as
+  // dead weight (the cause of the 200 MB+ logs.db that prompted this).
+  sqlite.query('PRAGMA auto_vacuum = INCREMENTAL').run();
   sqlite.query('PRAGMA journal_mode = WAL').run();
   sqlite.query('PRAGMA synchronous = NORMAL').run();
   sqlite.query('PRAGMA temp_store = MEMORY').run();
@@ -40,10 +47,67 @@ function openDatabase<TSchema extends Record<string, unknown>>(
   sqlite.query('PRAGMA foreign_keys = ON').run();
 
   applyMigrations(sqlite, migrations);
+  reclaimIfBloated(sqlite, resolved);
 
   const db = drizzle(sqlite, { schema });
   return { db, sqlite, path: resolved };
 }
+
+/** Read a single-value PRAGMA (e.g. `page_count`) as an integer. */
+function readPragmaInt(sqlite: Database, pragma: string): number {
+  const row: unknown = sqlite.query(`PRAGMA ${pragma}`).get();
+  if (row !== null && typeof row === 'object') {
+    const value = Object.values(row)[0];
+    if (typeof value === 'number') {
+      return value;
+    }
+  }
+  return 0;
+}
+
+/**
+ * Reclaim free pages back to the OS. `incremental_vacuum` moves freed pages off
+ * the database, and the truncating checkpoint then shrinks the on-disk file (in
+ * WAL mode the main file is only resized at a checkpoint). No-op unless
+ * `auto_vacuum` is enabled. Safe to call after a retention prune.
+ */
+export function incrementalVacuum(sqlite: Database): void {
+  sqlite.query('PRAGMA incremental_vacuum').run();
+  sqlite.query('PRAGMA wal_checkpoint(TRUNCATE)').run();
+}
+
+/**
+ * One-time reclaim for a DB that bloated before `auto_vacuum` was enabled (the
+ * retention pruner deletes rows but old SQLite never returned the pages). A full
+ * `VACUUM` rewrites the file compactly AND activates incremental auto_vacuum
+ * going forward. Guarded so it only fires when the free space is large enough to
+ * be worth the rewrite, so it's effectively a one-time cost, not every boot.
+ */
+function reclaimIfBloated(sqlite: Database, path: string): void {
+  if (path === ':memory:') {
+    return;
+  }
+  const pageCount = readPragmaInt(sqlite, 'page_count');
+  const freelist = readPragmaInt(sqlite, 'freelist_count');
+  if (pageCount === 0) {
+    return;
+  }
+  // Only worth it when free pages are both substantial in absolute terms and a
+  // meaningful fraction of the file (avoids churning small/healthy DBs).
+  if (freelist < RECLAIM_MIN_FREE_PAGES || freelist / pageCount < RECLAIM_FREE_RATIO) {
+    return;
+  }
+  sqlite.query('VACUUM').run();
+  // VACUUM compacts the page graph, but in WAL mode the main .db file is only
+  // resized at a checkpoint, so truncate explicitly to actually return the
+  // space to the OS.
+  sqlite.query('PRAGMA wal_checkpoint(TRUNCATE)').run();
+}
+
+/** ~8 MiB of free pages (at 4 KiB/page) before a one-time VACUUM is worthwhile. */
+const RECLAIM_MIN_FREE_PAGES = 2000;
+/** …and free pages must be at least this fraction of the file. */
+const RECLAIM_FREE_RATIO = 0.25;
 
 const MIGRATIONS_TABLE = '__drizzle_migrations';
 
