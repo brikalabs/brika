@@ -2,6 +2,7 @@ export { cache } from './cache';
 export { crashHandlers } from './crash-handlers';
 export { loader } from './loader';
 export { MigrationStatus, migrations } from './migrations';
+export { pluginStorageGc } from './plugin-storage-gc';
 export { processGuard } from './process-guard';
 export { remoteAccess } from './remote-access';
 export { routes } from './routes';

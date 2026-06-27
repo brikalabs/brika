@@ -1,12 +1,14 @@
 import { createHash } from 'node:crypto';
-import { mkdir, readlink, rename, symlink, unlink } from 'node:fs/promises';
+import { mkdir, readlink, rename, rm, symlink, unlink } from 'node:fs/promises';
 import { dirname, join, relative, resolve } from 'node:path';
 import { inject, singleton } from '@brika/di';
 import { classifyNetworkError, errors } from '@brika/errors';
+import { resolveSystemDir } from '@brika/sdk/exec-context';
 import { semver } from 'bun';
 import { z } from 'zod';
 import { BunRunner, ConfigLoader, HubConfig } from '@/runtime/config';
 import { Logger } from '@/runtime/logs/log-router';
+import { generateUid } from '@/runtime/plugins/utils';
 import { StateStore } from '@/runtime/state/state-store';
 import { PackageManager } from './package-manager';
 import { errorFields } from './progress';
@@ -174,8 +176,10 @@ export class PluginRegistry {
   readonly #pm: PackageManager;
 
   constructor() {
-    // Use absolute path for Bun.resolveSync compatibility
-    this.pluginsDir = resolve(this.hubConfig.homeDir, 'plugins');
+    // Use absolute path for Bun.resolveSync compatibility. The installed-plugins
+    // tree lives under the hidden `.system/` dir, alongside the rest of the
+    // hub-managed data.
+    this.pluginsDir = resolve(resolveSystemDir(this.hubConfig.homeDir), 'plugins');
     this.#pm = new PackageManager(this.bunRunner, this.pluginsDir);
   }
 
@@ -342,6 +346,15 @@ export class PluginRegistry {
       // NPM plugin: use package manager
       await this.#pm.remove(name);
     }
+
+    // Reclaim the plugin's writable storage (data/cache/tmp under
+    // `plugins/data/<uid>/`) immediately. The boot orphan-prune is only a
+    // safety net for crashes/legacy rows; without this, uninstalling via the
+    // CLI / config-sync path would leak quota-sized data until the next boot.
+    await rm(join(this.pluginsDir, 'data', generateUid(name)), {
+      recursive: true,
+      force: true,
+    });
 
     this.logs.info('Plugin uninstalled successfully', {
       packageName: name,

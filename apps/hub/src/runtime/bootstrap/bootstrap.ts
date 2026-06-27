@@ -1,4 +1,3 @@
-import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { ANALYTICS_HOST, Analytics, EventForwarder, EventStore } from '@brika/analytics';
 import { createBanner } from '@brika/banner';
@@ -7,10 +6,12 @@ import { container, inject } from '@brika/di';
 import { hub } from '@/hub';
 import { BrikaInitializer, ConfigLoader } from '@/runtime/config';
 import { brikaContext } from '@/runtime/context/brika-context';
+import { JsonStateFile } from '@/runtime/fs/json-state-file';
 import { ApiServer } from '@/runtime/http/api-server';
 import { Logger } from '@/runtime/logs/log-router';
 import { LogStore } from '@/runtime/logs/log-store';
 import { MetricsSnapshotSchema, MetricsStore } from '@/runtime/metrics';
+import { setOperatorFsQuotas } from '@/runtime/plugins/grants/fs/types';
 import { setHubReady, setHubStopping } from '@/runtime/readiness';
 import { redactPaths } from '@/runtime/updates/telemetry';
 import type { BootstrapPlugin } from './plugin';
@@ -72,7 +73,7 @@ export class Bootstrap {
       })
     );
 
-    configureDatabases(`${this.configLoader.getRootDir()}/.brika`);
+    configureDatabases(this.initializer.systemDir);
     this.logStore.init();
     this.logs.setStore(this.logStore);
     // Provide the analytics package its host context (anonymous instance id,
@@ -92,6 +93,8 @@ export class Bootstrap {
     // CPU/memory history charts survive a restart instead of resetting.
     this.#restoreMetrics();
     const config = await this.configLoader.load();
+    // Apply operator-wide plugin disk-quota defaults before any plugin loads.
+    setOperatorFsQuotas(config.hub.plugins.quotas);
     this.logStore.startRetention(config.hub.logs.retentionDays, config.hub.logs.pruneIntervalMs);
     this.eventStore.startRetention(
       config.hub.analytics.retentionDays,
@@ -124,25 +127,31 @@ export class Bootstrap {
     this.#persistMetrics();
   }
 
-  #metricsHistoryFile(): string {
-    return join(this.initializer.brikaDir, 'metrics-history.json');
+  #metricsHistoryFile() {
+    return new JsonStateFile(join(this.initializer.systemDir, 'metrics-history.json'), {
+      schema: MetricsSnapshotSchema,
+      pretty: false,
+    });
   }
 
   /** Load the persisted CPU/memory history (best-effort) at boot. */
   #restoreMetrics(): void {
     try {
-      const raw = readFileSync(this.#metricsHistoryFile(), 'utf8');
-      this.metricsStore.restore(MetricsSnapshotSchema.parse(JSON.parse(raw)));
+      // No prior history (first boot / wiped / corrupt) reads as null — charts
+      // start empty and refill as the heartbeat samples come in.
+      const snapshot = this.#metricsHistoryFile().load();
+      if (snapshot) {
+        this.metricsStore.restore(snapshot);
+      }
     } catch {
-      // No prior history (first boot / wiped / corrupt) — charts start empty
-      // and refill as the heartbeat samples come in.
+      // Restoring charts must never abort boot.
     }
   }
 
   /** Snapshot the in-memory history to disk so a restart keeps the charts. */
   #persistMetrics(): void {
     try {
-      writeFileSync(this.#metricsHistoryFile(), JSON.stringify(this.metricsStore.snapshot()));
+      this.#metricsHistoryFile().persist(this.metricsStore.snapshot());
     } catch (error) {
       this.logs.warn('Failed to persist metrics history', { error: errorMessage(error) });
     }
