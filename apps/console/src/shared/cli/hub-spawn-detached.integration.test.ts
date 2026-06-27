@@ -14,7 +14,7 @@
  *      returned when the settle deadline passes
  */
 import { afterEach, beforeEach, describe, expect, spyOn, test } from 'bun:test';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { CliError } from './errors';
@@ -79,6 +79,8 @@ describe('spawnHubDetached', () => {
 
   beforeEach(() => {
     home = mkdtempSync(join(tmpdir(), 'brika-spawn-detached-'));
+    // The pid file lives under the hidden .system/ dir.
+    mkdirSync(join(home, '.system'), { recursive: true });
     originalHome = process.env.BRIKA_HOME;
     originalPort = process.env.BRIKA_PORT;
     process.env.BRIKA_HOME = home;
@@ -105,7 +107,7 @@ describe('spawnHubDetached', () => {
     // `process.pid` is always a running process from this test's POV,
     // so `checkPid` returns `running` and `spawnHubDetached` short-
     // circuits before ever calling `Bun.spawn`.
-    writeFileSync(join(home, 'brika.pid'), String(process.pid), 'utf8');
+    writeFileSync(join(home, '.system', 'brika.pid'), String(process.pid), 'utf8');
     const spawnSpy = spyOn(Bun, 'spawn');
     try {
       const pid = await spawnHubDetached();
@@ -122,7 +124,7 @@ describe('spawnHubDetached', () => {
       // Simulate the child claiming the pid file mid-spawn — by the time
       // `spawnHubDetached` polls `checkPid`, the file is in place with
       // a pid that resolves to a "running" process (this test's own pid).
-      writeFileSync(join(home, 'brika.pid'), String(process.pid), 'utf8');
+      writeFileSync(join(home, '.system', 'brika.pid'), String(process.pid), 'utf8');
       return child;
     });
     try {
@@ -160,7 +162,7 @@ describe('spawnHubDetached', () => {
       // Another supervisor wrote the pid file *before* our forked child
       // got a chance — our child exits but `checkPid` still reports a
       // running hub, so the caller gets that winner's pid back.
-      writeFileSync(join(home, 'brika.pid'), String(process.pid), 'utf8');
+      writeFileSync(join(home, '.system', 'brika.pid'), String(process.pid), 'utf8');
       return child;
     });
     try {
@@ -176,7 +178,7 @@ describe('spawnHubDetached', () => {
     // A pid that is essentially guaranteed not to exist — `kill(pid, 0)`
     // raises ESRCH and `pingHub()` fails because there's no listener,
     // so `checkPid` returns `stale` and `spawnHubDetached` proceeds.
-    writeFileSync(join(home, 'brika.pid'), '999999', 'utf8');
+    writeFileSync(join(home, '.system', 'brika.pid'), '999999', 'utf8');
     const child = fakeChild({ pid: 7777 });
     const spawnSpy = spyOn(Bun, 'spawn').mockImplementation(() => child);
     try {

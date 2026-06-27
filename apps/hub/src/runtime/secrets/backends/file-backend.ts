@@ -42,6 +42,7 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { dirname, join } from 'node:path';
+import { resolveSystemDir } from '@brika/sdk/exec-context';
 import { brikaContext } from '../../context/brika-context';
 import type { SecretBackend, SecretRef } from './types';
 
@@ -119,7 +120,7 @@ function assertSecureMode(path: string): void {
 }
 
 export interface FileBackendOptions {
-  /** Directory containing `secrets.json` and (optionally) `master.key`. Defaults to `brikaContext.brikaDir`. */
+  /** Directory containing `secrets.json` and (optionally) `master.key`. Defaults to `brikaContext.systemDir`. */
   readonly brikaDir?: string;
   /** Override master key resolution (used by tests). */
   readonly masterKey?: Buffer;
@@ -134,7 +135,11 @@ export class FileBackend implements SecretBackend {
   constructor(options: FileBackendOptions = {}) {
     // Re-read BRIKA_HOME at construction time so tests can redirect storage
     // (brikaContext freezes at module load, which doesn't help test setup).
-    this.#brikaDir = options.brikaDir ?? process.env.BRIKA_HOME ?? brikaContext.brikaDir;
+    // An explicit `brikaDir` option is used verbatim (the dir that directly
+    // holds secrets.json); the env/default path routes through `.system/`.
+    this.#brikaDir =
+      options.brikaDir ??
+      (process.env.BRIKA_HOME ? resolveSystemDir(process.env.BRIKA_HOME) : brikaContext.systemDir);
     this.#filePath = join(this.#brikaDir, SECRETS_FILENAME);
     this.#key = options.masterKey ?? resolveMasterKey(this.#brikaDir);
   }

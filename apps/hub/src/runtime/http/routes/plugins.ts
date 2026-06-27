@@ -426,7 +426,7 @@ export const pluginsRoutes = group({
         // `<brikaDir>/plugins/data/<uid>/`). The boot prune migration is only a
         // safety net for crashes/legacy rows; an always-on hub would otherwise
         // keep this (quota-sized, holds streamed uploads) on disk until restart.
-        await rm(join(pluginDataDir(brikaContext.brikaDir), plugin.uid), {
+        await rm(join(pluginDataDir(brikaContext.systemDir), plugin.uid), {
           recursive: true,
           force: true,
         });

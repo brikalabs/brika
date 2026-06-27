@@ -16,7 +16,7 @@
 import { mkdir } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import { isCompiledFrom, resolveDataDir } from '../src/exec-context';
+import { isCompiledFrom, resolveDataDir, resolveSystemDir } from '../src/exec-context';
 
 /** True when the running toolchain must delegate (compiled binary). */
 export function shouldDelegateToEmbeddedCli(): boolean {
@@ -80,7 +80,7 @@ export async function runEmbeddedBuild(
     home: homedir(),
     platform: process.platform,
   }).path;
-  const cliPath = await materializeEmbeddedCli(source, dataDir);
+  const cliPath = await materializeEmbeddedCli(source, resolveSystemDir(dataDir));
   const args = ['build', '--dir', root, ...(check ? ['--check'] : [])];
   return (await runMaterializedCli(cliPath, args, root)) === 0;
 }

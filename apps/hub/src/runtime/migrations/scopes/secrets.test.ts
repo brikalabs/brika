@@ -18,6 +18,7 @@ describe('secrets scope', () => {
   test('the stamp migration is a no-op (recorded, never surfaced as changed)', async () => {
     const result = await secretsScope.migrations[0]?.run({
       brikaDir: '/tmp/anywhere',
+      systemDir: '/tmp/anywhere',
       toVersion: '0.6.0',
       fromVersion: '0.5.0',
     });

@@ -22,8 +22,9 @@ import { randomBytes } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { isCompiledFrom, resolveDataDir } from '@brika/sdk/exec-context';
+import { isCompiledFrom, resolveDataDir, resolveSystemDir } from '@brika/sdk/exec-context';
 import { buildInfo } from '../../build-info';
+import { relocateLegacyLayout } from './layout';
 
 const isCompiled = isCompiledFrom(import.meta.path);
 const installDir = dirname(process.execPath);
@@ -53,8 +54,8 @@ function resolveBrikaDir(): string {
   }).path;
 }
 
-function readOrGenerateInstanceId(brikaDir: string): string {
-  const path = join(brikaDir, INSTANCE_ID_FILE);
+function readOrGenerateInstanceId(systemDir: string): string {
+  const path = join(systemDir, INSTANCE_ID_FILE);
   let staleId: string | null = null;
   if (existsSync(path)) {
     const raw = readFileSync(path, 'utf8').trim();
@@ -65,7 +66,7 @@ function readOrGenerateInstanceId(brikaDir: string): string {
     staleId = raw || null;
   }
   const fresh = randomBytes(INSTANCE_ID_BYTES).toString('hex');
-  mkdirSync(brikaDir, { recursive: true });
+  mkdirSync(systemDir, { recursive: true });
   writeFileSync(path, fresh, { encoding: 'utf8', mode: 0o600 });
   // The structured Logger isn't wired yet at module load - and this is the
   // module that gives the logger its serviceName - so warn via console. The
@@ -73,7 +74,7 @@ function readOrGenerateInstanceId(brikaDir: string): string {
   // keychain namespace.
   const stalePart = staleId ? ` (previous file held "${staleId}")` : ' (no previous instance.id)';
   console.warn(
-    `[brika] Generated a fresh instance.id "${fresh}" in ${brikaDir}${stalePart}. ` +
+    `[brika] Generated a fresh instance.id "${fresh}" in ${systemDir}${stalePart}. ` +
       `Any keychain entries under "${KEYCHAIN_SERVICE_BASE}.<previous>" are now orphaned ` +
       `and won't be read by this hub - clean them up via Keychain Access or ` +
       `\`security delete-generic-password -s ${KEYCHAIN_SERVICE_BASE}.<previous>\`.`
@@ -82,7 +83,11 @@ function readOrGenerateInstanceId(brikaDir: string): string {
 }
 
 const brikaDir = resolveBrikaDir();
-const instanceId = readOrGenerateInstanceId(brikaDir);
+const systemDir = resolveSystemDir(brikaDir);
+// Migrate older flat installs into `.system/` once, before anything reads a
+// relocated path (instance.id below is the first such read).
+relocateLegacyLayout(brikaDir, systemDir);
+const instanceId = readOrGenerateInstanceId(systemDir);
 
 export interface BrikaContext {
   // ─── Filesystem ──────────────────────────────────────────────────
@@ -90,11 +95,17 @@ export interface BrikaContext {
   readonly brikaDir: string;
   /** Parent of `brikaDir` - workspace root (dev) or binary parent (compiled). */
   readonly rootDir: string;
+  /**
+   * `${brikaDir}/.system` - the hidden folder holding everything the hub
+   * manages (db, plugins, identity, update state, secrets, runtime). Only
+   * `brika.yml`, `boards/` and `workflows/` stay at `brikaDir` itself.
+   */
+  readonly systemDir: string;
   /** Directory containing the running binary. */
   readonly installDir: string;
-  /** `${brikaDir}/plugins/node_modules` - registry-installed plugins. */
+  /** `${systemDir}/plugins/node_modules` - registry-installed plugins. */
   readonly pluginsDir: string;
-  /** `${brikaDir}/db` - SQLite databases (cache, logs, auth, …). */
+  /** `${systemDir}/db` - SQLite databases (cache, logs, auth, …). */
   readonly dbDir: string;
 
   // ─── Identity ────────────────────────────────────────────────────
@@ -122,9 +133,10 @@ export interface BrikaContext {
 export const brikaContext: BrikaContext = Object.freeze({
   brikaDir,
   rootDir: dirname(brikaDir),
+  systemDir,
   installDir,
-  pluginsDir: join(brikaDir, 'plugins', 'node_modules'),
-  dbDir: join(brikaDir, 'db'),
+  pluginsDir: join(systemDir, 'plugins', 'node_modules'),
+  dbDir: join(systemDir, 'db'),
 
   instanceId,
   serviceName: `${KEYCHAIN_SERVICE_BASE}.${instanceId}`,

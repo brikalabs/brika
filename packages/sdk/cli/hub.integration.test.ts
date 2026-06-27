@@ -6,9 +6,10 @@
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { resolveSystemDir } from '../src/exec-context';
 import { hubInstanceId, hubOrigin, installViaRegistry, pingHub } from './hub';
 
 const TOKEN = 'deadbeefcafef00d';
@@ -39,7 +40,10 @@ function sseFrames(frames: ReadonlyArray<Record<string, unknown>>): Response {
 
 beforeAll(async () => {
   home = await mkdtemp(join(tmpdir(), 'brika-hub-'));
-  await writeFile(join(home, 'cli-token'), TOKEN);
+  // The cli-token lives under the hidden .system/ dir.
+  const sys = resolveSystemDir(home);
+  await mkdir(sys, { recursive: true });
+  await writeFile(join(sys, 'cli-token'), TOKEN);
 
   server = Bun.serve({
     port: 0,

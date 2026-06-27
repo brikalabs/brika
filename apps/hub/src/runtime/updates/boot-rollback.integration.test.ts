@@ -38,7 +38,7 @@ const noopExit: (code: number) => never = (() => undefined) as never;
 describe('checkAndRollback', () => {
   test("returns 'no-backup' when no .previous exists (typical case)", () => {
     writeBinary(liveBinaryPath(installDir), 'live');
-    expect(checkAndRollback({ brikaDir, installDir })).toBe('no-backup');
+    expect(checkAndRollback({ systemDir: brikaDir, installDir })).toBe('no-backup');
   });
 
   test("returns 'no-rollback' after a clean previous boot — backup kept until THIS boot succeeds", () => {
@@ -50,7 +50,7 @@ describe('checkAndRollback', () => {
 
     // Backup must NOT be cleared here — orchestrator.recordBootSuccess
     // owns that cleanup, only after the current boot completes onStart.
-    expect(checkAndRollback({ brikaDir, installDir })).toBe('no-rollback');
+    expect(checkAndRollback({ systemDir: brikaDir, installDir })).toBe('no-rollback');
     expect(existsSync(previousBinaryPath(installDir))).toBe(true);
   });
 
@@ -67,7 +67,7 @@ describe('checkAndRollback', () => {
       // but we want to inspect post-rename state.
     }) as never;
 
-    const outcome = checkAndRollback({ brikaDir, installDir, exit: fakeExit });
+    const outcome = checkAndRollback({ systemDir: brikaDir, installDir, exit: fakeExit });
 
     expect(outcome).toBe('rolled-back');
     expect(exitCalls).toBe(1);
@@ -85,7 +85,7 @@ describe('checkAndRollback', () => {
     vs.recordBootAttempt();
 
     const outcome = checkAndRollback({
-      brikaDir,
+      systemDir: brikaDir,
       installDir,
       exit: noopExit,
     });
@@ -99,7 +99,7 @@ describe('checkAndRollback', () => {
     vs.recordBootAttempt();
 
     checkAndRollback({
-      brikaDir,
+      systemDir: brikaDir,
       installDir,
       exit: noopExit,
     });

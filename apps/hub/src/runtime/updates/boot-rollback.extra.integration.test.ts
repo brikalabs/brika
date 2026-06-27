@@ -47,7 +47,7 @@ describe('boot-rollback extra paths', () => {
     const vs = new VersionStateStore(brikaDir, '0.6.0');
     vs.recordBootAttempt();
 
-    const outcome = checkAndRollback({ brikaDir, installDir, exit: noopExit });
+    const outcome = checkAndRollback({ systemDir: brikaDir, installDir, exit: noopExit });
     expect(outcome).toBe('rolled-back');
     // The new `.broken` replaces the stale one (same path, but the
     // payload is the crashed binary's content, not the stale text).

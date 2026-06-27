@@ -1,14 +1,9 @@
-#BRIKA Runtime Files
-# These files are generated at runtime and should not be committed
-
-# State and database
-state.json
-logs.db
-logs.db-shm
-logs.db-wal
-
-# Installed plugins (managed by registry)
-plugins/
+# BRIKA runtime files — generated and managed by the hub, never committed.
+#
+# Everything the hub owns (databases, installed plugins, identity, update state,
+# secrets, caches) lives under .system/. Only the human-authored files stay
+# tracked: brika.yml, boards/ and workflows/.
+/.system/
 
 # OS files
 .DS_Store

@@ -40,12 +40,12 @@ const pruneOrphans: Migration = {
   id: '0001-prune-orphans',
   description: 'Remove plugin-data dirs whose UID is no longer registered',
   run(ctx: MigrationContext): Promise<MigrationOutcome> {
-    const dataRoot = pluginDataDir(ctx.brikaDir);
+    const dataRoot = pluginDataDir(ctx.systemDir);
     if (!existsSync(dataRoot)) {
       return Promise.resolve({ changed: false });
     }
 
-    const dbPath = join(ctx.brikaDir, 'db', STATE_DB_FILENAME);
+    const dbPath = join(ctx.systemDir, 'db', STATE_DB_FILENAME);
     const knownUids = readKnownUids(dbPath);
     if (knownUids === null) {
       // Couldn't trust the DB (missing, locked, no `plugins` table).

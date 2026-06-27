@@ -47,10 +47,10 @@ export class UpdateOrchestrator {
   #strategy: UpdateStrategy = strategyForMode(this.#mode, {
     managed: detectManagedInstall(),
   });
-  #lock: UpdateLock = new UpdateLock(brikaContext.brikaDir);
-  #audit: UpdateAuditLog = new UpdateAuditLog(brikaContext.brikaDir);
+  #lock: UpdateLock = new UpdateLock(brikaContext.systemDir);
+  #audit: UpdateAuditLog = new UpdateAuditLog(brikaContext.systemDir);
   #versionState: VersionStateStore = new VersionStateStore(
-    brikaContext.brikaDir,
+    brikaContext.systemDir,
     brikaContext.version
   );
 

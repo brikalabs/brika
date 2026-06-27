@@ -14,7 +14,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { CliError } from '@brika/cli';
 import pc from 'picocolors';
-import { resolveDataDir } from '../src/exec-context';
+import { resolveDataDir, resolveSystemDir } from '../src/exec-context';
 
 const DEFAULT_HOST = '127.0.0.1';
 const DEFAULT_PORT = 3001;
@@ -49,7 +49,7 @@ export function cliDataDir(): string {
 /** The local-trust CLI token the hub supervisor wrote, or null when absent. */
 function readCliToken(): string | null {
   try {
-    const raw = readFileSync(join(brikaHome(), 'cli-token'), 'utf8').trim();
+    const raw = readFileSync(join(resolveSystemDir(brikaHome()), 'cli-token'), 'utf8').trim();
     return raw.length > 0 ? raw : null;
   } catch {
     return null;

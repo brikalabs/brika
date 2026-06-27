@@ -71,7 +71,10 @@ describe('PluginRegistry', () => {
       list: mock().mockReturnValue([]),
     };
 
-    bun.resolve('@test/existing', '/test/home/plugins/node_modules/@test/existing/index.js');
+    bun.resolve(
+      '@test/existing',
+      '/test/home/.system/plugins/node_modules/@test/existing/index.js'
+    );
 
     stub(Logger);
     provide(HubConfig, mockHubConfig);
@@ -90,8 +93,8 @@ describe('PluginRegistry', () => {
 
       await registry.init();
 
-      expect(bun.hasFile('/test/home/plugins/package.json')).toBe(true);
-      expect(bun.getFile('/test/home/plugins/package.json')).toMatchObject({
+      expect(bun.hasFile('/test/home/.system/plugins/package.json')).toBe(true);
+      expect(bun.getFile('/test/home/.system/plugins/package.json')).toMatchObject({
         name: 'brika-plugins',
         private: true,
         dependencies: {},
@@ -103,15 +106,15 @@ describe('PluginRegistry', () => {
 
       await registry.init();
 
-      expect(bun.hasFile('/test/home/plugins/.npmrc')).toBe(true);
-      expect(String(bun.getFile('/test/home/plugins/.npmrc'))).toContain(
+      expect(bun.hasFile('/test/home/.system/plugins/.npmrc')).toBe(true);
+      expect(String(bun.getFile('/test/home/.system/plugins/.npmrc'))).toContain(
         '@brika:registry=https://registry.brika.dev'
       );
     });
 
     test('does not create package.json when it already exists', async () => {
       bun
-        .file('/test/home/plugins/package.json', {
+        .file('/test/home/.system/plugins/package.json', {
           name: 'existing',
           dependencies: {
             '@test/plugin': '1.0.0',
@@ -121,7 +124,7 @@ describe('PluginRegistry', () => {
 
       await registry.init();
 
-      expect(bun.getFile('/test/home/plugins/package.json')).toMatchObject({
+      expect(bun.getFile('/test/home/.system/plugins/package.json')).toMatchObject({
         name: 'existing',
         dependencies: {
           '@test/plugin': '1.0.0',
@@ -231,7 +234,9 @@ describe('PluginRegistry', () => {
     test('resolves a semver range to the greatest hosted version (not the latest tag)', async () => {
       bun
         .spawn({ exitCode: 0 })
-        .file('/test/home/plugins/node_modules/@myscope/tada/package.json', { version: '1.5.0' })
+        .file('/test/home/.system/plugins/node_modules/@myscope/tada/package.json', {
+          version: '1.5.0',
+        })
         .apply();
       bun.fetch(
         async () =>
@@ -536,7 +541,7 @@ describe('PluginRegistry', () => {
 
     test('runs bun remove when npm package exists', async () => {
       bun
-        .file('/test/home/plugins/node_modules/@test/plugin/package.json', {
+        .file('/test/home/.system/plugins/node_modules/@test/plugin/package.json', {
           name: '@test/plugin',
         })
         .spawn({
@@ -577,12 +582,12 @@ describe('PluginRegistry', () => {
     test('returns npm packages from package.json', async () => {
       bun
         .fs({
-          '/test/home/plugins/package.json': {
+          '/test/home/.system/plugins/package.json': {
             dependencies: {
               '@test/plugin': '^1.0.0',
             },
           },
-          '/test/home/plugins/node_modules/@test/plugin/package.json': {
+          '/test/home/.system/plugins/node_modules/@test/plugin/package.json': {
             version: '1.2.3',
           },
         })
@@ -593,7 +598,7 @@ describe('PluginRegistry', () => {
       expect(result).toContainEqual({
         name: '@test/plugin',
         version: '1.2.3',
-        path: '/test/home/plugins/node_modules/@test/plugin',
+        path: '/test/home/.system/plugins/node_modules/@test/plugin',
       });
     });
 
@@ -640,12 +645,12 @@ describe('PluginRegistry', () => {
     test('deduplicates packages that appear in both npm and config', async () => {
       bun
         .fs({
-          '/test/home/plugins/package.json': {
+          '/test/home/.system/plugins/package.json': {
             dependencies: {
               '@test/plugin': '^1.0.0',
             },
           },
-          '/test/home/plugins/node_modules/@test/plugin/package.json': {
+          '/test/home/.system/plugins/node_modules/@test/plugin/package.json': {
             version: '1.2.3',
           },
         })
@@ -670,12 +675,12 @@ describe('PluginRegistry', () => {
     test('returns true when plugin is installed', async () => {
       bun
         .fs({
-          '/test/home/plugins/package.json': {
+          '/test/home/.system/plugins/package.json': {
             dependencies: {
               '@test/plugin': '^1.0.0',
             },
           },
-          '/test/home/plugins/node_modules/@test/plugin/package.json': {
+          '/test/home/.system/plugins/node_modules/@test/plugin/package.json': {
             version: '1.0.0',
           },
         })
@@ -699,12 +704,12 @@ describe('PluginRegistry', () => {
     test('returns package info when installed', async () => {
       bun
         .fs({
-          '/test/home/plugins/package.json': {
+          '/test/home/.system/plugins/package.json': {
             dependencies: {
               '@test/plugin': '^1.0.0',
             },
           },
-          '/test/home/plugins/node_modules/@test/plugin/package.json': {
+          '/test/home/.system/plugins/node_modules/@test/plugin/package.json': {
             version: '1.2.3',
           },
         })
@@ -715,7 +720,7 @@ describe('PluginRegistry', () => {
       expect(result).toEqual({
         name: '@test/plugin',
         version: '1.2.3',
-        path: '/test/home/plugins/node_modules/@test/plugin',
+        path: '/test/home/.system/plugins/node_modules/@test/plugin',
       });
     });
 
@@ -734,7 +739,7 @@ describe('PluginRegistry', () => {
 
       const result = registry.resolve('@test/existing');
 
-      expect(result).toBe('/test/home/plugins/node_modules/@test/existing/index.js');
+      expect(result).toBe('/test/home/.system/plugins/node_modules/@test/existing/index.js');
     });
 
     test('returns null for non-existing package', () => {
@@ -771,14 +776,16 @@ describe('PluginRegistry', () => {
       const tarballUrl = 'https://registry.brika.dev/@test/plugin/-/plugin-2.0.0.tgz';
       bun
         .spawn({ exitCode: 0 })
-        .file('/test/home/plugins/package.json', {
+        .file('/test/home/.system/plugins/package.json', {
           name: 'brika-plugins',
           dependencies: {
             // A registry install records a pinned tarball URL spec, which `bun update` cannot bump.
             '@test/plugin': 'https://registry.brika.dev/@test/plugin/-/plugin-1.0.0.tgz',
           },
         })
-        .file('/test/home/plugins/node_modules/@test/plugin/package.json', { version: '1.0.0' })
+        .file('/test/home/.system/plugins/node_modules/@test/plugin/package.json', {
+          version: '1.0.0',
+        })
         .apply();
       // Registry serves a newer 2.0.0; the tarball download returns bytes for that URL.
       bun.fetch(async (input) => {
@@ -835,11 +842,11 @@ describe('PluginRegistry', () => {
     test('reloads every bun-managed plugin on an update-all (no name)', async () => {
       bun
         .spawn({ exitCode: 0 })
-        .file('/test/home/plugins/package.json', {
+        .file('/test/home/.system/plugins/package.json', {
           dependencies: { '@a/p': '1.0.0', '@b/q': '2.0.0' },
         })
-        .file('/test/home/plugins/node_modules/@a/p/package.json', { version: '1.0.0' })
-        .file('/test/home/plugins/node_modules/@b/q/package.json', { version: '2.0.0' })
+        .file('/test/home/.system/plugins/node_modules/@a/p/package.json', { version: '1.0.0' })
+        .file('/test/home/.system/plugins/node_modules/@b/q/package.json', { version: '2.0.0' })
         .apply();
 
       for await (const _ of registry.update()) {
@@ -854,11 +861,11 @@ describe('PluginRegistry', () => {
     test('one plugin failing to reload does not abort an update-all', async () => {
       bun
         .spawn({ exitCode: 0 })
-        .file('/test/home/plugins/package.json', {
+        .file('/test/home/.system/plugins/package.json', {
           dependencies: { '@a/p': '1.0.0', '@b/q': '2.0.0' },
         })
-        .file('/test/home/plugins/node_modules/@a/p/package.json', { version: '1.0.0' })
-        .file('/test/home/plugins/node_modules/@b/q/package.json', { version: '2.0.0' })
+        .file('/test/home/.system/plugins/node_modules/@a/p/package.json', { version: '1.0.0' })
+        .file('/test/home/.system/plugins/node_modules/@b/q/package.json', { version: '2.0.0' })
         .apply();
       mockPluginManager.load.mockRejectedValueOnce(new Error('boom'));
 
@@ -941,10 +948,10 @@ describe('PluginRegistry', () => {
     test('returns update info when dependencies exist', async () => {
       bun
         .fs({
-          '/test/home/plugins/package.json': {
+          '/test/home/.system/plugins/package.json': {
             dependencies: { '@test/plugin': '^1.0.0' },
           },
-          '/test/home/plugins/node_modules/@test/plugin/package.json': {
+          '/test/home/.system/plugins/node_modules/@test/plugin/package.json': {
             version: '1.0.0',
           },
         })
@@ -965,10 +972,10 @@ describe('PluginRegistry', () => {
     test('reports no update when versions match', async () => {
       bun
         .fs({
-          '/test/home/plugins/package.json': {
+          '/test/home/.system/plugins/package.json': {
             dependencies: { '@test/plugin': '^1.0.0' },
           },
-          '/test/home/plugins/node_modules/@test/plugin/package.json': {
+          '/test/home/.system/plugins/node_modules/@test/plugin/package.json': {
             version: '1.0.0',
           },
         })
@@ -984,10 +991,10 @@ describe('PluginRegistry', () => {
     test('reports no update when the registry version is older (locally bumped ahead)', async () => {
       bun
         .fs({
-          '/test/home/plugins/package.json': {
+          '/test/home/.system/plugins/package.json': {
             dependencies: { '@test/plugin': '^0.4.0' },
           },
-          '/test/home/plugins/node_modules/@test/plugin/package.json': {
+          '/test/home/.system/plugins/node_modules/@test/plugin/package.json': {
             version: '0.4.0',
           },
         })
@@ -1007,10 +1014,10 @@ describe('PluginRegistry', () => {
     test('treats an uncomparable registry version as no update', async () => {
       bun
         .fs({
-          '/test/home/plugins/package.json': {
+          '/test/home/.system/plugins/package.json': {
             dependencies: { '@test/plugin': '^1.0.0' },
           },
-          '/test/home/plugins/node_modules/@test/plugin/package.json': {
+          '/test/home/.system/plugins/node_modules/@test/plugin/package.json': {
             version: '1.0.0',
           },
         })
@@ -1028,12 +1035,12 @@ describe('PluginRegistry', () => {
     test('uninstalls removed plugins', async () => {
       bun
         .fs({
-          '/test/home/plugins/package.json': {
+          '/test/home/.system/plugins/package.json': {
             dependencies: {
               '@test/old-plugin': '^1.0.0',
             },
           },
-          '/test/home/plugins/node_modules/@test/old-plugin/package.json': {
+          '/test/home/.system/plugins/node_modules/@test/old-plugin/package.json': {
             version: '1.0.0',
           },
         })
@@ -1067,12 +1074,12 @@ describe('PluginRegistry', () => {
     test('handles errors during uninstall gracefully', async () => {
       bun
         .fs({
-          '/test/home/plugins/package.json': {
+          '/test/home/.system/plugins/package.json': {
             dependencies: {
               '@test/broken': '^1.0.0',
             },
           },
-          '/test/home/plugins/node_modules/@test/broken/package.json': {
+          '/test/home/.system/plugins/node_modules/@test/broken/package.json': {
             version: '1.0.0',
           },
         })
@@ -1176,7 +1183,8 @@ describe('PluginRegistry: local plugins', () => {
   beforeEach(async () => {
     spawnExitCode = 0;
     tmpHome = await realpath(await mkdtemp(join(tmpdir(), 'brika-registry-test-')));
-    pluginsDir = join(tmpHome, 'plugins');
+    // The registry roots installed plugins under the hidden .system/ dir.
+    pluginsDir = join(tmpHome, '.system', 'plugins');
     await mkdir(join(pluginsDir, 'node_modules'), { recursive: true });
     // Create the initial plugins package.json
     await writeFile(

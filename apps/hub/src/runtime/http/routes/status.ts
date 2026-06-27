@@ -42,7 +42,6 @@ export const systemRoute = route.get({
     const sparks = inject(SparkRegistry);
     const brickTypes = inject(BrickTypeRegistry);
 
-    const config = configLoader.get();
     const pluginList = plugins.list();
     const blockList = blocks.list();
     const workflowList = workflows.list();
@@ -60,7 +59,7 @@ export const systemRoute = route.get({
         root: resolve(configLoader.rootDir),
         config: resolve(configLoader.configPath),
         data: resolve(configLoader.brikaDir),
-        plugins: resolve(configLoader.brikaDir, config.hub.plugins.installDir),
+        plugins: resolve(configLoader.getSystemDir(), 'plugins'),
       },
       stats: {
         plugins: {

@@ -4,7 +4,7 @@
  * actual `.brika/`.
  */
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { existsSync, mkdtempSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { readCliToken, removeCliToken, writeCliToken } from './auth-token';
@@ -15,6 +15,8 @@ describe('cli-token', () => {
 
   beforeEach(() => {
     home = mkdtempSync(join(tmpdir(), 'brika-cli-token-'));
+    // The cli-token lives under the hidden .system/ dir.
+    mkdirSync(join(home, '.system'), { recursive: true });
     original = process.env.BRIKA_HOME;
     process.env.BRIKA_HOME = home;
   });
@@ -33,12 +35,12 @@ describe('cli-token', () => {
   });
 
   test('returns the trimmed token contents when the file exists', () => {
-    writeFileSync(join(home, 'cli-token'), '  deadbeef  \n', 'utf8');
+    writeFileSync(join(home, '.system', 'cli-token'), '  deadbeef  \n', 'utf8');
     expect(readCliToken()).toBe('deadbeef');
   });
 
   test('returns null for an empty file', () => {
-    writeFileSync(join(home, 'cli-token'), '   \n', 'utf8');
+    writeFileSync(join(home, '.system', 'cli-token'), '   \n', 'utf8');
     expect(readCliToken()).toBeNull();
   });
 
@@ -47,7 +49,7 @@ describe('cli-token', () => {
     expect(token).toMatch(/^[0-9a-f]{64}$/);
     expect(readCliToken()).toBe(token);
     if (process.platform !== 'win32') {
-      const mode = statSync(join(home, 'cli-token')).mode & 0o777;
+      const mode = statSync(join(home, '.system', 'cli-token')).mode & 0o777;
       expect(mode).toBe(0o600);
     }
   });
@@ -55,7 +57,7 @@ describe('cli-token', () => {
   test('writeCliToken creates BRIKA_HOME if missing', () => {
     rmSync(home, { recursive: true, force: true });
     writeCliToken();
-    expect(existsSync(join(home, 'cli-token'))).toBe(true);
+    expect(existsSync(join(home, '.system', 'cli-token'))).toBe(true);
   });
 
   test('writeCliToken regenerates a fresh token on every call', () => {
@@ -68,7 +70,7 @@ describe('cli-token', () => {
   test('removeCliToken deletes the file and is idempotent', () => {
     writeCliToken();
     removeCliToken();
-    expect(existsSync(join(home, 'cli-token'))).toBe(false);
+    expect(existsSync(join(home, '.system', 'cli-token'))).toBe(false);
     expect(() => removeCliToken()).not.toThrow();
   });
 });

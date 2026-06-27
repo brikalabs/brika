@@ -54,7 +54,7 @@ describe('boot-rollback rename failure audit', () => {
     const vs = new VersionStateStore(brikaDir, '0.6.0');
     vs.recordBootAttempt();
 
-    const outcome = checkAndRollback({ brikaDir, installDir, exit: noopExit });
+    const outcome = checkAndRollback({ systemDir: brikaDir, installDir, exit: noopExit });
     expect(outcome).toBe('no-backup');
 
     const failures = readAudit(brikaDir).filter((e) => e.kind === 'apply.failure');

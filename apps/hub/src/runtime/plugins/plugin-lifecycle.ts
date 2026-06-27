@@ -531,7 +531,7 @@ export class PluginLifecycle {
     // Allocate per-plugin host dirs that back `/data`, `/cache`, `/tmp`.
     // `/bundle` is the plugin install dir, read-only. The L3 sandbox needs
     // to know about the writable ones so it doesn't block legitimate writes.
-    const fsDirs = allocateFsDirs(this.#brikaInit.brikaDir, uid, rootDirectory);
+    const fsDirs = allocateFsDirs(this.#brikaInit.systemDir, uid, rootDirectory);
 
     // L3 sandbox: wrap the bun command in the platform's launcher.
     // The launcher inspects the plugin's writable backing dirs and
@@ -544,7 +544,7 @@ export class PluginLifecycle {
     const grantedPermissions = this.#state.getGrantedPermissions(pluginName);
     const allowNetwork = networkConsented(metadata.grants, grantedPermissions);
 
-    const preludePath = await resolvePreludePath(this.#brikaInit.brikaDir);
+    const preludePath = await resolvePreludePath(this.#brikaInit.systemDir);
     const sandboxPlan = this.#sandboxLauncher.wrap(
       this.#bunRunner.bin,
       [`--preload=${preludePath}`, buildResult.entryPath],

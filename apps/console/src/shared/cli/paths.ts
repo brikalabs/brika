@@ -10,7 +10,7 @@
 
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import { isCompiledFrom, resolveDataDir } from '@brika/sdk/exec-context';
+import { isCompiledFrom, resolveDataDir, resolveSystemDir } from '@brika/sdk/exec-context';
 
 export function brikaHome(): string {
   return resolveDataDir({
@@ -23,6 +23,15 @@ export function brikaHome(): string {
   }).path;
 }
 
+/**
+ * The hub-managed `.system` dir under the data dir. Transient supervisor files
+ * (the PID file, the local-trust cli-token) live here, alongside everything
+ * else the hub owns, so only `brika.yml`/`boards`/`workflows` stay visible.
+ */
+export function systemDir(): string {
+  return resolveSystemDir(brikaHome());
+}
+
 export function pidFile(): string {
-  return join(brikaHome(), 'brika.pid');
+  return join(systemDir(), 'brika.pid');
 }

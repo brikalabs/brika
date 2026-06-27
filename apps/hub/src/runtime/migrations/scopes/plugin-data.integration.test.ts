@@ -51,6 +51,7 @@ describe('plugin-data prune-orphans migration', () => {
 
     const result = await pluginDataScope.migrations[0]?.run({
       brikaDir,
+      systemDir: brikaDir,
       toVersion: '0.6.0',
       fromVersion: '0.5.0',
     });
@@ -70,6 +71,7 @@ describe('plugin-data prune-orphans migration', () => {
     await expect(
       pluginDataScope.migrations[0]?.run({
         brikaDir,
+        systemDir: brikaDir,
         toVersion: '0.6.0',
         fromVersion: null,
       })
@@ -83,6 +85,7 @@ describe('plugin-data prune-orphans migration', () => {
     await expect(
       pluginDataScope.migrations[0]?.run({
         brikaDir,
+        systemDir: brikaDir,
         toVersion: '0.6.0',
         fromVersion: null,
       })
@@ -101,6 +104,7 @@ describe('plugin-data prune-orphans migration', () => {
     await expect(
       pluginDataScope.migrations[0]?.run({
         brikaDir,
+        systemDir: brikaDir,
         toVersion: '0.6.0',
         fromVersion: null,
       })

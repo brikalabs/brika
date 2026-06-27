@@ -102,8 +102,8 @@ describe('pidFile', () => {
     }
   });
 
-  test('returns <brikaHome>/brika.pid', () => {
+  test('returns <brikaHome>/.system/brika.pid', () => {
     process.env.BRIKA_HOME = '/var/brika';
-    expect(pidFile()).toBe('/var/brika/brika.pid');
+    expect(pidFile()).toBe('/var/brika/.system/brika.pid');
   });
 });
