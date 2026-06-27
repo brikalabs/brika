@@ -5,6 +5,7 @@
  */
 
 import { inject, singleton } from '@brika/di';
+import { BytesSchema, DurationSchema, formatBytes, formatDuration } from '@brika/schema';
 import YAML from 'yaml';
 import { z } from 'zod';
 import { Logger } from '../logs/log-router';
@@ -158,7 +159,6 @@ export interface BrikaConfig {
      */
     corsAllowlist: string[];
     plugins: {
-      installDir: string;
       heartbeatInterval: number;
       heartbeatTimeout: number;
       /**
@@ -188,6 +188,13 @@ export interface BrikaConfig {
        * the Bun version and is regenerated transparently on mismatch.
        */
       bytecode: boolean;
+      /**
+       * Operator-wide per-root disk-quota defaults (bytes). Override the hub's
+       * built-in defaults per deployment (a single-tenant box may want more, a
+       * multi-tenant one less). A plugin's own `package.json` quotas still win
+       * over these; omitted roots fall back to the built-in defaults.
+       */
+      quotas?: { data?: number; cache?: number; tmp?: number };
     };
     logs: {
       /**
@@ -208,6 +215,18 @@ export interface BrikaConfig {
        */
       retentionDays: number;
       /** How often (in milliseconds) the analytics retention sweep runs. */
+      pruneIntervalMs: number;
+    };
+    sparks: {
+      /** Drop spark rows older than this many days. 0 disables retention. */
+      retentionDays: number;
+      /** How often (in milliseconds) the spark retention sweep runs. */
+      pruneIntervalMs: number;
+    };
+    workflows: {
+      /** Drop workflow runs (and their events) older than this many days. 0 disables retention. */
+      retentionDays: number;
+      /** How often (in milliseconds) the workflow-run retention sweep runs. */
       pruneIntervalMs: number;
     };
     shutdown: ShutdownConfig;
@@ -263,7 +282,6 @@ const DEFAULT_CONFIG: BrikaConfig = {
     host: '0.0.0.0',
     corsAllowlist: [],
     plugins: {
-      installDir: './plugins/.installed',
       heartbeatInterval: 5000,
       heartbeatTimeout: 15000,
       rssSoftLimitBytes: DEFAULT_RSS_SOFT_LIMIT_BYTES,
@@ -277,6 +295,14 @@ const DEFAULT_CONFIG: BrikaConfig = {
     },
     analytics: {
       retentionDays: 90,
+      pruneIntervalMs: 60 * 60 * 1000,
+    },
+    sparks: {
+      retentionDays: 30,
+      pruneIntervalMs: 60 * 60 * 1000,
+    },
+    workflows: {
+      retentionDays: 30,
       pruneIntervalMs: 60 * 60 * 1000,
     },
     shutdown: {
@@ -301,26 +327,139 @@ function defaultConfig(): BrikaConfig {
   return config;
 }
 
-/**
- * Schema for the RSS soft-limit field. A non-negative integer (bytes);
- * `0` disables the limit. Invalid or missing values fall back to the
- * documented default rather than failing the whole config load.
- */
-const RssSoftLimitSchema = z.coerce
-  .number()
-  .int()
-  .nonnegative()
-  .catch(DEFAULT_RSS_SOFT_LIMIT_BYTES);
-
-/**
- * Scale-to-zero field schemas. Like {@link RssSoftLimitSchema}, each falls
- * back to its documented default on a missing or malformed value rather than
- * failing the whole config load. `bytecode` is a native YAML boolean (no
- * coercion, so the string "false" can never read as true).
- */
-const IdleReapMsSchema = z.coerce.number().int().nonnegative().catch(DEFAULT_IDLE_REAP_MS);
+/** `keepWarmCount` is a plain non-negative integer; `bytecode` a native YAML boolean. */
 const KeepWarmCountSchema = z.coerce.number().int().nonnegative().catch(DEFAULT_KEEP_WARM_COUNT);
 const BytecodeSchema = z.boolean().catch(DEFAULT_BYTECODE);
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** Narrow an unknown YAML node to a plain object map (empty when it isn't one). */
+function asRecord(value: unknown): Record<string, unknown> {
+  return z.record(z.string(), z.unknown()).catch({}).parse(value);
+}
+
+/**
+ * Read a YAML duration value (`"5s"`, `"1h"`, `"7d"`, or raw ms) into integer
+ * milliseconds, falling back to `fallback` when absent or malformed (so a typo
+ * in a tuning knob doesn't fail the whole load).
+ */
+function readDurationMs(raw: unknown, fallback: number): number {
+  if (raw === undefined || raw === null) {
+    return fallback;
+  }
+  return DurationSchema.catch(fallback).parse(raw);
+}
+
+/** Read a YAML byte value (`"512mb"`, `"2gb"`, or raw bytes), falling back when absent/malformed. */
+function readBytes(raw: unknown, fallback: number): number {
+  if (raw === undefined || raw === null) {
+    return fallback;
+  }
+  return BytesSchema.catch(fallback).parse(raw);
+}
+
+/** Read an optional byte value: a valid value, or `undefined` when absent/malformed. */
+function readOptionalBytes(raw: unknown): number | undefined {
+  if (raw === undefined || raw === null) {
+    return undefined;
+  }
+  const parsed = BytesSchema.safeParse(raw);
+  return parsed.success ? parsed.data : undefined;
+}
+
+/** Parse the optional `hub.plugins.quotas` override map; `undefined` when no roots are set. */
+function readQuotaOverrides(
+  raw: unknown
+): { data?: number; cache?: number; tmp?: number } | undefined {
+  const rec = asRecord(raw);
+  const out: { data?: number; cache?: number; tmp?: number } = {};
+  const data = readOptionalBytes(rec.data);
+  const cache = readOptionalBytes(rec.cache);
+  const tmp = readOptionalBytes(rec.tmp);
+  if (data !== undefined) {
+    out.data = data;
+  }
+  if (cache !== undefined) {
+    out.cache = cache;
+  }
+  if (tmp !== undefined) {
+    out.tmp = tmp;
+  }
+  return Object.keys(out).length > 0 ? out : undefined;
+}
+
+/**
+ * Read a retention window expressed as a duration (`"7d"`, `"90d"`, `"36h"`)
+ * into a (possibly fractional) day count, the unit the log/analytics stores
+ * still consume internally. `0`/absent disables retention.
+ */
+function readRetentionDays(raw: unknown, fallbackDays: number): number {
+  if (raw === undefined || raw === null) {
+    return fallbackDays;
+  }
+  return DurationSchema.catch(fallbackDays * DAY_MS).parse(raw) / DAY_MS;
+}
+
+/** Serialize the optional per-root quota overrides back to readable byte strings. */
+function serializeQuotaOverrides(quotas: {
+  data?: number;
+  cache?: number;
+  tmp?: number;
+}): Record<string, string> {
+  const out: Record<string, string> = {};
+  if (quotas.data !== undefined) {
+    out.data = formatBytes(quotas.data);
+  }
+  if (quotas.cache !== undefined) {
+    out.cache = formatBytes(quotas.cache);
+  }
+  if (quotas.tmp !== undefined) {
+    out.tmp = formatBytes(quotas.tmp);
+  }
+  return out;
+}
+
+/**
+ * Serialize the in-memory hub config to the human-friendly YAML shape: readable
+ * units (`5s`/`512mb`/`7d`) and suffix-free key names. The inverse of the parse
+ * in {@link ConfigLoader.load}. Normalizes the file to the friendly form on every
+ * save, so an operator who typed raw numbers sees them tidied up.
+ */
+function hubToYaml(hub: BrikaConfig['hub']): Record<string, unknown> {
+  return {
+    port: hub.port,
+    host: hub.host,
+    corsAllowlist: hub.corsAllowlist,
+    plugins: {
+      heartbeat: formatDuration(hub.plugins.heartbeatInterval),
+      heartbeatTimeout: formatDuration(hub.plugins.heartbeatTimeout),
+      rssSoftLimit: formatBytes(hub.plugins.rssSoftLimitBytes),
+      idleReap: formatDuration(hub.plugins.idleReapMs),
+      keepWarmCount: hub.plugins.keepWarmCount,
+      bytecode: hub.plugins.bytecode,
+      ...(hub.plugins.quotas ? { quotas: serializeQuotaOverrides(hub.plugins.quotas) } : {}),
+    },
+    logs: {
+      retention: formatDuration(hub.logs.retentionDays * DAY_MS),
+      pruneInterval: formatDuration(hub.logs.pruneIntervalMs),
+    },
+    analytics: {
+      retention: formatDuration(hub.analytics.retentionDays * DAY_MS),
+      pruneInterval: formatDuration(hub.analytics.pruneIntervalMs),
+    },
+    sparks: {
+      retention: formatDuration(hub.sparks.retentionDays * DAY_MS),
+      pruneInterval: formatDuration(hub.sparks.pruneIntervalMs),
+    },
+    workflows: {
+      retention: formatDuration(hub.workflows.retentionDays * DAY_MS),
+      pruneInterval: formatDuration(hub.workflows.pruneIntervalMs),
+    },
+    shutdown: {
+      gracePeriod: formatDuration(hub.shutdown.gracePeriodMs),
+    },
+  };
+}
 
 const SECRET_PREFIX = '__secret_';
 
@@ -363,6 +502,10 @@ export class ConfigLoader {
     return this.#init.brikaDir;
   }
 
+  get systemDir(): string {
+    return this.#init.systemDir;
+  }
+
   async load(): Promise<BrikaConfig> {
     if (this.#config) {
       return this.#config;
@@ -379,12 +522,16 @@ export class ConfigLoader {
       }
 
       const content = await file.text();
-      const parsed = YAML.parse(content) as Record<string, unknown>;
+      const parsed = asRecord(YAML.parse(content));
 
-      const hubParsed = (parsed.hub ?? {}) as Record<string, unknown>;
-      const hubPluginsParsed = (hubParsed.plugins ?? {}) as Record<string, unknown>;
-      const hubLogsParsed = (hubParsed.logs ?? {}) as Record<string, unknown>;
-      const hubAnalyticsParsed = (hubParsed.analytics ?? {}) as Record<string, unknown>;
+      const hubParsed = asRecord(parsed.hub);
+      const hubPluginsParsed = asRecord(hubParsed.plugins);
+      const hubLogsParsed = asRecord(hubParsed.logs);
+      const hubAnalyticsParsed = asRecord(hubParsed.analytics);
+      const hubSparksParsed = asRecord(hubParsed.sparks);
+      const hubWorkflowsParsed = asRecord(hubParsed.workflows);
+      const hubShutdownParsed = asRecord(hubParsed.shutdown);
+      const defaults = DEFAULT_CONFIG.hub;
 
       // Declarative registry catalogue: built-in presets extended by the operator's `registries:`
       // block. The flat `searchStores` key stays the runtime-mutable list; an operator registry's
@@ -394,49 +541,78 @@ export class ConfigLoader {
 
       this.#config = {
         hub: {
-          port: (hubParsed.port as number) ?? DEFAULT_CONFIG.hub.port,
-          host: (hubParsed.host as string) ?? DEFAULT_CONFIG.hub.host,
+          port: typeof hubParsed.port === 'number' ? hubParsed.port : defaults.port,
+          host: typeof hubParsed.host === 'string' ? hubParsed.host : defaults.host,
           corsAllowlist: this.#parseCorsAllowlist(hubParsed.corsAllowlist),
           plugins: {
-            installDir:
-              (hubPluginsParsed.installDir as string) ?? DEFAULT_CONFIG.hub.plugins.installDir,
-            heartbeatInterval:
-              (hubPluginsParsed.heartbeatInterval as number) ??
-              DEFAULT_CONFIG.hub.plugins.heartbeatInterval,
-            heartbeatTimeout:
-              (hubPluginsParsed.heartbeatTimeout as number) ??
-              DEFAULT_CONFIG.hub.plugins.heartbeatTimeout,
-            rssSoftLimitBytes:
-              hubPluginsParsed.rssSoftLimitBytes === undefined
-                ? DEFAULT_CONFIG.hub.plugins.rssSoftLimitBytes
-                : RssSoftLimitSchema.parse(hubPluginsParsed.rssSoftLimitBytes),
-            idleReapMs: IdleReapMsSchema.parse(hubPluginsParsed.idleReapMs),
+            heartbeatInterval: readDurationMs(
+              hubPluginsParsed.heartbeat,
+              defaults.plugins.heartbeatInterval
+            ),
+            heartbeatTimeout: readDurationMs(
+              hubPluginsParsed.heartbeatTimeout,
+              defaults.plugins.heartbeatTimeout
+            ),
+            rssSoftLimitBytes: readBytes(
+              hubPluginsParsed.rssSoftLimit,
+              defaults.plugins.rssSoftLimitBytes
+            ),
+            idleReapMs: readDurationMs(hubPluginsParsed.idleReap, defaults.plugins.idleReapMs),
             keepWarmCount: KeepWarmCountSchema.parse(hubPluginsParsed.keepWarmCount),
             bytecode: BytecodeSchema.parse(hubPluginsParsed.bytecode),
+            ...(readQuotaOverrides(hubPluginsParsed.quotas) !== undefined
+              ? { quotas: readQuotaOverrides(hubPluginsParsed.quotas) }
+              : {}),
           },
           logs: {
-            retentionDays:
-              (hubLogsParsed.retentionDays as number) ?? DEFAULT_CONFIG.hub.logs.retentionDays,
-            pruneIntervalMs:
-              (hubLogsParsed.pruneIntervalMs as number) ?? DEFAULT_CONFIG.hub.logs.pruneIntervalMs,
+            retentionDays: readRetentionDays(hubLogsParsed.retention, defaults.logs.retentionDays),
+            pruneIntervalMs: readDurationMs(
+              hubLogsParsed.pruneInterval,
+              defaults.logs.pruneIntervalMs
+            ),
           },
           analytics: {
-            retentionDays:
-              (hubAnalyticsParsed.retentionDays as number) ??
-              DEFAULT_CONFIG.hub.analytics.retentionDays,
-            pruneIntervalMs:
-              (hubAnalyticsParsed.pruneIntervalMs as number) ??
-              DEFAULT_CONFIG.hub.analytics.pruneIntervalMs,
+            retentionDays: readRetentionDays(
+              hubAnalyticsParsed.retention,
+              defaults.analytics.retentionDays
+            ),
+            pruneIntervalMs: readDurationMs(
+              hubAnalyticsParsed.pruneInterval,
+              defaults.analytics.pruneIntervalMs
+            ),
           },
-          shutdown: ShutdownConfigSchema.parse(hubParsed.shutdown ?? {}),
+          sparks: {
+            retentionDays: readRetentionDays(
+              hubSparksParsed.retention,
+              defaults.sparks.retentionDays
+            ),
+            pruneIntervalMs: readDurationMs(
+              hubSparksParsed.pruneInterval,
+              defaults.sparks.pruneIntervalMs
+            ),
+          },
+          workflows: {
+            retentionDays: readRetentionDays(
+              hubWorkflowsParsed.retention,
+              defaults.workflows.retentionDays
+            ),
+            pruneIntervalMs: readDurationMs(
+              hubWorkflowsParsed.pruneInterval,
+              defaults.workflows.pruneIntervalMs
+            ),
+          },
+          shutdown: {
+            gracePeriodMs: readDurationMs(
+              hubShutdownParsed.gracePeriod,
+              defaults.shutdown.gracePeriodMs
+            ),
+          },
         },
         plugins: this.#parsePlugins(parsed.plugins),
-        rules: (parsed.rules as RuleEntry[]) ?? [],
-        schedules: (parsed.schedules as ScheduleEntry[]) ?? [],
+        rules: z.array(z.custom<RuleEntry>()).catch([]).parse(parsed.rules),
+        schedules: z.array(z.custom<ScheduleEntry>()).catch([]).parse(parsed.schedules),
         defaultRegistry:
-          typeof parsed.defaultRegistry === 'string'
-            ? trimUrl(parsed.defaultRegistry)
-            : defaultRegistry(),
+          typeof parsed.registry === 'string' ? trimUrl(parsed.registry) : defaultRegistry(),
         npmRegistries:
           parsed.npmRegistries === undefined
             ? {}
@@ -500,6 +676,10 @@ export class ConfigLoader {
     return this.brikaDir;
   }
 
+  getSystemDir(): string {
+    return this.systemDir;
+  }
+
   /**
    * Save the current config to brika.yml
    */
@@ -523,12 +703,13 @@ export class ConfigLoader {
       };
     }
 
+    const hubYaml = hubToYaml(configToSave.hub);
     const configStructure = {
-      hub: configToSave.hub,
+      hub: hubYaml,
       plugins: pluginsObj,
       rules: configToSave.rules,
       schedules: configToSave.schedules,
-      defaultRegistry: configToSave.defaultRegistry,
+      registry: configToSave.defaultRegistry,
       npmRegistries: configToSave.npmRegistries,
       searchStores: configToSave.searchStores,
     };
@@ -540,11 +721,13 @@ export class ConfigLoader {
       const content = await file.text();
       try {
         doc = YAML.parseDocument(content);
-        doc.set('hub', configToSave.hub);
+        doc.set('hub', hubYaml);
         doc.set('plugins', pluginsObj);
         doc.set('rules', configToSave.rules);
         doc.set('schedules', configToSave.schedules);
-        doc.set('defaultRegistry', configToSave.defaultRegistry);
+        doc.set('registry', configToSave.defaultRegistry);
+        // Drop the pre-rename key so an upgraded file isn't left with both.
+        doc.delete('defaultRegistry');
         doc.set('npmRegistries', configToSave.npmRegistries);
         doc.set('searchStores', configToSave.searchStores);
       } catch {
@@ -718,7 +901,7 @@ export class ConfigLoader {
     }
 
     // npm package - check in registry's plugins directory
-    const registryPluginPath = `${this.brikaDir}/plugins/node_modules/${name}`;
+    const registryPluginPath = `${this.systemDir}/plugins/node_modules/${name}`;
     const pkgJsonPath = `${registryPluginPath}/package.json`;
     if (await Bun.file(pkgJsonPath).exists()) {
       return { name, rootDirectory: registryPluginPath };

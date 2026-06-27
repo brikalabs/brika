@@ -2,22 +2,41 @@
 
 The hub reads its configuration from `${BRIKA_HOME}/brika.yml` (default: `.brika/brika.yml` in the current working directory). On first start the hub creates this file with sensible defaults. Edit it by hand at any time — the hub re-reads the file on restart.
 
+`brika.yml` is the only file you edit by hand. Everything the hub manages (databases, installed plugins, identity, caches, secrets) lives in the hidden `.brika/.system/` folder next to it; leave that folder alone.
+
+### Units
+
+Tuning values accept readable units, normalised on the next save:
+
+- **Durations:** `5s`, `15s`, `1h`, `7d` — or a raw number of milliseconds. `0` means "disabled".
+- **Sizes:** `512mb`, `2gb`, `256mib` — or a raw number of bytes. `0` means "disabled".
+
 ## Full schema
 
 ```yaml
 hub:
   port: 3001
   host: 127.0.0.1
-  corsAllowlist: []           # exact production origins to allow (see below); empty keeps LAN/dev defaults
+  corsAllowlist: []          # exact production origins to allow (see below); empty keeps LAN/dev defaults
   plugins:
-    installDir: ./plugins/.installed
-    heartbeatInterval: 5000   # ms between ping → pong
-    heartbeatTimeout: 15000   # ms before marking a plugin unresponsive
+    heartbeat: 5s            # interval between ping → pong
+    heartbeatTimeout: 15s    # mark a plugin unresponsive after this long without a pong
+    rssSoftLimit: 512mb      # graceful restart when a plugin's RSS stays above this; 0 disables
+    idleReap: 0              # scale-to-zero: reap a plugin idle this long; 0 keeps it resident
+    keepWarmCount: 0         # keep the N most-recently-active plugins resident past their idle window
+    bytecode: false          # compile plugin bundles to bytecode for faster cold starts
+    quotas:                  # operator-wide per-plugin disk-quota defaults (optional)
+      data: 2gb              # a plugin's own package.json quotas still win over these
+      cache: 2gb
+      tmp: 256mb
   logs:
-    retentionDays: 7          # delete log rows older than this; 0 = keep forever
-    pruneIntervalMs: 3600000  # how often the retention sweep runs
+    retention: 7d            # delete log rows older than this; 0 = keep forever
+    pruneInterval: 1h        # how often the retention sweep runs
+  analytics:
+    retention: 90d           # delete analytics events older than this; 0 = keep forever
+    pruneInterval: 1h
   shutdown:
-    gracePeriodMs: 10000      # max time to drain requests + tear down before forcing exit
+    gracePeriod: 10s         # max time to drain requests + tear down before forcing exit
 
 plugins:
   "@brika/plugin-timer":
@@ -25,12 +44,12 @@ plugins:
   my-local-plugin:
     version: "workspace:./plugins/my-plugin"
     config:
-      apiKey: __secret_apiKey   # presence sentinel; real value lives in the secret store
+      apiKey: "my-plaintext-key"   # a secret typed by hand; see "Writing secrets" below
       pollInterval: 60
 
-defaultRegistry: https://registry.brika.dev   # npm registry probed for scoped installs (auto-routing)
-npmRegistries: {}                              # explicit scope → registry overrides (auto-routing fills this)
-searchStores:                                  # /v1 stores searched for plugins
+registry: https://registry.brika.dev   # npm registry probed for scoped installs (auto-routing)
+npmRegistries: {}                       # explicit scope → registry overrides (auto-routing fills this)
+searchStores:                           # /v1 stores searched for plugins
   - https://store.brika.dev
 
 rules: []        # reserved for future use
@@ -44,12 +63,18 @@ schedules: []    # reserved for future use
 | `hub.port` | `3001` | TCP port to listen on |
 | `hub.host` | `127.0.0.1` | Bind address. Use `0.0.0.0` for LAN/Docker (plus a firewall rule!) |
 | `hub.corsAllowlist` | `[]` | Exact production origins the API accepts credentialed CORS requests from. Empty keeps the built-in LAN/dev defaults. See [CORS Allowlist](../architecture/cors.md) |
-| `hub.plugins.installDir` | `./plugins/.installed` | Where the registry installs plugins, relative to `.brika/` |
-| `hub.plugins.heartbeatInterval` | `5000` ms | Ping interval; the supervisor sends a ping RPC this often |
-| `hub.plugins.heartbeatTimeout` | `15000` ms | Mark a plugin unresponsive (then kill + restart) after this many ms without a pong |
-| `hub.logs.retentionDays` | `7` | Drop log rows older than this. `0` disables retention (file grows forever) |
-| `hub.logs.pruneIntervalMs` | `3600000` (1 h) | How often the retention sweep runs |
-| `hub.shutdown.gracePeriodMs` | `10000` ms | On SIGINT/SIGTERM/SIGHUP, drain in-flight HTTP requests and tear down subsystems within this budget. A hard timeout then force-closes connections, flushes logs, and exits so shutdown can't hang. Must be a positive integer; invalid values fall back to the default |
+| `hub.plugins.heartbeat` | `5s` | Ping interval; the supervisor sends a ping RPC this often |
+| `hub.plugins.heartbeatTimeout` | `15s` | Mark a plugin unresponsive (then kill + restart) after this long without a pong |
+| `hub.plugins.rssSoftLimit` | `512mb` | Graceful restart when a plugin's resident set size stays above this. `0` disables RSS-based restarts |
+| `hub.plugins.idleReap` | `0` | Scale-to-zero: reap an idle plugin after this long with no activity. `0` keeps plugins resident |
+| `hub.plugins.keepWarmCount` | `0` | Keep the N most-recently-active plugins resident past their idle window |
+| `hub.plugins.bytecode` | `false` | Compile plugin server bundles to bytecode so cold starts skip parse/compile |
+| `hub.plugins.quotas` | (built-in: 2gb/2gb/256mb) | Operator-wide per-plugin disk-quota defaults for the `data`/`cache`/`tmp` roots. A plugin's own `package.json` quotas win over these; omit a root to keep the built-in. The hub also auto-reclaims each plugin's evictable `/tmp` (older than 24h) and `/cache` (older than 14d) on a periodic sweep. |
+| `hub.logs.retention` | `7d` | Drop log rows older than this. `0` disables retention (file grows forever) |
+| `hub.logs.pruneInterval` | `1h` | How often the log retention sweep runs |
+| `hub.analytics.retention` | `90d` | Drop analytics events older than this. `0` disables retention |
+| `hub.analytics.pruneInterval` | `1h` | How often the analytics retention sweep runs |
+| `hub.shutdown.gracePeriod` | `10s` | On SIGINT/SIGTERM/SIGHUP, drain in-flight HTTP requests and tear down subsystems within this budget. A hard timeout then force-closes connections, flushes logs, and exits so shutdown can't hang. Invalid values fall back to the default |
 
 The hub also has internal defaults for IPC call timeout (`30 s`), kill grace period (`3 s`), and the restart policy (`5 crashes / 60 s` = crash loop, `30 s` of stability resets backoff, `1 s` base / `60 s` max delay). These are not configurable from `brika.yml` today — see [`PluginManagerConfig`](../architecture/plugin-supervisor.md).
 
@@ -91,17 +116,28 @@ A free-form object passed to the plugin as its preferences (`getPreferences()`).
 
 ### Secret values
 
-Any key starting with `__secret_` is a **presence sentinel**, not a real value. The real value lives in the [Secret Store](../architecture/secret-store.md) (OS keychain or encrypted file). The hub strips real secret values from the YAML on save so they never leak into version control or backups of `brika.yml`.
+Secret config values (a field the plugin declares as a `password`, or any key starting with `__secret_`) never persist in plaintext in `brika.yml`. The real value lives in the [Secret Store](../architecture/secret-store.md) (OS keychain or encrypted file).
 
-When you set a secret through the UI or API, the hub:
+**Writing a secret by hand.** You can type a plaintext secret straight into `brika.yml`:
+
+```yaml
+plugins:
+  my-plugin:
+    config:
+      apiKey: "sk-my-real-key"   # a password-typed field
+```
+
+On the next start the hub **absorbs** it: it moves the value into the secret store and scrubs `brika.yml` (a password field is removed entirely; a `__secret_*` key is replaced with a `null` presence marker). The plaintext never survives a restart, so it can't leak into version control or backups. This absorption is idempotent — once scrubbed, later starts leave the file alone.
+
+**Setting a secret through the UI or API** does the same routing directly:
 
 1. Writes the actual value to the secret store under a stable key.
-2. Writes a `__secret_<key>: null` sentinel into the YAML so the config diff shows that *some* secret exists for that field.
+2. Writes a `__secret_<key>: null` marker into the YAML (for `__secret_*` keys) so the config diff shows that *some* secret exists for that field.
 3. Re-pushes the resolved value to the plugin via IPC.
 
-## `defaultRegistry` / `npmRegistries` / `searchStores`
+## `registry` / `npmRegistries` / `searchStores`
 
-Where the hub installs and searches for plugins. `defaultRegistry` is probed for scoped installs and
+Where the hub installs and searches for plugins. `registry` is probed for scoped installs and
 auto-routes scopes it serves; `npmRegistries` are explicit scope overrides; `searchStores` are the `/v1`
 stores searched. All optional (Brika defaults apply). Manage them with `brika registry add` / `list`, and
 see [Registries](registries.md) for the full model.

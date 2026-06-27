@@ -82,9 +82,8 @@ hub:
   port: 4000
   host: localhost
   plugins:
-    installDir: ./custom-plugins
-    heartbeatInterval: 10000
-    heartbeatTimeout: 30000
+    heartbeat: 10s
+    heartbeatTimeout: 30s
 plugins:
   "@test/plugin":
     version: "1.0.0"
@@ -97,7 +96,9 @@ schedules: []
 
       expect(config.hub.port).toBe(4000);
       expect(config.hub.host).toBe('localhost');
-      expect(config.hub.plugins.installDir).toBe('./custom-plugins');
+      // Friendly duration units parse to milliseconds in the in-memory shape.
+      expect(config.hub.plugins.heartbeatInterval).toBe(10_000);
+      expect(config.hub.plugins.heartbeatTimeout).toBe(30_000);
       expect(config.plugins).toHaveLength(1);
       expect(config.plugins[0].name).toBe('@test/plugin');
       expect(config.plugins[0].version).toBe('1.0.0');
@@ -115,7 +116,7 @@ schedules: []
         `
 hub:
   shutdown:
-    gracePeriodMs: 25000
+    gracePeriod: 25s
 plugins: {}
 rules: []
 schedules: []
@@ -133,7 +134,7 @@ schedules: []
         `
 hub:
   shutdown:
-    gracePeriodMs: -5
+    gracePeriod: -5
 plugins: {}
 rules: []
 schedules: []
@@ -159,7 +160,7 @@ schedules: []
         `
 hub:
   plugins:
-    rssSoftLimitBytes: 268435456
+    rssSoftLimit: 256mb
 plugins: {}
 rules: []
 schedules: []
@@ -176,7 +177,7 @@ schedules: []
         `
 hub:
   plugins:
-    rssSoftLimitBytes: 0
+    rssSoftLimit: 0
 plugins: {}
 rules: []
 schedules: []
@@ -193,7 +194,7 @@ schedules: []
         `
 hub:
   plugins:
-    rssSoftLimitBytes: -100
+    rssSoftLimit: -100
 plugins: {}
 rules: []
 schedules: []
@@ -279,7 +280,6 @@ schedules: []
           host: '127.0.0.1',
           corsAllowlist: [],
           plugins: {
-            installDir: './plugins',
             heartbeatInterval: 5000,
             heartbeatTimeout: 15000,
             rssSoftLimitBytes: 0,
@@ -289,6 +289,8 @@ schedules: []
           },
           logs: { retentionDays: 7, pruneIntervalMs: 3600000 },
           analytics: { retentionDays: 90, pruneIntervalMs: 3600000 },
+          sparks: { retentionDays: 30, pruneIntervalMs: 3600000 },
+          workflows: { retentionDays: 30, pruneIntervalMs: 3600000 },
           shutdown: { gracePeriodMs: 10000 },
         },
         plugins: [

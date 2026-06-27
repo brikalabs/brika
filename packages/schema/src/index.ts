@@ -10,3 +10,11 @@ export type {
   PreferenceSchema as PreferenceSchemaType,
 } from './plugin';
 export { PluginPackageSchema } from './plugin';
+export {
+  BytesSchema,
+  DurationSchema,
+  formatBytes,
+  formatDuration,
+  parseByteString,
+  parseDurationString,
+} from './units';

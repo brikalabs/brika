@@ -1,4 +1,5 @@
 import * as z from 'zod';
+import { BytesSchema as NonNegativeBytesSchema } from './units';
 
 /**
  * BRIKA Plugin Package Schema (Zod)
@@ -294,102 +295,16 @@ const PageSchema = z.object({
 // ============================================================================
 
 /**
- * Unit multipliers for the byte-string parser.
- *
- * Disk and memory limits in dev tooling almost universally use base
- * 1024 (so "1 GB" of RAM ≈ 1 GiB), and that's what operators expect
- * here too — we treat `kb` and `kib` as synonyms (both = 1024) and
- * `mb`/`mib`, `gb`/`gib`, `tb`/`tib` likewise. Strict SI fans can
- * still write raw integers if they care about exact base-10 values.
+ * Per-plugin byte caps reuse the shared byte parser (raw integer or readable
+ * string like `"2gb"`/`"500mb"`/`"256mib"`) but require a STRICTLY positive
+ * value: a 0-byte cap is nonsensical here (it would block every write), whereas
+ * the hub's RSS/quota knobs use `0` as a "disabled" sentinel.
  */
-const BYTE_UNIT_MULTIPLIERS: Record<string, number> = {
-  '': 1,
-  b: 1,
-  k: 1024,
-  kb: 1024,
-  kib: 1024,
-  m: 1024 ** 2,
-  mb: 1024 ** 2,
-  mib: 1024 ** 2,
-  g: 1024 ** 3,
-  gb: 1024 ** 3,
-  gib: 1024 ** 3,
-  t: 1024 ** 4,
-  tb: 1024 ** 4,
-  tib: 1024 ** 4,
-};
-
-/**
- * Hard ceiling on the byte-string length we'll attempt to parse —
- * the longest legitimate value (`"1234567890.123456 tib"`-ish) is
- * well under 32 chars. Anything larger is a typo or a fuzzer.
- */
-const BYTE_STRING_MAX_LENGTH = 32;
-
-/**
- * Pattern: digits + optional `.fraction` + optional single space +
- * unit letters, anchored. Trimmed input only — leading / trailing
- * whitespace is stripped by the caller, which avoids the multiple
- * `\s*` quantifiers Sonar treats as a ReDoS hotspot. The remaining
- * character classes (`\d`, `[a-z]`) don't overlap, so the regex is
- * strictly linear.
- */
-const BYTE_STRING_PATTERN = /^(\d+(?:\.\d+)?) ?([a-z]*)$/i;
-
-/**
- * Parse a human-readable byte count like `"500mb"` / `"2 gb"` /
- * `"256 mib"` / `"1024"` into a non-negative integer.
- *
- * Returns `null` for malformed input, NaN/Infinity, negative results,
- * unknown unit suffixes, or strings exceeding `BYTE_STRING_MAX_LENGTH`.
- * The caller turns that into a zod issue.
- */
-function parseByteString(raw: string): number | null {
-  if (raw.length > BYTE_STRING_MAX_LENGTH) {
-    return null;
-  }
-  const trimmed = raw.trim();
-  const match = BYTE_STRING_PATTERN.exec(trimmed);
-  if (!match?.[1] || match[2] === undefined) {
-    return null;
-  }
-  const multiplier = BYTE_UNIT_MULTIPLIERS[match[2].toLowerCase()];
-  if (multiplier === undefined) {
-    return null;
-  }
-  const bytes = Number.parseFloat(match[1]) * multiplier;
-  if (!Number.isFinite(bytes) || bytes <= 0) {
-    return null;
-  }
-  return Math.floor(bytes);
-}
-
-/**
- * Positive byte count. Accepts either:
- *   - a raw positive integer (`2147483648`)
- *   - a human-readable string (`"2gb"`, `"500 mb"`, `"256mib"`).
- *
- * The schema normalises both to a plain positive integer so consumers
- * only ever see numbers in the typed output.
- */
-const BytesSchema = z
-  .union([
-    z.number().int().positive(),
-    z.string().transform((raw, ctx) => {
-      const parsed = parseByteString(raw);
-      if (parsed === null) {
-        ctx.addIssue({
-          code: 'custom',
-          message: `Invalid byte size "${raw}". Expected a positive integer or a value like "500mb", "2gb", "256mib".`,
-        });
-        return z.NEVER;
-      }
-      return parsed;
-    }),
-  ])
-  .describe(
-    'Positive byte count. Either a raw integer (`2147483648`) or a human-readable string (`"2gb"`, `"500mb"`, `"256mib"`).'
-  );
+const BytesSchema = NonNegativeBytesSchema.refine((n) => n > 0, {
+  message: 'must be a positive byte count, e.g. "512mb", "2gb", "256mib".',
+}).describe(
+  'Positive byte count. Either a raw integer (`2147483648`) or a human-readable string (`"2gb"`, `"500mb"`, `"256mib"`).'
+);
 
 const FsResourcesSchema = z
   .object({
