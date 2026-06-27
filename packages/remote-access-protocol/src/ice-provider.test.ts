@@ -73,7 +73,7 @@ describe('CloudflareIceServerProvider', () => {
     );
     const provider = new CloudflareIceServerProvider({ appId: 'app', token: 'tok' });
     const result = await provider.iceServers();
-    expect(result.length).toBe(DEFAULT_ICE_SERVERS.length + 2);
+    expect(result).toHaveLength(DEFAULT_ICE_SERVERS.length + 2);
   });
 
   it('non-2xx → defaults only', async () => {

@@ -121,7 +121,7 @@ describe('SecretStore', () => {
 
       expect(await store.get('@plugin-a', 'apiKey')).toBeNull();
       expect(await store.get('@plugin-a', 'user.session')).toBeNull();
-      expect(nonIndexKeys().length).toBe(0);
+      expect(nonIndexKeys()).toHaveLength(0);
     });
 
     test('purgeServiceSecrets wipes every entry under the service', async () => {
@@ -148,7 +148,7 @@ describe('SecretStore', () => {
       expect(await store.get('@plugin-a', 'k1')).toBeNull();
       expect(await store.get('@plugin-a', 'k2')).toBeNull();
       expect(await store.get('@plugin-a', 'k3')).toBeNull();
-      expect(nonIndexKeys().length).toBe(0);
+      expect(nonIndexKeys()).toHaveLength(0);
     });
 
     test('deleteAllForPlugin does not catch a prefix-overlapping plugin name', async () => {
@@ -188,7 +188,7 @@ describe('SecretStore', () => {
       expect(await store.get('@plugin', 'apiKey')).toBe('pref-value');
       expect(await store.get('@plugin', 'user.apiKey')).toBe('sdk-value');
       // And both rows physically exist in the keychain.
-      expect(nonIndexKeys().length).toBe(2);
+      expect(nonIndexKeys()).toHaveLength(2);
     });
 
     test('a key cannot reach another plugin via crafted separators', async () => {
@@ -228,12 +228,12 @@ describe('SecretStore', () => {
 
       expect(await store.get('@plugin', 'token')).toBe('short');
       // Only one row; the old value is fully replaced (not appended).
-      expect(nonIndexKeys().length).toBe(1);
+      expect(nonIndexKeys()).toHaveLength(1);
     });
 
     test('delete removes the underlying keychain entry, not just our view', async () => {
       await store.set('@plugin', 'token', 'value');
-      expect(nonIndexKeys().length).toBe(1);
+      expect(nonIndexKeys()).toHaveLength(1);
 
       await store.delete('@plugin', 'token');
       expect(mock.store.size).toBe(0);

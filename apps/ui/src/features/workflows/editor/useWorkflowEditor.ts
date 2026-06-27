@@ -164,7 +164,7 @@ export function useWorkflowEditor(
     // Dedupe: node+edge deletions of one gesture both land here in the same
     // batch (refs unchanged), and that must stay a single undo step.
     const top = pastRef.current.at(-1);
-    if (top && top.nodes === nodesRef.current && top.edges === edgesRef.current) {
+    if (top?.nodes === nodesRef.current && top?.edges === edgesRef.current) {
       return;
     }
     pastRef.current = [

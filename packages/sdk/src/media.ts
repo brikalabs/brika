@@ -112,7 +112,7 @@ export function bytesToDataUrl(bytes: Uint8Array, mimeType?: string): string {
   let binary = '';
   const chunk = 0x8000;
   for (let i = 0; i < bytes.length; i += chunk) {
-    binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+    binary += String.fromCodePoint(...bytes.subarray(i, i + chunk));
   }
   return `data:${mime};base64,${btoa(binary)}`;
 }
@@ -127,7 +127,7 @@ export function dataUrlToBytes(dataUrl: string): { bytes: Uint8Array; mimeType?:
     const binary = atob(match[2] ?? '');
     const bytes = new Uint8Array(binary.length);
     for (let i = 0; i < binary.length; i++) {
-      bytes[i] = binary.charCodeAt(i);
+      bytes[i] = binary.codePointAt(i) ?? 0;
     }
     return { bytes, mimeType: match[1] };
   } catch {

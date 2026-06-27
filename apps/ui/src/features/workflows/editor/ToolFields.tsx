@@ -6,46 +6,9 @@
  * ResolvedFieldInfo contract.
  */
 
-import {
-  Badge,
-  Button,
-  Checkbox,
-  cn,
-  Input,
-  InputGroup,
-  InputGroupAddon,
-  InputGroupInput,
-  Label,
-  ScrollArea,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Separator,
-  Skeleton,
-  Spinner,
-  Switch,
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@brika/clay';
-import {
-  AlertTriangle,
-  Check,
-  ChevronDown,
-  ChevronRight,
-  ChevronsUpDown,
-  HelpCircle,
-  Loader2,
-  PencilLine,
-  Search,
-  Wrench,
-  X,
-} from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
-import { useCapture } from '@/features/analytics/hooks';
-import { useLocale } from '@/lib/use-locale';
+import { Badge, Button, Input } from '@brika/clay';
+import { Check, ChevronsUpDown, PencilLine, Wrench, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { fetchTools, type ToolSummary } from '../api';
 import { type DynamicOption, type ResolvedFieldInfo, toDisplayString } from './field-shared';
 

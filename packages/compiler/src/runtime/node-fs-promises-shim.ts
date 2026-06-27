@@ -36,7 +36,7 @@ function runtime(): BrikaFsRuntime {
 
 // ─── readFile / writeFile / appendFile ──────────────────────────────────────
 
-type FsEncoding = 'utf-8' | 'utf8' | 'binary' | null | undefined;
+type FsEncoding = 'utf-8' | 'utf8' | 'binary' | null;
 type FsContent = string | Uint8Array;
 
 function normaliseEncoding(encoding: unknown): 'utf-8' | 'binary' {

@@ -90,7 +90,7 @@ describe('EventSystem', () => {
       })
     );
 
-    expect(received.length).toBe(3);
+    expect(received).toHaveLength(3);
     expect(received[0]?.type).toBe('test.hello');
     expect(received[1]?.type).toBe('test.goodbye');
     expect(received[2]?.type).toBe('test.count');
@@ -123,7 +123,7 @@ describe('EventSystem', () => {
       })
     ); // This won't be received
 
-    expect(received.length).toBe(2);
+    expect(received).toHaveLength(2);
     expect(received[0]?.type).toBe('test.hello');
     expect(received[1]?.type).toBe('test.goodbye');
   });
@@ -356,7 +356,7 @@ describe('EventSystem', () => {
     );
 
     // All handlers should have completed (order may vary due to timing)
-    expect(order.length).toBe(3);
+    expect(order).toHaveLength(3);
     expect(order).toContain(1);
     expect(order).toContain(2);
     expect(order).toContain(3);
@@ -565,7 +565,7 @@ describe('EventSystem', () => {
         value: 42,
       }),
     ];
-    expect(actions.length).toBe(3);
+    expect(actions).toHaveLength(3);
   });
 
   it('should handle errors in subscribers gracefully', async () => {
@@ -615,7 +615,7 @@ describe('EventSystem', () => {
       })
     );
 
-    expect(received.length).toBe(3);
+    expect(received).toHaveLength(3);
     expect(received[0]?.type).toBe('test.hello');
     expect(received[1]?.type).toBe('test.goodbye');
     expect(received[2]?.type).toBe('test.count');

@@ -58,7 +58,7 @@ describe('defineEmote (script DSL)', () => {
     });
     const frames = e.timeline.tracks[0]?.clip.frames ?? [];
     // 300ms @ 10fps ≈ 3 frames (rounded).
-    expect(frames.length).toBe(3);
+    expect(frames).toHaveLength(3);
   });
 
   test('impulse + waitLand produces a ballistic arc that ends on the floor', () => {

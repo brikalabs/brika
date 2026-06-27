@@ -45,7 +45,7 @@ describe('stepField', () => {
   test('drops particles whose age has reached life', () => {
     const field = { width: 10, height: 10, particles: [fixedParticle({ age: 900, life: 1000 })] };
     const next = stepField(field, 200);
-    expect(next.particles.length).toBe(0);
+    expect(next.particles).toHaveLength(0);
   });
 
   test('emitter contributes fresh particles', () => {
@@ -53,14 +53,14 @@ describe('stepField', () => {
       spawn: () => [fixedParticle({ x: 5 })],
     };
     const next = stepField(emptyField(10, 10), 100, emitter, RNG);
-    expect(next.particles.length).toBe(1);
+    expect(next.particles).toHaveLength(1);
     expect(next.particles[0]?.x).toBe(5);
   });
 
   test('never mutates the input field', () => {
     const field = { width: 10, height: 10, particles: [fixedParticle()] };
     stepField(field, 100);
-    expect(field.particles.length).toBe(1);
+    expect(field.particles).toHaveLength(1);
   });
 });
 
@@ -127,7 +127,7 @@ describe('rateEmitter', () => {
     });
     expect(emitter.spawn(400, RNG).length).toBeGreaterThan(0);
     emitter.spawn(200, RNG);
-    expect(emitter.spawn(100, RNG).length).toBe(0);
+    expect(emitter.spawn(100, RNG)).toHaveLength(0);
   });
 });
 

@@ -174,7 +174,7 @@ describe('resolveMasterKey', () => {
 
   test('generates and persists a key file on first run with 0600 perms', () => {
     const key = resolveMasterKey(dir);
-    expect(key.length).toBe(32);
+    expect(key).toHaveLength(32);
     const path = join(dir, 'master.key');
     const saved = readFileSync(path);
     expect(Buffer.compare(saved, key)).toBe(0);

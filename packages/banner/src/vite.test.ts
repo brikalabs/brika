@@ -44,7 +44,7 @@ describe('bannerPlugin buildStart', () => {
   test('prints the banner on first invocation', () => {
     const plugin = bannerPlugin(sampleOptions);
     callBuildStart(plugin);
-    expect(captured.length).toBe(1);
+    expect(captured).toHaveLength(1);
     expect(captured[0]).toContain('unit subtitle');
     expect(captured[0]).toContain('Version');
     expect(captured[0]).toContain('0.0.0-test');
@@ -55,7 +55,7 @@ describe('bannerPlugin buildStart', () => {
     callBuildStart(plugin);
     callBuildStart(plugin);
     callBuildStart(plugin);
-    expect(captured.length).toBe(1);
+    expect(captured).toHaveLength(1);
   });
 
   test('each plugin instance has its own shown flag', () => {
@@ -63,7 +63,7 @@ describe('bannerPlugin buildStart', () => {
     const b = bannerPlugin({ ...sampleOptions, subtitle: 'instance b' });
     callBuildStart(a);
     callBuildStart(b);
-    expect(captured.length).toBe(2);
+    expect(captured).toHaveLength(2);
     expect(captured[0]).toContain('unit subtitle');
     expect(captured[1]).toContain('instance b');
   });

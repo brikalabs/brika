@@ -27,7 +27,7 @@ describe('poopEmote', () => {
 
   test('per-frame state array is parallel to the timeline frames', () => {
     const frames = poopEmote.timeline.tracks[0]?.clip.frames ?? [];
-    expect(poopEmote.states.length).toBe(frames.length);
+    expect(poopEmote.states).toHaveLength(frames.length);
     for (const state of poopEmote.states) {
       expect(typeof state.cx).toBe('number');
       expect(typeof state.w).toBe('number');

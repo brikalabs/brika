@@ -143,8 +143,8 @@ describe('PluginEventHandler', () => {
 
       handler.onBlockEmit('instance-1', 'output', { value: 1 });
 
-      expect(a.mock.calls.length).toBe(1);
-      expect(b.mock.calls.length).toBe(1);
+      expect(a.mock.calls).toHaveLength(1);
+      expect(b.mock.calls).toHaveLength(1);
     });
 
     test('clearBlockEmitHandler(handler) removes only that handler', () => {
@@ -157,8 +157,8 @@ describe('PluginEventHandler', () => {
       handler.clearBlockEmitHandler(a);
       handler.onBlockEmit('instance-1', 'output', { value: 1 });
 
-      expect(a.mock.calls.length).toBe(0);
-      expect(b.mock.calls.length).toBe(1);
+      expect(a.mock.calls).toHaveLength(0);
+      expect(b.mock.calls).toHaveLength(1);
     });
   });
 

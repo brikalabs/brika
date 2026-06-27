@@ -36,7 +36,7 @@ describe('applyResize', () => {
     const s = ready();
     const targetW = 200;
     const resized = applyResize(s, targetW, WORLD_H);
-    expect(resized.clouds.length).toBe(cloudCount(targetW));
+    expect(resized.clouds).toHaveLength(cloudCount(targetW));
   });
 
   test('keeps clouds when the count is unchanged (only height differs)', () => {

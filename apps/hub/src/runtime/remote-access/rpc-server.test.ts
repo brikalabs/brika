@@ -102,7 +102,7 @@ describe('RpcServer', () => {
     );
     await flush();
 
-    expect(seenRequests.length).toBe(1);
+    expect(seenRequests).toHaveLength(1);
     const seen = seenRequests[0];
     expect(seen?.method).toBe('GET');
     expect(seen?.headers.get('x-real-ip')).toBe('203.0.113.1');
@@ -322,7 +322,7 @@ describe('RpcServer', () => {
     server.handle({ v: PROTOCOL_VERSION, kind: 'request.end', id: 42 }, sender);
     await flush();
 
-    expect(seen.length).toBe(1);
+    expect(seen).toHaveLength(1);
     expect(seen[0]?.method).toBe('PUT');
     // The dispatcher started reading before request.end arrived (streaming
     // body), but the consumer in this test fully drains the body — so the
@@ -380,7 +380,7 @@ describe('RpcServer', () => {
     server.handle({ v: PROTOCOL_VERSION, kind: 'request.end', id: 100 }, sender);
     await flush();
 
-    expect(seen.length).toBe(1);
+    expect(seen).toHaveLength(1);
     expect(Array.from(seen[0] ?? new Uint8Array())).toEqual([1, 2, 3, 4, 5]);
   });
 

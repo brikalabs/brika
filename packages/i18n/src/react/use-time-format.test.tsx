@@ -128,7 +128,7 @@ describe('useTimeFormatStore — setPreference writes to localStorage and fires 
     result.setPreference('h24');
 
     expect(storage.get('i18n.timeFormat')).toBe('h24');
-    expect(events.length).toBe(1);
+    expect(events).toHaveLength(1);
     expect(events[0]?.type).toBe('i18n.timeFormatChange');
   });
 
@@ -137,7 +137,7 @@ describe('useTimeFormatStore — setPreference writes to localStorage and fires 
     result.setPreference('h12');
 
     expect(storage.get('i18n.timeFormat')).toBe('h12');
-    expect(events.length).toBe(1);
+    expect(events).toHaveLength(1);
   });
 
   test('setPreference("auto") clears any prior preference back to the default value', () => {
@@ -145,6 +145,6 @@ describe('useTimeFormatStore — setPreference writes to localStorage and fires 
     result.setPreference('auto');
 
     expect(storage.get('i18n.timeFormat')).toBe('auto');
-    expect(events.length).toBe(1);
+    expect(events).toHaveLength(1);
   });
 });

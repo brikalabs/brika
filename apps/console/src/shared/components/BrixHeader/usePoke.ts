@@ -161,7 +161,7 @@ export function usePoke({ dispatch, life, setLife }: Readonly<PokeDeps>): PokeAp
         // First line becomes the headline; subsequent lines flatten
         // into a single sentence so the bubble (which is one row of
         // text) reads cleanly.
-        const epitaphLine = `{:dead:}§8${epitaph.split('\n').join(' — ')}`;
+        const epitaphLine = `{:dead:}§8${epitaph.replaceAll('\n', ' — ')}`;
         dispatch({
           type: 'STATUS',
           text: epitaphLine,

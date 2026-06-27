@@ -158,7 +158,7 @@ describe('BoardLoader', () => {
       await loader.loadDir(TEST_DIR);
 
       const boards = loader.list();
-      expect(boards.length).toBe(1);
+      expect(boards).toHaveLength(1);
       expect(boards[0].id).toBe('home');
       expect(boards[0].name).toBe('Home');
       expect(boards[0].icon).toBe('home');
@@ -423,7 +423,7 @@ notaboard: true
       const deleteCalls = listener.mock.calls.filter(
         (call: unknown[]) => call[1] === 'unload' && call[0] === 'yaml-dash'
       );
-      expect(deleteCalls.length).toBe(0);
+      expect(deleteCalls).toHaveLength(0);
       loader2.stopWatching();
     });
 

@@ -22,7 +22,7 @@ describe('device-family registry', () => {
     expect(new Set(ids).size).toBe(ids.length);
     // The merged map carries every claimed id (composition would have thrown
     // on a collision; this guards against silent key loss too).
-    expect(Object.keys(DEVICE_TYPE_MAP).length).toBe(ids.length);
+    expect(Object.keys(DEVICE_TYPE_MAP)).toHaveLength(ids.length);
   });
 
   test('no duplicate command names across cluster entries', () => {
@@ -41,7 +41,7 @@ describe('device-family registry', () => {
     // And no executor exists outside the declared command vocabulary: the
     // ClusterCommand.name type enforces it, the count proves nothing leaked.
     const executors = CLUSTER_ENTRIES.flatMap((entry) => entry.commands ?? []);
-    expect(executors.length).toBe(MATTER_COMMAND_VALUES.length);
+    expect(executors).toHaveLength(MATTER_COMMAND_VALUES.length);
   });
 
   test('every state key a reader can produce has a display ATTRIBUTES entry', () => {

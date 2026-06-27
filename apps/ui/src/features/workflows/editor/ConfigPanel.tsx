@@ -48,21 +48,17 @@ import {
   Check,
   ChevronRight,
   ChevronsUpDown,
-  Copy,
   HelpCircle,
   PencilLine,
   Plus,
   Sparkles,
   Trash2,
-  Wrench,
-  X,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useCapture } from '@/features/analytics/hooks';
 import { fetcher } from '@/lib/query';
 import { useLocale } from '@/lib/use-locale';
-import { fetchTools, type ToolSummary } from '../api';
 import type { BlockNodeData, BlockPort } from './BlockNode';
 import { ClientBlockView } from './ClientBlockView';
 import { lintExpressions } from './expression-lint';

@@ -130,7 +130,7 @@ function renderEntry(entry: Entry, index: number): ReactNode {
         <div className="flex flex-wrap items-center gap-2">
           <p className="font-medium text-xs">
             Step {entry.iteration}
-            {entry.maxIterations !== undefined ? ` / ${entry.maxIterations}` : ''}
+            {entry.maxIterations === undefined ? '' : ` / ${entry.maxIterations}`}
           </p>
           {entry.stepTokens !== undefined && (
             <Badge variant="outline" className="text-[9px]">

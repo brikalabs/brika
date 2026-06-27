@@ -579,7 +579,7 @@ describe('boards routes', () => {
     // EventSystem.subscribe should have been called for each event type:
     // BrickActions: dataUpdated, moduleRecompiled
     // BoardActions: brickAdded, brickRemoved, layoutChanged, brickLabelChanged, brickConfigChanged
-    expect(mockEvents.subscribe.mock.calls.length).toBe(7);
+    expect(mockEvents.subscribe.mock.calls).toHaveLength(7);
 
     // Clean up the stream
     const reader = raw.body?.getReader();

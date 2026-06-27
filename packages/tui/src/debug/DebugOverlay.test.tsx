@@ -157,7 +157,7 @@ describe('<DebugOverlay>', () => {
     // keeps Ctrl+L firing through useShortcut.
     stdin.write(''); // Ctrl+L
     await flush();
-    expect(debugBuffer.getEntries().length).toBe(0);
+    expect(debugBuffer.getEntries()).toHaveLength(0);
     unmount();
   });
 

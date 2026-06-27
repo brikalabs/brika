@@ -73,7 +73,7 @@ describe('BundleNamespaceLoader — bulk path', () => {
     const loader = new BundleNamespaceLoader('/api/i18n');
     const result = await loader.load('en', 'common');
     expect(result).toEqual({ hello: 'Hello' });
-    expect(harness.calls.length).toBe(1);
+    expect(harness.calls).toHaveLength(1);
     expect(harness.calls[0]?.url).toBe('/api/i18n/bundle/en');
   });
 
@@ -89,7 +89,7 @@ describe('BundleNamespaceLoader — bulk path', () => {
     const p1 = loader.load('en', 'common');
     const p2 = loader.load('en', 'layout');
     const p3 = loader.load('en', 'settings');
-    expect(harness.calls.length).toBe(1);
+    expect(harness.calls).toHaveLength(1);
     resolver.fn?.(
       new Response(
         JSON.stringify({
@@ -104,7 +104,7 @@ describe('BundleNamespaceLoader — bulk path', () => {
     expect(r1).toEqual({ hello: 'Hello' });
     expect(r2).toEqual({ title: 'T' });
     expect(r3).toEqual({ label: 'L' });
-    expect(harness.calls.length).toBe(1);
+    expect(harness.calls).toHaveLength(1);
   });
 
   test('subsequent loads after a bundle fetch reuse the cache without new requests', async () => {
@@ -120,7 +120,7 @@ describe('BundleNamespaceLoader — bulk path', () => {
     await loader.load('en', 'common');
     const callsBefore = harness.calls.length;
     await loader.load('en', 'common');
-    expect(harness.calls.length).toBe(callsBefore);
+    expect(harness.calls).toHaveLength(callsBefore);
   });
 
   test('revalidate sends If-None-Match and short-circuits on 304', async () => {
@@ -141,7 +141,7 @@ describe('BundleNamespaceLoader — bulk path', () => {
     await loader.load('en', 'common');
     const callsBefore = harness.calls.length;
     await loader.revalidate('en');
-    expect(harness.calls.length).toBe(callsBefore + 1);
+    expect(harness.calls).toHaveLength(callsBefore + 1);
     expect(harness.calls[callsBefore]?.ifNoneMatch).toBe('"v1"');
   });
 
@@ -190,11 +190,11 @@ describe('BundleNamespaceLoader — bulk path', () => {
     // All 50 callers must coalesce on the same in-flight fetch — verify
     // BEFORE the fetch resolves, otherwise sequential reuse-from-cache
     // could hide a per-load duplicate fetch.
-    expect(harness.calls.length).toBe(1);
+    expect(harness.calls).toHaveLength(1);
     resolver.fn?.(new Response(JSON.stringify(fixture), { status: 200 }));
     const results = await Promise.all(pending);
     expect(results).toEqual(namespaces.map((ns) => ({ key: ns })));
-    expect(harness.calls.length).toBe(1);
+    expect(harness.calls).toHaveLength(1);
   });
 
   test('5xx after a cached bundle keeps serving the cache', async () => {
@@ -262,7 +262,7 @@ describe('BundleNamespaceLoader — missing-namespace revalidation', () => {
     bundleBody = { common: { hello: 'Hello' }, 'plugin:foo': { greet: 'Yo' } };
     const result = await loader.load('en', 'plugin:foo');
     expect(result).toEqual({ greet: 'Yo' });
-    expect(harness.calls.length).toBe(callsBefore + 1);
+    expect(harness.calls).toHaveLength(callsBefore + 1);
   });
 
   test('still-missing after revalidation: subsequent loads return empty without re-fetching', async () => {
@@ -279,7 +279,7 @@ describe('BundleNamespaceLoader — missing-namespace revalidation', () => {
     const callsBefore = harness.calls.length;
     const result = await loader.load('en', 'absent');
     expect(result).toEqual({});
-    expect(harness.calls.length).toBe(callsBefore);
+    expect(harness.calls).toHaveLength(callsBefore);
   });
 
   test('revalidate restores a previously-missing namespace once it appears in the bundle', async () => {
@@ -303,7 +303,7 @@ describe('BundleNamespaceLoader — missing-namespace revalidation', () => {
     const callsBefore = harness.calls.length;
     const result = await loader.load('en', 'plugin:late');
     expect(result).toEqual({ greet: 'Yo' });
-    expect(harness.calls.length).toBe(callsBefore);
+    expect(harness.calls).toHaveLength(callsBefore);
   });
 });
 

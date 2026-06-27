@@ -190,7 +190,7 @@ describe('buildApp — tickets', () => {
     const res = await jsonPost(app, '/v1/tickets', { hubName: 'myhub' });
     expect(res.status).toBe(200);
     const body = (await res.json()) as { ticket: string; iceServers: unknown[] };
-    expect(body.ticket.split('.').length).toBe(3);
+    expect(body.ticket.split('.')).toHaveLength(3);
     expect(body.iceServers.length).toBeGreaterThan(0);
   });
 

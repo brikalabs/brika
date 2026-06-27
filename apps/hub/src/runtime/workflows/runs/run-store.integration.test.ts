@@ -53,7 +53,7 @@ describe('RunStore', () => {
     store.record({ type: 'run.closed', workflowId: 'wf', correlationId });
 
     const { runs } = store.query();
-    expect(runs.length).toBe(1);
+    expect(runs).toHaveLength(1);
     expect(runs[0]?.status).toBe('completed');
     expect(runs[0]?.workflowId).toBe('wf');
     expect(runs[0]?.triggerBlockId).toBe('trigger');
@@ -89,10 +89,10 @@ describe('RunStore', () => {
     store.record({ type: 'run.closed', workflowId: 'a', correlationId: 'c-a' });
     store.record({ type: 'run.opened', workflowId: 'b', correlationId: 'c-b', blockId: 't' });
 
-    expect(store.query({ workflowId: 'a' }).runs.length).toBe(1);
-    expect(store.query({ status: 'completed' }).runs.length).toBe(1);
+    expect(store.query({ workflowId: 'a' }).runs).toHaveLength(1);
+    expect(store.query({ status: 'completed' }).runs).toHaveLength(1);
     const running = store.query({ status: 'running' }).runs;
-    expect(running.length).toBe(1);
+    expect(running).toHaveLength(1);
     expect(running[0]?.workflowId).toBe('b');
   });
 
@@ -141,7 +141,7 @@ describe('RunStore', () => {
     });
 
     const { runs } = store.query();
-    expect(runs.length).toBe(1);
+    expect(runs).toHaveLength(1);
     expect(runs[0]?.status).toBe('running');
     expect(runs[0]?.eventCount).toBe(1);
   });

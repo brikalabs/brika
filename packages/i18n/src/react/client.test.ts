@@ -180,7 +180,7 @@ describe('switchLanguage', () => {
   test('no-op when target equals current language', async () => {
     const before = harness.calls.length;
     await switchLanguage(i18n.language);
-    expect(harness.calls.length).toBe(before);
+    expect(harness.calls).toHaveLength(before);
   });
 
   test('preloads via the bundle endpoint before flipping i18n.language', async () => {
@@ -204,7 +204,7 @@ describe('switchLanguage', () => {
   test('cimode bypasses the preload step but still flips the language', async () => {
     const before = harness.calls.length;
     await switchLanguage('cimode');
-    expect(harness.calls.length).toBe(before);
+    expect(harness.calls).toHaveLength(before);
     expect(i18n.language).toBe('cimode');
     // Restore to a real language for subsequent tests.
     await switchLanguage('en');
@@ -229,7 +229,7 @@ describe('hydrateTranslations', () => {
       en: { common: { hello: 'Hi from HMR' } },
     });
 
-    expect(harness.calls.length).toBe(callsBefore);
+    expect(harness.calls).toHaveLength(callsBefore);
     expect(i18n.getResource('en', 'common', 'hello')).toBe('Hi from HMR');
   });
 

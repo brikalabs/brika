@@ -84,7 +84,7 @@ describe('Permission System', () => {
 
   describe('PERMISSION_LIST', () => {
     test('contains all permissions from registry', () => {
-      expect(PERMISSION_LIST.length).toBe(Object.keys(PERMISSIONS).length);
+      expect(PERMISSION_LIST).toHaveLength(Object.keys(PERMISSIONS).length);
     });
 
     test('entries are PermissionDefinition objects', () => {

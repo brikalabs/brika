@@ -5,7 +5,6 @@
  * Uses Zod schemas for type inference and JSON Schema generation.
  */
 
-import type { FlowErrorHandler } from '@brika/flow';
 import { z } from 'zod';
 import type { Json } from '../types';
 import type { GenericRef, PassthroughRef, ResolvedRef } from './schema-types';
@@ -89,7 +88,15 @@ export function output<T extends OutputSchema>(schema: T, meta?: PortMeta): Outp
 // Block Context Types
 // ─────────────────────────────────────────────────────────────────────────────
 
-import type { Cleanup, CleanupRegistry, Emitter, Factory, Flow, Source } from '@brika/flow';
+import type {
+  Cleanup,
+  CleanupRegistry,
+  Emitter,
+  Factory,
+  Flow,
+  FlowErrorHandler,
+  Source,
+} from '@brika/flow';
 import { FlowImpl, isSource } from '@brika/flow';
 
 /** Extract inferred type from Zod schema, GenericRef, PassthroughRef, or ResolvedRef */

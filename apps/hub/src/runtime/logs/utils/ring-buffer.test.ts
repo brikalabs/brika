@@ -13,7 +13,7 @@ describe('RingBuffer', () => {
     buffer.push(2);
     buffer.push(3);
 
-    expect(buffer.length).toBe(3);
+    expect(buffer).toHaveLength(3);
     expect(buffer.snapshot()).toEqual([1, 2, 3]);
   });
 
@@ -25,7 +25,7 @@ describe('RingBuffer', () => {
     buffer.push(3);
     buffer.push(4); // Overwrites 1
 
-    expect(buffer.length).toBe(3);
+    expect(buffer).toHaveLength(3);
     expect(buffer.snapshot()).toEqual([2, 3, 4]);
   });
 
@@ -45,7 +45,7 @@ describe('RingBuffer', () => {
   test('returns empty array when buffer is empty', () => {
     const buffer = new RingBuffer<number>(3);
 
-    expect(buffer.length).toBe(0);
+    expect(buffer).toHaveLength(0);
     expect(buffer.snapshot()).toEqual([]);
   });
 
@@ -55,7 +55,7 @@ describe('RingBuffer', () => {
     buffer.push(1);
     buffer.push(2);
 
-    expect(buffer.length).toBe(2);
+    expect(buffer).toHaveLength(2);
     expect(buffer.capacity).toBe(5);
   });
 

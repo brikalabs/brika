@@ -28,7 +28,7 @@ describe('cloudCount', () => {
 describe('makeInitialClouds', () => {
   test('produces exactly cloudCount(width) clouds', () => {
     const clouds = makeInitialClouds(60);
-    expect(clouds.length).toBe(cloudCount(60));
+    expect(clouds).toHaveLength(cloudCount(60));
   });
 
   test('every cloud has a non-empty glyph and a finite x position', () => {
@@ -52,7 +52,7 @@ describe('tickClouds', () => {
   test('preserves the cloud count on every tick', () => {
     const clouds = makeInitialClouds(60);
     const ticked = tickClouds(clouds, 0.1, 10, 60);
-    expect(ticked.length).toBe(clouds.length);
+    expect(ticked).toHaveLength(clouds.length);
   });
 
   test('on-screen clouds drift left by scrollSpeed * CLOUD_SPEED_RATIO * dt', () => {

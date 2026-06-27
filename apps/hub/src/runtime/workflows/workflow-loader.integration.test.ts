@@ -1188,7 +1188,7 @@ describe('WorkflowLoader - Watch Callbacks (with FsWatchMock)', () => {
 
     // Negative assertion: confirm no register triggered by the non-YAML file
     await sleep(20);
-    expect(mockRegister.mock.calls.length).toBe(registerCountBefore);
+    expect(mockRegister.mock.calls).toHaveLength(registerCountBefore);
 
     // Now add a valid YAML file
     const watchedPath = join(TEST_DIR, 'watched-yaml.yaml');

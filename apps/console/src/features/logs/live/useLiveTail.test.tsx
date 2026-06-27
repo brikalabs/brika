@@ -270,7 +270,7 @@ describe('useLiveTail', () => {
     );
     await waitFor(() => controls.length === 1);
     // Stream is established and consuming.
-    expect(controls.length).toBe(1);
+    expect(controls).toHaveLength(1);
 
     // Push one event while mounted — should land.
     controls[0]?.push(makeEvent({ ts: 1, message: 'pre-unmount' }));
