@@ -186,4 +186,56 @@ describe('PluginConfigService — secret routing', () => {
     expect(keys).toContain('__secret_oauth_test_token');
     expect(keys).not.toContain('serverUrl');
   });
+
+  test('getConfig absorbs a hand-written plaintext password into the keychain and scrubs YAML', async () => {
+    // An operator typed the secret straight into brika.yml.
+    configBacking.apiKey = 'sk-handwritten';
+
+    const resolved = await svc.getConfig(PLUGIN);
+
+    // Resolved config still carries the value (read back from the keychain)…
+    expect(resolved.apiKey).toBe('sk-handwritten');
+    // …the keychain now holds it…
+    expect(await get(SecretStore).get(PLUGIN, 'apiKey')).toBe('sk-handwritten');
+    // …and the plaintext is gone from the on-disk config.
+    expect(configBacking).not.toHaveProperty('apiKey');
+  });
+
+  test('getConfig absorbs a hand-written __secret_* value and leaves a null marker', async () => {
+    const token = { access_token: 'handwritten', expires_at: 0, token_type: 'Bearer' };
+    configBacking.__secret_oauth_test_token = token;
+
+    const resolved = await svc.getConfig(PLUGIN);
+
+    expect(resolved.__secret_oauth_test_token).toEqual(token);
+    expect(
+      await get(SecretStore).getJSON<typeof token>(PLUGIN, '__secret_oauth_test_token')
+    ).toEqual(token);
+    expect(configBacking.__secret_oauth_test_token).toBeNull();
+  });
+
+  test('ingestion is idempotent — a second getConfig does not rewrite an already-scrubbed config', async () => {
+    configBacking.apiKey = 'sk-handwritten';
+    await svc.getConfig(PLUGIN);
+    expect(configBacking).not.toHaveProperty('apiKey');
+
+    // A `null` marker / absent plaintext must not trigger another keychain write.
+    const before = await get(SecretStore).get(PLUGIN, 'apiKey');
+    await get(SecretStore).set(PLUGIN, 'apiKey', 'sk-rotated');
+    await svc.getConfig(PLUGIN);
+    // The second pass found no plaintext, so it left the keychain value alone.
+    expect(await get(SecretStore).get(PLUGIN, 'apiKey')).toBe('sk-rotated');
+    expect(before).toBe('sk-handwritten');
+  });
+
+  test('a *** placeholder accidentally left in YAML is dropped, not stored', async () => {
+    await get(SecretStore).set(PLUGIN, 'apiKey', 'sk-existing');
+    configBacking.apiKey = '***';
+
+    const resolved = await svc.getConfig(PLUGIN);
+
+    expect(configBacking).not.toHaveProperty('apiKey');
+    expect(await get(SecretStore).get(PLUGIN, 'apiKey')).toBe('sk-existing');
+    expect(resolved.apiKey).toBe('sk-existing');
+  });
 });

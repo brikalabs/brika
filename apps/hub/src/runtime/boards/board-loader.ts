@@ -12,9 +12,14 @@ import { Analytics } from '@brika/analytics';
 import { inject, singleton } from '@brika/di';
 import { parse as parseYAML, stringify as stringifyYAML } from 'yaml';
 import { z } from 'zod';
+import { JsonStateFile } from '@/runtime/fs/json-state-file';
 import { Logger } from '@/runtime/logs/log-router';
 import { ensureAndScanYamlDir } from '@/runtime/utils/yaml-dir';
 import type { Json } from '@/types';
+
+/** The board-order index is a plain ordered list of board IDs. */
+const BoardOrderSchema = z.array(z.string());
+
 import type { Board, BoardBrickPlacement } from './types';
 
 const YAML_OPTIONS = {
@@ -69,6 +74,8 @@ export class BoardLoader {
   readonly #analytics = inject(Analytics);
 
   #dir: string | null = null;
+  /** Dir holding the machine-managed `board-order.json` (the hidden `.system/`). */
+  #orderDir: string | null = null;
   #watcher: ReturnType<typeof watch> | null = null;
   readonly #loaded = new Map<string, string>(); // filePath -> boardId
   readonly #idToFile = new Map<string, string>(); // boardId -> filePath
@@ -84,8 +91,12 @@ export class BoardLoader {
     return () => this.#changeListeners.delete(listener);
   }
 
-  async loadDir(dir: string): Promise<void> {
+  async loadDir(dir: string, orderDir?: string): Promise<void> {
     this.#dir = dir;
+    // The board files live in the visible `boards/` dir; the ordering index is
+    // machine-managed and lives under the hidden `.system/`. Tests that pass no
+    // orderDir keep the legacy "parent of boards dir" location.
+    this.#orderDir = orderDir ?? dirname(dir);
 
     const filePaths = await ensureAndScanYamlDir(dir, this.logs, 'Boards');
     for (const filePath of filePaths) {
@@ -105,7 +116,7 @@ export class BoardLoader {
     }
 
     // Load order from file, falling back to current map iteration order
-    await this.#loadOrder();
+    this.#loadOrder();
 
     this.logs.info('Board files loaded', {
       directory: dir,
@@ -179,7 +190,7 @@ export class BoardLoader {
     // Append new boards to the end of the order
     if (isNew && !this.#order.includes(board.id)) {
       this.#order.push(board.id);
-      await this.#persistOrder();
+      this.#persistOrder();
     }
 
     // Discrete lifecycle: a new board is created. Plain saves (every brick
@@ -220,7 +231,7 @@ export class BoardLoader {
 
     // Remove from order
     this.#order = this.#order.filter((oid) => oid !== id);
-    await this.#persistOrder();
+    this.#persistOrder();
 
     for (const l of this.#changeListeners) {
       l(id, 'unload');
@@ -256,7 +267,7 @@ export class BoardLoader {
     return ordered;
   }
 
-  async reorder(ids: string[]): Promise<boolean> {
+  reorder(ids: string[]): boolean {
     // Validate: all provided IDs must exist
     for (const id of ids) {
       if (!this.#boards.has(id)) {
@@ -270,7 +281,7 @@ export class BoardLoader {
         this.#order.push(id);
       }
     }
-    await this.#persistOrder();
+    this.#persistOrder();
 
     this.#analytics.capture('board.reordered', { count: this.#order.length });
 
@@ -387,38 +398,32 @@ export class BoardLoader {
     };
   }
 
-  get #orderFilePath(): string {
-    // Store order file in parent dir (e.g. .brika/board-order.json)
-    return join(dirname(this.#dir ?? ''), 'board-order.json');
+  #orderFile(): JsonStateFile<string[]> {
+    // Machine-managed ordering index, kept under the hidden `.system/` dir
+    // (falls back to the boards' parent dir when loadDir got no orderDir).
+    const path = join(this.#orderDir ?? dirname(this.#dir ?? ''), 'board-order.json');
+    return new JsonStateFile(path, { schema: BoardOrderSchema });
   }
 
-  async #loadOrder(): Promise<void> {
-    try {
-      const file = Bun.file(this.#orderFilePath);
-      if (await file.exists()) {
-        const data = await file.json();
-        if (Array.isArray(data)) {
-          // Filter to only IDs that exist
-          this.#order = data.filter((id) => typeof id === 'string' && this.#boards.has(id));
-          // Append any boards not in the saved order
-          for (const id of this.#boards.keys()) {
-            if (!this.#order.includes(id)) {
-              this.#order.push(id);
-            }
-          }
-          return;
+  #loadOrder(): void {
+    const saved = this.#orderFile().load();
+    if (saved) {
+      // Keep only IDs that still exist, then append any boards not in the saved order.
+      this.#order = saved.filter((id) => this.#boards.has(id));
+      for (const id of this.#boards.keys()) {
+        if (!this.#order.includes(id)) {
+          this.#order.push(id);
         }
       }
-    } catch {
-      // Ignore read errors, fall through to default order
+      return;
     }
-    // Default: use current map iteration order
+    // No (or invalid) saved order: use current map iteration order.
     this.#order = [...this.#boards.keys()];
   }
 
-  async #persistOrder(): Promise<void> {
+  #persistOrder(): void {
     try {
-      await Bun.write(this.#orderFilePath, JSON.stringify(this.#order));
+      this.#orderFile().persist(this.#order);
     } catch (error) {
       this.logs.error(
         'Failed to persist board order',

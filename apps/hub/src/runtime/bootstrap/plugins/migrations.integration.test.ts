@@ -32,8 +32,8 @@ describe('migrations() bootstrap plugin', () => {
   afterEach(() => {
     // Clean any audit log + version-state files left behind so the
     // next test starts from a clean slate.
-    const log = join(brikaContext.brikaDir, 'updates.log');
-    const vs = join(brikaContext.brikaDir, '.version-state.json');
+    const log = join(brikaContext.systemDir, 'updates.log');
+    const vs = join(brikaContext.systemDir, '.version-state.json');
     rmSync(log, { force: true });
     rmSync(vs, { force: true });
   });
@@ -71,7 +71,7 @@ describe('migrations() bootstrap plugin', () => {
   });
 
   test('audit log entry is written after migration completion', async () => {
-    const logPath = join(brikaContext.brikaDir, 'updates.log');
+    const logPath = join(brikaContext.systemDir, 'updates.log');
     // Force-delete any existing log so we measure exactly what THIS run produces.
     rmSync(logPath, { force: true });
     await migrations().onInit?.();

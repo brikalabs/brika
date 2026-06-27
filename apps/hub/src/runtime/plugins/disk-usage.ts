@@ -11,6 +11,15 @@ interface RootUsage {
   readonly used: number;
   /** Quota ceiling in bytes for this root. */
   readonly limit: number;
+  /** True when usage is within {@link NEAR_LIMIT_RATIO} of the limit — an operator pressure signal. */
+  readonly nearLimit: boolean;
+}
+
+/** Flag a root as "near limit" once it crosses this fraction of its quota. */
+const NEAR_LIMIT_RATIO = 0.9;
+
+function rootUsage(used: number, limit: number): RootUsage {
+  return { used, limit, nearLimit: limit > 0 && used / limit >= NEAR_LIMIT_RATIO };
 }
 
 export interface PluginDiskUsage {
@@ -52,13 +61,10 @@ export class DiskUsageCache {
     const limits = resolveFsQuotas(process?.metadata.resources?.fs?.quotas);
     const used = await this.#usedBytes(plugin);
     return {
-      data: { used: used.data, limit: limits.data },
-      cache: { used: used.cache, limit: limits.cache },
-      tmp: { used: used.tmp, limit: limits.tmp },
-      total: {
-        used: used.data + used.cache + used.tmp,
-        limit: limits.data + limits.cache + limits.tmp,
-      },
+      data: rootUsage(used.data, limits.data),
+      cache: rootUsage(used.cache, limits.cache),
+      tmp: rootUsage(used.tmp, limits.tmp),
+      total: rootUsage(used.data + used.cache + used.tmp, limits.data + limits.cache + limits.tmp),
       running: Boolean(process),
     };
   }
@@ -73,7 +79,7 @@ export class DiskUsageCache {
     if (hit && hit.expiresAt > Date.now()) {
       return hit.value;
     }
-    const dirs = pluginFsDirs(this.#brikaInit.brikaDir, plugin.uid, plugin.rootDirectory);
+    const dirs = pluginFsDirs(this.#brikaInit.systemDir, plugin.uid, plugin.rootDirectory);
     const [data, cache, tmp] = await Promise.all([
       scanDirSize(dirs.data),
       scanDirSize(dirs.cache),

@@ -174,7 +174,7 @@ export function deriveCachePaths(
   version: string
 ): { safeAssetName: string; tmpDir: string; archivePath: string } {
   const safeAssetName = basename(assetName);
-  const tmpDir = join(brikaContext.brikaDir, '.update-cache', `${version}-${safeAssetName}`);
+  const tmpDir = join(brikaContext.systemDir, '.update-cache', `${version}-${safeAssetName}`);
   const archivePath = join(tmpDir, safeAssetName);
   return { safeAssetName, tmpDir, archivePath };
 }
@@ -270,7 +270,7 @@ async function fetchReleaseMeta(release: GitHubRelease): Promise<ReleaseMeta | n
 // hitting the filesystem unless they exercise this code path.
 let etagCache: GithubEtagCache | null = null;
 function getEtagCache(): GithubEtagCache {
-  etagCache ??= new GithubEtagCache(brikaContext.brikaDir);
+  etagCache ??= new GithubEtagCache(brikaContext.systemDir);
   return etagCache;
 }
 

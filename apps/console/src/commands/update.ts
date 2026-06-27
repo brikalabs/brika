@@ -72,7 +72,7 @@ async function refuseUpdate(strategy: UpdateStrategy): Promise<never> {
  * version on success.
  */
 async function applyInProcess(strategy: UpdateStrategy, opts: ApplyOptions): Promise<string> {
-  const lock = new UpdateLock(brikaContext.brikaDir);
+  const lock = new UpdateLock(brikaContext.systemDir);
   try {
     lock.acquire();
   } catch (err) {

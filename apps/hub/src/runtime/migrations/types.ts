@@ -21,6 +21,8 @@
 export interface MigrationContext {
   /** Per-install data dir; `${brikaContext.brikaDir}`. */
   readonly brikaDir: string;
+  /** Hidden hub-managed dir holding db/plugins/etc.; `${brikaContext.systemDir}`. */
+  readonly systemDir: string;
   /** The version we're transitioning *to* (the current build). */
   readonly toVersion: string;
   /**

@@ -3,10 +3,15 @@ import {
   asc,
   type BrikaDatabase,
   cursorFilter,
+  DAY_MS,
   desc,
   endTsFilter,
   eq,
+  incrementalVacuum,
+  lt,
+  ne,
   or,
+  scheduleRetention,
   sql,
   startTsFilter,
 } from '@brika/db';
@@ -92,9 +97,70 @@ export class RunStore {
   /** `${workflowId}:${correlationId}` -> open run id. */
   readonly #openRunIds = new Map<string, number>();
   #disabled = false;
+  #pruneTimer?: ReturnType<typeof setInterval>;
 
   init(): void {
     this.#database = workflowsDb.open();
+  }
+
+  /**
+   * Start a periodic sweep dropping runs (and their events) older than
+   * `retentionDays`, freed pages reclaimed after each sweep. `retentionDays = 0`
+   * disables it. Idempotent; runs once immediately so a stale DB shrinks at boot.
+   */
+  startRetention(retentionDays: number, intervalMs: number): void {
+    this.stopRetention();
+    this.#pruneTimer = scheduleRetention(retentionDays, intervalMs, () => {
+      this.pruneOlderThan(Date.now() - retentionDays * DAY_MS);
+    });
+  }
+
+  stopRetention(): void {
+    if (this.#pruneTimer) {
+      clearInterval(this.#pruneTimer);
+      this.#pruneTimer = undefined;
+    }
+  }
+
+  /**
+   * Delete finished runs with `startedAt < cutoff` and their `run_events` (no FK
+   * cascade, so both tables are pruned in one transaction), then reclaim the
+   * freed pages. Still-`running` runs are never pruned: their correlationId may
+   * still be live in `#openRunIds`, and deleting the row would orphan every
+   * later event for that run. Returns the number of runs removed; failures are
+   * swallowed so a transient I/O error never crashes the retention timer.
+   */
+  pruneOlderThan(cutoff: number): number {
+    const db = this.db;
+    if (!db || !this.#database) {
+      return 0;
+    }
+    const sqlite = this.#database.sqlite;
+    try {
+      const removed = sqlite.transaction(() => {
+        // Events first, via a subquery so there's no per-id parameter expansion
+        // (a large sweep could otherwise exceed the bound-parameter limit).
+        sqlite.run(
+          "DELETE FROM run_events WHERE run_id IN (SELECT id FROM runs WHERE started_at < ? AND status != 'running')",
+          [cutoff]
+        );
+        return db
+          .delete(runsTable)
+          .where(and(lt(runsTable.startedAt, cutoff), ne(runsTable.status, 'running')))
+          .returning({ id: runsTable.id })
+          .all().length;
+      })();
+      if (removed > 0) {
+        try {
+          incrementalVacuum(sqlite);
+        } catch {
+          // Best-effort: a failed reclaim leaves the freed pages for next time.
+        }
+      }
+      return removed;
+    } catch {
+      return 0;
+    }
   }
 
   private get db(): RunsDb | null {
@@ -364,6 +430,7 @@ export class RunStore {
   }
 
   close(): void {
+    this.stopRetention();
     this.#database?.sqlite.close();
     this.#database = null;
     this.#openRunIds.clear();

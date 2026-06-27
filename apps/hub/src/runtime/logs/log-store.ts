@@ -1,12 +1,14 @@
 import {
   and, asc, type BrikaDatabase, count, cursorFilter, desc, endTsFilter,
-  eq, isNotNull, lt, oneOrMany, sql, startTsFilter,
+  eq, isNotNull, lt, oneOrMany, sql, startTsFilter, TimeSeriesStore,
 } from "@brika/db";
 import { singleton } from "@brika/di";
 import type { Json } from "@/types";
 import { logsDb } from "./database";
 import { logs as logsTable } from "./schema";
 import type { LogEvent, LogLevel, LogSource } from "./types";
+
+type LogSchema = { logs: typeof logsTable };
 
 /**
  * Escape SQLite LIKE wildcards (`%`, `_`) and the escape char itself so a
@@ -45,152 +47,18 @@ export interface StoredLogEvent extends LogEvent {
 // Log Store Service
 // ─────────────────────────────────────────────────────────────────────────────
 
-const MAX_INSERT_ERRORS = 5;
-
+/**
+ * SQLite-backed store for hub + plugin logs. The batched-write hot path,
+ * retention sweep, and lifecycle live in {@link TimeSeriesStore}; this class
+ * adds the `logs`-table row mapping and the log-specific read APIs.
+ */
 @singleton()
-export class LogStore {
-  #database: BrikaDatabase<{ logs: typeof logsTable }> | null = null;
-  #insertDisabled = false;
-  #insertErrors = 0;
-  #pruneTimer?: Timer;
-
-  // Write buffer for the batched hot path. Logger.emit() funnels every event
-  // through enqueue() so a burst of log lines collapses into a single
-  // transaction on the next tick instead of one synchronous fsync per line.
-  readonly #queue: LogEvent[] = [];
-  #flushTimer?: Timer;
-
-  init(): void {
-    this.#database = logsDb.open();
+export class LogStore extends TimeSeriesStore<LogEvent, LogSchema> {
+  protected openDatabase(): BrikaDatabase<LogSchema> {
+    return logsDb.open();
   }
 
-  /**
-   * Start a periodic background sweep that drops rows older than
-   * `retentionDays`. Safe to call once at boot; idempotent (a second
-   * call replaces the previous timer). Call `stopRetention()` on
-   * shutdown to clear it.
-   *
-   * `retentionDays = 0` disables the sweep entirely (logs grow
-   * unbounded). The sweep is `DELETE WHERE ts < cutoff` against the
-   * `idx_logs_ts` index — fast even for million-row tables.
-   */
-  startRetention(retentionDays: number, intervalMs: number): void {
-    this.stopRetention();
-    if (retentionDays <= 0 || intervalMs <= 0) {
-      return;
-    }
-    const sweep = () => {
-      const cutoff = Date.now() - retentionDays * 24 * 60 * 60 * 1000;
-      this.pruneOlderThan(cutoff);
-    };
-    // Run once at startup so a stale DB shrinks immediately rather than
-    // waiting a full interval; subsequent sweeps fire every intervalMs.
-    sweep();
-    this.#pruneTimer = setInterval(sweep, intervalMs);
-  }
-
-  stopRetention(): void {
-    if (this.#pruneTimer) {
-      clearInterval(this.#pruneTimer);
-      this.#pruneTimer = undefined;
-    }
-  }
-
-  /**
-   * Delete all log rows with `ts < cutoff`. Returns the number of rows
-   * removed. Failures are swallowed so a transient I/O error never
-   * crashes the timer that calls us.
-   */
-  pruneOlderThan(cutoff: number): number {
-    if (!this.db) { return 0; }
-    try {
-      const deleted = this.db
-        .delete(logsTable)
-        .where(lt(logsTable.ts, cutoff))
-        .returning({ id: logsTable.id })
-        .all();
-      return deleted.length;
-    } catch {
-      return 0;
-    }
-  }
-
-  private get db() {
-    return this.#database?.db ?? null;
-  }
-
-  /**
-   * Buffer an event for batched persistence. This is the hot path used by
-   * {@link Logger.emit}: the actual SQLite write is deferred to the next tick
-   * (or to {@link flush}/{@link close}), so a burst of synchronous log calls
-   * costs one transaction instead of N synchronous fsyncs. Events are never
-   * lost on a clean exit because {@link close} drains the buffer; on a crash
-   * the {@link crashHandlers} plugin calls close() which flushes too.
-   */
-  enqueue(event: LogEvent): void {
-    if (!this.db || this.#insertDisabled) { return; }
-    this.#queue.push(event);
-    if (!this.#flushTimer) {
-      // setTimeout(0) (not a microtask) so the whole synchronous call stack —
-      // which may emit many log lines — finishes enqueuing before we flush.
-      this.#flushTimer = setTimeout(() => this.flush(), 0);
-    }
-  }
-
-  /**
-   * Drain the write buffer into SQLite in a single transaction. Safe to call
-   * at any time (idempotent when the buffer is empty); invoked by the flush
-   * timer, on {@link close}, and on crash. Failures are swallowed for the
-   * same reason {@link insert} swallows them — log persistence must never
-   * crash the request pipeline.
-   */
-  flush(): void {
-    if (this.#flushTimer) {
-      clearTimeout(this.#flushTimer);
-      this.#flushTimer = undefined;
-    }
-    if (this.#queue.length === 0) { return; }
-
-    const batch = this.#queue.splice(0, this.#queue.length);
-    if (!this.db || this.#insertDisabled) { return; }
-
-    try {
-      this.#database?.sqlite.transaction(() => {
-        for (const event of batch) {
-          this.#insertRow(event);
-        }
-      })();
-      this.#insertErrors = 0;
-    } catch {
-      this.#insertErrors++;
-      if (this.#insertErrors >= MAX_INSERT_ERRORS) {
-        this.#insertDisabled = true;
-      }
-    }
-  }
-
-  /**
-   * Synchronous single-row insert with immediate read-after-write semantics.
-   * Kept for direct callers and tests; the logging hot path uses
-   * {@link enqueue} instead.
-   */
-  insert(event: LogEvent): void {
-    if (!this.db || this.#insertDisabled) { return; }
-
-    try {
-      this.#insertRow(event);
-      this.#insertErrors = 0;
-    } catch {
-      // Silently drop — log persistence must never crash the request pipeline.
-      // Only disable after repeated failures to tolerate transient I/O errors.
-      this.#insertErrors++;
-      if (this.#insertErrors >= MAX_INSERT_ERRORS) {
-        this.#insertDisabled = true;
-      }
-    }
-  }
-
-  #insertRow(event: LogEvent): void {
+  protected writeRow(event: LogEvent): void {
     this.db?.insert(logsTable).values({
       ts: event.ts,
       level: event.level,
@@ -203,6 +71,16 @@ export class LogStore {
       errorStack: event.error?.stack ?? null,
       errorCause: event.error?.cause ?? null,
     }).run();
+  }
+
+  protected deleteOlderThan(cutoff: number): number {
+    return (
+      this.db
+        ?.delete(logsTable)
+        .where(lt(logsTable.ts, cutoff))
+        .returning({ id: logsTable.id })
+        .all().length ?? 0
+    );
   }
 
   query(params: LogQueryParams = {}): LogQueryResult {
@@ -290,23 +168,6 @@ export class LogStore {
       .select({ value: count() })
       .from(logsTable)
       .get()?.value ?? 0;
-  }
-
-  /**
-   * Flush and close the underlying SQLite database. Idempotent: the
-   * graceful-shutdown path may call this both on the clean stop and again
-   * from the hard-timeout fallback, so a second call must be a harmless
-   * no-op rather than throwing on an already-closed handle.
-   */
-  close(): void {
-    this.stopRetention();
-    // Drain any buffered events before releasing the handle so a clean stop
-    // (or a crash-handler close) never loses the tail of the log stream.
-    this.flush();
-    if (this.#database) {
-      this.#database.sqlite.close();
-      this.#database = null;
-    }
   }
 }
 

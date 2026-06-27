@@ -23,6 +23,7 @@ import {
 
 export interface RunnerOptions {
   readonly brikaDir: string;
+  readonly systemDir: string;
   readonly currentVersion: string;
   readonly versionState: VersionStateStore;
   readonly audit?: UpdateAuditLog;
@@ -66,6 +67,7 @@ export class MigrationRunner {
 
     const ctx: MigrationContext = {
       brikaDir: this.#opts.brikaDir,
+      systemDir: this.#opts.systemDir,
       toVersion: this.#opts.currentVersion,
       fromVersion: this.#opts.versionState.snapshot.lastBootSucceededVersion,
     };

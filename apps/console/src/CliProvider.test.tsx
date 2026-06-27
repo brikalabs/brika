@@ -20,7 +20,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, spyOn, test } from 'bun:test';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -110,9 +110,11 @@ describe('<CliProvider>', () => {
   let originalHome: string | undefined;
   let originalPort: string | undefined;
   let originalHost: string | undefined;
-  const pidPath = (): string => join(home, 'brika.pid');
+  // The pid file lives under the hidden .system/ dir.
+  const pidPath = (): string => join(home, '.system', 'brika.pid');
 
   const writePid = (pid: number): void => {
+    mkdirSync(join(home, '.system'), { recursive: true });
     writeFileSync(pidPath(), String(pid), 'utf8');
   };
   const clearPid = async (): Promise<void> => {

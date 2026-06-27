@@ -9,13 +9,18 @@ import {
   endTsFilter,
   eq,
   isNotNull,
+  lt,
   oneOrMany,
   startTsFilter,
+  TimeSeriesStore,
 } from '@brika/db';
 import { inject, singleton } from '@brika/di';
 import type { Json } from '@/types';
 import { sparksDb } from './database';
 import { sparks as sparksTable } from './schema';
+
+type SparkSchema = { sparks: typeof sparksTable };
+type SparkEvent = Omit<StoredSparkEvent, 'id'>;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -50,26 +55,22 @@ export interface StoredSparkEvent {
 // Spark Store Service
 // ─────────────────────────────────────────────────────────────────────────────
 
+/**
+ * SQLite-backed store for spark events (user-visible activity pulses). Buffering,
+ * retention, and lifecycle come from {@link TimeSeriesStore}; this class adds the
+ * `sparks`-table row mapping and the spark-specific read APIs.
+ */
 @singleton()
-export class SparkStore {
+export class SparkStore extends TimeSeriesStore<SparkEvent, SparkSchema> {
   readonly #analytics = inject(Analytics);
-  #database: BrikaDatabase<{ sparks: typeof sparksTable }> | null = null;
 
-  init(): void {
-    this.#database = sparksDb.open();
+  protected openDatabase(): BrikaDatabase<SparkSchema> {
+    return sparksDb.open();
   }
 
-  private get db() {
-    return this.#database?.db ?? null;
-  }
-
-  insert(event: Omit<StoredSparkEvent, 'id'>): void {
-    if (!this.db) {
-      return;
-    }
-
+  protected writeRow(event: SparkEvent): void {
     this.db
-      .insert(sparksTable)
+      ?.insert(sparksTable)
       .values({
         ts: event.ts,
         type: event.type,
@@ -81,6 +82,16 @@ export class SparkStore {
             : JSON.stringify(event.payload),
       })
       .run();
+  }
+
+  protected deleteOlderThan(cutoff: number): number {
+    return (
+      this.db
+        ?.delete(sparksTable)
+        .where(lt(sparksTable.ts, cutoff))
+        .returning({ id: sparksTable.id })
+        .all().length ?? 0
+    );
   }
 
   query(params: SparkQueryParams = {}): SparkQueryResult {
@@ -176,10 +187,6 @@ export class SparkStore {
     }
 
     return this.db.select({ value: count() }).from(sparksTable).get()?.value ?? 0;
-  }
-
-  close(): void {
-    this.#database?.sqlite.close();
   }
 }
 

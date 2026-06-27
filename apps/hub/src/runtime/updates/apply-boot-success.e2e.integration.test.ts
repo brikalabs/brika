@@ -111,7 +111,7 @@ describe('apply → next-boot-success → backup cleared (happy path)', () => {
     // At step 1, the state on disk is the result of boot N's
     // recordBootSuccess — attempted=0.5.0, succeeded=0.5.0 — so
     // previousBootCrashed() is false and rollback is skipped.
-    const outcome = checkAndRollback({ brikaDir, installDir, exit: noopExit });
+    const outcome = checkAndRollback({ systemDir: brikaDir, installDir, exit: noopExit });
     expect(outcome).toBe('no-rollback');
     // Critical: the backup MUST still be on disk — this is the bug
     // the review caught. If `checkAndRollback` deletes it here, a
@@ -161,7 +161,7 @@ describe('apply → next-boot-crash → rollback (sad path)', () => {
     const fakeExit: (code: number) => never = (() => {
       exited += 1;
     }) as never;
-    const outcome = checkAndRollback({ brikaDir, installDir, exit: fakeExit });
+    const outcome = checkAndRollback({ systemDir: brikaDir, installDir, exit: fakeExit });
 
     expect(outcome).toBe('rolled-back');
     expect(exited).toBe(1);

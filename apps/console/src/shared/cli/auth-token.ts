@@ -17,10 +17,10 @@
 import { randomBytes } from 'node:crypto';
 import { chmodSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { brikaHome } from './paths';
+import { systemDir } from './paths';
 
 function tokenPath(): string {
-  return join(brikaHome(), 'cli-token');
+  return join(systemDir(), 'cli-token');
 }
 
 /** Read the current token, or `null` if the file is missing or unreadable. */
@@ -37,7 +37,7 @@ export function readCliToken(): string | null {
 export function writeCliToken(): string {
   const token = randomBytes(32).toString('hex');
   const file = tokenPath();
-  mkdirSync(brikaHome(), { recursive: true });
+  mkdirSync(systemDir(), { recursive: true });
   writeFileSync(file, token, { encoding: 'utf8', mode: 0o600 });
   // `mode` in writeFileSync only applies on creation; re-apply so a
   // pre-existing file gets locked down too.

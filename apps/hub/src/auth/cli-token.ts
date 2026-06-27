@@ -14,15 +14,20 @@
 import { randomBytes } from 'node:crypto';
 import { chmodSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { resolveSystemDir } from '@brika/sdk/exec-context';
 import { brikaContext } from '@/runtime/context/brika-context';
 
 /**
- * Path is resolved lazily — `BRIKA_HOME` can change between hub
- * restarts (or in tests), and we want every call to honour the
+ * The hub-managed `.system` dir, resolved lazily — `BRIKA_HOME` can change
+ * between hub restarts (or in tests), and we want every call to honour the
  * current value rather than the one captured at module load.
  */
+function systemDir(): string {
+  return process.env.BRIKA_HOME ? resolveSystemDir(process.env.BRIKA_HOME) : brikaContext.systemDir;
+}
+
 function tokenPath(): string {
-  return join(process.env.BRIKA_HOME ?? brikaContext.brikaDir, 'cli-token');
+  return join(systemDir(), 'cli-token');
 }
 
 /** 32 random bytes → 64 hex chars. Same shape as a session token. */
@@ -38,7 +43,7 @@ function generateToken(): string {
 export function writeCliToken(): string {
   const token = generateToken();
   const file = tokenPath();
-  mkdirSync(process.env.BRIKA_HOME ?? brikaContext.brikaDir, { recursive: true });
+  mkdirSync(systemDir(), { recursive: true });
   writeFileSync(file, token, { encoding: 'utf8', mode: 0o600 });
   // mode in writeFileSync only applies on file creation — re-apply
   // explicitly so a pre-existing token gets locked down too.

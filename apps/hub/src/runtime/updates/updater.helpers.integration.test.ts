@@ -56,7 +56,7 @@ describe('deriveCachePaths', () => {
     );
     expect(safeAssetName).toBe('brika-linux-x64.tar.gz');
     expect(tmpDir).toBe(
-      join(brikaContext.brikaDir, '.update-cache', '0.5.0-brika-linux-x64.tar.gz')
+      join(brikaContext.systemDir, '.update-cache', '0.5.0-brika-linux-x64.tar.gz')
     );
     expect(archivePath).toBe(join(tmpDir, 'brika-linux-x64.tar.gz'));
   });

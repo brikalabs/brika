@@ -28,8 +28,8 @@ import { hasPreviousBackup, liveBinaryPath, previousBinaryPath } from './staged-
 import { VersionStateStore } from './version-state';
 
 interface RollbackInput {
-  /** Equivalent to `brikaContext.brikaDir`, but passed explicitly to keep this module DI-free. */
-  readonly brikaDir: string;
+  /** Equivalent to `brikaContext.systemDir`, but passed explicitly to keep this module DI-free. */
+  readonly systemDir: string;
   /** Equivalent to `brikaContext.installDir`. */
   readonly installDir: string;
   /** Exit hook; defaults to `process.exit`. Tests pass a spy. */
@@ -44,8 +44,8 @@ export type RollbackOutcome = 'no-backup' | 'no-rollback' | 'rolled-back';
  * never returns — control passes back to the supervisor.
  */
 export function checkAndRollback(input: RollbackInput): RollbackOutcome {
-  const audit = new UpdateAuditLog(input.brikaDir);
-  const versionState = new VersionStateStore(input.brikaDir, brikaContext.version);
+  const audit = new UpdateAuditLog(input.systemDir);
+  const versionState = new VersionStateStore(input.systemDir, brikaContext.version);
 
   if (!hasPreviousBackup(input.installDir)) {
     return 'no-backup';
@@ -138,7 +138,7 @@ export function checkAndRollback(input: RollbackInput): RollbackOutcome {
  */
 export function rollbackIfPreviousBootCrashed(): RollbackOutcome {
   return checkAndRollback({
-    brikaDir: brikaContext.brikaDir,
+    systemDir: brikaContext.systemDir,
     installDir: brikaContext.installDir,
   });
 }

@@ -62,14 +62,32 @@ export function findWorkspaceRoot(opts: { cwd: string; maxDepth?: number }): str
 const INSTANCE_ID_RE = /^[0-9a-f]{8}$/;
 
 /**
- * Read `<dataDir>/instance.id` WITHOUT generating one. The hub's own
+ * Name of the hidden folder inside the data dir that holds everything the hub
+ * manages: databases, installed plugins, identity, update state, secrets,
+ * materialized runtime. Only the human-authored files (`brika.yml`, `boards/`,
+ * `workflows/`) stay at the data-dir root. Defined here so the hub, the console
+ * CLI, and the lean bin all agree on one location.
+ */
+export const SYSTEM_DIR_NAME = '.system';
+
+/**
+ * The hub-managed `.system` directory under a given data dir. Single source of
+ * truth for "where does the hub keep its internal files" so callers never
+ * hardcode the folder name.
+ */
+export function resolveSystemDir(dataDir: string): string {
+  return join(dataDir, SYSTEM_DIR_NAME);
+}
+
+/**
+ * Read `<dataDir>/.system/instance.id` WITHOUT generating one. The hub's own
  * readOrGenerateInstanceId mints a fresh id (and warns about orphaned keychain
  * entries) on a miss, which is wrong for read-only diagnostics. Returns null if
  * the file is missing or malformed.
  */
 export function peekInstanceId(dataDir: string): string | null {
   try {
-    const raw = readFileSync(join(dataDir, 'instance.id'), 'utf8').trim();
+    const raw = readFileSync(join(resolveSystemDir(dataDir), 'instance.id'), 'utf8').trim();
     return INSTANCE_ID_RE.test(raw) ? raw : null;
   } catch {
     return null;

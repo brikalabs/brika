@@ -1,13 +1,18 @@
 # BRIKA Configuration
 # https://brika.dev/docs/configuration
+#
+# This file is yours to edit. Everything the hub manages (databases, installed
+# plugins, identity, caches) lives in the hidden .system/ folder next to it.
+#
+# Durations accept readable units: 5s, 15s, 1h, 7d (or raw milliseconds).
+# Sizes accept readable units: 512mb, 2gb (or raw bytes). 0 means "disabled".
 
 hub:
   port: 3001
   host: 0.0.0.0
   plugins:
-    installDir: ./plugins/.installed
-    heartbeatInterval: 5000
-    heartbeatTimeout: 15000
+    heartbeat: 5s
+    heartbeatTimeout: 15s
 
 # Installed plugins
 # Format:
@@ -15,6 +20,8 @@ hub:
 #     version: "version-specifier"
 #     config:
 #       key: value
+#       # Secrets: type the plaintext value here once; the hub moves it into the
+#       # OS keychain on next start and replaces it with a marker. Never commit secrets.
 plugins:
   "@brika/plugin-builtin":
     version: "latest"

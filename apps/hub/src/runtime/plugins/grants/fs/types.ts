@@ -53,11 +53,24 @@ export const DEFAULT_FS_QUOTAS: FsQuotas = {
  * back to {@link DEFAULT_FS_QUOTAS}. Shared by the grant registry (enforcement)
  * and the disk-usage endpoint (display) so both report the same limits.
  */
+/**
+ * Operator-wide quota defaults from `brika.yml` (`hub.plugins.quotas`), set once
+ * at boot. Sits between a plugin's own declared quotas (which win) and the
+ * built-in {@link DEFAULT_FS_QUOTAS} (the floor). Module-level + set-once, like
+ * the db `configureDatabases` pattern, so every {@link resolveFsQuotas} caller
+ * (enforcement and display) honours it without threading config through.
+ */
+let operatorFsQuotas: Partial<FsQuotas> = {};
+
+export function setOperatorFsQuotas(quotas: Partial<FsQuotas> | undefined): void {
+  operatorFsQuotas = quotas ?? {};
+}
+
 export function resolveFsQuotas(quotas?: Partial<FsQuotas>): FsQuotas {
   return {
-    data: quotas?.data ?? DEFAULT_FS_QUOTAS.data,
-    cache: quotas?.cache ?? DEFAULT_FS_QUOTAS.cache,
-    tmp: quotas?.tmp ?? DEFAULT_FS_QUOTAS.tmp,
+    data: quotas?.data ?? operatorFsQuotas.data ?? DEFAULT_FS_QUOTAS.data,
+    cache: quotas?.cache ?? operatorFsQuotas.cache ?? DEFAULT_FS_QUOTAS.cache,
+    tmp: quotas?.tmp ?? operatorFsQuotas.tmp ?? DEFAULT_FS_QUOTAS.tmp,
   };
 }
 

@@ -22,6 +22,10 @@ export class BrikaInitializer {
     return brikaContext.brikaDir;
   }
 
+  get systemDir(): string {
+    return brikaContext.systemDir;
+  }
+
   get rootDir(): string {
     return brikaContext.rootDir;
   }

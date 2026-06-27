@@ -22,7 +22,7 @@ import { join } from 'node:path';
 import { startHub } from '@brika/hub';
 import pc from 'picocolors';
 import { CliError } from './errors';
-import { brikaHome } from './paths';
+import { systemDir } from './paths';
 import { claimPidFile } from './pid-claim';
 
 export interface RunForegroundHubOptions {
@@ -38,9 +38,9 @@ export async function runForegroundHub(
     throw new CliError(`${pc.red('Already running')} — pid ${existing}. Use \`brika stop\` first.`);
   }
   process.on('exit', () => {
-    const home = brikaHome();
-    rmSync(join(home, 'brika.pid'), { force: true });
-    rmSync(join(home, 'cli-token'), { force: true });
+    const sys = systemDir();
+    rmSync(join(sys, 'brika.pid'), { force: true });
+    rmSync(join(sys, 'cli-token'), { force: true });
   });
   if (opts.port) {
     process.env.BRIKA_PORT = String(opts.port);

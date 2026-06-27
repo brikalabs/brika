@@ -12,7 +12,7 @@
  *     `preload not found "/$bunfs/root/prelude/index.ts"`). The build embeds a
  *     self-contained bundle as the virtual module `brika:embedded-prelude`
  *     (see `apps/build/src/plugins/embed-prelude.ts`); materialize it to
- *     `<brikaDir>/runtime/prelude-<hash>.js` once and preload that.
+ *     `<systemDir>/runtime/prelude-<hash>.js` once and preload that.
  */
 
 import { mkdir } from 'node:fs/promises';
@@ -23,29 +23,29 @@ const SOURCE_PRELUDE_PATH = join(import.meta.dir, 'prelude', 'index.ts');
 let resolved: Promise<string> | undefined;
 
 /** Memoized: the materialization runs once per hub process. */
-export function resolvePreludePath(brikaDir: string): Promise<string> {
-  resolved ??= locate(brikaDir);
+export function resolvePreludePath(systemDir: string): Promise<string> {
+  resolved ??= locate(systemDir);
   return resolved;
 }
 
-async function locate(brikaDir: string): Promise<string> {
+async function locate(systemDir: string): Promise<string> {
   if (await Bun.file(SOURCE_PRELUDE_PATH).exists()) {
     return SOURCE_PRELUDE_PATH;
   }
   const { default: source } = await import('brika:embedded-prelude');
-  return materializePrelude(source, brikaDir);
+  return materializePrelude(source, systemDir);
 }
 
 /**
- * Write the embedded prelude source to `<brikaDir>/runtime/prelude-<hash>.js`
+ * Write the embedded prelude source to `<systemDir>/runtime/prelude-<hash>.js`
  * (content-addressed, written once). Exposed for testing; production callers
  * use {@link resolvePreludePath}.
  */
-export async function materializePrelude(source: string, brikaDir: string): Promise<string> {
+export async function materializePrelude(source: string, systemDir: string): Promise<string> {
   const hasher = new Bun.CryptoHasher('sha256');
   hasher.update(source);
   const hash = hasher.digest('hex').slice(0, 16);
-  const dir = join(brikaDir, 'runtime');
+  const dir = join(systemDir, 'runtime');
   const path = join(dir, `prelude-${hash}.js`);
   if (!(await Bun.file(path).exists())) {
     await mkdir(dir, { recursive: true });

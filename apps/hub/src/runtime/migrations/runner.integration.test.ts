@@ -52,6 +52,7 @@ describe('MigrationRunner', () => {
     const versionState = new VersionStateStore(brikaDir, '0.6.0');
     const runner = new MigrationRunner([scope], {
       brikaDir,
+      systemDir: brikaDir,
       currentVersion: '0.6.0',
       versionState,
     });
@@ -71,6 +72,7 @@ describe('MigrationRunner', () => {
     const versionState = new VersionStateStore(brikaDir, '0.6.0');
     const reports = await new MigrationRunner([scope], {
       brikaDir,
+      systemDir: brikaDir,
       currentVersion: '0.6.0',
       versionState,
     }).run();
@@ -90,8 +92,18 @@ describe('MigrationRunner', () => {
     };
     const versionState = new VersionStateStore(brikaDir, '0.6.0');
 
-    await new MigrationRunner([scope], { brikaDir, currentVersion: '0.6.0', versionState }).run();
-    await new MigrationRunner([scope], { brikaDir, currentVersion: '0.6.0', versionState }).run();
+    await new MigrationRunner([scope], {
+      brikaDir,
+      systemDir: brikaDir,
+      currentVersion: '0.6.0',
+      versionState,
+    }).run();
+    await new MigrationRunner([scope], {
+      brikaDir,
+      systemDir: brikaDir,
+      currentVersion: '0.6.0',
+      versionState,
+    }).run();
 
     expect(runs.count).toBe(1);
   });
@@ -109,6 +121,7 @@ describe('MigrationRunner', () => {
     const versionState = new VersionStateStore(brikaDir, '0.6.0');
     const reports = await new MigrationRunner([scopeA, scopeB], {
       brikaDir,
+      systemDir: brikaDir,
       currentVersion: '0.6.0',
       versionState,
     }).run();
@@ -126,7 +139,12 @@ describe('MigrationRunner', () => {
       migrations: [makeFailingMigration('001')],
     };
 
-    await new MigrationRunner([scope], { brikaDir, currentVersion: '0.6.0', versionState }).run();
+    await new MigrationRunner([scope], {
+      brikaDir,
+      systemDir: brikaDir,
+      currentVersion: '0.6.0',
+      versionState,
+    }).run();
     expect(versionState.getAppliedMigrations('test')).toEqual([]);
   });
 
@@ -148,6 +166,7 @@ describe('MigrationRunner', () => {
 
     const reports1 = await new MigrationRunner([scope], {
       brikaDir,
+      systemDir: brikaDir,
       currentVersion: '0.6.0',
       versionState,
     }).run();
@@ -158,6 +177,7 @@ describe('MigrationRunner', () => {
 
     const reports2 = await new MigrationRunner([scope], {
       brikaDir,
+      systemDir: brikaDir,
       currentVersion: '0.6.0',
       versionState,
     }).run();
@@ -174,6 +194,7 @@ describe('MigrationRunner', () => {
     const versionState = new VersionStateStore(brikaDir, '0.6.0');
     const reports = await new MigrationRunner([scope], {
       brikaDir,
+      systemDir: brikaDir,
       currentVersion: '0.6.0',
       versionState,
     }).run();

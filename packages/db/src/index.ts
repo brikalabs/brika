@@ -18,6 +18,7 @@ export {
   lte,
   max,
   min,
+  ne,
   notInArray,
   or,
   type SQL,
@@ -35,5 +36,11 @@ export {
   uniqueIndex,
 } from 'drizzle-orm/sqlite-core';
 export { configureDatabases } from './config';
-export { type BrikaDatabase, type DatabaseDefinition, defineDatabase } from './database';
+export {
+  type BrikaDatabase,
+  type DatabaseDefinition,
+  defineDatabase,
+  incrementalVacuum,
+} from './database';
 export { cursorFilter, endTsFilter, oneOrMany, startTsFilter } from './helpers';
+export { DAY_MS, scheduleRetention, TimeSeriesStore } from './time-series-store';

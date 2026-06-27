@@ -43,13 +43,14 @@ export function migrations(): BootstrapPlugin {
       const status = inject(MigrationStatus);
       const runner = new MigrationRunner(allScopes, {
         brikaDir: brikaContext.brikaDir,
+        systemDir: brikaContext.systemDir,
         currentVersion: brikaContext.version,
         versionState: new VersionStateStore(
-          brikaContext.brikaDir,
+          brikaContext.systemDir,
           brikaContext.version,
           (message, meta) => logs.warn(message, meta)
         ),
-        audit: new UpdateAuditLog(brikaContext.brikaDir),
+        audit: new UpdateAuditLog(brikaContext.systemDir),
         log: (level, message, data) => {
           if (level === 'info') {
             logs.info(message, data);

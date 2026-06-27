@@ -12,8 +12,12 @@ export class BoardsLoader implements Loader {
   private readonly configLoader = inject(ConfigLoader);
 
   async load(_config: BrikaConfig): Promise<void> {
-    // Load YAML boards with hot-reload
-    await this.boardLoader.loadDir(`${this.configLoader.getBrikaDir()}/boards`);
+    // Boards stay in the visible `boards/` dir; the ordering index is
+    // machine-managed and lives under the hidden `.system/`.
+    await this.boardLoader.loadDir(
+      `${this.configLoader.getBrikaDir()}/boards`,
+      this.configLoader.getSystemDir()
+    );
     this.boardLoader.watch();
   }
 

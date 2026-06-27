@@ -11,10 +11,11 @@
  * corruption event, and is trivial to inspect with `cat`.
  */
 
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { z } from 'zod';
 import type { Json } from '@/types';
+import { writeJsonAtomic } from '../fs/json-state-file';
 
 /** Optional structured-warning sink, injected so this pre-DI utility can report a corrupt state file. */
 export type VersionStateLog = (message: string, meta?: Record<string, Json>) => void;
@@ -223,9 +224,6 @@ export class VersionStateStore {
   }
 
   #persist(): void {
-    mkdirSync(dirname(this.#path), { recursive: true });
-    const tmp = `${this.#path}.tmp`;
-    writeFileSync(tmp, JSON.stringify(this.#state, null, 2), { encoding: 'utf8', mode: 0o600 });
-    renameSync(tmp, this.#path);
+    writeJsonAtomic(this.#path, this.#state);
   }
 }

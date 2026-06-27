@@ -14,6 +14,7 @@ import {
   loader,
   migrations,
   PluginLoader,
+  pluginStorageGc,
   processGuard,
   remoteAccess,
   routes,
@@ -87,6 +88,8 @@ export async function startHub(): Promise<void> {
     // Subscribe run persistence before any loader so workflows that auto-start
     // on boot have their first run recorded.
     .use(workflowRuns())
+    // Periodically reclaim each plugin's evictable cache/tmp storage.
+    .use(pluginStorageGc())
     .use(routes(allRoutes))
     // Migrations run before any loader so filesystem reshapes
     // (plugin-data prune, future secrets re-encryption) don't race

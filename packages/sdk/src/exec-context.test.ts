@@ -9,6 +9,7 @@ import {
   isManagedInstall,
   peekInstanceId,
   resolveDataDir,
+  resolveSystemDir,
 } from './exec-context';
 
 type DataDirInput = Parameters<typeof resolveDataDir>[0];
@@ -185,15 +186,17 @@ describe('resolveDataDir matrix', () => {
 });
 
 describe('peekInstanceId', () => {
-  test('reads a valid id, never generates, null on miss/corrupt', async () => {
+  test('reads a valid id from the .system dir, never generates, null on miss/corrupt', async () => {
     const dir = await tempDir('brika-iid-');
+    const sys = resolveSystemDir(dir);
     expect(peekInstanceId(dir)).toBeNull(); // missing -> null, and NOT created
-    expect(existsSync(join(dir, 'instance.id'))).toBe(false);
+    expect(existsSync(join(sys, 'instance.id'))).toBe(false);
 
-    await writeFile(join(dir, 'instance.id'), 'deadbeef');
+    await mkdir(sys, { recursive: true });
+    await writeFile(join(sys, 'instance.id'), 'deadbeef');
     expect(peekInstanceId(dir)).toBe('deadbeef');
 
-    await writeFile(join(dir, 'instance.id'), 'NOT-HEX');
+    await writeFile(join(sys, 'instance.id'), 'NOT-HEX');
     expect(peekInstanceId(dir)).toBeNull();
   });
 });

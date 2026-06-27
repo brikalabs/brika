@@ -214,4 +214,70 @@ describe('RunStore.recentEmittedValues', () => {
     expect(store.recentEmittedValues('wf', [], 10)).toEqual([]);
     expect(store.recentEmittedValues('ghost', [{ blockId: 'a', port: 'out' }], 10)).toEqual([]);
   });
+
+  test('pruneOlderThan deletes runs AND their events past the cutoff', () => {
+    const correlationId = 'corr-old';
+    store.record({ type: 'run.opened', workflowId: 'wf', correlationId, blockId: 't' });
+    store.record({
+      type: 'block.start',
+      workflowId: 'wf',
+      correlationId,
+      blockId: 'b1',
+      port: 'in',
+    });
+    store.record({ type: 'run.closed', workflowId: 'wf', correlationId });
+
+    const before = store.query();
+    expect(before.runs).toHaveLength(1);
+    const runId = Number(before.runs[0]?.id);
+    expect(store.get(runId)?.events.length).toBe(1);
+
+    // Cutoff in the future deletes the just-created run (startedAt < cutoff).
+    const removed = store.pruneOlderThan(Date.now() + 10_000);
+    expect(removed).toBe(1);
+
+    // Both the run and its events are gone (no orphaned run_events).
+    expect(store.query().runs).toHaveLength(0);
+    expect(store.get(runId)).toBeNull();
+  });
+
+  test('pruneOlderThan keeps runs newer than the cutoff', () => {
+    store.record({ type: 'run.opened', workflowId: 'wf', correlationId: 'keep', blockId: 't' });
+    store.record({ type: 'run.closed', workflowId: 'wf', correlationId: 'keep' });
+
+    // Cutoff far in the past removes nothing.
+    expect(store.pruneOlderThan(1)).toBe(0);
+    expect(store.query().runs).toHaveLength(1);
+  });
+
+  test('pruneOlderThan never prunes a still-running run (no orphaned events)', () => {
+    const correlationId = 'still-open';
+    // Opened but never closed: status stays 'running' and its correlationId is
+    // still live, so even an old startedAt must NOT be pruned.
+    store.record({ type: 'run.opened', workflowId: 'wf', correlationId, blockId: 't' });
+    store.record({
+      type: 'block.start',
+      workflowId: 'wf',
+      correlationId,
+      blockId: 'b1',
+      port: 'in',
+    });
+
+    // A cutoff in the future would match by startedAt, but the status filter spares it.
+    expect(store.pruneOlderThan(Date.now() + 10_000)).toBe(0);
+
+    const runs = store.query().runs;
+    expect(runs).toHaveLength(1);
+    expect(runs[0]?.status).toBe('running');
+    // A later event for the still-open run still lands on a live row, not an orphan.
+    store.record({
+      type: 'block.emit',
+      workflowId: 'wf',
+      correlationId,
+      blockId: 'b1',
+      port: 'out',
+      data: { ok: true },
+    });
+    expect(store.get(Number(runs[0]?.id))?.events.length).toBe(2);
+  });
 });

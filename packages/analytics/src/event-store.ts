@@ -12,11 +12,14 @@ import {
   oneOrMany,
   sql,
   startTsFilter,
+  TimeSeriesStore,
 } from '@brika/db';
 import { singleton } from '@brika/di';
 import { eventsDb } from './database';
 import { events as eventsTable } from './schema';
 import type { CaptureEvent, CaptureSource, Json } from './types';
+
+type EventSchema = { events: typeof eventsTable };
 
 /** Narrow a stored source string to the {@link CaptureSource} union. */
 function isCaptureSource(value: string): value is CaptureSource {
@@ -83,135 +86,18 @@ export interface TimeBucket {
 // Event Store Service
 // ─────────────────────────────────────────────────────────────────────────────
 
-const MAX_INSERT_ERRORS = 5;
-const DAY_MS = 86_400_000;
-
 /**
- * SQLite-backed store for captured feature-usage events. Deliberately a close
- * sibling of `LogStore`, same batched-write hot path, same retention sweep,
- * same graceful-degradation-on-error stance, but for the `events` table.
+ * SQLite-backed store for captured feature-usage events. The batched-write hot
+ * path, retention sweep, and lifecycle live in {@link TimeSeriesStore}; this
+ * class adds the `events`-table row mapping and the analytics read/aggregate APIs.
  */
 @singleton()
-export class EventStore {
-  #database: BrikaDatabase<{ events: typeof eventsTable }> | null = null;
-  #insertDisabled = false;
-  #insertErrors = 0;
-  #pruneTimer?: Timer;
-  // Hard-stop flag: once close() has run, enqueue/flush become no-ops so
-  // late-arriving events from a hot-reload or shutdown race can't accumulate
-  // in #queue (they would never be drained, and would also leak memory).
-  #closed = false;
-
-  readonly #queue: CaptureEvent[] = [];
-  #flushTimer?: Timer;
-
-  init(): void {
-    this.#database = eventsDb.open();
+export class EventStore extends TimeSeriesStore<CaptureEvent, EventSchema> {
+  protected openDatabase(): BrikaDatabase<EventSchema> {
+    return eventsDb.open();
   }
 
-  /**
-   * Start a periodic background sweep dropping rows older than
-   * `retentionDays`. `retentionDays = 0` disables it (events grow unbounded).
-   * Mirrors {@link LogStore.startRetention}.
-   */
-  startRetention(retentionDays: number, intervalMs: number): void {
-    this.stopRetention();
-    if (retentionDays > 0 && intervalMs > 0) {
-      const sweepNow = () => this.pruneOlderThan(Date.now() - retentionDays * DAY_MS);
-      sweepNow();
-      this.#pruneTimer = setInterval(sweepNow, intervalMs);
-    }
-  }
-
-  stopRetention(): void {
-    if (!this.#pruneTimer) {
-      return;
-    }
-    clearInterval(this.#pruneTimer);
-    this.#pruneTimer = undefined;
-  }
-
-  pruneOlderThan(cutoff: number): number {
-    if (!this.db) {
-      return 0;
-    }
-    try {
-      const deleted = this.db
-        .delete(eventsTable)
-        .where(lt(eventsTable.ts, cutoff))
-        .returning({ id: eventsTable.id })
-        .all();
-      return deleted.length;
-    } catch {
-      return 0;
-    }
-  }
-
-  private get db() {
-    return this.#database?.db ?? null;
-  }
-
-  /**
-   * Buffer an event for batched persistence. The hot path used by
-   * {@link Analytics.capture}; defers the SQLite write to the next tick.
-   */
-  enqueue(event: CaptureEvent): void {
-    if (this.#closed || !this.db || this.#insertDisabled) {
-      return;
-    }
-    this.#queue.push(event);
-    if (!this.#flushTimer) {
-      this.#flushTimer = setTimeout(() => this.flush(), 0);
-    }
-  }
-
-  /** Drain the write buffer into SQLite in a single transaction. */
-  flush(): void {
-    if (this.#flushTimer) {
-      clearTimeout(this.#flushTimer);
-      this.#flushTimer = undefined;
-    }
-    if (this.#queue.length === 0) {
-      return;
-    }
-
-    const batch = this.#queue.splice(0, this.#queue.length);
-    if (this.#closed || !this.db || this.#insertDisabled) {
-      return;
-    }
-
-    try {
-      this.#database?.sqlite.transaction(() => {
-        for (const event of batch) {
-          this.#insertRow(event);
-        }
-      })();
-      this.#insertErrors = 0;
-    } catch {
-      this.#insertErrors++;
-      if (this.#insertErrors >= MAX_INSERT_ERRORS) {
-        this.#insertDisabled = true;
-      }
-    }
-  }
-
-  /** Synchronous single-row insert with read-after-write semantics (tests). */
-  insert(event: CaptureEvent): void {
-    if (!this.db || this.#insertDisabled) {
-      return;
-    }
-    try {
-      this.#insertRow(event);
-      this.#insertErrors = 0;
-    } catch {
-      this.#insertErrors++;
-      if (this.#insertErrors >= MAX_INSERT_ERRORS) {
-        this.#insertDisabled = true;
-      }
-    }
-  }
-
-  #insertRow(event: CaptureEvent): void {
+  protected writeRow(event: CaptureEvent): void {
     this.db
       ?.insert(eventsTable)
       .values({
@@ -224,6 +110,16 @@ export class EventStore {
         props: event.props ? JSON.stringify(event.props) : null,
       })
       .run();
+  }
+
+  protected deleteOlderThan(cutoff: number): number {
+    return (
+      this.db
+        ?.delete(eventsTable)
+        .where(lt(eventsTable.ts, cutoff))
+        .returning({ id: eventsTable.id })
+        .all().length ?? 0
+    );
   }
 
   query(params: EventQueryParams = {}): EventQueryResult {
@@ -390,26 +286,6 @@ export class EventStore {
       return 0;
     }
     return this.db.select({ value: count() }).from(eventsTable).get()?.value ?? 0;
-  }
-
-  close(): void {
-    this.stopRetention();
-    // Drain whatever is buffered BEFORE flipping #closed, so events in flight
-    // at shutdown still reach disk (crash-handler / graceful-stop contract).
-    this.flush();
-    this.#closed = true;
-    // Anything that managed to enqueue between flush() and now is dropped;
-    // record-zero the queue explicitly rather than leaving it as a memory
-    // root that lives until the singleton is collected.
-    this.#queue.length = 0;
-    if (this.#flushTimer) {
-      clearTimeout(this.#flushTimer);
-      this.#flushTimer = undefined;
-    }
-    if (this.#database) {
-      this.#database.sqlite.close();
-      this.#database = null;
-    }
   }
 }
 

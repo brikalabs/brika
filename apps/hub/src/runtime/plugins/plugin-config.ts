@@ -34,10 +34,22 @@ export class PluginConfigService {
   /**
    * Resolved config for internal hub use — passed to the running plugin process.
    * Password values and __secret_* keys are read from the OS keychain.
+   *
+   * An operator may hand-write a plaintext secret directly in `brika.yml` (under
+   * a password-typed field, or a `__secret_*` key). Before resolving, we absorb
+   * any such plaintext into the keychain and scrub it back to a presence marker,
+   * so the secret never persists in plaintext on disk.
    */
   async getConfig(pluginName: string): Promise<Record<string, unknown>> {
     const schema = this.getSchema(pluginName);
-    const userConfig = this.#configLoader.getPluginConfig(pluginName) ?? {};
+    let userConfig = this.#configLoader.getPluginConfig(pluginName) ?? {};
+
+    const scrubbed = await this.#ingestPlaintextSecrets(pluginName, schema, userConfig);
+    if (scrubbed) {
+      await this.#configLoader.setPluginConfig(pluginName, scrubbed);
+      userConfig = scrubbed;
+    }
+
     const merged: Record<string, unknown> = {};
 
     for (const pref of schema) {
@@ -130,6 +142,53 @@ export class PluginConfigService {
     const passwordKeys = schema.filter((p) => p.type === 'password').map((p) => p.name);
     const internalSecretKeys = Object.keys(userConfig).filter((k) => k.startsWith(SECRET_PREFIX));
     return [...passwordKeys, ...internalSecretKeys];
+  }
+
+  /**
+   * Absorb any hand-written plaintext secrets in `userConfig` into the keychain
+   * and return a scrubbed copy to persist, or `null` when there was nothing to
+   * ingest. Password-typed fields are removed entirely (their presence is
+   * schema-derived); `__secret_*` keys keep a `null` presence marker. Idempotent:
+   * once scrubbed, a later pass finds no plaintext and returns `null`.
+   */
+  async #ingestPlaintextSecrets(
+    pluginName: string,
+    schema: PreferenceDefinition[],
+    userConfig: Record<string, unknown>
+  ): Promise<Record<string, unknown> | null> {
+    const passwordPrefs = new Set(schema.filter((p) => p.type === 'password').map((p) => p.name));
+    // Fast path for the steady state (every spawn/respawn calls getConfig): if no
+    // key could possibly be a secret, there's nothing to ingest — skip the clone.
+    const hasCandidate = Object.keys(userConfig).some(
+      (k) => passwordPrefs.has(k) || k.startsWith(SECRET_PREFIX)
+    );
+    if (!hasCandidate) {
+      return null;
+    }
+    const scrubbed: Record<string, unknown> = { ...userConfig };
+    let changed = false;
+
+    for (const [key, value] of Object.entries(userConfig)) {
+      if (passwordPrefs.has(key)) {
+        // A masked sentinel that got persisted is meaningless on disk — drop it.
+        if (value === SECRET_PLACEHOLDER) {
+          delete scrubbed[key];
+          changed = true;
+        } else if (typeof value === 'string' && value.length > 0) {
+          await this.#secrets.set(pluginName, key, value);
+          delete scrubbed[key];
+          changed = true;
+        }
+        continue;
+      }
+      if (key.startsWith(SECRET_PREFIX) && value !== null && value !== undefined) {
+        await this.#secrets.setJSON(pluginName, key, value);
+        scrubbed[key] = null;
+        changed = true;
+      }
+    }
+
+    return changed ? scrubbed : null;
   }
 
   async #readPrefValue(
