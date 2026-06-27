@@ -10,12 +10,28 @@ import { ConfigLoader } from '@/runtime/config/config-loader';
 import { Logger } from '@/runtime/logs/log-router';
 import { LocalRegistry } from '@/runtime/store/sources/local';
 import { NpmRegistry } from '@/runtime/store/sources/npm';
+import { RemoteRegistrySource } from '@/runtime/store/sources/remote';
 import { StoreService } from '@/runtime/store/store-service';
 import { VerifiedPluginsService } from '@/runtime/store/verified';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Fixtures
 // ─────────────────────────────────────────────────────────────────────────────
+
+const TEST_REGISTRIES = [
+  {
+    id: 'npm',
+    name: 'npm',
+    pluginUrl: 'https://www.npmjs.com/package/{name}',
+    search: { type: 'npm' },
+  },
+  {
+    id: 'brika',
+    name: 'Brika Store',
+    pluginUrl: 'https://store.brika.dev/{name}',
+    search: { type: 'v1', url: 'https://store.brika.dev' },
+  },
+];
 
 const mockConfig = {
   plugins: [
@@ -24,6 +40,7 @@ const mockConfig = {
       version: 'workspace:*',
     },
   ],
+  registries: TEST_REGISTRIES,
 };
 
 const mockConfigEmpty = {
@@ -31,6 +48,7 @@ const mockConfigEmpty = {
     name: string;
     version: string;
   }>,
+  registries: TEST_REGISTRIES,
 };
 
 const localPkg = {
@@ -108,6 +126,14 @@ describe('StoreService', () => {
     search: ReturnType<typeof mock>;
     getPackageDetails: ReturnType<typeof mock>;
   };
+  let mockRemote: {
+    configured: boolean;
+    search: ReturnType<typeof mock>;
+    getPackageDetails: ReturnType<typeof mock>;
+    getDetailWithStore: ReturnType<typeof mock>;
+    getReadme: ReturnType<typeof mock>;
+    getIconUrl: ReturnType<typeof mock>;
+  };
   let mockLocal: {
     search: ReturnType<typeof mock>;
     findByName: ReturnType<typeof mock>;
@@ -144,6 +170,16 @@ describe('StoreService', () => {
         }),
         findByName: mock().mockResolvedValue(null),
       };
+      // Off by default so these tests assert the npm fallback path regardless of BRIKA_STORE_URL
+      // in the environment; the "remote configured" tests flip `configured` explicitly.
+      mockRemote = {
+        configured: false,
+        search: mock().mockResolvedValue({ plugins: [], total: 0 }),
+        getPackageDetails: mock().mockResolvedValue(null),
+        getDetailWithStore: mock().mockResolvedValue(null),
+        getReadme: mock().mockResolvedValue(null),
+        getIconUrl: mock().mockResolvedValue(null),
+      };
       mockVerified = {
         init: mock().mockResolvedValue(undefined),
         isVerified: mock().mockResolvedValue(false),
@@ -163,6 +199,7 @@ describe('StoreService', () => {
       };
 
       stub(NpmRegistry, mockNpm);
+      stub(RemoteRegistrySource, mockRemote);
       stub(LocalRegistry, mockLocal);
       stub(VerifiedPluginsService, mockVerified);
       stub(ConfigLoader, mockConfigLoader);
@@ -196,6 +233,17 @@ describe('StoreService', () => {
       await service.search('weather', 10, 5);
 
       expect(mockNpm.search).toHaveBeenCalledWith('weather', 10, 5);
+    });
+
+    test('uses the remote store and skips npm when a store is configured', async () => {
+      mockRemote.configured = true;
+      mockRemote.search.mockResolvedValue({ plugins: [npmSearchResult], total: 1 });
+
+      const result = await service.search('weather', 10, 5);
+
+      expect(mockRemote.search).toHaveBeenCalledWith('weather', 10, 5);
+      expect(mockNpm.search).not.toHaveBeenCalled();
+      expect(result.plugins.map((p) => p.package.name)).toContain('@brika/plugin-weather');
     });
 
     test('passes query to local registry', async () => {
@@ -268,7 +316,7 @@ describe('StoreService', () => {
       expect(mockNpm.getPackageDetails).not.toHaveBeenCalled();
     });
 
-    test('routes to npm only when id has "npm:" prefix', async () => {
+    test('routes to npm only when id has "npm:" prefix and carries its "Open in npm" link', async () => {
       mockNpm.getPackageDetails.mockResolvedValue(npmPkgData);
 
       const result = await service.getPluginDetails('npm:@brika/plugin-weather');
@@ -276,8 +324,32 @@ describe('StoreService', () => {
       expect(result).not.toBeNull();
       expect(result?.source).toBe('npm');
       expect(result?.name).toBe('@brika/plugin-weather');
+      // The external link is built from the npm registry descriptor's name + pluginUrl template.
+      expect(result?.externalRegistry).toEqual({
+        name: 'npm',
+        url: 'https://www.npmjs.com/package/@brika/plugin-weather',
+      });
       // Should not have called local findByName
       expect(mockLocal.findByName).not.toHaveBeenCalled();
+    });
+
+    test('routes to the remote store and carries its "Open in <store>" link for a "store:" prefix', async () => {
+      mockConfigLoader.get.mockReturnValue(mockConfigEmpty);
+      mockRemote.getDetailWithStore.mockResolvedValue({
+        pkg: npmPkgData,
+        external: { name: 'Brika Store', url: 'https://store.brika.dev/@brika/plugin-weather' },
+      });
+
+      const result = await service.getPluginDetails('store:@brika/plugin-weather');
+
+      expect(result?.source).toBe('store');
+      expect(result?.externalRegistry).toEqual({
+        name: 'Brika Store',
+        url: 'https://store.brika.dev/@brika/plugin-weather',
+      });
+      expect(mockRemote.getDetailWithStore).toHaveBeenCalledWith('@brika/plugin-weather');
+      // npm must not be consulted for an explicit store id.
+      expect(mockNpm.getPackageDetails).not.toHaveBeenCalled();
     });
 
     test('tries local first then npm when no prefix', async () => {
@@ -651,6 +723,59 @@ describe('StoreService', () => {
       await service.getPluginDetails('npm:@scope/plugin-name');
 
       expect(mockNpm.getPackageDetails).toHaveBeenCalledWith('@scope/plugin-name');
+    });
+  });
+
+  // ─── getRemoteReadme / getRemoteIconUrl ─────────────────────────────────────
+
+  describe('getRemoteReadme', () => {
+    test('queries the remote store with the unprefixed name', async () => {
+      mockRemote.getReadme.mockResolvedValue({ readme: '# Hi', filename: 'README.md' });
+
+      const result = await service.getRemoteReadme('store:@brika/plugin-clock');
+
+      expect(result).toEqual({ readme: '# Hi', filename: 'README.md' });
+      expect(mockRemote.getReadme).toHaveBeenCalledWith('@brika/plugin-clock');
+    });
+
+    test('queries the remote store for an unprefixed id', async () => {
+      mockRemote.getReadme.mockResolvedValue({ readme: '# Hi', filename: 'README.md' });
+
+      await service.getRemoteReadme('@brika/plugin-clock');
+
+      expect(mockRemote.getReadme).toHaveBeenCalledWith('@brika/plugin-clock');
+    });
+
+    test('skips the remote store for an explicit npm id', async () => {
+      const result = await service.getRemoteReadme('npm:@brika/plugin-clock');
+
+      expect(result).toBeNull();
+      expect(mockRemote.getReadme).not.toHaveBeenCalled();
+    });
+
+    test('skips the remote store for an explicit local id', async () => {
+      const result = await service.getRemoteReadme('local:@brika/plugin-clock');
+
+      expect(result).toBeNull();
+      expect(mockRemote.getReadme).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('getRemoteIconUrl', () => {
+    test('queries the remote store with the unprefixed name', async () => {
+      mockRemote.getIconUrl.mockResolvedValue('https://store.test/icon.svg');
+
+      const result = await service.getRemoteIconUrl('store:@brika/plugin-clock');
+
+      expect(result).toBe('https://store.test/icon.svg');
+      expect(mockRemote.getIconUrl).toHaveBeenCalledWith('@brika/plugin-clock');
+    });
+
+    test('skips the remote store for an explicit npm id', async () => {
+      const result = await service.getRemoteIconUrl('npm:@brika/plugin-clock');
+
+      expect(result).toBeNull();
+      expect(mockRemote.getIconUrl).not.toHaveBeenCalled();
     });
   });
 });

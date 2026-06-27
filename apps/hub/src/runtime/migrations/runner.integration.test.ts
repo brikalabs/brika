@@ -21,12 +21,13 @@ afterEach(() => {
   rmSync(brikaDir, { recursive: true, force: true });
 });
 
-function makeMigration(id: string, runs: { count: number }): Migration {
+function makeMigration(id: string, runs: { count: number }, changed = true): Migration {
   return {
     id,
     description: `test ${id}`,
     async run() {
       runs.count += 1;
+      return { changed };
     },
   };
 }
@@ -59,6 +60,26 @@ describe('MigrationRunner', () => {
     expect(reports[0]?.applied).toEqual(['001', '002']);
     expect(runs.count).toBe(2);
     expect(versionState.getAppliedMigrations('test')).toEqual(['001', '002']);
+  });
+
+  test('records a no-op migration as applied but never lists it as changed', async () => {
+    const runs = { count: 0 };
+    const scope: MigrationScope = {
+      name: 'test',
+      migrations: [makeMigration('001-real', runs, true), makeMigration('002-noop', runs, false)],
+    };
+    const versionState = new VersionStateStore(brikaDir, '0.6.0');
+    const reports = await new MigrationRunner([scope], {
+      brikaDir,
+      currentVersion: '0.6.0',
+      versionState,
+    }).run();
+
+    // Both ran and are recorded (so they are skipped forever after)…
+    expect(reports[0]?.applied).toEqual(['001-real', '002-noop']);
+    expect(versionState.getAppliedMigrations('test')).toEqual(['001-real', '002-noop']);
+    // …but only the one that changed on-disk state is surfaced, so a pure no-op pass shows no banner.
+    expect(reports[0]?.changed).toEqual(['001-real']);
   });
 
   test('skips already-applied migrations on re-run (idempotency)', async () => {
@@ -119,7 +140,7 @@ describe('MigrationRunner', () => {
         if (attempts === 1) {
           return Promise.reject(new MigrationDeferred('not ready'));
         }
-        return Promise.resolve();
+        return Promise.resolve({ changed: true });
       },
     };
     const scope: MigrationScope = { name: 'test', migrations: [flaky] };

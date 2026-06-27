@@ -6,7 +6,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  ProgressDisplay,
 } from '@brika/clay';
 import { useQueryClient } from '@tanstack/react-query';
 import { Download, Loader2, Package } from 'lucide-react';
@@ -16,8 +15,10 @@ import { getProgressValue, useProgressStream } from '@/hooks/use-progress-stream
 import { useLocale } from '@/lib/use-locale';
 import { pluginsKeys } from '../api';
 import { registryApi } from '../registry-api';
+import { usePluginCompileLogs } from '../use-plugin-compile';
 import { InstallPluginFormFields } from './InstallPluginFormFields';
 import { getPhaseLabel } from './install-progress-utils';
+import { PluginProgress } from './PluginProgress';
 
 interface InstallPluginDialogProps {
   open: boolean;
@@ -35,6 +36,9 @@ export function InstallPluginDialog({
   const capture = useCapture();
   const [packageName, setPackageName] = useState(defaultName);
   const [version, setVersion] = useState('');
+  // The plugin's build streams as `plugin.compile` events while it loads; surface those steps as
+  // lines in the install log.
+  const buildLogs = usePluginCompileLogs(packageName.trim());
 
   // Sync packageName with defaultName whenever the dialog is (re)opened
   // for a different starter recommendation.
@@ -120,10 +124,10 @@ export function InstallPluginDialog({
           )}
 
           {(isProcessing || success || error) && (
-            <ProgressDisplay
+            <PluginProgress
               progressValue={getProgressValue(progress?.phase)}
               phaseLabel={getPhaseLabel(progress, t)}
-              logs={logs}
+              logs={[...logs, ...buildLogs]}
               scrollRef={scrollRef}
               error={error}
               success={success}

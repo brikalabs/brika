@@ -121,6 +121,12 @@ export interface LoadOptions {
    * Ignored once the plugin has an explicit enabled/disabled choice in state.
    */
   defaultEnabled?: boolean;
+  /**
+   * Reload even when the plugin is already running. An explicit install/update sets this so an
+   * already-loaded plugin (e.g. a workspace plugin auto-loaded at boot) is recompiled (running the
+   * freshly-linked code and surfacing the build trace) instead of no-op'ing on the existing process.
+   */
+  force?: boolean;
 }
 
 @singleton()
@@ -428,24 +434,12 @@ export class PluginLifecycle {
     const existingState = this.#state.get(pluginName);
     const uid = existingState?.uid ?? generateUid(metadata.name);
 
-    // Consent-before-code: a plugin that requests grants must not execute until
-    // the operator has reviewed those capabilities and enabled it. A first-time
-    // load of such a plugin (no state row yet) registers it dormant instead of
-    // spawning; enable() then flips `enabled` and re-loads to actually start it.
-    // Precedence: a prior explicit choice (existingState.enabled) wins; else the
-    // caller's `defaultEnabled` (install passes true for LOCAL/dev plugins, which
-    // are the operator's own code, not remote marketplace code needing consent);
-    // else dormant only when the plugin requests grants.
-    const enabled = existingState?.enabled ?? defaultEnabled ?? !pluginRequestsGrants(metadata);
-    if (!enabled) {
-      await this.#registerDormant(pluginName, rootDirectory, entryPoint, uid, metadata);
-      return;
-    }
-
     const locales = await this.#i18n.registerPluginTranslations(metadata.name, rootDirectory);
 
-    // Surface the build live over `/api/stream/events` so the UI can show
-    // compilation step-by-step while a plugin installs, enables, or reloads.
+    // Surface the build live over `/api/stream/events` so the UI can show compilation step-by-step
+    // while a plugin installs, enables, or reloads. The build runs even for a plugin that will stay
+    // dormant (see the consent gate below the build): compiling bundles the code, it never executes
+    // it, so consent-before-code is preserved while the operator still sees the build on install.
     const compileStart = performance.now();
     this.#emitCompile(uid, pluginName, { phase: 'start' });
 
@@ -462,12 +456,6 @@ export class PluginLifecycle {
         durationMs: k.durationMs,
       });
     }
-
-    this.#logs.info('Starting plugin', {
-      pluginName: pluginName,
-      version: metadata.version,
-      uid,
-    });
 
     // Build the server-side entry: action IDs are injected at compile time
     const outdir = join(rootDirectory, 'node_modules', '.cache', 'brika', 'server');
@@ -520,6 +508,24 @@ export class PluginLifecycle {
     this.#emitCompile(uid, pluginName, {
       phase: 'done',
       durationMs: Math.round(performance.now() - compileStart),
+    });
+
+    // Consent-before-code: the plugin is built above but must not EXECUTE until the operator has
+    // reviewed its requested grants and enabled it. A first-time load of a grant-requesting plugin
+    // (no state row) registers it dormant instead of spawning; enable() flips `enabled` and reloads
+    // to start it. Precedence: a prior explicit choice (existingState.enabled) wins; else the caller's
+    // `defaultEnabled` (install passes true for LOCAL/dev plugins, the operator's own code); else
+    // dormant only when the plugin requests grants.
+    const enabled = existingState?.enabled ?? defaultEnabled ?? !pluginRequestsGrants(metadata);
+    if (!enabled) {
+      await this.#registerDormant(pluginName, rootDirectory, entryPoint, uid, metadata);
+      return;
+    }
+
+    this.#logs.info('Starting plugin', {
+      pluginName,
+      version: metadata.version,
+      uid,
     });
 
     // Allocate per-plugin host dirs that back `/data`, `/cache`, `/tmp`.

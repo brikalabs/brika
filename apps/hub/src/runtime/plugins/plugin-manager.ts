@@ -216,7 +216,7 @@ export class PluginManager {
   }
 
   load(moduleId: string, parent?: string, options?: LoadOptions): Promise<void> {
-    return this.#lifecycle.load(moduleId, false, parent, options);
+    return this.#lifecycle.load(moduleId, options?.force ?? false, parent, options);
   }
 
   unload(name: string, skipRestartReset = false): Promise<void> {

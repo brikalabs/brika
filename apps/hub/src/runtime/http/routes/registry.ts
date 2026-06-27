@@ -4,6 +4,7 @@ import { requireScope } from '@brika/auth/server';
 import { createSSEStream, group, NotFound, route } from '@brika/router';
 import { z } from 'zod';
 import { HUB_VERSION } from '@/hub';
+import { ConfigLoader } from '@/runtime/config/config-loader';
 import { Logger } from '@/runtime/logs/log-router';
 import { PluginRegistry } from '@/runtime/registry';
 import { errorFields } from '@/runtime/registry/progress';
@@ -172,6 +173,47 @@ export const registryRoutes = group({
       handler: ({ inject }) => inject(StoreService).getVerifiedList(),
     }),
 
+    // ─── Registries (per-scope install routing + /v1 search stores) ───────────
+
+    route.get({
+      path: '/registries',
+      handler: ({ inject }) => {
+        const config = inject(ConfigLoader).get();
+        return {
+          defaultRegistry: config.defaultRegistry,
+          npmRegistries: config.npmRegistries,
+          searchStores: config.searchStores,
+          registries: config.registries,
+        };
+      },
+    }),
+
+    route.post({
+      path: '/registries',
+      middleware: [requireScope(Scope.PLUGIN_MANAGE)],
+      body: z.object({
+        scope: z.string().min(1),
+        registry: z.string().min(1),
+        store: z.string().min(1).optional(),
+      }),
+      handler: async ({ body, inject }) => {
+        const config = inject(ConfigLoader);
+        await config.setNpmRegistry(body.scope, body.registry);
+        if (body.store) {
+          await config.addSearchStore(body.store);
+        }
+        // Rewrite the plugins-dir `.npmrc` from the updated config so the new registry
+        // routes installs immediately, without waiting for a hub restart.
+        await inject(PluginRegistry).init();
+        const updated = config.get();
+        return {
+          defaultRegistry: updated.defaultRegistry,
+          npmRegistries: updated.npmRegistries,
+          searchStores: updated.searchStores,
+        };
+      },
+    }),
+
     route.get({
       path: '/plugins/:name',
       params: z.object({
@@ -207,6 +249,12 @@ export const registryRoutes = group({
               filename: 'README.md',
             };
           }
+        }
+
+        // A plugin served by a configured Brika store ships its README there, not on npm.
+        const remoteReadme = await store.getRemoteReadme(params.name);
+        if (remoteReadme) {
+          return remoteReadme;
         }
 
         try {
@@ -268,6 +316,28 @@ export const registryRoutes = group({
           const result = await serveLocalIcon(rootDir);
           if (result) {
             return result;
+          }
+        }
+
+        // A plugin served by a configured Brika store ships its icon there, not on npm.
+        const remoteIconUrl = await store.getRemoteIconUrl(params.name);
+        if (remoteIconUrl) {
+          try {
+            const response = await fetch(remoteIconUrl, { redirect: 'follow' });
+            if (response.ok) {
+              const blob = await response.arrayBuffer();
+              return new Response(blob, {
+                headers: {
+                  'Content-Type': response.headers.get('content-type') || 'image/png',
+                  'Cache-Control': 'public, max-age=86400',
+                },
+              });
+            }
+          } catch (error) {
+            inject(Logger).error('Failed to fetch icon from store', {
+              packageName: pkgName,
+              error: String(error),
+            });
           }
         }
 

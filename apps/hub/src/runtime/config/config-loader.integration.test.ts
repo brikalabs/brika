@@ -299,6 +299,9 @@ schedules: []
         ],
         rules: [],
         schedules: [],
+        npmRegistries: {},
+        searchStores: [],
+        registries: [],
       };
 
       await loader.save(newConfig);
@@ -330,6 +333,127 @@ schedules: []
 
       const content = await Bun.file(join(BRIKA_DIR, 'brika.yml')).text();
       expect(content).toBeDefined();
+    });
+  });
+
+  describe('registries', () => {
+    test('defaults to the Brika registry and store', async () => {
+      const config = await loader.load();
+
+      expect(config.defaultRegistry).toBe('https://registry.brika.dev');
+      expect(config.npmRegistries).toEqual({}); // scopes are auto-routed on install, not pre-seeded
+      expect(config.searchStores).toContain('https://store.brika.dev');
+    });
+
+    test('setNpmRegistry adds a scope mapping, normalizes the URL, and persists', async () => {
+      await loader.load();
+
+      await loader.setNpmRegistry('@acme', 'https://npm.acme.com/');
+
+      expect(loader.get().npmRegistries['@acme']).toBe('https://npm.acme.com');
+      // Reload from disk to prove it was written to brika.yml.
+      reset();
+      provide(BrikaInitializer, { brikaDir: BRIKA_DIR, rootDir: TEST_DIR });
+      stub(Logger);
+      const reloaded = await get(ConfigLoader).load();
+      expect(reloaded.npmRegistries['@acme']).toBe('https://npm.acme.com');
+    });
+
+    test('removeNpmRegistry drops a scope mapping', async () => {
+      await loader.load();
+      await loader.setNpmRegistry('@acme', 'https://npm.acme.com');
+
+      await loader.removeNpmRegistry('@acme');
+
+      expect('@acme' in loader.get().npmRegistries).toBe(false);
+    });
+
+    test('addSearchStore appends and de-dupes', async () => {
+      await loader.load();
+
+      await loader.addSearchStore('https://store.acme.com/');
+      await loader.addSearchStore('https://store.acme.com');
+
+      const stores = loader.get().searchStores;
+      expect(stores.filter((s) => s === 'https://store.acme.com')).toHaveLength(1);
+    });
+
+    test('removeSearchStore drops a store', async () => {
+      await loader.load();
+      await loader.addSearchStore('https://store.acme.com');
+
+      await loader.removeSearchStore('https://store.acme.com');
+
+      expect(loader.get().searchStores).not.toContain('https://store.acme.com');
+    });
+
+    test('setRegistries replaces both lists wholesale', async () => {
+      await loader.load();
+
+      await loader.setRegistries({
+        npmRegistries: { '@only': 'https://npm.only.dev/' },
+        searchStores: ['https://store.only.dev/'],
+      });
+
+      const config = loader.get();
+      expect(config.npmRegistries).toEqual({ '@only': 'https://npm.only.dev' });
+      expect(config.searchStores).toEqual(['https://store.only.dev']);
+    });
+
+    test('exposes the built-in registry catalogue by default', async () => {
+      const config = await loader.load();
+
+      expect(config.registries.map((r) => r.id)).toEqual(['npm', 'brika']);
+      expect(loader.getSearchStores()).toEqual(['https://store.brika.dev']);
+    });
+
+    test('parses a registries: block and unions its v1 store into getSearchStores', async () => {
+      await Bun.write(
+        join(BRIKA_DIR, 'brika.yml'),
+        `
+plugins: {}
+rules: []
+schedules: []
+registries:
+  - id: acme
+    name: Acme Store
+    pluginUrl: "https://acme.dev/p/{name}"
+    search: { type: v1, url: "https://store.acme.com/" }
+    install: { registry: "https://npm.acme.com" }
+    readme: { type: v1 }
+`
+      );
+
+      const config = await loader.load();
+
+      // Catalogue = built-ins + the operator entry.
+      expect(config.registries.map((r) => r.id)).toEqual(['npm', 'brika', 'acme']);
+      // The operator store is searched alongside the default Brika store, de-duped.
+      expect(loader.getSearchStores()).toEqual([
+        'https://store.brika.dev',
+        'https://store.acme.com',
+      ]);
+    });
+
+    test('a registry override merges over the built-in of the same id', async () => {
+      await Bun.write(
+        join(BRIKA_DIR, 'brika.yml'),
+        `
+plugins: {}
+rules: []
+schedules: []
+registries:
+  - id: brika
+    name: My Mirror
+`
+      );
+
+      const config = await loader.load();
+
+      const brika = config.registries.find((r) => r.id === 'brika');
+      expect(brika?.name).toBe('My Mirror');
+      // Untouched fields keep the preset (the store is still searched).
+      expect(brika?.search).toEqual({ type: 'v1', url: 'https://store.brika.dev' });
     });
   });
 

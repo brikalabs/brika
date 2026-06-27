@@ -29,7 +29,11 @@ export class PackageManager {
 
   async *install(name: string, version?: string): AsyncGenerator<OperationProgress> {
     const spec = version ? `${name}@${version}` : name;
-    yield* this.#stream('install', name, ['install', spec]);
+    // `--ignore-scripts`: never run a dependency's install lifecycle scripts (postinstall, …) in the
+    // hub process. A plugin's runtime code only executes once the operator consents (consent-before-
+    // code); an unconsented dep's postinstall would be an earlier execute-on-install vector. Plugins
+    // ship pre-built, so they need no build step here.
+    yield* this.#stream('install', name, ['install', spec, '--ignore-scripts']);
   }
 
   async remove(name: string): Promise<void> {
@@ -38,7 +42,7 @@ export class PackageManager {
 
   async *update(name?: string): AsyncGenerator<OperationProgress> {
     const args = name ? ['update', name] : ['update'];
-    yield* this.#stream('update', name ?? 'all', args);
+    yield* this.#stream('update', name ?? 'all', [...args, '--ignore-scripts']);
   }
 
   // ─── Private ─────────────────────────────────────────────────────────────
@@ -68,50 +72,21 @@ export class PackageManager {
   ): AsyncGenerator<OperationProgress> {
     const proc = this.#spawn(args, 'pipe');
 
-    if (proc.stderr instanceof ReadableStream) {
-      const decoder = new TextDecoder();
-      const reader = proc.stderr.getReader();
-      let buffer = '';
-
-      try {
-        let result = await reader.read();
-        while (!result.done) {
-          buffer += decoder.decode(result.value, {
-            stream: true,
-          });
-          const lines = buffer.split('\n');
-          buffer = lines.pop() ?? '';
-
-          for (const line of lines) {
-            const trimmed = line.trim();
-            if (!trimmed) {
-              continue;
-            }
-            // The authoritative phases (resolving -> linking -> complete) come
-            // from PluginRegistry.install; here we only relay bun's raw output as
-            // an opaque message under a single coarse phase, rather than scraping
-            // bun's stderr text (which drifts across bun versions).
-            yield {
-              phase: 'downloading',
-              operation,
-              package: packageName,
-              message: trimmed,
-            };
-          }
-
-          result = await reader.read();
-        }
-      } finally {
-        reader.releaseLock();
-      }
-
-      const remaining = buffer.trim();
-      if (remaining) {
+    // Relay BOTH stdout and stderr. bun prints progress ("Resolving…", "Saved lockfile") to stderr
+    // but the resolved packages ("+ name@version", "N packages installed") to stdout, so reading only
+    // stderr hid which dependencies were installed. The authoritative phases (resolving -> linking ->
+    // complete) still come from PluginRegistry; here we relay bun's raw lines under one coarse phase.
+    const streams = [proc.stdout, proc.stderr].filter(
+      (s): s is ReadableStream => s instanceof ReadableStream
+    );
+    for await (const line of mergeStreamLines(streams)) {
+      const trimmed = line.trim();
+      if (trimmed) {
         yield {
           phase: 'downloading',
           operation,
           package: packageName,
-          message: remaining,
+          message: trimmed,
         };
       }
     }
@@ -119,6 +94,60 @@ export class PackageManager {
     const code = await proc.exited;
     if (code !== 0) {
       throw new Error(`bun ${args.join(' ')} failed with exit code ${code}`);
+    }
+  }
+}
+
+/**
+ * Merge several byte streams into a single line-by-line async iterator, yielding each line from
+ * whichever stream produced it first. Used to relay a child process's stdout AND stderr together.
+ */
+async function* mergeStreamLines(streams: ReadableStream[]): AsyncGenerator<string> {
+  const decoder = new TextDecoder();
+  const queue: string[] = [];
+  let pending = streams.length;
+  let notify: (() => void) | null = null;
+  const wake = () => {
+    notify?.();
+    notify = null;
+  };
+
+  for (const stream of streams) {
+    void (async () => {
+      const reader = stream.getReader();
+      let buffer = '';
+      try {
+        for (let r = await reader.read(); !r.done; r = await reader.read()) {
+          buffer += decoder.decode(r.value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() ?? '';
+          queue.push(...lines);
+          wake();
+        }
+        if (buffer) {
+          queue.push(buffer);
+        }
+      } catch {
+        // A read error ends this stream's relay (best-effort log mirroring); the `finally` still marks
+        // it done so the consumer loop terminates. Swallowing avoids an unhandled promise rejection.
+      } finally {
+        reader.releaseLock();
+        pending -= 1;
+        wake();
+      }
+    })();
+  }
+
+  while (pending > 0 || queue.length > 0) {
+    if (queue.length === 0) {
+      await new Promise<void>((resolve) => {
+        notify = resolve;
+      });
+      continue;
+    }
+    const line = queue.shift();
+    if (line !== undefined) {
+      yield line;
     }
   }
 }

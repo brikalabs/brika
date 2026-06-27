@@ -49,7 +49,7 @@ describe('plugin-data prune-orphans migration', () => {
     seedDir('orphan-1');
     seedDir('orphan-2');
 
-    await pluginDataScope.migrations[0]?.run({
+    const result = await pluginDataScope.migrations[0]?.run({
       brikaDir,
       toVersion: '0.6.0',
       fromVersion: '0.5.0',
@@ -59,6 +59,8 @@ describe('plugin-data prune-orphans migration', () => {
     expect(existsSync(join(dataRoot, 'kept-2'))).toBe(true);
     expect(existsSync(join(dataRoot, 'orphan-1'))).toBe(false);
     expect(existsSync(join(dataRoot, 'orphan-2'))).toBe(false);
+    // Two orphans were reclaimed, so the migration reports a real change (the operator sees a banner).
+    expect(result?.changed).toBe(true);
   });
 
   test('is a no-op when the plugin-data dir does not exist (fresh install)', async () => {
@@ -71,7 +73,7 @@ describe('plugin-data prune-orphans migration', () => {
         toVersion: '0.6.0',
         fromVersion: null,
       })
-    ).resolves.toBeUndefined();
+    ).resolves.toEqual({ changed: false });
   });
 
   test('defers (throws MigrationDeferred) when state.db is missing — never wipes a fresh install', async () => {

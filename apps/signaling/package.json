@@ -1,6 +1,8 @@
 {
   "name": "@brika/signaling",
-  "knip": { "ignoreDependencies": ["node:sqlite", "better-sqlite3"] },
+  "knip": {
+    "ignoreDependencies": ["node:sqlite", "better-sqlite3"]
+  },
   "version": "0.4.0",
   "private": true,
   "type": "module",
@@ -26,26 +28,26 @@
     "start:standalone": "bun run build && bun run server/standalone.ts"
   },
   "dependencies": {
-    "@brika/clay": "^0.2.0",
+    "@brika/clay": "^0.4.0",
     "@brika/components": "workspace:*",
     "@brika/remote-access-protocol": "workspace:*",
-    "@tanstack/react-router": "^1.170.15",
-    "hono": "^4.12.24",
-    "lucide-react": "^1.17.0",
+    "@tanstack/react-router": "^1.170.16",
+    "hono": "^4.12.27",
+    "lucide-react": "^1.21.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
-    "zod": "^4.3.4"
+    "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@cloudflare/vite-plugin": "^1.40.0",
-    "@cloudflare/workers-types": "^4.20260608.1",
-    "@tailwindcss/vite": "^4.2.1",
+    "@cloudflare/vite-plugin": "^1.42.3",
+    "@cloudflare/workers-types": "^4.20260627.1",
+    "@tailwindcss/vite": "^4.3.1",
     "@types/react": "^19.2.17",
-    "@types/react-dom": "^19.0.0",
-    "@vitejs/plugin-react": "^6.0.2",
-    "esbuild": "^0.28.0",
-    "tailwindcss": "^4.2.1",
-    "vite": "^8.0.16",
-    "wrangler": "^4.98.0"
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.3",
+    "esbuild": "^0.28.1",
+    "tailwindcss": "^4.3.1",
+    "vite": "^8.1.0",
+    "wrangler": "^4.105.0"
   }
 }

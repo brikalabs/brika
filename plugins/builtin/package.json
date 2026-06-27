@@ -182,8 +182,8 @@
   },
   "devDependencies": {
     "@types/react": "^19.2.17",
-    "lucide-react": "^1.17.0",
+    "lucide-react": "^1.21.0",
     "react": "^19.2.7",
-    "zod": "^4.3.4"
+    "zod": "^4.4.3"
   }
 }

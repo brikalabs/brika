@@ -56,7 +56,8 @@
     "uninstall": "Uninstall",
     "clickToInstall": "Click to install",
     "clickToUninstall": "Click to uninstall",
-    "viewOnNpm": "View on npm",
+    "clickToUpdate": "Update to v{{version}}",
+    "openIn": "Open in {{registry}}",
     "cancel": "Cancel",
     "done": "Done",
     "close": "Close"
@@ -82,7 +83,7 @@
   },
   "plugin": {
     "notFound": "$t(common:items.plugin_one) not found",
-    "notFoundDetail": "The $t(common:items.plugin_one) \"{{name}}\" could not be found in the npm registry.",
+    "notFoundDetail": "The $t(common:items.plugin_one) \"{{name}}\" could not be found in the registry.",
     "downloadsPerWeek": "downloads/week"
   }
 }

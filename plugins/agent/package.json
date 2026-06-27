@@ -1,7 +1,9 @@
 {
   "$schema": "https://schema.brika.dev/plugin.schema.json",
   "name": "@brika/plugin-agent",
-  "knip": { "entry": ["src/blocks/**/*.{ts,tsx}"] },
+  "knip": {
+    "entry": ["src/blocks/**/*.{ts,tsx}"]
+  },
   "displayName": "AI Agent",
   "version": "0.4.0",
   "description": "Run LLMs (Claude or any OpenAI-compatible endpoint) inside your workflows: prompt-in, text-out AI blocks",
@@ -101,7 +103,7 @@
     "@brika/sdk": "workspace:*"
   },
   "devDependencies": {
-    "bun-types": "^1.3.5"
+    "bun-types": "^1.3.14"
   },
   "files": [
     "src",

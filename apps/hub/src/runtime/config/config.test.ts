@@ -101,6 +101,9 @@ describe('HubConfig', () => {
       plugins: [],
       rules: [],
       schedules: [],
+      npmRegistries: {},
+      searchStores: [],
+      registries: [],
     };
 
     provide(ConfigLoader, {
@@ -156,6 +159,9 @@ describe('PluginManagerConfig', () => {
       plugins: [],
       rules: [],
       schedules: [],
+      npmRegistries: {},
+      searchStores: [],
+      registries: [],
     };
 
     provide(ConfigLoader, {

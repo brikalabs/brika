@@ -34,7 +34,17 @@ export interface StorePlugin {
   compatibilityReason?: string;
   installed: boolean;
   installedVersion?: string;
+  /** True when the registry's latest version is newer than the installed one. */
+  updateAvailable: boolean;
   source: string;
+  /**
+   * "Open in <name>" link to the plugin's page on its source registry (npm, a store, ...), built from
+   * the registry catalogue. Absent for local plugins.
+   */
+  externalRegistry?: {
+    name: string;
+    url: string;
+  };
   npm: {
     downloads: number;
     publishedAt: string;
@@ -95,6 +105,8 @@ export interface PluginSearchResult {
   downloadCount: number;
   installed: boolean;
   installedVersion?: string;
+  /** True when the registry's latest version is newer than the installed one. */
+  updateAvailable: boolean;
   compatible: boolean;
   compatibilityReason?: string;
 }

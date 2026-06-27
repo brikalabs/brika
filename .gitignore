@@ -81,3 +81,8 @@ apps/signaling-worker/public/
 # Snyk reads yarn.lock (it can't parse bun.lock). CI's snyk workflow
 # generates it via 'bun install --yarn'; never commit it alongside bun.lock.
 yarn.lock
+
+# generate-manifest.integration.test.ts mkdtemps `genman-*` INSIDE the package
+# (it needs in-repo module resolution for @brika/sdk); afterEach removes it, but
+# an interrupted/killed run can leave one behind. Never track these.
+packages/compiler/genman-*/

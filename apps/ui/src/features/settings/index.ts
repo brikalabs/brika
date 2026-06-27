@@ -4,6 +4,7 @@ export {
   HubPage,
   LanguagePage,
   LocationPage,
+  RegistryPage,
   RemoteAccessPage,
   SystemPage,
   TimePage,

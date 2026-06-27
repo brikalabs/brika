@@ -31,6 +31,18 @@ export interface MigrationContext {
   readonly fromVersion: string | null;
 }
 
+/**
+ * What a migration actually did. The runner records every successful migration in the ledger (so it is
+ * skipped forever after), but only a migration that reports `changed: true` is surfaced to the operator.
+ * A no-op (nothing to migrate on a fresh install, or an intentional ledger stamp) returns
+ * `changed: false` so the UI never announces work that did not happen.
+ */
+export interface MigrationOutcome {
+  readonly changed: boolean;
+  /** Optional human detail for the audit log (e.g. "pruned 3 orphan dirs"). */
+  readonly detail?: string;
+}
+
 export interface Migration {
   /**
    * Stable identifier — never renamed, never reused. The ledger is
@@ -42,14 +54,16 @@ export interface Migration {
   /**
    * Apply the migration. Must be idempotent — the runner skips
    * applied IDs, but the migration itself might run twice if the
-   * ledger write races with a crash.
+   * ledger write races with a crash. Return a {@link MigrationOutcome}
+   * stating whether it actually changed on-disk state; a no-op must
+   * return `changed: false` so it is recorded but never announced.
    *
    * Throw {@link MigrationDeferred} to signal "preconditions not met
    * yet, retry on next boot". The runner treats it as a no-op (not a
    * failure) and does **not** mark the migration applied, so the
    * migration runs again next boot when preconditions are likely met.
    */
-  run(ctx: MigrationContext): Promise<void>;
+  run(ctx: MigrationContext): Promise<MigrationOutcome>;
 }
 
 /**
@@ -75,7 +89,10 @@ export interface MigrationScope {
 
 export interface MigrationReport {
   readonly scope: string;
+  /** Migrations that ran successfully and were recorded in the ledger (includes no-ops). */
   readonly applied: readonly string[];
+  /** The subset of `applied` that actually changed on-disk state, i.e. worth surfacing to the operator. */
+  readonly changed: readonly string[];
   readonly skipped: readonly string[];
   readonly failed: ReadonlyArray<{ id: string; error: string }>;
   readonly durationMs: number;

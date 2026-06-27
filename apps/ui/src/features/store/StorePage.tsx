@@ -56,6 +56,7 @@ export function StorePage() {
         compatibilityReason: plugin.compatibilityReason,
         installed: plugin.installed,
         installedVersion: plugin.installedVersion,
+        updateAvailable: plugin.updateAvailable,
         source: plugin.source,
         npm: {
           downloads: plugin.downloadCount,

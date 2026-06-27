@@ -6,7 +6,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  ProgressDisplay,
 } from '@brika/clay';
 import type { Plugin } from '@brika/plugin';
 import { useQueryClient } from '@tanstack/react-query';
@@ -18,7 +17,9 @@ import { useLocale } from '@/lib/use-locale';
 import { pluginsKeys } from '../api';
 import type { UpdateInfo } from '../registry-api';
 import { registryApi, registryKeys } from '../registry-api';
+import { usePluginCompileLogs } from '../use-plugin-compile';
 import { getPhaseLabel } from './install-progress-utils';
+import { PluginProgress } from './PluginProgress';
 import { UpdateListPreview } from './UpdateListPreview';
 
 interface UpdateAllButtonProps {
@@ -31,6 +32,9 @@ export function UpdateAllButton({ updates, plugins }: Readonly<UpdateAllButtonPr
   const capture = useCapture();
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = React.useState(false);
+  // Each plugin recompiles as it is reloaded after the update; surface every plugin's build steps as
+  // (name-prefixed) lines in the update log.
+  const buildLogs = usePluginCompileLogs();
 
   const {
     isProcessing,
@@ -74,27 +78,32 @@ export function UpdateAllButton({ updates, plugins }: Readonly<UpdateAllButtonPr
     }
   };
 
-  if (updates.length === 0) {
+  // Keep the component mounted while the dialog is open even after a successful "update all" refetches
+  // `updates` to empty, unmounting it then would snap the dialog shut before the operator reads the
+  // logs. The trigger button itself only shows while there are updates.
+  if (updates.length === 0 && !dialogOpen) {
     return null;
   }
 
   return (
     <>
-      <Button
-        variant="outline"
-        size="sm"
-        className="gap-1.5"
-        onClick={() => {
-          capture('plugins.update_all_dialog_opened', { count: updates.length });
-          setDialogOpen(true);
-        }}
-      >
-        <ArrowUp className="size-3.5" />
-        {t('plugins:update.updateAll')}
-        <span className="flex size-4.5 items-center justify-center rounded-full bg-blue-500 font-medium text-[10px] text-white">
-          {updates.length}
-        </span>
-      </Button>
+      {updates.length > 0 && (
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-1.5"
+          onClick={() => {
+            capture('plugins.update_all_dialog_opened', { count: updates.length });
+            setDialogOpen(true);
+          }}
+        >
+          <ArrowUp className="size-3.5" />
+          {t('plugins:update.updateAll')}
+          <span className="flex size-4.5 items-center justify-center rounded-full bg-blue-500 font-medium text-[10px] text-white">
+            {updates.length}
+          </span>
+        </Button>
+      )}
 
       <Dialog open={dialogOpen} onOpenChange={handleClose}>
         <DialogContent className="sm:max-w-lg">
@@ -113,10 +122,10 @@ export function UpdateAllButton({ updates, plugins }: Readonly<UpdateAllButtonPr
             )}
 
             {(isProcessing || success || error) && (
-              <ProgressDisplay
+              <PluginProgress
                 progressValue={getProgressValue(progress?.phase)}
                 phaseLabel={getPhaseLabel(progress, t, 'update')}
-                logs={logs}
+                logs={[...logs, ...buildLogs]}
                 scrollRef={scrollRef}
                 error={error}
                 success={success}

@@ -41,6 +41,9 @@ const createMockConfig = (plugins: BrikaConfig['plugins'] = []): BrikaConfig => 
   plugins,
   rules: [],
   schedules: [],
+  npmRegistries: {},
+  searchStores: [],
+  registries: [],
 });
 
 // ─────────────────────────────────────────────────────────────────────────────

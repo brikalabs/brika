@@ -11,8 +11,55 @@
     "time": "Date et heure",
     "location": "Localisation",
     "hub": "Hub",
+    "registry": "Registres",
     "remoteAccess": "Accès distant",
     "system": "Système"
+  },
+  "registry": {
+    "title": "Registres",
+    "description": "Où le hub découvre et installe les plugins. Chaque registre définit comment chercher, installer et ouvrir les plugins.",
+    "catalogue": {
+      "title": "Catalogue des registres",
+      "description": "Les registres connus de ce hub (les presets npm et Brika intégrés, plus ceux que vous déclarez dans brika.yml)."
+    },
+    "routing": {
+      "title": "Routage des installations",
+      "description": "Registres d'installation par scope et stores /v1 interrogés pour la recherche."
+    },
+    "add": {
+      "title": "Ajouter un registre",
+      "description": "Router les installations d'un scope vers un registre npm, et éventuellement ajouter un store /v1 à la recherche fédérée.",
+      "scopeLabel": "Scope",
+      "registryLabel": "Registre d'installation",
+      "storeLabel": "Store de recherche (optionnel)",
+      "scopePlaceholder": "@scope",
+      "registryPlaceholder": "https://npm.example.com",
+      "storePlaceholder": "https://store.example.com",
+      "submit": "Ajouter le registre"
+    },
+    "install": {
+      "title": "Routage des installations (scope → registre)"
+    },
+    "stores": {
+      "title": "Stores de recherche"
+    },
+    "fields": {
+      "search": "Recherche",
+      "install": "Installation",
+      "page": "Page du plugin",
+      "readme": "README/icône"
+    },
+    "search": {
+      "npm": "recherche par mot-clé npm",
+      "v1": "store /v1"
+    },
+    "badges": {
+      "default": "par défaut"
+    },
+    "empty": {
+      "install": "Aucun routage par scope : tout est résolu depuis npm public.",
+      "stores": "Aucun store de recherche configuré."
+    }
   },
   "remoteAccess": {
     "title": "Accès distant",

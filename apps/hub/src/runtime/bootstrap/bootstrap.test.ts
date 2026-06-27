@@ -42,6 +42,9 @@ const mockConfig: BrikaConfig = {
   plugins: [],
   rules: [],
   schedules: [],
+  npmRegistries: {},
+  searchStores: [],
+  registries: [],
 };
 
 const clearHotReload = () => {

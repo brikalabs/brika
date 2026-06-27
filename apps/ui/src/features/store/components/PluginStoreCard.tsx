@@ -88,12 +88,13 @@ export function PluginStoreCard({ plugin }: Readonly<PluginStoreCardProps>) {
               </div>
             </div>
 
-            {/* Install Button */}
+            {/* Install / update / uninstall. The buttons open dialogs that React-portal to <body>,
+                but portal events still bubble through the React tree to the card's <Link>; stop them
+                here so a click inside an open dialog never navigates to the plugin page. */}
             <div
               className="flex shrink-0"
-              onClick={(e) => e.preventDefault()}
-              onKeyDown={(e) => e.key === 'Enter' && e.preventDefault()}
-              aria-hidden="true"
+              onClick={(e) => e.stopPropagation()}
+              onKeyDown={(e) => e.stopPropagation()}
             >
               <InstallButton plugin={plugin} size="icon" variant="ghost" />
             </div>

@@ -1,6 +1,20 @@
+import { semver } from 'bun';
 import { checkCompatibility } from '@/runtime/utils/compatibility';
 import type { RawRegistryPlugin } from './sources/registry-source';
 import type { PluginSearchResult } from './types';
+
+/**
+ * True when the registry's latest is strictly newer than the installed version. False when either is
+ * not comparable semver (a `workspace:`/`file:`/tarball install never prompts an update; it tracks
+ * its source, not a published release).
+ */
+function isNewer(latest: string, installed: string): boolean {
+  try {
+    return semver.order(latest, installed) > 0;
+  } catch {
+    return false;
+  }
+}
 
 interface PluginConfig {
   plugins: ReadonlyArray<{
@@ -27,7 +41,10 @@ export function computeEnrichment(
   const { compatible, reason: compatibilityReason } = checkCompatibility(pkg.engines?.brika);
   return {
     installed: entry !== undefined,
-    installedVersion: entry ? pkg.version : undefined,
+    // The version actually installed (the brika.yml spec), not the registry's latest, so the UI can
+    // tell whether an update is available and show "installed → latest".
+    installedVersion: entry?.version,
+    updateAvailable: entry !== undefined && isNewer(pkg.version, entry.version),
     compatible,
     compatibilityReason,
   };

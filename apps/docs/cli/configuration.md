@@ -28,6 +28,11 @@ plugins:
       apiKey: __secret_apiKey   # presence sentinel; real value lives in the secret store
       pollInterval: 60
 
+defaultRegistry: https://registry.brika.dev   # npm registry probed for scoped installs (auto-routing)
+npmRegistries: {}                              # explicit scope → registry overrides (auto-routing fills this)
+searchStores:                                  # /v1 stores searched for plugins
+  - https://store.brika.dev
+
 rules: []        # reserved for future use
 schedules: []    # reserved for future use
 ```
@@ -93,6 +98,13 @@ When you set a secret through the UI or API, the hub:
 1. Writes the actual value to the secret store under a stable key.
 2. Writes a `__secret_<key>: null` sentinel into the YAML so the config diff shows that *some* secret exists for that field.
 3. Re-pushes the resolved value to the plugin via IPC.
+
+## `defaultRegistry` / `npmRegistries` / `searchStores`
+
+Where the hub installs and searches for plugins. `defaultRegistry` is probed for scoped installs and
+auto-routes scopes it serves; `npmRegistries` are explicit scope overrides; `searchStores` are the `/v1`
+stores searched. All optional (Brika defaults apply). Manage them with `brika registry add` / `list`, and
+see [Registries](registries.md) for the full model.
 
 ## Hot reload
 

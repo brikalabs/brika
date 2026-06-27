@@ -45,7 +45,12 @@ describe('PackageManager', () => {
 
       await collect(pm.install('@brika/plugin', '1.2.0'));
 
-      expect(bun.spawnCalls[0]?.cmd).toEqual([process.execPath, 'install', '@brika/plugin@1.2.0']);
+      expect(bun.spawnCalls[0]?.cmd).toEqual([
+        process.execPath,
+        'install',
+        '@brika/plugin@1.2.0',
+        '--ignore-scripts',
+      ]);
     });
 
     test('spawns: bun install <name> when no version given', async () => {
@@ -57,7 +62,12 @@ describe('PackageManager', () => {
 
       await collect(pm.install('@brika/plugin'));
 
-      expect(bun.spawnCalls[0]?.cmd).toEqual([process.execPath, 'install', '@brika/plugin']);
+      expect(bun.spawnCalls[0]?.cmd).toEqual([
+        process.execPath,
+        'install',
+        '@brika/plugin',
+        '--ignore-scripts',
+      ]);
     });
 
     test('uses pluginsDir as cwd', async () => {
@@ -98,6 +108,24 @@ describe('PackageManager', () => {
 
       expect(streamed[0]?.operation).toBe('install');
       expect(streamed[0]?.package).toBe('@brika/plugin');
+    });
+
+    test('relays stdout (the resolved packages) alongside stderr progress', async () => {
+      bun
+        .spawn({
+          exitCode: 0,
+          stderr: 'Resolving dependencies\nSaved lockfile',
+          stdout: '+ is-odd@3.0.1\n2 packages installed',
+        })
+        .apply();
+
+      const messages = (await collect(pm.install('@brika/plugin', '1.0.0'))).map((e) => e.message);
+
+      // stderr progress…
+      expect(messages).toContain('Saved lockfile');
+      // …and the stdout lines that name the resolved dependencies.
+      expect(messages).toContain('+ is-odd@3.0.1');
+      expect(messages).toContain('2 packages installed');
     });
 
     test('throws on non-zero exit', async () => {
@@ -161,7 +189,7 @@ describe('PackageManager', () => {
 
       await collect(pm.update());
 
-      expect(bun.spawnCalls[0]?.cmd).toEqual([process.execPath, 'update']);
+      expect(bun.spawnCalls[0]?.cmd).toEqual([process.execPath, 'update', '--ignore-scripts']);
     });
 
     test('spawns: bun update <name> for specific package', async () => {
@@ -173,7 +201,12 @@ describe('PackageManager', () => {
 
       await collect(pm.update('@brika/plugin'));
 
-      expect(bun.spawnCalls[0]?.cmd).toEqual([process.execPath, 'update', '@brika/plugin']);
+      expect(bun.spawnCalls[0]?.cmd).toEqual([
+        process.execPath,
+        'update',
+        '@brika/plugin',
+        '--ignore-scripts',
+      ]);
     });
 
     test('streams events with correct operation', async () => {

@@ -1,6 +1,8 @@
 {
   "name": "@brika/hub",
-  "knip": { "entry": ["src/runtime/plugins/prelude/**/*.ts"] },
+  "knip": {
+    "entry": ["src/runtime/plugins/prelude/**/*.ts"]
+  },
   "version": "0.4.0",
   "private": true,
   "type": "module",
@@ -54,16 +56,16 @@
     "@brika/type-system": "workspace:*",
     "@brika/ui-kit": "workspace:*",
     "date-fns": "^4.4.0",
-    "hono": "^4.12.24",
+    "hono": "^4.12.27",
     "picocolors": "^1.1.1",
     "reflect-metadata": "^0.2.2",
-    "tailwindcss": "^4.3.0",
+    "tailwindcss": "^4.3.1",
     "werift": "^0.23.0",
     "yaml": "^2.9.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.4.15",
+    "@biomejs/biome": "^2.5.1",
     "@brika/testing": "workspace:*",
     "@types/bun": "^1.3.14"
   }

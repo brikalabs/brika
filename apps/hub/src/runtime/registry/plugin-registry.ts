@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { mkdir, readlink, rename, symlink, unlink } from 'node:fs/promises';
 import { dirname, join, relative, resolve } from 'node:path';
 import { inject, singleton } from '@brika/di';
@@ -17,6 +18,107 @@ const WorkspacesSchema = z.union([
   z.object({ packages: z.array(z.string()) }).transform((o) => o.packages),
 ]);
 
+/**
+ * The subset of an npm packument the hub reads to resolve a plugin's tarball URL + integrity. Unknown
+ * keys are dropped; `tarball`/`integrity` are optional so a version without a full dist block degrades
+ * gracefully (no throw).
+ */
+const RegistryPackumentSchema = z.object({
+  'dist-tags': z.record(z.string(), z.string()).optional(),
+  versions: z
+    .record(
+      z.string(),
+      z.object({
+        dist: z
+          .object({ tarball: z.string().optional(), integrity: z.string().optional() })
+          .optional(),
+      })
+    )
+    .optional(),
+});
+
+type PackumentVersions = NonNullable<z.infer<typeof RegistryPackumentSchema>['versions']>;
+
+/** A plugin tarball resolved from a registry packument: where to fetch it, how to verify it, and the
+ *  concrete version it resolved to (recorded in brika.yml for reproducibility). */
+interface ResolvedTarball {
+  tarball: string;
+  integrity?: string;
+  version: string;
+}
+
+/**
+ * The greatest available version satisfying a semver `range`, or null when none do. bun's `semver` has
+ * `satisfies`/`order` but no `maxSatisfying`, so fold over the candidates.
+ */
+function maxSatisfying(versions: string[], range: string): string | null {
+  let best: string | null = null;
+  for (const candidate of versions) {
+    try {
+      if (
+        semver.satisfies(candidate, range) &&
+        (best === null || semver.order(candidate, best) > 0)
+      ) {
+        best = candidate;
+      }
+    } catch {
+      // a non-version key or unparseable range simply does not match
+    }
+  }
+  return best;
+}
+
+/**
+ * Resolve a requested spec against a registry packument to a concrete hosted version, honoring the npm
+ * grammar: no spec / `latest` → the latest dist-tag; an exact version → itself when hosted; a dist-tag
+ * (e.g. `beta`) → its target; otherwise a semver range → the greatest satisfying version. Returns null
+ * when an exact pin or range is requested that the registry does NOT serve, so the caller falls back to
+ * npm (where the pin may exist) instead of silently substituting `latest`.
+ */
+function resolvePackumentVersion(
+  versions: PackumentVersions,
+  distTags: Record<string, string>,
+  requested?: string
+): string | null {
+  if (!requested || requested === 'latest') {
+    return distTags.latest ?? null;
+  }
+  if (requested in versions) {
+    return requested;
+  }
+  if (requested in distTags) {
+    return distTags[requested] ?? null;
+  }
+  return maxSatisfying(Object.keys(versions), requested);
+}
+
+/**
+ * True when an installed manifest spec points at a REGISTRY tarball rather than a public-npm version:
+ * an http(s) URL, or the verified `.tgz` we cached and installed by `file:`. Such a plugin is updated by
+ * re-resolving the registry packument (bun cannot bump a pinned URL/file spec).
+ */
+function isRegistrySpec(spec?: string | null): boolean {
+  if (!spec) {
+    return false;
+  }
+  if (spec.startsWith('https://') || spec.startsWith('http://')) {
+    return true;
+  }
+  return spec.startsWith('file:') && spec.endsWith('.tgz');
+}
+
+/**
+ * A manually-symlinked LOCAL plugin in the manifest: `workspace:*`, or a `file:` DIRECTORY. Distinct
+ * from a verified registry `.tgz` installed by `file:` (kept; bun manages it like any dep). The dir
+ * specs make `bun install` abort, so init() prunes them.
+ */
+function isLocalPluginSpec(spec?: string): boolean {
+  if (spec?.startsWith('workspace:')) {
+    return true;
+  }
+  return spec?.startsWith('file:') === true && !spec.endsWith('.tgz');
+}
+
 function normalizeVersion(version?: string): string | undefined {
   // Bare absolute paths → file: specifier
   if (version?.startsWith('/')) {
@@ -27,6 +129,21 @@ function normalizeVersion(version?: string): string | undefined {
 
 function isLocalVersion(version?: string): version is string {
   return version?.startsWith('workspace:') === true || version?.startsWith('file:') === true;
+}
+
+/**
+ * Human label for the registry a spec resolves from: the host of an http(s) tarball/URL spec (e.g.
+ * `registry.brika.dev`), otherwise `npm` (a bare version resolves from the public npm registry).
+ */
+function registrySource(spec?: string | null): string {
+  if (spec?.startsWith('https://') || spec?.startsWith('http://')) {
+    try {
+      return new URL(spec).host;
+    } catch {
+      return 'the registry';
+    }
+  }
+  return 'npm';
 }
 
 /**
@@ -85,6 +202,19 @@ export class PluginRegistry {
         directory: this.pluginsDir,
       });
     }
+    // Local/workspace plugins are symlinked into node_modules and tracked in brika.yml, never managed
+    // by bun. A stale `workspace:*` / `file:` entry in this (non-workspace) manifest makes every
+    // `bun install` fail to resolve it, so prune any before they break a registry install.
+    await this.#pruneLocalManifestDeps();
+    // Route installs per scope: write the configured scope->registry map to the plugins-dir `.npmrc`,
+    // one `@scope:registry=<url>` line each. Both `bun install` and the `npm view` update check run in
+    // pluginsDir, so both honor it; any scope not listed falls back to the public npm registry.
+    // Rewritten every init so config edits take effect on the next start.
+    const { npmRegistries } = await this.configLoader.load();
+    const npmrc = Object.entries(npmRegistries ?? {})
+      .map(([scope, url]) => `${scope}:registry=${url}`)
+      .join('\n');
+    await Bun.write(join(this.pluginsDir, '.npmrc'), npmrc ? `${npmrc}\n` : '');
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -107,7 +237,25 @@ export class PluginRegistry {
       if (isLocalVersion(version)) {
         rootDirectory = await this.#linkLocalPlugin(name, version);
       } else {
-        yield* this.#installNpm(name, version);
+        // Install the plugin itself from the registry when it hosts the requested version; its deps
+        // resolve from public npm. The tarball is downloaded + integrity-verified, then installed from a
+        // local `file:` path. A scope-wide `.npmrc` route is deliberately NOT written: it would send
+        // same-scope deps (e.g. @brika/sdk) to the registry too, which only hosts plugins.
+        const resolved = await this.#resolveRegistryTarball(name, version);
+        if (resolved) {
+          yield this.#msg(
+            'downloading',
+            'install',
+            name,
+            resolved.version,
+            `Downloading from ${registrySource(resolved.tarball)} (verified, dependencies from npm)`
+          );
+          const tarball = await this.#downloadVerifiedTarball(resolved, name);
+          yield* this.#installNpm(name, `file:${tarball}`);
+        } else {
+          yield this.#msg('downloading', 'install', name, version, 'Downloading from npm');
+          yield* this.#installNpm(name, version);
+        }
       }
 
       yield this.#msg('linking', 'install', name, version, 'Loading plugin...');
@@ -122,7 +270,14 @@ export class PluginRegistry {
       // "config only references healthy plugins": #loadResolved returns rather
       // than throws on build-failure / incompatibility / awaiting-config, and
       // those plugins are legitimately recorded.)
-      await this.configLoader.addPlugin(name, version ?? 'latest');
+      // Record the CONCRETE version actually on disk, not the requested spec: a range/tag/`latest`
+      // resolves to a specific release, and recording that keeps brika.yml reproducible and lets
+      // update-checks compare against it. A local plugin keeps its file:/workspace spec (re-linked on
+      // boot).
+      const recordedVersion = local
+        ? (version ?? 'latest')
+        : ((await this.#getVersion(name)) ?? version ?? 'latest');
+      await this.configLoader.addPlugin(name, recordedVersion);
 
       // A grant-requesting remote plugin installs dormant (consent-before-code);
       // tell the operator it needs review rather than reporting a plain success.
@@ -242,10 +397,98 @@ export class PluginRegistry {
   async *update(name?: string): AsyncGenerator<OperationProgress> {
     try {
       yield this.#msg('resolving', 'update', name ?? 'all');
-      yield* this.#pm.update(name);
+      if (name) {
+        // A single named update: bump it (re-resolve a registry tarball, or `bun update` an npm dep),
+        // then reload so the new code actually runs (and recompiles, surfacing the build trace). Always
+        // reload, even if unchanged, so a forced reinstall still takes effect. A reload that leaves the
+        // plugin crashed surfaces as the operation error (not a misleading success).
+        yield* this.#bumpPlugin(name);
+        yield this.#msg('linking', 'update', name, undefined, `Reloading ${name}...`);
+        await this.#loadPlugin(name);
+        this.#assertNotCrashed(name);
+      } else {
+        // Update-all: one `bun update` pass bumps every bare-version npm dependency; registry-sourced
+        // plugins (pinned tarball specs bun can't bump) are re-resolved individually. Reload each so the
+        // updated code runs, tolerating a single failure so one bad plugin does not abort the batch.
+        yield* this.#pm.update();
+        for (const pkg of await this.#listNpm()) {
+          try {
+            if (isRegistrySpec(await this.#installedSpec(pkg.name))) {
+              yield* this.#bumpRegistry(pkg.name);
+            }
+            yield this.#msg('linking', 'update', pkg.name, undefined, `Reloading ${pkg.name}...`);
+            await this.#loadPlugin(pkg.name);
+            this.#assertNotCrashed(pkg.name);
+          } catch (error) {
+            this.logs.error('Failed to update plugin', { pluginName: pkg.name }, { error });
+          }
+        }
+      }
       yield this.#msg('complete', 'update', name ?? 'all', undefined, 'Updated successfully');
     } catch (error) {
       yield this.#errorMsg('update', name ?? 'all', undefined, error);
+    }
+  }
+
+  /** Bump one plugin to the newest version available from its source (no reload). A registry plugin's
+   *  recorded spec is a pinned tarball URL/file bun can't bump, so it is re-resolved against the registry
+   *  packument; a bare-version npm plugin uses `bun update`. */
+  async *#bumpPlugin(name: string): AsyncGenerator<OperationProgress> {
+    if (isRegistrySpec(await this.#installedSpec(name))) {
+      yield* this.#bumpRegistry(name);
+    } else {
+      yield this.#msg('downloading', 'update', name, undefined, 'Updating from npm');
+      yield* this.#pm.update(name);
+    }
+  }
+
+  /**
+   * Re-resolve a registry plugin's current tarball and reinstall it from a freshly verified download
+   * when the registry serves a newer version. A no-op when the registry no longer resolves it or it is
+   * already up to date (so a forced single-update reload below still re-runs the same code).
+   */
+  async *#bumpRegistry(name: string): AsyncGenerator<OperationProgress> {
+    const resolved = await this.#resolveRegistryTarball(name);
+    if (!resolved) {
+      return;
+    }
+    const current = await this.#getVersion(name);
+    if (current && !isUpgrade(current, resolved.version)) {
+      return;
+    }
+    yield this.#msg(
+      'downloading',
+      'update',
+      name,
+      resolved.version,
+      `Updating to ${resolved.version} from ${registrySource(resolved.tarball)}`
+    );
+    const tarball = await this.#downloadVerifiedTarball(resolved, name);
+    yield* this.#installNpm(name, `file:${tarball}`);
+    await this.configLoader.addPlugin(name, resolved.version);
+  }
+
+  /**
+   * Throw if a reload left the plugin crashed (e.g. the new version failed to build), so an install /
+   * update reports the failure instead of a misleading "succeeded". #loadResolved returns (not throws)
+   * on a build failure and marks health 'crashed', so a non-UI caller would otherwise see only success.
+   */
+  #assertNotCrashed(name: string): void {
+    if (this.state.get(name)?.health === 'crashed') {
+      throw errors.unavailable({
+        message: `${name} failed to build; the previous version keeps running. Check the build log.`,
+      });
+    }
+  }
+
+  /** The version specifier recorded for an installed plugin in the bun manifest (tarball URL or version). */
+  async #installedSpec(name: string): Promise<string | undefined> {
+    try {
+      const pkg = await Bun.file(join(this.pluginsDir, 'package.json')).json();
+      const spec = pkg.dependencies?.[name];
+      return typeof spec === 'string' ? spec : undefined;
+    } catch {
+      return undefined;
     }
   }
 
@@ -360,6 +603,109 @@ export class PluginRegistry {
     }
   }
 
+  /**
+   * Resolve a plugin's tarball (URL + integrity + concrete version) from the default registry's npm
+   * packument. Installing by tarball fetches ONLY the plugin from the registry, while its dependencies
+   * resolve from public npm (the Brika registry hosts plugins, not their deps). Returns null when no
+   * default registry is set, it is unreachable, or it does not serve the requested package/version, so
+   * the caller falls back to a plain npm install. Never throws.
+   */
+  async #resolveRegistryTarball(name: string, version?: string): Promise<ResolvedTarball | null> {
+    const { defaultRegistry } = await this.configLoader.load();
+    if (defaultRegistry === undefined) {
+      return null; // resolution from a default registry disabled
+    }
+    try {
+      const res = await fetch(`${defaultRegistry}/${name.replace('/', '%2F')}`, {
+        signal: AbortSignal.timeout(4000),
+      });
+      if (!res.ok) {
+        return null; // the registry doesn't host this plugin → fall through to npm
+      }
+      const packument = RegistryPackumentSchema.parse(await res.json());
+      const versions = packument.versions ?? {};
+      const target = resolvePackumentVersion(versions, packument['dist-tags'] ?? {}, version);
+      const dist = target ? versions[target]?.dist : undefined;
+      if (!target || !dist?.tarball) {
+        // The registry does not serve this exact pin/range → fall through to npm (the pin may exist
+        // there) rather than silently installing a different version.
+        return null;
+      }
+      return { tarball: dist.tarball, integrity: dist.integrity, version: target };
+    } catch {
+      return null; // unreachable / offline / malformed packument → fall through to npm
+    }
+  }
+
+  /**
+   * Download a resolved plugin tarball and verify it against the registry's `dist.integrity`
+   * (Subresource Integrity, e.g. `sha512-<base64>`), caching it to a `file:`-installable path. This
+   * restores the metadata→bytes binding a bare `bun install name@<url>` lacks (bun would accept whatever
+   * bytes the URL returns and hash after the fact). Throws on a non-https URL, a download failure, or an
+   * integrity mismatch. Returns the absolute cache path to install from.
+   */
+  async #downloadVerifiedTarball(resolved: ResolvedTarball, name: string): Promise<string> {
+    const url = new URL(resolved.tarball); // throws on a malformed URL
+    if (url.protocol !== 'https:') {
+      throw errors.unavailable({
+        message: `Refusing to download "${name}" from a non-https tarball URL (${resolved.tarball}).`,
+      });
+    }
+    const res = await fetch(resolved.tarball, { signal: AbortSignal.timeout(30_000) });
+    if (!res.ok) {
+      throw errors.unavailable({
+        message: `Could not download "${name}" from ${url.host} (HTTP ${res.status}).`,
+      });
+    }
+    const bytes = new Uint8Array(await res.arrayBuffer());
+    this.#verifyIntegrity(bytes, resolved.integrity, name, url.host);
+
+    // Bun.write creates the parent directory automatically, so no mkdir is needed.
+    const file = join(
+      this.pluginsDir,
+      '.cache',
+      'tarballs',
+      `${name.replace('/', '+')}-${resolved.version}.tgz`
+    );
+    await Bun.write(file, bytes);
+    return file;
+  }
+
+  /**
+   * Verify downloaded bytes against a Subresource-Integrity hash (`sha512-<base64>`). A missing hash
+   * means a registry that does not publish integrity: we still install the exact bytes we downloaded
+   * (no TLS→bytes gap), only without the cryptographic check, so warn rather than block. Throws on an
+   * unsupported algorithm or a real mismatch (a tampered/corrupt tarball).
+   */
+  #verifyIntegrity(
+    bytes: Uint8Array,
+    integrity: string | undefined,
+    name: string,
+    host: string
+  ): void {
+    if (!integrity) {
+      this.logs.warn('Registry tarball has no dist.integrity; installing unverified bytes', {
+        pluginName: name,
+        host,
+      });
+      return;
+    }
+    const dash = integrity.indexOf('-');
+    const algorithm = dash > 0 ? integrity.slice(0, dash) : '';
+    const expected = dash > 0 ? integrity.slice(dash + 1) : '';
+    if (algorithm !== 'sha512' || !expected) {
+      throw errors.unavailable({
+        message: `Unsupported integrity "${integrity}" for "${name}" (expected sha512-<base64>).`,
+      });
+    }
+    const actual = createHash('sha512').update(bytes).digest('base64');
+    if (actual !== expected) {
+      throw errors.unavailable({
+        message: `Integrity check failed for "${name}" from ${host}: the downloaded tarball does not match the registry's published hash.`,
+      });
+    }
+  }
+
   /** Best-effort connectivity check: false only on a classified network failure. */
   async #online(): Promise<boolean> {
     try {
@@ -377,8 +723,10 @@ export class PluginRegistry {
   async #loadPlugin(name: string, defaultEnabled?: boolean): Promise<void> {
     const { PluginManager } = await import('@/runtime/plugins/plugin-manager');
     const pm = inject(PluginManager);
-    // All plugins (npm + workspace) are in pluginsDir/node_modules/
-    await pm.load(name, this.pluginsDir, { defaultEnabled });
+    // All plugins (npm + workspace) are in pluginsDir/node_modules/. Force the reload: an explicit
+    // install/update should recompile and run the freshly-linked code (and show its build trace) even
+    // when the plugin is already loaded, e.g. a workspace plugin auto-loaded at boot.
+    await pm.load(name, this.pluginsDir, { defaultEnabled, force: true });
   }
 
   /**
@@ -402,7 +750,9 @@ export class PluginRegistry {
     // Create symlink: pluginsDir/node_modules/<name> → rootDirectory
     await this.#ensureSymlink(name, rootDirectory);
 
-    await this.#addDependency(name, version);
+    // Deliberately NOT recorded in pluginsDir/package.json: a `workspace:*` / `file:` entry in this
+    // non-workspace manifest breaks every later `bun install` (it tries to resolve it as a workspace
+    // member). The symlink above plus the brika.yml entry are the source of truth for local plugins.
     return rootDirectory;
   }
 
@@ -545,13 +895,31 @@ export class PluginRegistry {
     await rename(tmpPath, pkgPath);
   }
 
-  #addDependency(name: string, version: string): Promise<void> {
+  /**
+   * Drop manually-symlinked local plugins (`workspace:*` / `file:` DIRECTORY specifiers) from the
+   * install manifest. pluginsDir is not a bun workspace, so such an entry makes `bun install` abort with
+   * "Workspace dependency … not found"; local plugins live as symlinks + brika.yml entries instead. A
+   * verified registry `.tgz` installed by `file:` is kept (bun manages it like any dependency).
+   */
+  #pruneLocalManifestDeps(): Promise<void> {
     return this.#withPkgLock(async () => {
       const pkgPath = join(this.pluginsDir, 'package.json');
       const pkg = await Bun.file(pkgPath).json();
-      pkg.dependencies ??= {};
-      pkg.dependencies[name] = version;
-      await this.#writePackageJson(pkg);
+      if (!pkg.dependencies) {
+        return;
+      }
+      const kept = Object.fromEntries(
+        Object.entries(pkg.dependencies).filter(
+          ([, version]) => !(typeof version === 'string' && isLocalPluginSpec(version))
+        )
+      );
+      if (Object.keys(kept).length !== Object.keys(pkg.dependencies).length) {
+        pkg.dependencies = kept;
+        await this.#writePackageJson(pkg);
+        this.logs.info('Pruned local plugin entries from the install manifest', {
+          directory: this.pluginsDir,
+        });
+      }
     });
   }
 
@@ -610,6 +978,11 @@ export class PluginRegistry {
   }
 
   async #getLatestVersion(name: string): Promise<string | null> {
+    // A registry/tarball plugin's latest lives in the registry packument: `npm view` would query public
+    // npm, which may not host it at all (or host a divergent version) → a wrong "update available".
+    if (isRegistrySpec(await this.#installedSpec(name))) {
+      return (await this.#resolveRegistryTarball(name))?.version ?? null;
+    }
     try {
       const proc = Bun.spawn(['npm', 'view', name, 'version'], {
         cwd: this.pluginsDir,
@@ -636,7 +1009,9 @@ export class PluginRegistry {
       operation,
       package: packageName,
       targetVersion: version,
-      message: message ?? `${phase} ${packageName}@${version}`,
+      // Only append `@version` when a version is known: an update (or a `latest` install) carries
+      // none, so the default message must not read "…@undefined".
+      message: message ?? `${phase} ${packageName}${version ? `@${version}` : ''}`,
       error,
     };
   }

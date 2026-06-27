@@ -26,7 +26,7 @@
     "@brika/sdk": "workspace:*",
     "@brika/tui": "workspace:*",
     "create-brika": "workspace:*",
-    "ink": "^7.0.5",
+    "ink": "^7.1.0",
     "picocolors": "^1.1.1",
     "react": "^19.2.7",
     "reflect-metadata": "^0.2.2",
@@ -34,7 +34,7 @@
   },
   "devDependencies": {
     "@brika/testing": "workspace:*",
-    "@types/bun": "^1.3.5",
+    "@types/bun": "^1.3.14",
     "@types/react": "^19.2.17",
     "ink-testing-library": "^4.0.0"
   }

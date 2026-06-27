@@ -50,7 +50,7 @@ import {
 import type { BrickFamily, Plugin, PluginHealth } from '@brika/plugin';
 import type { PluginPackageSchema } from '@brika/schema';
 import { FsScopeSchema } from '@brika/sdk/grants';
-import { getProcessMetrics, RssSoftLimitMonitor } from '@/runtime/metrics';
+import { getProcessMetrics, type ProcessMetrics, RssSoftLimitMonitor } from '@/runtime/metrics';
 import type { HubLocation } from '@/runtime/state/state-store';
 import { dispatchGrantRequest } from './grants/dispatch';
 import { streamWriteFile } from './grants/fs/handlers/write-file';
@@ -74,6 +74,12 @@ export interface PluginProcessConfig {
   rssSoftLimitBytes: number;
   /** Consecutive over-limit RSS samples required before a breach is reported. */
   rssBreachSamples: number;
+  /**
+   * Override the process-metrics sampler. Defaults to the real `ps`-backed {@link getProcessMetrics};
+   * tests inject a controllable one here instead of `mock.module`-ing the shared metrics module (whose
+   * process-wide bleed, Bun #12823, would corrupt unrelated tests).
+   */
+  sampleProcessMetrics?: (pid: number) => Promise<ProcessMetrics | null>;
 }
 
 export interface SparkRegistration {
@@ -997,7 +1003,7 @@ export class PluginProcess {
 
         // Collect metrics on successful heartbeat
         if (this.callbacks.onMetrics || this.#rssMonitor.enabled) {
-          const metrics = await getProcessMetrics(this.pid);
+          const metrics = await (this.config.sampleProcessMetrics ?? getProcessMetrics)(this.pid);
           if (metrics) {
             this.callbacks.onMetrics?.(this, metrics.cpu, metrics.memory);
 

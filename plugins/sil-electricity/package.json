@@ -151,11 +151,11 @@
   ],
   "dependencies": {
     "@brika/sdk": "workspace:*",
-    "recharts": "^3.8.1"
+    "recharts": "^3.9.0"
   },
   "devDependencies": {
     "@types/react": "^19.2.17",
-    "lucide-react": "^1.17.0",
+    "lucide-react": "^1.21.0",
     "react": "^19.2.7"
   },
   "files": [

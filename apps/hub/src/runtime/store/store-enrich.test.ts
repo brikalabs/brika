@@ -44,6 +44,33 @@ describe('computeEnrichment', () => {
     );
     expect(result.installed).toBe(false);
     expect(result.installedVersion).toBeUndefined();
+    expect(result.updateAvailable).toBe(false);
+  });
+
+  test('updateAvailable is true when the registry version is newer than installed', () => {
+    const result = computeEnrichment(
+      { name: '@brika/test', version: '1.2.0' },
+      makeConfig([{ name: '@brika/test', version: '1.0.0' }])
+    );
+    expect(result.installedVersion).toBe('1.0.0');
+    expect(result.updateAvailable).toBe(true);
+  });
+
+  test('updateAvailable is false when installed is up to date', () => {
+    const result = computeEnrichment(
+      { name: '@brika/test', version: '1.0.0' },
+      makeConfig([{ name: '@brika/test', version: '1.0.0' }])
+    );
+    expect(result.updateAvailable).toBe(false);
+  });
+
+  test('updateAvailable is false for a non-semver (workspace) install', () => {
+    const result = computeEnrichment(
+      { name: '@brika/test', version: '1.2.0' },
+      makeConfig([{ name: '@brika/test', version: 'workspace:*' }])
+    );
+    expect(result.installedVersion).toBe('workspace:*');
+    expect(result.updateAvailable).toBe(false);
   });
 
   test('checks compatibility with engine requirement', () => {

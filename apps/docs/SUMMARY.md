@@ -16,6 +16,7 @@
 * [Commands](cli/commands.md)
 * [TUI Dashboard](cli/tui.md)
 * [Environment Variables](cli/environment.md)
+* [Registries](cli/registries.md)
 * [Configuration File](cli/configuration.md)
 
 ## Tutorials
