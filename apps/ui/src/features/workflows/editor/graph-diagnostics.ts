@@ -144,6 +144,47 @@ function isBlank(value: unknown): boolean {
   return value === undefined || value === null || (typeof value === 'string' && !value.trim());
 }
 
+/**
+ * A required field is satisfied when it has a value, a schema default, or is
+ * hidden by an unmet showWhen condition (so not required in this configuration).
+ */
+function isRequiredFieldSatisfied(
+  data: BlockNodeData,
+  def: BlockDefinition,
+  field: string
+): boolean {
+  if (!isBlank(data.config?.[field])) {
+    return true;
+  }
+  const property = fieldProperty(def, field);
+  if (property?.default !== undefined) {
+    return true;
+  }
+  const showWhen = toShowWhen(property?.showWhen);
+  return Boolean(showWhen && !showWhenSatisfied(data.config?.[showWhen.field], showWhen.equals));
+}
+
+/** Missing-config warnings for one block node's unsatisfied required fields. */
+function nodeConfigDiagnostics(
+  node: Node,
+  data: BlockNodeData,
+  def: BlockDefinition
+): GraphDiagnostic[] {
+  const out: GraphDiagnostic[] = [];
+  for (const field of def.schema?.required ?? []) {
+    if (isRequiredFieldSatisfied(data, def, field)) {
+      continue;
+    }
+    out.push({
+      kind: 'missing-config',
+      severity: 'warning',
+      nodeId: node.id,
+      params: { block: data.label || node.id, field },
+    });
+  }
+  return out;
+}
+
 function configDiagnostics(
   nodes: ReadonlyArray<Node>,
   blockSchemaMap: Record<string, BlockDefinition>
@@ -164,27 +205,7 @@ function configDiagnostics(
       });
       continue;
     }
-    for (const field of def.schema?.required ?? []) {
-      if (!isBlank(data.config?.[field])) {
-        continue;
-      }
-      // A defaulted field is satisfied by the runtime; a field hidden by an
-      // unmet showWhen condition is not required in the current configuration.
-      const property = fieldProperty(def, field);
-      if (property?.default !== undefined) {
-        continue;
-      }
-      const showWhen = toShowWhen(property?.showWhen);
-      if (showWhen && !showWhenSatisfied(data.config?.[showWhen.field], showWhen.equals)) {
-        continue;
-      }
-      out.push({
-        kind: 'missing-config',
-        severity: 'warning',
-        nodeId: node.id,
-        params: { block: data.label || node.id, field },
-      });
-    }
+    out.push(...nodeConfigDiagnostics(node, data, def));
   }
   return out;
 }

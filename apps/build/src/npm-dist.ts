@@ -19,7 +19,7 @@
  */
 
 import { chmodSync, cpSync, existsSync, mkdirSync, rmSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, resolve, sep } from 'node:path';
 import { parseArgs } from 'node:util';
 import pc from 'picocolors';
 import { done, fail, log, step } from './log';
@@ -74,8 +74,23 @@ const provenance = values.provenance === true;
 const dryRun = values['dry-run'] === true;
 const tag = typeof values.tag === 'string' ? values.tag : 'latest';
 const binariesDir = typeof values.binaries === 'string' ? values.binaries : undefined;
-const outDir =
-  typeof values.out === 'string' ? values.out : join(REPO_ROOT, 'apps/build/dist/npm');
+const outDir = resolveOutDir();
+
+/**
+ * Resolve the staging directory (default `<repo>/apps/build/dist/npm`) and
+ * refuse a `--out` that escapes the repo: `outDir` is wiped with a recursive
+ * `rmSync`, so a path outside the repo must never reach the filesystem.
+ */
+function resolveOutDir(): string {
+  const requested =
+    typeof values.out === 'string' ? values.out : join(REPO_ROOT, 'apps/build/dist/npm');
+  const resolved = resolve(requested);
+  if (resolved !== REPO_ROOT && !resolved.startsWith(REPO_ROOT + sep)) {
+    fail(`--out must stay within the repo (${REPO_ROOT}); refusing ${resolved}`);
+    process.exit(1);
+  }
+  return resolved;
+}
 
 async function resolveVersion(): Promise<string> {
   if (typeof values.version === 'string' && values.version !== '') {

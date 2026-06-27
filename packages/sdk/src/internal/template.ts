@@ -167,6 +167,36 @@ function parseOperand(raw: string): ExpressionOperand | null {
   return segments ? { kind: 'path', segments } : null;
 }
 
+/** One parsed path segment plus the index to resume scanning from. */
+interface SegmentParse {
+  key: string;
+  next: number;
+}
+
+/** Parse a `[...]` index / quoted-key segment starting at the `[` at `open`. */
+function parseBracketSegment(raw: string, open: number): SegmentParse | null {
+  const close = findBracketClose(raw, open);
+  if (close === -1) {
+    return null;
+  }
+  const key = parseBracketKey(raw.slice(open + 1, close).trim());
+  return key === null ? null : { key, next: close + 1 };
+}
+
+/** Parse a bare identifier / numeric-index segment up to the next '.' or '['. */
+function parseIdentifierSegment(raw: string, start: number): SegmentParse | null {
+  let end = start;
+  while (end < raw.length && raw[end] !== '.' && raw[end] !== '[') {
+    end++;
+  }
+  const ident = raw.slice(start, end).trim();
+  // Identifiers and bare numeric indices (`items.0`, the historic syntax)
+  if (!IDENTIFIER.test(ident) && !NUMBER_LITERAL.test(ident)) {
+    return null;
+  }
+  return { key: ident, next: end };
+}
+
 /**
  * Parse `inputs.items[0]["my key"].name` into ['inputs','items','0','my key','name'].
  * Returns null on malformed syntax.
@@ -175,37 +205,16 @@ function parsePathSegments(raw: string): string[] | null {
   const segments: string[] = [];
   let i = 0;
   while (i < raw.length) {
-    const ch = raw[i];
-    if (ch === '.') {
+    if (raw[i] === '.') {
       i++;
       continue;
     }
-    if (ch === '[') {
-      const close = findBracketClose(raw, i);
-      if (close === -1) {
-        return null;
-      }
-      const inner = raw.slice(i + 1, close).trim();
-      const key = parseBracketKey(inner);
-      if (key === null) {
-        return null;
-      }
-      segments.push(key);
-      i = close + 1;
-      continue;
-    }
-    // Bare identifier segment up to the next '.' or '['
-    let end = i;
-    while (end < raw.length && raw[end] !== '.' && raw[end] !== '[') {
-      end++;
-    }
-    const ident = raw.slice(i, end).trim();
-    // Identifiers and bare numeric indices (`items.0`, the historic syntax)
-    if (!IDENTIFIER.test(ident) && !NUMBER_LITERAL.test(ident)) {
+    const parsed = raw[i] === '[' ? parseBracketSegment(raw, i) : parseIdentifierSegment(raw, i);
+    if (!parsed) {
       return null;
     }
-    segments.push(ident);
-    i = end;
+    segments.push(parsed.key);
+    i = parsed.next;
   }
   return segments.length > 0 ? segments : null;
 }

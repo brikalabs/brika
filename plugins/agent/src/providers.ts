@@ -1,4 +1,4 @@
-import { getPreferences, type Json, localFetch, log, z } from '@brika/sdk';
+import { getPreferences, type Json, localFetch, log } from '@brika/sdk';
 import {
   describeModel,
   hintsForModel,
@@ -288,8 +288,8 @@ const DEFAULT_OPENAI_BASE = 'https://api.openai.com/v1';
 const DEFAULT_OLLAMA_BASE = 'http://localhost:11434';
 
 /** Normalize a user-pasted Ollama base: strip trailing slash and a /v1 suffix. */
-function ollamaRoot(baseUrl: string): string {
-  return baseUrl.replace(/\/+$/, '').replace(/\/v1$/, '');
+export function ollamaRoot(baseUrl: string): string {
+  return baseUrl.replace(/(^|[^/])\/+$/, '$1').replace(/\/v1$/, '');
 }
 
 function openaiMessages(req: ChatRequest): Json[] {

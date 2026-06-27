@@ -16,7 +16,7 @@ registerCheck('notImportFrom', (pattern: RegExp, description?: string) => {
   return {
     name: `not import ${desc}`,
     check: (_, file, content) => {
-      for (const match of content.matchAll(/import\s+.*?from\s+['"]([^'"]+)['"]/g)) {
+      for (const match of content.matchAll(/import\s+(?:\S.*?)?from\s+['"]([^'"]+)['"]/g)) {
         const imported = match[1];
         if (imported && pattern.test(imported)) {
           const line = content.substring(0, match.index).split('\n').length;
@@ -36,7 +36,7 @@ registerCheck('onlyImportFrom', (pattern: RegExp, description?: string) => {
   return {
     name: `only import ${desc}`,
     check: (_, file, content) => {
-      for (const match of content.matchAll(/import\s+.*?from\s+['"]([^'"]+)['"]/g)) {
+      for (const match of content.matchAll(/import\s+(?:\S.*?)?from\s+['"]([^'"]+)['"]/g)) {
         const imported = match[1];
         if (imported && !pattern.test(imported)) {
           const line = content.substring(0, match.index).split('\n').length;

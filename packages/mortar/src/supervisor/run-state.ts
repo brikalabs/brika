@@ -18,7 +18,7 @@
  */
 
 import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { resolve, sep } from 'node:path';
 import { SHUTDOWN_GRACE_MS } from '../constants';
 import { killPidTree } from './kill-tree';
 
@@ -44,7 +44,15 @@ export type ReapResult =
   | { kind: 'reaped'; reaped: number };
 
 export function runStatePath(root: string): string {
-  return join(root, RUN_STATE_FILE);
+  const base = resolve(root);
+  const path = resolve(base, RUN_STATE_FILE);
+  // `RUN_STATE_FILE` is a constant basename, but validating the constructed
+  // path keeps a state file from ever being read/written/removed outside the
+  // supervisor's root.
+  if (path !== base && !path.startsWith(base + sep)) {
+    throw new Error(`run-state path escapes root: ${path}`);
+  }
+  return path;
 }
 
 /** Atomically (best-effort) persist the current live-service set. */
