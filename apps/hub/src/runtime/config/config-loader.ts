@@ -334,6 +334,16 @@ function readRetentionDays(raw: unknown, fallbackDays: number): number {
   return readUnit(DurationSchema, raw, fallbackDays * DAY_MS) / DAY_MS;
 }
 
+/**
+ * The default registry URL. Reads the `registry:` key, falling back once to the
+ * pre-rename `defaultRegistry:` key so an upgraded file doesn't silently lose an
+ * operator's pinned registry; the next save() normalizes it to `registry:`.
+ */
+function readRegistry(parsed: Record<string, unknown>): string {
+  const raw = typeof parsed.registry === 'string' ? parsed.registry : parsed.defaultRegistry;
+  return typeof raw === 'string' ? trimUrl(raw) : defaultRegistry();
+}
+
 /** Parse one `{ retention, pruneInterval }` YAML section into the in-memory shape. */
 function readRetentionSection(raw: unknown, def: RetentionConfig): RetentionConfig {
   const rec = asRecord(raw);
@@ -529,15 +539,7 @@ export class ConfigLoader {
         plugins: this.#parsePlugins(parsed.plugins),
         rules: z.array(z.custom<RuleEntry>()).catch([]).parse(parsed.rules),
         schedules: z.array(z.custom<ScheduleEntry>()).catch([]).parse(parsed.schedules),
-        // Accept the pre-rename `defaultRegistry:` key once so an upgraded file
-        // doesn't silently lose an operator's pinned registry; the next save()
-        // normalizes it to `registry:` and drops the old key.
-        defaultRegistry:
-          typeof parsed.registry === 'string'
-            ? trimUrl(parsed.registry)
-            : typeof parsed.defaultRegistry === 'string'
-              ? trimUrl(parsed.defaultRegistry)
-              : defaultRegistry(),
+        defaultRegistry: readRegistry(parsed),
         npmRegistries:
           parsed.npmRegistries === undefined
             ? {}
