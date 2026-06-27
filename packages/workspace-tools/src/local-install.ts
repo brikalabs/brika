@@ -13,7 +13,7 @@
 import { existsSync } from 'node:fs';
 import { chmod, copyFile, cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
-import { basename, join, resolve, sep } from 'node:path';
+import { basename, join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import pc from 'picocolors';
 
@@ -53,27 +53,14 @@ if (values.help) {
   process.exit(0);
 }
 
-const INSTALL_DIR = typeof values.dir === 'string' ? values.dir : join(homedir(), '.brika');
-const BIN_DIR = within(INSTALL_DIR, 'bin');
+const BIN_DIR = join(
+  typeof values.dir === 'string' ? values.dir : join(homedir(), '.brika'),
+  'bin'
+);
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
 const log = (msg: string) => console.log(`  ${msg}`);
-
-/**
- * Join `segment` onto `base` and refuse any result that escapes `base`.
- * The install root (`--dir`) is intentionally free-form, but our appended
- * segments must stay inside it: this keeps a constructed path from ever
- * reaching the filesystem if a segment is ever made dynamic.
- */
-function within(base: string, segment: string): string {
-  const root = resolve(base);
-  const resolved = resolve(root, segment);
-  if (resolved !== root && !resolved.startsWith(root + sep)) {
-    throw new Error(`refusing path "${segment}" that escapes ${root}`);
-  }
-  return resolved;
-}
 
 async function exec(args: string[], timeout = 5 * 60_000): Promise<void> {
   const proc = Bun.spawn(args, {
@@ -114,16 +101,14 @@ await mkdir(BIN_DIR, {
   recursive: true,
 });
 
-const binaryDest = within(BIN_DIR, BINARY_NAME);
-await copyFile(BINARY_SRC, binaryDest);
-await chmod(binaryDest, 0o755);
+await copyFile(BINARY_SRC, join(BIN_DIR, BINARY_NAME));
+await chmod(join(BIN_DIR, BINARY_NAME), 0o755);
 
-const uiDest = within(BIN_DIR, 'ui');
-await rm(uiDest, {
+await rm(join(BIN_DIR, 'ui'), {
   recursive: true,
   force: true,
 });
-await cp(UI_SRC, uiDest, {
+await cp(UI_SRC, join(BIN_DIR, 'ui'), {
   recursive: true,
 });
 
@@ -165,7 +150,7 @@ if (!inPath) {
 
 // ── Verify ──────────────────────────────────────────────────────────────────
 
-const proc = Bun.spawn([binaryDest, '--version'], {
+const proc = Bun.spawn([join(BIN_DIR, BINARY_NAME), '--version'], {
   stdout: 'pipe',
   stderr: 'pipe',
   env: {
