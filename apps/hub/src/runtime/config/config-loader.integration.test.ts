@@ -347,6 +347,21 @@ schedules: []
       expect(config.searchStores).toContain('https://store.brika.dev');
     });
 
+    test('reads the new `registry` key', async () => {
+      await Bun.write(join(BRIKA_DIR, 'brika.yml'), 'registry: https://new.example.com\n');
+      const config = await loader.load();
+      expect(config.defaultRegistry).toBe('https://new.example.com');
+    });
+
+    test('still honours the pre-rename `defaultRegistry` key on upgrade', async () => {
+      await Bun.write(
+        join(BRIKA_DIR, 'brika.yml'),
+        'defaultRegistry: https://private.example.com\n'
+      );
+      const config = await loader.load();
+      expect(config.defaultRegistry).toBe('https://private.example.com');
+    });
+
     test('setNpmRegistry adds a scope mapping, normalizes the URL, and persists', async () => {
       await loader.load();
 

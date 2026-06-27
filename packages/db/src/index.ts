@@ -18,6 +18,7 @@ export {
   lte,
   max,
   min,
+  ne,
   notInArray,
   or,
   type SQL,

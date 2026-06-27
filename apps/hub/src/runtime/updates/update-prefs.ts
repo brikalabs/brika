@@ -38,14 +38,12 @@ export interface UpdatePrefs {
 const DEFAULT_PREFS: UpdatePrefs = { channel: DEFAULT_CHANNEL_ID, pinnedVersion: null };
 
 /**
- * Path the hub opens `state.db` at. Mirrors `bootstrap.ts`, which calls
- * `configureDatabases(`${rootDir}/.brika`)`; the db layer then resolves
- * `state.db` to `${rootDir}/.brika/db/state.db`. `brikaContext.rootDir`
- * is the same value the hub's config loader reports, so this resolves to
- * the exact file the running hub uses.
+ * Path the hub opens `state.db` at: `${systemDir}/db/state.db`. `brikaContext.dbDir`
+ * is the same `.system/db` location `bootstrap.ts` passes to `configureDatabases`,
+ * so this stays in lockstep with the hub (and with any future relocation).
  */
 function stateDbPath(): string {
-  return join(brikaContext.rootDir, '.brika', 'db', 'state.db');
+  return join(brikaContext.dbDir, 'state.db');
 }
 
 /** Read one JSON-encoded `settings` value, or `undefined` when absent/unparseable. */

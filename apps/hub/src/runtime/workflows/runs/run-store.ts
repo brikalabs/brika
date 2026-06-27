@@ -7,9 +7,9 @@ import {
   desc,
   endTsFilter,
   eq,
-  inArray,
   incrementalVacuum,
   lt,
+  ne,
   or,
   scheduleRetention,
   sql,
@@ -123,38 +123,36 @@ export class RunStore {
   }
 
   /**
-   * Delete runs with `startedAt < cutoff` and their `run_events` (no FK cascade,
-   * so both tables are pruned in one transaction), then reclaim the freed pages.
-   * Returns the number of runs removed. Failures are swallowed so a transient
-   * I/O error never crashes the retention timer.
+   * Delete finished runs with `startedAt < cutoff` and their `run_events` (no FK
+   * cascade, so both tables are pruned in one transaction), then reclaim the
+   * freed pages. Still-`running` runs are never pruned: their correlationId may
+   * still be live in `#openRunIds`, and deleting the row would orphan every
+   * later event for that run. Returns the number of runs removed; failures are
+   * swallowed so a transient I/O error never crashes the retention timer.
    */
   pruneOlderThan(cutoff: number): number {
     const db = this.db;
     if (!db || !this.#database) {
       return 0;
     }
+    const sqlite = this.#database.sqlite;
     try {
-      const removed = this.#database.sqlite.transaction(() => {
-        const oldRuns = db
+      const removed = sqlite.transaction(() => {
+        // Events first, via a subquery so there's no per-id parameter expansion
+        // (a large sweep could otherwise exceed the bound-parameter limit).
+        sqlite.run(
+          "DELETE FROM run_events WHERE run_id IN (SELECT id FROM runs WHERE started_at < ? AND status != 'running')",
+          [cutoff]
+        );
+        return db
           .delete(runsTable)
-          .where(lt(runsTable.startedAt, cutoff))
+          .where(and(lt(runsTable.startedAt, cutoff), ne(runsTable.status, 'running')))
           .returning({ id: runsTable.id })
-          .all();
-        if (oldRuns.length > 0) {
-          db.delete(runEventsTable)
-            .where(
-              inArray(
-                runEventsTable.runId,
-                oldRuns.map((r) => r.id)
-              )
-            )
-            .run();
-        }
-        return oldRuns.length;
+          .all().length;
       })();
       if (removed > 0) {
         try {
-          incrementalVacuum(this.#database.sqlite);
+          incrementalVacuum(sqlite);
         } catch {
           // Best-effort: a failed reclaim leaves the freed pages for next time.
         }

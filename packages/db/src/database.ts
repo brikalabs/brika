@@ -97,11 +97,19 @@ function reclaimIfBloated(sqlite: Database, path: string): void {
   if (freelist < RECLAIM_MIN_FREE_PAGES || freelist / pageCount < RECLAIM_FREE_RATIO) {
     return;
   }
-  sqlite.query('VACUUM').run();
-  // VACUUM compacts the page graph, but in WAL mode the main .db file is only
-  // resized at a checkpoint, so truncate explicitly to actually return the
-  // space to the OS.
-  sqlite.query('PRAGMA wal_checkpoint(TRUNCATE)').run();
+  // Best-effort: VACUUM needs up to ~2x the DB size in temp space, so on a
+  // low-disk host (often the very reason the DB bloated) it can throw
+  // SQLITE_FULL. This runs during boot, before any UI is reachable, and is a
+  // pure optimization, so a failure must never crash startup. auto_vacuum stays
+  // INCREMENTAL, so deletions still reclaim space gradually on later boots.
+  try {
+    sqlite.query('VACUUM').run();
+    // VACUUM compacts the page graph, but in WAL mode the main .db file is only
+    // resized at a checkpoint, so truncate explicitly to return the space to the OS.
+    sqlite.query('PRAGMA wal_checkpoint(TRUNCATE)').run();
+  } catch {
+    // Leave the bloat for incremental_vacuum / a future boot with more headroom.
+  }
 }
 
 /** ~8 MiB of free pages (at 4 KiB/page) before a one-time VACUUM is worthwhile. */

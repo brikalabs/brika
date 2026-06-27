@@ -529,8 +529,15 @@ export class ConfigLoader {
         plugins: this.#parsePlugins(parsed.plugins),
         rules: z.array(z.custom<RuleEntry>()).catch([]).parse(parsed.rules),
         schedules: z.array(z.custom<ScheduleEntry>()).catch([]).parse(parsed.schedules),
+        // Accept the pre-rename `defaultRegistry:` key once so an upgraded file
+        // doesn't silently lose an operator's pinned registry; the next save()
+        // normalizes it to `registry:` and drops the old key.
         defaultRegistry:
-          typeof parsed.registry === 'string' ? trimUrl(parsed.registry) : defaultRegistry(),
+          typeof parsed.registry === 'string'
+            ? trimUrl(parsed.registry)
+            : typeof parsed.defaultRegistry === 'string'
+              ? trimUrl(parsed.defaultRegistry)
+              : defaultRegistry(),
         npmRegistries:
           parsed.npmRegistries === undefined
             ? {}

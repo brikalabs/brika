@@ -6,7 +6,7 @@
  * leniently (worth keeping warm for a while). Persistent `/data` is never touched.
  */
 
-import { lstat, readdir, rm } from 'node:fs/promises';
+import { lstat, readdir, rm, rmdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { pluginDataDir } from './fs-dirs';
 
@@ -44,6 +44,12 @@ async function sweepOldFiles(
       const stats = await lstat(full);
       if (stats.isDirectory()) {
         await sweepOldFiles(full, cutoff, acc);
+        // Remove the subdir if the sweep emptied it (per-job scratch trees),
+        // so cleared-out hierarchies don't leak inodes. The root tmp/cache dirs
+        // aren't passed here, so they're never removed.
+        if ((await readdir(full)).length === 0) {
+          await rmdir(full);
+        }
       } else if (stats.isFile() && stats.mtimeMs < cutoff) {
         await rm(full, { force: true });
         acc.freedBytes += stats.size;

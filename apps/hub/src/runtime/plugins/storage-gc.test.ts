@@ -51,6 +51,19 @@ describe('gcPluginStorage', () => {
     expect(result).toEqual({ freedBytes: 0, removedFiles: 0, sweptPlugins: 0 });
   });
 
+  test('removes subdirectories it empties, but keeps the tmp/cache roots', async () => {
+    const nested = join(uidBase, 'tmp', 'job-1', 'inputs');
+    mkdirSync(nested, { recursive: true });
+    writeFileSync(join(nested, 'photo.jpg'), 'x'.repeat(50));
+
+    await gcPluginStorage(systemDir, Date.now() + 100 * DAY);
+
+    // The emptied scratch hierarchy is gone…
+    expect(existsSync(join(uidBase, 'tmp', 'job-1'))).toBe(false);
+    // …but the tmp/ root itself remains (re-created lazily on next plugin use).
+    expect(existsSync(join(uidBase, 'tmp'))).toBe(true);
+  });
+
   test('respects custom per-root ages (tmp aged out, cache kept)', async () => {
     // tmp max age tiny (everything stale), cache max age huge (nothing stale).
     const result = await gcPluginStorage(systemDir, Date.now() + DAY, {
