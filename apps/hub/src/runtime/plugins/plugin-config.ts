@@ -157,6 +157,14 @@ export class PluginConfigService {
     userConfig: Record<string, unknown>
   ): Promise<Record<string, unknown> | null> {
     const passwordPrefs = new Set(schema.filter((p) => p.type === 'password').map((p) => p.name));
+    // Fast path for the steady state (every spawn/respawn calls getConfig): if no
+    // key could possibly be a secret, there's nothing to ingest — skip the clone.
+    const hasCandidate = Object.keys(userConfig).some(
+      (k) => passwordPrefs.has(k) || k.startsWith(SECRET_PREFIX)
+    );
+    if (!hasCandidate) {
+      return null;
+    }
     const scrubbed: Record<string, unknown> = { ...userConfig };
     let changed = false;
 

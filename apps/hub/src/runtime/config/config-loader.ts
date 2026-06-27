@@ -147,6 +147,12 @@ function defaultSearchStores(): string[] {
   return [trimUrl(process.env.BRIKA_STORE_URL || BRIKA_DEFAULT_STORE)];
 }
 
+/** A periodic retention sweep: drop rows older than `retentionDays`, every `pruneIntervalMs`. */
+export interface RetentionConfig {
+  retentionDays: number;
+  pruneIntervalMs: number;
+}
+
 export interface BrikaConfig {
   hub: {
     port: number;
@@ -196,39 +202,14 @@ export interface BrikaConfig {
        */
       quotas?: { data?: number; cache?: number; tmp?: number };
     };
-    logs: {
-      /**
-       * Drop log rows older than this many days during periodic pruning.
-       * 0 disables retention (keep everything — log file grows unbounded).
-       */
-      retentionDays: number;
-      /**
-       * How often (in milliseconds) the retention sweep runs. Defaults
-       * to 1 hour; setting too low wastes CPU, too high risks bloat.
-       */
-      pruneIntervalMs: number;
-    };
-    analytics: {
-      /**
-       * Drop captured feature-usage events older than this many days during
-       * periodic pruning. 0 disables retention (events grow unbounded).
-       */
-      retentionDays: number;
-      /** How often (in milliseconds) the analytics retention sweep runs. */
-      pruneIntervalMs: number;
-    };
-    sparks: {
-      /** Drop spark rows older than this many days. 0 disables retention. */
-      retentionDays: number;
-      /** How often (in milliseconds) the spark retention sweep runs. */
-      pruneIntervalMs: number;
-    };
-    workflows: {
-      /** Drop workflow runs (and their events) older than this many days. 0 disables retention. */
-      retentionDays: number;
-      /** How often (in milliseconds) the workflow-run retention sweep runs. */
-      pruneIntervalMs: number;
-    };
+    /** Drop log rows older than `retentionDays` (0 = keep forever); sweep every `pruneIntervalMs`. */
+    logs: RetentionConfig;
+    /** Drop analytics events older than `retentionDays` (0 = keep forever). */
+    analytics: RetentionConfig;
+    /** Drop spark rows older than `retentionDays` (0 = keep forever). */
+    sparks: RetentionConfig;
+    /** Drop workflow runs (and their events) older than `retentionDays` (0 = keep forever). */
+    workflows: RetentionConfig;
     shutdown: ShutdownConfig;
   };
   plugins: PluginEntry[];
@@ -339,84 +320,63 @@ function asRecord(value: unknown): Record<string, unknown> {
 }
 
 /**
- * Read a YAML duration value (`"5s"`, `"1h"`, `"7d"`, or raw ms) into integer
- * milliseconds, falling back to `fallback` when absent or malformed (so a typo
- * in a tuning knob doesn't fail the whole load).
+ * Read a YAML value through a unit schema (duration `"5s"`/`"7d"` or bytes
+ * `"512mb"`), falling back when absent or malformed so a typo in a tuning knob
+ * doesn't fail the whole load. `DurationSchema`/`BytesSchema` accept raw numbers
+ * too, so this also handles the legacy plain-number form.
  */
-function readDurationMs(raw: unknown, fallback: number): number {
-  if (raw === undefined || raw === null) {
-    return fallback;
-  }
-  return DurationSchema.catch(fallback).parse(raw);
+function readUnit(schema: z.ZodType<number>, raw: unknown, fallback: number): number {
+  return raw === undefined || raw === null ? fallback : schema.catch(fallback).parse(raw);
 }
 
-/** Read a YAML byte value (`"512mb"`, `"2gb"`, or raw bytes), falling back when absent/malformed. */
-function readBytes(raw: unknown, fallback: number): number {
-  if (raw === undefined || raw === null) {
-    return fallback;
-  }
-  return BytesSchema.catch(fallback).parse(raw);
+/** A retention window read as a (possibly fractional) day count; the log/analytics stores use days. */
+function readRetentionDays(raw: unknown, fallbackDays: number): number {
+  return readUnit(DurationSchema, raw, fallbackDays * DAY_MS) / DAY_MS;
 }
 
-/** Read an optional byte value: a valid value, or `undefined` when absent/malformed. */
-function readOptionalBytes(raw: unknown): number | undefined {
-  if (raw === undefined || raw === null) {
-    return undefined;
-  }
-  const parsed = BytesSchema.safeParse(raw);
-  return parsed.success ? parsed.data : undefined;
+/** Parse one `{ retention, pruneInterval }` YAML section into the in-memory shape. */
+function readRetentionSection(raw: unknown, def: RetentionConfig): RetentionConfig {
+  const rec = asRecord(raw);
+  return {
+    retentionDays: readRetentionDays(rec.retention, def.retentionDays),
+    pruneIntervalMs: readUnit(DurationSchema, rec.pruneInterval, def.pruneIntervalMs),
+  };
 }
+
+const QUOTA_ROOTS = ['data', 'cache', 'tmp'] as const;
+type QuotaOverrides = Partial<Record<(typeof QUOTA_ROOTS)[number], number>>;
 
 /** Parse the optional `hub.plugins.quotas` override map; `undefined` when no roots are set. */
-function readQuotaOverrides(
-  raw: unknown
-): { data?: number; cache?: number; tmp?: number } | undefined {
+function readQuotaOverrides(raw: unknown): QuotaOverrides | undefined {
   const rec = asRecord(raw);
-  const out: { data?: number; cache?: number; tmp?: number } = {};
-  const data = readOptionalBytes(rec.data);
-  const cache = readOptionalBytes(rec.cache);
-  const tmp = readOptionalBytes(rec.tmp);
-  if (data !== undefined) {
-    out.data = data;
-  }
-  if (cache !== undefined) {
-    out.cache = cache;
-  }
-  if (tmp !== undefined) {
-    out.tmp = tmp;
+  const out: QuotaOverrides = {};
+  for (const root of QUOTA_ROOTS) {
+    const parsed = BytesSchema.safeParse(rec[root]);
+    if (parsed.success) {
+      out[root] = parsed.data;
+    }
   }
   return Object.keys(out).length > 0 ? out : undefined;
 }
 
-/**
- * Read a retention window expressed as a duration (`"7d"`, `"90d"`, `"36h"`)
- * into a (possibly fractional) day count, the unit the log/analytics stores
- * still consume internally. `0`/absent disables retention.
- */
-function readRetentionDays(raw: unknown, fallbackDays: number): number {
-  if (raw === undefined || raw === null) {
-    return fallbackDays;
-  }
-  return DurationSchema.catch(fallbackDays * DAY_MS).parse(raw) / DAY_MS;
-}
-
 /** Serialize the optional per-root quota overrides back to readable byte strings. */
-function serializeQuotaOverrides(quotas: {
-  data?: number;
-  cache?: number;
-  tmp?: number;
-}): Record<string, string> {
+function serializeQuotaOverrides(quotas: QuotaOverrides): Record<string, string> {
   const out: Record<string, string> = {};
-  if (quotas.data !== undefined) {
-    out.data = formatBytes(quotas.data);
-  }
-  if (quotas.cache !== undefined) {
-    out.cache = formatBytes(quotas.cache);
-  }
-  if (quotas.tmp !== undefined) {
-    out.tmp = formatBytes(quotas.tmp);
+  for (const root of QUOTA_ROOTS) {
+    const value = quotas[root];
+    if (value !== undefined) {
+      out[root] = formatBytes(value);
+    }
   }
   return out;
+}
+
+/** Serialize one in-memory retention section to the friendly `{ retention, pruneInterval }` YAML. */
+function retentionYaml(section: RetentionConfig): { retention: string; pruneInterval: string } {
+  return {
+    retention: formatDuration(section.retentionDays * DAY_MS),
+    pruneInterval: formatDuration(section.pruneIntervalMs),
+  };
 }
 
 /**
@@ -439,22 +399,10 @@ function hubToYaml(hub: BrikaConfig['hub']): Record<string, unknown> {
       bytecode: hub.plugins.bytecode,
       ...(hub.plugins.quotas ? { quotas: serializeQuotaOverrides(hub.plugins.quotas) } : {}),
     },
-    logs: {
-      retention: formatDuration(hub.logs.retentionDays * DAY_MS),
-      pruneInterval: formatDuration(hub.logs.pruneIntervalMs),
-    },
-    analytics: {
-      retention: formatDuration(hub.analytics.retentionDays * DAY_MS),
-      pruneInterval: formatDuration(hub.analytics.pruneIntervalMs),
-    },
-    sparks: {
-      retention: formatDuration(hub.sparks.retentionDays * DAY_MS),
-      pruneInterval: formatDuration(hub.sparks.pruneIntervalMs),
-    },
-    workflows: {
-      retention: formatDuration(hub.workflows.retentionDays * DAY_MS),
-      pruneInterval: formatDuration(hub.workflows.pruneIntervalMs),
-    },
+    logs: retentionYaml(hub.logs),
+    analytics: retentionYaml(hub.analytics),
+    sparks: retentionYaml(hub.sparks),
+    workflows: retentionYaml(hub.workflows),
     shutdown: {
       gracePeriod: formatDuration(hub.shutdown.gracePeriodMs),
     },
@@ -526,12 +474,9 @@ export class ConfigLoader {
 
       const hubParsed = asRecord(parsed.hub);
       const hubPluginsParsed = asRecord(hubParsed.plugins);
-      const hubLogsParsed = asRecord(hubParsed.logs);
-      const hubAnalyticsParsed = asRecord(hubParsed.analytics);
-      const hubSparksParsed = asRecord(hubParsed.sparks);
-      const hubWorkflowsParsed = asRecord(hubParsed.workflows);
       const hubShutdownParsed = asRecord(hubParsed.shutdown);
       const defaults = DEFAULT_CONFIG.hub;
+      const quotas = readQuotaOverrides(hubPluginsParsed.quotas);
 
       // Declarative registry catalogue: built-in presets extended by the operator's `registries:`
       // block. The flat `searchStores` key stays the runtime-mutable list; an operator registry's
@@ -545,64 +490,37 @@ export class ConfigLoader {
           host: typeof hubParsed.host === 'string' ? hubParsed.host : defaults.host,
           corsAllowlist: this.#parseCorsAllowlist(hubParsed.corsAllowlist),
           plugins: {
-            heartbeatInterval: readDurationMs(
+            heartbeatInterval: readUnit(
+              DurationSchema,
               hubPluginsParsed.heartbeat,
               defaults.plugins.heartbeatInterval
             ),
-            heartbeatTimeout: readDurationMs(
+            heartbeatTimeout: readUnit(
+              DurationSchema,
               hubPluginsParsed.heartbeatTimeout,
               defaults.plugins.heartbeatTimeout
             ),
-            rssSoftLimitBytes: readBytes(
+            rssSoftLimitBytes: readUnit(
+              BytesSchema,
               hubPluginsParsed.rssSoftLimit,
               defaults.plugins.rssSoftLimitBytes
             ),
-            idleReapMs: readDurationMs(hubPluginsParsed.idleReap, defaults.plugins.idleReapMs),
+            idleReapMs: readUnit(
+              DurationSchema,
+              hubPluginsParsed.idleReap,
+              defaults.plugins.idleReapMs
+            ),
             keepWarmCount: KeepWarmCountSchema.parse(hubPluginsParsed.keepWarmCount),
             bytecode: BytecodeSchema.parse(hubPluginsParsed.bytecode),
-            ...(readQuotaOverrides(hubPluginsParsed.quotas) !== undefined
-              ? { quotas: readQuotaOverrides(hubPluginsParsed.quotas) }
-              : {}),
+            ...(quotas !== undefined ? { quotas } : {}),
           },
-          logs: {
-            retentionDays: readRetentionDays(hubLogsParsed.retention, defaults.logs.retentionDays),
-            pruneIntervalMs: readDurationMs(
-              hubLogsParsed.pruneInterval,
-              defaults.logs.pruneIntervalMs
-            ),
-          },
-          analytics: {
-            retentionDays: readRetentionDays(
-              hubAnalyticsParsed.retention,
-              defaults.analytics.retentionDays
-            ),
-            pruneIntervalMs: readDurationMs(
-              hubAnalyticsParsed.pruneInterval,
-              defaults.analytics.pruneIntervalMs
-            ),
-          },
-          sparks: {
-            retentionDays: readRetentionDays(
-              hubSparksParsed.retention,
-              defaults.sparks.retentionDays
-            ),
-            pruneIntervalMs: readDurationMs(
-              hubSparksParsed.pruneInterval,
-              defaults.sparks.pruneIntervalMs
-            ),
-          },
-          workflows: {
-            retentionDays: readRetentionDays(
-              hubWorkflowsParsed.retention,
-              defaults.workflows.retentionDays
-            ),
-            pruneIntervalMs: readDurationMs(
-              hubWorkflowsParsed.pruneInterval,
-              defaults.workflows.pruneIntervalMs
-            ),
-          },
+          logs: readRetentionSection(hubParsed.logs, defaults.logs),
+          analytics: readRetentionSection(hubParsed.analytics, defaults.analytics),
+          sparks: readRetentionSection(hubParsed.sparks, defaults.sparks),
+          workflows: readRetentionSection(hubParsed.workflows, defaults.workflows),
           shutdown: {
-            gracePeriodMs: readDurationMs(
+            gracePeriodMs: readUnit(
+              DurationSchema,
               hubShutdownParsed.gracePeriod,
               defaults.shutdown.gracePeriodMs
             ),

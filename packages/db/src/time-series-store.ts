@@ -19,7 +19,28 @@ import { type BrikaDatabase, incrementalVacuum } from './database';
  * (query/aggregate/distinct) stay on the subclass since they vary per table.
  */
 const MAX_INSERT_ERRORS = 5;
-const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** One day in milliseconds. */
+export const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Schedule a retention sweep: run `sweep` once immediately (so a stale DB
+ * shrinks at boot, not after a full interval) then every `intervalMs`. Returns
+ * the interval timer, or `undefined` when retention is disabled
+ * (`retentionDays <= 0` or `intervalMs <= 0`). Shared by {@link TimeSeriesStore}
+ * and the bespoke dual-table RunStore so the scheduling logic lives in one place.
+ */
+export function scheduleRetention(
+  retentionDays: number,
+  intervalMs: number,
+  sweep: () => void
+): ReturnType<typeof setInterval> | undefined {
+  if (retentionDays <= 0 || intervalMs <= 0) {
+    return undefined;
+  }
+  sweep();
+  return setInterval(sweep, intervalMs);
+}
 
 export abstract class TimeSeriesStore<TEvent, TSchema extends Record<string, unknown>> {
   #database: BrikaDatabase<TSchema> | null = null;
@@ -61,14 +82,9 @@ export abstract class TimeSeriesStore<TEvent, TSchema extends Record<string, unk
    */
   startRetention(retentionDays: number, intervalMs: number): void {
     this.stopRetention();
-    if (retentionDays <= 0 || intervalMs <= 0) {
-      return;
-    }
-    const sweep = () => {
+    this.#pruneTimer = scheduleRetention(retentionDays, intervalMs, () => {
       this.pruneOlderThan(Date.now() - retentionDays * DAY_MS);
-    };
-    sweep();
-    this.#pruneTimer = setInterval(sweep, intervalMs);
+    });
   }
 
   stopRetention(): void {
@@ -176,13 +192,11 @@ export abstract class TimeSeriesStore<TEvent, TSchema extends Record<string, unk
    */
   close(): void {
     this.stopRetention();
+    // flush() clears #flushTimer and drains the buffer; #closed then blocks any
+    // re-arming, so there's nothing left to clear here.
     this.flush();
     this.#closed = true;
     this.#queue.length = 0;
-    if (this.#flushTimer) {
-      clearTimeout(this.#flushTimer);
-      this.#flushTimer = undefined;
-    }
     if (this.#database) {
       this.#database.sqlite.close();
       this.#database = null;

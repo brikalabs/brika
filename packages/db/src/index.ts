@@ -42,4 +42,4 @@ export {
   incrementalVacuum,
 } from './database';
 export { cursorFilter, endTsFilter, oneOrMany, startTsFilter } from './helpers';
-export { TimeSeriesStore } from './time-series-store';
+export { DAY_MS, scheduleRetention, TimeSeriesStore } from './time-series-store';

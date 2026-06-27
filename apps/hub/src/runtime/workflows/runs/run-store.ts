@@ -3,6 +3,7 @@ import {
   asc,
   type BrikaDatabase,
   cursorFilter,
+  DAY_MS,
   desc,
   endTsFilter,
   eq,
@@ -10,6 +11,7 @@ import {
   incrementalVacuum,
   lt,
   or,
+  scheduleRetention,
   sql,
   startTsFilter,
 } from '@brika/db';
@@ -108,14 +110,9 @@ export class RunStore {
    */
   startRetention(retentionDays: number, intervalMs: number): void {
     this.stopRetention();
-    if (retentionDays <= 0 || intervalMs <= 0) {
-      return;
-    }
-    const sweep = () => {
-      this.pruneOlderThan(Date.now() - retentionDays * 24 * 60 * 60 * 1000);
-    };
-    sweep();
-    this.#pruneTimer = setInterval(sweep, intervalMs);
+    this.#pruneTimer = scheduleRetention(retentionDays, intervalMs, () => {
+      this.pruneOlderThan(Date.now() - retentionDays * DAY_MS);
+    });
   }
 
   stopRetention(): void {
