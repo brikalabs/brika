@@ -538,7 +538,7 @@ schedules: []
       await loader.removePlugin('non-existent');
 
       // Should not throw and length should be unchanged
-      expect(loader.get().plugins.length).toBe(initialLength);
+      expect(loader.get().plugins).toHaveLength(initialLength);
     });
   });
 

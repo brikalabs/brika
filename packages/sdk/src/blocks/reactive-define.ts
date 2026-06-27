@@ -669,7 +669,7 @@ function zodToBlockSchema(schema: z.ZodObject<z.ZodRawShape>): BlockSchema {
       type?: string;
       description?: string;
       enum?: Json[];
-      default?: Json;
+      default?: Exclude<Json, undefined>;
       format?: string;
       label?: string;
       showWhen?: {

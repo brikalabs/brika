@@ -47,7 +47,7 @@ export interface BlockSchema {
     {
       type: 'string' | 'number' | 'boolean' | 'array' | 'object';
       description?: string;
-      default?: Json;
+      default?: Exclude<Json, undefined>;
       enum?: Json[];
       items?: {
         type: string;

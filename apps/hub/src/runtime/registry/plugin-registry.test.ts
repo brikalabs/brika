@@ -429,7 +429,7 @@ describe('PluginRegistry', () => {
       }
 
       const installCalls = bun.spawnCalls.filter((c) => c.cmd.includes('install'));
-      expect(installCalls.length).toBe(0);
+      expect(installCalls).toHaveLength(0);
     });
 
     test('skips npm install for file packages', async () => {
@@ -452,7 +452,7 @@ describe('PluginRegistry', () => {
       }
 
       const installCalls = bun.spawnCalls.filter((c) => c.cmd.includes('install'));
-      expect(installCalls.length).toBe(0);
+      expect(installCalls).toHaveLength(0);
     });
 
     test('yields error on failure', async () => {
@@ -547,7 +547,7 @@ describe('PluginRegistry', () => {
       await registry.uninstall('@test/plugin');
 
       const removeCalls = bun.spawnCalls.filter((c) => c.cmd.includes('remove'));
-      expect(removeCalls.length).toBe(1);
+      expect(removeCalls).toHaveLength(1);
       expect(removeCalls[0]?.cmd).toContain('@test/plugin');
     });
 
@@ -561,7 +561,7 @@ describe('PluginRegistry', () => {
       await registry.uninstall('@test/workspace-plugin');
 
       const removeCalls = bun.spawnCalls.filter((c) => c.cmd.includes('remove'));
-      expect(removeCalls.length).toBe(0);
+      expect(removeCalls).toHaveLength(0);
     });
   });
 
@@ -662,7 +662,7 @@ describe('PluginRegistry', () => {
       const result = await registry.list();
 
       const pluginEntries = result.filter((p) => p.name === '@test/plugin');
-      expect(pluginEntries.length).toBe(1);
+      expect(pluginEntries).toHaveLength(1);
     });
   });
 
@@ -869,7 +869,7 @@ describe('PluginRegistry', () => {
 
       // The batch still completes despite one reload throwing.
       expect(phases.some((p) => p.phase === 'complete')).toBe(true);
-      expect(mockPluginManager.load.mock.calls.length).toBe(2);
+      expect(mockPluginManager.load.mock.calls).toHaveLength(2);
     });
 
     test('updates all packages when no name specified', async () => {
@@ -886,7 +886,7 @@ describe('PluginRegistry', () => {
 
       expect(phases[0]?.package).toBe('all');
       const updateCalls = bun.spawnCalls.filter((c) => c.cmd.includes('update'));
-      expect(updateCalls.length).toBe(1);
+      expect(updateCalls).toHaveLength(1);
       expect(updateCalls[0]?.cmd).toEqual([process.execPath, 'update', '--ignore-scripts']);
     });
 
@@ -903,7 +903,7 @@ describe('PluginRegistry', () => {
       }
 
       const updateCalls = bun.spawnCalls.filter((c) => c.cmd.includes('update'));
-      expect(updateCalls.length).toBe(1);
+      expect(updateCalls).toHaveLength(1);
       expect(updateCalls[0]?.cmd).toEqual([
         process.execPath,
         'update',

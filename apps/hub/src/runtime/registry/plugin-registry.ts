@@ -1004,14 +1004,15 @@ export class PluginRegistry {
     message?: string,
     error?: string
   ): OperationProgress {
+    // Only append `@version` when a version is known: an update (or a `latest` install) carries none,
+    // so the default message must not read "…@undefined".
+    const versionSuffix = version ? `@${version}` : '';
     return {
       phase,
       operation,
       package: packageName,
       targetVersion: version,
-      // Only append `@version` when a version is known: an update (or a `latest` install) carries
-      // none, so the default message must not read "…@undefined".
-      message: message ?? `${phase} ${packageName}${version ? `@${version}` : ''}`,
+      message: message ?? `${phase} ${packageName}${versionSuffix}`,
       error,
     };
   }

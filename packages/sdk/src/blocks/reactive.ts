@@ -124,14 +124,14 @@ export type OutputEmitters<O extends Record<string, OutputDef<OutputSchema>>> = 
 export interface ToolCallResult {
   ok: boolean;
   content?: string;
-  data?: Json;
+  data?: Exclude<Json, undefined>;
 }
 
 /** A registered tool as seen by a block via `ctx.listTools` (qualified id). */
 export interface ToolInfo {
   id: string;
   description?: string;
-  inputSchema?: Json;
+  inputSchema?: Exclude<Json, undefined>;
 }
 
 /**

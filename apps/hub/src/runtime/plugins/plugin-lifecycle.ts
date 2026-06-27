@@ -723,6 +723,37 @@ export class PluginLifecycle {
     this.#watcher.watch(pluginName, rootDirectory);
   }
 
+  /**
+   * Stop a running plugin process and clear its per-process runtime state: index entries, the source
+   * watcher, the stability timer, and metrics. Shared by {@link #unloadInner} (full teardown, which
+   * also unregisters blocks + resets the crash policy) and {@link #reapInner} (scale-to-zero idle reap,
+   * which keeps blocks registered and leaves the crash policy untouched).
+   */
+  async #teardownProcess(name: string, proc: PluginProcessInstance): Promise<void> {
+    this.#processes.delete(name);
+    this.#uidIndex.delete(proc.uid);
+    this.#watcher.unwatch(name);
+
+    const timer = this.#stabilityTimers.get(name);
+    if (timer) {
+      clearInterval(timer);
+      this.#stabilityTimers.delete(name);
+    }
+
+    proc.stop();
+    // Wait for the process to exit gracefully; force-kill if it doesn't within the timeout.
+    const exited = await Promise.race([
+      proc.exited.then(() => true),
+      new Promise<false>((r) => setTimeout(() => r(false), this.#config.killTimeoutMs)),
+    ]);
+    if (!exited) {
+      proc.kill();
+    }
+
+    // Clear runtime metrics (compiled modules are preserved for client-side bricks).
+    this.#metrics.clear(name);
+  }
+
   unload(name: string, skipRestartReset = false): Promise<void> {
     return this.#serialize(name, () => this.#unloadInner(name, skipRestartReset));
   }
@@ -733,28 +764,7 @@ export class PluginLifecycle {
       return;
     }
 
-    this.#processes.delete(name);
-    this.#uidIndex.delete(process.uid);
-    this.#watcher.unwatch(name);
-
-    const timer = this.#stabilityTimers.get(name);
-    if (timer) {
-      clearInterval(timer);
-      this.#stabilityTimers.delete(name);
-    }
-
-    process.stop();
-    // Wait for the process to exit gracefully; force-kill if it doesn't within the timeout.
-    const exited = await Promise.race([
-      process.exited.then(() => true),
-      new Promise<false>((r) => setTimeout(() => r(false), this.#config.killTimeoutMs)),
-    ]);
-    if (!exited) {
-      process.kill();
-    }
-
-    // Clear runtime metrics (compiled modules are preserved for client-side bricks)
-    this.#metrics.clear(name);
+    await this.#teardownProcess(name, process);
 
     // Unregister the plugin's blocks so consumers learn the handlers are gone.
     // The workflow engine listens for this to pause running workflows whose
@@ -815,26 +825,7 @@ export class PluginLifecycle {
     const uid = process.uid;
     const idleMs = Date.now() - process.lastActivityAt;
 
-    this.#processes.delete(name);
-    this.#uidIndex.delete(process.uid);
-    this.#watcher.unwatch(name);
-
-    const timer = this.#stabilityTimers.get(name);
-    if (timer) {
-      clearInterval(timer);
-      this.#stabilityTimers.delete(name);
-    }
-
-    process.stop();
-    const exited = await Promise.race([
-      process.exited.then(() => true),
-      new Promise<false>((r) => setTimeout(() => r(false), this.#config.killTimeoutMs)),
-    ]);
-    if (!exited) {
-      process.kill();
-    }
-
-    this.#metrics.clear(name);
+    await this.#teardownProcess(name, process);
     // Deliberately NOT unregistering the plugin's blocks: they stay registered
     // so the palette and routing survive and ensureStarted can respawn lazily.
     // Deliberately NOT touching the restart policy: reaping is intentional, not

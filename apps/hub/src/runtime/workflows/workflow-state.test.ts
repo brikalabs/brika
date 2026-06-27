@@ -230,7 +230,7 @@ describe('WorkflowEngine - State Management', () => {
     engine.register(workflow2);
 
     const workflows = engine.list();
-    expect(workflows.length).toBe(2);
+    expect(workflows).toHaveLength(2);
     expect(workflows.map((w) => w.id)).toContain('workflow-1');
     expect(workflows.map((w) => w.id)).toContain('workflow-2');
   });
@@ -587,7 +587,7 @@ describe('WorkflowEngine - Global Listeners', () => {
 
     expect(events1.length).toBeGreaterThan(0);
     expect(events2.length).toBeGreaterThan(0);
-    expect(events1.length).toBe(events2.length);
+    expect(events1).toHaveLength(events2.length);
   });
 
   test('should stop notifying after listener is removed', async () => {
@@ -609,7 +609,7 @@ describe('WorkflowEngine - Global Listeners', () => {
     await waitFor(() => engine.get('listener-remove-2')?.status === 'running');
 
     // Should not receive new events after unsubscribe
-    expect(events.length).toBe(countAfterFirst);
+    expect(events).toHaveLength(countAfterFirst);
   });
 });
 

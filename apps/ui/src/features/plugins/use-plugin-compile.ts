@@ -70,7 +70,7 @@ function reduce(prev: CompileTimeline | null, frame: Frame): CompileTimeline {
       return { status: 'building', steps: [] };
     case 'step': {
       const settled = base.steps.map((s) => ({ ...s, state: 'done' as const }));
-      const existing = settled.find((s) => s.key === frame.key);
+      const existing = settled.some((s) => s.key === frame.key);
       const steps = existing
         ? settled.map((s) => (s.key === frame.key ? { ...s, state: 'active' as const } : s))
         : [...settled, { key: frame.key, state: 'active' as const }];
@@ -206,7 +206,8 @@ function compileLogLine(event: PluginCompileEvent): string | null {
   if (event.phase === 'progress' && event.step) {
     const label = STEP_LABELS[event.step] ?? event.step;
     const count = event.modules ?? 0;
-    const modules = count > 0 ? ` (${count} ${count === 1 ? 'module' : 'modules'})` : '';
+    const noun = count === 1 ? 'module' : 'modules';
+    const modules = count > 0 ? ` (${count} ${noun})` : '';
     return `Compiling ${label}${modules}${event.cached ? ' [cached]' : ''}`;
   }
   if (event.phase === 'done') {
@@ -216,6 +217,12 @@ function compileLogLine(event: PluginCompileEvent): string | null {
     return `Build failed: ${event.message ?? ''}`;
   }
   return null;
+}
+
+/** Drop the build lines belonging to `name` (used to reset that plugin's lines on a fresh `start`). */
+function dropPluginLines(lines: string[], name: string): string[] {
+  const prefix = `${name}: `;
+  return lines.filter((line) => !line.startsWith(prefix));
 }
 
 /**
@@ -236,9 +243,7 @@ export function usePluginCompileLogs(name?: string): string[] {
       // A fresh `start` replaces this plugin's prior build lines: a dev file-watcher can trigger a
       // redundant recompile right after install, and only the latest run is worth showing.
       if (event.phase === 'start') {
-        setLines((prev) =>
-          name === undefined ? prev.filter((l) => !l.startsWith(`${event.name}: `)) : []
-        );
+        setLines((prev) => (name === undefined ? dropPluginLines(prev, event.name) : []));
         return;
       }
       const line = compileLogLine(event);

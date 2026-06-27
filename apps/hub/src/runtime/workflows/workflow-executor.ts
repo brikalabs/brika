@@ -43,7 +43,7 @@ export interface ExecutionEvent {
   correlationId?: string;
   blockId?: string;
   port?: string;
-  data?: Json;
+  data?: Exclude<Json, undefined>;
   error?: string;
   level?: string;
   message?: string;
@@ -453,7 +453,7 @@ export class WorkflowExecutor {
   #startHostedTrigger(block: WorkflowBlock, trigger: BlockTrigger, workflow: Workflow): void {
     this.#instanceIds.add(block.id);
     this.#triggerFireCount.set(block.id, 0);
-    const intervalMs = Number((block.config ?? {})[trigger.intervalField]);
+    const intervalMs = Number(block.config?.[trigger.intervalField]);
     const scheduled = this.#triggers.register(block.id, { kind: 'interval', intervalMs }, () =>
       this.#fireTrigger(block.id, trigger.output)
     );

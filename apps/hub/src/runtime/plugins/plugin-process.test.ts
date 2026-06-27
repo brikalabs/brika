@@ -881,7 +881,7 @@ describe('PluginProcess', () => {
       await sleep(100);
 
       // No new pings after stop
-      expect(mockChannel.ping.mock.calls.length).toBe(callsBefore);
+      expect(mockChannel.ping.mock.calls).toHaveLength(callsBefore);
     });
 
     test('collects metrics on successful heartbeat when onMetrics is defined', async () => {

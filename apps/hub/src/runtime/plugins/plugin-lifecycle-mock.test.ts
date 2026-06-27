@@ -753,7 +753,7 @@ describe('PluginLifecycle (with mocked spawn)', () => {
           typeof c[2] === 'string' &&
           (c[2] as string).startsWith('Restarting in')
       );
-      expect(restartingCalls.length).toBe(0);
+      expect(restartingCalls).toHaveLength(0);
     });
 
     test('does not restart when plugin is disabled', async () => {
@@ -776,7 +776,7 @@ describe('PluginLifecycle (with mocked spawn)', () => {
           typeof c[2] === 'string' &&
           (c[2] as string).startsWith('Restarting in')
       );
-      expect(restartingCalls.length).toBe(0);
+      expect(restartingCalls).toHaveLength(0);
     });
 
     test('schedules restart when plugin is enabled', async () => {

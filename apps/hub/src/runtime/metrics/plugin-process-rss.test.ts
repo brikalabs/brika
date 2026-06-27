@@ -183,6 +183,6 @@ describe('PluginProcess RSS soft-limit heartbeat branch', () => {
     // The heartbeat enters the metrics branch because the RSS monitor is
     // enabled, even though there is no onMetrics callback.
     await waitFor(() => onBreached.mock.calls.length > 0, { timeoutMs: 2000 });
-    expect(onBreached.mock.calls.length).toBe(1);
+    expect(onBreached.mock.calls).toHaveLength(1);
   });
 });
