@@ -530,7 +530,7 @@ export class PluginProcess {
       const result = await this.#tracked(() =>
         this.#channel.call(preferenceOptions, {
           name,
-          ...(params !== undefined ? { params } : {}),
+          ...(params === undefined ? {} : { params }),
         })
       );
       return result.options;

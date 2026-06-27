@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'bun:test';
 import {
   ollamaModelOption,
+  ollamaRoot,
   openAiModelOption,
   openRouterPricing,
   readAnthropicTurn,
@@ -8,6 +9,29 @@ import {
   readOpenAiTurn,
   resolveModel,
 } from './providers';
+
+describe('ollamaRoot', () => {
+  it('strips a trailing slash run and a /v1 suffix', () => {
+    expect(ollamaRoot('http://localhost:11434')).toBe('http://localhost:11434');
+    expect(ollamaRoot('http://localhost:11434/')).toBe('http://localhost:11434');
+    expect(ollamaRoot('http://localhost:11434///')).toBe('http://localhost:11434');
+    expect(ollamaRoot('http://localhost:11434/v1')).toBe('http://localhost:11434');
+    expect(ollamaRoot('http://localhost:11434/v1/')).toBe('http://localhost:11434');
+    expect(ollamaRoot('http://localhost:11434/v1//')).toBe('http://localhost:11434');
+  });
+
+  it('only strips slashes at the very end (leaves internal slashes intact)', () => {
+    expect(ollamaRoot('http://host/ollama')).toBe('http://host/ollama');
+    expect(ollamaRoot('http://host/ollama/')).toBe('http://host/ollama');
+    // /v1 is stripped after the trailing-slash pass, exposing a now-trailing slash.
+    expect(ollamaRoot('http://host//v1')).toBe('http://host/');
+  });
+
+  it('handles an all-slashes input without leaving a leading boundary char', () => {
+    expect(ollamaRoot('///')).toBe('');
+    expect(ollamaRoot('/')).toBe('');
+  });
+});
 
 describe('resolveModel', () => {
   it('splits a provider-qualified ref on the first colon only', () => {

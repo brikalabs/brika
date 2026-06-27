@@ -27,7 +27,6 @@ import {
   collectInputValues,
   WorkflowIdContext,
 } from './block-input-values';
-import { ConfigPanel } from './ConfigPanel';
 import { ConnectionDropPicker } from './ConnectionDropPicker';
 import {
   type CompatibleBlock,
@@ -566,8 +565,8 @@ function WorkflowEditorWithBlocks({
         }
       }
     };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
+    globalThis.addEventListener('keydown', onKeyDown);
+    return () => globalThis.removeEventListener('keydown', onKeyDown);
   }, [readonly, undo, redo]);
 
   // Get available variables for selected block

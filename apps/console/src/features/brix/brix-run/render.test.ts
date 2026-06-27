@@ -46,7 +46,7 @@ describe('renderWorld', () => {
     const sprite = renderWorld(stateWith('ready'), geom);
     expect(sprite.width).toBe(WORLD_W);
     expect(sprite.height).toBe(WORLD_H);
-    expect(sprite.rows.length).toBe(WORLD_H);
+    expect(sprite.rows).toHaveLength(WORLD_H);
   });
 
   test('renders for every game status without throwing', () => {
@@ -57,7 +57,7 @@ describe('renderWorld', () => {
       expect(sprite.height).toBe(WORLD_H);
       // Every row must be the world width, including padded transparent cells.
       for (const row of sprite.rows) {
-        expect(row.length).toBe(WORLD_W);
+        expect(row).toHaveLength(WORLD_W);
       }
     }
   });

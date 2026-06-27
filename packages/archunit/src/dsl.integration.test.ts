@@ -197,6 +197,25 @@ describe('files()', () => {
       expect(result.passed).toBe(false);
       expect(result.violations[0]?.violations[0]?.message).toContain('Forbidden import');
     });
+
+    it('matches namespace, extra-whitespace, and multiple imports on one line', async () => {
+      // Locks the import-detection regex against its (linear) rewrite: the
+      // specifier must still be extracted for `* as`, irregular spacing, and
+      // a second statement sharing the line.
+      await setupFixtures({
+        'file.ts': "import   *   as   ns   from   'lodash';",
+        'b.ts': "import a from 'ok'; import b from 'lodash';",
+      });
+      const rules = arch(
+        files('*.ts')
+          .should()
+          .notImportFrom(/lodash/)
+      );
+      const result = await runRules(rules);
+      expect(result.passed).toBe(false);
+      // Both files import lodash and must be flagged.
+      expect(result.violations[0]?.violations.length).toBe(2);
+    });
   });
 
   describe('onlyImportFrom', () => {

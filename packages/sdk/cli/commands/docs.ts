@@ -31,22 +31,37 @@ interface HubBlock {
   outputs?: HubPort[];
 }
 
+/** A string field, or undefined when the value is not a string. */
+function stringField(value: unknown): string | undefined {
+  return typeof value === 'string' ? value : undefined;
+}
+
+/** Coerce one manifest entry into a block, or null when it lacks a string id. */
+function toManifestBlock(entry: unknown): ManifestBlock | null {
+  if (typeof entry !== 'object' || entry === null || !('id' in entry)) {
+    return null;
+  }
+  const record: Record<string, unknown> = { ...entry };
+  if (typeof record.id !== 'string') {
+    return null;
+  }
+  return {
+    id: record.id,
+    name: stringField(record.name),
+    description: stringField(record.description),
+    category: stringField(record.category),
+  };
+}
+
 function asManifestBlocks(value: unknown): ManifestBlock[] {
   if (!Array.isArray(value)) {
     return [];
   }
   const blocks: ManifestBlock[] = [];
   for (const entry of value) {
-    if (typeof entry === 'object' && entry !== null && 'id' in entry) {
-      const record: Record<string, unknown> = { ...entry };
-      if (typeof record.id === 'string') {
-        blocks.push({
-          id: record.id,
-          name: typeof record.name === 'string' ? record.name : undefined,
-          description: typeof record.description === 'string' ? record.description : undefined,
-          category: typeof record.category === 'string' ? record.category : undefined,
-        });
-      }
+    const block = toManifestBlock(entry);
+    if (block) {
+      blocks.push(block);
     }
   }
   return blocks;
@@ -115,15 +130,13 @@ function renderMarkdown(
   )) {
     lines.push(`## ${category.charAt(0).toUpperCase()}${category.slice(1)}`, '');
     for (const block of group) {
-      lines.push(`### ${block.name ?? block.id}`, '');
-      lines.push(`- id: \`${block.id}\``);
+      lines.push(`### ${block.name ?? block.id}`, '', `- id: \`${block.id}\``);
       if (block.description) {
         lines.push(`- ${block.description}`);
       }
       const live = hubBlocks.get(block.id);
       if (live) {
-        lines.push(`- inputs: ${portList(live.inputs)}`);
-        lines.push(`- outputs: ${portList(live.outputs)}`);
+        lines.push(`- inputs: ${portList(live.inputs)}`, `- outputs: ${portList(live.outputs)}`);
       }
       lines.push('');
     }

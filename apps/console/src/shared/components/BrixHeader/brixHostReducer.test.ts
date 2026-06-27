@@ -19,7 +19,7 @@ describe('reduce — HUB events', () => {
     expect(out.reaction).toBe('wave');
     expect(out.cursor).toBe(0);
     expect(out.tint).toBe('green');
-    expect(out.stream.length).toBe('hi!'.length);
+    expect(out.stream).toHaveLength('hi!'.length);
   });
 
   test('no-op for HUB with null reaction', () => {
@@ -174,7 +174,7 @@ describe('reduce — HOLD_OVER events', () => {
     };
     const out = reduce(speaking, { type: 'HOLD_OVER' });
     expect(out.phase).toBe('idle');
-    expect(out.stream.length).toBe(0);
+    expect(out.stream).toHaveLength(0);
     expect(out.cursor).toBe(0);
     expect(out.reaction).toBeNull();
     expect(out.tint).toBe('magenta');

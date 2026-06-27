@@ -162,7 +162,7 @@ describe('useGameLoop', () => {
     unmount();
     const callsAtUnmount = dispatch.mock.calls.length;
     await flush(120);
-    expect(dispatch.mock.calls.length).toBe(callsAtUnmount);
+    expect(dispatch.mock.calls).toHaveLength(callsAtUnmount);
   });
 });
 

@@ -55,8 +55,8 @@ function stripThemeDeclarations(css: string): { css: string; tokens: string } {
 function minifyCss(css: string): string {
   return css
     .replace(/\/\*[\s\S]*?\*\//g, '') // block comments
-    .replace(/\s*([{}:;,])\s*/g, '$1') // collapse around punctuation
-    .replace(/\s+/g, ' ') // collapse runs of whitespace
+    .replace(/\s+/g, ' ') // collapse runs of whitespace to single spaces
+    .replace(/ ?([{}:;,]) ?/g, '$1') // drop the single spaces left around punctuation
     .replaceAll(';}', '}') // drop trailing semicolons
     .trim();
 }

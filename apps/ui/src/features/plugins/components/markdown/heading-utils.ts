@@ -32,7 +32,7 @@ export function extractText(node: ReactNode): string {
 
 export function slugify(text: string) {
   return text
-    .replaceAll(/<[^>]*>/g, '')
+    .replaceAll(/(?<!<)<[^>]*>/g, '')
     .toLowerCase()
     .trim()
     .replaceAll(/[^\w\s-]/g, '')

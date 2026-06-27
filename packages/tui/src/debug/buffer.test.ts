@@ -22,7 +22,7 @@ describe('push / getEntries', () => {
   test('push appends one entry with default source', () => {
     debugBuffer.push('log', 'hello');
     const entries = debugBuffer.getEntries();
-    expect(entries.length).toBe(1);
+    expect(entries).toHaveLength(1);
     expect(entries[0]?.level).toBe('log');
     expect(entries[0]?.text).toBe('hello');
     expect(entries[0]?.source).toBe('app');
@@ -109,7 +109,7 @@ describe('setCapacity / trim', () => {
     for (let i = 0; i < 10; i++) {
       debugBuffer.push('log', `m${i}`);
     }
-    expect(debugBuffer.getEntries().length).toBe(10);
+    expect(debugBuffer.getEntries()).toHaveLength(10);
   });
 
   test('shrinks capacity and trims existing overflow', () => {
@@ -118,7 +118,7 @@ describe('setCapacity / trim', () => {
     }
     debugBuffer.setCapacity(10);
     const entries = debugBuffer.getEntries();
-    expect(entries.length).toBe(10);
+    expect(entries).toHaveLength(10);
     // The newest 10 should remain — m10…m19.
     expect(entries[0]?.text).toBe('m10');
     expect(entries[9]?.text).toBe('m19');
@@ -130,7 +130,7 @@ describe('setCapacity / trim', () => {
       debugBuffer.push('log', `m${i}`);
     }
     const entries = debugBuffer.getEntries();
-    expect(entries.length).toBe(10);
+    expect(entries).toHaveLength(10);
     expect(entries[0]?.text).toBe('m5');
     expect(entries[9]?.text).toBe('m14');
   });
@@ -141,7 +141,7 @@ describe('setCapacity / trim', () => {
       debugBuffer.push('log', `m${i}`);
     }
     // Even though we asked for 1, the floor is 10.
-    expect(debugBuffer.getEntries().length).toBe(10);
+    expect(debugBuffer.getEntries()).toHaveLength(10);
   });
 
   test('capacity floor accepts negative input', () => {
@@ -149,7 +149,7 @@ describe('setCapacity / trim', () => {
     for (let i = 0; i < 12; i++) {
       debugBuffer.push('log', `m${i}`);
     }
-    expect(debugBuffer.getEntries().length).toBe(10);
+    expect(debugBuffer.getEntries()).toHaveLength(10);
   });
 });
 
@@ -158,7 +158,7 @@ describe('install / uninstall', () => {
     debugBuffer.install();
     console.log('captured');
     const entries = debugBuffer.getEntries();
-    expect(entries.length).toBe(1);
+    expect(entries).toHaveLength(1);
     expect(entries[0]?.level).toBe('log');
     expect(entries[0]?.source).toBe('console');
     expect(entries[0]?.text).toBe('captured');

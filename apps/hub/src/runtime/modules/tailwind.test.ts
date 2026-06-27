@@ -104,5 +104,20 @@ describe('TailwindCompiler', () => {
       expect(css).toContain('--color-slate-900');
       expect(css).toContain(':root');
     });
+
+    test('minifies output: no whitespace around punctuation and no double spaces', async () => {
+      // Exercises the (linear) whitespace-collapse in minifyCss. The output
+      // must carry no space adjacent to `{ } : ; ,` and no run of spaces.
+      // Spaces inside values (e.g. `calc(var(--spacing) * 2)`) are preserved
+      // because `*` is not in the punctuation set.
+      const tw = new TailwindCompiler();
+      const css = await tw.compileCss('const a = "flex items-center p-4 gap-2"', 'plugin:brick');
+
+      expect(css).toBeDefined();
+      expect(css).toMatch(/\{|:|,/); // sanity: there is punctuation to collapse around
+      expect(css).not.toMatch(/\s[{}:;,]/); // no whitespace before punctuation
+      expect(css).not.toMatch(/[{}:;,]\s/); // no whitespace after punctuation
+      expect(css).not.toContain('  '); // no collapsed-but-leftover double spaces
+    });
   });
 });

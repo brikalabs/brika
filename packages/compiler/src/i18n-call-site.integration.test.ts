@@ -217,7 +217,7 @@ describe('brikaI18nCallSitePlugin', () => {
     );
     // The literal 'existing-cs' survives — and no second __cs sneaks in.
     expect(out).toContain('existing-cs');
-    expect((out.match(/existing-cs/g) ?? []).length).toBe(1);
+    expect(out.match(/existing-cs/g) ?? []).toHaveLength(1);
   });
 
   // ── Out-of-tree path rejection ──

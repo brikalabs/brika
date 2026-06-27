@@ -66,7 +66,7 @@ describe('tickObstacles', () => {
   test('scrolls every obstacle left by scrollSpeed * dt', () => {
     const obs: Obstacle[] = [{ id: 1, kind: 'sprout', x: 20 }];
     const result = tickObstacles(obs, 10, 0.1);
-    expect(result.obstacles.length).toBe(1);
+    expect(result.obstacles).toHaveLength(1);
     expect(result.obstacles[0]?.x).toBeCloseTo(19, 5);
     expect(result.passed).toBe(0);
   });
@@ -74,7 +74,7 @@ describe('tickObstacles', () => {
   test('obstacles that scroll past the left edge are dropped and counted as passed', () => {
     const obs: Obstacle[] = [{ id: 1, kind: 'sprout', x: -10 }];
     const result = tickObstacles(obs, 10, 0.1);
-    expect(result.obstacles.length).toBe(0);
+    expect(result.obstacles).toHaveLength(0);
     expect(result.passed).toBe(1);
   });
 
@@ -86,7 +86,7 @@ describe('tickObstacles', () => {
     ];
     const result = tickObstacles(obs, 10, 0.1);
     expect(result.passed).toBe(2);
-    expect(result.obstacles.length).toBe(1);
+    expect(result.obstacles).toHaveLength(1);
   });
 
   test('empty input → empty output, zero passed', () => {
@@ -106,7 +106,7 @@ describe('maybeSpawn', () => {
 
   test('appends one obstacle, advances nextSpawnAt, increments nextId', () => {
     const out = maybeSpawn([], 1500, 1000, 7, 8, 60);
-    expect(out.obstacles.length).toBe(1);
+    expect(out.obstacles).toHaveLength(1);
     expect(out.nextId).toBe(8);
     expect(out.nextSpawnAt).toBeGreaterThan(1500);
     // The minimum gap is `SPAWN_GAP_MIN_CELLS / scrollSpeed` seconds.
@@ -117,7 +117,7 @@ describe('maybeSpawn', () => {
   test('preserves existing obstacles when spawning', () => {
     const existing: Obstacle[] = [{ id: 1, kind: 'sprout', x: 30 }];
     const out = maybeSpawn(existing, 1500, 1000, 7, 8, 60);
-    expect(out.obstacles.length).toBe(2);
+    expect(out.obstacles).toHaveLength(2);
     expect(out.obstacles[0]).toEqual(existing[0]);
   });
 

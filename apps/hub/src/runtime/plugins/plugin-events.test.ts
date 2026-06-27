@@ -108,7 +108,7 @@ describe('PluginEventHandler', () => {
         value: 42,
       });
 
-      expect(emitHandler.mock.calls.length > 0).toBe(true);
+      expect(emitHandler.mock.calls.length).toBeGreaterThan(0);
       expect(emitHandler.mock.calls[emitHandler.mock.calls.length - 1]).toEqual([
         'instance-1',
         'output',
@@ -127,7 +127,7 @@ describe('PluginEventHandler', () => {
         value: 42,
       });
 
-      expect(emitHandler.mock.calls.length > 0).toBe(false);
+      expect(emitHandler.mock.calls).toHaveLength(0);
     });
 
     test('onBlockEmit does nothing when no handler set', () => {
@@ -143,8 +143,8 @@ describe('PluginEventHandler', () => {
 
       handler.onBlockEmit('instance-1', 'output', { value: 1 });
 
-      expect(a.mock.calls.length).toBe(1);
-      expect(b.mock.calls.length).toBe(1);
+      expect(a.mock.calls).toHaveLength(1);
+      expect(b.mock.calls).toHaveLength(1);
     });
 
     test('clearBlockEmitHandler(handler) removes only that handler', () => {
@@ -157,8 +157,8 @@ describe('PluginEventHandler', () => {
       handler.clearBlockEmitHandler(a);
       handler.onBlockEmit('instance-1', 'output', { value: 1 });
 
-      expect(a.mock.calls.length).toBe(0);
-      expect(b.mock.calls.length).toBe(1);
+      expect(a.mock.calls).toHaveLength(0);
+      expect(b.mock.calls).toHaveLength(1);
     });
   });
 
@@ -169,7 +169,7 @@ describe('PluginEventHandler', () => {
 
       handler.onBlockLog('instance-1', 'workflow-1', 'info', 'Test message');
 
-      expect(logHandler.mock.calls.length > 0).toBe(true);
+      expect(logHandler.mock.calls.length).toBeGreaterThan(0);
       expect(logHandler.mock.calls[logHandler.mock.calls.length - 1]).toEqual([
         'instance-1',
         'workflow-1',
@@ -185,7 +185,7 @@ describe('PluginEventHandler', () => {
 
       handler.onBlockLog('instance-1', 'workflow-1', 'info', 'Test message');
 
-      expect(logHandler.mock.calls.length > 0).toBe(false);
+      expect(logHandler.mock.calls).toHaveLength(0);
     });
 
     test('onBlockLog does nothing when no handler set', () => {
@@ -210,7 +210,7 @@ describe('PluginEventHandler', () => {
           (call: unknown[]) => call[0] === '@test/plugin' && call[1] === 'running'
         )
       ).toBe(true);
-      expect(mockEventSystem.dispatch.mock.calls.length > 0).toBe(true);
+      expect(mockEventSystem.dispatch.mock.calls.length).toBeGreaterThan(0);
     });
   });
 
@@ -268,7 +268,7 @@ describe('PluginEventHandler', () => {
         category: 'utility',
       });
 
-      expect(mockBlockRegistry.register.mock.calls.length > 0).toBe(true);
+      expect(mockBlockRegistry.register.mock.calls.length).toBeGreaterThan(0);
     });
 
     test('merges package metadata with block definition', () => {
@@ -293,7 +293,7 @@ describe('PluginEventHandler', () => {
 
       handler.registerBlock('@test/plugin', block, packageMetadata);
 
-      expect(mockBlockRegistry.register.mock.calls.length > 0).toBe(true);
+      expect(mockBlockRegistry.register.mock.calls.length).toBeGreaterThan(0);
     });
 
     test('handles author as object', () => {
@@ -308,7 +308,7 @@ describe('PluginEventHandler', () => {
 
       handler.registerBlock('@test/plugin', block, packageMetadata);
 
-      expect(mockBlockRegistry.register.mock.calls.length > 0).toBe(true);
+      expect(mockBlockRegistry.register.mock.calls.length).toBeGreaterThan(0);
     });
 
     test('handles package metadata without matching block in blocks array', () => {
@@ -326,7 +326,7 @@ describe('PluginEventHandler', () => {
 
       handler.registerBlock('@test/plugin', block, packageMetadata);
 
-      expect(mockBlockRegistry.register.mock.calls.length > 0).toBe(true);
+      expect(mockBlockRegistry.register.mock.calls.length).toBeGreaterThan(0);
     });
 
     test('handles no package metadata', () => {
@@ -336,7 +336,7 @@ describe('PluginEventHandler', () => {
 
       handler.registerBlock('@test/plugin', block);
 
-      expect(mockBlockRegistry.register.mock.calls.length > 0).toBe(true);
+      expect(mockBlockRegistry.register.mock.calls.length).toBeGreaterThan(0);
       // Plugin info should have 'unknown' version
       const registeredPluginInfo = mockBlockRegistry.register.mock.calls[0][1];
       expect(registeredPluginInfo.version).toBe('unknown');
@@ -352,7 +352,7 @@ describe('PluginEventHandler', () => {
         },
       });
 
-      expect(mockSparkRegistry.register.mock.calls.length > 0).toBe(true);
+      expect(mockSparkRegistry.register.mock.calls.length).toBeGreaterThan(0);
     });
   });
 
@@ -364,7 +364,7 @@ describe('PluginEventHandler', () => {
         value: 42,
       });
 
-      expect(mockEventSystem.dispatch.mock.calls.length > 0).toBe(true);
+      expect(mockEventSystem.dispatch.mock.calls.length).toBeGreaterThan(0);
     });
 
     test('warns and skips when spark not registered', () => {
@@ -374,7 +374,7 @@ describe('PluginEventHandler', () => {
         value: 42,
       });
 
-      expect(mockEventSystem.dispatch.mock.calls.length > 0).toBe(false);
+      expect(mockEventSystem.dispatch.mock.calls).toHaveLength(0);
     });
   });
 
@@ -383,7 +383,7 @@ describe('PluginEventHandler', () => {
       const sparkHandler = mock();
       const unsubscribe = handler.subscribeToSparks('@test/plugin:my-spark', sparkHandler);
 
-      expect(mockEventSystem.subscribe.mock.calls.length > 0).toBe(true);
+      expect(mockEventSystem.subscribe.mock.calls.length).toBeGreaterThan(0);
       expect(typeof unsubscribe).toBe('function');
     });
 

@@ -186,7 +186,7 @@ describe('<DebugProvider>', () => {
     expect(debugBuffer.getEntries().length).toBeGreaterThanOrEqual(2);
     latest.current?.clear();
     await flush();
-    expect(debugBuffer.getEntries().length).toBe(0);
+    expect(debugBuffer.getEntries()).toHaveLength(0);
     unmount();
   });
 
@@ -225,7 +225,7 @@ describe('<DebugProvider>', () => {
     for (let i = 0; i < 20; i++) {
       debugBuffer.push('log', `m${i}`);
     }
-    expect(debugBuffer.getEntries().length).toBe(12);
+    expect(debugBuffer.getEntries()).toHaveLength(12);
     unmount();
   });
 

@@ -105,7 +105,7 @@ describe('canonicalize', () => {
 describe('SPKI_HEADER', () => {
   test('is 12 bytes (Ed25519 OID prefix)', () => {
     expect(SPKI_HEADER).toBeInstanceOf(Uint8Array);
-    expect(SPKI_HEADER.length).toBe(12);
+    expect(SPKI_HEADER).toHaveLength(12);
   });
 
   test('matches known Ed25519 SPKI DER prefix', () => {
@@ -121,7 +121,7 @@ describe('SPKI_HEADER', () => {
 describe('REGISTRY_PUBLIC_KEY', () => {
   test('is valid base64 decoding to 32 bytes', () => {
     const raw = Buffer.from(REGISTRY_PUBLIC_KEY, 'base64');
-    expect(raw.length).toBe(32);
+    expect(raw).toHaveLength(32);
   });
 });
 

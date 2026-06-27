@@ -37,17 +37,17 @@ describe('RingBuffer', () => {
   describe('length getter', () => {
     test('reports 0 on an empty buffer', () => {
       const buf = new RingBuffer<string>(10);
-      expect(buf.length).toBe(0);
+      expect(buf).toHaveLength(0);
     });
 
     test('tracks the count up to capacity', () => {
       const buf = new RingBuffer<string>(3);
-      expect(buf.length).toBe(0);
+      expect(buf).toHaveLength(0);
       buf.push('a');
-      expect(buf.length).toBe(1);
+      expect(buf).toHaveLength(1);
       buf.push('b');
       buf.push('c');
-      expect(buf.length).toBe(3);
+      expect(buf).toHaveLength(3);
     });
 
     test('stays at capacity after overflow', () => {
@@ -56,7 +56,7 @@ describe('RingBuffer', () => {
       buf.push('b');
       buf.push('c');
       // Overflowed; length must remain 2 (= capacity), not grow past it.
-      expect(buf.length).toBe(2);
+      expect(buf).toHaveLength(2);
     });
   });
 
@@ -80,7 +80,7 @@ describe('RingBuffer', () => {
       buf.push('first');
       buf.push('second');
       expect(buf.snapshot()).toEqual(['second']);
-      expect(buf.length).toBe(1);
+      expect(buf).toHaveLength(1);
     });
   });
 });

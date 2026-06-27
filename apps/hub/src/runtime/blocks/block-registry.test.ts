@@ -340,7 +340,7 @@ describe('BlockRegistry - Queries', () => {
 
     const list = registry.list();
 
-    expect(list.length).toBe(2);
+    expect(list).toHaveLength(2);
     // Should be sorted by ID
     expect(list[0].id).toBe('block-a');
     expect(list[1].id).toBe('block-z');
@@ -375,8 +375,8 @@ describe('BlockRegistry - Queries', () => {
     const plugin1Blocks = registry.listByPlugin('plugin-1');
     const plugin2Blocks = registry.listByPlugin('plugin-2');
 
-    expect(plugin1Blocks.length).toBe(1);
-    expect(plugin2Blocks.length).toBe(1);
+    expect(plugin1Blocks).toHaveLength(1);
+    expect(plugin2Blocks).toHaveLength(1);
     expect(plugin1Blocks[0].id).toBe('block');
   });
 
@@ -554,8 +554,8 @@ describe('BlockRegistry - Listeners', () => {
 
     registry.register(block, plugin);
 
-    expect(types1.length).toBe(1);
-    expect(types2.length).toBe(1);
+    expect(types1).toHaveLength(1);
+    expect(types2).toHaveLength(1);
   });
 
   test('should allow removing listeners', () => {
@@ -583,7 +583,7 @@ describe('BlockRegistry - Listeners', () => {
     };
 
     registry.register(block1, plugin);
-    expect(registeredTypes.length).toBe(1);
+    expect(registeredTypes).toHaveLength(1);
 
     unsubscribe();
 
@@ -602,7 +602,7 @@ describe('BlockRegistry - Listeners', () => {
     registry.register(block2, plugin);
 
     // Should still be 1 (not notified after unsubscribe)
-    expect(registeredTypes.length).toBe(1);
+    expect(registeredTypes).toHaveLength(1);
   });
 });
 
@@ -1284,7 +1284,7 @@ describe('BlockRegistry - Provider and Plugins', () => {
 
     const plugins = registry.getPlugins();
 
-    expect(plugins.length).toBe(2);
+    expect(plugins).toHaveLength(2);
     expect(plugins.map((p) => p.id)).toContain('plugin-1');
     expect(plugins.map((p) => p.id)).toContain('plugin-2');
   });
@@ -1347,7 +1347,7 @@ describe('BlockRegistry - listByOwner', () => {
 
     const summaries = registry.listByOwner('my-plugin');
 
-    expect(summaries.length).toBe(1);
+    expect(summaries).toHaveLength(1);
     expect(summaries[0].id).toBe('my-plugin:test-block');
     expect(summaries[0].name).toBe('Test Block');
     expect(summaries[0].description).toBe('A test block');

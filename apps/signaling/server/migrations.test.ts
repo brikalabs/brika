@@ -46,7 +46,7 @@ describe('applyPendingMigrations (sqlite)', () => {
       const rows = db
         .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='_brika_migrations'")
         .all() as Array<{ name: string }>;
-      expect(rows.length).toBe(1);
+      expect(rows).toHaveLength(1);
       const versions = db
         .prepare('SELECT version FROM _brika_migrations ORDER BY version')
         .all() as Array<{ version: string }>;

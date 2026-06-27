@@ -79,7 +79,7 @@ describe('rateEmitter', () => {
       }),
     });
     const out = drain(e, 1000);
-    expect(out.length).toBe(3);
+    expect(out).toHaveLength(3);
   });
 
   test('stops spawning after `duration` elapses', () => {
@@ -143,7 +143,7 @@ describe('built-in emitters', () => {
   test('emitter tuning overrides color and rate', () => {
     const emitter = sparkles(ORIGIN, { color: 'red', rate: 20 });
     const particles = drain(emitter, 1000);
-    expect(particles.length).toBe(20);
+    expect(particles).toHaveLength(20);
     for (const p of particles) {
       expect(p.color).toBe('red');
     }

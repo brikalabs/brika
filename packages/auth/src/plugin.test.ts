@@ -50,7 +50,7 @@ describe('Auth Plugin', () => {
 
     plugin.setup?.();
 
-    expect(server.middleware.length).toBe(1);
+    expect(server.middleware).toHaveLength(1);
     expect(server.routes.length).toBeGreaterThan(0);
 
     plugin.onStop?.();

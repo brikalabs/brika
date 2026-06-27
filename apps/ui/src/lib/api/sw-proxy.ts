@@ -55,7 +55,7 @@ export function installSwProxyListener(transport: Transport): void {
     // Drop cross-origin postMessage attempts before touching `event.data`.
     // The SW is same-origin by browser policy, but an anomalous origin
     // value means an intermediary or hostile context is forging events.
-    const expectedOrigin = self.location.origin;
+    const expectedOrigin = globalThis.location.origin;
     if (event.origin !== expectedOrigin && event.origin !== '') {
       return;
     }

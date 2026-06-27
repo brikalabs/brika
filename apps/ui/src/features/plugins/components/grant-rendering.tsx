@@ -266,6 +266,27 @@ export interface ScopeDetailProps {
   readwriteLabel: string;
 }
 
+/**
+ * Consented loopback ports across all net.local grants, as localhost:<port>
+ * chips. netLocal's grant id is dev.brika.net.local.fetch (family segment
+ * 'net'), so match by id prefix rather than the family segment.
+ */
+function localNetHosts(grants: Record<string, unknown>): string[] {
+  const ports = new Set<number>();
+  for (const [id, scope] of Object.entries(grants)) {
+    if (!id.startsWith('dev.brika.net.local.')) {
+      continue;
+    }
+    const result = LocalNetScopeSchema.safeParse(scope);
+    if (result.success) {
+      for (const port of result.data.allowLoopbackPorts) {
+        ports.add(port);
+      }
+    }
+  }
+  return [...ports].sort((a, b) => a - b).map((p) => `localhost:${p}`);
+}
+
 export function ScopeDetail({
   family,
   grants,
@@ -285,26 +306,9 @@ export function ScopeDetail({
     return <HostScopeDetail hosts={hosts} label={hostsLabel} />;
   }
 
-  // netLocal's grant id is dev.brika.net.local.fetch (family segment 'net'),
-  // so match by id prefix and show the consented ports as localhost chips.
   if (family === 'netLocal') {
-    const ports = new Set<number>();
-    for (const [id, scope] of Object.entries(grants)) {
-      if (!id.startsWith('dev.brika.net.local.')) {
-        continue;
-      }
-      const result = LocalNetScopeSchema.safeParse(scope);
-      if (result.success) {
-        for (const port of result.data.allowLoopbackPorts) {
-          ports.add(port);
-        }
-      }
-    }
-    if (ports.size === 0) {
-      return null;
-    }
-    const hosts = [...ports].sort((a, b) => a - b).map((p) => `localhost:${p}`);
-    return <HostScopeDetail hosts={hosts} label={hostsLabel} />;
+    const hosts = localNetHosts(grants);
+    return hosts.length > 0 ? <HostScopeDetail hosts={hosts} label={hostsLabel} /> : null;
   }
 
   if (family === 'fs') {

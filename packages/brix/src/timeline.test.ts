@@ -79,7 +79,7 @@ describe('parallel', () => {
   test('returns one sprite per running clip', () => {
     const tl = parallel([clip([A], 100), clip([B], 100)]);
     const out = tracksAt(tl, 50);
-    expect(out.length).toBe(2);
+    expect(out).toHaveLength(2);
     expect(out[0]?.rows[0]?.[0]?.ch).toBe('A');
     expect(out[1]?.rows[0]?.[0]?.ch).toBe('B');
   });
@@ -88,7 +88,7 @@ describe('parallel', () => {
 describe('timeline / timelineDone', () => {
   test('track delays push start time', () => {
     const tl = timeline([{ clip: clip([A], 100, { loop: false }), delay: 200 }]);
-    expect(tracksAt(tl, 50).length).toBe(0);
+    expect(tracksAt(tl, 50)).toHaveLength(0);
     expect(tracksAt(tl, 250)[0]?.rows[0]?.[0]?.ch).toBe('A');
   });
 

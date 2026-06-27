@@ -58,8 +58,8 @@ export function ConnectionDropPicker({
         onClose();
       }
     };
-    window.addEventListener('keydown', onKeyDown, true);
-    return () => window.removeEventListener('keydown', onKeyDown, true);
+    globalThis.addEventListener('keydown', onKeyDown, true);
+    return () => globalThis.removeEventListener('keydown', onKeyDown, true);
   }, [onClose]);
 
   const grouped = useMemo(() => {

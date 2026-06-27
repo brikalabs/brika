@@ -118,7 +118,7 @@ describe('applyTick — collisions', () => {
     };
     const next = applyTick(s, 50);
     expect(next.score).toBe(1);
-    expect(next.obstacles.length).toBe(0);
+    expect(next.obstacles).toHaveLength(0);
   });
 
   test('an obstacle still on-screen survives the tick', () => {
@@ -127,7 +127,7 @@ describe('applyTick — collisions', () => {
       obstacles: [{ id: 1, kind: 'sprout', x: WORLD_W - 5 }],
     };
     const next = applyTick(s, 50);
-    expect(next.obstacles.length).toBe(1);
+    expect(next.obstacles).toHaveLength(1);
     expect(next.score).toBe(0);
   });
 });

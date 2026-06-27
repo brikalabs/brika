@@ -204,7 +204,7 @@ describe('generateCacheKey', () => {
 
     const key = generateCacheKey(config);
 
-    expect(key.split('|').length).toBe(3);
+    expect(key.split('|')).toHaveLength(3);
   });
 
   test('should handle FormData body', () => {
@@ -266,7 +266,7 @@ describe('generateCacheKey', () => {
     const key = generateCacheKey(config);
 
     // URLSearchParams body should produce a hash
-    expect(key.split('|').length).toBe(3);
+    expect(key.split('|')).toHaveLength(3);
   });
 
   test('should handle non-serializable object body gracefully', () => {

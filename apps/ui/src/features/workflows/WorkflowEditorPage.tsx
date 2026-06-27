@@ -196,8 +196,8 @@ export function WorkflowEditorPage() {
         flushSave();
       }
     };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
+    globalThis.addEventListener('keydown', onKeyDown);
+    return () => globalThis.removeEventListener('keydown', onKeyDown);
   }, [flushSave]);
 
   // Handle workflow changes from editor

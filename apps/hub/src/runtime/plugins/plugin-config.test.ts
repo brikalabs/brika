@@ -247,7 +247,7 @@ describe('PluginConfigService', () => {
       });
 
       expect(result.success).toBe(true);
-      expect(mockConfigLoader.setPluginConfig.mock.calls.length > 0).toBe(true);
+      expect(mockConfigLoader.setPluginConfig.mock.calls.length).toBeGreaterThan(0);
     });
 
     test('does not save invalid config', async () => {
@@ -260,7 +260,7 @@ describe('PluginConfigService', () => {
       });
 
       expect(result.success).toBe(false);
-      expect(mockConfigLoader.setPluginConfig.mock.calls.length > 0).toBe(false);
+      expect(mockConfigLoader.setPluginConfig.mock.calls).toHaveLength(0);
     });
   });
 });

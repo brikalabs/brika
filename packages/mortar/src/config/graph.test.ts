@@ -70,7 +70,7 @@ describe('topologicalLayers', () => {
     // The ghost dep claims depth 0 → service `b` lands at depth 1,
     // so we get an empty layer-0 plus a layer-1 with `b`.
     const layers = topologicalLayers([svc('b', ['ghost'])]);
-    expect(layers.length).toBe(2);
+    expect(layers).toHaveLength(2);
     expect(layers[1]?.map((s) => s.id)).toEqual(['b']);
   });
 });

@@ -86,7 +86,7 @@ describe('EventSystem', () => {
 
     await waitFor(() => handler.mock.calls.length === 3);
 
-    expect(handler.mock.calls.length).toBe(3);
+    expect(handler.mock.calls).toHaveLength(3);
   });
 
   it('should support action map for subscribing to multiple actions', async () => {
@@ -129,7 +129,7 @@ describe('EventSystem', () => {
 
     await waitFor(() => handler.mock.calls.length === 3);
 
-    expect(handler.mock.calls.length).toBe(3);
+    expect(handler.mock.calls).toHaveLength(3);
   });
 
   it('should unsubscribe correctly', async () => {
@@ -149,7 +149,7 @@ describe('EventSystem', () => {
       )
     );
     await waitFor(() => handler.mock.calls.length === 1);
-    expect(handler.mock.calls.length).toBe(1);
+    expect(handler.mock.calls).toHaveLength(1);
 
     unsub();
 
@@ -166,7 +166,7 @@ describe('EventSystem', () => {
     // Negative assertion — the unsubscribed handler must not fire even
     // after the dispatch has fully settled.
     await dispatched;
-    expect(handler.mock.calls.length).toBe(1);
+    expect(handler.mock.calls).toHaveLength(1);
   });
 
   it('should notify global subscribers', async () => {
@@ -206,8 +206,8 @@ describe('EventSystem', () => {
       () => globalHandler.mock.calls.length === 2 && patternHandler.mock.calls.length === 1
     );
 
-    expect(globalHandler.mock.calls.length).toBe(2);
-    expect(patternHandler.mock.calls.length).toBe(1);
+    expect(globalHandler.mock.calls).toHaveLength(2);
+    expect(patternHandler.mock.calls).toHaveLength(1);
   });
 
   it('should store events in ring buffer', async () => {
@@ -317,6 +317,6 @@ describe('EventSystem', () => {
 
     await waitFor(() => handler.mock.calls.length === 2);
 
-    expect(handler.mock.calls.length).toBe(2);
+    expect(handler.mock.calls).toHaveLength(2);
   });
 });
