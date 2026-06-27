@@ -35,5 +35,11 @@ export {
   uniqueIndex,
 } from 'drizzle-orm/sqlite-core';
 export { configureDatabases } from './config';
-export { type BrikaDatabase, type DatabaseDefinition, defineDatabase } from './database';
+export {
+  type BrikaDatabase,
+  type DatabaseDefinition,
+  defineDatabase,
+  incrementalVacuum,
+} from './database';
 export { cursorFilter, endTsFilter, oneOrMany, startTsFilter } from './helpers';
+export { TimeSeriesStore } from './time-series-store';
