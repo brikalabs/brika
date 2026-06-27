@@ -15,13 +15,13 @@ describe('secrets scope', () => {
     expect(secretsScope.migrations[0]?.id).toBe('0001-stamp-v1');
   });
 
-  test('the stamp migration is a no-op that resolves', async () => {
+  test('the stamp migration is a no-op (recorded, never surfaced as changed)', async () => {
     const result = await secretsScope.migrations[0]?.run({
       brikaDir: '/tmp/anywhere',
       toVersion: '0.6.0',
       fromVersion: '0.5.0',
     });
-    expect(result).toBeUndefined();
+    expect(result).toEqual({ changed: false });
   });
 
   test('description survives — operator-facing audit text', () => {

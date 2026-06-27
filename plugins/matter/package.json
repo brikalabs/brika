@@ -149,16 +149,16 @@
   ],
   "dependencies": {
     "@brika/sdk": "workspace:*",
-    "@matter/main": "^0.17.1",
-    "@matter/nodejs": "^0.17.1",
-    "@project-chip/matter.js": "^0.17.1"
+    "@matter/main": "^0.17.3",
+    "@matter/nodejs": "^0.17.3",
+    "@project-chip/matter.js": "^0.17.3"
   },
   "devDependencies": {
     "@types/react": "^19.2.17",
-    "bun-types": "^1.3.5",
+    "bun-types": "^1.3.14",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "lucide-react": "^1.17.0",
+    "lucide-react": "^1.21.0",
     "react": "^19.2.7"
   },
   "files": [

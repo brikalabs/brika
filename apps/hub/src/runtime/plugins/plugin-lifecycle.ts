@@ -2,6 +2,7 @@ import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { Analytics } from '@brika/analytics';
 import { inject, singleton } from '@brika/di';
+import { withPredicate } from '@brika/events';
 import type { LogLevelType } from '@brika/ipc/contract';
 import type { Plugin, PluginHealth } from '@brika/plugin';
 import type { PluginPackageSchema } from '@brika/schema';
@@ -25,6 +26,7 @@ import { compileServerEntry, PluginProcess, spawnPlugin } from './lifecycle-deps
 import { PluginConfigService } from './plugin-config';
 import { PluginErrors } from './plugin-errors';
 import { PluginEventHandler } from './plugin-events';
+import { PluginReaper, type ReapGuard } from './plugin-reaper';
 import { PluginResolver } from './plugin-resolver';
 import { PluginWatcher } from './plugin-watcher';
 import { resolvePreludePath } from './prelude-locator';
@@ -119,6 +121,12 @@ export interface LoadOptions {
    * Ignored once the plugin has an explicit enabled/disabled choice in state.
    */
   defaultEnabled?: boolean;
+  /**
+   * Reload even when the plugin is already running. An explicit install/update sets this so an
+   * already-loaded plugin (e.g. a workspace plugin auto-loaded at boot) is recompiled (running the
+   * freshly-linked code and surfacing the build trace) instead of no-op'ing on the existing process.
+   */
+  force?: boolean;
 }
 
 @singleton()
@@ -153,6 +161,13 @@ export class PluginLifecycle {
   readonly #restartPolicy: RestartPolicy;
   readonly #watcher = inject(PluginWatcher);
   /**
+   * Scale-to-zero reaper. Off unless `idleReapMs > 0`. Reaps idle plugin
+   * processes (keeping them enabled + block-registered so they respawn on the
+   * next event); guarded so a plugin whose blocks a running workflow owns, or
+   * one mid-call, is never reaped.
+   */
+  readonly #reaper: PluginReaper;
+  /**
    * L3 sandbox launcher. macOS wraps every plugin spawn in
    * `sandbox-exec`; Linux + Windows currently no-op (the JS-layer
    * defences still apply). Mode read from `BRIKA_SANDBOX_MODE` once
@@ -168,6 +183,38 @@ export class PluginLifecycle {
       crashWindowMs: this.#config.restartCrashWindowMs,
       stabilityThresholdMs: this.#config.restartStabilityMs,
     });
+
+    this.#reaper = new PluginReaper({
+      idleReapMs: this.#config.idleReapMs,
+      keepWarmCount: this.#config.keepWarmCount,
+      // Sweep often enough to honour the window without busy-looping: a quarter
+      // of the window, clamped to [1s, 30s].
+      sweepIntervalMs: Math.min(30_000, Math.max(1000, Math.floor(this.#config.idleReapMs / 4))),
+      now: () => Date.now(),
+      listProcesses: () =>
+        this.listProcesses().map((p) => ({
+          name: p.name,
+          lastActivityAt: p.lastActivityAt,
+          hasInFlight: p.hasInFlight,
+        })),
+      reap: (name) => {
+        void this.#reap(name);
+      },
+    });
+    // Never reap a plugin that exposes a passive UI surface (board bricks or
+    // pages render live and push data); there is no inbound request to lazily
+    // respawn them on. Headless plugins (blocks, tools, routes, actions) reap
+    // and respawn on their next use.
+    this.#reaper.addGuard((name) => {
+      const meta = this.#processes.get(name)?.metadata;
+      if (!meta) {
+        return false;
+      }
+      return (meta.bricks?.length ?? 0) > 0 || (meta.pages?.length ?? 0) > 0;
+    });
+    // No-op when reaping is disabled (idleReapMs <= 0), so the default config
+    // keeps the pre-scale-to-zero behaviour and tests start no timer.
+    this.#reaper.start();
 
     this.#watcher.setReloadHandler((pluginName) => {
       const process = this.#processes.get(pluginName);
@@ -225,6 +272,47 @@ export class PluginLifecycle {
 
   listProcesses(): PluginProcessInstance[] {
     return [...this.#processes.values()];
+  }
+
+  /**
+   * Pin plugins against scale-to-zero reaping. The predicate returns true for
+   * a plugin that must stay resident (e.g. a running workflow owns one of its
+   * blocks, or it hosts a live in-plugin trigger). Returns a disposer. Guards
+   * compose: any guard returning true keeps the plugin alive.
+   */
+  addReapGuard(guard: ReapGuard): () => void {
+    return this.#reaper.addGuard(guard);
+  }
+
+  /**
+   * Ensure a plugin is running, spawning it on demand if it was reaped (or
+   * never started this session) and awaiting readiness. Returns the live
+   * process, or undefined if the plugin is unknown or the operator disabled it
+   * (a disabled plugin must stay down: reaping only respawns *enabled* ones).
+   */
+  async ensureStarted(name: string): Promise<PluginProcessInstance | undefined> {
+    const existing = this.#processes.get(name);
+    if (existing) {
+      return existing;
+    }
+    const stored = this.#state.get(name);
+    if (!stored || stored.enabled === false) {
+      return undefined;
+    }
+
+    // Mirror enable(): wait until the respawned plugin is actually ready (or
+    // its config is found invalid) before handing it back, so the caller can
+    // immediately start blocks / push input without racing the boot.
+    const racePromise = this.#events.race(
+      [
+        withPredicate(PluginActions.loaded, (a) => a.payload.name === name),
+        withPredicate(PluginActions.configInvalid, (a) => a.payload.name === name),
+      ],
+      { timeout: 30_000 }
+    );
+    await this.load(stored.rootDirectory);
+    await racePromise;
+    return this.#processes.get(name);
   }
 
   getStatus(name: string): PluginHealth {
@@ -346,24 +434,12 @@ export class PluginLifecycle {
     const existingState = this.#state.get(pluginName);
     const uid = existingState?.uid ?? generateUid(metadata.name);
 
-    // Consent-before-code: a plugin that requests grants must not execute until
-    // the operator has reviewed those capabilities and enabled it. A first-time
-    // load of such a plugin (no state row yet) registers it dormant instead of
-    // spawning; enable() then flips `enabled` and re-loads to actually start it.
-    // Precedence: a prior explicit choice (existingState.enabled) wins; else the
-    // caller's `defaultEnabled` (install passes true for LOCAL/dev plugins, which
-    // are the operator's own code, not remote marketplace code needing consent);
-    // else dormant only when the plugin requests grants.
-    const enabled = existingState?.enabled ?? defaultEnabled ?? !pluginRequestsGrants(metadata);
-    if (!enabled) {
-      await this.#registerDormant(pluginName, rootDirectory, entryPoint, uid, metadata);
-      return;
-    }
-
     const locales = await this.#i18n.registerPluginTranslations(metadata.name, rootDirectory);
 
-    // Surface the build live over `/api/stream/events` so the UI can show
-    // compilation step-by-step while a plugin installs, enables, or reloads.
+    // Surface the build live over `/api/stream/events` so the UI can show compilation step-by-step
+    // while a plugin installs, enables, or reloads. The build runs even for a plugin that will stay
+    // dormant (see the consent gate below the build): compiling bundles the code, it never executes
+    // it, so consent-before-code is preserved while the operator still sees the build on install.
     const compileStart = performance.now();
     this.#emitCompile(uid, pluginName, { phase: 'start' });
 
@@ -381,12 +457,6 @@ export class PluginLifecycle {
       });
     }
 
-    this.#logs.info('Starting plugin', {
-      pluginName: pluginName,
-      version: metadata.version,
-      uid,
-    });
-
     // Build the server-side entry: action IDs are injected at compile time
     const outdir = join(rootDirectory, 'node_modules', '.cache', 'brika', 'server');
     const serverExternals = computeServerExternals(metadata);
@@ -397,6 +467,7 @@ export class PluginLifecycle {
         pluginRoot: rootDirectory,
         outdir,
         external: serverExternals,
+        bytecode: this.#config.bytecode,
       })
     );
 
@@ -437,6 +508,24 @@ export class PluginLifecycle {
     this.#emitCompile(uid, pluginName, {
       phase: 'done',
       durationMs: Math.round(performance.now() - compileStart),
+    });
+
+    // Consent-before-code: the plugin is built above but must not EXECUTE until the operator has
+    // reviewed its requested grants and enabled it. A first-time load of a grant-requesting plugin
+    // (no state row) registers it dormant instead of spawning; enable() flips `enabled` and reloads
+    // to start it. Precedence: a prior explicit choice (existingState.enabled) wins; else the caller's
+    // `defaultEnabled` (install passes true for LOCAL/dev plugins, the operator's own code); else
+    // dormant only when the plugin requests grants.
+    const enabled = existingState?.enabled ?? defaultEnabled ?? !pluginRequestsGrants(metadata);
+    if (!enabled) {
+      await this.#registerDormant(pluginName, rootDirectory, entryPoint, uid, metadata);
+      return;
+    }
+
+    this.#logs.info('Starting plugin', {
+      pluginName,
+      version: metadata.version,
+      uid,
     });
 
     // Allocate per-plugin host dirs that back `/data`, `/cache`, `/tmp`.
@@ -557,10 +646,17 @@ export class PluginLifecycle {
         onBrickDataPush: (brickTypeId, data) =>
           this.#eventHandler.pushBrickData(metadata.name, brickTypeId, data),
         onRoute: (method, path) => this.#eventHandler.registerRoute(metadata.name, method, path),
-        onRegisterTool: (tool, process) =>
-          this.#tools.register(metadata.name, tool, (args, ctx) =>
-            process.callPluginTool(tool.id, args, ctx)
-          ),
+        onRegisterTool: (tool) =>
+          // Re-resolve the live process per call instead of capturing this
+          // one: scale-to-zero may have reaped it since registration, so we
+          // respawn on demand and never invoke a dead process.
+          this.#tools.register(metadata.name, tool, async (args, ctx) => {
+            const live = await this.ensureStarted(metadata.name);
+            if (!live) {
+              return { ok: false, content: `Plugin not available: ${metadata.name}` };
+            }
+            return live.callPluginTool(tool.id, args, ctx);
+          }),
         onInvokeTool: (tool, args) =>
           this.#tools.call(tool, args, { traceId: crypto.randomUUID(), source: 'automation' }),
         onListTools: () => this.#tools.list(),
@@ -627,6 +723,37 @@ export class PluginLifecycle {
     this.#watcher.watch(pluginName, rootDirectory);
   }
 
+  /**
+   * Stop a running plugin process and clear its per-process runtime state: index entries, the source
+   * watcher, the stability timer, and metrics. Shared by {@link #unloadInner} (full teardown, which
+   * also unregisters blocks + resets the crash policy) and {@link #reapInner} (scale-to-zero idle reap,
+   * which keeps blocks registered and leaves the crash policy untouched).
+   */
+  async #teardownProcess(name: string, proc: PluginProcessInstance): Promise<void> {
+    this.#processes.delete(name);
+    this.#uidIndex.delete(proc.uid);
+    this.#watcher.unwatch(name);
+
+    const timer = this.#stabilityTimers.get(name);
+    if (timer) {
+      clearInterval(timer);
+      this.#stabilityTimers.delete(name);
+    }
+
+    proc.stop();
+    // Wait for the process to exit gracefully; force-kill if it doesn't within the timeout.
+    const exited = await Promise.race([
+      proc.exited.then(() => true),
+      new Promise<false>((r) => setTimeout(() => r(false), this.#config.killTimeoutMs)),
+    ]);
+    if (!exited) {
+      proc.kill();
+    }
+
+    // Clear runtime metrics (compiled modules are preserved for client-side bricks).
+    this.#metrics.clear(name);
+  }
+
   unload(name: string, skipRestartReset = false): Promise<void> {
     return this.#serialize(name, () => this.#unloadInner(name, skipRestartReset));
   }
@@ -637,28 +764,7 @@ export class PluginLifecycle {
       return;
     }
 
-    this.#processes.delete(name);
-    this.#uidIndex.delete(process.uid);
-    this.#watcher.unwatch(name);
-
-    const timer = this.#stabilityTimers.get(name);
-    if (timer) {
-      clearInterval(timer);
-      this.#stabilityTimers.delete(name);
-    }
-
-    process.stop();
-    // Wait for the process to exit gracefully; force-kill if it doesn't within the timeout.
-    const exited = await Promise.race([
-      process.exited.then(() => true),
-      new Promise<false>((r) => setTimeout(() => r(false), this.#config.killTimeoutMs)),
-    ]);
-    if (!exited) {
-      process.kill();
-    }
-
-    // Clear runtime metrics (compiled modules are preserved for client-side bricks)
-    this.#metrics.clear(name);
+    await this.#teardownProcess(name, process);
 
     // Unregister the plugin's blocks so consumers learn the handlers are gone.
     // The workflow engine listens for this to pause running workflows whose
@@ -687,6 +793,46 @@ export class PluginLifecycle {
         'hub'
       )
     );
+  }
+
+  /**
+   * Reap an idle plugin: stop its process but keep it enabled and its blocks
+   * registered, so the next event respawns it ({@link ensureStarted}) and the
+   * editor palette / routing never lose the block types. Distinct from
+   * {@link unload}, which is a full teardown (unregisters blocks, resets the
+   * crash backoff) for an operator-initiated stop/disable. Serialized per
+   * plugin so it cannot interleave with a concurrent load/unload.
+   */
+  #reap(name: string): Promise<void> {
+    return this.#serialize(name, () => this.#reapInner(name));
+  }
+
+  async #reapInner(name: string): Promise<void> {
+    const process = this.#processes.get(name);
+    if (!process) {
+      return;
+    }
+    // Re-check eligibility under the op lock: a workflow may have started
+    // owning this plugin (guard now pins it), or it may have done work, between
+    // the sweep's decision and this point. Never reap a freshly-active/pinned
+    // plugin.
+    if (!this.#reaper.reapable().includes(name)) {
+      return;
+    }
+
+    // Capture observability data while the process is still in hand; the rest
+    // of this method tears it down.
+    const uid = process.uid;
+    const idleMs = Date.now() - process.lastActivityAt;
+
+    await this.#teardownProcess(name, process);
+    // Deliberately NOT unregistering the plugin's blocks: they stay registered
+    // so the palette and routing survive and ensureStarted can respawn lazily.
+    // Deliberately NOT touching the restart policy: reaping is intentional, not
+    // a crash, and must not consume the crash budget.
+    this.#state.setHealth(name, 'stopped');
+    this.#logs.info('Reaped idle plugin (scale-to-zero)', { pluginName: name, idleMs });
+    this.#analytics.capture('plugin.reaped', { uid, idleMs }, { pluginName: name });
   }
 
   /** Remove compiled modules from cache (in-memory + disk). */
@@ -735,6 +881,7 @@ export class PluginLifecycle {
   }
 
   async stopAll(): Promise<void> {
+    this.#reaper.stop();
     this.#watcher.stopAll();
     const names = [...this.#processes.keys()];
     await Promise.all(names.map((name) => this.unload(name)));

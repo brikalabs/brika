@@ -14,15 +14,16 @@
  * migration to this list.
  */
 
-import type { Migration, MigrationScope } from '../types';
+import type { Migration, MigrationOutcome, MigrationScope } from '../types';
 
 const stampV1: Migration = {
   id: '0001-stamp-v1',
   description: 'Mark the secret store as v1-format (no-op stamp)',
-  run(): Promise<void> {
-    // Intentional no-op. Presence of this ID in the ledger means
-    // "we've seen this install".
-    return Promise.resolve();
+  run(): Promise<MigrationOutcome> {
+    // Intentional no-op: presence of this ID in the ledger means "we've seen this install". It touches
+    // nothing on disk, so `changed: false` keeps it off the migration banner (it is recorded, never
+    // announced).
+    return Promise.resolve({ changed: false });
   },
 };
 

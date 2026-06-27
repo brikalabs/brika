@@ -4,6 +4,7 @@
 
 import 'reflect-metadata';
 import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
+import { createHash } from 'node:crypto';
 import { mkdir, mkdtemp, readlink, realpath, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -33,6 +34,7 @@ describe('PluginRegistry', () => {
     load: ReturnType<typeof mock>;
     addPlugin: ReturnType<typeof mock>;
     removePlugin: ReturnType<typeof mock>;
+    setNpmRegistry: ReturnType<typeof mock>;
     resolvePluginEntry: ReturnType<typeof mock>;
   };
   let mockPluginManager: {
@@ -53,9 +55,11 @@ describe('PluginRegistry', () => {
       }),
       load: mock().mockResolvedValue({
         plugins: [],
+        npmRegistries: { '@brika': 'https://registry.brika.dev' },
       }),
       addPlugin: mock().mockResolvedValue(undefined),
       removePlugin: mock().mockResolvedValue(undefined),
+      setNpmRegistry: mock().mockResolvedValue(undefined),
       resolvePluginEntry: mock().mockResolvedValue({
         rootDirectory: '/test/workspace/plugin',
       }),
@@ -92,6 +96,17 @@ describe('PluginRegistry', () => {
         private: true,
         dependencies: {},
       });
+    });
+
+    test('writes a scoped .npmrc from the configured registries', async () => {
+      bun.apply();
+
+      await registry.init();
+
+      expect(bun.hasFile('/test/home/plugins/.npmrc')).toBe(true);
+      expect(String(bun.getFile('/test/home/plugins/.npmrc'))).toContain(
+        '@brika:registry=https://registry.brika.dev'
+      );
     });
 
     test('does not create package.json when it already exists', async () => {
@@ -149,6 +164,212 @@ describe('PluginRegistry', () => {
       expect(complete?.message).toContain('enable');
     });
 
+    test('installs a registry plugin by its tarball (deps stay on npm, no scope routing)', async () => {
+      bun.spawn({ exitCode: 0 }).apply();
+      // The registry serves an npm packument carrying the tarball URL.
+      bun.fetch(
+        async () =>
+          new Response(
+            JSON.stringify({
+              'dist-tags': { latest: '1.0.0' },
+              versions: {
+                '1.0.0': {
+                  dist: { tarball: 'https://registry.brika.dev/@myscope/tada/-/tada-1.0.0.tgz' },
+                },
+              },
+            }),
+            { status: 200, headers: { 'content-type': 'application/json' } }
+          )
+      );
+      mockConfigLoader.load.mockResolvedValue({
+        plugins: [],
+        defaultRegistry: 'https://registry.brika.dev',
+        npmRegistries: {},
+      });
+
+      const events: OperationProgress[] = [];
+      for await (const progress of registry.install('@myscope/tada', '1.0.0')) {
+        events.push(progress);
+      }
+
+      // The plugin is installed from a verified LOCAL tarball (downloaded from the registry, then
+      // installed by `file:`), never directly from the URL, so the bytes can't be swapped under bun.
+      expect(
+        bun.spawnCalls.some((c) =>
+          c.cmd.some((arg) => arg.includes('@file:') && arg.includes('tada-1.0.0.tgz'))
+        )
+      ).toBe(true);
+      // …the stream surfaces the registry it came from…
+      expect(
+        events.some((e) => e.message?.includes('Downloading from registry.brika.dev') === true)
+      ).toBe(true);
+      // …and no scope is routed to the registry, so dependencies resolve from public npm.
+      expect(mockConfigLoader.setNpmRegistry).not.toHaveBeenCalled();
+    });
+
+    test('falls back to a plain npm install when the registry does not host the plugin', async () => {
+      bun.spawn({ exitCode: 0 }).apply();
+      bun.fetch(async () => new Response(null, { status: 404 }));
+      mockConfigLoader.load.mockResolvedValue({
+        plugins: [],
+        defaultRegistry: 'https://registry.brika.dev',
+        npmRegistries: {},
+      });
+
+      const events: OperationProgress[] = [];
+      for await (const progress of registry.install('@myscope/tada', '1.0.0')) {
+        events.push(progress);
+      }
+
+      // No tarball resolved → bun installs by name@version, still with no scope routing.
+      expect(bun.spawnCalls.some((c) => c.cmd.includes('@myscope/tada@1.0.0'))).toBe(true);
+      // The fallback source is reported as npm.
+      expect(events.some((e) => e.message?.includes('Downloading from npm') === true)).toBe(true);
+      expect(mockConfigLoader.setNpmRegistry).not.toHaveBeenCalled();
+    });
+
+    test('resolves a semver range to the greatest hosted version (not the latest tag)', async () => {
+      bun
+        .spawn({ exitCode: 0 })
+        .file('/test/home/plugins/node_modules/@myscope/tada/package.json', { version: '1.5.0' })
+        .apply();
+      bun.fetch(
+        async () =>
+          new Response(
+            JSON.stringify({
+              'dist-tags': { latest: '2.0.0' },
+              versions: {
+                '1.0.0': { dist: { tarball: 'https://r.brika.dev/tada-1.0.0.tgz' } },
+                '1.5.0': { dist: { tarball: 'https://r.brika.dev/tada-1.5.0.tgz' } },
+                '2.0.0': { dist: { tarball: 'https://r.brika.dev/tada-2.0.0.tgz' } },
+              },
+            }),
+            { status: 200, headers: { 'content-type': 'application/json' } }
+          )
+      );
+      mockConfigLoader.load.mockResolvedValue({
+        plugins: [],
+        defaultRegistry: 'https://r.brika.dev',
+        npmRegistries: {},
+      });
+
+      for await (const _ of registry.install('@myscope/tada', '^1.0.0')) {
+        // consume
+      }
+
+      // ^1.0.0 resolves to 1.5.0 (the greatest match), NOT the 2.0.0 latest tag.
+      expect(bun.spawnCalls.some((c) => c.cmd.some((a) => a.includes('tada-1.5.0.tgz')))).toBe(
+        true
+      );
+      expect(bun.spawnCalls.some((c) => c.cmd.some((a) => a.includes('tada-2.0.0.tgz')))).toBe(
+        false
+      );
+      // brika.yml records the concrete resolved version, not the requested range.
+      expect(mockConfigLoader.addPlugin).toHaveBeenCalledWith('@myscope/tada', '1.5.0');
+    });
+
+    test('falls back to npm for an exact version the registry does not host (no silent latest)', async () => {
+      bun.spawn({ exitCode: 0 }).apply();
+      bun.fetch(
+        async () =>
+          new Response(
+            JSON.stringify({
+              'dist-tags': { latest: '1.0.0' },
+              versions: { '1.0.0': { dist: { tarball: 'https://r.brika.dev/tada-1.0.0.tgz' } } },
+            }),
+            { status: 200, headers: { 'content-type': 'application/json' } }
+          )
+      );
+      mockConfigLoader.load.mockResolvedValue({
+        plugins: [],
+        defaultRegistry: 'https://r.brika.dev',
+        npmRegistries: {},
+      });
+
+      const events: OperationProgress[] = [];
+      for await (const progress of registry.install('@myscope/tada', '9.9.9')) {
+        events.push(progress);
+      }
+
+      // The registry hosts only 1.0.0; requesting 9.9.9 must NOT silently install 1.0.0/latest from it…
+      expect(bun.spawnCalls.some((c) => c.cmd.some((a) => a.includes('.tgz')))).toBe(false);
+      // …it falls back to a plain npm install by the exact spec (the pin may exist on npm).
+      expect(bun.spawnCalls.some((c) => c.cmd.includes('@myscope/tada@9.9.9'))).toBe(true);
+      expect(events.some((e) => e.message?.includes('Downloading from npm') === true)).toBe(true);
+    });
+
+    test('verifies the tarball against dist.integrity and installs the verified bytes', async () => {
+      const tarballUrl = 'https://r.brika.dev/@myscope/tada/-/tada-1.0.0.tgz';
+      const bytes = new Uint8Array([10, 20, 30, 40, 50]);
+      const integrity = `sha512-${createHash('sha512').update(bytes).digest('base64')}`;
+      bun.spawn({ exitCode: 0 }).apply();
+      bun.fetch(async (input) => {
+        const url = `${input}`;
+        if (url === tarballUrl) {
+          return new Response(bytes);
+        }
+        return new Response(
+          JSON.stringify({
+            'dist-tags': { latest: '1.0.0' },
+            versions: { '1.0.0': { dist: { tarball: tarballUrl, integrity } } },
+          }),
+          { status: 200, headers: { 'content-type': 'application/json' } }
+        );
+      });
+      mockConfigLoader.load.mockResolvedValue({
+        plugins: [],
+        defaultRegistry: 'https://r.brika.dev',
+        npmRegistries: {},
+      });
+
+      const events: OperationProgress[] = [];
+      for await (const progress of registry.install('@myscope/tada', '1.0.0')) {
+        events.push(progress);
+      }
+
+      expect(events.some((e) => e.phase === 'error')).toBe(false);
+      expect(events.some((e) => e.phase === 'complete')).toBe(true);
+      expect(
+        bun.spawnCalls.some((c) =>
+          c.cmd.some((a) => a.includes('@file:') && a.includes('tada-1.0.0.tgz'))
+        )
+      ).toBe(true);
+    });
+
+    test('rejects a tarball whose bytes do not match dist.integrity', async () => {
+      const tarballUrl = 'https://r.brika.dev/@myscope/tada/-/tada-1.0.0.tgz';
+      bun.spawn({ exitCode: 0 }).apply();
+      bun.fetch(async (input) => {
+        const url = `${input}`;
+        if (url === tarballUrl) {
+          return new Response(new Uint8Array([9, 9, 9])); // not what the integrity hash covers
+        }
+        return new Response(
+          JSON.stringify({
+            'dist-tags': { latest: '1.0.0' },
+            versions: {
+              '1.0.0': { dist: { tarball: tarballUrl, integrity: 'sha512-Zm9vYmFy' } },
+            },
+          }),
+          { status: 200, headers: { 'content-type': 'application/json' } }
+        );
+      });
+      mockConfigLoader.load.mockResolvedValue({
+        plugins: [],
+        defaultRegistry: 'https://r.brika.dev',
+        npmRegistries: {},
+      });
+
+      const events: OperationProgress[] = [];
+      for await (const progress of registry.install('@myscope/tada', '1.0.0')) {
+        events.push(progress);
+      }
+
+      // A hash mismatch aborts the install before the plugin is ever installed by file:.
+      expect(events.some((e) => e.phase === 'error')).toBe(true);
+      expect(bun.spawnCalls.some((c) => c.cmd.some((a) => a.includes('@file:')))).toBe(false);
+    });
+
     test('adds plugin to config after install', async () => {
       bun
         .spawn({
@@ -161,6 +382,17 @@ describe('PluginRegistry', () => {
       }
 
       expect(mockConfigLoader.addPlugin).toHaveBeenCalledWith('@test/plugin', '1.0.0');
+    });
+
+    test('forces the reload so an already-loaded plugin recompiles (and shows its build) on install', async () => {
+      bun.spawn({ exitCode: 0 }).apply();
+
+      for await (const _ of registry.install('@test/plugin', '1.0.0')) {
+        // Consume progress
+      }
+
+      const call = mockPluginManager.load.mock.calls.find((c) => c[0] === '@test/plugin');
+      expect(call?.[2]).toMatchObject({ force: true });
     });
 
     test('uses latest version when not specified', async () => {
@@ -197,7 +429,7 @@ describe('PluginRegistry', () => {
       }
 
       const installCalls = bun.spawnCalls.filter((c) => c.cmd.includes('install'));
-      expect(installCalls.length).toBe(0);
+      expect(installCalls).toHaveLength(0);
     });
 
     test('skips npm install for file packages', async () => {
@@ -220,7 +452,7 @@ describe('PluginRegistry', () => {
       }
 
       const installCalls = bun.spawnCalls.filter((c) => c.cmd.includes('install'));
-      expect(installCalls.length).toBe(0);
+      expect(installCalls).toHaveLength(0);
     });
 
     test('yields error on failure', async () => {
@@ -315,7 +547,7 @@ describe('PluginRegistry', () => {
       await registry.uninstall('@test/plugin');
 
       const removeCalls = bun.spawnCalls.filter((c) => c.cmd.includes('remove'));
-      expect(removeCalls.length).toBe(1);
+      expect(removeCalls).toHaveLength(1);
       expect(removeCalls[0]?.cmd).toContain('@test/plugin');
     });
 
@@ -329,7 +561,7 @@ describe('PluginRegistry', () => {
       await registry.uninstall('@test/workspace-plugin');
 
       const removeCalls = bun.spawnCalls.filter((c) => c.cmd.includes('remove'));
-      expect(removeCalls.length).toBe(0);
+      expect(removeCalls).toHaveLength(0);
     });
   });
 
@@ -430,7 +662,7 @@ describe('PluginRegistry', () => {
       const result = await registry.list();
 
       const pluginEntries = result.filter((p) => p.name === '@test/plugin');
-      expect(pluginEntries.length).toBe(1);
+      expect(pluginEntries).toHaveLength(1);
     });
   });
 
@@ -529,6 +761,115 @@ describe('PluginRegistry', () => {
 
       expect(phases.some((p) => p.phase === 'resolving')).toBe(true);
       expect(phases.some((p) => p.phase === 'complete')).toBe(true);
+      // An update carries no target version, so no message should read "…@undefined".
+      expect(phases.some((p) => p.message?.includes('undefined') === true)).toBe(false);
+      const resolving = phases.find((p) => p.phase === 'resolving');
+      expect(resolving?.message).toBe('resolving @test/plugin');
+    });
+
+    test('re-resolves a registry plugin from the registry on update (bun cannot bump a pinned tarball)', async () => {
+      const tarballUrl = 'https://registry.brika.dev/@test/plugin/-/plugin-2.0.0.tgz';
+      bun
+        .spawn({ exitCode: 0 })
+        .file('/test/home/plugins/package.json', {
+          name: 'brika-plugins',
+          dependencies: {
+            // A registry install records a pinned tarball URL spec, which `bun update` cannot bump.
+            '@test/plugin': 'https://registry.brika.dev/@test/plugin/-/plugin-1.0.0.tgz',
+          },
+        })
+        .file('/test/home/plugins/node_modules/@test/plugin/package.json', { version: '1.0.0' })
+        .apply();
+      // Registry serves a newer 2.0.0; the tarball download returns bytes for that URL.
+      bun.fetch(async (input) => {
+        const url = `${input}`;
+        if (url === tarballUrl) {
+          return new Response(new Uint8Array([1, 2, 3]));
+        }
+        return new Response(
+          JSON.stringify({
+            'dist-tags': { latest: '2.0.0' },
+            versions: { '2.0.0': { dist: { tarball: tarballUrl } } },
+          }),
+          { status: 200, headers: { 'content-type': 'application/json' } }
+        );
+      });
+      mockConfigLoader.load.mockResolvedValue({
+        plugins: [],
+        defaultRegistry: 'https://registry.brika.dev',
+        npmRegistries: {},
+      });
+
+      const phases: OperationProgress[] = [];
+      for await (const progress of registry.update('@test/plugin')) {
+        phases.push(progress);
+      }
+
+      // The registry is re-queried and the newer tarball reinstalled by a verified file: path…
+      expect(
+        phases.some(
+          (p) => p.message?.includes('Updating to 2.0.0 from registry.brika.dev') === true
+        )
+      ).toBe(true);
+      expect(
+        bun.spawnCalls.some((c) =>
+          c.cmd.some((a) => a.includes('@file:') && a.includes('plugin-2.0.0.tgz'))
+        )
+      ).toBe(true);
+      // …and brika.yml records the new concrete version.
+      expect(mockConfigLoader.addPlugin).toHaveBeenCalledWith('@test/plugin', '2.0.0');
+    });
+
+    test('reloads the named plugin after updating so the new code runs', async () => {
+      bun.spawn({ exitCode: 0 }).apply();
+
+      for await (const _ of registry.update('@test/plugin')) {
+        // Consume progress
+      }
+
+      // `bun update` only rewrites node_modules; the plugin must be reloaded to run the new code
+      // (which also recompiles it, surfacing the build trace).
+      expect(mockPluginManager.load.mock.calls.some((c) => c[0] === '@test/plugin')).toBe(true);
+    });
+
+    test('reloads every bun-managed plugin on an update-all (no name)', async () => {
+      bun
+        .spawn({ exitCode: 0 })
+        .file('/test/home/plugins/package.json', {
+          dependencies: { '@a/p': '1.0.0', '@b/q': '2.0.0' },
+        })
+        .file('/test/home/plugins/node_modules/@a/p/package.json', { version: '1.0.0' })
+        .file('/test/home/plugins/node_modules/@b/q/package.json', { version: '2.0.0' })
+        .apply();
+
+      for await (const _ of registry.update()) {
+        // Consume progress
+      }
+
+      const reloaded = mockPluginManager.load.mock.calls.map((c) => c[0]);
+      expect(reloaded).toContain('@a/p');
+      expect(reloaded).toContain('@b/q');
+    });
+
+    test('one plugin failing to reload does not abort an update-all', async () => {
+      bun
+        .spawn({ exitCode: 0 })
+        .file('/test/home/plugins/package.json', {
+          dependencies: { '@a/p': '1.0.0', '@b/q': '2.0.0' },
+        })
+        .file('/test/home/plugins/node_modules/@a/p/package.json', { version: '1.0.0' })
+        .file('/test/home/plugins/node_modules/@b/q/package.json', { version: '2.0.0' })
+        .apply();
+      mockPluginManager.load.mockRejectedValueOnce(new Error('boom'));
+
+      const phases: OperationProgress[] = [];
+      for await (const progress of registry.update()) {
+        phases.push(progress);
+      }
+
+      // The batch still completes despite one reload throwing.
+      expect(phases.some((p) => p.phase === 'complete')).toBe(true);
+      expect(mockPluginManager.load.mock.calls).toHaveLength(2);
     });
 
     test('updates all packages when no name specified', async () => {
@@ -545,8 +886,8 @@ describe('PluginRegistry', () => {
 
       expect(phases[0]?.package).toBe('all');
       const updateCalls = bun.spawnCalls.filter((c) => c.cmd.includes('update'));
-      expect(updateCalls.length).toBe(1);
-      expect(updateCalls[0]?.cmd).toEqual([process.execPath, 'update']);
+      expect(updateCalls).toHaveLength(1);
+      expect(updateCalls[0]?.cmd).toEqual([process.execPath, 'update', '--ignore-scripts']);
     });
 
     test('updates specific package when name specified', async () => {
@@ -562,8 +903,13 @@ describe('PluginRegistry', () => {
       }
 
       const updateCalls = bun.spawnCalls.filter((c) => c.cmd.includes('update'));
-      expect(updateCalls.length).toBe(1);
-      expect(updateCalls[0]?.cmd).toEqual([process.execPath, 'update', '@test/plugin']);
+      expect(updateCalls).toHaveLength(1);
+      expect(updateCalls[0]?.cmd).toEqual([
+        process.execPath,
+        'update',
+        '@test/plugin',
+        '--ignore-scripts',
+      ]);
     });
 
     test('yields error on failure', async () => {
@@ -876,7 +1222,7 @@ describe('PluginRegistry: local plugins', () => {
     await rm(tmpHome, { recursive: true, force: true });
   });
 
-  test('workspace install links local plugin, creates symlink and adds dependency', async () => {
+  test('workspace install links local plugin and records it in brika.yml, not the bun manifest', async () => {
     // Create a real plugin directory
     const pluginSrc = join(tmpHome, 'workspace-plugin');
     await mkdir(pluginSrc, { recursive: true });
@@ -898,12 +1244,14 @@ describe('PluginRegistry: local plugins', () => {
     const linkTarget = await readlink(join(pluginsDir, 'node_modules', '@test/ws-plugin'));
     expect(linkTarget).toBe(pluginSrc);
 
-    // package.json should have the dependency
+    // A local plugin must NOT land in pluginsDir/package.json: a `workspace:*` entry in this
+    // non-workspace manifest makes every later `bun install` abort. It is tracked via the symlink
+    // above plus the brika.yml entry instead.
     const pkg = await Bun.file(join(pluginsDir, 'package.json')).json();
-    expect(pkg.dependencies['@test/ws-plugin']).toBe('workspace:*');
+    expect(pkg.dependencies['@test/ws-plugin']).toBeUndefined();
   });
 
-  test('concurrent local installs both persist their dependency (no lost update)', async () => {
+  test('concurrent local installs link both without polluting the bun manifest', async () => {
     const dirA = join(tmpHome, 'plugin-a');
     const dirB = join(tmpHome, 'plugin-b');
     await mkdir(dirA, { recursive: true });
@@ -922,16 +1270,47 @@ describe('PluginRegistry: local plugins', () => {
       }
     };
 
-    // Run both installs concurrently: the read-modify-write of package.json must
-    // be serialized, or one dependency entry is lost.
     await Promise.all([
       drain(registry.install('@test/a', 'workspace:*')),
       drain(registry.install('@test/b', 'workspace:*')),
     ]);
 
+    // Both are symlinked…
+    expect(await readlink(join(pluginsDir, 'node_modules', '@test/a'))).toBe(dirA);
+    expect(await readlink(join(pluginsDir, 'node_modules', '@test/b'))).toBe(dirB);
+    // …and neither pollutes the install manifest.
     const pkg = await Bun.file(join(pluginsDir, 'package.json')).json();
-    expect(pkg.dependencies['@test/a']).toBe('workspace:*');
-    expect(pkg.dependencies['@test/b']).toBe('workspace:*');
+    expect(pkg.dependencies['@test/a']).toBeUndefined();
+    expect(pkg.dependencies['@test/b']).toBeUndefined();
+  });
+
+  test('init prunes stale local (workspace:/file:) entries from the install manifest', async () => {
+    await Bun.write(
+      join(pluginsDir, 'package.json'),
+      JSON.stringify({
+        name: 'brika-plugins',
+        private: true,
+        dependencies: {
+          '@test/ws': 'workspace:*',
+          '@test/file': 'file:/some/abs/path',
+          '@test/npm': '1.2.3',
+          // A verified registry tarball installed by file: (NOT a local plugin) must survive the prune.
+          '@test/registry': 'file:/abs/.cache/tarballs/@test+registry-1.0.0.tgz',
+        },
+      })
+    );
+
+    await registry.init();
+
+    const pkg = await Bun.file(join(pluginsDir, 'package.json')).json();
+    // The two local specifiers (which break `bun install` here) are gone…
+    expect(pkg.dependencies['@test/ws']).toBeUndefined();
+    expect(pkg.dependencies['@test/file']).toBeUndefined();
+    // …while a real npm dependency and a verified registry .tgz (bun-managed) are left intact.
+    expect(pkg.dependencies['@test/npm']).toBe('1.2.3');
+    expect(pkg.dependencies['@test/registry']).toBe(
+      'file:/abs/.cache/tarballs/@test+registry-1.0.0.tgz'
+    );
   });
 
   test('normalizes bare absolute path to file: specifier', async () => {

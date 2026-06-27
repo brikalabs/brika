@@ -44,4 +44,11 @@ export {
   TypeMarker,
 } from './schema-types';
 // Block metadata types
-export type { BlockDefinition, BlockPort, BlockSchema, PortDirection, Serializable } from './types';
+export type {
+  BlockDefinition,
+  BlockPort,
+  BlockSchema,
+  BlockTrigger,
+  PortDirection,
+  Serializable,
+} from './types';

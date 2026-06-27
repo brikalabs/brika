@@ -1,38 +1,26 @@
 /**
  * Tests for the RSS soft-limit branch in PluginProcess#startHeartbeat.
  *
- * The heartbeat samples `getProcessMetrics(pid)` and feeds RSS into the
- * per-process RssSoftLimitMonitor. A sustained breach fires
- * `onRssSoftLimitBreached` exactly once. The real `getProcessMetrics` shells
- * out to `ps` and returns null for the fake pid used in tests, so this file
- * mocks `@/runtime/metrics` to return a controllable RSS while keeping the
- * real RssSoftLimitMonitor + MetricsStore (avoids mock.module bleed by living
- * in its own file).
+ * The heartbeat samples process metrics and feeds RSS into the per-process
+ * RssSoftLimitMonitor. A sustained breach fires `onRssSoftLimitBreached`
+ * exactly once. The real sampler shells out to `ps` and returns null for the
+ * fake pid used in tests, so we inject a controllable sampler via
+ * `config.sampleProcessMetrics` rather than `mock.module`-ing the shared
+ * metrics module (whose process-wide bleed, Bun #12823, corrupted
+ * process-metrics.test.ts). The real RssSoftLimitMonitor + MetricsStore run.
  */
 
 import 'reflect-metadata';
 import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
 import type { PluginPackageSchema } from '@brika/schema';
 import { waitFor } from '@brika/testing';
-import { MetricsStore } from '@/runtime/metrics/metrics-store';
-import { RssSoftLimitMonitor } from '@/runtime/metrics/rss-soft-limit';
+import { PluginProcess } from '@/runtime/plugins/plugin-process';
 
 const MB = 1024 * 1024;
 
-// Controllable RSS the mocked getProcessMetrics returns each sample.
+// Controllable RSS the injected sampler returns each sample.
 let mockRssBytes = 0;
 
-mock.module('@/runtime/metrics', () => ({
-  MetricsStore,
-  RssSoftLimitMonitor,
-  getProcessMetrics: mock().mockImplementation(async () => ({
-    cpu: 1,
-    memory: mockRssBytes,
-    ts: Date.now(),
-  })),
-}));
-
-const { PluginProcess } = await import('@/runtime/plugins/plugin-process');
 type PluginProcessType = InstanceType<typeof PluginProcess>;
 type PluginProcessCallbacks = ConstructorParameters<typeof PluginProcess>[3];
 type PluginProcessConfig = ConstructorParameters<typeof PluginProcess>[2];
@@ -78,7 +66,11 @@ describe('PluginProcess RSS soft-limit heartbeat branch', () => {
         locales: [],
         fsDirs: TEST_FS_DIRS,
       },
-      config,
+      // Inject a controllable sampler instead of mocking the shared metrics module.
+      {
+        ...config,
+        sampleProcessMetrics: async () => ({ cpu: 1, memory: mockRssBytes, ts: Date.now() }),
+      },
       callbacks
     );
     processes.push(p);
@@ -191,6 +183,6 @@ describe('PluginProcess RSS soft-limit heartbeat branch', () => {
     // The heartbeat enters the metrics branch because the RSS monitor is
     // enabled, even though there is no onMetrics callback.
     await waitFor(() => onBreached.mock.calls.length > 0, { timeoutMs: 2000 });
-    expect(onBreached.mock.calls.length).toBe(1);
+    expect(onBreached.mock.calls).toHaveLength(1);
   });
 });

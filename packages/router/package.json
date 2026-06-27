@@ -21,8 +21,8 @@
   "dependencies": {
     "@brika/di": "workspace:*",
     "@brika/errors": "workspace:*",
-    "hono": "^4.12.24",
-    "zod": "^4.3.4"
+    "hono": "^4.12.27",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@brika/testing": "workspace:*"

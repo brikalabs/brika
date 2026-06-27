@@ -16,6 +16,7 @@
 * [Commands](cli/commands.md)
 * [TUI Dashboard](cli/tui.md)
 * [Environment Variables](cli/environment.md)
+* [Registries](cli/registries.md)
 * [Configuration File](cli/configuration.md)
 
 ## Tutorials
@@ -53,6 +54,7 @@
 * [System Overview](architecture/overview.md)
 * [Hub Server](architecture/hub.md)
 * [Plugin Supervisor](architecture/plugin-supervisor.md)
+* [Scale to Zero](architecture/scale-to-zero.md)
 * [IPC Protocol](architecture/ipc-protocol.md)
 * [Compiler](architecture/compiler.md)
 * [Externals Rewrite](architecture/externals-rewrite.md)

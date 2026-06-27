@@ -34,6 +34,12 @@ export const settingRoutes = {
         select: (m) => m.HubPage,
         scopes: Scope.ADMIN_ALL,
       }),
+      registry: page({
+        path: 'registry',
+        load: () => import('@/features/settings'),
+        select: (m) => m.RegistryPage,
+        scopes: Scope.ADMIN_ALL,
+      }),
       remoteAccess: page({
         path: 'remote-access',
         load: () => import('@/features/settings'),

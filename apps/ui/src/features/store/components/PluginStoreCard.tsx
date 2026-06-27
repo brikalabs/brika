@@ -31,102 +31,103 @@ export function PluginStoreCard({ plugin }: Readonly<PluginStoreCardProps>) {
   const authorName = typeof plugin.author === 'string' ? plugin.author : plugin.author?.name;
 
   return (
-    <Link
-      to={paths.store.detail.to({
-        source: plugin.source,
-        _splat: plugin.name,
-      })}
-      onClick={() =>
-        capture('store.details_opened', {
+    <Card accent={accent} interactive className="group relative h-full p-5">
+      {/* Stretched navigation link: it covers the card and sits BENEATH the interactive controls, so a
+          click on the card body navigates, while the install/update controls (and their portaled
+          dialogs) live outside the link and can never trigger navigation. This replaces an interactive
+          controls-inside-a-link nesting (and the event-stopping shield it required). */}
+      <Link
+        to={paths.store.detail.to({
           source: plugin.source,
-          verified: plugin.verified,
-          installed: plugin.installed,
-        })
-      }
-      className="group block"
-    >
-      <Card accent={accent} interactive className="h-full p-5">
-        <div className="space-y-3">
-          {/* Header: Icon + Title/Badges + Install Button */}
-          <div className="flex items-start gap-4">
-            {/* Plugin Icon */}
-            <Avatar className="size-14 shrink-0 rounded-2xl ring-1 ring-border/50">
-              <AvatarImage
-                src={`/api/registry/plugins/${encodeURIComponent(plugin.name)}/icon`}
-                className="object-cover"
-              />
-              <AvatarFallback className="rounded-2xl bg-gradient-to-br from-primary/10 via-primary/5 to-background">
-                <Package className="size-7 text-primary/70" />
-              </AvatarFallback>
-            </Avatar>
+          _splat: plugin.name,
+        })}
+        onClick={() =>
+          capture('store.details_opened', {
+            source: plugin.source,
+            verified: plugin.verified,
+            installed: plugin.installed,
+          })
+        }
+        aria-label={tp(plugin.name, 'name', plugin.displayName ?? plugin.name)}
+        className="absolute inset-0 z-0"
+      />
+      {/* Content is non-interactive so card-body clicks fall through to the stretched link. */}
+      <div className="pointer-events-none space-y-3">
+        {/* Header: Icon + Title/Badges + Install Button */}
+        <div className="flex items-start gap-4">
+          {/* Plugin Icon */}
+          <Avatar className="size-14 shrink-0 rounded-2xl ring-1 ring-border/50">
+            <AvatarImage
+              src={`/api/registry/plugins/${encodeURIComponent(plugin.name)}/icon`}
+              className="object-cover"
+            />
+            <AvatarFallback className="rounded-2xl bg-gradient-to-br from-primary/10 via-primary/5 to-background">
+              <Package className="size-7 text-primary/70" />
+            </AvatarFallback>
+          </Avatar>
 
-            {/* Title + Badges */}
-            <div className="min-w-0 flex-1 space-y-2">
-              {/* Title + Verified Badge */}
-              <div className="flex items-center gap-1.5 overflow-hidden">
-                <h3 className="truncate font-semibold text-base leading-tight transition-colors group-hover:text-foreground">
-                  {tp(plugin.name, 'name', plugin.displayName ?? plugin.name)}
-                </h3>
-                {plugin.verified && <VerifiedBadge />}
-              </div>
-
-              {/* Status Badges */}
-              <div className="flex flex-wrap items-center gap-1.5">
-                {plugin.source === 'local' && <LocalBadge />}
-                <CompatibilityBadge
-                  compatible={plugin.compatible}
-                  reason={plugin.compatibilityReason}
-                />
-                {plugin.installed && (
-                  <Badge
-                    variant="default"
-                    className="h-5 bg-emerald-500/10 font-medium text-emerald-700 text-xs dark:bg-emerald-500/20 dark:text-emerald-400"
-                  >
-                    {t('store:actions.installed')}
-                  </Badge>
-                )}
-              </div>
+          {/* Title + Badges */}
+          <div className="min-w-0 flex-1 space-y-2">
+            {/* Title + Verified Badge */}
+            <div className="flex items-center gap-1.5 overflow-hidden">
+              <h3 className="truncate font-semibold text-base leading-tight transition-colors group-hover:text-foreground">
+                {tp(plugin.name, 'name', plugin.displayName ?? plugin.name)}
+              </h3>
+              {plugin.verified && <VerifiedBadge />}
             </div>
 
-            {/* Install Button */}
-            <div
-              className="flex shrink-0"
-              onClick={(e) => e.preventDefault()}
-              onKeyDown={(e) => e.key === 'Enter' && e.preventDefault()}
-              aria-hidden="true"
-            >
-              <InstallButton plugin={plugin} size="icon" variant="ghost" />
+            {/* Status Badges */}
+            <div className="flex flex-wrap items-center gap-1.5">
+              {plugin.source === 'local' && <LocalBadge />}
+              <CompatibilityBadge
+                compatible={plugin.compatible}
+                reason={plugin.compatibilityReason}
+              />
+              {plugin.installed && (
+                <Badge
+                  variant="default"
+                  className="h-5 bg-emerald-500/10 font-medium text-emerald-700 text-xs dark:bg-emerald-500/20 dark:text-emerald-400"
+                >
+                  {t('store:actions.installed')}
+                </Badge>
+              )}
             </div>
           </div>
 
-          {/* Description */}
-          {plugin.description && (
-            <p className="line-clamp-2 text-muted-foreground text-sm leading-relaxed">
-              {tp(plugin.name, 'description', plugin.description)}
-            </p>
-          )}
-
-          {/* Metadata Row */}
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-muted-foreground/90 text-xs">
-            {authorName && (
-              <span className="inline-flex items-center gap-1.5 font-medium">
-                <User className="size-3.5 opacity-70" />
-                <span>{authorName}</span>
-              </span>
-            )}
-            <span className="inline-flex items-center gap-1.5 font-medium">
-              <Tag className="size-3.5 opacity-70" />
-              <span>v{plugin.version}</span>
-            </span>
-            {plugin.npm.downloads > 0 && (
-              <span className="inline-flex items-center gap-1.5 font-medium">
-                <Download className="size-3.5 opacity-70" />
-                <span>{formatDownloads(plugin.npm.downloads)}</span>
-              </span>
-            )}
+          {/* Install / update / uninstall. Sits above the stretched link and re-enables pointer
+                events; its dialogs are no longer descendants of the link, so they never navigate. */}
+          <div className="pointer-events-auto relative z-10 flex shrink-0">
+            <InstallButton plugin={plugin} size="icon" variant="ghost" />
           </div>
         </div>
-      </Card>
-    </Link>
+
+        {/* Description */}
+        {plugin.description && (
+          <p className="line-clamp-2 text-muted-foreground text-sm leading-relaxed">
+            {tp(plugin.name, 'description', plugin.description)}
+          </p>
+        )}
+
+        {/* Metadata Row */}
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-muted-foreground/90 text-xs">
+          {authorName && (
+            <span className="inline-flex items-center gap-1.5 font-medium">
+              <User className="size-3.5 opacity-70" />
+              <span>{authorName}</span>
+            </span>
+          )}
+          <span className="inline-flex items-center gap-1.5 font-medium">
+            <Tag className="size-3.5 opacity-70" />
+            <span>v{plugin.version}</span>
+          </span>
+          {plugin.npm.downloads > 0 && (
+            <span className="inline-flex items-center gap-1.5 font-medium">
+              <Download className="size-3.5 opacity-70" />
+              <span>{formatDownloads(plugin.npm.downloads)}</span>
+            </span>
+          )}
+        </div>
+      </div>
+    </Card>
   );
 }

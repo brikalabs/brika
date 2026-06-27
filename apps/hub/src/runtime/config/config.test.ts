@@ -90,6 +90,9 @@ describe('HubConfig', () => {
           heartbeatInterval: 5000,
           heartbeatTimeout: 15000,
           rssSoftLimitBytes: 0,
+          idleReapMs: 0,
+          keepWarmCount: 0,
+          bytecode: false,
         },
         logs: { retentionDays: 7, pruneIntervalMs: 3600000 },
         analytics: { retentionDays: 90, pruneIntervalMs: 3600000 },
@@ -98,6 +101,9 @@ describe('HubConfig', () => {
       plugins: [],
       rules: [],
       schedules: [],
+      npmRegistries: {},
+      searchStores: [],
+      registries: [],
     };
 
     provide(ConfigLoader, {
@@ -142,6 +148,9 @@ describe('PluginManagerConfig', () => {
           heartbeatInterval: 10000,
           heartbeatTimeout: 30000,
           rssSoftLimitBytes: 256 * 1024 * 1024,
+          idleReapMs: 0,
+          keepWarmCount: 0,
+          bytecode: false,
         },
         logs: { retentionDays: 7, pruneIntervalMs: 3600000 },
         analytics: { retentionDays: 90, pruneIntervalMs: 3600000 },
@@ -150,6 +159,9 @@ describe('PluginManagerConfig', () => {
       plugins: [],
       rules: [],
       schedules: [],
+      npmRegistries: {},
+      searchStores: [],
+      registries: [],
     };
 
     provide(ConfigLoader, {

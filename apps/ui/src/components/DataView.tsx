@@ -1,4 +1,4 @@
-import { type ReactNode, useMemo } from 'react';
+import { type ReactNode, useMemo, useRef } from 'react';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Hook: useDataView()
@@ -10,93 +10,68 @@ interface UseDataViewOptions<T> {
   isEmpty?: (data: T) => boolean;
 }
 
+/** Whether `data` should render the empty state. */
+function computeIsEmpty<T>(data: T | undefined, isEmpty?: (data: T) => boolean): boolean {
+  if (data === undefined) {
+    return true;
+  }
+  if (isEmpty) {
+    return isEmpty(data);
+  }
+  if (Array.isArray(data)) {
+    return data.length === 0;
+  }
+  return !data;
+}
+
 /**
- * Hook that returns typed DataView components for inline use.
+ * Hook that returns typed DataView slot components for inline use.
+ *
+ * The slot components keep **stable identities** across renders: they read the latest state through a
+ * ref instead of closing over `data`/`isLoading` (which a refetch changes on every call). Rebuilding
+ * them per render (the naive approach) makes React see a new component type at `<View.Content>` and
+ * remount the whole content subtree on each refetch, tearing down anything stateful inside it (an open
+ * install/update dialog on a card, scroll position, focus). With stable identities the content
+ * re-renders in place and reconciles its children by key instead.
  *
  * @example
  * ```tsx
- * function PluginsPage() {
- *   const { data: plugins, isLoading } = usePlugins();
- *   const View = useDataView({ data: plugins, isLoading });
+ * const { data: plugins, isLoading } = usePlugins();
+ * const View = useDataView({ data: plugins, isLoading });
  *
- *   return (
- *     <View.Root>
- *       <View.Skeleton>
- *         <PluginSkeleton />
- *       </View.Skeleton>
- *
- *       <View.Empty>
- *         <EmptyState />
- *       </View.Empty>
- *
- *       <View.Content>
- *         {(plugins) => <PluginList plugins={plugins} />}
- *       </View.Content>
- *     </View.Root>
- *   );
- * }
+ * return (
+ *   <View.Root>
+ *     <View.Skeleton><PluginSkeleton /></View.Skeleton>
+ *     <View.Empty><EmptyState /></View.Empty>
+ *     <View.Content>{(plugins) => <PluginList plugins={plugins} />}</View.Content>
+ *   </View.Root>
+ * );
  * ```
  */
-export function useDataView<T>({ data, isLoading, isEmpty: isEmptyFn }: UseDataViewOptions<T>) {
+export function useDataView<T>({ data, isLoading, isEmpty }: UseDataViewOptions<T>) {
+  const state = useRef({ data, isLoading, empty: false });
+  state.current = { data, isLoading, empty: computeIsEmpty(data, isEmpty) };
+
   return useMemo(() => {
-    let computedIsEmpty: boolean;
-    if (data === undefined) {
-      computedIsEmpty = true;
-    } else if (isEmptyFn) {
-      computedIsEmpty = isEmptyFn(data);
-    } else if (Array.isArray(data)) {
-      computedIsEmpty = data.length === 0;
-    } else {
-      computedIsEmpty = !data;
-    }
-
-    // Simple components that use closure over the options
-    function Root({
-      children,
-    }: Readonly<{
-      children: ReactNode;
-    }>) {
+    function Root({ children }: Readonly<{ children: ReactNode }>) {
       return <>{children}</>;
     }
 
-    function Skeleton({
-      children,
-    }: Readonly<{
-      children: ReactNode;
-    }>) {
-      if (!isLoading) {
-        return null;
-      }
-      return <>{children}</>;
+    function Skeleton({ children }: Readonly<{ children: ReactNode }>) {
+      return state.current.isLoading ? <>{children}</> : null;
     }
 
-    function Empty({
-      children,
-    }: Readonly<{
-      children: ReactNode;
-    }>) {
-      if (isLoading || !computedIsEmpty) {
-        return null;
-      }
-      return <>{children}</>;
+    function Empty({ children }: Readonly<{ children: ReactNode }>) {
+      const { isLoading, empty } = state.current;
+      return !isLoading && empty ? <>{children}</> : null;
     }
 
-    function Content({
-      children,
-    }: Readonly<{
-      children: (data: T) => ReactNode;
-    }>) {
-      if (isLoading || computedIsEmpty || data === undefined) {
-        return null;
-      }
-      return <>{children(data)}</>;
+    function Content({ children }: Readonly<{ children: (data: T) => ReactNode }>) {
+      const { data, isLoading, empty } = state.current;
+      return isLoading || empty || data === undefined ? null : <>{children(data)}</>;
     }
 
-    return {
-      Root,
-      Skeleton,
-      Empty,
-      Content,
-    };
-  }, [data, isLoading, isEmptyFn]);
+    return { Root, Skeleton, Empty, Content };
+    // Built once: the slots close over the `state` ref, never over `data`/`isLoading` directly.
+  }, []);
 }

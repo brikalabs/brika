@@ -10,7 +10,7 @@ import {
 } from './components';
 import { useStorePluginDetails, useStorePluginReadme } from './hooks';
 
-const KNOWN_SOURCES = new Set(['npm', 'local']);
+const KNOWN_SOURCES = new Set(['npm', 'local', 'store']);
 
 export function StorePluginDetailPage() {
   // Route: /store/$source/$  →  e.g. /store/npm/@brika/plugin-timer

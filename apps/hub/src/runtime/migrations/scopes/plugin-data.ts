@@ -21,6 +21,7 @@ import {
   type Migration,
   type MigrationContext,
   MigrationDeferred,
+  type MigrationOutcome,
   type MigrationScope,
 } from '../types';
 
@@ -38,10 +39,10 @@ const STATE_DB_FILENAME = 'state.db';
 const pruneOrphans: Migration = {
   id: '0001-prune-orphans',
   description: 'Remove plugin-data dirs whose UID is no longer registered',
-  run(ctx: MigrationContext): Promise<void> {
+  run(ctx: MigrationContext): Promise<MigrationOutcome> {
     const dataRoot = pluginDataDir(ctx.brikaDir);
     if (!existsSync(dataRoot)) {
-      return Promise.resolve();
+      return Promise.resolve({ changed: false });
     }
 
     const dbPath = join(ctx.brikaDir, 'db', STATE_DB_FILENAME);
@@ -56,14 +57,21 @@ const pruneOrphans: Migration = {
       return Promise.reject(new MigrationDeferred('state.db missing or has no plugins table'));
     }
 
+    let removed = 0;
     for (const entry of readdirSync(dataRoot, { withFileTypes: true })) {
       if (!entry.isDirectory() || knownUids.has(entry.name)) {
         continue;
       }
       // Orphan — uninstall left this behind.
       rmSync(join(dataRoot, entry.name), { recursive: true, force: true });
+      removed += 1;
     }
-    return Promise.resolve();
+    // `changed` only when an orphan was actually reclaimed, so a clean install (the common case) does
+    // not raise a "state updated" banner for having pruned nothing.
+    return Promise.resolve({
+      changed: removed > 0,
+      detail: removed > 0 ? `pruned ${removed} orphan plugin-data dir(s)` : undefined,
+    });
   },
 };
 

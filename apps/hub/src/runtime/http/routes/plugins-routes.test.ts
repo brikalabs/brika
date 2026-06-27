@@ -37,6 +37,7 @@ describe('plugins routes', () => {
   };
   let mockLifecycle: {
     getProcess: ReturnType<typeof mock>;
+    ensureStarted: ReturnType<typeof mock>;
     load?: ReturnType<typeof mock>;
   };
   let mockConfig: {
@@ -67,6 +68,9 @@ describe('plugins routes', () => {
     };
     mockLifecycle = {
       getProcess: mock().mockReturnValue(null),
+      // The /routes proxy now lazily respawns via ensureStarted; delegate to
+      // getProcess so each test's getProcess.mockReturnValue drives both paths.
+      ensureStarted: mock((name: string) => mockLifecycle.getProcess(name)),
     };
     mockConfig = {
       getSchema: mock().mockReturnValue([]),

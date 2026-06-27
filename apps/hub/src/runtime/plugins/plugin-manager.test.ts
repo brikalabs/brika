@@ -24,6 +24,7 @@ describe('PluginManager', () => {
   let mockLifecycle: {
     getProcessByUid: ReturnType<typeof mock>;
     getProcess: ReturnType<typeof mock>;
+    ensureStarted: ReturnType<typeof mock>;
     hasProcess: ReturnType<typeof mock>;
     listProcesses: ReturnType<typeof mock>;
     toPlugin: ReturnType<typeof mock>;
@@ -88,6 +89,7 @@ describe('PluginManager', () => {
     mockLifecycle = {
       getProcessByUid: mock(),
       getProcess: mock(),
+      ensureStarted: mock().mockResolvedValue(undefined),
       hasProcess: mock(),
       listProcesses: mock().mockReturnValue([]),
       toPlugin: mock(),
@@ -578,7 +580,7 @@ describe('PluginManager', () => {
       test('starts block on correct plugin', async () => {
         const process = createMockProcess('@test/plugin', 'uid-123');
         mockBlocks.getProvider.mockReturnValue('@test/plugin');
-        mockLifecycle.getProcess.mockReturnValue(process);
+        mockLifecycle.ensureStarted.mockResolvedValue(process);
 
         const result = await manager.startBlock('my-block', 'instance-1', 'workflow-1', {
           key: 'value',
@@ -601,7 +603,7 @@ describe('PluginManager', () => {
 
       test('returns error when plugin not loaded', async () => {
         mockBlocks.getProvider.mockReturnValue('@test/plugin');
-        mockLifecycle.getProcess.mockReturnValue(null);
+        mockLifecycle.ensureStarted.mockResolvedValue(null);
 
         const result = await manager.startBlock('my-block', 'instance-1', 'workflow-1', {});
 

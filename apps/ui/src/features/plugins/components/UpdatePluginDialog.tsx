@@ -1,11 +1,4 @@
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  ProgressDisplay,
-} from '@brika/clay';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@brika/clay';
 import { useQueryClient } from '@tanstack/react-query';
 import { ArrowUpCircle, RotateCcw } from 'lucide-react';
 import { useCapture } from '@/features/analytics/hooks';
@@ -13,7 +6,9 @@ import { getProgressValue, useProgressStream } from '@/hooks/use-progress-stream
 import { useLocale } from '@/lib/use-locale';
 import { pluginsKeys } from '../api';
 import { registryApi } from '../registry-api';
+import { usePluginCompileLogs } from '../use-plugin-compile';
 import { getPhaseLabel } from './install-progress-utils';
+import { PluginProgress } from './PluginProgress';
 import { UpdatePluginDialogFooter } from './UpdatePluginDialogFooter';
 import { UpdatePluginInfo } from './UpdatePluginInfo';
 
@@ -39,6 +34,9 @@ export function UpdatePluginDialog({
   const queryClient = useQueryClient();
   const { t } = useLocale();
   const capture = useCapture();
+  // The rebuild after an update/reinstall streams as `plugin.compile` events; surface those steps as
+  // lines in the update log.
+  const buildLogs = usePluginCompileLogs(packageName);
 
   const {
     isProcessing,
@@ -120,10 +118,10 @@ export function UpdatePluginDialog({
           )}
 
           {(isProcessing || success || error) && (
-            <ProgressDisplay
+            <PluginProgress
               progressValue={getProgressValue(progress?.phase)}
               phaseLabel={getPhaseLabel(progress, t, mode)}
-              logs={logs}
+              logs={[...logs, ...buildLogs]}
               scrollRef={scrollRef}
               error={error}
               success={success}

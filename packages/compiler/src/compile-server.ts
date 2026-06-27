@@ -17,6 +17,15 @@ export interface ServerCompileOptions {
   external: string[];
   /** Whether to enable code splitting (preserves dynamic imports). Default: true */
   splitting?: boolean;
+  /**
+   * Compile to JSC bytecode to cut the plugin's cold-start parse/compile time.
+   * Bun emits bytecode only for a single CommonJS bundle, so enabling this
+   * forces `format: 'cjs'` + `splitting: false` (overriding {@link splitting}).
+   * Default: false (the esm+splitting path is unchanged). The bytecode variant
+   * is cached under a distinct filename so flipping the flag never serves a
+   * stale build of the other format.
+   */
+  bytecode?: boolean;
 }
 
 export type ServerCompileResult =
@@ -35,7 +44,13 @@ export type ServerCompileResult =
 export async function compileServerEntry(opts: ServerCompileOptions): Promise<ServerCompileResult> {
   const entryBase = basename(opts.entrypoint).replace(/\.[tj]sx?$/, '');
   const hash = await hashPluginSources(opts.pluginRoot);
-  const entryPath = join(opts.outdir, `${entryBase}.${hash}.js`);
+  // The bytecode build is a different output format from the same sources, so
+  // it gets its own cache key, otherwise flipping `bytecode` would serve a
+  // stale build of the other format. Non-bytecode keeps the plain `<hash>`
+  // name, so existing caches stay valid.
+  const bytecode = opts.bytecode ?? false;
+  const cacheKey = bytecode ? `${hash}.bc` : hash;
+  const entryPath = join(opts.outdir, `${entryBase}.${cacheKey}.js`);
 
   // Cache hit — hash-in-filename means no separate hash file is needed
   if (await Bun.file(entryPath).exists()) {
@@ -49,10 +64,13 @@ export async function compileServerEntry(opts: ServerCompileOptions): Promise<Se
   const result = await Bun.build({
     entrypoints: [opts.entrypoint],
     outdir: opts.outdir,
-    naming: `[name].${hash}.[ext]`,
+    naming: `[name].${cacheKey}.[ext]`,
     target: 'bun',
-    format: 'esm',
-    splitting: opts.splitting ?? true,
+    // Bytecode requires a single CommonJS bundle; otherwise keep the esm +
+    // code-splitting path (preserves dynamic imports across chunks).
+    format: bytecode ? 'cjs' : 'esm',
+    splitting: bytecode ? false : (opts.splitting ?? true),
+    bytecode,
     minify: true,
     external: opts.external,
     // NOTE: deliberately NOT inlining process.env.NODE_ENV here. The server

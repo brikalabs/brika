@@ -21,7 +21,7 @@ export const oauthRoutes = group({
       params: z.object({
         providerId: z.string(),
       }),
-      handler: ({ params, req, inject }) => {
+      handler: async ({ params, req, inject }) => {
         const url = new URL(req.url);
         const pluginPath = url.pathname.slice('/api'.length) || '/';
 
@@ -30,7 +30,8 @@ export const oauthRoutes = group({
           throw new NotFound('OAuth route not found');
         }
 
-        const process = inject(PluginLifecycle).getProcess(registered.pluginName);
+        // Respawn the plugin if scale-to-zero reaped it (no-op when resident).
+        const process = await inject(PluginLifecycle).ensureStarted(registered.pluginName);
         if (!process) {
           throw new NotFound('Plugin not running');
         }

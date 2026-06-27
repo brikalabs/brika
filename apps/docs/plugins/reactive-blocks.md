@@ -203,6 +203,35 @@ export const clock = defineReactiveBlock(
 
 `start(value)`, `start(source)`, and `start(factory)` all lift a value or producer into a `Flow` whose subscription is tracked by the cleanup registry — when the workflow stops, the underlying timer/socket/subscription is torn down automatically.
 
+### Host-scheduled triggers (scale-to-zero)
+
+A trigger that uses `start(interval(...))` runs its timer **inside the plugin process**, so the plugin must stay resident to keep firing. For a simple, fixed-interval trigger you can instead let the **hub** own the schedule by declaring a `trigger` descriptor. The hub fires the block's output on its own timer, so a trigger-only plugin can be reaped while idle and still keep firing (see [Scale to zero](../architecture/scale-to-zero.md)).
+
+```ts
+export const clock = defineBlock({
+  id: 'clock',
+  inputs: {},
+  outputs: {
+    tick: output(z.object({ count: z.number(), ts: z.number() }), { name: 'Tick' }),
+  },
+  config: z.object({
+    interval: z.duration(undefined, 'Interval between ticks'),
+  }),
+  // The hub schedules this and emits `tick` every `config.interval` ms.
+  trigger: { kind: 'interval', intervalField: 'interval', output: 'tick' },
+  run: ({ outputs, config, start }) => {
+    // Fallback only: a hub that understands `trigger` never runs this. An older
+    // hub ignores `trigger` and schedules in-process instead, so keep it.
+    start(interval(config.interval)).to(outputs.tick);
+  },
+});
+```
+
+- `intervalField` names the config field (a number of milliseconds) the operator sets; a missing or invalid value disables that instance's trigger (it fails closed with a `block.error`).
+- The hub emits `{ count, ts }` on `output` each fire (`count` increments per instance).
+- The contract is a discriminated union on `kind` (only `interval` today). It is forward-compatible: a future `kind` an older hub doesn't recognise degrades the trigger to "not hosted" and the block falls back to its `run()`, rather than failing to load.
+- Keep `run()` as the in-process fallback. A hub that honours `trigger` never starts the block in the plugin, so there is no double-fire.
+
 ## Async work
 
 Setup is not async. If you need to do async work, call it from inside a subscription handler:

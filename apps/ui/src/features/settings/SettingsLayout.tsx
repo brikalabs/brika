@@ -3,6 +3,7 @@ import { useCanAccess } from '@brika/auth/react';
 import { cn } from '@brika/clay';
 import { Link, Navigate, Outlet, useMatchRoute, useRouterState } from '@tanstack/react-router';
 import {
+  Boxes,
   Clock,
   Globe,
   Info,
@@ -50,6 +51,12 @@ const NAV_GROUPS: NavGroup[] = [
         to: paths.settings.hub.path,
         labelKey: 'settings:nav.hub',
         icon: Server,
+        adminOnly: true,
+      },
+      {
+        to: paths.settings.registry.path,
+        labelKey: 'settings:nav.registry',
+        icon: Boxes,
         adminOnly: true,
       },
       {

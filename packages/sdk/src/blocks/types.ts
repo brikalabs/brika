@@ -47,7 +47,7 @@ export interface BlockSchema {
     {
       type: 'string' | 'number' | 'boolean' | 'array' | 'object';
       description?: string;
-      default?: Json;
+      default?: Exclude<Json, undefined>;
       enum?: Json[];
       items?: {
         type: string;
@@ -76,6 +76,29 @@ export interface BlockSchema {
  * Visual metadata (name, description, icon, color, category) comes from package.json.
  * i18n keys: `blocks.{id}.*`
  */
+/**
+ * Declares a block as a HOST-scheduled trigger: the hub owns the schedule and
+ * fires the block's output, so a trigger-only plugin needs no resident process
+ * and scale-to-zero can reap it between fires.
+ *
+ * The union is the extension point. New schedule kinds (cron, webhook, ...) are
+ * added as additional members keyed by `kind`; consumers switch on `kind`, so
+ * adding one is purely additive and an older hub simply ignores a `kind` it does
+ * not recognise. Keep members flat and self-describing for that reason.
+ */
+export type BlockTrigger = {
+  /** Fixed interval. `cron`/`webhook`/... are future members of this union. */
+  kind: 'interval';
+  /**
+   * Name of the block's config field (a number of milliseconds) that sets the
+   * interval. Read per workflow instance so the operator controls the period;
+   * a missing or invalid value disables that instance's trigger (fails closed).
+   */
+  intervalField: string;
+  /** Output port id the hub emits on each time the trigger fires. */
+  output: string;
+};
+
 export interface BlockDefinition {
   /** Local block ID */
   id: string;
@@ -89,4 +112,9 @@ export interface BlockDefinition {
   schema: BlockSchema;
   /** Plugin that provides this block */
   pluginId?: string;
+  /**
+   * Present when the block is a host-scheduled trigger (see {@link BlockTrigger}).
+   * Optional, so non-trigger blocks and older plugins are unaffected.
+   */
+  trigger?: BlockTrigger;
 }

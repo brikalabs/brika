@@ -308,6 +308,9 @@ function compileBlock<
     inputs,
     outputs,
     schema: configJsonSchema,
+    // Host-scheduled trigger declaration, forwarded to the hub so it can own
+    // the schedule. Omitted entirely for ordinary blocks.
+    ...(spec.trigger ? { trigger: spec.trigger } : {}),
 
     // Start function - creates reactive context and runs setup
     start(ctx: BlockRuntimeContext): BlockInstance {
@@ -666,7 +669,7 @@ function zodToBlockSchema(schema: z.ZodObject<z.ZodRawShape>): BlockSchema {
       type?: string;
       description?: string;
       enum?: Json[];
-      default?: Json;
+      default?: Exclude<Json, undefined>;
       format?: string;
       label?: string;
       showWhen?: {

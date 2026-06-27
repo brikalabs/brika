@@ -9,6 +9,12 @@ import YAML from 'yaml';
 import { z } from 'zod';
 import { Logger } from '../logs/log-router';
 import { BrikaInitializer } from './brika-initializer';
+import {
+  operatorSearchStores,
+  parseOperatorRegistries,
+  type RegistryDescriptor,
+  resolveRegistries,
+} from './registries';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -115,6 +121,31 @@ export function safeParseCorsAllowlist(raw: unknown): { origins: string[] } | { 
   return { issues: result.error.issues.map((issue) => issue.message) };
 }
 
+// ─── Multi-registry config ────────────────────────────────────────────────────
+// `npmRegistries` routes installs per scope (written to the plugins-dir `.npmrc`);
+// `searchStores` are `/v1`-conforming bases the hub searches and reads details from.
+// Both default to the Brika registry/store; the env vars override only the defaults.
+
+const BRIKA_DEFAULT_REGISTRY = 'https://registry.brika.dev';
+const BRIKA_DEFAULT_STORE = 'https://store.brika.dev';
+
+/** Drop a trailing slash so `${base}/v1/...` never doubles up. */
+const trimUrl = (url: string): string => url.trim().replace(/\/$/, '');
+
+/** scope -> npm-registry URL. A malformed map degrades to empty rather than failing the load. */
+const NpmRegistriesSchema = z.record(z.string(), z.string()).catch({});
+/** `/v1` store base URLs. A malformed list degrades to empty. */
+const SearchStoresSchema = z.array(z.string()).catch([]);
+
+/** The npm-protocol registry probed for scoped plugins whose scope isn't explicitly mapped. */
+function defaultRegistry(): string {
+  return trimUrl(process.env.BRIKA_REGISTRY_URL || BRIKA_DEFAULT_REGISTRY);
+}
+/** Default search stores: the Brika store, `BRIKA_STORE_URL` overriding it. */
+function defaultSearchStores(): string[] {
+  return [trimUrl(process.env.BRIKA_STORE_URL || BRIKA_DEFAULT_STORE)];
+}
+
 export interface BrikaConfig {
   hub: {
     port: number;
@@ -137,6 +168,26 @@ export interface BrikaConfig {
        * killing it abruptly. `0` disables the limit (no RSS-based restarts).
        */
       rssSoftLimitBytes: number;
+      /**
+       * Scale-to-zero: reap an idle plugin process after this many milliseconds
+       * with no activity (no block input, route call, tool call, or trigger
+       * fire). `0` disables reaping (plugins stay resident, the behaviour
+       * before scale-to-zero). A plugin that hosts a live (not yet hub-hosted)
+       * trigger block is never reaped regardless of this value.
+       */
+      idleReapMs: number;
+      /**
+       * Keep the N most-recently-active plugins resident even once their idle
+       * window elapses, to hide cold-start latency on the hot set. `0` keeps
+       * none warm (every idle plugin is eligible for reaping).
+       */
+      keepWarmCount: number;
+      /**
+       * Compile plugin server bundles to JSC bytecode (`bun build --bytecode`)
+       * so cold starts skip parse/compile. Off by default; bytecode is tied to
+       * the Bun version and is regenerated transparently on mismatch.
+       */
+      bytecode: boolean;
     };
     logs: {
       /**
@@ -164,6 +215,22 @@ export interface BrikaConfig {
   plugins: PluginEntry[];
   rules: RuleEntry[];
   schedules: ScheduleEntry[];
+  /**
+   * npm-protocol registry probed for a scoped plugin whose scope isn't in `npmRegistries`: when it
+   * serves the package, the hub auto-routes that scope to it. Absent disables auto-routing.
+   */
+  defaultRegistry?: string;
+  /** Explicit scope -> npm-registry overrides (`.npmrc` install routing); auto-routing fills this. */
+  npmRegistries: Record<string, string>;
+  /** `/v1`-conforming store base URLs the hub searches and reads plugin details from. */
+  searchStores: string[];
+  /**
+   * Declarative registry catalogue (built-in `npm` + `brika` presets, extended by the `registries:`
+   * block in `brika.yml`). Source of truth for each registry's display name, plugin-URL template,
+   * search/install method, and README/icon source. The flat `searchStores` list above stays the set
+   * actually queried (see {@link ConfigLoader.getSearchStores}).
+   */
+  registries: RegistryDescriptor[];
 }
 
 /**
@@ -172,6 +239,15 @@ export interface BrikaConfig {
  * starves the host. Operators tune this per deployment; `0` disables it.
  */
 const DEFAULT_RSS_SOFT_LIMIT_BYTES = 512 * 1024 * 1024;
+
+/**
+ * Scale-to-zero defaults. `idleReapMs: 0` keeps the pre-scale-to-zero
+ * behaviour (plugins resident forever) so the feature is strictly opt-in;
+ * operators enable it by setting a positive idle window in `brika.yml`.
+ */
+const DEFAULT_IDLE_REAP_MS = 0;
+const DEFAULT_KEEP_WARM_COUNT = 0;
+const DEFAULT_BYTECODE = false;
 
 /**
  * Default config *template*. Never assign this object (or its nested
@@ -191,6 +267,9 @@ const DEFAULT_CONFIG: BrikaConfig = {
       heartbeatInterval: 5000,
       heartbeatTimeout: 15000,
       rssSoftLimitBytes: DEFAULT_RSS_SOFT_LIMIT_BYTES,
+      idleReapMs: DEFAULT_IDLE_REAP_MS,
+      keepWarmCount: DEFAULT_KEEP_WARM_COUNT,
+      bytecode: DEFAULT_BYTECODE,
     },
     logs: {
       retentionDays: 7,
@@ -207,11 +286,19 @@ const DEFAULT_CONFIG: BrikaConfig = {
   plugins: [],
   rules: [],
   schedules: [],
+  defaultRegistry: BRIKA_DEFAULT_REGISTRY,
+  npmRegistries: {},
+  searchStores: [BRIKA_DEFAULT_STORE],
+  registries: [],
 };
 
-/** Fresh, independently-mutable copy of {@link DEFAULT_CONFIG}. */
+/** Fresh, independently-mutable copy of {@link DEFAULT_CONFIG}, with env-resolved registry defaults. */
 function defaultConfig(): BrikaConfig {
-  return structuredClone(DEFAULT_CONFIG);
+  const config = structuredClone(DEFAULT_CONFIG);
+  config.defaultRegistry = defaultRegistry();
+  config.searchStores = defaultSearchStores();
+  config.registries = resolveRegistries([]);
+  return config;
 }
 
 /**
@@ -224,6 +311,16 @@ const RssSoftLimitSchema = z.coerce
   .int()
   .nonnegative()
   .catch(DEFAULT_RSS_SOFT_LIMIT_BYTES);
+
+/**
+ * Scale-to-zero field schemas. Like {@link RssSoftLimitSchema}, each falls
+ * back to its documented default on a missing or malformed value rather than
+ * failing the whole config load. `bytecode` is a native YAML boolean (no
+ * coercion, so the string "false" can never read as true).
+ */
+const IdleReapMsSchema = z.coerce.number().int().nonnegative().catch(DEFAULT_IDLE_REAP_MS);
+const KeepWarmCountSchema = z.coerce.number().int().nonnegative().catch(DEFAULT_KEEP_WARM_COUNT);
+const BytecodeSchema = z.boolean().catch(DEFAULT_BYTECODE);
 
 const SECRET_PREFIX = '__secret_';
 
@@ -250,6 +347,9 @@ export class ConfigLoader {
   readonly #logger = inject(Logger);
 
   #config: BrikaConfig | null = null;
+  /** `/v1` store URLs declared by operator `registries:` entries (built-ins excluded), unioned into
+   * {@link getSearchStores}. Set at load; empty for the default (no-file) config. */
+  #operatorStoreUrls: string[] = [];
 
   get configPath(): string {
     return `${this.#init.brikaDir}/brika.yml`;
@@ -286,6 +386,12 @@ export class ConfigLoader {
       const hubLogsParsed = (hubParsed.logs ?? {}) as Record<string, unknown>;
       const hubAnalyticsParsed = (hubParsed.analytics ?? {}) as Record<string, unknown>;
 
+      // Declarative registry catalogue: built-in presets extended by the operator's `registries:`
+      // block. The flat `searchStores` key stays the runtime-mutable list; an operator registry's
+      // `/v1` store is unioned into the effective search set (see getSearchStores).
+      const operatorRegistries = parseOperatorRegistries(parsed.registries);
+      this.#operatorStoreUrls = operatorSearchStores(operatorRegistries);
+
       this.#config = {
         hub: {
           port: (hubParsed.port as number) ?? DEFAULT_CONFIG.hub.port,
@@ -304,6 +410,9 @@ export class ConfigLoader {
               hubPluginsParsed.rssSoftLimitBytes === undefined
                 ? DEFAULT_CONFIG.hub.plugins.rssSoftLimitBytes
                 : RssSoftLimitSchema.parse(hubPluginsParsed.rssSoftLimitBytes),
+            idleReapMs: IdleReapMsSchema.parse(hubPluginsParsed.idleReapMs),
+            keepWarmCount: KeepWarmCountSchema.parse(hubPluginsParsed.keepWarmCount),
+            bytecode: BytecodeSchema.parse(hubPluginsParsed.bytecode),
           },
           logs: {
             retentionDays:
@@ -324,6 +433,23 @@ export class ConfigLoader {
         plugins: this.#parsePlugins(parsed.plugins),
         rules: (parsed.rules as RuleEntry[]) ?? [],
         schedules: (parsed.schedules as ScheduleEntry[]) ?? [],
+        defaultRegistry:
+          typeof parsed.defaultRegistry === 'string'
+            ? trimUrl(parsed.defaultRegistry)
+            : defaultRegistry(),
+        npmRegistries:
+          parsed.npmRegistries === undefined
+            ? {}
+            : Object.fromEntries(
+                Object.entries(NpmRegistriesSchema.parse(parsed.npmRegistries)).map(
+                  ([scope, url]) => [scope, trimUrl(url)]
+                )
+              ),
+        searchStores:
+          parsed.searchStores === undefined
+            ? defaultSearchStores()
+            : SearchStoresSchema.parse(parsed.searchStores).map(trimUrl),
+        registries: resolveRegistries(operatorRegistries),
       };
 
       this.#logger.info('Configuration loaded successfully', {
@@ -354,6 +480,16 @@ export class ConfigLoader {
       throw new Error('Config not loaded. Call load() first.');
     }
     return this.#config;
+  }
+
+  /**
+   * The `/v1` store base URLs the hub actually searches: the runtime-mutable `searchStores` list
+   * unioned (de-duped) with any `/v1` stores declared by operator `registries:` entries. Keeping the
+   * union out of `searchStores` itself means a registry removed from `registries:` stops being
+   * searched (no stale entry baked into the saved file).
+   */
+  getSearchStores(): string[] {
+    return [...new Set([...this.get().searchStores, ...this.#operatorStoreUrls])];
   }
 
   getRootDir(): string {
@@ -392,6 +528,9 @@ export class ConfigLoader {
       plugins: pluginsObj,
       rules: configToSave.rules,
       schedules: configToSave.schedules,
+      defaultRegistry: configToSave.defaultRegistry,
+      npmRegistries: configToSave.npmRegistries,
+      searchStores: configToSave.searchStores,
     };
 
     const file = Bun.file(this.configPath);
@@ -405,6 +544,9 @@ export class ConfigLoader {
         doc.set('plugins', pluginsObj);
         doc.set('rules', configToSave.rules);
         doc.set('schedules', configToSave.schedules);
+        doc.set('defaultRegistry', configToSave.defaultRegistry);
+        doc.set('npmRegistries', configToSave.npmRegistries);
+        doc.set('searchStores', configToSave.searchStores);
       } catch {
         doc = new YAML.Document(configStructure);
       }
@@ -454,6 +596,70 @@ export class ConfigLoader {
     if (config.plugins.length !== initialLength) {
       await this.save(config);
     }
+  }
+
+  /**
+   * Set (add or replace) a scope's npm registry for install routing, and save. Takes effect in the
+   * plugins-dir `.npmrc` on the next registry init. The URL is normalized (trailing slash dropped).
+   */
+  async setNpmRegistry(scope: string, url: string): Promise<void> {
+    const config = this.get();
+    const normalized = trimUrl(url);
+    if (config.npmRegistries[scope] === normalized) {
+      return;
+    }
+    config.npmRegistries = { ...config.npmRegistries, [scope]: normalized };
+    await this.save(config);
+  }
+
+  /** Remove a scope's npm registry and save. No-op if the scope is not mapped. */
+  async removeNpmRegistry(scope: string): Promise<void> {
+    const config = this.get();
+    if (!(scope in config.npmRegistries)) {
+      return;
+    }
+    const { [scope]: _removed, ...rest } = config.npmRegistries;
+    config.npmRegistries = rest;
+    await this.save(config);
+  }
+
+  /** Add a `/v1` search store (de-duped, normalized) and save. No-op if already present. */
+  async addSearchStore(url: string): Promise<void> {
+    const config = this.get();
+    const normalized = trimUrl(url);
+    if (config.searchStores.includes(normalized)) {
+      return;
+    }
+    config.searchStores = [...config.searchStores, normalized];
+    await this.save(config);
+  }
+
+  /** Remove a `/v1` search store and save. No-op if absent. */
+  async removeSearchStore(url: string): Promise<void> {
+    const config = this.get();
+    const normalized = trimUrl(url);
+    if (!config.searchStores.includes(normalized)) {
+      return;
+    }
+    config.searchStores = config.searchStores.filter((store) => store !== normalized);
+    await this.save(config);
+  }
+
+  /** Replace the whole registry configuration (install map and/or search stores) and save. */
+  async setRegistries(registries: {
+    npmRegistries?: Record<string, string>;
+    searchStores?: string[];
+  }): Promise<void> {
+    const config = this.get();
+    if (registries.npmRegistries) {
+      config.npmRegistries = Object.fromEntries(
+        Object.entries(registries.npmRegistries).map(([scope, url]) => [scope, trimUrl(url)])
+      );
+    }
+    if (registries.searchStores) {
+      config.searchStores = registries.searchStores.map(trimUrl);
+    }
+    await this.save(config);
   }
 
   /**

@@ -51,11 +51,11 @@ export function MigrationBanner() {
     return null;
   }
 
-  const applied = status.reports.reduce((sum, r) => sum + r.applied.length, 0);
+  const changed = status.reports.reduce((sum, r) => sum + r.changed.length, 0);
   const failed = status.reports.flatMap((r) => r.failed);
 
   const handleDismiss = () => {
-    capture('migration.dismissed', { applied, failed: failed.length });
+    capture('migration.dismissed', { changed, failed: failed.length });
     if (status.completedAt !== null) {
       setDismissedAt(status.completedAt);
       try {
@@ -84,7 +84,7 @@ export function MigrationBanner() {
             : t('common:updates.migrationAppliedHeadline')}
         </p>
         <p className="text-muted-foreground text-xs">
-          {t('common:updates.migrationApplied', { count: applied })}
+          {t('common:updates.migrationApplied', { count: changed })}
           {failed.length > 0
             ? ` · ${t('common:updates.migrationFailedCount', { count: failed.length })}`
             : ''}

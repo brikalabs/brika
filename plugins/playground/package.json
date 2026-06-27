@@ -128,10 +128,18 @@
       "description": "Minimum log level to display",
       "default": "info",
       "options": [
-        { "value": "debug" },
-        { "value": "info" },
-        { "value": "warn" },
-        { "value": "error" }
+        {
+          "value": "debug"
+        },
+        {
+          "value": "info"
+        },
+        {
+          "value": "warn"
+        },
+        {
+          "value": "error"
+        }
       ]
     }
   ],

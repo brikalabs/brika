@@ -6,14 +6,15 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  ProgressDisplay,
 } from '@brika/clay';
 import { useQueryClient } from '@tanstack/react-query';
 import { Package } from 'lucide-react';
 import { useEffect } from 'react';
 import { useCapture } from '@/features/analytics/hooks';
 import { pluginsKeys } from '@/features/plugins/api';
+import { PluginProgress } from '@/features/plugins/components/PluginProgress';
 import { registryApi, registryKeys } from '@/features/plugins/registry-api';
+import { usePluginCompileLogs } from '@/features/plugins/use-plugin-compile';
 import { getProgressValue, useProgressStream } from '@/hooks/use-progress-stream';
 import { useLocale } from '@/lib/use-locale';
 
@@ -33,6 +34,9 @@ export function InstallProgressDialog({
   const { t } = useLocale();
   const queryClient = useQueryClient();
   const capture = useCapture();
+  // The plugin's build (bricks/pages → server) streams as `plugin.compile` events while it loads;
+  // surface those steps as lines in the install log.
+  const buildLogs = usePluginCompileLogs(packageName);
 
   const {
     isProcessing,
@@ -127,10 +131,10 @@ export function InstallProgressDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <ProgressDisplay
+        <PluginProgress
           progressValue={getProgressValue(progress?.phase)}
           phaseLabel={getPhaseLabel()}
-          logs={logs}
+          logs={[...logs, ...buildLogs]}
           scrollRef={scrollRef}
           error={error}
           success={success}

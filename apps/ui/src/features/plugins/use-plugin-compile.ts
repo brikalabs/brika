@@ -70,7 +70,7 @@ function reduce(prev: CompileTimeline | null, frame: Frame): CompileTimeline {
       return { status: 'building', steps: [] };
     case 'step': {
       const settled = base.steps.map((s) => ({ ...s, state: 'done' as const }));
-      const existing = settled.find((s) => s.key === frame.key);
+      const existing = settled.some((s) => s.key === frame.key);
       const steps = existing
         ? settled.map((s) => (s.key === frame.key ? { ...s, state: 'active' as const } : s))
         : [...settled, { key: frame.key, state: 'active' as const }];
@@ -116,11 +116,10 @@ function toFrame(event: PluginCompileEvent): Frame | null {
 }
 
 /**
- * A plugin's live build, paced for display. Subscribes to `plugin.compile`
- * events over the shared SSE and plays the steps out with a minimum dwell each
- * ({@link MIN_DWELL_MS}) so a fast build still reads step by step. Returns null
- * when nothing is building; a settled build lingers briefly then clears, an
- * error stays until the next run.
+ * A plugin's live build, paced for display. Subscribes to `plugin.compile` events over the shared SSE
+ * and plays the steps out with a minimum dwell each ({@link MIN_DWELL_MS}) so a fast build still reads
+ * step by step. Returns null when nothing is building; a settled build lingers briefly then clears, an
+ * error stays until the next run. Drives the in-context build pill on a plugin card / detail header.
  */
 export function usePluginCompileTimeline(uid: string): CompileTimeline | null {
   const [timeline, setTimeline] = useState<CompileTimeline | null>(null);
@@ -189,4 +188,70 @@ export function usePluginCompileTimeline(uid: string): CompileTimeline | null {
   }, [uid]);
 
   return timeline;
+}
+
+// ─── Build steps as log lines (for install/update dialogs) ───────────────────
+
+/** Display name for a build step (a module kind, or the server entry). */
+const STEP_LABELS: Record<string, string> = {
+  brick: 'bricks',
+  page: 'pages',
+  blockView: 'block views',
+  blockNode: 'block nodes',
+  server: 'server',
+};
+
+/** Format one compile event as a single log line, or null for events not worth a line (`start`). */
+function compileLogLine(event: PluginCompileEvent): string | null {
+  if (event.phase === 'progress' && event.step) {
+    const label = STEP_LABELS[event.step] ?? event.step;
+    const count = event.modules ?? 0;
+    const noun = count === 1 ? 'module' : 'modules';
+    const modules = count > 0 ? ` (${count} ${noun})` : '';
+    return `Compiling ${label}${modules}${event.cached ? ' [cached]' : ''}`;
+  }
+  if (event.phase === 'done') {
+    return `Compiled in ${event.durationMs ?? 0}ms`;
+  }
+  if (event.phase === 'error') {
+    return `Build failed: ${event.message ?? ''}`;
+  }
+  return null;
+}
+
+/** Drop the build lines belonging to `name` (used to reset that plugin's lines on a fresh `start`). */
+function dropPluginLines(lines: string[], name: string): string[] {
+  const prefix = `${name}: `;
+  return lines.filter((line) => !line.startsWith(prefix));
+}
+
+/**
+ * Build steps as plain log lines, to interleave with an install/update log rather than show a badge.
+ * With a `name` it follows that one plugin (unprefixed lines); without, it follows every plugin and
+ * prefixes each line with the plugin it belongs to (for a bulk "Update all" log). Resets on each run.
+ */
+export function usePluginCompileLogs(name?: string): string[] {
+  const [lines, setLines] = useState<string[]>([]);
+
+  useEffect(() => {
+    setLines([]);
+    return subscribeSharedEvents(getStreamUrl('/api/stream/events'), (ev) => {
+      const event = parsePluginCompileEvent(ev.data);
+      if (!event || (name !== undefined && event.name !== name)) {
+        return;
+      }
+      // A fresh `start` replaces this plugin's prior build lines: a dev file-watcher can trigger a
+      // redundant recompile right after install, and only the latest run is worth showing.
+      if (event.phase === 'start') {
+        setLines((prev) => (name === undefined ? dropPluginLines(prev, event.name) : []));
+        return;
+      }
+      const line = compileLogLine(event);
+      if (line) {
+        setLines((prev) => [...prev, name === undefined ? `${event.name}: ${line}` : line]);
+      }
+    });
+  }, [name]);
+
+  return lines;
 }

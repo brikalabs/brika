@@ -99,6 +99,38 @@ describe('VersionStateStore', () => {
     expect(store.snapshot.lastSeenVersion).toBe('0.5.0');
   });
 
+  test('preserves the migration ledger when the rest of the file fails validation', () => {
+    // A future schemaVersion bump (or a single corrupt field) must NOT wipe the applied-migration
+    // ledger: wiping it is what silently re-runs every migration and re-fires the "state updated"
+    // banner. Salvage the ledger, reset only the (recomputable) boot-tracking fields.
+    writeFileSync(
+      join(tmp, '.version-state.json'),
+      JSON.stringify({
+        schemaVersion: 999, // unknown version → full-schema parse fails
+        lastSeenVersion: 12345, // wrong type, too
+        scopes: { 'plugin-data': ['0001-prune-orphans'], secrets: ['0001-stamp-v1'] },
+      })
+    );
+    const warnings: string[] = [];
+    const store = new VersionStateStore(tmp, '0.5.0', (message) => warnings.push(message));
+
+    // Boot-tracking fields are reset…
+    expect(store.snapshot.lastSeenVersion).toBe('0.5.0');
+    // …but the migration ledger survives, so migrations are NOT re-applied on the next boot.
+    expect(store.getAppliedMigrations('plugin-data')).toEqual(['0001-prune-orphans']);
+    expect(store.getAppliedMigrations('secrets')).toEqual(['0001-stamp-v1']);
+    // And the corruption is surfaced rather than reset silently.
+    expect(warnings.length).toBeGreaterThan(0);
+  });
+
+  test('warns (does not silently reset) when the file is not valid JSON', () => {
+    writeFileSync(join(tmp, '.version-state.json'), '{not json');
+    const warnings: string[] = [];
+    const store = new VersionStateStore(tmp, '0.5.0', (message) => warnings.push(message));
+    expect(store.snapshot.lastSeenVersion).toBe('0.5.0');
+    expect(warnings).toHaveLength(1);
+  });
+
   test('writes the state file with 0600 mode (best-effort secrets hygiene)', () => {
     const store = new VersionStateStore(tmp, '0.5.0');
     store.recordBootAttempt();

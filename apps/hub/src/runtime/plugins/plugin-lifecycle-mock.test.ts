@@ -35,12 +35,15 @@ let capturedSpawnDisconnect: ((error?: Error) => void) | null = null;
 let capturedSpawnStderr: ((line: string) => void) | null = null;
 let mockProcessInstance: Record<string, unknown> | null = null;
 
+// The server-build mock, captured so tests can assert a plugin was compiled.
+const mockCompileServerEntry = mock().mockResolvedValue({
+  success: true,
+  entryPath: '/mock/path/node_modules/.cache/brika-server/index.js',
+});
+
 // Mock the lifecycle-deps re-export layer (never mock the originals directly)
 mock.module('@/runtime/plugins/lifecycle-deps', () => ({
-  compileServerEntry: mock().mockResolvedValue({
-    success: true,
-    entryPath: '/mock/path/node_modules/.cache/brika-server/index.js',
-  }),
+  compileServerEntry: mockCompileServerEntry,
   spawnPlugin: mock((_cmd: string, _args: string[], opts?: Record<string, unknown>) => {
     capturedSpawnDisconnect = (opts?.onDisconnect as (error?: Error) => void) ?? null;
     capturedSpawnStderr = (opts?.onStderr as (line: string) => void) ?? null;
@@ -172,6 +175,7 @@ describe('PluginLifecycle (with mocked spawn)', () => {
     capturedSpawnDisconnect = null;
     capturedSpawnStderr = null;
     mockProcessInstance = null;
+    mockCompileServerEntry.mockClear();
 
     mockConfig = {
       restartBaseDelayMs: 1000,
@@ -323,7 +327,7 @@ describe('PluginLifecycle (with mocked spawn)', () => {
       expect(mockState.registerPlugin).not.toHaveBeenCalled();
     });
 
-    test('consent-before-code: a first-time grant-requesting plugin registers dormant, never spawns', async () => {
+    test('consent-before-code: a first-time grant-requesting plugin compiles, registers dormant, never spawns', async () => {
       resolverSpy.mockResolvedValueOnce({
         ...defaultResolverResult,
         metadata: {
@@ -336,7 +340,10 @@ describe('PluginLifecycle (with mocked spawn)', () => {
 
       await lifecycle.load('/mock/path');
 
-      // Registered dormant (enabled:false), health stopped, and NO process spawned.
+      // It is BUILT (so the operator sees the build trace on install): compiling bundles the code,
+      // it never runs it…
+      expect(mockCompileServerEntry).toHaveBeenCalled();
+      // …yet it registers dormant (enabled:false), health stopped, and NO process is spawned.
       expect(mockState.registerPlugin).toHaveBeenCalledWith(
         expect.objectContaining({ name: '@test/plugin', enabled: false })
       );
@@ -746,7 +753,7 @@ describe('PluginLifecycle (with mocked spawn)', () => {
           typeof c[2] === 'string' &&
           (c[2] as string).startsWith('Restarting in')
       );
-      expect(restartingCalls.length).toBe(0);
+      expect(restartingCalls).toHaveLength(0);
     });
 
     test('does not restart when plugin is disabled', async () => {
@@ -769,7 +776,7 @@ describe('PluginLifecycle (with mocked spawn)', () => {
           typeof c[2] === 'string' &&
           (c[2] as string).startsWith('Restarting in')
       );
-      expect(restartingCalls.length).toBe(0);
+      expect(restartingCalls).toHaveLength(0);
     });
 
     test('schedules restart when plugin is enabled', async () => {

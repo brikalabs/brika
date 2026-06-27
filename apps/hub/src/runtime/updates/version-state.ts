@@ -14,6 +14,10 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { z } from 'zod';
+import type { Json } from '@/types';
+
+/** Optional structured-warning sink, injected so this pre-DI utility can report a corrupt state file. */
+export type VersionStateLog = (message: string, meta?: Record<string, Json>) => void;
 
 const UpdateHistoryEntry = z.object({
   from: z.string(),
@@ -41,6 +45,15 @@ const VersionStateSchema = z.object({
 });
 export type VersionState = z.infer<typeof VersionStateSchema>;
 
+/**
+ * Lenient view of just the migration ledger. Used to salvage `scopes` when the full file fails schema
+ * validation (e.g. a future `schemaVersion` bump, or a corrupt boot-tracking field), so the
+ * load-bearing migration record survives instead of being silently wiped and re-applied.
+ */
+const LedgerSchema = z.object({
+  scopes: z.record(z.string(), z.array(z.string())).optional(),
+});
+
 const STATE_FILE = '.version-state.json';
 const HISTORY_MAX = 50;
 
@@ -66,11 +79,13 @@ function emptyState(currentVersion: string): VersionState {
 export class VersionStateStore {
   readonly #path: string;
   readonly #currentVersion: string;
+  readonly #log?: VersionStateLog;
   #state: VersionState;
 
-  constructor(brikaDir: string, currentVersion: string) {
+  constructor(brikaDir: string, currentVersion: string, log?: VersionStateLog) {
     this.#path = join(brikaDir, STATE_FILE);
     this.#currentVersion = currentVersion;
+    this.#log = log;
     this.#state = this.#load();
   }
 
@@ -151,20 +166,42 @@ export class VersionStateStore {
 
   #load(): VersionState {
     if (!existsSync(this.#path)) {
+      return emptyState(this.#currentVersion); // first install: expected, not a warning
+    }
+
+    let json: unknown;
+    try {
+      json = JSON.parse(readFileSync(this.#path, 'utf8'));
+    } catch (error) {
+      // Unreadable file or non-JSON bytes: nothing to salvage. Warn rather than silently reset, since a
+      // reset re-applies every migration on the next boot.
+      this.#log?.('version-state file unreadable or not valid JSON; starting from empty state', {
+        path: this.#path,
+        error: String(error),
+      });
       return emptyState(this.#currentVersion);
     }
-    try {
-      const raw = readFileSync(this.#path, 'utf8');
-      const parsed = VersionStateSchema.safeParse(JSON.parse(raw));
-      if (parsed.success) {
-        return parsed.data;
-      }
-    } catch {
-      // Corrupt JSON or schema mismatch — fall through and reset. The
-      // worst case is a one-time loss of update history, which is a
-      // diagnostic aid, not load-bearing state.
+
+    const parsed = VersionStateSchema.safeParse(json);
+    if (parsed.success) {
+      return parsed.data;
     }
-    return emptyState(this.#currentVersion);
+
+    // Partial corruption / schema drift (e.g. a future `schemaVersion` bump, or a single bad field):
+    // do NOT discard the migration ledger. Wiping it is what silently re-applies every migration and
+    // re-fires the "state updated" banner. Salvage `scopes` leniently; reset only the boot-tracking
+    // fields, which are recomputed on the next boot anyway.
+    const recovered = emptyState(this.#currentVersion);
+    const ledger = LedgerSchema.safeParse(json);
+    if (ledger.success && ledger.data.scopes) {
+      recovered.scopes = ledger.data.scopes;
+    }
+    this.#log?.('version-state failed validation; preserved the migration ledger, reset the rest', {
+      path: this.#path,
+      preservedScopes: Object.keys(recovered.scopes),
+      issues: parsed.error.issues.map((i) => i.path.join('.') || '(root)').slice(0, 10),
+    });
+    return recovered;
   }
 
   /**

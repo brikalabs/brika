@@ -16,6 +16,7 @@ import {
   type Migration,
   type MigrationContext,
   MigrationDeferred,
+  type MigrationOutcome,
   type MigrationReport,
   type MigrationScope,
 } from './types';
@@ -58,6 +59,7 @@ export class MigrationRunner {
   async #runScope(scope: MigrationScope): Promise<MigrationReport> {
     const started = Date.now();
     const applied: string[] = [];
+    const changed: string[] = [];
     const skipped: string[] = [];
     const failed: Array<{ id: string; error: string }> = [];
     const previouslyApplied = new Set(this.#opts.versionState.getAppliedMigrations(scope.name));
@@ -78,9 +80,15 @@ export class MigrationRunner {
         this.#log('info', `running migration ${scope.name}/${migration.id}`, {
           description: migration.description,
         });
-        await this.#runOne(migration, ctx);
+        const outcome = await this.#runOne(migration, ctx);
         this.#opts.versionState.recordMigrationApplied(scope.name, migration.id);
         applied.push(migration.id);
+        if (outcome.changed) {
+          changed.push(migration.id);
+          this.#log('info', `migration ${scope.name}/${migration.id} changed on-disk state`, {
+            detail: outcome.detail ?? null,
+          });
+        }
       } catch (err) {
         if (err instanceof MigrationDeferred) {
           // Preconditions not met yet (e.g. DB doesn't exist on first
@@ -114,14 +122,15 @@ export class MigrationRunner {
       this.#opts.audit?.append('apply.success', {
         scope: scope.name,
         applied,
+        changed,
         durationMs,
       });
     }
-    return { scope: scope.name, applied, skipped, failed, durationMs };
+    return { scope: scope.name, applied, changed, skipped, failed, durationMs };
   }
 
-  async #runOne(migration: Migration, ctx: MigrationContext): Promise<void> {
-    await migration.run(ctx);
+  async #runOne(migration: Migration, ctx: MigrationContext): Promise<MigrationOutcome> {
+    return await migration.run(ctx);
   }
 
   #log(level: 'info' | 'warn' | 'error', message: string, data?: Record<string, Json>): void {

@@ -56,7 +56,8 @@
     "uninstall": "Désinstaller",
     "clickToInstall": "Cliquer pour installer",
     "clickToUninstall": "Cliquer pour désinstaller",
-    "viewOnNpm": "Voir sur npm",
+    "clickToUpdate": "Mettre à jour vers v{{version}}",
+    "openIn": "Ouvrir dans {{registry}}",
     "cancel": "Annuler",
     "done": "Terminé",
     "close": "Fermer"
@@ -82,7 +83,7 @@
   },
   "plugin": {
     "notFound": "$t(common:items.plugin_one) non trouvé",
-    "notFoundDetail": "Le $t(common:items.plugin_one) \"{{name}}\" n'a pas pu être trouvé dans le registre npm.",
+    "notFoundDetail": "Le $t(common:items.plugin_one) \"{{name}}\" n'a pas pu être trouvé dans le registre.",
     "downloadsPerWeek": "téléchargements/semaine"
   }
 }

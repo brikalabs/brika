@@ -335,13 +335,17 @@ export function PluginCard({
         </Card>
       </Link>
 
-      {hasUpdate && (
+      {/* Keep the dialog mounted while it is open even after a successful update: the updates query
+          refetches and `updateInfo` goes away (and `hasUpdate` flips false); gating on either would
+          unmount the dialog and snap it shut before the operator reads the logs. Versions are passed
+          optionally since they vanish once the plugin is up to date. */}
+      {(hasUpdate || updateDialogOpen) && (
         <UpdatePluginDialog
           open={updateDialogOpen}
           onOpenChange={setUpdateDialogOpen}
           packageName={p.name}
-          currentVersion={updateInfo.currentVersion}
-          latestVersion={updateInfo.latestVersion}
+          currentVersion={updateInfo?.currentVersion}
+          latestVersion={updateInfo?.latestVersion}
           mode="update"
         />
       )}

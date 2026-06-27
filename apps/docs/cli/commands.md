@@ -107,6 +107,23 @@ brika hub -p 8080
 brika hub --host 0.0.0.0
 ```
 
+## `brika registry`
+
+Manage the registries the hub installs and searches from (talks to the running hub, started if needed).
+See [Registries](registries.md).
+
+```sh
+brika registry list                                     # show default registry, scope overrides, stores
+brika registry add @acme https://npm.acme.com           # route a scope's installs to a registry
+brika registry add @acme https://npm.acme.com --store https://store.acme.com   # + federated search
+```
+
+| Argument / flag | Description |
+|---|---|
+| `add <scope> <registry-url>` | Map a scope's installs to an npm-protocol registry (persisted to `brika.yml`, rewrites the `.npmrc`) |
+| `--store, -s <url>` | Also add a `/v1` store to federated search |
+| `list` | Print the current registry configuration (default with no subcommand) |
+
 ## `brika version`
 
 Print binary version, commit, branch, build time, runtime version, and platform.

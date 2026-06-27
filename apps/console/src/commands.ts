@@ -40,6 +40,7 @@ import doctor from './commands/doctor';
 import hub from './commands/hub';
 import install from './commands/install';
 import open from './commands/open';
+import registry from './commands/registry';
 import start from './commands/start';
 import status from './commands/status';
 import stop from './commands/stop';
@@ -90,6 +91,7 @@ export const cli = createCli({ name: 'brika', defaultCommand: 'dashboard', helpF
   .addCommand(publish)
   .addCommand(dev)
   .addCommand(install)
+  .addCommand(registry)
   .addCommand(version)
   .addCommand(update)
   .addCommand(completions)

@@ -1,6 +1,8 @@
 {
   "name": "@brika/sdk",
-  "knip": { "entry": ["cli/brika.ts"] },
+  "knip": {
+    "entry": ["cli/brika.ts"]
+  },
   "version": "0.4.0",
   "description": "SDK for building BRIKA plugins and workflow blocks",
   "type": "module",
@@ -66,10 +68,10 @@
     "prepare": "bun run build:bin"
   },
   "dependencies": {
-    "zod": "^4.3.4"
+    "zod": "^4.4.3"
   },
   "peerDependencies": {
-    "lucide-react": "^1.17.0"
+    "lucide-react": "^1.21.0"
   },
   "peerDependenciesMeta": {
     "lucide-react": {
@@ -88,8 +90,8 @@
     "@brika/testing": "workspace:*",
     "@brika/ui-kit": "workspace:*",
     "@brika/workspace-tools": "workspace:*",
-    "@types/bun": "^1.3.5",
+    "@types/bun": "^1.3.14",
     "picocolors": "^1.1.1",
-    "tsdown": "^0.22.2"
+    "tsdown": "^0.22.3"
   }
 }

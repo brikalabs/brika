@@ -74,17 +74,19 @@ export function StorePluginHeader({ plugin }: Readonly<StorePluginHeaderProps>) 
           </div>
 
           <div className="flex shrink-0 gap-2">
-            {plugin.source !== 'local' && (
+            {plugin.externalRegistry && (
               <Button variant="outline" size="sm" asChild>
                 <a
-                  href={`https://www.npmjs.com/package/${plugin.name}`}
+                  href={plugin.externalRegistry.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  onClick={() => capture('store.external_link_opened', { target: 'npm' })}
+                  onClick={() =>
+                    capture('store.external_link_opened', { target: plugin.externalRegistry?.name })
+                  }
                   className="gap-1.5"
                 >
                   <ExternalLink className="size-3.5" />
-                  {t('store:actions.viewOnNpm')}
+                  {t('store:actions.openIn', { registry: plugin.externalRegistry.name })}
                 </a>
               </Button>
             )}

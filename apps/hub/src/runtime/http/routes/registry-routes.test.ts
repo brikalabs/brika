@@ -8,6 +8,7 @@ import { provide, stub, useTestBed } from '@brika/di/testing';
 import type { Middleware } from '@brika/router';
 import { TestApp } from '@brika/router/testing';
 import { useBunMock } from '@brika/testing';
+import { ConfigLoader } from '@/runtime/config/config-loader';
 import { registryRoutes } from '@/runtime/http/routes/registry';
 import { Logger } from '@/runtime/logs/log-router';
 import { PluginRegistry } from '@/runtime/registry';
@@ -46,10 +47,17 @@ describe('registry routes', () => {
     getVerifiedList: ReturnType<typeof mock>;
     getPluginDetails: ReturnType<typeof mock>;
     getLocalPluginRoot: ReturnType<typeof mock>;
+    getRemoteReadme: ReturnType<typeof mock>;
+    getRemoteIconUrl: ReturnType<typeof mock>;
   };
   let mockLogger: {
     error: ReturnType<typeof mock>;
     withSource: ReturnType<typeof mock>;
+  };
+  let mockConfigLoader: {
+    get: ReturnType<typeof mock>;
+    setNpmRegistry: ReturnType<typeof mock>;
+    addSearchStore: ReturnType<typeof mock>;
   };
 
   const bun = useBunMock();
@@ -79,11 +87,29 @@ describe('registry routes', () => {
       }),
       getPluginDetails: mock().mockResolvedValue(null),
       getLocalPluginRoot: mock().mockResolvedValue(null),
+      getRemoteReadme: mock().mockResolvedValue(null),
+      getRemoteIconUrl: mock().mockResolvedValue(null),
     };
     mockLogger = {
       error: mock(),
       withSource: mock().mockReturnThis(),
     };
+    mockConfigLoader = {
+      get: mock().mockReturnValue({
+        npmRegistries: { '@brika': 'https://registry.brika.dev' },
+        searchStores: ['https://store.brika.dev'],
+        registries: [
+          {
+            id: 'brika',
+            name: 'Brika Store',
+            search: { type: 'v1', url: 'https://store.brika.dev' },
+          },
+        ],
+      }),
+      setNpmRegistry: mock().mockResolvedValue(undefined),
+      addSearchStore: mock().mockResolvedValue(undefined),
+    };
+    stub(ConfigLoader, mockConfigLoader);
 
     // Use `provide` (not `stub`) for PluginRegistry so that async generators
     // returned by install/update are not wrapped by the deep-stub proxy, which
@@ -133,6 +159,45 @@ describe('registry routes', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.updates).toEqual([]);
+  });
+
+  // ─── Registries ───────────────────────────────────────────────────────────
+
+  test('GET /api/registry/registries returns the configured registries', async () => {
+    const res = await app.get<{
+      npmRegistries: Record<string, string>;
+      searchStores: string[];
+      registries: Array<{ id: string; name: string }>;
+    }>('/api/registry/registries');
+
+    expect(res.status).toBe(200);
+    expect(res.body.npmRegistries['@brika']).toBe('https://registry.brika.dev');
+    expect(res.body.searchStores).toContain('https://store.brika.dev');
+    expect(res.body.registries.map((r) => r.id)).toContain('brika');
+  });
+
+  test('POST /api/registry/registries adds a registry, a store, and rewrites the .npmrc', async () => {
+    const res = await app.post('/api/registry/registries', {
+      scope: '@acme',
+      registry: 'https://npm.acme.com',
+      store: 'https://store.acme.com',
+    });
+
+    expect(res.status).toBe(200);
+    expect(mockConfigLoader.setNpmRegistry).toHaveBeenCalledWith('@acme', 'https://npm.acme.com');
+    expect(mockConfigLoader.addSearchStore).toHaveBeenCalledWith('https://store.acme.com');
+    expect(mockRegistry.init).toHaveBeenCalled();
+  });
+
+  test('POST /api/registry/registries without a store skips the search store', async () => {
+    const res = await app.post('/api/registry/registries', {
+      scope: '@acme',
+      registry: 'https://npm.acme.com',
+    });
+
+    expect(res.status).toBe(200);
+    expect(mockConfigLoader.setNpmRegistry).toHaveBeenCalledWith('@acme', 'https://npm.acme.com');
+    expect(mockConfigLoader.addSearchStore).not.toHaveBeenCalled();
   });
 
   // ─── Version ──────────────────────────────────────────────────────────────
@@ -645,6 +710,25 @@ describe('registry routes', () => {
         error: 'Error: Network error',
       });
     });
+
+    test('serves the README from the Brika store before falling back to the CDN', async () => {
+      mockStore.getRemoteReadme.mockResolvedValue({
+        readme: '# From the store',
+        filename: 'README.md',
+      });
+      fetchSpy = spyOn(globalThis, 'fetch');
+
+      const res = await app.get<{
+        readme: string;
+        filename: string;
+      }>(`/api/registry/plugins/${encodeURIComponent('store:@brika/plugin-clock')}/readme`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.readme).toBe('# From the store');
+      expect(mockStore.getRemoteReadme).toHaveBeenCalledWith('store:@brika/plugin-clock');
+      // The store served it, so the npm CDN must not be hit.
+      expect(fetchSpy).not.toHaveBeenCalled();
+    });
   });
 
   // ─── Plugin Icon ────────────────────────────────────────────────────────
@@ -902,6 +986,31 @@ describe('registry routes', () => {
       );
 
       expect(raw.status).toBe(200);
+    });
+
+    test('serves the icon from the Brika store before falling back to the CDN', async () => {
+      mockStore.getRemoteIconUrl.mockResolvedValue('https://store.test/icon.svg');
+      fetchSpy = spyOn(globalThis, 'fetch').mockResolvedValue(
+        new Response(new TextEncoder().encode('<svg/>'), {
+          status: 200,
+          headers: {
+            'content-type': 'image/svg+xml',
+          },
+        })
+      );
+
+      const raw = await app.hono.fetch(
+        new Request(
+          `http://test/api/registry/plugins/${encodeURIComponent('store:@brika/plugin-clock')}/icon`
+        )
+      );
+
+      expect(raw.status).toBe(200);
+      expect(raw.headers.get('Content-Type')).toBe('image/svg+xml');
+      expect(raw.headers.get('Cache-Control')).toBe('public, max-age=86400');
+      expect(mockStore.getRemoteIconUrl).toHaveBeenCalledWith('store:@brika/plugin-clock');
+      // The store URL was fetched, not the npm CDN.
+      expect(fetchSpy).toHaveBeenCalledWith('https://store.test/icon.svg', { redirect: 'follow' });
     });
   });
 });

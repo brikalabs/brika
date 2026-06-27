@@ -13,6 +13,8 @@ Every `BRIKA_*` environment variable the hub, CLI, TUI, plugin processes, and in
 | `BRIKA_DEV_UI_PROXY` | unset | Hub (dev only) | Proxy non-`/api/*` requests to this origin (typically `http://localhost:5173` for Vite). Wins over `BRIKA_STATIC_DIR` when set |
 | `BRIKA_MAX_REQUEST_BODY_BYTES` | `1073741824` (1 GiB) | Hub | HTTP body size cap. `0` disables the cap |
 | `BRIKA_COORDINATOR_URL` | `https://hub.brika.dev` | Hub | Remote-access coordinator origin |
+| `BRIKA_REGISTRY_URL` | `https://registry.brika.dev` | Hub | Default npm registry probed for scoped plugin installs (auto-routing). Overrides the `defaultRegistry` default. See [Registries](registries.md) |
+| `BRIKA_STORE_URL` | `https://store.brika.dev` | Hub | Default `/v1` store searched for plugins. Overrides the `searchStores` default; empty disables remote search (npm only). See [Registries](registries.md) |
 | `BRIKA_CORS_ALLOWLIST` | from `brika.yml` | Hub | Comma-separated list of exact production origins to allow for credentialed CORS. Overrides `hub.corsAllowlist`. Empty keeps LAN/dev defaults. See [CORS Allowlist](../architecture/cors.md) |
 | `BRIKA_BUN_PATH` | bundled `bun` | Plugin supervisor | Path to the Bun binary used to spawn plugin processes |
 

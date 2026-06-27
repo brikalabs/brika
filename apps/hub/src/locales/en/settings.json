@@ -11,8 +11,55 @@
     "time": "Date & time",
     "location": "Location",
     "hub": "Hub",
+    "registry": "Registries",
     "remoteAccess": "Remote access",
     "system": "System"
+  },
+  "registry": {
+    "title": "Registries",
+    "description": "Where the hub discovers and installs plugins. Each registry defines how to search, install, and open plugins.",
+    "catalogue": {
+      "title": "Registry catalogue",
+      "description": "The registries known to this hub (the built-in npm and Brika presets, plus any you declare in brika.yml)."
+    },
+    "routing": {
+      "title": "Install routing",
+      "description": "Per-scope install registries and the /v1 stores queried for search."
+    },
+    "add": {
+      "title": "Add a registry",
+      "description": "Route a scope's installs to an npm-protocol registry, and optionally add a /v1 store to federated search.",
+      "scopeLabel": "Scope",
+      "registryLabel": "Install registry",
+      "storeLabel": "Search store (optional)",
+      "scopePlaceholder": "@scope",
+      "registryPlaceholder": "https://npm.example.com",
+      "storePlaceholder": "https://store.example.com",
+      "submit": "Add registry"
+    },
+    "install": {
+      "title": "Install routing (scope → registry)"
+    },
+    "stores": {
+      "title": "Search stores"
+    },
+    "fields": {
+      "search": "Search",
+      "install": "Install",
+      "page": "Plugin page",
+      "readme": "README/icon"
+    },
+    "search": {
+      "npm": "npm keyword search",
+      "v1": "/v1 store"
+    },
+    "badges": {
+      "default": "default"
+    },
+    "empty": {
+      "install": "No scope overrides: everything resolves from public npm.",
+      "stores": "No search stores configured."
+    }
   },
   "remoteAccess": {
     "title": "Remote access",

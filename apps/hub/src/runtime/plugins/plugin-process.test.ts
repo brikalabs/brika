@@ -286,12 +286,20 @@ describe('PluginProcess', () => {
     });
 
     describe('pushInput', () => {
-      test('sends input to channel', () => {
+      test('sends input to channel', async () => {
+        // pushInput only delivers to instances this process owns; start one first.
+        await process.startBlock('test-block', 'instance-1', 'workflow-1', {});
         process.pushInput('instance-1', 'input', {
           value: 42,
         });
 
         expect(mockChannel.send).toHaveBeenCalled();
+      });
+
+      test('ignores input for an instance it does not own', () => {
+        process.pushInput('unowned-instance', 'input', { value: 1 });
+
+        expect(mockChannel.send).not.toHaveBeenCalled();
       });
 
       test('does nothing when stopped', () => {
@@ -873,7 +881,7 @@ describe('PluginProcess', () => {
       await sleep(100);
 
       // No new pings after stop
-      expect(mockChannel.ping.mock.calls.length).toBe(callsBefore);
+      expect(mockChannel.ping.mock.calls).toHaveLength(callsBefore);
     });
 
     test('collects metrics on successful heartbeat when onMetrics is defined', async () => {

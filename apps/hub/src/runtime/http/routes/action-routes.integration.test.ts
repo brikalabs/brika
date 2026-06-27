@@ -24,7 +24,7 @@ describe('action routes', () => {
     get: ReturnType<typeof mock>;
   };
   let mockLifecycle: {
-    getProcess: ReturnType<typeof mock>;
+    ensureStarted: ReturnType<typeof mock>;
   };
 
   useTestBed(() => {
@@ -32,7 +32,7 @@ describe('action routes', () => {
       get: mock().mockReturnValue(PLUGIN),
     };
     mockLifecycle = {
-      getProcess: mock().mockReturnValue(null),
+      ensureStarted: mock().mockReturnValue(null),
     };
     stub(PluginManager, mockManager);
     stub(PluginLifecycle, mockLifecycle);
@@ -54,7 +54,7 @@ describe('action routes', () => {
   });
 
   test('POST /:uid/actions/:actionId returns data on success', async () => {
-    mockLifecycle.getProcess.mockReturnValue({
+    mockLifecycle.ensureStarted.mockReturnValue({
       callPluginAction: mock().mockResolvedValue({
         ok: true,
         data: {
@@ -74,7 +74,7 @@ describe('action routes', () => {
   });
 
   test('POST /:uid/actions/:actionId returns 500 on action error', async () => {
-    mockLifecycle.getProcess.mockReturnValue({
+    mockLifecycle.ensureStarted.mockReturnValue({
       callPluginAction: mock().mockResolvedValue({
         ok: false,
         error: 'failed',
@@ -87,7 +87,7 @@ describe('action routes', () => {
   });
 
   test('returns 404 for ACTION_NOT_FOUND error code', async () => {
-    mockLifecycle.getProcess.mockReturnValue({
+    mockLifecycle.ensureStarted.mockReturnValue({
       callPluginAction: mock().mockResolvedValue({
         ok: false,
         error: { message: 'no such action', code: 'ACTION_NOT_FOUND' },
@@ -99,7 +99,7 @@ describe('action routes', () => {
 
   test('returns binary response with X-Brika-Binary marker', async () => {
     const bytes = new Uint8Array([0x89, 0x50, 0x4e, 0x47]);
-    mockLifecycle.getProcess.mockReturnValue({
+    mockLifecycle.ensureStarted.mockReturnValue({
       callPluginAction: mock().mockResolvedValue({
         ok: true,
         bytes,
@@ -114,7 +114,7 @@ describe('action routes', () => {
 
   test('returns 403 when streamFile target fails the readFile scope', async () => {
     const denied = Object.assign(new Error('not granted'), { code: 'PERMISSION_DENIED' });
-    mockLifecycle.getProcess.mockReturnValue({
+    mockLifecycle.ensureStarted.mockReturnValue({
       callPluginAction: mock().mockResolvedValue({
         ok: true,
         stream: { virtualPath: '/cache/secret.txt' },
@@ -128,7 +128,7 @@ describe('action routes', () => {
 
   test('writeStream result streams the body to disk and returns path + bytesWritten', async () => {
     const streamWriteToGrantedPath = mock().mockResolvedValue(40 * 1024 * 1024);
-    mockLifecycle.getProcess.mockReturnValue({
+    mockLifecycle.ensureStarted.mockReturnValue({
       callPluginAction: mock().mockResolvedValue({
         ok: true,
         writeStream: { virtualPath: '/data/upload.dmg' },
@@ -148,7 +148,7 @@ describe('action routes', () => {
 
   test('returns 403 when streamWrite target fails the writeFile scope', async () => {
     const denied = Object.assign(new Error('not granted'), { code: 'PERMISSION_DENIED' });
-    mockLifecycle.getProcess.mockReturnValue({
+    mockLifecycle.ensureStarted.mockReturnValue({
       callPluginAction: mock().mockResolvedValue({
         ok: true,
         writeStream: { virtualPath: '/cache/evil.bin' },
@@ -171,7 +171,7 @@ describe('action routes', () => {
       writeStream: { virtualPath: '/data/Un développeur.mp3' },
     });
     const streamWriteToGrantedPath = mock().mockResolvedValue(12);
-    mockLifecycle.getProcess.mockReturnValue({ callPluginAction, streamWriteToGrantedPath });
+    mockLifecycle.ensureStarted.mockReturnValue({ callPluginAction, streamWriteToGrantedPath });
 
     const meta = Buffer.from(JSON.stringify({ path: '/data/Un développeur.mp3' }), 'utf8').toString(
       'base64'
@@ -197,7 +197,7 @@ describe('action routes', () => {
 
   test('passes undefined input when a binary request carries no meta header', async () => {
     const callPluginAction = mock().mockResolvedValue({ ok: true, data: { received: true } });
-    mockLifecycle.getProcess.mockReturnValue({ callPluginAction });
+    mockLifecycle.ensureStarted.mockReturnValue({ callPluginAction });
 
     const res = await app.hono.fetch(
       new Request('http://test/api/plugins/plg-1/actions/noMeta', {
@@ -213,7 +213,7 @@ describe('action routes', () => {
 
   test('treats a malformed meta header as no input', async () => {
     const callPluginAction = mock().mockResolvedValue({ ok: true, data: null });
-    mockLifecycle.getProcess.mockReturnValue({ callPluginAction });
+    mockLifecycle.ensureStarted.mockReturnValue({ callPluginAction });
 
     const res = await app.hono.fetch(
       new Request('http://test/api/plugins/plg-1/actions/badMeta', {
@@ -231,7 +231,7 @@ describe('action routes', () => {
   });
 
   test('returns 400 when a stream-write action receives no request body', async () => {
-    mockLifecycle.getProcess.mockReturnValue({
+    mockLifecycle.ensureStarted.mockReturnValue({
       callPluginAction: mock().mockResolvedValue({
         ok: true,
         writeStream: { virtualPath: '/data/empty.bin' },
@@ -265,7 +265,7 @@ describe('action routes', () => {
       const content = 'hello brika streaming';
       writeFileSync(hostPath, content);
 
-      mockLifecycle.getProcess.mockReturnValue({
+      mockLifecycle.ensureStarted.mockReturnValue({
         callPluginAction: mock().mockResolvedValue({
           ok: true,
           stream: { virtualPath: '/data/note.txt', contentType: 'text/plain' },
