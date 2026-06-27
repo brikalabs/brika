@@ -6,6 +6,9 @@ import {
   desc,
   endTsFilter,
   eq,
+  inArray,
+  incrementalVacuum,
+  lt,
   or,
   sql,
   startTsFilter,
@@ -92,9 +95,77 @@ export class RunStore {
   /** `${workflowId}:${correlationId}` -> open run id. */
   readonly #openRunIds = new Map<string, number>();
   #disabled = false;
+  #pruneTimer?: ReturnType<typeof setInterval>;
 
   init(): void {
     this.#database = workflowsDb.open();
+  }
+
+  /**
+   * Start a periodic sweep dropping runs (and their events) older than
+   * `retentionDays`, freed pages reclaimed after each sweep. `retentionDays = 0`
+   * disables it. Idempotent; runs once immediately so a stale DB shrinks at boot.
+   */
+  startRetention(retentionDays: number, intervalMs: number): void {
+    this.stopRetention();
+    if (retentionDays <= 0 || intervalMs <= 0) {
+      return;
+    }
+    const sweep = () => {
+      this.pruneOlderThan(Date.now() - retentionDays * 24 * 60 * 60 * 1000);
+    };
+    sweep();
+    this.#pruneTimer = setInterval(sweep, intervalMs);
+  }
+
+  stopRetention(): void {
+    if (this.#pruneTimer) {
+      clearInterval(this.#pruneTimer);
+      this.#pruneTimer = undefined;
+    }
+  }
+
+  /**
+   * Delete runs with `startedAt < cutoff` and their `run_events` (no FK cascade,
+   * so both tables are pruned in one transaction), then reclaim the freed pages.
+   * Returns the number of runs removed. Failures are swallowed so a transient
+   * I/O error never crashes the retention timer.
+   */
+  pruneOlderThan(cutoff: number): number {
+    const db = this.db;
+    if (!db || !this.#database) {
+      return 0;
+    }
+    try {
+      const removed = this.#database.sqlite.transaction(() => {
+        const oldRuns = db
+          .delete(runsTable)
+          .where(lt(runsTable.startedAt, cutoff))
+          .returning({ id: runsTable.id })
+          .all();
+        if (oldRuns.length > 0) {
+          db.delete(runEventsTable)
+            .where(
+              inArray(
+                runEventsTable.runId,
+                oldRuns.map((r) => r.id)
+              )
+            )
+            .run();
+        }
+        return oldRuns.length;
+      })();
+      if (removed > 0) {
+        try {
+          incrementalVacuum(this.#database.sqlite);
+        } catch {
+          // Best-effort: a failed reclaim leaves the freed pages for next time.
+        }
+      }
+      return removed;
+    } catch {
+      return 0;
+    }
   }
 
   private get db(): RunsDb | null {
@@ -364,6 +435,7 @@ export class RunStore {
   }
 
   close(): void {
+    this.stopRetention();
     this.#database?.sqlite.close();
     this.#database = null;
     this.#openRunIds.clear();

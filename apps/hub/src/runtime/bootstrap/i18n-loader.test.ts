@@ -23,7 +23,6 @@ const createMockConfig = (): BrikaConfig => ({
     port: 3001,
     corsAllowlist: [],
     plugins: {
-      installDir: '/tmp',
       heartbeatInterval: 5000,
       heartbeatTimeout: 15000,
       rssSoftLimitBytes: 0,
@@ -33,6 +32,8 @@ const createMockConfig = (): BrikaConfig => ({
     },
     logs: { retentionDays: 7, pruneIntervalMs: 3600000 },
     analytics: { retentionDays: 90, pruneIntervalMs: 3600000 },
+    sparks: { retentionDays: 30, pruneIntervalMs: 3600000 },
+    workflows: { retentionDays: 30, pruneIntervalMs: 3600000 },
     shutdown: { gracePeriodMs: 10000 },
   },
   plugins: [],
