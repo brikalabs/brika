@@ -228,7 +228,7 @@ describe('RunStore.recentEmittedValues', () => {
     store.record({ type: 'run.closed', workflowId: 'wf', correlationId });
 
     const before = store.query();
-    expect(before.runs.length).toBe(1);
+    expect(before.runs).toHaveLength(1);
     const runId = Number(before.runs[0]?.id);
     expect(store.get(runId)?.events.length).toBe(1);
 
@@ -237,7 +237,7 @@ describe('RunStore.recentEmittedValues', () => {
     expect(removed).toBe(1);
 
     // Both the run and its events are gone (no orphaned run_events).
-    expect(store.query().runs.length).toBe(0);
+    expect(store.query().runs).toHaveLength(0);
     expect(store.get(runId)).toBeNull();
   });
 
@@ -247,7 +247,7 @@ describe('RunStore.recentEmittedValues', () => {
 
     // Cutoff far in the past removes nothing.
     expect(store.pruneOlderThan(1)).toBe(0);
-    expect(store.query().runs.length).toBe(1);
+    expect(store.query().runs).toHaveLength(1);
   });
 
   test('pruneOlderThan never prunes a still-running run (no orphaned events)', () => {
@@ -267,7 +267,7 @@ describe('RunStore.recentEmittedValues', () => {
     expect(store.pruneOlderThan(Date.now() + 10_000)).toBe(0);
 
     const runs = store.query().runs;
-    expect(runs.length).toBe(1);
+    expect(runs).toHaveLength(1);
     expect(runs[0]?.status).toBe('running');
     // A later event for the still-open run still lands on a live row, not an orphan.
     store.record({

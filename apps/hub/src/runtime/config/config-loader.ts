@@ -522,7 +522,7 @@ export class ConfigLoader {
             ),
             keepWarmCount: KeepWarmCountSchema.parse(hubPluginsParsed.keepWarmCount),
             bytecode: BytecodeSchema.parse(hubPluginsParsed.bytecode),
-            ...(quotas !== undefined ? { quotas } : {}),
+            ...(quotas ? { quotas } : {}),
           },
           logs: readRetentionSection(hubParsed.logs, defaults.logs),
           analytics: readRetentionSection(hubParsed.analytics, defaults.analytics),

@@ -15,6 +15,9 @@ export const TMP_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 /** `/cache` is worth keeping warm longer, but not forever. */
 export const CACHE_MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000;
 
+/** Default per-root max ages, hoisted so the parameter default isn't a fresh object literal per call. */
+const DEFAULT_STORAGE_AGES = { tmpMaxAgeMs: TMP_MAX_AGE_MS, cacheMaxAgeMs: CACHE_MAX_AGE_MS };
+
 export interface StorageGcResult {
   freedBytes: number;
   removedFiles: number;
@@ -68,10 +71,7 @@ async function sweepOldFiles(
 export async function gcPluginStorage(
   systemDir: string,
   now: number,
-  ages: { tmpMaxAgeMs: number; cacheMaxAgeMs: number } = {
-    tmpMaxAgeMs: TMP_MAX_AGE_MS,
-    cacheMaxAgeMs: CACHE_MAX_AGE_MS,
-  }
+  ages: { tmpMaxAgeMs: number; cacheMaxAgeMs: number } = DEFAULT_STORAGE_AGES
 ): Promise<StorageGcResult> {
   const root = pluginDataDir(systemDir);
   const acc = { freedBytes: 0, removedFiles: 0 };
