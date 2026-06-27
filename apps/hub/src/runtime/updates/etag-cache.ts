@@ -15,9 +15,9 @@
  * than throwing.
  */
 
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { join } from 'node:path';
 import { z } from 'zod';
+import { JsonStateFile } from '../fs/json-state-file';
 
 const CACHE_FILE = '.github-etag.json';
 
@@ -37,12 +37,12 @@ export interface FetchWithEtagResult<T> {
 }
 
 export class GithubEtagCache {
-  readonly #path: string;
+  readonly #file: JsonStateFile<Record<string, CacheEntry>>;
   #data: Record<string, CacheEntry>;
 
   constructor(brikaDir: string) {
-    this.#path = join(brikaDir, CACHE_FILE);
-    this.#data = this.#load();
+    this.#file = new JsonStateFile(join(brikaDir, CACHE_FILE), { schema: CacheSchema });
+    this.#data = this.#file.load() ?? {};
   }
 
   /**
@@ -115,28 +115,9 @@ export class GithubEtagCache {
     throw new Error(`Cached response is stale-shape (schema mismatch): ${parsed.error.message}`);
   }
 
-  #load(): Record<string, CacheEntry> {
-    if (!existsSync(this.#path)) {
-      return {};
-    }
-    try {
-      const parsed = CacheSchema.safeParse(JSON.parse(readFileSync(this.#path, 'utf8')));
-      if (parsed.success) {
-        return parsed.data;
-      }
-    } catch {
-      // Corrupt cache — reset rather than crashing the updater. Worst case
-      // is one wasted API call before the cache rebuilds.
-    }
-    return {};
-  }
-
   #persist(): void {
     try {
-      mkdirSync(dirname(this.#path), { recursive: true });
-      const tmp = `${this.#path}.tmp`;
-      writeFileSync(tmp, JSON.stringify(this.#data, null, 2), { encoding: 'utf8', mode: 0o600 });
-      renameSync(tmp, this.#path);
+      this.#file.persist(this.#data);
     } catch {
       // Cache write failed (permission, disk full) — silently degrade.
     }
