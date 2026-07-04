@@ -1,0 +1,4 @@
+{
+  "title": "Agent IA",
+  "description": "Exécutez des LLM (Claude ou tout endpoint compatible OpenAI) dans vos flux : des blocs d'IA prompt-in, texte-out"
+}

@@ -1,0 +1,4 @@
+{
+  "title": "AI Agent",
+  "description": "Run LLMs (Claude or any OpenAI-compatible endpoint) inside your workflows: prompt-in, text-out AI blocks"
+}
