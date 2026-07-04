@@ -18,7 +18,7 @@
   "files": ["dist", "src", "!src/**/*.test.ts", "!src/**/*.integration.test.ts"],
   "scripts": {
     "build": "bun run build.ts",
-    "release": "bun run release.ts",
+    "nightly": "bun run nightly.ts",
     "prepack": "bun run build",
     "prepublishOnly": "bun run build",
     "typecheck": "tsgo --noEmit",
