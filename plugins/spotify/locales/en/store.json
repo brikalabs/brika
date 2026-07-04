@@ -1,4 +1,4 @@
 {
   "title": "Spotify",
-  "description": "Control Spotify without leaving your dashboard. **Spotify** brings full playback control, instant search, and now-playing info to Brika, authorized securely with PKCE (no client secret needed).\n\n- **Spotify Player** — a responsive player with album art and full transport controls that grows from a compact tile to a split album-art-and-controls layout, unlocking a seek slider, volume, and device badge as it gets bigger\n- **Play a Song** — search Spotify and start any track with a single tap\n- **Now Playing** — a compact current-track widget with album art, title, and artist\n- **Play Spotify** — an automation block to start playback on any device from your flows\n\nAutomations can react to *Track Changed*, *Playback Started*, *Playback Paused*, *Volume Changed*, and *Device Changed* events. Use Brika's built-in Spotify app with nothing to configure, or paste your own Client ID for self-hosted setups."
+  "description": "Spotify Connect player for BRIKA dashboards"
 }

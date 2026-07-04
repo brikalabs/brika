@@ -1,4 +1,4 @@
 {
   "title": "Blocs de base",
-  "description": "Les blocs indispensables de chaque automatisation Brika. **Blocs de base** réunit déclencheurs, contrôle de flux, actions et transformations de données pour construire des workflows visuels sur le canevas, sans écrire une ligne de code.\n\n- **Déclencheurs** : **Clock** émet des impulsions à intervalle régulier, **Button** se déclenche au clic, et **Spark Receiver** écoute les événements spark typés\n- **Contrôle de flux** : bifurquez avec **Condition** et **Switch**, temporisez avec **Delay**, divisez avec **Split**, recombinez avec **Merge**, et terminez une branche avec **End**\n- **Actions** : **HTTP Request** appelle des API externes, et **Log** consigne des messages avec interpolation de variables\n- **Transformations** : **Transform** extrait ou remodèle des champs de données, tandis que **Text** et **Image** affichent des valeurs sur le canevas et les laissent passer\n\nChaque bloc se pose dans l'éditeur de workflow et se relie port à port : vous composez déclencheurs, branchements et actions sans écrire de code."
+  "description": "Blocs de flux de base pour les automatisations BRIKA"
 }

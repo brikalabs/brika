@@ -1,4 +1,4 @@
 {
   "title": "SIL Électricité",
-  "description": "Votre électricité lausannoise, en direct sur votre tableau de bord Brika. **SIL Électricité** récupère vos relevés de compteur directement auprès des Services Industriels de Lausanne et les transforme en bricks de consommation, de tendance et de coût.\n\n- **Graphique de consommation** — votre consommation sur les dernières 24 heures, 7 ou 30 jours, ou jusqu'à 24 mois, en barres, en aires ou en courbe\n- **Consommation en direct** — le dernier relevé de 15 minutes accompagné d'un mini graphique en aires de l'activité récente\n- **Résumé mensuel** — le total du mois en cours et sa tendance par rapport au mois précédent\n- **Coût mensuel** — une estimation de votre facture pour le mois en cours, calculée d'après votre propre tarif au kWh\n\nVos identifiants SIL restent sur le hub, et le plugin communique directement avec le portail lausannois : aucune donnée ne transite par le cloud de Brika."
+  "description": "Suivez votre consommation d'électricité des Services Industriels de Lausanne"
 }

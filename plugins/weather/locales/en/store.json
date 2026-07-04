@@ -1,4 +1,4 @@
 {
   "title": "Weather",
-  "description": "Beautiful weather at a glance. **Weather** brings live conditions, multi-day forecasts, and a compact temperature widget to your Brika dashboard, on backgrounds that shift with the sky.\n\n- **Current Weather** — temperature, feels-like, humidity, wind, and pressure over a gradient that reflects the conditions\n- **Forecast** — up to 7 days of highs, lows, and icons, laid out to fit the space\n- **Temperature** — a minimal current-temp widget for the tightest corners\n\nEvery brick adapts from 1×1 to full width. Powered by the free [Open-Meteo API](https://open-meteo.com/), so there is no API key to configure."
+  "description": "Beautiful weather display with current conditions, forecast, and compact widget"
 }

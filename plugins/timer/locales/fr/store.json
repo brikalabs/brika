@@ -1,4 +1,4 @@
 {
   "title": "Minuteur",
-  "description": "Le temps joue pour vous. **Minuteur** ajoute des déclencheurs différés, des comptes à rebours en direct et un suivi d'un coup d'œil à vos workflows et tableaux de bord Brika.\n\n- **Minuteur** — un bloc minuteur à déclenchement unique qui se lance après la durée choisie, puis passe la main à l'étape suivante de votre flux\n- **Compte à rebours** — décompte en temps réel, émettant des tops de progression ainsi que des événements de fin et d'annulation à relier à ce que vous voulez\n- **Tableau de bord des minuteurs** — une brique en direct qui affiche d'un coup d'œil chaque minuteur et compte à rebours actif\n- **Photo** — une brique galerie photo avec rotation automatique en option\n- **Vidéo en direct** — une brique de flux vidéo HLS avec commandes de lecture\n\nChaque exécution émet des **Sparks** — Minuteur démarré, Minuteur terminé, Top du compte à rebours et Compte à rebours terminé — pour que le reste de votre automatisation réagisse à l'instant où le temps est écoulé."
+  "description": "Blocs de minuterie et de compte à rebours pour les flux BRIKA"
 }

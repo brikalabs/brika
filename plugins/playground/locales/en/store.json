@@ -1,4 +1,4 @@
 {
   "title": "Playground",
-  "description": "A hands-on reference plugin that packs every first-party Brika SDK feature into one place. **Playground** is the kitchen-sink example: a working transform block, a full preferences panel, and a real file browser you can poke at.\n\n- **Echo** — passes any input straight through to the output, with an optional prefix and suffix on string payloads, and fires an `echoed` spark on every tick\n- **File Browser** — upload, preview, download, sort, create folders, and delete files inside the plugin's sandboxed `/data` directory, all routed through the grant runtime with a consent gate when filesystem access is denied\n- **Preferences showcase** — every preference type the system supports: password (kept in the OS keychain), text, number, checkbox, and dropdown, with init and change hooks wired up\n\nEvery filesystem operation is scoped to `/data` and approved by the operator, making it the ideal starting point for building your own Brika plugin."
+  "description": "Experimental sandbox plugin: echo block, preferences showcase, and a file browser demo"
 }
