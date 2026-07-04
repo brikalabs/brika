@@ -9,6 +9,7 @@
   "ignore": [
     "@brika/*",
     "!@brika/sdk",
+    "!@brika/compiler",
     "!@brika/plugin-agent",
     "!@brika/plugin-builtin",
     "!@brika/plugin-matter",
