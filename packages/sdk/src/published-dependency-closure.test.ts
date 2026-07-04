@@ -79,10 +79,9 @@ describe('@brika/sdk bundled publish layout', () => {
   // self-contained dist (so `brika build` needs no separate install) AND published
   // standalone (`@brika/compiler/v8`) for the Cloudflare registry's compile gate.
   const alsoPublished = new Set(['@brika/compiler']);
-  test.each(CLOSURE.filter((name) => !alsoPublished.has(name)))(
-    '%s is private (never published standalone)',
-    (name) => {
-      expect(workspacePrivacy.get(name)).toBe(true);
-    },
-  );
+  test.each(
+    CLOSURE.filter((name) => !alsoPublished.has(name))
+  )('%s is private (never published standalone)', (name) => {
+    expect(workspacePrivacy.get(name)).toBe(true);
+  });
 });
