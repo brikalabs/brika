@@ -254,7 +254,8 @@ describe('ModuleCompiler - compile()', () => {
       expect(jsEntry).toBeDefined();
       expect(jsEntry?.hash).toMatch(/^[0-9a-z]+$/);
       expect(jsEntry?.filePath).toBeDefined();
-      expect(await Bun.file(jsEntry?.filePath ?? '').text()).toBe(compiledJs);
+      // `toContain`, not `toBe`: the bundler prepends a provenance stamp banner.
+      expect(await Bun.file(jsEntry?.filePath ?? '').text()).toContain(compiledJs);
     } finally {
       buildSpy.mockRestore();
     }
@@ -277,10 +278,10 @@ describe('ModuleCompiler - compile()', () => {
       // One build for the whole `page` kind, with both entrypoints.
       expect(buildSpy).toHaveBeenCalledTimes(1);
       expect((buildSpy.mock.calls[0][0] as { entrypoints: string[] }).entrypoints).toHaveLength(2);
-      expect(await Bun.file(compiler.get('multi:pages/page1')?.filePath ?? '').text()).toBe(
+      expect(await Bun.file(compiler.get('multi:pages/page1')?.filePath ?? '').text()).toContain(
         'module_1'
       );
-      expect(await Bun.file(compiler.get('multi:pages/page2')?.filePath ?? '').text()).toBe(
+      expect(await Bun.file(compiler.get('multi:pages/page2')?.filePath ?? '').text()).toContain(
         'module_2'
       );
     } finally {
@@ -492,9 +493,11 @@ describe('ModuleCompiler - compile() cache hit', () => {
     await mkdir(cacheDir, { recursive: true });
     await Bun.write(join(sourceDir, `${moduleId}.tsx`), sourceContent);
 
-    // Compute the plugin-wide hash (same algo as ModuleCompiler uses)
-    const { hashPluginSources } = await import('@brika/compiler');
-    const hash = await hashPluginSources(pluginRoot);
+    // Compute the plugin-wide hash exactly as ModuleCompiler does: source hash
+    // plus the active bundler's `<backend>@<version>` cache variant.
+    const { hashPluginSources, BunBundler } = await import('@brika/compiler');
+    const bundler = new BunBundler();
+    const hash = await hashPluginSources(pluginRoot, `${bundler.backend}@${bundler.version}`);
 
     // Prepare the disk cache entry
     await Bun.write(join(cacheDir, `${moduleId}.${hash}.js`), 'cached-js');
