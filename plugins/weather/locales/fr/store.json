@@ -1,0 +1,4 @@
+{
+  "title": "Météo",
+  "description": "La météo en un coup d'œil. **Météo** affiche les conditions en direct, les prévisions sur plusieurs jours et un widget de température compact sur votre tableau de bord Brika, sur des fonds qui évoluent avec le ciel.\n\n- **Météo actuelle** — température, ressenti, humidité, vent et pression sur un dégradé qui reflète les conditions\n- **Prévisions** — jusqu'à 7 jours de maximales, minimales et icônes, disposés pour s'adapter à l'espace\n- **Température** — un widget minimal de température actuelle pour les plus petits recoins\n\nChaque brique s'adapte de 1×1 à la pleine largeur. Propulsé par l'API gratuite [Open-Meteo](https://open-meteo.com/), donc aucune clé d'API à configurer."
+}

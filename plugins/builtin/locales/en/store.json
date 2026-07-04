@@ -1,0 +1,4 @@
+{
+  "title": "Core Blocks",
+  "description": "The essential building blocks for every Brika automation. **Core Blocks** gives you triggers, flow control, actions, and data transforms to wire up visual workflows on the canvas, no code required.\n\n- **Triggers**: **Clock** emits ticks at a set interval, **Button** fires on a click, and **Spark Receiver** listens for typed spark events\n- **Flow control**: branch with **Condition** and **Switch**, pause with **Delay**, fan out with **Split**, recombine with **Merge**, and stop a branch with **End**\n- **Actions**: **HTTP Request** calls external APIs, and **Log** writes messages with variable interpolation\n- **Transforms**: **Transform** extracts or reshapes data fields, while **Text** and **Image** display values on the canvas and pass them through\n\nEvery block snaps into the workflow editor and connects port to port, so you can compose triggers, branches, and actions without writing any code."
+}

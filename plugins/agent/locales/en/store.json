@@ -1,0 +1,4 @@
+{
+  "title": "AI Agent",
+  "description": "Real AI, right inside your workflows. **AI Agent** runs LLMs (Claude, any OpenAI-compatible endpoint, or a local Ollama server) as prompt-in, text-out blocks you can wire into any Brika flow.\n\n- **Ask AI** — send a prompt to an LLM and emit the completion; tune the model, system prompt, effort (low, medium, high), and max tokens to summarize, classify, draft, or rewrite inside a flow\n- **Call Tool** — invoke a hub-registered tool by id and emit its result\n- **AI Agent** — an LLM that reasons over each prompt and calls your hub-registered tools to answer it\n\nSet one provider key in the plugin preferences (Anthropic, OpenAI, an OpenAI-compatible base URL, or an Ollama server) and every AI block shares it. Keys never leave the hub: they are stored in the OS keychain and sent only to the provider you configure."
+}

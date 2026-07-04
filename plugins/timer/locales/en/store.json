@@ -1,0 +1,4 @@
+{
+  "title": "Timer",
+  "description": "Put time on your side. **Timer** brings delayed triggers, live countdowns, and at-a-glance monitoring to your Brika workflows and dashboards.\n\n- **Timer** — a one-shot timer block that fires after the duration you set, handing completion off to the next step in your flow\n- **Countdown** — counts down in real time, emitting progress ticks plus completion and cancellation events you can wire into anything\n- **Timers Dashboard** — a live brick showing every active timer and countdown at a glance\n- **Photo** — a photo-showcase brick with optional auto-rotation\n- **Live Video** — an HLS video-stream brick with playback controls\n\nEvery run emits **Sparks** — Timer Started, Timer Completed, Countdown Tick, and Countdown Completed — so the rest of your automation can react the moment time runs out."
+}

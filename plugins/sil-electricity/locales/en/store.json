@@ -1,0 +1,4 @@
+{
+  "title": "SIL Electricity",
+  "description": "Your Lausanne electricity, live on your Brika dashboard. **SIL Electricity** pulls meter readings straight from Services Industriels de Lausanne and turns them into dashboard bricks for consumption, trends, and cost.\n\n- **Consumption Chart** — usage over the last 24 hours, 7 or 30 days, or up to 24 months, drawn as a bar, area, or line chart\n- **Live Consumption** — the latest 15-minute reading with a mini area chart of recent activity\n- **Monthly Summary** — this month's total with its trend against the previous month\n- **Monthly Cost** — an estimated bill for the current month, based on your own kWh rate\n\nYour SIL credentials stay on the hub, and the plugin talks to the Lausanne portal directly, so no data passes through Brika's cloud."
+}
