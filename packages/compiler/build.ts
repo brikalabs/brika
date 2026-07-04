@@ -15,7 +15,8 @@
  *
  *   bun run build
  */
-import { execSync } from 'node:child_process';
+import { writeFileSync } from 'node:fs';
+import { generateDtsBundle } from 'dts-bundle-generator';
 import { OUTPUT_VERSION } from './src/output-version';
 
 const dir = import.meta.dir;
@@ -48,18 +49,21 @@ if (!v8.success) {
   process.exit(1);
 }
 
-// Bun cannot emit .d.ts, so bundle a self-contained declaration per route (types
-// are inlined; internal `@brika/sdk` build-deps do not leak into the public API).
-for (const [entry, rt] of [
-  ['route-v8', 'v8'],
-  ['route-bun', 'bun'],
-] as const) {
-  execSync(
-    `bunx dts-bundle-generator --no-check --no-banner -o dist/${rt}/index.d.ts src/bundle/${entry}.ts`,
-    { cwd: dir, stdio: 'pipe' }
+// Types are slow (~7s: a full TS program) and only needed to publish, so gate
+// them behind `--dts` (prepack passes it; a plain `bun run build` stays ~0.3s).
+// Bun cannot emit .d.ts, so bundle one self-contained declaration per route in a
+// single shared compile; internal `@brika/sdk` build-deps do not leak out.
+if (process.argv.includes('--dts')) {
+  const [v8dts, bunDts] = generateDtsBundle(
+    [
+      { filePath: `${dir}/src/bundle/route-v8.ts`, output: { noBanner: true } },
+      { filePath: `${dir}/src/bundle/route-bun.ts`, output: { noBanner: true } },
+    ],
+    { preferredConfigPath: `${dir}/tsconfig.json` }
   );
+  writeFileSync(`${dir}/dist/v8/index.d.ts`, v8dts);
+  writeFileSync(`${dir}/dist/bun/index.d.ts`, bunDts);
 }
 
-console.log(
-  `built dist/bun + dist/v8 (compilePluginGate + .d.ts) with fingerprint ${OUTPUT_VERSION}`
-);
+const kind = process.argv.includes('--dts') ? 'compilePluginGate + .d.ts' : 'compilePluginGate';
+console.log(`built dist/bun + dist/v8 (${kind}) with fingerprint ${OUTPUT_VERSION}`);

@@ -28,8 +28,7 @@
   "scripts": {
     "build": "bun run build.ts",
     "nightly": "bun run nightly.ts",
-    "prepack": "bun run build",
-    "prepublishOnly": "bun run build",
+    "prepack": "bun run build.ts --dts",
     "typecheck": "tsgo --noEmit",
     "test": "bun test",
     "test:cf": "bun run build && bun run cf-test/run.ts",
