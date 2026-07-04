@@ -15,6 +15,7 @@
  *
  *   bun run build
  */
+import { execSync } from 'node:child_process';
 import { OUTPUT_VERSION } from './src/output-version';
 
 const dir = import.meta.dir;
@@ -47,4 +48,18 @@ if (!v8.success) {
   process.exit(1);
 }
 
-console.log(`built dist/bun + dist/v8 (compilePluginGate) with fingerprint ${OUTPUT_VERSION}`);
+// Bun cannot emit .d.ts, so bundle a self-contained declaration per route (types
+// are inlined; internal `@brika/sdk` build-deps do not leak into the public API).
+for (const [entry, rt] of [
+  ['route-v8', 'v8'],
+  ['route-bun', 'bun'],
+] as const) {
+  execSync(
+    `bunx dts-bundle-generator --no-check --no-banner -o dist/${rt}/index.d.ts src/bundle/${entry}.ts`,
+    { cwd: dir, stdio: 'pipe' }
+  );
+}
+
+console.log(
+  `built dist/bun + dist/v8 (compilePluginGate + .d.ts) with fingerprint ${OUTPUT_VERSION}`
+);
