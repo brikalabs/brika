@@ -23,6 +23,7 @@
   "keywords": ["brika", "brika-plugin", "electricity", "energy", "sil", "lausanne"],
   "type": "module",
   "main": "./src/index.tsx",
+  "readme": { "en": "README.md", "fr": "README.fr.md" },
   "exports": {
     ".": "./src/index.tsx"
   },
