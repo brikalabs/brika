@@ -7,7 +7,8 @@
  * The stamped version is reverted afterwards, so the committed package.json stays
  * on the plain base version.
  *
- * Prereq: `npm login` (a valid npm auth token). Run: `bun run release`.
+ * Prereq: `npm login` (writes a valid token to ~/.npmrc, which bun reads).
+ * Run: `bun run release`.
  */
 import { execSync } from 'node:child_process';
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -23,8 +24,8 @@ const version = `${base}-${OUTPUT_VERSION}`;
 console.log(`publishing @brika/compiler@${version}`);
 writeFileSync(pkgPath, `${JSON.stringify({ ...pkg, version }, null, 2)}\n`);
 try {
-  // prepublishOnly rebuilds dist; --access public is required for a scoped package.
-  execSync('npm publish --access public', { cwd: dir, stdio: 'inherit' });
+  // prepack rebuilds dist; --access public is required to publish a scoped package.
+  execSync('bun publish --access public', { cwd: dir, stdio: 'inherit' });
 } finally {
   writeFileSync(pkgPath, original); // keep the committed version on the plain base
 }
