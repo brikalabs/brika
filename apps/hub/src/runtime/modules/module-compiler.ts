@@ -1,8 +1,8 @@
 import { readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import {
+  BunBundler,
   type ClientBundleChunk,
-  compileClientBundle,
   compileClientModule,
   hashPluginSources,
 } from '@brika/compiler';
@@ -62,6 +62,10 @@ export class ModuleCompiler {
   readonly #logs = inject(Logger).withSource('hub');
   readonly #cache = new ModuleCache();
   readonly #tailwind = new TailwindCompiler();
+  // The hub always runs under Bun, so it binds the Bun backend explicitly. Its
+  // backend + version go into the cache key so a future isolate-built artifact
+  // never cross-serves.
+  readonly #bundler = new BunBundler();
 
   /**
    * Prune cache entries no longer declared in the manifest, then compile every
@@ -93,8 +97,13 @@ export class ModuleCompiler {
     metadata: ManifestModules
   ): Promise<CompileSummary> {
     // Hash all sources once, shared across all modules so dependency
-    // changes (e.g. action files) invalidate every client module.
-    const hash = await hashPluginSources(rootDirectory);
+    // changes (e.g. action files) invalidate every client module. The active
+    // bundler's backend + version is folded in, so a switch of backend (or a
+    // bump of either compiler) invalidates rather than cross-serves stale bytes.
+    const hash = await hashPluginSources(
+      rootDirectory,
+      `${this.#bundler.backend}@${this.#bundler.version}`
+    );
     const cacheDir = pluginCacheDir(rootDirectory);
 
     // Drop shared chunks orphaned by a prior source version before (re)building.
@@ -181,7 +190,7 @@ export class ModuleCompiler {
       };
     }
 
-    const result = await compileClientBundle({
+    const result = await this.#bundler.bundle({
       entrypoints: specs.map((s) => s.entrypoint),
       pluginRoot: rootDirectory,
       // Workspace-relative source paths so the dev-server's open-in-editor
