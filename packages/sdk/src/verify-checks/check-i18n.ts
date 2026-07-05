@@ -16,97 +16,18 @@
  *     keys and in-code `t()` strings alike), so a partial translation
  *     surfaces before publish instead of silently falling back (warnings).
  *
- * Bundles are read the way the hub reads them: every `*.json` under
- * `locales/<lang>/` deep-merged into one namespace.
+ * The key model (manifest-implied keys, leaf walking) lives in
+ * `@brika/schema/i18n-keys`, shared with the compiler's static usage analysis
+ * (`brika verify` runs both). Bundles are read with hub semantics: every
+ * `*.json` under `locales/<lang>/`, deep-merged.
  */
 
-import { readdir, readFile } from 'node:fs/promises';
-import { join } from 'node:path';
-import type { PluginPackageSchema, PreferenceSchema } from '@brika/schema/plugin';
+import { hasI18nKey, leafKeys, manifestI18nKeys } from '@brika/schema/i18n-keys';
+import { loadAllLocaleBundles } from './locale-bundles';
 import { registerCheck } from './registry';
-
-type Bundle = Record<string, unknown>;
 
 /** Cap per-message key listings so one sweeping gap doesn't flood the output. */
 const LIST_CAP = 8;
-
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
-}
-
-/** The `<lang>` directories under `locales/`, sorted. Empty when none exist. */
-async function localeDirs(pluginDir: string): Promise<string[]> {
-  try {
-    const entries = await readdir(join(pluginDir, 'locales'), { withFileTypes: true });
-    return entries
-      .filter((e) => e.isDirectory())
-      .map((e) => e.name)
-      .sort((a, b) => a.localeCompare(b));
-  } catch {
-    return [];
-  }
-}
-
-function deepMerge(target: Bundle, source: Bundle): void {
-  for (const [key, value] of Object.entries(source)) {
-    const existing = target[key];
-    if (isPlainObject(existing) && isPlainObject(value)) {
-      deepMerge(existing, value);
-    } else {
-      target[key] = value;
-    }
-  }
-}
-
-/** One locale's bundle: every `*.json` in its folder deep-merged (hub semantics). */
-async function loadBundle(pluginDir: string, locale: string): Promise<Bundle> {
-  const dir = join(pluginDir, 'locales', locale);
-  const bundle: Bundle = {};
-  let files: string[];
-  try {
-    files = (await readdir(dir)).filter((f) => f.endsWith('.json')).sort();
-  } catch {
-    return bundle;
-  }
-  for (const file of files) {
-    try {
-      const parsed: unknown = JSON.parse(await readFile(join(dir, file), 'utf8'));
-      if (isPlainObject(parsed)) {
-        deepMerge(bundle, parsed);
-      }
-    } catch {
-      // Malformed JSON is the hub loader's problem to warn about; here it
-      // simply contributes no keys, which the coverage diff will surface.
-    }
-  }
-  return bundle;
-}
-
-/** Every dot-path whose value is a leaf (anything but a plain object). */
-function leafKeys(bundle: Bundle, prefix = ''): string[] {
-  const keys: string[] = [];
-  for (const [key, value] of Object.entries(bundle)) {
-    const path = prefix === '' ? key : `${prefix}.${key}`;
-    if (isPlainObject(value)) {
-      keys.push(...leafKeys(value, path));
-    } else {
-      keys.push(path);
-    }
-  }
-  return keys;
-}
-
-/** True when `path` resolves to a non-empty string in the bundle. */
-function hasKey(bundle: Bundle, path: string): boolean {
-  let node: unknown = bundle;
-  for (const part of path.split('.')) {
-    if (!isPlainObject(node)) {
-      return false;
-    }
-    node = node[part];
-  }
-  return typeof node === 'string' && node.trim().length > 0;
-}
 
 /** `a, b, c (+2 more)` with the tail capped. */
 function capped(keys: readonly string[]): string {
@@ -115,74 +36,10 @@ function capped(keys: readonly string[]): string {
   return rest > 0 ? `${shown} (+${rest} more)` : shown;
 }
 
-interface NamedEntry {
-  id: string;
-  description?: string;
-}
-
-/** `<kind>.<id>.name` for every entry; `.description` when the manifest has one. */
-function entityKeys(kind: string, entries: readonly NamedEntry[] | undefined): string[] {
-  const keys: string[] = [];
-  for (const entry of entries ?? []) {
-    keys.push(`${kind}.${entry.id}.name`);
-    if (entry.description !== undefined) {
-      keys.push(`${kind}.${entry.id}.description`);
-    }
-  }
-  return keys;
-}
-
-/**
- * A preference-shaped field (plugin preference or brick config entry) at
- * `base`: `<base>.<title field>` always, `.description` when the manifest has
- * one, `.options.<value>` per dropdown option (see the schema's DropdownOption
- * doc: option labels come from i18n).
- */
-function preferenceKeys(base: string, titleField: string, field: PreferenceSchema): string[] {
-  const keys: string[] = [`${base}.${titleField}`];
-  if (field.description !== undefined) {
-    keys.push(`${base}.description`);
-  }
-  if (field.type === 'dropdown') {
-    keys.push(...field.options.map((opt) => `${base}.options.${opt.value}`));
-  }
-  return keys;
-}
-
-/**
- * Every i18n key the manifest implies. Mirrors the UI's lookup contract:
- * entity names/descriptions, preference titles (+ dropdown option labels) and
- * brick config field labels.
- */
-function requiredKeys(pkg: PluginPackageSchema): string[] {
-  const keys: string[] = [];
-  if (pkg.displayName !== undefined) {
-    keys.push('name');
-  }
-  if (pkg.description !== undefined) {
-    keys.push('description');
-  }
-  keys.push(
-    ...entityKeys('blocks', pkg.blocks),
-    ...entityKeys('sparks', pkg.sparks),
-    ...entityKeys('tools', pkg.tools),
-    ...entityKeys('pages', pkg.pages),
-    ...entityKeys('bricks', pkg.bricks)
-  );
-  for (const pref of pkg.preferences ?? []) {
-    keys.push(...preferenceKeys(`preferences.${pref.name}`, 'title', pref));
-  }
-  for (const brick of pkg.bricks ?? []) {
-    for (const field of brick.config ?? []) {
-      keys.push(...preferenceKeys(`bricks.${brick.id}.config.${field.name}`, 'label', field));
-    }
-  }
-  return keys;
-}
-
 registerCheck(async ({ pkg, pluginDir }) => {
-  const required = requiredKeys(pkg);
-  const locales = await localeDirs(pluginDir);
+  const required = manifestI18nKeys(pkg);
+  const bundles = await loadAllLocaleBundles(pluginDir);
+  const locales = [...bundles.keys()];
 
   if (locales.length === 0) {
     if (required.length === 0) {
@@ -197,10 +54,6 @@ registerCheck(async ({ pkg, pluginDir }) => {
 
   const errors: string[] = [];
   const warnings: string[] = [];
-  const bundles = new Map<string, Bundle>();
-  for (const locale of locales) {
-    bundles.set(locale, await loadBundle(pluginDir, locale));
-  }
 
   // "i18n is set up" means at least ONE locale, whichever language it is,
   // fully covers the manifest-implied keys. No hardcoded base language.
@@ -208,7 +61,7 @@ registerCheck(async ({ pkg, pluginDir }) => {
   for (const [locale, bundle] of bundles) {
     missingByLocale.set(
       locale,
-      required.filter((key) => !hasKey(bundle, key))
+      required.filter((key) => !hasI18nKey(bundle, key))
     );
   }
   const fullyCovered = locales.filter((locale) => missingByLocale.get(locale)?.length === 0);

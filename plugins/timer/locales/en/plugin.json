@@ -73,10 +73,6 @@
       "description": "Countdown with progress ticks"
     }
   },
-  "events": {
-    "completed": "Timer completed",
-    "cancelled": "Timer cancelled"
-  },
   "fields": {
     "name": {
       "label": "Name",

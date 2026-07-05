@@ -17,6 +17,7 @@ import {
   type VerifyResult,
   verifyPlugin,
 } from '../../src/verify-plugin';
+import { i18nUsageDiagnostics } from '../i18n-usage';
 
 async function readVersion(pkgJsonPath: string | URL): Promise<string | null> {
   try {
@@ -132,6 +133,17 @@ export async function runVerify(
     process.stderr.write(`${pc.red('✗')} Could not read ${resolve(pluginDir, 'package.json')}\n`);
     return false;
   }
+
+  // Compiler-backed static analysis: every t()/tp() key used in code must
+  // exist in some locale. Lives at the CLI layer (not in verify-checks)
+  // because the sdk deliberately does not depend on @brika/compiler.
+  const usage = await i18nUsageDiagnostics(pluginDir);
+  result = {
+    ...result,
+    errors: [...result.errors, ...usage.errors],
+    warnings: [...result.warnings, ...usage.warnings],
+    passed: result.passed && usage.errors.length === 0,
+  };
 
   if (opts.json) {
     process.stdout.write(`${JSON.stringify({ ...result, sdkVersion })}\n`);

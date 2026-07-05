@@ -217,8 +217,9 @@ function skipTemplateLiteral(code: string, start: number): number {
 /**
  * Skip a `${...}` body inside a template literal, returning the position
  * just after the matching `}`. Handles nested strings, templates, and braces.
+ * Exported for `keys.ts`, which splits template keys on their interpolations.
  */
-function skipTemplateInterpolation(code: string, start: number): number {
+export function skipTemplateInterpolation(code: string, start: number): number {
   let i = start;
   let depth = 1;
   while (i < code.length && depth > 0) {

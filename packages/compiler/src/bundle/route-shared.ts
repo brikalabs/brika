@@ -10,6 +10,12 @@ export const FINGERPRINT = process.env.BRIKA_GATE_VERSION ?? 'dev';
 
 export type { ActionEntry, GateOptions, GateResult, PluginManifest, PluginReport } from './gate';
 export { buildReport, compilePluginGate, readManifest, scanActions } from './gate';
+export {
+  analyzeI18nUsage,
+  type I18nUsageDiagnostics,
+  type PluginI18nUsage,
+  scanI18nUsage,
+} from './i18n-usage';
 export { readStamp, stamp } from './stamp';
 export type {
   BundleChunk,

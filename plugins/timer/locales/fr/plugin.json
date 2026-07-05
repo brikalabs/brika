@@ -73,10 +73,6 @@
       "description": "Compte à rebours avec tics de progression"
     }
   },
-  "events": {
-    "completed": "Minuterie terminée",
-    "cancelled": "Minuterie annulée"
-  },
   "fields": {
     "name": {
       "label": "Nom",

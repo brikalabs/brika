@@ -18,6 +18,7 @@ import { defineCommand } from '@brika/cli';
 import { browserAllowedSpecifiers } from '@brika/compiler';
 import pc from 'picocolors';
 import { verifyPlugin } from '../../src/verify-plugin';
+import { i18nUsageDiagnostics } from '../i18n-usage';
 
 export interface Violation {
   file: string;
@@ -129,15 +130,16 @@ export default defineCommand({
       return;
     }
 
-    const [result, violations] = await Promise.all([
+    const [result, violations, usage] = await Promise.all([
       verifyPlugin(root, await resolveSdkVersion()),
       scanBoundary(root),
+      i18nUsageDiagnostics(root),
     ]);
 
-    for (const warning of result.warnings) {
+    for (const warning of [...result.warnings, ...usage.warnings]) {
       process.stderr.write(`  ${pc.yellow('warn')} ${warning}\n`);
     }
-    for (const error of result.errors) {
+    for (const error of [...result.errors, ...usage.errors]) {
       process.stderr.write(`  ${pc.red('error')} ${error}\n`);
     }
     for (const v of violations) {
@@ -146,7 +148,7 @@ export default defineCommand({
       );
     }
 
-    if (!typesOk || !result.passed || violations.length > 0) {
+    if (!typesOk || !result.passed || violations.length > 0 || usage.errors.length > 0) {
       process.stderr.write(pc.red('\nbrika check failed.\n'));
       process.exitCode = 1;
       return;
