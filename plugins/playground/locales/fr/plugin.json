@@ -16,7 +16,9 @@
   "blocks": {
     "echo": {
       "prefixPlaceholder": "ex. > ",
-      "suffixPlaceholder": "ex.  !"
+      "suffixPlaceholder": "ex.  !",
+      "name": "Écho",
+      "description": "Transmet l'entrée vers la sortie, en ajoutant éventuellement un préfixe/suffixe aux chaînes"
     }
   },
   "preferences": {
@@ -48,8 +50,14 @@
     }
   },
   "fileBrowser": {
-    "columns": { "name": "Nom", "size": "Taille", "modified": "Modifié" },
-    "tree": { "label": "Arborescence des dossiers" },
+    "columns": {
+      "name": "Nom",
+      "size": "Taille",
+      "modified": "Modifié"
+    },
+    "tree": {
+      "label": "Arborescence des dossiers"
+    },
     "kind": {
       "folder": "Dossier",
       "image": "Image",
@@ -94,7 +102,10 @@
       "ariaLabel": "Nom du nouveau dossier",
       "create": "Créer"
     },
-    "empty": { "title": "Glissez des fichiers ici", "hint": "ou cliquez pour téléverser" },
+    "empty": {
+      "title": "Glissez des fichiers ici",
+      "hint": "ou cliquez pour téléverser"
+    },
     "dropzone": {
       "regionLabel": "Liste de fichiers et zone de dépôt",
       "title": "Déposez pour téléverser",
@@ -106,7 +117,11 @@
       "queued": "En attente",
       "failedTitle": "Échec du téléversement"
     },
-    "actions": { "cancel": "Annuler", "delete": "Supprimer", "download": "Télécharger" },
+    "actions": {
+      "cancel": "Annuler",
+      "delete": "Supprimer",
+      "download": "Télécharger"
+    },
     "delete": {
       "titleFile": "Supprimer le fichier ?",
       "titleFolder": "Supprimer le dossier ?",
@@ -141,6 +156,11 @@
   "pages": {
     "file-browser": {
       "name": "Explorateur de fichiers"
+    }
+  },
+  "sparks": {
+    "echoed": {
+      "name": "Écho émis"
     }
   }
 }

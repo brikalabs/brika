@@ -32,6 +32,20 @@
           "label": "Refresh interval (ms)"
         }
       }
+    },
+    "play-song": {
+      "name": "Play a Song",
+      "description": "Search Spotify and play any track with one tap",
+      "config": {
+        "device": {
+          "label": "Device",
+          "description": "Device to play searched songs on"
+        }
+      }
+    },
+    "now-playing": {
+      "name": "Now Playing",
+      "description": "Compact current-track widget (album art, title, artist)"
     }
   },
   "player": {

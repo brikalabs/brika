@@ -32,6 +32,20 @@
           "label": "Intervalle de rafraîchissement (ms)"
         }
       }
+    },
+    "play-song": {
+      "name": "Jouer un titre",
+      "description": "Recherchez sur Spotify et lancez n'importe quel titre en un geste",
+      "config": {
+        "device": {
+          "label": "Appareil",
+          "description": "Appareil sur lequel jouer les titres recherchés"
+        }
+      }
+    },
+    "now-playing": {
+      "name": "En cours de lecture",
+      "description": "Widget compact du titre en cours (pochette, titre, artiste)"
     }
   },
   "player": {

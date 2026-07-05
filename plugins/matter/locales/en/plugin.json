@@ -21,12 +21,24 @@
           "description": "Select a commissioned Matter device"
         }
       }
+    },
+    "commission": {
+      "name": "Add a Matter Device",
+      "description": "Pair a new Matter device from a dashboard with its setup code"
     }
   },
   "blocks": {
     "command": {
       "name": "Matter Command",
       "description": "Send a command to a Matter device"
+    },
+    "device-event": {
+      "name": "When Device Changes",
+      "description": "Fires when a Matter device's attributes change (any change, becomes a value, or crosses a threshold) or it emits an event (button press)"
+    },
+    "button-press": {
+      "name": "When Button Pressed",
+      "description": "Fires once per button gesture (short, long, double or triple press) on a Matter switch or remote"
     }
   },
   "sparks": {
@@ -201,7 +213,8 @@
   "preferences": {
     "autoCommission": {
       "label": "Auto-commission",
-      "description": "Automatically commission discovered devices"
+      "description": "Automatically commission discovered devices",
+      "title": "Auto-commission"
     }
   }
 }

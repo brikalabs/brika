@@ -16,7 +16,9 @@
   "blocks": {
     "echo": {
       "prefixPlaceholder": "e.g. > ",
-      "suffixPlaceholder": "e.g.  !"
+      "suffixPlaceholder": "e.g.  !",
+      "name": "Echo",
+      "description": "Pass input through to output, optionally adding a prefix/suffix to string payloads"
     }
   },
   "preferences": {
@@ -48,8 +50,14 @@
     }
   },
   "fileBrowser": {
-    "columns": { "name": "Name", "size": "Size", "modified": "Modified" },
-    "tree": { "label": "Directory tree" },
+    "columns": {
+      "name": "Name",
+      "size": "Size",
+      "modified": "Modified"
+    },
+    "tree": {
+      "label": "Directory tree"
+    },
     "kind": {
       "folder": "Folder",
       "image": "Image",
@@ -94,7 +102,10 @@
       "ariaLabel": "New folder name",
       "create": "Create"
     },
-    "empty": { "title": "Drag files here", "hint": "or click to upload" },
+    "empty": {
+      "title": "Drag files here",
+      "hint": "or click to upload"
+    },
     "dropzone": {
       "regionLabel": "File list and upload drop zone",
       "title": "Drop to upload",
@@ -106,7 +117,11 @@
       "queued": "Queued",
       "failedTitle": "Upload failed"
     },
-    "actions": { "cancel": "Cancel", "delete": "Delete", "download": "Download" },
+    "actions": {
+      "cancel": "Cancel",
+      "delete": "Delete",
+      "download": "Download"
+    },
     "delete": {
       "titleFile": "Delete file?",
       "titleFolder": "Delete folder?",
@@ -141,6 +156,11 @@
   "pages": {
     "file-browser": {
       "name": "File browser"
+    }
+  },
+  "sparks": {
+    "echoed": {
+      "name": "Echoed"
     }
   }
 }

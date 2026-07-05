@@ -21,12 +21,24 @@
           "description": "Sélectionner un appareil Matter connecté"
         }
       }
+    },
+    "commission": {
+      "name": "Ajouter un appareil Matter",
+      "description": "Appairez un nouvel appareil Matter depuis un tableau de bord avec son code d'installation"
     }
   },
   "blocks": {
     "command": {
       "name": "Commande Matter",
       "description": "Envoyer une commande à un appareil Matter"
+    },
+    "device-event": {
+      "name": "Quand un appareil change",
+      "description": "Se déclenche quand les attributs d'un appareil Matter changent (tout changement, valeur atteinte ou seuil franchi) ou quand il émet un événement (appui sur un bouton)"
+    },
+    "button-press": {
+      "name": "Quand un bouton est pressé",
+      "description": "Se déclenche une fois par geste (appui court, long, double ou triple) sur un interrupteur ou une télécommande Matter"
     }
   },
   "sparks": {
@@ -201,7 +213,8 @@
   "preferences": {
     "autoCommission": {
       "label": "Commission automatique",
-      "description": "Commissionnement automatique des appareils découverts"
+      "description": "Commissionnement automatique des appareils découverts",
+      "title": "Appairage automatique"
     }
   }
 }
