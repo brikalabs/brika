@@ -1,39 +1,45 @@
 # @brika/schema
 
-Unified schema package for BRIKA plugins and configuration.
+The BRIKA plugin CONTRACT package: the dependency-free leaf that authoring
+(`@brika/sdk`), build (`@brika/compiler`), and runtime (`apps/hub`) all share.
+Zod is the single source of truth; JSON Schema for IDE support is derived.
 
-**Single source of truth** — Define schemas once in Zod, get both runtime validation and IDE support.
+## Subpaths
 
-## Features
+| Subpath | Contents |
+| --- | --- |
+| `.` / `./plugin` | `PluginPackageSchema` + entity schemas (`BlockSchema`, `SparkSchema`, `BrickSchema`, `PageSchema`, `ActionSchema`, `ToolSchema`, `PreferenceSchema`) with inferred types, plus friendly config units (`BytesSchema`, `DurationSchema`) |
+| `./collect` | Build-time collect contract + zod lowering (`zodToPreferences`, `parseBrickMeta`) used by `brika build` |
+| `./collect-sink` | Zod-free collector sink the SDK's `define*` helpers write into |
+| `./i18n-keys` | The i18n key model: manifest-implied keys, runtime-resolved prefixes, bundle helpers |
+| `./browser-bridge` | `BRIDGE_GLOBALS` — import specifier → `globalThis.__brika.*` map |
+| `./fs-runtime` | `BrikaFsRuntime`, the pinned `__brika_fs` contract |
+| `./plugin.json` | Generated JSON Schema (served at `schema.brika.dev`) |
 
-✅ **Zod schemas** for runtime validation (TypeScript)  
-✅ **JSON Schema** auto-generated for IDE support  
-✅ **Version synchronization** - package.json version injected into schemas  
-✅ **Single file to maintain** - Zod is the source, JSON Schema is derived  
+Architecture invariants (enforced by `src/architecture.test.ts`): the package
+imports nothing from the workspace, and the modules the compiler bundles for
+V8/Workers (`collect-sink`, `i18n-keys`, `browser-bridge`, `fs-runtime`) are
+zod-free at runtime.
 
 ## Installation
 
-Internal package. It is bundled into `@brika/sdk` and is not published to npm or installable on its own. Its runtime validation API ships inside `@brika/sdk`, and the generated JSON Schema is served separately over the CDN at `schema.brika.dev` (see below). The examples below import from `@brika/schema` as an internal reference.
+Internal package. It is bundled into `@brika/sdk` and `@brika/compiler`
+(devDependency closure) and is not published to npm on its own. The generated
+JSON Schema is served separately over the CDN at `schema.brika.dev`.
 
 ## Usage
 
 ### Runtime Validation (TypeScript)
 
 ```typescript
-import { PluginPackageSchema, validatePluginPackage } from "@brika/schema";
+import { PluginPackageSchema } from "@brika/schema";
 
-// Validate plugin package.json at runtime
-const result = validatePluginPackage(packageData);
-
+const result = PluginPackageSchema.safeParse(packageData);
 if (result.success) {
   console.log("Valid plugin:", result.data);
 } else {
-  console.error("Invalid plugin:", result.error);
+  console.error("Invalid plugin:", result.error.issues);
 }
-
-// Or assert (throws on invalid)
-import { assertPluginPackage } from "@brika/schema";
-assertPluginPackage(packageData); // throws if invalid
 ```
 
 ### IDE Validation (JSON Schema)

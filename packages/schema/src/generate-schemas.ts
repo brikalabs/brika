@@ -22,10 +22,15 @@ const version = packageJson.version;
 
 console.log(`📦 Generating schemas for version ${version}...`);
 
-// Generate plugin schema using Zod 4's native toJSONSchema
+// Generate plugin schema using Zod 4's native toJSONSchema.
+// `unrepresentable: 'any'` is required for the byte/duration unit schemas
+// (`resources.fs.*`), whose string form parses through a transform: the
+// transform cannot serialize, so those fields degrade to permissive schemas
+// in the IDE while staying strictly validated at runtime.
 const pluginJsonSchema = z.toJSONSchema(PluginPackageSchema, {
   target: 'draft-07',
   metadata: z.globalRegistry,
+  unrepresentable: 'any',
 });
 
 // Customize the JSON schema
