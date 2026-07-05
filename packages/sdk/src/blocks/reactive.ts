@@ -220,7 +220,7 @@ export interface BlockLogger {
  * the artifact the host reads. The shape is defined once in the collect
  * contract (`@brika/schema/collect-sink`) and re-exported here.
  */
-export type { BlockMeta };
+export type { BlockMeta } from '@brika/schema/collect-sink';
 
 /**
  * Block specification with typed ports.
