@@ -59,7 +59,9 @@ if (process.argv.includes('--dts')) {
       { filePath: `${dir}/src/bundle/route-v8.ts`, output: { noBanner: true } },
       { filePath: `${dir}/src/bundle/route-bun.ts`, output: { noBanner: true } },
     ],
-    { preferredConfigPath: `${dir}/tsconfig.json` }
+    // tsconfig.dts.json widens the program to @brika/schema's sources, which
+    // the routes reach through the contract subpaths (i18n-keys, bridge).
+    { preferredConfigPath: `${dir}/tsconfig.dts.json` }
   );
   writeFileSync(`${dir}/dist/v8/index.d.ts`, v8dts);
   writeFileSync(`${dir}/dist/bun/index.d.ts`, bunDts);

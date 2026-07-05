@@ -2,7 +2,7 @@ import { readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import {
   BunBundler,
-  type ClientBundleChunk,
+  type BundleChunk,
   compileClientModule,
   hashPluginSources,
 } from '@brika/compiler';
@@ -377,14 +377,11 @@ export class ModuleCompiler {
  *
  * Exported for unit testing the graph walk (transitive edges, cycles).
  */
-export function reachableChunks(
-  entryJs: string,
-  chunks: readonly ClientBundleChunk[]
-): ClientBundleChunk[] {
+export function reachableChunks(entryJs: string, chunks: readonly BundleChunk[]): BundleChunk[] {
   const byName = new Map(chunks.map((chunk) => [chunk.name, chunk]));
   const seen = new Set<string>();
   const queue = chunks.filter((chunk) => entryJs.includes(chunk.name)).map((chunk) => chunk.name);
-  const out: ClientBundleChunk[] = [];
+  const out: BundleChunk[] = [];
   while (queue.length > 0) {
     const name = queue.pop();
     if (name === undefined || seen.has(name)) {

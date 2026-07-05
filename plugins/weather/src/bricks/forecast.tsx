@@ -9,7 +9,7 @@
 import { useBrickConfig, useBrickSize } from '@brika/sdk/brick-views';
 import { useLocale } from '@brika/sdk/ui-kit/hooks';
 import { MapPin } from 'lucide-react';
-import { dayKey } from '../utils';
+import { dayToken } from '../utils';
 import {
   CityError,
   formatTempWithUnit,
@@ -56,7 +56,9 @@ function DayRow({ day, unit }: Readonly<{ day: ForecastDay; unit: string }>) {
       >
         <WeatherIcon name={day.icon} color={day.color} className="size-4" />
       </div>
-      <span className="flex-1 truncate font-medium text-sm text-white">{t(dayKey(day.date))}</span>
+      <span className="flex-1 truncate font-medium text-sm text-white">
+        {t(`days.${dayToken(day.date)}`)}
+      </span>
       <span className="font-bold text-white">{formatTempWithUnit(day.tempMax, unit)}</span>
       <span className="text-sm text-white/35">{formatTempWithUnit(day.tempMin, unit)}</span>
     </div>
@@ -69,7 +71,9 @@ function DayCell({ day, unit }: Readonly<{ day: ForecastDay; unit: string }>) {
   const { t } = useLocale();
   return (
     <div className="flex flex-col items-center gap-1.5">
-      <span className="font-semibold text-[11px] text-white/70">{t(dayKey(day.date))}</span>
+      <span className="font-semibold text-[11px] text-white/70">
+        {t(`days.${dayToken(day.date)}`)}
+      </span>
       <div
         className="flex size-8 items-center justify-center rounded-full"
         style={{ backgroundColor: `${day.color}33` }}

@@ -21,6 +21,7 @@ import {
   registerBrickType,
   registerRoute,
   registerSpark,
+  registerTool,
   setPluginSecret,
   subscribeSpark,
   unsubscribeSpark,
@@ -82,6 +83,13 @@ describe('PluginProcess', () => {
         id: 'test-brick',
       },
     ],
+    actions: [
+      { id: 'do-stuff', file: 'src/actions.ts', name: 'doStuff' },
+      { id: 'my-action', file: 'src/actions.ts', name: 'myAction' },
+      { id: 'action-a', file: 'src/actions.ts', name: 'actionA' },
+      { id: 'action-b', file: 'src/actions.ts', name: 'actionB' },
+    ],
+    tools: [{ id: 'test-tool' }],
     grants: {
       'dev.brika.location.get': {},
       'dev.brika.secrets.get': {},
@@ -544,6 +552,18 @@ describe('PluginProcess', () => {
           'error',
           expect.stringContaining('Action call failed [do-stuff]')
         );
+      });
+
+      test('refuses an action id not declared in the manifest without dispatching', async () => {
+        const result = await process.callPluginAction('undeclared-action');
+
+        expect(result.ok).toBe(false);
+        expect(result.error).toEqual({
+          message: 'Action "undeclared-action" not found',
+          name: 'ActionNotFound',
+          code: 'ACTION_NOT_FOUND',
+        });
+        expect(mockChannel.call).not.toHaveBeenCalled();
       });
     });
 
@@ -1204,6 +1224,30 @@ describe('PluginProcess', () => {
       expect(process.actions.size).toBe(2);
       expect(process.actions.has('action-a')).toBe(true);
       expect(process.actions.has('action-b')).toBe(true);
+    });
+
+    test('registerAction handler ignores ids not declared in the manifest', () => {
+      triggerHandler(registerAction, {
+        id: 'undeclared-action',
+      });
+
+      expect(process.actions.size).toBe(0);
+    });
+
+    test('registerTool handler forwards tools declared in the manifest', () => {
+      triggerHandler(registerTool, {
+        tool: { id: 'test-tool', description: 'A test tool' },
+      });
+
+      expect(callbacks.onRegisterTool).toHaveBeenCalledTimes(1);
+    });
+
+    test('registerTool handler ignores tools not declared in the manifest', () => {
+      triggerHandler(registerTool, {
+        tool: { id: 'undeclared-tool' },
+      });
+
+      expect(callbacks.onRegisterTool).not.toHaveBeenCalled();
     });
 
     test('registerRoute handler calls onRoute', () => {

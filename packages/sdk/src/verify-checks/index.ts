@@ -7,3 +7,4 @@ import './check-main';
 import './check-schema-url';
 import './check-keywords';
 import './check-publish-files';
+import './check-i18n';

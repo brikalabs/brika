@@ -182,8 +182,13 @@ function compileBlock<
   spec: ReactiveBlockSpec<TInputs, TOutputs, TConfig>,
   setup: BlockSetup<TInputs, TOutputs, TConfig>
 ): CompiledReactiveBlock {
-  // Capture id + display metadata for `brika build`. No-op at plugin runtime.
-  collectBlock({ id: spec.id, meta: spec.meta });
+  // Capture id + display metadata + config field names for `brika build`
+  // (fields drive the `fields.<name>.label` i18n keys). No-op at plugin runtime.
+  collectBlock({
+    id: spec.id,
+    meta: spec.meta,
+    configFields: Object.keys(spec.config.shape).sort((a, b) => a.localeCompare(b)),
+  });
 
   const configJsonSchema = zodToBlockSchema(spec.config);
 

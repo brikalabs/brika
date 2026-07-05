@@ -5,10 +5,8 @@
  * instead of Bun.build by changing this import path and nothing else.
  */
 import { IsolateBundler } from './isolate';
+import { FINGERPRINT } from './route-shared';
 import type { Bundler } from './types';
-
-/** Fingerprint baked by `build.ts` via `Bun.build` define; `dev` for un-built source. */
-const FINGERPRINT = process.env.BRIKA_GATE_VERSION ?? 'dev';
 
 /**
  * A {@link Bundler} backed by rollup + sucrase (pure JS; runs in any V8 isolate).
@@ -19,13 +17,4 @@ export function createCompiler(version: string = FINGERPRINT): Bundler {
   return new IsolateBundler(version);
 }
 
-export type { ActionEntry, GateOptions, GateResult, PluginManifest, PluginReport } from './gate';
-export { buildReport, compilePluginGate, readManifest, scanActions } from './gate';
-export { readStamp, stamp } from './stamp';
-export type {
-  BundleChunk,
-  BundleEntry,
-  BundleOptions,
-  BundleResult,
-  Bundler,
-} from './types';
+export * from './route-shared';

@@ -1,0 +1,17 @@
+{
+  // Program for the publish-time .d.ts bundling only (see build.ts --dts).
+  // The declaration bundle crosses into @brika/schema source (the contract
+  // package the compiler consumes): the paths mapping resolves those imports
+  // straight to the workspace sources so the bundler follows them (its
+  // resolver trips over the exports-map/symlink route), and the include list
+  // makes them part of the TS program.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "paths": {
+      "@brika/schema": ["../schema/src/index.ts"],
+      "@brika/schema/*": ["../schema/src/*.ts"]
+    }
+  },
+  "include": ["src", "../schema/src"],
+  "exclude": ["src/**/*.test.ts", "../schema/src/**/*.test.ts"]
+}

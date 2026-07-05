@@ -2,40 +2,28 @@
  * Plugin report derived at compile time, entirely from the in-memory sources
  * (pure JS, edge-safe - no Bun, no module execution):
  *   - `manifest`: the capability arrays the plugin ships in its package.json
- *     (bricks / blocks / pages / sparks / tools, each with metadata). These are
- *     lowered by `brika build` on the author's machine, so here we just read them.
- *   - `actions`: server actions discovered by scanning for `@brika/sdk/actions`
- *     imports. Actions are internal RPC endpoints (no manifest metadata), but a
- *     list of them + their ids is useful to surface during compilation.
+ *     (bricks / blocks / pages / sparks / tools / actions, each with metadata).
+ *     These are lowered by `brika build` on the author's machine, so here we
+ *     just read them.
+ *   - `actions`: server actions re-discovered by scanning for
+ *     `@brika/sdk/actions` imports. `brika build` writes the same entries into
+ *     the package.json `actions[]` array (same scan, same hash), so a registry
+ *     can compare the declared list against this independent re-derivation.
  *
- * Re-deriving the manifest metadata from scratch needs to evaluate each module
- * (`generateManifest` -> `Bun.build`), which is Bun-only; that stays a
+ * Re-deriving the other manifest metadata from scratch needs to evaluate each
+ * module (`generateManifest` -> `Bun.build`), which is Bun-only; that stays a
  * `brika build`-time step, which is why the result is baked into package.json.
  */
-import { actionExports } from './action-scan';
-
-/**
- * The RPC id for an action, matching `computeActionId` (sha256 of
- * `path\0name`, 12 hex). Uses Web Crypto (native in Bun, Node and workerd)
- * rather than `node:crypto`, whose browser polyfill throws in a Worker.
- */
-async function actionId(path: string, name: string): Promise<string> {
-  const bytes = new TextEncoder().encode(`${path}\0${name}`);
-  const digest = await crypto.subtle.digest('SHA-256', bytes);
-  return [...new Uint8Array(digest)]
-    .map((b) => b.toString(16).padStart(2, '0'))
-    .join('')
-    .slice(0, 12);
-}
+import { actionExports, computeActionId } from './action-scan';
 
 /** One server action: an export of a file that imports `@brika/sdk/actions`. */
 export interface ActionEntry {
+  /** The RPC id the runtime dispatches on, matching the server build. */
+  readonly id: string;
   /** Source path (the sources-map key), relative to the plugin root. */
   readonly file: string;
   /** Exported action name (`default` for a default export). */
   readonly name: string;
-  /** The RPC id the runtime dispatches on, matching the server build. */
-  readonly actionId: string;
 }
 
 /**
@@ -49,6 +37,7 @@ export interface PluginManifest {
   readonly pages: readonly unknown[];
   readonly sparks: readonly unknown[];
   readonly tools: readonly unknown[];
+  readonly actions: readonly unknown[];
 }
 
 export interface PluginReport {
@@ -60,6 +49,9 @@ const ACTION_MODULE = '@brika/sdk/actions';
 // Only .ts/.tsx: the authoritative server-actions build (actions-server) footers
 // only 'ts'/'tsx' loaders, so a `.jsx`/`.js` "action" file is never registered.
 const TS_SOURCE = /\.tsx?$/;
+// Test files are never reachable from the plugin entry, so their exports never
+// register; skipping them keeps this scan aligned with `brika build`.
+const TEST_SOURCE = /\.(test|spec)\.tsx?$/;
 
 /**
  * List a plugin's server actions: every export of a file that value-imports
@@ -70,7 +62,7 @@ const TS_SOURCE = /\.tsx?$/;
 export function scanActions(sources: ReadonlyMap<string, string>): Promise<ActionEntry[]> {
   const pending: { file: string; name: string }[] = [];
   for (const [file, code] of sources) {
-    if (!TS_SOURCE.test(file) || !code.includes(ACTION_MODULE)) {
+    if (!TS_SOURCE.test(file) || TEST_SOURCE.test(file) || !code.includes(ACTION_MODULE)) {
       continue;
     }
     const names = actionExports(code, file.endsWith('x'));
@@ -82,16 +74,23 @@ export function scanActions(sources: ReadonlyMap<string, string>): Promise<Actio
   }
   return Promise.all(
     pending.map(async (p) => ({
+      id: await computeActionId(p.file, p.name),
       file: p.file,
       name: p.name,
-      actionId: await actionId(p.file, p.name),
     }))
   );
 }
 
 /** Read the capability arrays from the plugin's package.json in the sources. */
 export function readManifest(sources: ReadonlyMap<string, string>): PluginManifest {
-  const empty: PluginManifest = { bricks: [], blocks: [], pages: [], sparks: [], tools: [] };
+  const empty: PluginManifest = {
+    bricks: [],
+    blocks: [],
+    pages: [],
+    sparks: [],
+    tools: [],
+    actions: [],
+  };
   const pkg = sources.get('package.json');
   if (pkg === undefined) {
     return empty;
@@ -116,6 +115,7 @@ export function readManifest(sources: ReadonlyMap<string, string>): PluginManife
     pages: arr('pages'),
     sparks: arr('sparks'),
     tools: arr('tools'),
+    actions: arr('actions'),
   };
 }
 

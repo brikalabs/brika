@@ -14,5 +14,58 @@
       "name": "Agent IA",
       "description": "Agent LLM qui raisonne et appelle des outils pour répondre à chaque prompt"
     }
+  },
+  "preferences": {
+    "anthropicApiKey": {
+      "title": "Clé API Anthropic",
+      "description": "Votre clé API Anthropic (sk-ant-...). La renseigner active les modèles Claude dans tous les blocs IA. Stockée en sécurité dans le trousseau du système."
+    },
+    "openaiApiKey": {
+      "title": "Clé API OpenAI",
+      "description": "Votre clé API OpenAI (ou compatible OpenAI). La renseigner active ces modèles dans tous les blocs IA. Stockée en sécurité dans le trousseau du système."
+    },
+    "openaiBaseUrl": {
+      "title": "URL de base compatible OpenAI",
+      "description": "Optionnel. Pointe la clé OpenAI vers un endpoint compatible (OpenRouter, Groq, Azure...). Par défaut : api.openai.com."
+    },
+    "ollamaBaseUrl": {
+      "title": "Serveur Ollama",
+      "description": "Optionnel. Votre serveur Ollama local ; par défaut http://localhost:11434. Les modèles installés apparaissent automatiquement quand le serveur tourne."
+    }
+  },
+  "fields": {
+    "model": {
+      "label": "Modèle"
+    },
+    "prompt": {
+      "label": "Prompt"
+    },
+    "systemPrompt": {
+      "label": "Prompt système"
+    },
+    "effort": {
+      "label": "Effort de raisonnement"
+    },
+    "maxTokens": {
+      "label": "Jetons max"
+    },
+    "maxIterations": {
+      "label": "Itérations max"
+    },
+    "tools": {
+      "label": "Outils"
+    },
+    "tool": {
+      "label": "Outil"
+    },
+    "argName": {
+      "label": "Nom de l'argument"
+    }
+  },
+  "tools": {
+    "ask-claude": {
+      "name": "Demander à Claude",
+      "description": "Posez une question à Claude et recevez une réponse texte. À utiliser pour le raisonnement ouvert, le résumé, la rédaction ou la classification."
+    }
   }
 }

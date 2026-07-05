@@ -1,6 +1,10 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+// The build context comes from the SDK (a compiler devDependency used only by
+// tests), mirroring what the `brika` CLI installs before generateManifest.
+import { installBuildContext } from '@brika/sdk/collect';
+import { computeActionId } from './bundle/action-scan';
 import { generateEntry } from './generate-entry';
 import { generateManifest } from './generate-manifest';
 
@@ -32,6 +36,12 @@ describe('generateManifest', () => {
   let root: string;
 
   beforeEach(async () => {
+    // Another test file may have leaked ITS branded bridge (an SDK context
+    // test harness) onto globalThis, which the idempotent installBuildContext
+    // would keep; clear it so these tests always run under the real build
+    // context (Bun runs all test files in one process).
+    globalThis.__brika_ipc = undefined;
+    installBuildContext();
     root = await mkdtemp(join(PKG_ROOT, 'genman-'));
     await mkdir(join(root, 'src', 'blocks'), { recursive: true });
   });
@@ -73,6 +83,44 @@ describe('generateManifest', () => {
     expect(result.sparks).toEqual([
       { id: 'spark-a', name: 'Spark A', description: 'desc' },
       { id: 'spark-b' },
+    ]);
+  });
+
+  test('records block config field names in blocks[].fields, sorted', async () => {
+    await writeFile(
+      join(root, 'src', 'blocks', 'cfg.ts'),
+      `import { defineBlock, input, z } from '@brika/sdk';
+export default defineBlock({
+  id: 'cfg', meta: { name: 'Cfg', category: 'action' }, inputs: { trigger: input(z.generic()) },
+  config: z.object({ zebra: z.string(), alpha: z.number() }),
+  run() {},
+});
+`
+    );
+
+    const result = await generateManifest(root);
+
+    expect(result.ok).toBe(true);
+    expect(result.blocks[0]?.fields).toEqual(['alpha', 'zebra']);
+  });
+
+  test('collects defineTool definitions into tools[]', async () => {
+    await mkdir(join(root, 'src', 'tools'), { recursive: true });
+    await writeFile(
+      join(root, 'src', 'tools', 'greet.ts'),
+      `import { defineTool, z } from '@brika/sdk';
+defineTool(
+  { id: 'greet', description: 'Say hello.', icon: 'hand', color: '#112233', input: z.object({}) },
+  () => 'hello'
+);
+`
+    );
+
+    const result = await generateManifest(root);
+
+    expect(result.diagnostics).toEqual([]);
+    expect(result.tools).toEqual([
+      { id: 'greet', description: 'Say hello.', icon: 'hand', color: '#112233' },
     ]);
   });
 
@@ -324,6 +372,43 @@ export default function GaugeBrick() {
         (d) => d.level === 'error' && d.message.includes('orphan') && d.message.includes('view')
       )
     ).toBe(true);
+  });
+
+  test('scans server actions into actions[] with server-build-parity ids', async () => {
+    const ACTIONS_SRC = [
+      "import { defineAction } from '@brika/sdk/actions';",
+      'export const scan = defineAction(async () => {});',
+      'export default defineAction(async () => {});',
+    ].join('\n');
+    await writeFile(join(root, 'src', 'actions.ts'), ACTIONS_SRC);
+    // Actions register from wherever the server graph imports them, so the
+    // scan covers all of src/, not just the conventional actions dir.
+    await mkdir(join(root, 'src', 'pages', 'files'), { recursive: true });
+    await writeFile(
+      join(root, 'src', 'pages', 'files', 'actions.ts'),
+      "import { defineAction } from '@brika/sdk/actions';\nexport const list = defineAction(async () => {});\n"
+    );
+    // Test files never reach the entry graph; they must not be listed.
+    await writeFile(join(root, 'src', 'actions.test.ts'), ACTIONS_SRC);
+    // A file without a value-import of @brika/sdk/actions is not an action file.
+    await writeFile(join(root, 'src', 'util.ts'), 'export const x = 1;\n');
+
+    const result = await generateManifest(root);
+
+    expect(result.ok).toBe(true);
+    expect(result.actions.map((a) => `${a.file}#${a.name}`).sort()).toEqual([
+      'src/actions.ts#default',
+      'src/actions.ts#scan',
+      'src/pages/files/actions.ts#list',
+    ]);
+    // Each id is exactly what actions-server injects at compile time.
+    for (const a of result.actions) {
+      expect(a.id).toBe(await computeActionId(a.file, a.name));
+    }
+    // Deterministic output: sorted by id like every other manifest array.
+    expect(result.actions.map((a) => a.id)).toEqual(
+      [...result.actions.map((a) => a.id)].sort((x, y) => x.localeCompare(y))
+    );
   });
 
   test('pages get id from filename + icon from meta (ui-kit stubbed)', async () => {

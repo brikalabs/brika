@@ -81,13 +81,25 @@ export class Context {
 // ─── Singleton ────────────────────────────────────────────────────────────────
 
 let ctx: Context | null = null;
+/** The `globalThis.__brika_ipc` value `ctx` was constructed against. */
+let boundBridge: unknown;
 
+/**
+ * The Context, constructed lazily and REBOUND whenever the prelude bridge on
+ * `globalThis.__brika_ipc` is replaced. In a real plugin process the bridge is
+ * installed once before any SDK call, so this constructs exactly one Context;
+ * the rebinding matters when several bridges follow each other in ONE process
+ * (`brika build` importing plugin modules after a test harness, test files
+ * sharing a runner process).
+ */
 export function getContext(): Context {
-  if (!ctx) {
+  const bridge = globalThis.__brika_ipc;
+  if (!ctx || boundBridge !== bridge) {
     if (typeof process.send !== 'function') {
       throw new TypeError('SDK only works in plugin processes spawned by BRIKA hub');
     }
     ctx = new Context();
+    boundBridge = bridge;
   }
   return ctx;
 }

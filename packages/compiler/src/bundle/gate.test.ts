@@ -93,7 +93,7 @@ describe('compilePluginGate (publish-time compile gate)', () => {
       // both exports of the action file are listed (incl. `default`), each with an id
       const names = r.report.actions.map((a) => a.name).sort();
       expect(names).toEqual(['default', 'run']);
-      expect(r.report.actions[0]?.actionId).toMatch(/^[0-9a-f]{12}$/);
+      expect(r.report.actions[0]?.id).toMatch(/^[0-9a-f]{12}$/);
       expect(r.report.actions.every((a) => a.file === 'src/actions.ts')).toBe(true);
     }
   });

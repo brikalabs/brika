@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdir, mkdtemp, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { computeActionId } from './action-hash';
+import { computeActionId } from './bundle/action-scan';
 import { brikaServerActionsPlugin } from './plugins/actions-server';
 
 describe('brikaServerActionsPlugin', () => {
@@ -56,8 +56,8 @@ describe('brikaServerActionsPlugin', () => {
 
     expect(output).toContain('__finalizeActions');
     // IDs are precomputed at build time, not the module path
-    expect(output).toContain(computeActionId('src/actions.ts', 'scan'));
-    expect(output).toContain(computeActionId('src/actions.ts', 'play'));
+    expect(output).toContain(await computeActionId('src/actions.ts', 'scan'));
+    expect(output).toContain(await computeActionId('src/actions.ts', 'play'));
   });
 
   // ── 2. File NOT importing @brika/sdk/actions passes through ────────
@@ -128,6 +128,6 @@ describe('brikaServerActionsPlugin', () => {
     );
 
     expect(output).toContain('__finalizeActions');
-    expect(output).toContain(computeActionId('src/actions.tsx', 'refresh'));
+    expect(output).toContain(await computeActionId('src/actions.tsx', 'refresh'));
   });
 });

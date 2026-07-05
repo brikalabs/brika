@@ -33,6 +33,7 @@
 import type { z } from 'zod';
 import { zodToJsonSchema } from '../blocks/reactive';
 import { getContext } from '../context';
+import { collectTool } from '../internal/collect-sink';
 import type { Json } from '../types';
 
 /** JSON Schema (object) describing a tool's arguments, shown to the model. */
@@ -105,6 +106,13 @@ export function defineTool<S extends z.ZodObject<Record<string, z.ZodType>>>(
   definition: TypedToolDefinition<S>,
   handler: (args: z.output<S>, ctx: ToolCallContext) => Json | Promise<Json>
 ): void {
+  // Capture id + display metadata for `brika build`. No-op at plugin runtime.
+  collectTool({
+    id: definition.id,
+    description: definition.description,
+    icon: definition.icon,
+    color: definition.color,
+  });
   const { input, ...rest } = definition;
   const inputSchema = toToolInputSchema(zodToJsonSchema(input));
   // A field that accepts undefined (optional or defaulted) is not required
@@ -135,5 +143,11 @@ export function defineTool<S extends z.ZodObject<Record<string, z.ZodType>>>(
  * cannot express.
  */
 export function defineRawTool(definition: ToolDefinition, handler: ToolHandler): void {
+  collectTool({
+    id: definition.id,
+    description: definition.description,
+    icon: definition.icon,
+    color: definition.color,
+  });
   getContext().registerTool(definition, handler);
 }

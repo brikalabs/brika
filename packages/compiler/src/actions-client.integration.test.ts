@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { mkdir, mkdtemp, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { computeActionId } from './action-hash';
+import { computeActionId } from './bundle/action-scan';
 import { brikaActionsPlugin } from './plugins/actions-client';
 
 let pluginRoot: string;
@@ -90,7 +90,7 @@ async function build(
 describe('brikaActionsPlugin', () => {
   test('replaces action file import with __actionId stub', async () => {
     const code = await build(`import { myAction } from './actions';\nexport { myAction };\n`);
-    const expectedId = computeActionId('src/actions.ts', 'myAction');
+    const expectedId = await computeActionId('src/actions.ts', 'myAction');
     expect(code).toContain('__actionId');
     expect(code).toContain(expectedId);
     // The original implementation body should NOT appear
@@ -116,9 +116,9 @@ describe('brikaActionsPlugin', () => {
     const code = await build(
       `import { alpha, beta, gamma } from './multi';\nexport { alpha, beta, gamma };\n`
     );
-    const idAlpha = computeActionId('src/multi.ts', 'alpha');
-    const idBeta = computeActionId('src/multi.ts', 'beta');
-    const idGamma = computeActionId('src/multi.ts', 'gamma');
+    const idAlpha = await computeActionId('src/multi.ts', 'alpha');
+    const idBeta = await computeActionId('src/multi.ts', 'beta');
+    const idGamma = await computeActionId('src/multi.ts', 'gamma');
     expect(code).toContain(idAlpha);
     expect(code).toContain(idBeta);
     expect(code).toContain(idGamma);
@@ -127,13 +127,13 @@ describe('brikaActionsPlugin', () => {
 
   test('action IDs match computeActionId(relativePath, exportName)', async () => {
     const code = await build(`import { myAction } from './actions';\nexport { myAction };\n`);
-    const expectedId = computeActionId('src/actions.ts', 'myAction');
+    const expectedId = await computeActionId('src/actions.ts', 'myAction');
     expect(code).toContain(`"${expectedId}"`);
   });
 
   test('.tsx action files work the same as .ts', async () => {
     const code = await build(`import { tsxAction } from './actions-tsx';\nexport { tsxAction };\n`);
-    const expectedId = computeActionId('src/actions-tsx.tsx', 'tsxAction');
+    const expectedId = await computeActionId('src/actions-tsx.tsx', 'tsxAction');
     expect(code).toContain(expectedId);
     expect(code).not.toContain('defineAction');
   });
@@ -142,13 +142,13 @@ describe('brikaActionsPlugin', () => {
     test('specifier with explicit .ts extension', async () => {
       const code = await build(`import { myAction } from './actions.ts';\nexport { myAction };\n`);
       expect(code).toContain('__actionId');
-      expect(code).toContain(computeActionId('src/actions.ts', 'myAction'));
+      expect(code).toContain(await computeActionId('src/actions.ts', 'myAction'));
     });
 
     test('specifier without extension resolves to .ts', async () => {
       const code = await build(`import { myAction } from './actions';\nexport { myAction };\n`);
       expect(code).toContain('__actionId');
-      expect(code).toContain(computeActionId('src/actions.ts', 'myAction'));
+      expect(code).toContain(await computeActionId('src/actions.ts', 'myAction'));
     });
 
     test('specifier without extension resolves to .tsx', async () => {
@@ -156,14 +156,14 @@ describe('brikaActionsPlugin', () => {
         `import { tsxAction } from './actions-tsx';\nexport { tsxAction };\n`
       );
       expect(code).toContain('__actionId');
-      expect(code).toContain(computeActionId('src/actions-tsx.tsx', 'tsxAction'));
+      expect(code).toContain(await computeActionId('src/actions-tsx.tsx', 'tsxAction'));
     });
 
     test('directory import resolves to index.ts', async () => {
       const code = await build(
         `import { featureAction } from './features';\nexport { featureAction };\n`
       );
-      const expectedId = computeActionId('src/features/index.ts', 'featureAction');
+      const expectedId = await computeActionId('src/features/index.ts', 'featureAction');
       expect(code).toContain('__actionId');
       expect(code).toContain(expectedId);
     });
@@ -180,7 +180,7 @@ describe('brikaActionsPlugin', () => {
       const code = await build(
         "import { widgetAction } from './widgets';\nexport { widgetAction };\n"
       );
-      const expectedId = computeActionId('src/widgets/index.tsx', 'widgetAction');
+      const expectedId = await computeActionId('src/widgets/index.tsx', 'widgetAction');
       expect(code).toContain('__actionId');
       expect(code).toContain(expectedId);
     });

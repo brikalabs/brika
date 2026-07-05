@@ -21,12 +21,24 @@
           "description": "Select a commissioned Matter device"
         }
       }
+    },
+    "commission": {
+      "name": "Add a Matter Device",
+      "description": "Pair a new Matter device from a dashboard with its setup code"
     }
   },
   "blocks": {
     "command": {
       "name": "Matter Command",
       "description": "Send a command to a Matter device"
+    },
+    "device-event": {
+      "name": "When Device Changes",
+      "description": "Fires when a Matter device's attributes change (any change, becomes a value, or crosses a threshold) or it emits an event (button press)"
+    },
+    "button-press": {
+      "name": "When Button Pressed",
+      "description": "Fires once per button gesture (short, long, double or triple press) on a Matter switch or remote"
     }
   },
   "sparks": {
@@ -59,6 +71,10 @@
     "control-device": {
       "name": "Control Device",
       "description": "Control a Matter device: toggle lights, lock or unlock, move covers, set brightness or temperature"
+    },
+    "get-device-state": {
+      "name": "Get Device State",
+      "description": "Read one Matter device by nodeId: full current state (on, brightness, locked, cover position, temperature, humidity, battery, ...), supported commands, and metadata. Use after control-device to confirm an action took effect."
     }
   },
   "device": {
@@ -201,7 +217,19 @@
   "preferences": {
     "autoCommission": {
       "label": "Auto-commission",
-      "description": "Automatically commission discovered devices"
+      "description": "Automatically commission discovered devices",
+      "title": "Auto-commission"
+    }
+  },
+  "fields": {
+    "nodeId": {
+      "label": "Device"
+    },
+    "button": {
+      "label": "Button"
+    },
+    "press": {
+      "label": "Press type"
     }
   }
 }

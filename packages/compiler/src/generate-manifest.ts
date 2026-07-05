@@ -10,11 +10,16 @@
  * safe when no server module imports its descriptor (otherwise react leaks into
  * the plugin subprocess), so bricks that push data keep the descriptor in a
  * `*.brick.ts`. All are lowered into the `blocks[]` / `sparks[]` / `bricks[]` /
- * `pages[]` shapes the hub reads from `package.json`. The hub contract is
- * unchanged: this only generates the committed arrays.
+ * `pages[]` shapes the hub reads from `package.json`.
+ *
+ * Actions are different: they are discovered by the same static source scan the
+ * publish gate report uses ({@link scanActions}, no module evaluation), so the
+ * committed `actions[]` array and the registry's independent re-derivation
+ * agree by construction. Each entry's `id` is the RPC hash the server build
+ * injects (`computeActionId`), which the hub uses as the dispatch allow-list.
  */
 
-import { basename, join, resolve } from 'node:path';
+import { basename, join, relative, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import {
   type BrickMetaInput,
@@ -23,16 +28,24 @@ import {
   type CollectedManifest,
   type CollectedSpark,
   drainCollector,
-  installBuildContext,
   installCollector,
   isZodSchema,
   type PreferenceEntry,
   parseBrickMeta,
   zodToPreferences,
-} from '@brika/sdk/collect';
+} from '@brika/schema/collect';
 import { z } from 'zod';
 import { errorMessage, readBrowserModule } from './browser-extract';
-import { blockFiles, brickDescriptorFiles, brickFiles, pageFiles, sparkFiles } from './scan';
+import { type ActionEntry, scanActions } from './bundle/report';
+import {
+  blockFiles,
+  brickDescriptorFiles,
+  brickFiles,
+  pageFiles,
+  sourceFiles,
+  sparkFiles,
+  toolFiles,
+} from './scan';
 import type { ValidationDiagnostic } from './validate';
 
 /** A generated manifest `blocks[]` entry (mirrors `@brika/schema` BlockSchema). */
@@ -45,6 +58,7 @@ export interface GeneratedBlock {
   color?: string;
   view?: boolean;
   nodeView?: boolean;
+  fields?: string[];
 }
 
 /** A generated manifest `sparks[]` entry (mirrors `@brika/schema` SparkSchema). */
@@ -72,11 +86,22 @@ export interface GeneratedPage {
   icon?: string;
 }
 
+/** A generated manifest `tools[]` entry (mirrors `@brika/schema` ToolSchema). */
+export interface GeneratedTool {
+  id: string;
+  description?: string;
+  icon?: string;
+  color?: string;
+}
+
 export interface GeneratedManifest {
   blocks: GeneratedBlock[];
   sparks: GeneratedSpark[];
   bricks: GeneratedBrick[];
   pages: GeneratedPage[];
+  tools: GeneratedTool[];
+  /** Server actions (`{ id, file, name }`), statically scanned - see header. */
+  actions: ActionEntry[];
   diagnostics: ValidationDiagnostic[];
   /** False when any diagnostic is an error. */
   ok: boolean;
@@ -90,12 +115,18 @@ interface ImportResult {
   errors: ValidationDiagnostic[];
 }
 
-/** Import each module under an installed collector and return what it captured. */
+/**
+ * Import each module under an installed collector and return what it captured.
+ *
+ * A module that reaches the SDK's `getContext()` at import time (e.g.
+ * `defineOAuth` registering routes) needs a no-op prelude bridge to be
+ * installed FIRST via `@brika/sdk/collect`'s `installBuildContext()`. The
+ * `brika` CLI does that before calling {@link generateManifest}; it lives in
+ * the SDK (not here) because the bridge brand is the SDK's contract, and the
+ * compiler deliberately has no `@brika/sdk` dependency.
+ */
 async function importModules(files: readonly string[]): Promise<ImportResult> {
   const errors: ValidationDiagnostic[] = [];
-  // A no-op prelude bridge so modules that reach getContext() at import time
-  // (e.g. defineOAuth registering routes) run their define* calls without a hub.
-  installBuildContext();
   installCollector();
   for (const file of files) {
     importSalt += 1;
@@ -144,6 +175,10 @@ async function toBlockEntry(
     color: meta.color,
     view: hasView || undefined,
     nodeView: hasNode || undefined,
+    fields:
+      block.configFields !== undefined && block.configFields.length > 0
+        ? block.configFields
+        : undefined,
   };
 }
 
@@ -368,6 +403,22 @@ async function buildPages(
 const byId = (a: { id: string }, b: { id: string }): number => a.id.localeCompare(b.id);
 
 /**
+ * Discover the plugin's server actions with the shared publish-gate scan
+ * ({@link scanActions}) over every `src/` module, keyed by root-relative path
+ * so each id hashes exactly what `actions-server` injects at compile time.
+ */
+async function buildActions(root: string): Promise<ActionEntry[]> {
+  const files = await sourceFiles(root);
+  const entries = await Promise.all(
+    files.map(async (file): Promise<[string, string]> => {
+      const key = relative(root, file).replaceAll('\\', '/');
+      return [key, await Bun.file(file).text()];
+    })
+  );
+  return scanActions(new Map(entries));
+}
+
+/**
  * Generate the `blocks[]`, `sparks[]`, `bricks[]`, and `pages[]` manifest arrays
  * from plugin source. Blocks must carry `meta` (the manifest requires a
  * category); a block without `meta` is an error so a capability is never
@@ -376,14 +427,22 @@ const byId = (a: { id: string }, b: { id: string }): number => a.id.localeCompar
  */
 export async function generateManifest(pluginRoot: string): Promise<GeneratedManifest> {
   const root = resolve(pluginRoot);
-  const [blocks, sparks, descriptorPaths, legacyBrickPaths, pagePaths] = await Promise.all([
-    blockFiles(root),
-    sparkFiles(root),
-    brickDescriptorFiles(root),
-    brickFiles(root),
-    pageFiles(root),
+  const [blocks, sparks, descriptorPaths, legacyBrickPaths, pagePaths, toolPaths, actions] =
+    await Promise.all([
+      blockFiles(root),
+      sparkFiles(root),
+      brickDescriptorFiles(root),
+      brickFiles(root),
+      pageFiles(root),
+      toolFiles(root),
+      buildActions(root),
+    ]);
+  const { collected, errors } = await importModules([
+    ...blocks,
+    ...sparks,
+    ...descriptorPaths,
+    ...toolPaths,
   ]);
-  const { collected, errors } = await importModules([...blocks, ...sparks, ...descriptorPaths]);
   const diagnostics: ValidationDiagnostic[] = [...errors];
 
   const managedBlocks: GeneratedBlock[] = [];
@@ -410,6 +469,15 @@ export async function generateManifest(pluginRoot: string): Promise<GeneratedMan
     sparks: dedupeById(collected.sparks).map(toSparkEntry).sort(byId),
     bricks: [...descriptorBricks, ...legacyBricks].sort(byId),
     pages: (await buildPages(pagePaths, diagnostics)).sort(byId),
+    tools: dedupeById(collected.tools)
+      .map((tool) => ({
+        id: tool.id,
+        description: tool.description,
+        icon: tool.icon,
+        color: tool.color,
+      }))
+      .sort(byId),
+    actions: [...actions].sort(byId),
     diagnostics,
     ok: diagnostics.every((d) => d.level !== 'error'),
   };

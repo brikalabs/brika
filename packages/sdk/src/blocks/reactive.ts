@@ -5,6 +5,7 @@
  * Uses Zod schemas for type inference and JSON Schema generation.
  */
 
+import type { BlockMeta } from '@brika/schema/collect-sink';
 import { z } from 'zod';
 import type { Json } from '../types';
 import type { GenericRef, PassthroughRef, ResolvedRef } from './schema-types';
@@ -216,20 +217,10 @@ export interface BlockLogger {
  * Human-facing block metadata. `brika build` lowers this into the plugin
  * manifest `blocks[]` entry, so co-locating it on the definition makes the
  * source the single source of truth and the generated, committed manifest
- * the artifact the host reads.
+ * the artifact the host reads. The shape is defined once in the collect
+ * contract (`@brika/schema/collect-sink`) and re-exported here.
  */
-export interface BlockMeta {
-  /** Display name shown in the workflow editor. */
-  name: string;
-  /** One-line description. */
-  description?: string;
-  /** Manifest category bucket. */
-  category: 'trigger' | 'flow' | 'action' | 'transform';
-  /** Lucide icon name. */
-  icon?: string;
-  /** Accent color as `#RRGGBB`. */
-  color?: string;
-}
+export type { BlockMeta } from '@brika/schema/collect-sink';
 
 /**
  * Block specification with typed ports.

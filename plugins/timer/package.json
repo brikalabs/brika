@@ -34,6 +34,7 @@
     "test": "bun test",
     "prepublishOnly": "brika verify"
   },
+  "tools": [],
   "blocks": [
     {
       "id": "timer",
@@ -43,7 +44,8 @@
       "icon": "timer",
       "color": "#22c55e",
       "view": true,
-      "nodeView": true
+      "nodeView": true,
+      "fields": ["duration", "name"]
     },
     {
       "id": "countdown",
@@ -53,7 +55,8 @@
       "icon": "clock",
       "color": "#3b82f6",
       "view": true,
-      "nodeView": true
+      "nodeView": true,
+      "fields": ["duration", "tickInterval"]
     }
   ],
   "bricks": [

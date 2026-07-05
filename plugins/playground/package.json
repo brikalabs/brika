@@ -70,6 +70,7 @@
     "check": "brika check",
     "prepublishOnly": "brika verify"
   },
+  "tools": [],
   "blocks": [
     {
       "id": "echo",
@@ -79,7 +80,8 @@
       "icon": "megaphone",
       "color": "#6366f1",
       "view": true,
-      "nodeView": true
+      "nodeView": true,
+      "fields": ["prefix", "suffix"]
     }
   ],
   "sparks": [
@@ -90,6 +92,33 @@
   "pages": [
     {
       "id": "file-browser"
+    }
+  ],
+  "actions": [
+    {
+      "id": "2789a77e2eea",
+      "file": "src/pages/file-browser/actions.ts",
+      "name": "writeEntry"
+    },
+    {
+      "id": "6c8bb95f5e90",
+      "file": "src/pages/file-browser/actions.ts",
+      "name": "makeFolder"
+    },
+    {
+      "id": "7a42d22e7002",
+      "file": "src/pages/file-browser/actions.ts",
+      "name": "readEntry"
+    },
+    {
+      "id": "bf18f3f337ec",
+      "file": "src/pages/file-browser/actions.ts",
+      "name": "listEntries"
+    },
+    {
+      "id": "e73eb4f0eb95",
+      "file": "src/pages/file-browser/actions.ts",
+      "name": "deleteEntry"
     }
   ],
   "preferences": [

@@ -159,11 +159,11 @@ export type TranslateFn = (key: string, params?: Record<string, string | number>
 const WEEKDAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const;
 
 /**
- * Resolve the i18n key for `dateStr` -- `days.today`, `days.tomorrow`,
- * or `days.<weekday>`. Pure helper so brick code that uses a different
- * `t(): string` shape can call it without depending on `TranslateFn`.
+ * Resolve the day token for `dateStr` -- `today`, `tomorrow`, or a weekday
+ * abbreviation. Call sites build the i18n key inline (`t(\`days.${...}\`)`)
+ * so the static i18n analysis sees the `days.*` key family.
  */
-export function dayKey(dateStr: string): string {
+export function dayToken(dateStr: string): string {
   const date = new Date(`${dateStr}T00:00:00`);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -172,14 +172,14 @@ export function dayKey(dateStr: string): string {
   tomorrow.setDate(tomorrow.getDate() + 1);
 
   if (date.getTime() === today.getTime()) {
-    return 'days.today';
+    return 'today';
   }
   if (date.getTime() === tomorrow.getTime()) {
-    return 'days.tomorrow';
+    return 'tomorrow';
   }
-  return `days.${WEEKDAY_KEYS[date.getDay()]}`;
+  return WEEKDAY_KEYS[date.getDay()] ?? 'today';
 }
 
 export function dayName(dateStr: string, t: TranslateFn): I18nRef {
-  return t(dayKey(dateStr));
+  return t(`days.${dayToken(dateStr)}`);
 }

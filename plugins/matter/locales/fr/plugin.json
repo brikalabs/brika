@@ -21,12 +21,24 @@
           "description": "Sélectionner un appareil Matter connecté"
         }
       }
+    },
+    "commission": {
+      "name": "Ajouter un appareil Matter",
+      "description": "Appairez un nouvel appareil Matter depuis un tableau de bord avec son code d'installation"
     }
   },
   "blocks": {
     "command": {
       "name": "Commande Matter",
       "description": "Envoyer une commande à un appareil Matter"
+    },
+    "device-event": {
+      "name": "Quand un appareil change",
+      "description": "Se déclenche quand les attributs d'un appareil Matter changent (tout changement, valeur atteinte ou seuil franchi) ou quand il émet un événement (appui sur un bouton)"
+    },
+    "button-press": {
+      "name": "Quand un bouton est pressé",
+      "description": "Se déclenche une fois par geste (appui court, long, double ou triple) sur un interrupteur ou une télécommande Matter"
     }
   },
   "sparks": {
@@ -59,6 +71,10 @@
     "control-device": {
       "name": "Contrôler un appareil",
       "description": "Contrôler un appareil Matter : allumer ou éteindre, verrouiller, déplacer les volets, régler la luminosité ou la température"
+    },
+    "get-device-state": {
+      "name": "État de l'appareil",
+      "description": "Lit un appareil Matter par nodeId : état courant complet (allumé, luminosité, verrouillé, position du volet, température, humidité, batterie, ...), commandes supportées et métadonnées. À utiliser après control-device pour confirmer qu'une action a bien été appliquée."
     }
   },
   "device": {
@@ -201,7 +217,19 @@
   "preferences": {
     "autoCommission": {
       "label": "Commission automatique",
-      "description": "Commissionnement automatique des appareils découverts"
+      "description": "Commissionnement automatique des appareils découverts",
+      "title": "Appairage automatique"
+    }
+  },
+  "fields": {
+    "nodeId": {
+      "label": "Appareil"
+    },
+    "button": {
+      "label": "Bouton"
+    },
+    "press": {
+      "label": "Type d'appui"
     }
   }
 }

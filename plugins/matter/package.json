@@ -42,6 +42,26 @@
     "check": "brika check",
     "prepublishOnly": "brika verify"
   },
+  "tools": [
+    {
+      "id": "control-device",
+      "description": "Control commissioned Matter devices by nodeId: turn a light on/off/toggle, lock/unlock, open/close/stop a cover, set brightness/color/temperature, drive a fan, or run a robot vacuum. Resolve nodeIds with list-devices first; it also lists each device's supported commands. To send the same command to several devices (e.g. turn off ALL lights), pass every nodeId in `nodeIds` in ONE call instead of calling once per device. Args use human units: setBrightness { \"brightness\": \"0-100\" }, setColorTemp { \"kelvin\": \"2000-6500\" }, setHueSaturation { \"hue\": \"0-360\", \"saturation\": \"0-100\" }, setFanSpeed { \"speed\": \"0-100\" }, setCoverPosition { \"position\": \"0-100\" }.",
+      "icon": "zap",
+      "color": "#7c3aed"
+    },
+    {
+      "id": "get-device-state",
+      "description": "Read one Matter device by nodeId: full current state (on, brightness, hue, saturation, colorTempMireds, locked, coverPosition, temperature, humidity, occupied, contact, illuminance, battery, ...), supported commands, and metadata. Use after control-device to confirm an action took effect.",
+      "icon": "eye",
+      "color": "#7c3aed"
+    },
+    {
+      "id": "list-devices",
+      "description": "List the commissioned Matter devices (lights, locks, covers, thermostats, switches, sensors) with their nodeId, name, type, online flag, current state (on, brightness, temperature, battery, ...), and the exact commands each device supports. Call this first: it tells you both WHICH device to target and WHAT it can do.",
+      "icon": "radio",
+      "color": "#7c3aed"
+    }
+  ],
   "sparks": [
     {
       "id": "device-state-changed",
@@ -78,7 +98,8 @@
       "icon": "cpu",
       "color": "#6366f1",
       "view": true,
-      "nodeView": true
+      "nodeView": true,
+      "fields": ["command", "nodeId", "params"]
     },
     {
       "id": "device-event",
@@ -88,7 +109,8 @@
       "icon": "radio",
       "color": "#6366f1",
       "view": true,
-      "nodeView": true
+      "nodeView": true,
+      "fields": ["attributes", "nodeId"]
     },
     {
       "id": "button-press",
@@ -96,13 +118,51 @@
       "description": "Fires once per button gesture (short, long, double or triple press) on a Matter switch or remote",
       "category": "trigger",
       "icon": "mouse-pointer-click",
-      "color": "#6366f1"
+      "color": "#6366f1",
+      "fields": ["button", "nodeId", "press"]
     }
   ],
   "pages": [
     {
       "id": "devices",
       "icon": "cpu"
+    }
+  ],
+  "actions": [
+    {
+      "id": "0844025241d0",
+      "file": "src/actions.ts",
+      "name": "listDevices"
+    },
+    {
+      "id": "1fe11e85d2d2",
+      "file": "src/actions.ts",
+      "name": "remove"
+    },
+    {
+      "id": "6345c4e9d612",
+      "file": "src/actions.ts",
+      "name": "commission"
+    },
+    {
+      "id": "77ec3398f4a2",
+      "file": "src/actions.ts",
+      "name": "getDevices"
+    },
+    {
+      "id": "c5a593a20e6c",
+      "file": "src/actions.ts",
+      "name": "scan"
+    },
+    {
+      "id": "e7983f049bc6",
+      "file": "src/actions.ts",
+      "name": "doDeviceCommand"
+    },
+    {
+      "id": "eb47885388d3",
+      "file": "src/actions.ts",
+      "name": "command"
     }
   ],
   "bricks": [

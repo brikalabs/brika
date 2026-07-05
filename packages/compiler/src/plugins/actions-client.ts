@@ -1,18 +1,16 @@
 import { join, relative, resolve } from 'node:path';
 import type { BunPlugin } from 'bun';
-import { computeActionId } from '../action-hash';
-import { pickLoader } from '../loader';
-
-const ACTION_IMPORT = '@brika/sdk/actions';
+import { actionExports, computeActionId } from '../bundle/action-scan';
 
 /**
  * Client-side actions plugin — replaces action file imports with
  * synthetic `{ __actionId }` stubs. Used when building pages/bricks
  * for the browser.
  *
- * Action files are detected semantically: a file is an action file if
- * it imports from `@brika/sdk/actions`.
- * Detection uses `Bun.Transpiler.scan()` — no regex or string matching.
+ * Detection and export listing use the shared `actionExports` scan
+ * (a file is an action file iff it value-imports `@brika/sdk/actions`),
+ * so the stubbed ids agree with the server build, the manifest and the
+ * publish-gate report by construction.
  */
 async function resolveSource(dir: string, specifier: string): Promise<string | null> {
   const base = resolve(dir, specifier);
@@ -39,23 +37,24 @@ async function resolveSource(dir: string, specifier: string): Promise<string | n
 
 export function brikaActionsPlugin(pluginRoot: string): BunPlugin {
   const srcPrefix = `${join(pluginRoot, 'src')}/`;
-  const actionFileCache = new Map<string, boolean>();
+  // Per-file scan result: the exported names of an action file, or null for a
+  // non-action file. Cached so onResolve's probe and onLoad share one scan.
+  const namesCache = new Map<string, string[] | null>();
 
-  async function checkActionFile(absPath: string): Promise<boolean> {
-    const cached = actionFileCache.get(absPath);
-    if (cached !== undefined) {
-      return cached;
+  async function actionNames(absPath: string): Promise<string[] | null> {
+    const hit = namesCache.get(absPath);
+    if (hit !== undefined) {
+      return hit;
     }
+    let names: string[] | null;
     try {
       const content = await Bun.file(absPath).text();
-      const { imports } = new Bun.Transpiler({ loader: pickLoader(absPath) }).scan(content);
-      const result = imports.some((i) => i.path === ACTION_IMPORT);
-      actionFileCache.set(absPath, result);
-      return result;
+      names = actionExports(content, /[jt]sx$/.test(absPath));
     } catch {
-      actionFileCache.set(absPath, false);
-      return false;
+      names = null;
     }
+    namesCache.set(absPath, names);
+    return names;
   }
 
   return {
@@ -69,25 +68,22 @@ export function brikaActionsPlugin(pluginRoot: string): BunPlugin {
         if (!resolved?.startsWith(srcPrefix)) {
           return;
         }
-        if (await checkActionFile(resolved)) {
+        if ((await actionNames(resolved)) !== null) {
           return { path: resolved, namespace: 'brika-actions' };
         }
       });
 
       build.onLoad({ namespace: 'brika-actions', filter: /.*/ }, async ({ path }) => {
-        const content = await Bun.file(path).text();
-        const { exports: names } = new Bun.Transpiler({ loader: pickLoader(path) }).scan(content);
+        const names = (await actionNames(path)) ?? [];
         const rel = relative(pluginRoot, path);
+        const stubs = await Promise.all(
+          names.map(
+            async (name) =>
+              `export const ${name} = { __actionId: ${JSON.stringify(await computeActionId(rel, name))} };`
+          )
+        );
 
-        return {
-          contents: names
-            .map(
-              (name) =>
-                `export const ${name} = { __actionId: ${JSON.stringify(computeActionId(rel, name))} };`
-            )
-            .join('\n'),
-          loader: 'js',
-        };
+        return { contents: stubs.join('\n'), loader: 'js' };
       });
     },
   };

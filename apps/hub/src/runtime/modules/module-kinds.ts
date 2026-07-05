@@ -1,8 +1,6 @@
 import { join } from 'node:path';
-import { CLIENT_CHUNK_PREFIX } from '@brika/compiler';
+import { CHUNK_PREFIX } from '@brika/compiler';
 import type { PluginPackageSchema } from '@brika/schema';
-
-export { CLIENT_CHUNK_PREFIX } from '@brika/compiler';
 
 /** On-disk cache directory (relative to a plugin's cache root) holding shared chunks. */
 export const CHUNK_DIR = '_chunks';
@@ -87,7 +85,7 @@ export function moduleScopeId(pluginName: string, kind: ModuleKind, id: string):
 
 /** True when a served `id` names a shared code chunk rather than a module. */
 export function isChunkId(id: string): boolean {
-  return id.startsWith(CLIENT_CHUNK_PREFIX);
+  return id.startsWith(CHUNK_PREFIX);
 }
 
 /** On-disk cache path (relative to the plugin cache root) for a shared chunk. */

@@ -14,5 +14,58 @@
       "name": "AI Agent",
       "description": "LLM agent that reasons and calls tools to answer each prompt"
     }
+  },
+  "preferences": {
+    "anthropicApiKey": {
+      "title": "Anthropic API Key",
+      "description": "Your Anthropic API key (sk-ant-...). Setting it enables Claude models in every AI block. Stored securely in the OS keychain."
+    },
+    "openaiApiKey": {
+      "title": "OpenAI API Key",
+      "description": "Your OpenAI (or OpenAI-compatible) API key. Setting it enables those models in every AI block. Stored securely in the OS keychain."
+    },
+    "openaiBaseUrl": {
+      "title": "OpenAI-compatible Base URL",
+      "description": "Optional. Point the OpenAI key at a compatible endpoint (OpenRouter, Groq, Azure...). Defaults to api.openai.com."
+    },
+    "ollamaBaseUrl": {
+      "title": "Ollama Server",
+      "description": "Optional. Your local Ollama server; defaults to http://localhost:11434. Installed models appear automatically when the server is running."
+    }
+  },
+  "fields": {
+    "model": {
+      "label": "Model"
+    },
+    "prompt": {
+      "label": "Prompt"
+    },
+    "systemPrompt": {
+      "label": "System prompt"
+    },
+    "effort": {
+      "label": "Reasoning effort"
+    },
+    "maxTokens": {
+      "label": "Max tokens"
+    },
+    "maxIterations": {
+      "label": "Max iterations"
+    },
+    "tools": {
+      "label": "Tools"
+    },
+    "tool": {
+      "label": "Tool"
+    },
+    "argName": {
+      "label": "Argument name"
+    }
+  },
+  "tools": {
+    "ask-claude": {
+      "name": "Ask Claude",
+      "description": "Ask Claude a question and get a text answer. Call for open-ended reasoning, summarization, drafting, or classification."
+    }
   }
 }

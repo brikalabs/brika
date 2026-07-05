@@ -4,12 +4,17 @@ import { transform } from 'sucrase';
 import { actionExports } from './action-scan';
 import { applyI18n, bridgePropFor, isBareSpecifier } from './shared';
 import { stamp } from './stamp';
-import type { BundleChunk, BundleEntry, BundleOptions, BundleResult, Bundler } from './types';
+import {
+  type BundleChunk,
+  type BundleEntry,
+  type BundleOptions,
+  type BundleResult,
+  type Bundler,
+  CHUNK_PREFIX,
+} from './types';
 
 /** Prefix for the virtual modules that stand in for host-bridged imports. */
 const BRIDGE_NS = '\0bridge:';
-/** Filename prefix Bun gives shared chunks; matched so both backends serve alike. */
-const CHUNK_PREFIX = '_brika_chunk_';
 const SOURCE_RE = /\.(?:tsx|ts|jsx|js|mts|cts|mjs|cjs)$/;
 const RESOLVE_EXTS = ['', '.ts', '.tsx', '.js', '.jsx', '/index.ts', '/index.tsx'];
 

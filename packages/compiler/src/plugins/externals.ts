@@ -1,4 +1,4 @@
-import { BRIDGE_GLOBALS } from '@brika/sdk/browser-bridge';
+import { BRIDGE_GLOBALS } from '@brika/schema/browser-bridge';
 import type { BunPlugin } from 'bun';
 
 /**

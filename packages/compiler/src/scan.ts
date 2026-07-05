@@ -71,6 +71,29 @@ export function pageFiles(pluginRoot: string): Promise<string[]> {
   return scanGlob(pluginRoot, 'src/pages/*.tsx');
 }
 
+/**
+ * Every plugin source module under `src/` (all `.ts`/`.tsx`, recursive), the
+ * universe the action scan reads. Unlike the per-kind globs above this
+ * deliberately keeps `_` helpers: an action registers from wherever the server
+ * graph imports it (a helper file included), so only test files - never
+ * reachable from the entry - are skipped.
+ */
+export async function sourceFiles(pluginRoot: string): Promise<string[]> {
+  const out: string[] = [];
+  try {
+    const glob = new Bun.Glob('src/**/*.{ts,tsx}');
+    for await (const rel of glob.scan({ cwd: pluginRoot })) {
+      const base = rel.split('/').pop() ?? rel;
+      if (!(base.includes('.test.') || base.includes('.spec.'))) {
+        out.push(join(pluginRoot, rel));
+      }
+    }
+  } catch {
+    // src/ may not exist; treat as no matches.
+  }
+  return out;
+}
+
 /** Return the first of `candidates` (paths relative to root) that exists. */
 export async function firstExisting(
   root: string,

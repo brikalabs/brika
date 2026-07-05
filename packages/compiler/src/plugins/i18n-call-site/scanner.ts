@@ -79,8 +79,11 @@ function applyEdits(code: string, edits: readonly Edit[]): string {
  * the scanner needs to maintain a 1-based line counter and template-nesting
  * state across spans, while the argument walker only ever runs between a
  * single call's parentheses and doesn't need either.
+ *
+ * Exported for `keys.ts`, which walks the same call sites to EXTRACT keys
+ * (static usage analysis) instead of rewriting them.
  */
-class Scanner {
+export class Scanner {
   private pos = 0;
   /**
    * Tracks `${` interpolation depth inside templates. Each entry is the
@@ -200,7 +203,13 @@ class Scanner {
     return null;
   }
 
-  /** True if the identifier we just read could legally start a call. */
+  /**
+   * True if the identifier we just read could legally start a call. Only a
+   * member access disqualifies it (`obj.t(...)`, and `obj?.t(...)` whose
+   * preceding char is also `.`); a bare `?` before the identifier is a
+   * ternary (`cond ? t('x') : y`) or nullish coalescing (`a ?? t('x')`),
+   * both of which are real calls.
+   */
   private canBeCall(identStart: number): boolean {
     let i = identStart - 1;
     while (i >= 0) {
@@ -214,8 +223,7 @@ class Scanner {
     if (i < 0) {
       return true;
     }
-    const prev = this.src[i];
-    return prev !== '.' && prev !== '?';
+    return this.src[i] !== '.';
   }
 
   /**

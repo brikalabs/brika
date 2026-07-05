@@ -3,8 +3,10 @@
  *
  * Reads the plugin's block, brick, page, and spark definitions, lowers their
  * `meta` (and brick zod `config`) into the matching `package.json` arrays the
- * hub reads, and writes them back. `--check` compares instead of writing and
- * exits non-zero on drift, so CI can guarantee the manifest matches the source.
+ * hub reads, and writes them back. Server actions are statically scanned into
+ * the `actions[]` array (the hub's dispatch allow-list). `--check` compares
+ * instead of writing and exits non-zero on drift, so CI can guarantee the
+ * manifest matches the source.
  *
  * Only kinds that have definitions in source are managed: if no files of a kind
  * are found, the existing array is left untouched (with a warning) rather than
@@ -16,6 +18,7 @@ import { dirname, join, resolve } from 'node:path';
 import { defineCommand } from '@brika/cli';
 import { type GeneratedManifest, generateEntry, generateManifest } from '@brika/compiler';
 import { PluginPackageSchema } from '@brika/schema';
+import { installBuildContext } from '@brika/sdk/collect';
 import pc from 'picocolors';
 import { runEmbeddedBuild, shouldDelegateToEmbeddedCli } from '../embedded-cli';
 
@@ -212,6 +215,10 @@ export async function runBuild(root: string, check: boolean): Promise<boolean> {
   if (shouldDelegateToEmbeddedCli()) {
     return runEmbeddedBuild(root, check);
   }
+  // No-op prelude bridge so plugin modules that reach getContext() at import
+  // time (e.g. defineOAuth) collect cleanly. Lives in the SDK, not the
+  // compiler: the bridge brand is the SDK's contract.
+  installBuildContext();
   const result = await generateManifest(root);
   printDiagnostics(result);
   if (!result.ok) {
@@ -228,6 +235,8 @@ export async function runBuild(root: string, check: boolean): Promise<boolean> {
     bricks: planKind(preserveOrder(result.bricks, pkg.bricks), pkg.bricks),
     pages: planKind(preserveOrder(result.pages, pkg.pages), pkg.pages),
     sparks: planKind(preserveOrder(result.sparks, pkg.sparks), pkg.sparks),
+    tools: planKind(preserveOrder(result.tools, pkg.tools), pkg.tools),
+    actions: planKind(preserveOrder(result.actions, pkg.actions), pkg.actions),
   };
 
   warnUnmanaged(plans, pkg);
@@ -287,10 +296,11 @@ export async function runBuild(root: string, check: boolean): Promise<boolean> {
 export default defineCommand({
   name: 'build',
   description:
-    'Generate the plugin manifest (blocks/bricks/pages/sparks) in package.json from source',
+    'Generate the plugin manifest (blocks/bricks/pages/sparks/actions) in package.json from source',
   details:
     "Lowers each capability's `meta` (and brick zod `config`) into the package.json " +
-    'arrays the hub reads. Use --check in CI to fail when the committed manifest is out of date.',
+    'arrays the hub reads, and scans server actions into `actions[]`. ' +
+    'Use --check in CI to fail when the committed manifest is out of date.',
   options: {
     check: {
       type: 'boolean',

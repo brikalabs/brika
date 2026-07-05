@@ -18,7 +18,7 @@ const h = createTestHarness({
     {
       id: 'test-block',
       name: 'Test Block',
-      category: 'test',
+      category: 'action',
     },
   ],
 });

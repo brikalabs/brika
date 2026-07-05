@@ -116,7 +116,6 @@
   },
   "stats": {
     "feelsLike": "Ressenti",
-    "feelsLikeTemp": "Ressenti {{temp}}",
     "humidity": "Humidité",
     "wind": "Vent",
     "pressure": "Pression"
@@ -133,11 +132,7 @@
     "sun": "Dim"
   },
   "ui": {
-    "forecast": "Prévisions",
     "dayForecast": "Prévisions {{count}} jours",
-    "locationForecast": "Prévisions {{name}}",
-    "locationDayForecast": "{{name}} — Prévisions {{count}} jours",
-    "noData": "Aucune donnée",
     "updated": "Mis à jour {{time}}"
   }
 }
