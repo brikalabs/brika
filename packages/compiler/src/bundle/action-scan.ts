@@ -1,7 +1,9 @@
 /**
- * Shared action-file analysis, used by both the isolate stubber (isolate.ts, so
- * the gate does not compile server-action subtrees as browser code) and the
- * report (report.ts). Pure JS, edge-safe.
+ * THE definition of "what is an action and what is its id", shared by every
+ * consumer: the server/client Bun build plugins (id injection + stubbing), the
+ * isolate stubber (isolate.ts, so the gate does not compile server-action
+ * subtrees as browser code), the report (report.ts) and `brika build`'s
+ * manifest generation. Pure JS, edge-safe.
  *
  * A file is an action file iff, after type-stripping, it still *value*-imports
  * `@brika/sdk/actions`. Export names are read from sucrase's CJS output, where a
@@ -12,6 +14,24 @@
  * `exports.x=` inside a string, which real action files do not contain.
  */
 import { transform } from 'sucrase';
+
+/**
+ * Deterministic action ID from file path + export name:
+ * SHA-256(`relativePath\0exportName`) truncated to 12 hex chars (48 bits).
+ * Order-independent, so ids survive reordering exports or files.
+ *
+ * Uses Web Crypto (native in Bun, Node and workerd) rather than `node:crypto`,
+ * whose browser polyfill throws in a Worker - one implementation for the Bun
+ * build plugins, the manifest generator and the isolate gate report alike.
+ */
+export async function computeActionId(relativePath: string, exportName: string): Promise<string> {
+  const bytes = new TextEncoder().encode(`${relativePath}\0${exportName}`);
+  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  return [...new Uint8Array(digest)]
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('')
+    .slice(0, 12);
+}
 
 const ACTION_REQUIRE = /require\(\s*["']@brika\/sdk\/actions["']\s*\)/;
 const EXPORT_ASSIGN =

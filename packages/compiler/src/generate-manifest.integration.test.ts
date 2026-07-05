@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { computeActionId } from './action-hash';
+import { computeActionId } from './bundle/action-scan';
 import { generateEntry } from './generate-entry';
 import { generateManifest } from './generate-manifest';
 
@@ -356,7 +356,7 @@ export default function GaugeBrick() {
     ]);
     // Each id is exactly what actions-server injects at compile time.
     for (const a of result.actions) {
-      expect(a.id).toBe(computeActionId(a.file, a.name));
+      expect(a.id).toBe(await computeActionId(a.file, a.name));
     }
     // Deterministic output: sorted by id like every other manifest array.
     expect(result.actions.map((a) => a.id)).toEqual(

@@ -1,9 +1,9 @@
-// ── Hashing ─────────────────────────────────────────────────────────────────
-export { computeActionId } from './action-hash';
 // ── Bundler (Bun.build backend; the isolate backend ships as `@brika/compiler/v8`) ─
 // Only BunBundler is consumed via the main entry (the hub); the isolate port,
 // gate, report and stamp helpers are exposed through the ./bun and ./v8 routes.
 export { BunBundler } from './bundle';
+// ── Action analysis (one detector + one hasher, shared with the gate) ───────
+export { actionExports, computeActionId } from './bundle/action-scan';
 // ── Action manifest entries (shared with the ./bun and ./v8 gate report) ────
 export type { ActionEntry } from './bundle/report';
 // ── Bundle port types (one shape for both backends and the raw pipelines) ───

@@ -1,28 +1,29 @@
 import { join, relative } from 'node:path';
 import type { BunPlugin } from 'bun';
-import { computeActionId } from '../action-hash';
+import { actionExports, computeActionId } from '../bundle/action-scan';
 import { pickLoader } from '../loader';
 import type { PluginBuildTransform } from './compose';
-
-const ACTION_IMPORT = '@brika/sdk/actions';
 
 /**
  * Server-side actions transform — detects modules that import from
  * `@brika/sdk/actions` and appends a `__finalizeActions` footer with
  * precomputed action IDs (same hash as the client transform).
  *
- * Detection uses `Bun.Transpiler.scan()`; the transform itself is pure
- * text append, applied to whatever content earlier transforms in the
- * compose chain produced. Order matters: this transform runs AFTER the
- * fs/os shims so the appended footer doesn't see un-shimmed imports
- * (and so the scan walks the same import graph the final bundle sees).
+ * Detection and export listing use the shared `actionExports` scan, so
+ * the injected ids agree with the manifest (`brika build`), the client
+ * stubs and the publish-gate report by construction. The transform
+ * itself is pure text append, applied to whatever content earlier
+ * transforms in the compose chain produced. Order matters: this
+ * transform runs AFTER the fs/os shims so the appended footer doesn't
+ * see un-shimmed imports (and so the scan walks the same import graph
+ * the final bundle sees).
  */
 export function brikaServerActionsTransform(pluginRoot: string): PluginBuildTransform {
   const srcPrefix = `${join(pluginRoot, 'src')}/`;
 
   return {
     name: 'brika-server-actions',
-    transform(content, ctx) {
+    async transform(content, ctx) {
       if (!ctx.path.startsWith(srcPrefix)) {
         return content;
       }
@@ -30,15 +31,21 @@ export function brikaServerActionsTransform(pluginRoot: string): PluginBuildTran
         return content;
       }
 
-      const { imports, exports } = new Bun.Transpiler({ loader: ctx.loader }).scan(content);
-      if (!imports.some((i) => i.path === ACTION_IMPORT) || exports.length === 0) {
+      const exports = actionExports(content, ctx.loader === 'tsx');
+      if (!exports || exports.length === 0) {
         return content;
       }
 
       const rel = relative(pluginRoot, ctx.path);
-      const idMap = Object.fromEntries(exports.map((name) => [name, computeActionId(rel, name)]));
+      const idMap = Object.fromEntries(
+        await Promise.all(
+          exports.map(
+            async (name): Promise<[string, string]> => [name, await computeActionId(rel, name)]
+          )
+        )
+      );
       const exportList = exports.join(', ');
-      const finalization = `\nimport{__finalizeActions}from'${ACTION_IMPORT}';__finalizeActions(${JSON.stringify(idMap)},{${exportList}});`;
+      const finalization = `\nimport{__finalizeActions}from'@brika/sdk/actions';__finalizeActions(${JSON.stringify(idMap)},{${exportList}});`;
       return content + finalization;
     },
   };

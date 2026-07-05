@@ -14,21 +14,7 @@
  * module (`generateManifest` -> `Bun.build`), which is Bun-only; that stays a
  * `brika build`-time step, which is why the result is baked into package.json.
  */
-import { actionExports } from './action-scan';
-
-/**
- * The RPC id for an action, matching `computeActionId` (sha256 of
- * `path\0name`, 12 hex). Uses Web Crypto (native in Bun, Node and workerd)
- * rather than `node:crypto`, whose browser polyfill throws in a Worker.
- */
-async function actionId(path: string, name: string): Promise<string> {
-  const bytes = new TextEncoder().encode(`${path}\0${name}`);
-  const digest = await crypto.subtle.digest('SHA-256', bytes);
-  return [...new Uint8Array(digest)]
-    .map((b) => b.toString(16).padStart(2, '0'))
-    .join('')
-    .slice(0, 12);
-}
+import { actionExports, computeActionId } from './action-scan';
 
 /** One server action: an export of a file that imports `@brika/sdk/actions`. */
 export interface ActionEntry {
@@ -88,7 +74,7 @@ export function scanActions(sources: ReadonlyMap<string, string>): Promise<Actio
   }
   return Promise.all(
     pending.map(async (p) => ({
-      id: await actionId(p.file, p.name),
+      id: await computeActionId(p.file, p.name),
       file: p.file,
       name: p.name,
     }))
