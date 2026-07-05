@@ -18,6 +18,7 @@ import { dirname, join, resolve } from 'node:path';
 import { defineCommand } from '@brika/cli';
 import { type GeneratedManifest, generateEntry, generateManifest } from '@brika/compiler';
 import { PluginPackageSchema } from '@brika/schema';
+import { installBuildContext } from '@brika/sdk/collect';
 import pc from 'picocolors';
 import { runEmbeddedBuild, shouldDelegateToEmbeddedCli } from '../embedded-cli';
 
@@ -214,6 +215,10 @@ export async function runBuild(root: string, check: boolean): Promise<boolean> {
   if (shouldDelegateToEmbeddedCli()) {
     return runEmbeddedBuild(root, check);
   }
+  // No-op prelude bridge so plugin modules that reach getContext() at import
+  // time (e.g. defineOAuth) collect cleanly. Lives in the SDK, not the
+  // compiler: the bridge brand is the SDK's contract.
+  installBuildContext();
   const result = await generateManifest(root);
   printDiagnostics(result);
   if (!result.ok) {

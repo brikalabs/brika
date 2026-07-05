@@ -133,7 +133,7 @@ const localId = z
   .string()
   .regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]*$/, 'id may only contain letters, digits, "-" and "_"');
 
-const ToolSchema = z.object({
+export const ToolSchema = z.object({
   id: localId.describe('Tool identifier (local to plugin)'),
   description: z.optional(z.string().describe('Human-readable description')),
   icon: z.optional(z.string().describe('Lucide icon name')),
@@ -145,7 +145,7 @@ const ToolSchema = z.object({
   ),
 });
 
-const BlockSchema = z.object({
+export const BlockSchema = z.object({
   id: localId.describe('Block identifier (local to plugin)'),
   name: z.optional(z.string().describe('Display name')),
   description: z.optional(z.string().describe('Human-readable description')),
@@ -173,7 +173,7 @@ const BlockSchema = z.object({
   ),
 });
 
-const SparkSchema = z.object({
+export const SparkSchema = z.object({
   id: localId.describe('Spark identifier (local to plugin)'),
   name: z.optional(z.string().describe('Display name')),
   description: z.optional(z.string().describe('Human-readable description')),
@@ -185,7 +185,7 @@ const SparkSchema = z.object({
  * (`computeActionId`: sha256 of `file\0name`, 12 hex chars); the hub only
  * dispatches action calls whose id appears in this array.
  */
-const ActionSchema = z.object({
+export const ActionSchema = z.object({
   id: z
     .string()
     .regex(/^[0-9a-f]{12}$/, 'id must be the 12-hex build-time action hash')
@@ -280,7 +280,7 @@ export type PreferenceSchema = z.infer<typeof PreferenceSchema>;
 
 const BrickFamilySchema = z.literal(['sm', 'md', 'lg']);
 
-const BrickSchema = z.object({
+export const BrickSchema = z.object({
   id: localId.describe('Brick identifier (local to plugin)'),
   name: z.optional(z.string().describe('Display name')),
   description: z.optional(z.string().describe('Human-readable description')),
@@ -300,10 +300,20 @@ const BrickSchema = z.object({
 // Page Schema (custom tabs on plugin detail view)
 // ============================================================================
 
-const PageSchema = z.object({
+export const PageSchema = z.object({
   id: localId.describe('Page identifier (local to plugin)'),
   icon: z.optional(z.string().describe('Lucide icon name')),
 });
+
+// One inferred type per entity schema: THE manifest entry shapes. Every other
+// package (sdk bridge, hub prelude, compiler, @brika/plugin) derives from
+// these instead of hand-mirroring, so the schema cannot drift from the types.
+export type ToolSchema = z.infer<typeof ToolSchema>;
+export type BlockSchema = z.infer<typeof BlockSchema>;
+export type SparkSchema = z.infer<typeof SparkSchema>;
+export type ActionSchema = z.infer<typeof ActionSchema>;
+export type BrickSchema = z.infer<typeof BrickSchema>;
+export type PageSchema = z.infer<typeof PageSchema>;
 
 // ============================================================================
 // Resources (per-plugin runtime caps, opt-in)

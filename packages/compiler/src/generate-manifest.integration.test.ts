@@ -1,6 +1,9 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+// The build context comes from the SDK (a compiler devDependency used only by
+// tests), mirroring what the `brika` CLI installs before generateManifest.
+import { installBuildContext } from '@brika/sdk/collect';
 import { computeActionId } from './bundle/action-scan';
 import { generateEntry } from './generate-entry';
 import { generateManifest } from './generate-manifest';
@@ -33,6 +36,7 @@ describe('generateManifest', () => {
   let root: string;
 
   beforeEach(async () => {
+    installBuildContext();
     root = await mkdtemp(join(PKG_ROOT, 'genman-'));
     await mkdir(join(root, 'src', 'blocks'), { recursive: true });
   });

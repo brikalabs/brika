@@ -10,6 +10,7 @@
  */
 
 import type { Channel } from '@brika/ipc';
+import type { BlockSchema, BrickSchema, PageSchema, SparkSchema } from '@brika/schema/plugin';
 import type {
   HubLocation,
   Json,
@@ -38,20 +39,18 @@ export interface PreferenceOption {
 
 // ---- Manifest ----
 
+/**
+ * The manifest slice the prelude hands the SDK: name/version plus the
+ * capability arrays, typed by the `@brika/schema` entity schemas (the single
+ * source of truth for manifest entry shapes).
+ */
 export interface PluginManifest {
   name: string;
   version: string;
-  blocks?: Array<{
-    id: string;
-    name: string;
-    description?: string;
-    category: string;
-    icon?: string;
-    color?: string;
-  }>;
-  sparks?: Array<{ id: string; name: string; description?: string }>;
-  bricks?: Array<{ id: string }>;
-  pages?: Array<{ id: string; icon?: string }>;
+  blocks?: BlockSchema[];
+  sparks?: SparkSchema[];
+  bricks?: BrickSchema[];
+  pages?: PageSchema[];
 }
 
 // ---- Bridge Interface ----

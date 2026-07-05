@@ -23,6 +23,10 @@
   "exports": {
     ".": "./src/index.ts",
     "./plugin": "./src/plugin.ts",
+    "./collect": "./src/collect.ts",
+    "./collect-sink": "./src/collect-sink.ts",
+    "./browser-bridge": "./src/browser-bridge.ts",
+    "./fs-runtime": "./src/fs-runtime.ts",
     "./plugin.json": "./dist/plugin.schema.json"
   },
   "scripts": {

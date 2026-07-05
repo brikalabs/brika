@@ -3,23 +3,18 @@
  *
  * Walks up from Bun.main to find the nearest package.json.
  * Cached so multiple bridge methods can access it.
+ *
+ * The type is the capability slice of `@brika/schema`'s PluginPackageSchema
+ * (type-only import: nothing of zod reaches the prelude bundle), so the
+ * prelude can never drift from the manifest schema the hub validates against.
  */
 
-export interface PluginManifest {
-  name: string;
-  version: string;
-  blocks?: Array<{
-    id: string;
-    name: string;
-    description?: string;
-    category: string;
-    icon?: string;
-    color?: string;
-  }>;
-  sparks?: Array<{ id: string; name: string; description?: string }>;
-  bricks?: Array<{ id: string }>;
-  pages?: Array<{ id: string; icon?: string }>;
-}
+import type { PluginPackageSchema } from '@brika/schema';
+
+export type PluginManifest = Pick<
+  PluginPackageSchema,
+  'name' | 'version' | 'blocks' | 'sparks' | 'bricks' | 'pages' | 'actions' | 'tools'
+>;
 
 let cached: { manifest: PluginManifest; rootDir: string } | null = null;
 

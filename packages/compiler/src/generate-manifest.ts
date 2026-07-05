@@ -28,13 +28,12 @@ import {
   type CollectedManifest,
   type CollectedSpark,
   drainCollector,
-  installBuildContext,
   installCollector,
   isZodSchema,
   type PreferenceEntry,
   parseBrickMeta,
   zodToPreferences,
-} from '@brika/sdk/collect';
+} from '@brika/schema/collect';
 import { z } from 'zod';
 import { errorMessage, readBrowserModule } from './browser-extract';
 import { type ActionEntry, scanActions } from './bundle/report';
@@ -105,12 +104,18 @@ interface ImportResult {
   errors: ValidationDiagnostic[];
 }
 
-/** Import each module under an installed collector and return what it captured. */
+/**
+ * Import each module under an installed collector and return what it captured.
+ *
+ * A module that reaches the SDK's `getContext()` at import time (e.g.
+ * `defineOAuth` registering routes) needs a no-op prelude bridge to be
+ * installed FIRST via `@brika/sdk/collect`'s `installBuildContext()`. The
+ * `brika` CLI does that before calling {@link generateManifest}; it lives in
+ * the SDK (not here) because the bridge brand is the SDK's contract, and the
+ * compiler deliberately has no `@brika/sdk` dependency.
+ */
 async function importModules(files: readonly string[]): Promise<ImportResult> {
   const errors: ValidationDiagnostic[] = [];
-  // A no-op prelude bridge so modules that reach getContext() at import time
-  // (e.g. defineOAuth registering routes) run their define* calls without a hub.
-  installBuildContext();
   installCollector();
   for (const file of files) {
     importSalt += 1;

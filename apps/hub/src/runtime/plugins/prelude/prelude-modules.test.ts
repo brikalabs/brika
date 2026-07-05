@@ -34,6 +34,7 @@ import {
   updateBrickConfig,
   updatePreference,
 } from '@brika/ipc/contract';
+import type { BlockSchema } from '@brika/schema/plugin';
 import { waitFor } from '@brika/testing';
 import { setupActions } from '@/runtime/plugins/prelude/actions';
 import { type RegisterBlockSpec, setupBlocks } from '@/runtime/plugins/prelude/blocks';
@@ -587,8 +588,8 @@ describe('Prelude Bricks', () => {
 // ─── Blocks ───────────────────────────────────────────────────────────────────
 
 describe('Prelude Blocks', () => {
-  const blockMeta = new Map([
-    ['timer', { id: 'timer', name: 'Timer', category: 'util', description: 'A timer block' }],
+  const blockMeta = new Map<string, BlockSchema>([
+    ['timer', { id: 'timer', name: 'Timer', category: 'flow', description: 'A timer block' }],
   ]);
   let channel: Channel;
   let sent: WireMessage[];
@@ -630,7 +631,7 @@ describe('Prelude Blocks', () => {
     const block = msg.block as Record<string, unknown>;
     expect(block.id).toBe('timer');
     expect(block.name).toBe('Timer');
-    expect(block.category).toBe('util');
+    expect(block.category).toBe('flow');
   });
 
   test('startBlock RPC starts a reactive block', async () => {

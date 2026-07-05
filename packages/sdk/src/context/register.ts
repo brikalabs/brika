@@ -7,6 +7,7 @@
  * all registered setups and applies their methods to the Context instance.
  */
 
+import type { BlockSchema, BrickSchema, PageSchema, SparkSchema } from '@brika/schema/plugin';
 import { PRELUDE_BRAND, type PreludeBridge } from '../bridge';
 import type { AnyObj, LogLevel } from '../types';
 
@@ -22,35 +23,16 @@ export function requireBridge(): PreludeBridge {
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
+// Manifest entry shapes come from `@brika/schema` (the single source of truth);
+// the Decl aliases keep this module's historical names for its consumers.
 
-export interface BlockDecl {
-  id: string;
-  name: string;
-  description?: string;
-  category: string;
-  icon?: string;
-  color?: string;
-}
+export type BlockDecl = BlockSchema;
 
-export interface SparkDecl {
-  id: string;
-  name: string;
-  description?: string;
-}
+export type SparkDecl = SparkSchema;
 
-export interface BrickDecl {
-  id: string;
-  name?: string;
-  description?: string;
-  category?: string;
-  icon?: string;
-  color?: string;
-}
+export type BrickDecl = BrickSchema;
 
-export interface PageDecl {
-  id: string;
-  icon?: string;
-}
+export type PageDecl = PageSchema;
 
 export interface Manifest {
   name: string;

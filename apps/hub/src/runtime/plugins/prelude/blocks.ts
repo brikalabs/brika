@@ -24,6 +24,7 @@ import {
   type ToolDefinition,
   type ToolResult,
 } from '@brika/ipc/contract';
+import type { BlockSchema } from '@brika/schema/plugin';
 
 // ---- Structural types (no @brika/flow import needed) ----
 
@@ -72,17 +73,7 @@ export interface RegisterBlockSpec {
 export function setupBlocks(
   channel: Channel,
   log: (level: LogLevelType, message: string) => void,
-  declaredBlocks: ReadonlyMap<
-    string,
-    {
-      id: string;
-      name: string;
-      description?: string;
-      category: string;
-      icon?: string;
-      color?: string;
-    }
-  >
+  declaredBlocks: ReadonlyMap<string, BlockSchema>
 ) {
   const registered = new Set<string>();
   const reactiveBlocks = new Map<string, (ctx: BlockRuntimeContext) => BlockInstance>();
@@ -171,7 +162,8 @@ export function setupBlocks(
       channel.send(registerBlockMsg, {
         block: {
           id,
-          name: meta.name,
+          // The IPC contract requires a display name; the manifest's is optional.
+          name: meta.name ?? id,
           description: meta.description,
           category: meta.category,
           icon: meta.icon,

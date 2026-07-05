@@ -3,7 +3,7 @@
  * bundler and no runtime API, so it runs identically under Bun and in a Worker.
  */
 
-import { BRIDGE_GLOBALS } from '@brika/sdk/browser-bridge';
+import { BRIDGE_GLOBALS } from '@brika/schema/browser-bridge';
 import { injectCallSites } from '../plugins/i18n-call-site/scanner';
 
 /**

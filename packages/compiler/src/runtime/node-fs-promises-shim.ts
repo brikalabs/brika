@@ -16,7 +16,7 @@
 
 /* eslint-disable no-var */
 
-import type { BrikaFsRuntime } from '@brika/sdk/grants/fs-runtime';
+import type { BrikaFsRuntime } from '@brika/schema/fs-runtime';
 
 declare global {
   var __brika_fs: BrikaFsRuntime | undefined;

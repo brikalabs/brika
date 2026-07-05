@@ -9,7 +9,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import type { BrikaFsRuntime } from '@brika/sdk/grants/fs-runtime';
+import type { BrikaFsRuntime } from '@brika/schema/fs-runtime';
 import {
   access,
   appendFile,
