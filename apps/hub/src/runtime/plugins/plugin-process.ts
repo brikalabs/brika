@@ -195,6 +195,14 @@ export class PluginProcess {
   readonly #sparks = new Set<string>();
   readonly #brickTypes = new Set<string>();
   readonly #actions = new Set<string>();
+  /**
+   * Action ids declared in the manifest `actions[]` array (`brika build`
+   * output). The dispatch allow-list: like blocks/sparks/bricks, an undeclared
+   * action is never registered and never callable. Gating dispatch on the
+   * static manifest (not on `#actions`) keeps a call that races plugin startup
+   * from being misclassified as unknown.
+   */
+  readonly #declaredActions: ReadonlySet<string>;
   readonly #sparkSubscriptions = new Map<string, () => void>(); // subscriptionId -> unsubscribe
   #stopped = false;
   #grants: GrantRegistry | undefined;
@@ -252,6 +260,7 @@ export class PluginProcess {
     this.version = info.version;
     this.metadata = info.metadata;
     this.locales = info.locales;
+    this.#declaredActions = new Set((info.metadata.actions ?? []).map((a) => a.id));
 
     this.#rssMonitor = new RssSoftLimitMonitor(
       this.config.rssSoftLimitBytes,
@@ -566,6 +575,16 @@ export class PluginProcess {
         error: { message: 'Plugin stopped', code: 'PLUGIN_STOPPED' },
       };
     }
+    if (!this.#declaredActions.has(actionId)) {
+      return {
+        ok: false,
+        error: {
+          message: `Action "${actionId}" not found`,
+          name: 'ActionNotFound',
+          code: 'ACTION_NOT_FOUND',
+        },
+      };
+    }
     try {
       return await this.#tracked(() =>
         this.#channel.call(
@@ -833,6 +852,9 @@ export class PluginProcess {
     });
 
     this.#channel.on(registerAction, ({ id }) => {
+      if (!this.#declaredActions.has(id)) {
+        return; // Undeclared actions ignored
+      }
       this.#actions.add(id);
     });
 

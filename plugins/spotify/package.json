@@ -130,6 +130,58 @@
       "nodeView": true
     }
   ],
+  "actions": [
+    {
+      "id": "0844025241d0",
+      "file": "src/actions.ts",
+      "name": "listDevices"
+    },
+    {
+      "id": "458c261fe5ef",
+      "file": "src/actions.ts",
+      "name": "doSeek"
+    },
+    {
+      "id": "4ffd67a8a78e",
+      "file": "src/actions.ts",
+      "name": "doNext"
+    },
+    {
+      "id": "5951c5f318c4",
+      "file": "src/actions.ts",
+      "name": "searchTracks"
+    },
+    {
+      "id": "7bbcd121a04f",
+      "file": "src/actions.ts",
+      "name": "getNowPlaying"
+    },
+    {
+      "id": "b9d819828ab1",
+      "file": "src/actions.ts",
+      "name": "playTrack"
+    },
+    {
+      "id": "bd6973c364c5",
+      "file": "src/actions.ts",
+      "name": "doPlay"
+    },
+    {
+      "id": "c0bc50df1145",
+      "file": "src/actions.ts",
+      "name": "doPause"
+    },
+    {
+      "id": "c5bdfc0a0f58",
+      "file": "src/actions.ts",
+      "name": "doSetVolume"
+    },
+    {
+      "id": "f265082e17d2",
+      "file": "src/actions.ts",
+      "name": "doPrevious"
+    }
+  ],
   "sparks": [
     {
       "id": "track-changed",

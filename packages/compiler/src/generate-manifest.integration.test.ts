@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { computeActionId } from './action-hash';
 import { generateEntry } from './generate-entry';
 import { generateManifest } from './generate-manifest';
 
@@ -324,6 +325,43 @@ export default function GaugeBrick() {
         (d) => d.level === 'error' && d.message.includes('orphan') && d.message.includes('view')
       )
     ).toBe(true);
+  });
+
+  test('scans server actions into actions[] with server-build-parity ids', async () => {
+    const ACTIONS_SRC = [
+      "import { defineAction } from '@brika/sdk/actions';",
+      'export const scan = defineAction(async () => {});',
+      'export default defineAction(async () => {});',
+    ].join('\n');
+    await writeFile(join(root, 'src', 'actions.ts'), ACTIONS_SRC);
+    // Actions register from wherever the server graph imports them, so the
+    // scan covers all of src/, not just the conventional actions dir.
+    await mkdir(join(root, 'src', 'pages', 'files'), { recursive: true });
+    await writeFile(
+      join(root, 'src', 'pages', 'files', 'actions.ts'),
+      "import { defineAction } from '@brika/sdk/actions';\nexport const list = defineAction(async () => {});\n"
+    );
+    // Test files never reach the entry graph; they must not be listed.
+    await writeFile(join(root, 'src', 'actions.test.ts'), ACTIONS_SRC);
+    // A file without a value-import of @brika/sdk/actions is not an action file.
+    await writeFile(join(root, 'src', 'util.ts'), 'export const x = 1;\n');
+
+    const result = await generateManifest(root);
+
+    expect(result.ok).toBe(true);
+    expect(result.actions.map((a) => `${a.file}#${a.name}`).sort()).toEqual([
+      'src/actions.ts#default',
+      'src/actions.ts#scan',
+      'src/pages/files/actions.ts#list',
+    ]);
+    // Each id is exactly what actions-server injects at compile time.
+    for (const a of result.actions) {
+      expect(a.id).toBe(computeActionId(a.file, a.name));
+    }
+    // Deterministic output: sorted by id like every other manifest array.
+    expect(result.actions.map((a) => a.id)).toEqual(
+      [...result.actions.map((a) => a.id)].sort((x, y) => x.localeCompare(y))
+    );
   });
 
   test('pages get id from filename + icon from meta (ui-kit stubbed)', async () => {

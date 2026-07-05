@@ -43,7 +43,7 @@ export default {
               sparks: r.report.manifest.sparks.length,
               tools: r.report.manifest.tools.length,
             },
-            actions: r.report.actions.map((a) => `${a.name}@${a.actionId}`),
+            actions: r.report.actions.map((a) => `${a.name}@${a.id}`),
           }
         : { ok: false, error: r.error },
       logs,

@@ -4,6 +4,8 @@ export { computeActionId } from './action-hash';
 // Only BunBundler is consumed via the main entry (the hub); the isolate port,
 // gate, report and stamp helpers are exposed through the ./bun and ./v8 routes.
 export { BunBundler } from './bundle';
+// ── Action manifest entries (shared with the ./bun and ./v8 gate report) ────
+export type { ActionEntry } from './bundle/report';
 export type {
   ClientBundleChunk,
   ClientBundleEntry,

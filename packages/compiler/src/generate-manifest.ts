@@ -10,11 +10,16 @@
  * safe when no server module imports its descriptor (otherwise react leaks into
  * the plugin subprocess), so bricks that push data keep the descriptor in a
  * `*.brick.ts`. All are lowered into the `blocks[]` / `sparks[]` / `bricks[]` /
- * `pages[]` shapes the hub reads from `package.json`. The hub contract is
- * unchanged: this only generates the committed arrays.
+ * `pages[]` shapes the hub reads from `package.json`.
+ *
+ * Actions are different: they are discovered by the same static source scan the
+ * publish gate report uses ({@link scanActions}, no module evaluation), so the
+ * committed `actions[]` array and the registry's independent re-derivation
+ * agree by construction. Each entry's `id` is the RPC hash the server build
+ * injects (`computeActionId`), which the hub uses as the dispatch allow-list.
  */
 
-import { basename, join, resolve } from 'node:path';
+import { basename, join, relative, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import {
   type BrickMetaInput,
@@ -32,7 +37,15 @@ import {
 } from '@brika/sdk/collect';
 import { z } from 'zod';
 import { errorMessage, readBrowserModule } from './browser-extract';
-import { blockFiles, brickDescriptorFiles, brickFiles, pageFiles, sparkFiles } from './scan';
+import { type ActionEntry, scanActions } from './bundle/report';
+import {
+  blockFiles,
+  brickDescriptorFiles,
+  brickFiles,
+  pageFiles,
+  sourceFiles,
+  sparkFiles,
+} from './scan';
 import type { ValidationDiagnostic } from './validate';
 
 /** A generated manifest `blocks[]` entry (mirrors `@brika/schema` BlockSchema). */
@@ -77,6 +90,8 @@ export interface GeneratedManifest {
   sparks: GeneratedSpark[];
   bricks: GeneratedBrick[];
   pages: GeneratedPage[];
+  /** Server actions (`{ id, file, name }`), statically scanned - see header. */
+  actions: ActionEntry[];
   diagnostics: ValidationDiagnostic[];
   /** False when any diagnostic is an error. */
   ok: boolean;
@@ -368,6 +383,22 @@ async function buildPages(
 const byId = (a: { id: string }, b: { id: string }): number => a.id.localeCompare(b.id);
 
 /**
+ * Discover the plugin's server actions with the shared publish-gate scan
+ * ({@link scanActions}) over every `src/` module, keyed by root-relative path
+ * so each id hashes exactly what `actions-server` injects at compile time.
+ */
+async function buildActions(root: string): Promise<ActionEntry[]> {
+  const files = await sourceFiles(root);
+  const entries = await Promise.all(
+    files.map(async (file): Promise<[string, string]> => {
+      const key = relative(root, file).replaceAll('\\', '/');
+      return [key, await Bun.file(file).text()];
+    })
+  );
+  return scanActions(new Map(entries));
+}
+
+/**
  * Generate the `blocks[]`, `sparks[]`, `bricks[]`, and `pages[]` manifest arrays
  * from plugin source. Blocks must carry `meta` (the manifest requires a
  * category); a block without `meta` is an error so a capability is never
@@ -376,13 +407,16 @@ const byId = (a: { id: string }, b: { id: string }): number => a.id.localeCompar
  */
 export async function generateManifest(pluginRoot: string): Promise<GeneratedManifest> {
   const root = resolve(pluginRoot);
-  const [blocks, sparks, descriptorPaths, legacyBrickPaths, pagePaths] = await Promise.all([
-    blockFiles(root),
-    sparkFiles(root),
-    brickDescriptorFiles(root),
-    brickFiles(root),
-    pageFiles(root),
-  ]);
+  const [blocks, sparks, descriptorPaths, legacyBrickPaths, pagePaths, actions] = await Promise.all(
+    [
+      blockFiles(root),
+      sparkFiles(root),
+      brickDescriptorFiles(root),
+      brickFiles(root),
+      pageFiles(root),
+      buildActions(root),
+    ]
+  );
   const { collected, errors } = await importModules([...blocks, ...sparks, ...descriptorPaths]);
   const diagnostics: ValidationDiagnostic[] = [...errors];
 
@@ -410,6 +444,7 @@ export async function generateManifest(pluginRoot: string): Promise<GeneratedMan
     sparks: dedupeById(collected.sparks).map(toSparkEntry).sort(byId),
     bricks: [...descriptorBricks, ...legacyBricks].sort(byId),
     pages: (await buildPages(pagePaths, diagnostics)).sort(byId),
+    actions: [...actions].sort(byId),
     diagnostics,
     ok: diagnostics.every((d) => d.level !== 'error'),
   };

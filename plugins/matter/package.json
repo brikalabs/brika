@@ -105,6 +105,43 @@
       "icon": "cpu"
     }
   ],
+  "actions": [
+    {
+      "id": "0844025241d0",
+      "file": "src/actions.ts",
+      "name": "listDevices"
+    },
+    {
+      "id": "1fe11e85d2d2",
+      "file": "src/actions.ts",
+      "name": "remove"
+    },
+    {
+      "id": "6345c4e9d612",
+      "file": "src/actions.ts",
+      "name": "commission"
+    },
+    {
+      "id": "77ec3398f4a2",
+      "file": "src/actions.ts",
+      "name": "getDevices"
+    },
+    {
+      "id": "c5a593a20e6c",
+      "file": "src/actions.ts",
+      "name": "scan"
+    },
+    {
+      "id": "e7983f049bc6",
+      "file": "src/actions.ts",
+      "name": "doDeviceCommand"
+    },
+    {
+      "id": "eb47885388d3",
+      "file": "src/actions.ts",
+      "name": "command"
+    }
+  ],
   "bricks": [
     {
       "id": "devices",

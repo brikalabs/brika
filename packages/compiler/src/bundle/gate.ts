@@ -6,10 +6,10 @@
  * `compilePluginGate`.
  *
  * Free of the Bun `output-version` macro and `Bun.build`, so wrangler/esbuild
- * can bundle it. It is intended to be called by the registry at `/-/publish`:
- * untar the uploaded plugin (the registry already does), hand the sources here,
- * and REJECT the publish when the plugin does not compile. Not yet wired into
- * the registry; exercised today by `cf-test/` and `gate.test.ts`.
+ * can bundle it. registry.brika.dev calls this at `/-/publish` (see the store
+ * repo's `manifest-validator.ts`): it untars the uploaded plugin, hands the
+ * sources here, REJECTS the publish when the plugin does not compile, and
+ * persists the returned report (`{ manifest, actions }`) on the version.
  */
 import { IsolateBundler } from './isolate';
 import type { PluginReport } from './report';

@@ -34,6 +34,42 @@ describe('PluginPackageSchema — grants', () => {
   });
 });
 
+describe('PluginPackageSchema — actions', () => {
+  test('parses a manifest with a generated actions array', () => {
+    const result = PluginPackageSchema.safeParse({
+      ...validManifest,
+      actions: [
+        { id: '0844025241d0', file: 'src/actions.ts', name: 'listDevices' },
+        { id: 'e73eb4f0eb95', file: 'src/pages/files/actions.ts', name: 'default' },
+      ],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  test('parses a manifest with no actions field (optional)', () => {
+    const result = PluginPackageSchema.safeParse(validManifest);
+    expect(result.success).toBe(true);
+  });
+
+  test('rejects an action id that is not the 12-hex build hash', () => {
+    for (const id of ['do-stuff', '0844', '0844025241D0', '0844025241d0ff']) {
+      const result = PluginPackageSchema.safeParse({
+        ...validManifest,
+        actions: [{ id, file: 'src/actions.ts', name: 'x' }],
+      });
+      expect(result.success).toBe(false);
+    }
+  });
+
+  test('rejects an action entry missing file or name', () => {
+    const result = PluginPackageSchema.safeParse({
+      ...validManifest,
+      actions: [{ id: '0844025241d0' }],
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
 function parseResources(fs: Record<string, unknown>) {
   return PluginPackageSchema.safeParse({ ...validManifest, resources: { fs } });
 }
