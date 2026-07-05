@@ -1,5 +1,11 @@
 import { basename } from 'node:path';
-import type { BunPlugin } from 'bun';
+import type { BuildOutput, BunPlugin } from 'bun';
+import {
+  type BundleChunk,
+  type BundleEntry,
+  CHUNK_PREFIX,
+  type RawBundleResult,
+} from './bundle/types';
 import { brikaActionsPlugin } from './plugins/actions-client';
 import { brikaExternalsPlugin } from './plugins/externals';
 import { brikaForceSideEffectsPlugin } from './plugins/force-side-effects';
@@ -24,16 +30,6 @@ export interface ClientCompileOptions {
 export type ClientCompileResult =
   | { success: true; js: string }
   | { success: false; errors: string[] };
-
-/**
- * Filename prefix Bun gives every shared chunk a client bundle emits.
- *
- * Picked to be distinctive so it cannot collide with a plugin's own module ids
- * (brick/page/block ids never start with `_`). An entry references a chunk via
- * a relative `import './<prefix><hash>.js'`, so the hub serves chunks from the
- * same `/api/modules` route, special-casing any file whose id has this prefix.
- */
-export const CLIENT_CHUNK_PREFIX = '_brika_chunk_';
 
 /** The build inputs both client compile paths share, independent of entrypoints. */
 interface ClientPluginOptions {
@@ -83,9 +79,16 @@ const clientBuildBase = {
   throw: false,
 } as const;
 
+/** The failed-build error messages, one per Bun log entry. */
+const buildErrors = (result: BuildOutput): string[] => result.logs.map((l) => l.message);
+
 /**
  * Compile a single client-side module (page or brick) for the browser.
  * Returns the bundled JS string on success.
+ *
+ * Deliberately NOT expressed via {@link compileClientBundle}: this path builds
+ * without code splitting so the output is one self-contained file, which is
+ * what the hub's standalone fallback serves when a kind build fails.
  *
  * Action files are detected automatically via `Bun.Transpiler.scan()`
  * (no pre-scanning needed). Files importing `@brika/sdk/actions` are
@@ -101,10 +104,7 @@ export async function compileClientModule(
   });
 
   if (!result.success) {
-    return {
-      success: false,
-      errors: result.logs.map((l) => l.message),
-    };
+    return { success: false, errors: buildErrors(result) };
   }
 
   const [output] = result.outputs;
@@ -132,65 +132,51 @@ export interface ClientBundleOptions {
   extraPlugins?: BunPlugin[];
 }
 
-/** One compiled entry point of a bundle, mapped back to its source entrypoint. */
-export interface ClientBundleEntry {
-  /** Absolute path of the source `.tsx` entrypoint this output came from. */
-  entrypoint: string;
-  /** The entry's bundled JS (imports any shared chunks by relative path). */
-  js: string;
-}
-
-/** One shared code chunk extracted across the bundle's entrypoints. */
-export interface ClientBundleChunk {
-  /** Chunk filename without extension, e.g. `_brika_chunk_54bngp5g`. */
-  name: string;
-  /** The chunk's bundled JS. */
-  js: string;
-}
-
-export type ClientBundleResult =
-  | { success: true; entries: ClientBundleEntry[]; chunks: ClientBundleChunk[] }
-  | { success: false; errors: string[] };
-
-/** Map an entrypoint's basename (no extension) back to its absolute path. */
-function entrypointByName(entrypoints: string[]): Map<string, string> {
-  const map = new Map<string, string>();
-  for (const abs of entrypoints) {
-    map.set(basename(abs).replace(/\.[tj]sx?$/, ''), abs);
-  }
-  return map;
-}
+/** An entrypoint's output name: its basename without the source extension. */
+const outputName = (abs: string): string => basename(abs).replace(/\.[tj]sx?$/, '');
 
 /**
- * Compile several client modules together with code splitting so shared
- * dependencies (e.g. recharts pulled in by multiple bricks) land in a single
- * chunk instead of being duplicated into every entry's bundle.
- *
- * Entry outputs are named `[name].js` (the source basename) so each maps back
- * to its entrypoint; chunks are named `_brika_chunk_[hash].js`. The host serves
- * both from `/api/modules`, and each entry references its chunks via a relative
- * `import './_brika_chunk_<hash>.js'` that resolves against the entry's URL.
+ * Split entrypoints into batches with no repeated output name inside a batch.
+ * Bun names entry outputs `[name].js` from the source basename (the output
+ * layout must stay flat so entries import chunks as `./_brika_chunk_<hash>.js`),
+ * so two same-named entrypoints across kinds (`bricks/devices.tsx` +
+ * `pages/devices.tsx`) are ambiguous within one build: batching restores an
+ * unambiguous output -> entrypoint mapping. Almost every call yields a single
+ * batch; a collision costs one extra build (and possibly a duplicated chunk),
+ * never a wrong mapping.
  */
-export async function compileClientBundle(opts: ClientBundleOptions): Promise<ClientBundleResult> {
-  if (opts.entrypoints.length === 0) {
-    return { success: true, entries: [], chunks: [] };
+function batchByName(entrypoints: string[]): string[][] {
+  const batches: string[][] = [];
+  const seen = new Map<string, number>();
+  for (const abs of entrypoints) {
+    const name = outputName(abs);
+    const batch = seen.get(name) ?? 0;
+    seen.set(name, batch + 1);
+    (batches[batch] ??= []).push(abs);
   }
+  return batches;
+}
 
+/** One `Bun.build` over a batch of unique-named entrypoints, outputs mapped back. */
+async function buildBatch(
+  entrypoints: string[],
+  opts: ClientBundleOptions
+): Promise<RawBundleResult> {
   const result = await Bun.build({
-    entrypoints: opts.entrypoints,
+    entrypoints,
     plugins: clientPlugins(opts),
     splitting: true,
-    naming: { entry: '[name].[ext]', chunk: `${CLIENT_CHUNK_PREFIX}[hash].[ext]` },
+    naming: { entry: '[name].[ext]', chunk: `${CHUNK_PREFIX}[hash].[ext]` },
     ...clientBuildBase,
   });
 
   if (!result.success) {
-    return { success: false, errors: result.logs.map((l) => l.message) };
+    return { success: false, errors: buildErrors(result) };
   }
 
-  const byName = entrypointByName(opts.entrypoints);
-  const entries: ClientBundleEntry[] = [];
-  const chunks: ClientBundleChunk[] = [];
+  const byName = new Map(entrypoints.map((abs) => [outputName(abs), abs]));
+  const entries: BundleEntry[] = [];
+  const chunks: BundleChunk[] = [];
   const errors: string[] = [];
 
   for (const output of result.outputs) {
@@ -211,4 +197,37 @@ export async function compileClientBundle(opts: ClientBundleOptions): Promise<Cl
     return { success: false, errors };
   }
   return { success: true, entries, chunks };
+}
+
+/**
+ * Compile several client modules together with code splitting so shared
+ * dependencies (e.g. recharts pulled in by multiple bricks) land in a single
+ * chunk instead of being duplicated into every entry's bundle.
+ *
+ * Entry outputs are named `[name].js` (the source basename) so each maps back
+ * to its entrypoint; chunks are named `_brika_chunk_[hash].js`. The host serves
+ * both from `/api/modules`, and each entry references its chunks via a relative
+ * `import './_brika_chunk_<hash>.js'` that resolves against the entry's URL.
+ */
+export async function compileClientBundle(opts: ClientBundleOptions): Promise<RawBundleResult> {
+  if (opts.entrypoints.length === 0) {
+    return { success: true, entries: [], chunks: [] };
+  }
+
+  const entries: BundleEntry[] = [];
+  const chunkByName = new Map<string, BundleChunk>();
+  for (const batch of batchByName(opts.entrypoints)) {
+    const result = await buildBatch(batch, opts);
+    if (!result.success) {
+      return result;
+    }
+    entries.push(...result.entries);
+    // Chunk names are content hashes: a repeat across batches is the same code.
+    for (const chunk of result.chunks) {
+      if (!chunkByName.has(chunk.name)) {
+        chunkByName.set(chunk.name, chunk);
+      }
+    }
+  }
+  return { success: true, entries, chunks: [...chunkByName.values()] };
 }

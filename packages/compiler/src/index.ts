@@ -6,16 +6,24 @@ export { computeActionId } from './action-hash';
 export { BunBundler } from './bundle';
 // ── Action manifest entries (shared with the ./bun and ./v8 gate report) ────
 export type { ActionEntry } from './bundle/report';
+// ── Bundle port types (one shape for both backends and the raw pipelines) ───
+export {
+  type Backend,
+  type BundleChunk,
+  type BundleEntry,
+  type BundleOptions,
+  type BundleResult,
+  type Bundler,
+  CHUNK_PREFIX,
+  type RawBundleResult,
+} from './bundle/types';
 export type {
-  ClientBundleChunk,
-  ClientBundleEntry,
   ClientBundleOptions,
-  ClientBundleResult,
   ClientCompileOptions,
   ClientCompileResult,
 } from './compile-client';
 // ── High-level compile functions ────────────────────────────────────────────
-export { CLIENT_CHUNK_PREFIX, compileClientBundle, compileClientModule } from './compile-client';
+export { compileClientBundle, compileClientModule } from './compile-client';
 export type { ServerCompileOptions, ServerCompileResult } from './compile-server';
 export { compileServerEntry } from './compile-server';
 // ── Manifest generation (brika build) ─────────────────────────────────────────

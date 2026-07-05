@@ -9,6 +9,16 @@
 /** Which backend produced an artifact. Stamped into every output. */
 export type Backend = 'bun' | 'isolate';
 
+/**
+ * Filename prefix every shared chunk is emitted under, on BOTH backends.
+ *
+ * Picked to be distinctive so it cannot collide with a plugin's own module ids
+ * (brick/page/block ids never start with `_`). An entry references a chunk via
+ * a relative `import './<prefix><hash>.js'`, so the hub serves chunks from the
+ * same `/api/modules` route, special-casing any file whose id has this prefix.
+ */
+export const CHUNK_PREFIX = '_brika_chunk_';
+
 export interface BundleOptions {
   /** Absolute paths to the `.tsx`/`.ts` entrypoints to build together. */
   readonly entrypoints: string[];
@@ -38,6 +48,15 @@ export interface BundleChunk {
   readonly name: string;
   readonly js: string;
 }
+
+/**
+ * A build product before provenance stamping: what the raw compile pipelines
+ * (`compileClientBundle`) return. A `Bundler` adapter turns this into a
+ * {@link BundleResult} by stamping backend + version onto every output.
+ */
+export type RawBundleResult =
+  | { readonly success: true; readonly entries: BundleEntry[]; readonly chunks: BundleChunk[] }
+  | { readonly success: false; readonly errors: string[] };
 
 export type BundleResult =
   | {
