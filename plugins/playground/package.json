@@ -70,6 +70,7 @@
     "check": "brika check",
     "prepublishOnly": "brika verify"
   },
+  "tools": [],
   "blocks": [
     {
       "id": "echo",
@@ -79,7 +80,8 @@
       "icon": "megaphone",
       "color": "#6366f1",
       "view": true,
-      "nodeView": true
+      "nodeView": true,
+      "fields": ["prefix", "suffix"]
     }
   ],
   "sparks": [

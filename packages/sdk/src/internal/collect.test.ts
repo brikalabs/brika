@@ -21,7 +21,7 @@ describe('build collector', () => {
   test('records nothing when no collector is installed', () => {
     collectBlock({ id: 'x', meta: { name: 'X', category: 'trigger' } });
     collectSpark({ id: 'y' });
-    expect(drainCollector()).toEqual({ blocks: [], sparks: [], bricks: [] });
+    expect(drainCollector()).toEqual({ blocks: [], sparks: [], bricks: [], tools: [] });
   });
 
   test('captures blocks and sparks between install and drain', () => {
@@ -33,6 +33,7 @@ describe('build collector', () => {
       blocks: [{ id: 'timer', meta: { name: 'Timer', category: 'trigger' } }],
       sparks: [{ id: 'tick', meta: { name: 'Tick' } }],
       bricks: [],
+      tools: [],
     });
   });
 
@@ -42,7 +43,7 @@ describe('build collector', () => {
     drainCollector();
 
     collectBlock({ id: 'b', meta: { name: 'X', category: 'flow' } });
-    expect(drainCollector()).toEqual({ blocks: [], sparks: [], bricks: [] });
+    expect(drainCollector()).toEqual({ blocks: [], sparks: [], bricks: [], tools: [] });
   });
 
   test('captures bricks between install and drain', () => {
@@ -67,7 +68,7 @@ describe('build collector', () => {
       config: z.object({}),
       data: z.object({}),
     });
-    expect(drainCollector()).toEqual({ blocks: [], sparks: [], bricks: [] });
+    expect(drainCollector()).toEqual({ blocks: [], sparks: [], bricks: [], tools: [] });
   });
 });
 

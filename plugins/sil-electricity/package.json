@@ -42,6 +42,14 @@
     "check": "brika check",
     "prepublishOnly": "brika verify"
   },
+  "tools": [
+    {
+      "id": "get-consumption",
+      "description": "Household electricity consumption for a period (24h, 7d, 30d, 12m, 24m): total kWh consumed, kWh injected back to the grid (solar), and the net cost estimate in CHF at the configured tariff.",
+      "icon": "zap",
+      "color": "#eab308"
+    }
+  ],
   "preferences": [
     {
       "name": "email",

@@ -14,12 +14,14 @@ export type {
   CollectedBrick,
   CollectedManifest,
   CollectedSpark,
+  CollectedTool,
   SparkMeta,
 } from '@brika/schema/collect-sink';
 export {
   collectBlock,
   collectBrick,
   collectSpark,
+  collectTool,
   drainCollector,
   installCollector,
 } from '@brika/schema/collect-sink';

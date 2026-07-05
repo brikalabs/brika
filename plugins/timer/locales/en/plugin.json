@@ -1,24 +1,6 @@
 {
   "name": "Timer Plugin",
   "description": "Timer and reminder functionality for BRIKA",
-  "tools": {
-    "set": {
-      "name": "Set Timer",
-      "description": "Set a timer that fires after the specified duration"
-    },
-    "list": {
-      "name": "List Timers",
-      "description": "List all active timers with remaining time"
-    },
-    "cancel": {
-      "name": "Cancel Timer",
-      "description": "Cancel an active timer by ID or name"
-    },
-    "clear": {
-      "name": "Clear All",
-      "description": "Clear all active timers at once"
-    }
-  },
   "bricks": {
     "timers-dashboard": {
       "name": "Timers Dashboard",
@@ -78,14 +60,6 @@
       "label": "Name",
       "description": "Timer name",
       "placeholder": "timer"
-    },
-    "seconds": {
-      "label": "Seconds",
-      "description": "Duration in seconds"
-    },
-    "target": {
-      "label": "Target",
-      "description": "Timer ID or name to cancel"
     }
   },
   "sparks": {

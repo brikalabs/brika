@@ -22,7 +22,12 @@ import {
   type TranslationBundle,
 } from '@brika/schema/i18n-keys';
 import type { PluginPackageSchema } from '@brika/schema/plugin';
-import { extractI18nKeys } from '../plugins/i18n-call-site/keys';
+import {
+  collectNamedObjectValues,
+  collectPropertyLiterals,
+  extractI18nKeys,
+  type FileI18nUsage,
+} from '../plugins/i18n-call-site/keys';
 
 const TS_SOURCE = /\.tsx?$/;
 // Test files never ship nor render; their t() calls are not runtime usage.
@@ -34,6 +39,8 @@ const LIST_CAP = 8;
 export interface PluginI18nUsage {
   readonly exact: ReadonlyMap<string, readonly string[]>;
   readonly patterns: ReadonlyMap<string, readonly string[]>;
+  /** Over-approximated keys (map values, property tables): usage only. */
+  readonly soft: ReadonlyMap<string, readonly string[]>;
   /** `file:line` of calls whose key is not a literal (statically unverifiable). */
   readonly dynamicSites: readonly string[];
 }
@@ -41,10 +48,16 @@ export interface PluginI18nUsage {
 /**
  * Extract every i18n key usage from the plugin sources (keys are the
  * sources-map keys, paths relative to the plugin root).
+ *
+ * `t(x.<prop>)` references resolve PLUGIN-WIDE: every `prop: '<literal>'`
+ * across the sources contributes a soft key (the option table and the call
+ * site often live in different files). A property with no literal anywhere
+ * degrades to a dynamic site.
  */
 export function scanI18nUsage(sources: ReadonlyMap<string, string>): PluginI18nUsage {
   const exact = new Map<string, string[]>();
   const patterns = new Map<string, string[]>();
+  const soft = new Map<string, string[]>();
   const dynamicSites: string[] = [];
 
   const push = (map: Map<string, string[]>, key: string, site: string) => {
@@ -56,23 +69,79 @@ export function scanI18nUsage(sources: ReadonlyMap<string, string>): PluginI18nU
     }
   };
 
+  const byFile = new Map<string, FileI18nUsage>();
+  const referencedProps = new Set<string>();
+  const referencedMaps = new Set<string>();
   for (const [file, code] of sources) {
     if (!TS_SOURCE.test(file) || TEST_SOURCE.test(file)) {
       continue;
     }
     const usage = extractI18nKeys(code);
+    byFile.set(file, usage);
     for (const use of usage.exact) {
       push(exact, use.key, `${file}:${use.line}`);
     }
     for (const use of usage.patterns) {
       push(patterns, use.key, `${file}:${use.line}`);
     }
-    for (let i = 0; i < usage.dynamic; i++) {
-      dynamicSites.push(file);
+    for (const use of usage.soft) {
+      push(soft, use.key, `${file}:${use.line}`);
+    }
+    for (const line of usage.dynamicLines) {
+      dynamicSites.push(`${file}:${line}`);
+    }
+    for (const ref of usage.propertyRefs) {
+      referencedProps.add(ref.key);
+    }
+    for (const ref of usage.mapRefs) {
+      referencedMaps.add(ref.key);
     }
   }
 
-  return { exact, patterns, dynamicSites };
+  // Plugin-wide property and map-value indexes, only for what is referenced.
+  const propertyValues = new Map<string, string[]>();
+  const mapValues = new Map<string, string[]>();
+  if (referencedProps.size > 0 || referencedMaps.size > 0) {
+    const merge = (target: Map<string, string[]>, source: Map<string, string[]>) => {
+      for (const [key, values] of source) {
+        const list = target.get(key);
+        if (list) {
+          list.push(...values);
+        } else {
+          target.set(key, [...values]);
+        }
+      }
+    };
+    for (const [file, code] of sources) {
+      if (!TS_SOURCE.test(file) || TEST_SOURCE.test(file)) {
+        continue;
+      }
+      merge(propertyValues, collectPropertyLiterals(code, referencedProps));
+      merge(mapValues, collectNamedObjectValues(code, referencedMaps));
+    }
+  }
+  const resolveRefs = (
+    file: string,
+    refs: readonly { key: string; line: number }[],
+    index: ReadonlyMap<string, readonly string[]>
+  ) => {
+    for (const ref of refs) {
+      const values = index.get(ref.key);
+      if (values === undefined || values.length === 0) {
+        dynamicSites.push(`${file}:${ref.line}`);
+        continue;
+      }
+      for (const value of values) {
+        push(soft, value, `${file}:${ref.line}`);
+      }
+    }
+  };
+  for (const [file, usage] of byFile) {
+    resolveRefs(file, usage.propertyRefs, propertyValues);
+    resolveRefs(file, usage.mapRefs, mapValues);
+  }
+
+  return { exact, patterns, soft, dynamicSites };
 }
 
 /** `a, b, c (+2 more)` with the tail capped. */
@@ -140,9 +209,13 @@ export function analyzeI18nUsage(
 
   // Locale keys nothing references: not the manifest, not code, not a
   // runtime-resolved prefix. Usually stale after an id rename. A single
-  // dynamic t(variable) call makes this unsound (any key may be referenced),
-  // so the report is skipped entirely in that case.
+  // dynamic t(expr) call makes this unsound (any key may be referenced), so
+  // the report is skipped in that case — loudly, naming the call sites, so
+  // the author can refactor to a resolvable shape (literal, ternary, const).
   if (usage.dynamicSites.length > 0) {
+    warnings.push(
+      `unused-key analysis skipped: ${usage.dynamicSites.length} t() call(s) with statically unresolvable keys (${capped([...usage.dynamicSites])})`
+    );
     return { errors, warnings };
   }
   const referenced = new Set([
@@ -153,7 +226,7 @@ export function analyzeI18nUsage(
   const prefixes = runtimeResolvedI18nPrefixes(pkg);
   const unused = [...union]
     .filter((key) => {
-      if (referenced.has(key) || usage.exact.has(key)) {
+      if (referenced.has(key) || usage.exact.has(key) || usage.soft.has(key)) {
         return false;
       }
       if (prefixes.some((prefix) => key.startsWith(prefix))) {

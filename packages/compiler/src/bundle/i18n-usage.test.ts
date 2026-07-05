@@ -21,7 +21,114 @@ describe('extractI18nKeys', () => {
       'ui.hello',
     ]);
     expect(usage.patterns).toEqual([]);
-    expect(usage.dynamic).toBe(0);
+    expect(usage.dynamicLines).toEqual([]);
+  });
+
+  test('resolves ternary keys to both branches, recursively', () => {
+    const usage = extractI18nKeys(
+      [
+        "const a = t(on ? 'state.on' : 'state.off');",
+        "const b = t(x ? 'a.one' : y ? 'a.two' : 'a.three');",
+        "const c = t((cond ? 'p.left' : 'p.right'));",
+      ].join('\n')
+    );
+
+    expect(usage.exact.map((u) => u.key).sort()).toEqual([
+      'a.one',
+      'a.three',
+      'a.two',
+      'p.left',
+      'p.right',
+      'state.off',
+      'state.on',
+    ]);
+    expect(usage.dynamicLines).toEqual([]);
+  });
+
+  test('resolves concatenation chains to patterns or exact keys', () => {
+    const usage = extractI18nKeys(
+      [
+        "const a = t('conditions.' + code);",
+        "const b = t('a.' + x + '.label');",
+        "const c = t('one.' + 'two');",
+      ].join('\n')
+    );
+
+    expect(usage.patterns.map((u) => u.key)).toEqual(['conditions.*', 'a.*.label']);
+    expect(usage.exact.map((u) => u.key)).toEqual(['one.two']);
+  });
+
+  test('resolves const bindings with ternary initializers', () => {
+    const usage = extractI18nKeys(
+      [
+        "const key = folders === 1 ? 'summary.folderOne' : 'summary.folderOther';",
+        't(key, { count: folders });',
+      ].join('\n')
+    );
+
+    expect(usage.exact.map((u) => u.key).sort()).toEqual([
+      'summary.folderOne',
+      'summary.folderOther',
+    ]);
+    expect(usage.dynamicLines).toEqual([]);
+  });
+
+  test('a name bound more than once resolves softly (usage, never errors)', () => {
+    const usage = extractI18nKeys(
+      [
+        "const key = 'Enter';", // unrelated same-named binding elsewhere in file
+        "const key = on ? 'state.on' : 'state.off';",
+        't(key);',
+      ].join('\n')
+    );
+
+    expect(usage.exact).toEqual([]);
+    expect(usage.soft.map((u) => u.key).sort()).toEqual(['Enter', 'state.off', 'state.on']);
+  });
+
+  test('resolves map lookups to all object-literal string values (soft)', () => {
+    const usage = extractI18nKeys(
+      [
+        "const PRESS_KEYS = { short: 'press.short', long: 'press.long' };",
+        'const a = t(PRESS_KEYS[press]);',
+        'const key = PRESS_KEYS[gesture];',
+        'const b = t(key);',
+      ].join('\n')
+    );
+
+    expect(usage.soft.map((u) => u.key).sort()).toEqual([
+      'press.long',
+      'press.long',
+      'press.short',
+      'press.short',
+    ]);
+    expect(usage.dynamicLines).toEqual([]);
+  });
+
+  test('collects property references for the plugin-wide pass', () => {
+    const usage = extractI18nKeys('t(opt.labelKey);\nt(meta?.labelKey);');
+
+    expect(usage.propertyRefs).toEqual([
+      { key: 'labelKey', line: 1 },
+      { key: 'labelKey', line: 2 },
+    ]);
+    expect(usage.dynamicLines).toEqual([]);
+  });
+
+  test('resolves identifiers through file-level const string bindings', () => {
+    const usage = extractI18nKeys(
+      [
+        "const TITLE_KEY = 'player.title';",
+        'const DAY_KEY = `days.${day}`;',
+        'const a = t(TITLE_KEY);',
+        'const b = t(DAY_KEY);',
+        't(UNKNOWN_KEY);',
+      ].join('\n')
+    );
+
+    expect(usage.exact.map((u) => u.key)).toEqual(['player.title']);
+    expect(usage.patterns.map((u) => u.key)).toEqual(['days.*']);
+    expect(usage.dynamicLines).toEqual([5]);
   });
 
   test('turns template interpolations into * patterns, with line numbers', () => {
@@ -40,13 +147,14 @@ describe('extractI18nKeys', () => {
     ]);
   });
 
-  test('counts non-literal keys as dynamic', () => {
+  test('counts unresolvable keys as dynamic, with their lines', () => {
     const usage = extractI18nKeys(
-      ['t(someVariable);', 't(key(), {});', 't(`${whole}`);', "t('lit.' + rest);"].join('\n')
+      ['t(someVariable);', 't(key(), {});', 't(`${whole}`);', 't(a ? b() : c);'].join('\n')
     );
 
     expect(usage.exact).toEqual([]);
-    expect(usage.dynamic).toBe(4);
+    expect(usage.patterns).toEqual([]);
+    expect(usage.dynamicLines).toEqual([1, 2, 3, 4]);
   });
 
   test('reads tp() keys from the second argument', () => {
@@ -69,11 +177,32 @@ describe('extractI18nKeys', () => {
 
     expect(usage.exact).toEqual([]);
     expect(usage.patterns).toEqual([]);
-    expect(usage.dynamic).toBe(0);
+    expect(usage.dynamicLines).toEqual([]);
   });
 });
 
 describe('scanI18nUsage', () => {
+  test('resolves t(x.prop) against property literals in OTHER files', () => {
+    const usage = scanI18nUsage(
+      new Map([
+        ['src/bricks/toolbar.tsx', 'SORT_OPTIONS.map((opt) => t(opt.labelKey));'],
+        [
+          'src/bricks/options.ts',
+          "export const SORT_OPTIONS = [{ value: 'az', labelKey: 'sort.nameAsc' }, { value: 'za', labelKey: 'sort.nameDesc' }];",
+        ],
+      ])
+    );
+
+    expect([...usage.soft.keys()].sort()).toEqual(['sort.nameAsc', 'sort.nameDesc']);
+    expect(usage.dynamicSites).toEqual([]);
+  });
+
+  test('a property with no literal anywhere degrades to a dynamic site', () => {
+    const usage = scanI18nUsage(new Map([['src/pages/a.tsx', 't(row.computedKey);']]));
+
+    expect(usage.dynamicSites).toEqual(['src/pages/a.tsx:1']);
+  });
+
   test('aggregates across files with file:line sites, skipping tests', () => {
     const usage = scanI18nUsage(
       new Map([

@@ -38,6 +38,38 @@
     "check": "brika check",
     "prepublishOnly": "brika verify"
   },
+  "tools": [
+    {
+      "id": "control-playback",
+      "description": "Control Spotify playback: play (resume or start), pause, next, previous, seek (positionMs), or set-volume (percent 0-100). Optionally target a device from list-devices.",
+      "icon": "sliders-horizontal",
+      "color": "#1DB954"
+    },
+    {
+      "id": "get-now-playing",
+      "description": "The track currently playing (or most recently played) on Spotify: track name, artist, album art URL, and whether playback is active.",
+      "icon": "music",
+      "color": "#1DB954"
+    },
+    {
+      "id": "list-devices",
+      "description": "List the available Spotify Connect devices (speakers, computers, phones) with their id, name, and type. Use a device id with play-track or control-playback.",
+      "icon": "speaker",
+      "color": "#1DB954"
+    },
+    {
+      "id": "play-track",
+      "description": "Start playback of a specific track by Spotify uri (from search-tracks), optionally on a specific device (from list-devices).",
+      "icon": "play",
+      "color": "#1DB954"
+    },
+    {
+      "id": "search-tracks",
+      "description": "Search the Spotify catalog for tracks by free text (title, artist, album). Returns up to `limit` results with uri, name, artist, and album art; pass a uri to play-track.",
+      "icon": "search",
+      "color": "#1DB954"
+    }
+  ],
   "preferences": [
     {
       "name": "clientId",
@@ -127,7 +159,8 @@
       "icon": "play",
       "color": "#1DB954",
       "view": true,
-      "nodeView": true
+      "nodeView": true,
+      "fields": ["contextUri", "deviceId"]
     }
   ],
   "actions": [

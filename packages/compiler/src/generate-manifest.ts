@@ -44,6 +44,7 @@ import {
   pageFiles,
   sourceFiles,
   sparkFiles,
+  toolFiles,
 } from './scan';
 import type { ValidationDiagnostic } from './validate';
 
@@ -57,6 +58,7 @@ export interface GeneratedBlock {
   color?: string;
   view?: boolean;
   nodeView?: boolean;
+  fields?: string[];
 }
 
 /** A generated manifest `sparks[]` entry (mirrors `@brika/schema` SparkSchema). */
@@ -84,11 +86,20 @@ export interface GeneratedPage {
   icon?: string;
 }
 
+/** A generated manifest `tools[]` entry (mirrors `@brika/schema` ToolSchema). */
+export interface GeneratedTool {
+  id: string;
+  description?: string;
+  icon?: string;
+  color?: string;
+}
+
 export interface GeneratedManifest {
   blocks: GeneratedBlock[];
   sparks: GeneratedSpark[];
   bricks: GeneratedBrick[];
   pages: GeneratedPage[];
+  tools: GeneratedTool[];
   /** Server actions (`{ id, file, name }`), statically scanned - see header. */
   actions: ActionEntry[];
   diagnostics: ValidationDiagnostic[];
@@ -164,6 +175,10 @@ async function toBlockEntry(
     color: meta.color,
     view: hasView || undefined,
     nodeView: hasNode || undefined,
+    fields:
+      block.configFields !== undefined && block.configFields.length > 0
+        ? block.configFields
+        : undefined,
   };
 }
 
@@ -412,17 +427,22 @@ async function buildActions(root: string): Promise<ActionEntry[]> {
  */
 export async function generateManifest(pluginRoot: string): Promise<GeneratedManifest> {
   const root = resolve(pluginRoot);
-  const [blocks, sparks, descriptorPaths, legacyBrickPaths, pagePaths, actions] = await Promise.all(
-    [
+  const [blocks, sparks, descriptorPaths, legacyBrickPaths, pagePaths, toolPaths, actions] =
+    await Promise.all([
       blockFiles(root),
       sparkFiles(root),
       brickDescriptorFiles(root),
       brickFiles(root),
       pageFiles(root),
+      toolFiles(root),
       buildActions(root),
-    ]
-  );
-  const { collected, errors } = await importModules([...blocks, ...sparks, ...descriptorPaths]);
+    ]);
+  const { collected, errors } = await importModules([
+    ...blocks,
+    ...sparks,
+    ...descriptorPaths,
+    ...toolPaths,
+  ]);
   const diagnostics: ValidationDiagnostic[] = [...errors];
 
   const managedBlocks: GeneratedBlock[] = [];
@@ -449,6 +469,14 @@ export async function generateManifest(pluginRoot: string): Promise<GeneratedMan
     sparks: dedupeById(collected.sparks).map(toSparkEntry).sort(byId),
     bricks: [...descriptorBricks, ...legacyBricks].sort(byId),
     pages: (await buildPages(pagePaths, diagnostics)).sort(byId),
+    tools: dedupeById(collected.tools)
+      .map((tool) => ({
+        id: tool.id,
+        description: tool.description,
+        icon: tool.icon,
+        color: tool.color,
+      }))
+      .sort(byId),
     actions: [...actions].sort(byId),
     diagnostics,
     ok: diagnostics.every((d) => d.level !== 'error'),

@@ -21,6 +21,7 @@ import {
   registerBrickType,
   registerRoute,
   registerSpark,
+  registerTool,
   setPluginSecret,
   subscribeSpark,
   unsubscribeSpark,
@@ -88,6 +89,7 @@ describe('PluginProcess', () => {
       { id: 'action-a', file: 'src/actions.ts', name: 'actionA' },
       { id: 'action-b', file: 'src/actions.ts', name: 'actionB' },
     ],
+    tools: [{ id: 'test-tool' }],
     grants: {
       'dev.brika.location.get': {},
       'dev.brika.secrets.get': {},
@@ -1230,6 +1232,22 @@ describe('PluginProcess', () => {
       });
 
       expect(process.actions.size).toBe(0);
+    });
+
+    test('registerTool handler forwards tools declared in the manifest', () => {
+      triggerHandler(registerTool, {
+        tool: { id: 'test-tool', description: 'A test tool' },
+      });
+
+      expect(callbacks.onRegisterTool).toHaveBeenCalledTimes(1);
+    });
+
+    test('registerTool handler ignores tools not declared in the manifest', () => {
+      triggerHandler(registerTool, {
+        tool: { id: 'undeclared-tool' },
+      });
+
+      expect(callbacks.onRegisterTool).not.toHaveBeenCalled();
     });
 
     test('registerRoute handler calls onRoute', () => {

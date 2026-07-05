@@ -116,7 +116,6 @@
   },
   "stats": {
     "feelsLike": "Feels like",
-    "feelsLikeTemp": "Feels like {{temp}}",
     "humidity": "Humidity",
     "wind": "Wind",
     "pressure": "Pressure"
@@ -133,11 +132,7 @@
     "sun": "Sun"
   },
   "ui": {
-    "forecast": "Forecast",
     "dayForecast": "{{count}}-Day Forecast",
-    "locationForecast": "{{name}} Forecast",
-    "locationDayForecast": "{{name}} — {{count}}-Day Forecast",
-    "noData": "No data",
     "updated": "Updated {{time}}"
   }
 }

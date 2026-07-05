@@ -203,6 +203,12 @@ export class PluginProcess {
    * from being misclassified as unknown.
    */
   readonly #declaredActions: ReadonlySet<string>;
+  /**
+   * Tool ids declared in the manifest `tools[]` array (`brika build` output).
+   * Same allow-list model as actions: an undeclared tool never reaches the
+   * hub-wide tool registry.
+   */
+  readonly #declaredTools: ReadonlySet<string>;
   readonly #sparkSubscriptions = new Map<string, () => void>(); // subscriptionId -> unsubscribe
   #stopped = false;
   #grants: GrantRegistry | undefined;
@@ -261,6 +267,7 @@ export class PluginProcess {
     this.metadata = info.metadata;
     this.locales = info.locales;
     this.#declaredActions = new Set((info.metadata.actions ?? []).map((a) => a.id));
+    this.#declaredTools = new Set((info.metadata.tools ?? []).map((t) => t.id));
 
     this.#rssMonitor = new RssSoftLimitMonitor(
       this.config.rssSoftLimitBytes,
@@ -859,6 +866,9 @@ export class PluginProcess {
     });
 
     this.#channel.on(registerTool, ({ tool }) => {
+      if (!this.#declaredTools.has(tool.id)) {
+        return; // Undeclared tools ignored
+      }
       this.callbacks.onRegisterTool(tool, this);
     });
 

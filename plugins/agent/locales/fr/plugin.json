@@ -32,5 +32,40 @@
       "title": "Serveur Ollama",
       "description": "Optionnel. Votre serveur Ollama local ; par défaut http://localhost:11434. Les modèles installés apparaissent automatiquement quand le serveur tourne."
     }
+  },
+  "fields": {
+    "model": {
+      "label": "Modèle"
+    },
+    "prompt": {
+      "label": "Prompt"
+    },
+    "systemPrompt": {
+      "label": "Prompt système"
+    },
+    "effort": {
+      "label": "Effort de raisonnement"
+    },
+    "maxTokens": {
+      "label": "Jetons max"
+    },
+    "maxIterations": {
+      "label": "Itérations max"
+    },
+    "tools": {
+      "label": "Outils"
+    },
+    "tool": {
+      "label": "Outil"
+    },
+    "argName": {
+      "label": "Nom de l'argument"
+    }
+  },
+  "tools": {
+    "ask-claude": {
+      "name": "Demander à Claude",
+      "description": "Posez une question à Claude et recevez une réponse texte. À utiliser pour le raisonnement ouvert, le résumé, la rédaction ou la classification."
+    }
   }
 }

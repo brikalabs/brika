@@ -235,6 +235,7 @@ export async function runBuild(root: string, check: boolean): Promise<boolean> {
     bricks: planKind(preserveOrder(result.bricks, pkg.bricks), pkg.bricks),
     pages: planKind(preserveOrder(result.pages, pkg.pages), pkg.pages),
     sparks: planKind(preserveOrder(result.sparks, pkg.sparks), pkg.sparks),
+    tools: planKind(preserveOrder(result.tools, pkg.tools), pkg.tools),
     actions: planKind(preserveOrder(result.actions, pkg.actions), pkg.actions),
   };
 

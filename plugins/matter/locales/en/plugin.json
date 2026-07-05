@@ -71,6 +71,10 @@
     "control-device": {
       "name": "Control Device",
       "description": "Control a Matter device: toggle lights, lock or unlock, move covers, set brightness or temperature"
+    },
+    "get-device-state": {
+      "name": "Get Device State",
+      "description": "Read one Matter device by nodeId: full current state (on, brightness, locked, cover position, temperature, humidity, battery, ...), supported commands, and metadata. Use after control-device to confirm an action took effect."
     }
   },
   "device": {
@@ -215,6 +219,17 @@
       "label": "Auto-commission",
       "description": "Automatically commission discovered devices",
       "title": "Auto-commission"
+    }
+  },
+  "fields": {
+    "nodeId": {
+      "label": "Device"
+    },
+    "button": {
+      "label": "Button"
+    },
+    "press": {
+      "label": "Press type"
     }
   }
 }

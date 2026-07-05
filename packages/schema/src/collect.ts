@@ -21,12 +21,14 @@ export type {
   CollectedBrick,
   CollectedManifest,
   CollectedSpark,
+  CollectedTool,
   SparkMeta,
 } from './collect-sink';
 export {
   collectBlock,
   collectBrick,
   collectSpark,
+  collectTool,
   drainCollector,
   installCollector,
 } from './collect-sink';

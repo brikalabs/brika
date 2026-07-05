@@ -163,7 +163,8 @@ export function skipWhitespace(code: string, start: number, limit: number): numb
   return i;
 }
 
-function trimRightWhitespace(code: string, start: number, end: number): number {
+/** Exported for `keys.ts`, which trims sub-expression spans. */
+export function trimRightWhitespace(code: string, start: number, end: number): number {
   let i = end;
   while (i > start) {
     const c = code[i - 1];
@@ -176,7 +177,8 @@ function trimRightWhitespace(code: string, start: number, end: number): number {
   return i;
 }
 
-function skipStringLiteral(code: string, start: number): number {
+/** Exported for `keys.ts`, which parses literals inside key expressions. */
+export function skipStringLiteral(code: string, start: number): number {
   const quote = code[start];
   let i = start + 1;
   while (i < code.length) {
@@ -195,7 +197,8 @@ function skipStringLiteral(code: string, start: number): number {
   return i;
 }
 
-function skipTemplateLiteral(code: string, start: number): number {
+/** Exported for `keys.ts`, which parses literals inside key expressions. */
+export function skipTemplateLiteral(code: string, start: number): number {
   let i = start + 1;
   while (i < code.length) {
     if (code[i] === '\\') {

@@ -48,6 +48,14 @@
       "allowLoopbackPorts": [11434]
     }
   },
+  "tools": [
+    {
+      "id": "ask-claude",
+      "description": "Ask Claude a question and get a text answer. Call for open-ended reasoning, summarization, drafting, or classification.",
+      "icon": "sparkles",
+      "color": "#d97757"
+    }
+  ],
   "preferences": [
     {
       "name": "anthropicApiKey",
@@ -81,7 +89,8 @@
       "description": "Send a prompt to an LLM and emit the completion",
       "category": "transform",
       "icon": "sparkles",
-      "color": "#d97757"
+      "color": "#d97757",
+      "fields": ["effort", "maxTokens", "model", "prompt", "systemPrompt"]
     },
     {
       "id": "call-tool",
@@ -89,7 +98,8 @@
       "description": "Invoke a hub-registered tool by id and emit its result",
       "category": "action",
       "icon": "wrench",
-      "color": "#d97757"
+      "color": "#d97757",
+      "fields": ["argName", "tool"]
     },
     {
       "id": "agent",
@@ -97,7 +107,8 @@
       "description": "LLM agent that reasons and calls tools to answer each prompt",
       "category": "action",
       "icon": "bot",
-      "color": "#d97757"
+      "color": "#d97757",
+      "fields": ["effort", "maxIterations", "maxTokens", "model", "prompt", "systemPrompt", "tools"]
     }
   ],
   "dependencies": {

@@ -1,18 +1,6 @@
 {
   "name": "Playground",
   "description": "Plugin bac à sable — bloc écho, démo des préférences et explorateur de fichiers",
-  "tools": {
-    "echo": {
-      "name": "Écho",
-      "description": "Renvoyer le message fourni en écho"
-    }
-  },
-  "fields": {
-    "message": {
-      "label": "Message",
-      "description": "Le message à renvoyer"
-    }
-  },
   "blocks": {
     "echo": {
       "prefixPlaceholder": "ex. > ",

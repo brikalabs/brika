@@ -36,6 +36,11 @@ describe('generateManifest', () => {
   let root: string;
 
   beforeEach(async () => {
+    // Another test file may have leaked ITS branded bridge (an SDK context
+    // test harness) onto globalThis, which the idempotent installBuildContext
+    // would keep; clear it so these tests always run under the real build
+    // context (Bun runs all test files in one process).
+    globalThis.__brika_ipc = undefined;
     installBuildContext();
     root = await mkdtemp(join(PKG_ROOT, 'genman-'));
     await mkdir(join(root, 'src', 'blocks'), { recursive: true });
@@ -78,6 +83,44 @@ describe('generateManifest', () => {
     expect(result.sparks).toEqual([
       { id: 'spark-a', name: 'Spark A', description: 'desc' },
       { id: 'spark-b' },
+    ]);
+  });
+
+  test('records block config field names in blocks[].fields, sorted', async () => {
+    await writeFile(
+      join(root, 'src', 'blocks', 'cfg.ts'),
+      `import { defineBlock, input, z } from '@brika/sdk';
+export default defineBlock({
+  id: 'cfg', meta: { name: 'Cfg', category: 'action' }, inputs: { trigger: input(z.generic()) },
+  config: z.object({ zebra: z.string(), alpha: z.number() }),
+  run() {},
+});
+`
+    );
+
+    const result = await generateManifest(root);
+
+    expect(result.ok).toBe(true);
+    expect(result.blocks[0]?.fields).toEqual(['alpha', 'zebra']);
+  });
+
+  test('collects defineTool definitions into tools[]', async () => {
+    await mkdir(join(root, 'src', 'tools'), { recursive: true });
+    await writeFile(
+      join(root, 'src', 'tools', 'greet.ts'),
+      `import { defineTool, z } from '@brika/sdk';
+defineTool(
+  { id: 'greet', description: 'Say hello.', icon: 'hand', color: '#112233', input: z.object({}) },
+  () => 'hello'
+);
+`
+    );
+
+    const result = await generateManifest(root);
+
+    expect(result.diagnostics).toEqual([]);
+    expect(result.tools).toEqual([
+      { id: 'greet', description: 'Say hello.', icon: 'hand', color: '#112233' },
     ]);
   });
 

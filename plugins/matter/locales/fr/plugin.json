@@ -71,6 +71,10 @@
     "control-device": {
       "name": "Contrôler un appareil",
       "description": "Contrôler un appareil Matter : allumer ou éteindre, verrouiller, déplacer les volets, régler la luminosité ou la température"
+    },
+    "get-device-state": {
+      "name": "État de l'appareil",
+      "description": "Lit un appareil Matter par nodeId : état courant complet (allumé, luminosité, verrouillé, position du volet, température, humidité, batterie, ...), commandes supportées et métadonnées. À utiliser après control-device pour confirmer qu'une action a bien été appliquée."
     }
   },
   "device": {
@@ -215,6 +219,17 @@
       "label": "Commission automatique",
       "description": "Commissionnement automatique des appareils découverts",
       "title": "Appairage automatique"
+    }
+  },
+  "fields": {
+    "nodeId": {
+      "label": "Appareil"
+    },
+    "button": {
+      "label": "Bouton"
+    },
+    "press": {
+      "label": "Type d'appui"
     }
   }
 }

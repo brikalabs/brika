@@ -39,6 +39,14 @@
     "check": "brika check",
     "prepublishOnly": "brika verify"
   },
+  "tools": [
+    {
+      "id": "get-weather",
+      "description": "Current weather and daily forecast for a city: temperature, feels-like, humidity, wind, condition, and per-day min/max/precipitation for up to 7 days. Use this for any \"what is the weather\" or \"will it rain\" question.",
+      "icon": "cloud-sun",
+      "color": "#0ea5e9"
+    }
+  ],
   "preferences": [
     {
       "name": "city",

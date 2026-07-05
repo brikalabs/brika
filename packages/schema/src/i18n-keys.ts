@@ -112,7 +112,18 @@ export function manifestI18nKeys(pkg: PluginPackageSchema): string[] {
       keys.push(...preferenceKeys(`bricks.${brick.id}.config.${field.name}`, 'label', field));
     }
   }
-  return keys;
+  // Blocks WITHOUT a custom config view render the generic schema-driven form,
+  // which labels every config field via `fields.<name>.label`. Blocks with
+  // `view: true` own their config UI, so their fields need no generic labels.
+  for (const block of pkg.blocks ?? []) {
+    if (block.view === true) {
+      continue;
+    }
+    for (const field of block.fields ?? []) {
+      keys.push(`fields.${field}.label`);
+    }
+  }
+  return [...new Set(keys)];
 }
 
 /**
@@ -140,28 +151,47 @@ export function impliedI18nKeys(pkg: PluginPackageSchema): string[] {
   for (const pref of pkg.preferences ?? []) {
     keys.push(`preferences.${pref.name}.title`, `preferences.${pref.name}.description`);
   }
-  return keys;
+  // Every declared block config field may carry a label AND a description
+  // (the editor looks both up), custom-view blocks included.
+  for (const block of pkg.blocks ?? []) {
+    for (const field of block.fields ?? []) {
+      keys.push(`fields.${field}.label`, `fields.${field}.description`);
+    }
+  }
+  return [...new Set(keys)];
 }
 
 /**
  * Key prefixes the host resolves with RUNTIME-computed tails, so static
  * analysis must treat everything under them as used:
  *
- *   - `fields.` — the workflow editor labels block config fields as
- *     `fields.<name>.label|description`; the field names live in each block's
- *     zod config schema, not in the manifest;
- *   - `tools.` — tools register at runtime (`defineTool`) and have no
- *     build-time collector yet, so their ids are not statically known;
  *   - `blocks.<id>.ports.` — port names/descriptions come from the block's
  *     registration message, not the manifest;
  *   - `preferences.<n>.options.` / `bricks.<id>.config.<f>.` — dropdown
  *     option values may be fetched at runtime (dynamic dropdowns), and config
- *     fields own their whole label/description/options family.
+ *     fields own their whole label/description/options family;
+ *   - `fields.<name>.` for every declared block config field. The blanket
+ *     `fields.` prefix applies only to manifests generated before `brika
+ *     build` recorded field names (no block carries a `fields` array), so a
+ *     current build gets exact checking and an older one stays quiet.
  */
 export function runtimeResolvedI18nPrefixes(pkg: PluginPackageSchema): string[] {
-  const prefixes: string[] = ['fields.', 'tools.'];
-  for (const block of pkg.blocks ?? []) {
+  const prefixes: string[] = [];
+  // An ABSENT tools array means the manifest predates tool collection, so
+  // tool ids are unknown; an empty array declares "no tools" and gets exact
+  // checking like everything else.
+  if (pkg.tools === undefined) {
+    prefixes.push('tools.');
+  }
+  const blocks = pkg.blocks ?? [];
+  if (blocks.length > 0 && blocks.every((block) => block.fields === undefined)) {
+    prefixes.push('fields.');
+  }
+  for (const block of blocks) {
     prefixes.push(`blocks.${block.id}.ports.`);
+    for (const field of block.fields ?? []) {
+      prefixes.push(`fields.${field}.`);
+    }
   }
   for (const pref of pkg.preferences ?? []) {
     prefixes.push(`preferences.${pref.name}.options.`);

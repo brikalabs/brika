@@ -36,6 +36,13 @@ export interface BlockMeta {
 export interface CollectedBlock {
   id: string;
   meta?: BlockMeta;
+  /**
+   * Names of the block's zod config fields, lowered into the manifest
+   * `blocks[].fields` array. The workflow editor labels them through i18n
+   * (`fields.<name>.label`), so the manifest carries the names to make that
+   * key set statically checkable.
+   */
+  configFields?: string[];
 }
 
 /** Human-facing spark metadata lowered into the manifest `sparks[]` entry. */
@@ -68,11 +75,20 @@ export interface CollectedBrick {
   data: z.ZodType;
 }
 
+/** A tool captured during a build pass (from `defineTool` / `defineRawTool`). */
+export interface CollectedTool {
+  id: string;
+  description?: string;
+  icon?: string;
+  color?: string;
+}
+
 /** Everything captured during a single build pass. */
 export interface CollectedManifest {
   blocks: CollectedBlock[];
   sparks: CollectedSpark[];
   bricks: CollectedBrick[];
+  tools: CollectedTool[];
 }
 
 declare global {
@@ -83,12 +99,12 @@ declare global {
 
 /** Begin capturing `define*` registrations. Resets any prior capture. */
 export function installCollector(): void {
-  globalThis.__brikaCollect = { blocks: [], sparks: [], bricks: [] };
+  globalThis.__brikaCollect = { blocks: [], sparks: [], bricks: [], tools: [] };
 }
 
 /** Return the captured definitions and stop capturing. */
 export function drainCollector(): CollectedManifest {
-  const sink = globalThis.__brikaCollect ?? { blocks: [], sparks: [], bricks: [] };
+  const sink = globalThis.__brikaCollect ?? { blocks: [], sparks: [], bricks: [], tools: [] };
   globalThis.__brikaCollect = undefined;
   return sink;
 }
@@ -106,4 +122,9 @@ export function collectSpark(spark: CollectedSpark): void {
 /** Record a brick descriptor. No-op unless a collector is installed. */
 export function collectBrick(brick: CollectedBrick): void {
   globalThis.__brikaCollect?.bricks.push(brick);
+}
+
+/** Record a tool definition. No-op unless a collector is installed. */
+export function collectTool(tool: CollectedTool): void {
+  globalThis.__brikaCollect?.tools.push(tool);
 }
